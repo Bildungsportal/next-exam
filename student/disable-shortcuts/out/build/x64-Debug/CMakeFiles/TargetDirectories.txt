@@ -1,0 +1,9 @@
+C:/Users/User/disable-windows-keys/out/build/x64-Debug/CMakeFiles/edit_cache.dir
+C:/Users/User/disable-windows-keys/out/build/x64-Debug/CMakeFiles/rebuild_cache.dir
+C:/Users/User/disable-windows-keys/out/build/x64-Debug/app/CMakeFiles/disable-shortcuts.dir
+C:/Users/User/disable-windows-keys/out/build/x64-Debug/app/CMakeFiles/disable-shortcuts-hook.dir
+C:/Users/User/disable-windows-keys/out/build/x64-Debug/app/CMakeFiles/edit_cache.dir
+C:/Users/User/disable-windows-keys/out/build/x64-Debug/app/CMakeFiles/rebuild_cache.dir
+C:/Users/User/disable-windows-keys/out/build/x64-Debug/setup/CMakeFiles/setup.dir
+C:/Users/User/disable-windows-keys/out/build/x64-Debug/setup/CMakeFiles/edit_cache.dir
+C:/Users/User/disable-windows-keys/out/build/x64-Debug/setup/CMakeFiles/rebuild_cache.dir

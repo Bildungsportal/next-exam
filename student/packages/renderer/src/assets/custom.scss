@@ -1,0 +1,62 @@
+@import 'bootstrap/scss/bootstrap';
+
+// Here we override bootstrap color variables globally
+
+$colors: (
+  "blue":       $blue,
+  "indigo":     $indigo,
+  "purple":     $purple,
+  "pink":       $pink,
+  "red":        $red,
+  "orange":     $orange,
+  "yellow":     $yellow,
+  "green":      $green,
+  "teal":       $teal,
+  "cyan":       $cyan,
+  "white":      $white,
+  "gray":       $gray-600,
+  "gray-dark":  $gray-800
+);
+
+$theme-colors: (
+  "primary":    $blue-700,
+  "secondary":  $secondary,
+  "success":    $success,
+  "info":       $info,
+  "warning":    $warning,
+  "danger":     $danger,
+  "light":      $light,
+  "dark":       $dark
+);
+
+.btn-teal       { background-color: $teal-600;}
+.btn-teal:hover { background-color: $teal-700;}
+
+.btn-danger       { background-color: $red-600; border-color:$red-600;}
+.btn-danger:hover { background-color: $red-500; border-color:$red-500;}
+
+.btn-cyan       { background-color: $cyan-600;}
+.btn-cyan:hover { background-color: $cyan-500;}
+
+.btn-warning        { background-color: $yellow-400 }
+.btn-warning:hover  { background-color: $yellow-300 }
+
+.btn-success        { background-color: $green-400; border-color:$green-400; }
+.btn-success:hover  { background-color: $green-300; border-color:$green-300;}
+
+
+.btn-primary        { background-color: $blue-400; border-color:$blue-400; }
+.btn-primary:hover  { background-color: $blue-300; border-color:$blue-300;}
+
+
+
+.form-check-input:checked { 
+  background-color: $blue-600;
+  border-color: $blue-600;
+}
+
+#description {
+  background-color: $gray-900;
+  border-color: $teal-300;
+  color: $white;
+}

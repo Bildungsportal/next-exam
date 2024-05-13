@@ -1,0 +1,8 @@
+# ninja log v5
+4	781	6703516063859628	app/CMakeFiles/disable-shortcuts.dir/mainwindow.c.obj	3bb5eeb4e75a5168
+800	1200	6703516068171165	app/CMakeFiles/disable-shortcuts-hook.dir/hook.c.obj	ba3f4f8f29ecbb3
+1	843	6703516063752204	app/CMakeFiles/disable-shortcuts.dir/app.c.obj	80c0a8d910880426
+5	1038	6703516066349841	app/CMakeFiles/disable-shortcuts.dir/resource.rc.res	54644308a4dbd899
+1	1195	6703518016921718	app/disable-shortcuts-hook.dll	6a2ddda33fe08325
+1	1195	6703518016921718	app/disable-shortcuts-hook.lib	6a2ddda33fe08325
+1196	1854	6703518029211121	app/disable-shortcuts.exe	87917bc8dc0e901a
