@@ -1,3 +1,9 @@
+ /**
+  * Leider ist es so, dass Electron Builder derzeit nur CommonJS-Module unterstützt, 
+  * wenn Skripte in Hooks wie afterSign definiert sind. 
+  * Das bedeutet, dass es keine native Unterstützung für ES6-Module in diesem spezifischen Kontext gibt.
+  */
+ 
  require('dotenv').config();
  const { notarize } = require('@electron/notarize');
 

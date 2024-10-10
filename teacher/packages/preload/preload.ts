@@ -1,6 +1,6 @@
 /**
  * @license GPL LICENSE
- * Copyright (c) 2021-2023 Thomas Michael Weissel
+ * Copyright (c) 2021 Thomas Michael Weissel
  * 
  * This program is free software: you can redistribute it and/or modify it 
  * under the terms of the GNU General Public License as published by the Free Software Foundation,
@@ -17,46 +17,25 @@
 
 /**
  * This is used to preload packages for the renderer process of electron (the frontend)
+ * it doesn't seem possible to use es6 standard here - the problem lies within vite build server and electron
  */
 
 
-import { contextBridge, ipcRenderer } from 'electron'
 
-let config = ipcRenderer.sendSync('getconfig')  // we need to fetch the updated version of the systemconfig from express api (server.js)
+const { contextBridge, ipcRenderer } = require('electron');
 
-
-/** document ready */
-function domReady(condition: DocumentReadyState[] = ['complete', 'interactive']) {
-    return new Promise(resolve => {
-        if (condition.includes(document.readyState)) {
-            resolve(true)
-        } 
-        else {
-            document.addEventListener('readystatechange', () => {
-                if (condition.includes(document.readyState)) {
-                resolve(true)
-                }
-            })
-        }
-    })
-}
-
-;(async () => {
-    await domReady()
-})()
+let config = ipcRenderer.sendSync('getconfig')
 
 
-// --------- Expose some API to the Renderer process. ---------
-contextBridge.exposeInMainWorld('ipcRenderer', withPrototype(ipcRenderer))
-contextBridge.exposeInMainWorld('config', config )  // expose configuration (readonly) to the renderer (frontend)
+// Expose configuration (readonly) to the renderer process
+contextBridge.exposeInMainWorld('config', config);
 
-// `exposeInMainWorld` can't detect attributes and methods of `prototype`, manually patching it.
-function withPrototype(obj: Record<string, any>): Record<string, any> {
-    const protos = Object.getPrototypeOf(obj)
-    for (const [key, value] of Object.entries(protos)) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) continue
-        if (typeof value === 'function') {obj[key] = function (...args: any) { return value.call(obj, ...args)  }  } // Some native APIs, like `NodeJS.EventEmitter['on']`, don't work in the Renderer process. Wrapping them into a function
-        else { obj[key] = value }
-    }
-    return obj
-}
+// Expose ipcRenderer methods safely via contextBridge
+contextBridge.exposeInMainWorld('ipcRenderer', {
+    send: (channel, data) => ipcRenderer.send(channel, data),
+    sendSync: (channel, data) => ipcRenderer.sendSync(channel, data),
+    on: (channel, func) => ipcRenderer.on(channel, (event, ...args) => func(...args)),
+    invoke: (channel, data) => ipcRenderer.invoke(channel, data), // invoke für asynchrone IPC-Kommunikation
+    removeListener: (channel, listener) => ipcRenderer.removeListener(channel, listener), // Entfernt einen Listener
+    removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel), // Entfernt alle Listener für einen Channel
+  });

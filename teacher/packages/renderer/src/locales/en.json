@@ -90,6 +90,8 @@
         "print": "print",
         "preview": "preview",
         "send": "send",
+        "activate":"activate",
+        "Activate":"Activate",
         "virtualized": "virtual environment detected",
         "delete": "delete",
         "filedelete": "Do you really want to delete this file/folder?",
@@ -140,7 +142,14 @@
         "noprinter": "no printer found",
         "directprint": "direct  print",
         "open": "open file in external viewer",
-        "ocr": "activate OCR saftey feature"
+        "ocr": "activate OCR saftey feature",
+        "audiorepeattitle": "Audio restrictions",
+        "audioallow": "no restrictions",
+        "audiorepeat1": "repetition",
+        "audiorepeat2": "repetitions",
+        "bildungsportal": "Bildungsportal",
+        "groups":"activate groups",
+        "extendedsettings": "Extended Settings"
     },
     "control": {
         "tokennotvalid": "token is not valid",
@@ -164,7 +173,8 @@
         "staterestore": "safe exam state restored",
         "virtualized": "next-exam is run in a virtual machine",
         "versionmismatch": "Application versions mismatch",
-        "examrequest": "Exams requested"
+        "examrequest": "Exams requested",
+        "biprequired": "Bildungsportal authentification mandatory!"
     },  
     "data": {
         "tokennotvalid": "the token is not valid",

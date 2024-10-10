@@ -14,6 +14,7 @@ function watchMain(server) {
   const env = Object.assign(process.env, {
     VITE_DEV_SERVER_HOST: address.address,
     VITE_DEV_SERVER_PORT: address.port,
+  
   })
 
 

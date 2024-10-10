@@ -23,16 +23,23 @@ import childProcess from 'child_process'
 import screenshot from 'screenshot-desktop'
 import {disableRestrictions, enableRestrictions} from './platformrestrictions.js';
 import fs from 'fs' 
-import Nodehun from 'nodehun'   // npm rebuild nodehun --update-binary  on mac after build to run in dev mode
+
+
+//import Nodehun from 'nodehun'   
+const NodehunModule = await import('./native-loader.cjs');  // npm rebuild nodehun --update-binary  on mac after build to run in dev mode
+const { default: Nodehun } = NodehunModule;  // Access the default export
+
 import log from 'electron-log/main'
 import {SchedulerService} from './schedulerservice.ts'
+
+const __dirname = import.meta.dirname;
+
+
+
 
   ////////////////////////////////////////////////////////////
  // Window handling (ipcRenderer Process - Frontend) START
 ////////////////////////////////////////////////////////////
-
-
-
 
 
 class WindowHandler {
@@ -52,6 +59,8 @@ class WindowHandler {
     init (mc, config) {
         this.multicastClient = mc
         this.config = config
+        this.checkWindowInterval = new SchedulerService(this.windowTracker.bind(this), 1000)
+        this.focusTargetAllowed = true
     }
 
     // return electron window in focus or an other electron window depending on the hierachy
@@ -68,7 +77,7 @@ class WindowHandler {
     }
 
 
-    createBiPLoginWin() {
+    createBiPLoginWin(biptest) {
         this.bipwindow = new BrowserWindow({
             title: 'Next-Exam',
             icon: join(__dirname, '../../public/icons/icon.png'),
@@ -86,7 +95,8 @@ class WindowHandler {
            // transparent: true
         })
      
-        this.bipwindow.loadURL(`https://www.bildung.gv.at/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)
+        if (biptest){   this.bipwindow.loadURL(`https://q.bildung.gv.at/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)   }
+        else {          this.bipwindow.loadURL(`https://www.bildung.gv.at/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)   }
 
         this.bipwindow.once('ready-to-show', () => {
             this.bipwindow.show()
@@ -117,9 +127,9 @@ class WindowHandler {
         this.bipwindow.webContents.on('will-redirect', (event, url) => {
             log.info('Redirecting to:', url);
             // Prüfen, ob die URL das gewünschte Format hat
-            if (url.startsWith('moodlemobile://')) {
+            if (url.startsWith('bildungsportal://')) {
                 event.preventDefault(); // Verhindert den Standard-Redirect
-                const prefix = 'moodlemobile://token=';
+                const prefix = 'bildungsportal://token=';
 
                 const token = url.substring(prefix.length);
                 
@@ -456,33 +466,43 @@ class WindowHandler {
          * HANDLE SPELLCHECK 
          */ 
       
-        if (serverstatus.spellcheck && serverstatus.spellchecklang){  
+        if (serverstatus.languagetool && serverstatus.spellchecklang){  
             const dictionaryPath = join( __dirname,'../../public/dictionaries');
             let language = serverstatus.spellchecklang
             let affix = null;
             let dictionary = null;
 
-            if (language === "en-GB") {
-                affix       = fs.readFileSync(join(dictionaryPath, 'en_US.aff'))
-                dictionary  = fs.readFileSync(join(dictionaryPath, 'en_US.dic'))
+            log.info(`windowhandler @ Handle Spellcheck: activating Hunspell Fallback Backend for lang: ${language}`)
+
+            try {
+                if (language === "en" || language === "en-GB") {
+                    affix       = fs.readFileSync(join(dictionaryPath, 'en_US.aff'))
+                    dictionary  = fs.readFileSync(join(dictionaryPath, 'en_US.dic'))
+                }
+                else if (language === "de" || language === "de-DE"){
+                    affix       = fs.readFileSync(join(dictionaryPath, 'de_DE_frami.aff'))
+                    dictionary  = fs.readFileSync(join(dictionaryPath, 'de_DE_frami.dic'))
+                }
+                else if (language === "it" || language === "it-IT"){
+                    affix       = fs.readFileSync(join(dictionaryPath, 'it_IT.aff'))
+                    dictionary  = fs.readFileSync(join(dictionaryPath, 'it_IT.dic'))
+                }
+                else if (language === "fr" || language === "fr-FR"){
+                    affix       = fs.readFileSync(join(dictionaryPath, 'fr.aff'))
+                    dictionary  = fs.readFileSync(join(dictionaryPath, 'fr.dic'))
+                }
+                else if (language === "es" || language === "es-ES"){
+                    affix       = fs.readFileSync(join(dictionaryPath, 'es_ES.aff'))
+                    dictionary  = fs.readFileSync(join(dictionaryPath, 'es_ES.dic'))
+                }
+                this.nodehun  = new Nodehun(affix, dictionary)
             }
-            else if (language === "de"){
-                affix       = fs.readFileSync(join(dictionaryPath, 'de_DE_frami.aff'))
-                dictionary  = fs.readFileSync(join(dictionaryPath, 'de_DE_frami.dic'))
-            }
-            else if (language === "it"){
-                affix       = fs.readFileSync(join(dictionaryPath, 'it_IT.aff'))
-                dictionary  = fs.readFileSync(join(dictionaryPath, 'it_IT.dic'))
-            }
-            else if (language === "fr"){
-                affix       = fs.readFileSync(join(dictionaryPath, 'fr.aff'))
-                dictionary  = fs.readFileSync(join(dictionaryPath, 'fr.dic'))
-            }
-            else if (language === "es"){
-                affix       = fs.readFileSync(join(dictionaryPath, 'es_ES.aff'))
-                dictionary  = fs.readFileSync(join(dictionaryPath, 'es_ES.dic'))
-            }
-            this.nodehun  = new Nodehun(affix, dictionary)
+            catch (e) { log.error(e);}
+
+
+
+
+
         }
         
 
@@ -575,6 +595,14 @@ class WindowHandler {
 
        
 
+ 
+        this.examwindow.on('app-command', (e, cmd) => {
+            // 'browser-backward' und 'browser-forward' sind die Befehle, die beim Klick auf die Maustasten gesendet werden
+            if (cmd === 'browser-backward' || cmd === 'browser-forward') {
+                log.warn("no navigation allowed")
+                e.preventDefault(); // Verhindern Sie das Standardverhalten
+            }
+        });
 
 
 
@@ -596,12 +624,14 @@ class WindowHandler {
                 
                 this.examwindow.setVisibleOnAllWorkspaces(true); 
 
-                enableRestrictions(this.examwindow)  // enable restriction only when exam window is fully loaded and in focus
+                enableRestrictions(this)  // enable restriction only when exam window is fully loaded and in focus
                 await this.sleep(2000) // wait an additional 2 sec for windows restrictions to kick in (they steal focus)
                 this.examwindow.focus()
                 this.addBlurListener()
+                
+                this.checkWindowInterval.start() //checks if the active window is next-exam (introduces exceptions for windows)
             }
-            
+            // this.checkWindowInterval.start()
             // this.addBlurListener() // just for dev purposes in order to test blur
 
         })
@@ -613,6 +643,7 @@ class WindowHandler {
             else {
                 this.examwindow.destroy(); 
                 this.examwindow = null;
+                this.checkWindowInterval.stop()
                 disableRestrictions(this.examwindow)
                 this.multicastClient.clientinfo.exammode = false
                 this.multicastClient.clientinfo.focus = true
@@ -637,11 +668,6 @@ class WindowHandler {
             log.info("windowhandler @ lock365: stopping lockScheduler")
             this.lockScheduler.stop()
         }
-        
-
- 
-
-
     }
 
 
@@ -663,7 +689,7 @@ class WindowHandler {
             center:true,
             width: 1000,
             height: 600,
-            minWidth: 760,
+            minWidth: 850,
             minHeight: 600,
             show: false,
             webPreferences: {
@@ -691,26 +717,14 @@ class WindowHandler {
         });
 
         this.mainwindow.on('close', async  (e) => {   //ask before closing
-            if (!this.config.development && !this.mainwindow.allowexit) {
-                if (this.mainwindow.closetriggered) { app.quit(); return;}
-                let choice = dialog.showMessageBoxSync(this.mainwindow, {
-                    type: 'question',
-                    buttons: ['Ja', 'Nein'],
-                    title: 'Programm Beenden',
-                    message: 'Sind sie sicher?',
-                    cancelId: 1
-                });
-                if(choice == 1){ e.preventDefault(); }
-                else {
-                    this.mainwindow.closetriggered = true
-                    app.quit()
-                }
+            if (!this.config.development && !this.mainwindow.allowexit) {  // allowexit ist ein override vom context menu oder screenshot test. dieser kann die app schliessen
+                this.mainwindow.hide();
+                e.preventDefault();
+                return
             }
-            if (this.config.development){
-                app.quit() 
-            }
+     
         });
-
+        
         this.mainwindow.once('ready-to-show', () => {
            // this.splashwin.close()
             this.mainwindow.show()
@@ -813,6 +827,47 @@ class WindowHandler {
      * Additional Functions
      */
 
+
+    async getActiveWindow() {
+
+        let activewinPath = "active-win"
+        if (app.isPackaged) { activewinPath = join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'active-win', 'index.js') }
+
+        const getwin = await import(activewinPath);  // https://www.npmjs.com/package/get-windows
+        return getwin;
+    }
+
+
+    // this function uses active-win to receive name and url from active window - yet another way to figure out if the focus is still on nextexam
+    // this is used to introduce exemptions for the blur listener
+    // (downgraded from get-windows because of napi v9 issue) https://github.com/sindresorhus/get-windows/issues/186
+    async windowTracker(){
+        try{
+            const getwin = await this.getActiveWindow();
+            const activeWindow = await getwin.default()
+            
+            if (activeWindow && activeWindow.owner && activeWindow.owner.name) {
+                let name = activeWindow.owner.name
+                let wpath = activeWindow.owner.path
+               
+                if (name.includes("exam") || name.includes("next")  || name.includes("Electron")|| name.includes("electron") ||  wpath.includes("EaseOfAccessDialog")  ){  
+                    // fokus is on allowed window instance
+                    this.focusTargetAllowed = true
+                }
+                else { //focus is not on next-exam or any other allowed window
+                    if (this.focusTargetAllowed){  //log just once
+                        log.warn(`windowhandler @ windowTracker: focus lost event was triggered. app: ${wpath} - ${name} `)
+                    }
+                    this.multicastClient.clientinfo.focus = false
+                    this.focusTargetAllowed = false
+                }
+            }
+        }
+        catch(err){
+            log.error(`windowhandler @ windowTracker: ${err}`) 
+        }
+    }
+
     //adds blur listener when entering exammode   // blur event isnt fired on macos MISSIONCONTROL (which cant be deactivated anymore) - damn you apple!
     addBlurListener(window = "examwindow"){
         log.info("windowhandler @ addBlurListener: adding blur listener")
@@ -831,18 +886,31 @@ class WindowHandler {
     }
     //removes blur listener when leaving exam mode
     removeBlurListener(){
-        log.info("windowhandler @ removeBlurListener: removing blur listener")
-        this.examwindow.removeAllListeners('blur')
+        if (this.examwindow){
+            this.examwindow.removeAllListeners('blur')
+            log.info("windowhandler @ removeBlurListener: removing blur listener")
+        }
     }
     // implementing a sleep (wait) function
     sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
     //student fogus went to another window
-    blurevent(winhandler) { 
+    async blurevent(winhandler) { 
+
         log.info("windowhandler @ blurevent: student tried to leave exam window")
+        await this.windowTracker()  //checks if new focus window is allowed
+        log.info("windowtracker check done...")
+        
         if (winhandler.screenlockwindows.length > 0) { return }// do nothing if screenlockwindow stole focus // do not trigger an infinite loop between exam window and screenlock window (stealing each others focus)
-            
+        if (winhandler.focusTargetAllowed){ 
+            winhandler.examwindow.moveTop();
+            winhandler.examwindow.show(); 
+            winhandler.examwindow.focus(); //trotzdem focus zurück auf die app
+            log.warn(`windowhandler @ blurevent: blurevent was triggered but target is allowed`)
+            return
+        } 
+        
         winhandler.multicastClient.clientinfo.focus = false   //inform the teacher
         
         winhandler.examwindow.moveTop();
@@ -858,19 +926,7 @@ class WindowHandler {
         //     exec('pactl set-sink-mute `pactl get-default-sink` 0');
         // }
         
-        //we could play a sound file here.. tbd.
-        
-        // if (this.multicastClient.clientinfo.examtype === "eduvidual" || this.multicastClient.clientinfo.examtype === "gforms" ){
-        //     // this only works in "eduvidual" mode because otherwise there is no element "warning" to append (clicking on an external link is considered a blur event)
-        //     winhandler.examwindow.webContents.executeJavaScript(` 
-        //                 if (typeof warning !== 'undefined'){
-        //                     document.body.appendChild(warning); 
-        //                     document.getElementById('nextexamwaring').innerHTML = "Leaving exam mode is not allowed";
-        //                     warning.setAttribute('style', 'text-align: center; padding: 20px;display: block; background-color:#ffc107; border-radius:5px;  z-index:100000; position: absolute; top: 50%; left: 50%; margin-left: -10vw; margin-top: -5vh;width:20vw; height: 10vh; box-shadow: 0 0 10px rgba(0,0,0,0.4); ');
-        //                     setTimeout( ()=>{ document.getElementById('nextexamwaring').style.display = 'none'  } , 5000); 
-        //                 }` , true)
-        //     .catch(err => log.error(err))
-        // }
+        //we could play a sound file here.. tbd.  
     }
     //special blur event for temporary low security screenlock
     blureventScreenlock(winhandler) { 

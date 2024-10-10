@@ -26,9 +26,9 @@ import i18n from '../../../../renderer/src/locales/locales.js'
 const { t } = i18n.global
 import archiver from 'archiver'
 import { PDFDocument, rgb } from 'pdf-lib/dist/pdf-lib.js'  // we import the complied version otherwise we get 1000 sourcemap warnings
-import log from 'electron-log/main';
-import pdf from 'pdf-parse';
+import log from 'electron-log';
 import moment from 'moment';
+import pdf from 'pdf-parse';
 
 
 /**
@@ -718,12 +718,23 @@ router.post('/upload/:servername/:servertoken/:studenttoken', async (req, res, n
             files.push({ name:filename , path:absoluteFilepath });
         }
 
-       
         // inform students about this send-file request so that they trigger a download request for the given files
         if (studenttoken === "all"){
             for (let student of mcServer.studentList){ 
                 student.status['fetchfiles'] = true  
                 student.status['files'] =  files
+            }
+        }
+        else if (studenttoken == "a" || studenttoken == "b"){
+            let groupArray = []
+            if (studenttoken == "a"){groupArray = mcServer.serverstatus.groupA }
+            if (studenttoken == "b"){groupArray = mcServer.serverstatus.groupB }
+            for (let name of groupArray){
+                let student = mcServer.studentList.find(element => element.clientname === name)
+                if (student) {  
+                    student.status['fetchfiles']= true 
+                    student.status['files'] = files
+                }   
             }
         }
         else {

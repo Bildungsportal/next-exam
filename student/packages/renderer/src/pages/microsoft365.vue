@@ -3,6 +3,8 @@
        
         <!-- HEADER START -->
         <exam-header
+        :serverstatus="serverstatus"
+        :clientinfo="clientinfo"
         :online="online"
         :clientname="clientname"
         :exammode="exammode"
@@ -12,6 +14,7 @@
         :currenttime="currenttime"
         :timesinceentry="timesinceentry"
         :componentName="componentName"
+        :localLockdown="localLockdown"
         @reconnect="reconnect"
         @gracefullyexit="gracefullyexit"
         ></exam-header>
@@ -88,6 +91,8 @@ export default {
             electron: this.$route.params.electron,
             pincode : this.$route.params.pincode,
             serverstatus: this.$route.params.serverstatus,
+            localLockdown: this.$route.params.localLockdown,
+            config: this.$route.params.config,
             clientinfo: null,
             entrytime: 0,
             timesinceentry: 0,

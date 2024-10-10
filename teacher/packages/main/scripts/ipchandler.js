@@ -22,13 +22,20 @@ import fs from 'fs'
 //const { t } = i18n.global
 import {  ipcMain, dialog } from 'electron'
 import {join} from 'path'
-import log from 'electron-log/main';
+import log from 'electron-log';
+
+import pdfToPrinter from "pdf-to-printer";
+const { print: printWin } = pdfToPrinter;
+
 import { print } from "unix-print";
-import { print as printWin } from "pdf-to-printer";
+//import { print as printWin } from "pdf-to-printer";
 import { exec } from 'child_process';
+import defaultGateway from'default-gateway';
+import ip from 'ip'
+import languageToolServer from './lt-server';
+import server from "../../server/src/server.js"
+import checkDiskSpace from 'check-disk-space';
 
-
-const checkDiskSpace = require('check-disk-space').default
 
 class IpcHandler {
     constructor () {
@@ -42,22 +49,68 @@ class IpcHandler {
         this.WindowHandler = wh  
         this.CommunicationHandler = ch
 
+
+
+        /**
+         * Start languageTool API Server (with Java JRE)
+         * Runs at localhost 8088
+         * students can access the api via teacher api on 22422
+         * (we do not expose the lt api because it makes it more complex and would need yet anoter port to open)
+        */ 
+        ipcMain.handle('startLanguageTool', (event) => { 
+            try{
+                languageToolServer.startServer();
+            }
+            catch(err){
+                return false
+            }
+            return true
+        }) 
+
+        // returns the current serverstatus object of the given server(name)
+        ipcMain.handle('getserverstatus', (event, servername) => { 
+            const mcServer = this.config.examServerList[servername]
+            if (mcServer ) { return mcServer.serverstatus  }
+            else {           return false  }
+        }) 
+
+
+        // stops the current exam server 
+        // (this is a copy of the /stopserver/:servername route in control.js )
+        // rethink concept that local requests go to the API (this had a non electron server version in mind but makes no sense in electron only app)
+        ipcMain.handle('stopserver', (event, servername) => { 
+            const mcServer = this.config.examServerList[servername]
+            if (mcServer ) { 
+                mcServer.broadcastInterval.stop()
+                mcServer.server.close();
+                delete config.examServerList[servername]    //delete mcServer
+                return true
+            }
+            else {  return false  }
+        }) 
+
+
+        // opens a loginwindow for microsoft 365
         ipcMain.on('openmsauth', (event) => { this.WindowHandler.createMsauthWindow();  event.returnValue = true })  
 
+
+        // returns current config
         ipcMain.on('getconfig', (event) => {  
             event.returnValue = this.copyConfig(config); 
         })  
 
+
+        // returns current config async
         ipcMain.handle('getconfigasync', (event) => {  
             return this.copyConfig(config)
         })  
 
+
+        // log out of microsoft 365
         ipcMain.handle('resetToken', async (event) => { 
-            
             const win = this.WindowHandler.mainwindow; // Oder wie auch immer Sie auf Ihr BrowserWindow-Objekt zugreifen
             if (!win) return;
 
-            
             await win.webContents.session.clearCache();
             await win.webContents.session.clearStorageData({
                 storages: ['cookies']
@@ -99,12 +152,10 @@ class IpcHandler {
 
 
         ipcMain.handle('checkDiscspace', async () => {
-       
                 let diskSpace = await checkDiskSpace(config.workdirectory);
                 let free = Math.round(diskSpace.free / 1024 / 1024 / 1024 * 1000) / 1000;
                 //log.info("ipchandler @ checkDiskspace:",diskSpace)
-                return free;
-              
+                return free;    
         });
 
         ipcMain.handle('setworkdir', async (event, arg) => {
@@ -113,7 +164,7 @@ class IpcHandler {
                 log.info('directories selected', result.filePaths)
                 let message = ""
                 try {
-                    let testdir = join(result.filePaths[0]   , config.examdirectory)
+                    let testdir = join(result.filePaths[0]   , config.serverdirectory)
                     if (!fs.existsSync(testdir)){fs.mkdirSync(testdir)}
                     message = "success"
                     config.workdirectory = testdir
@@ -194,101 +245,8 @@ class IpcHandler {
 
 
         /**
-         * print pdf (or image) in new browserwindow process detached from the current exam view
+         * print a pdf file via print() on linux, mac and printWin() on windows
          */
-        // ipcMain.handle('printpdf-withoutoptions', async (event, pdfurl, defaultPrinter) => {
-        //     log.info(`ipchandler: printpdf: ${pdfurl} defaultprinter: ${defaultPrinter}`)
-            
-        //     if (process.platform === "linux"){  //there is a problem on ubuntu and mint with the window.print() function  https://github.com/electron/electron/issues/31151
-        //         let isKDE = false
-        //         try {  isKDE = childProcess.execSync("echo $XDG_CURRENT_DESKTOP"); } 
-        //         catch (err) { log.error(`Error: ${err.message}`);  }
-
-        //         if (!isKDE.toString().trim().toLowerCase().includes('kde')){
-        //             try { childProcess.exec(`xdg-open ${pdfurl}`)  }
-        //             catch(err){log.error(err)}
-        //             return    //exit here - other operating systems may directly launch the print dialog and do not need external apps
-        //         }
-        //         log.info("ipchandler: printpdf: printing on kde desktop")
-        //     }
-            
-            
-        //     let win = new BrowserWindow({ 
-        //         show: false, 
-        //         webPreferences: {
-        //             webSecurity: false,
-        //             nodeIntegration: false,
-        //             contextIsolation: true,
-        //         }
-        //     });
-
-        //     let printOptions = {}
-        //     if (defaultPrinter){   // we do not use printoptions YET but if we can chose the default printer via dashboard ui then do not ask again here
-        //         printOptions = {
-        //             silent: true,
-        //             printBackground: true,
-        //             deviceName: defaultPrinter // Setzen des gewählten Druckers
-        //           };
-        //     }
-        
-        //     // Lesen Sie die PDF-Datei und konvertieren Sie sie in Base64
-        //     let fBase64 = ""
-        //     try {
-        //         const fBuffer = fs.readFileSync(pdfurl);
-        //         fBase64 = fBuffer.toString('base64');
-        //     }
-        //     catch (err) {
-        //         log.info(`ipchandler: printpdf: ${err}`)
-        //         win.show()
-        //     }
-           
-
-        //     let framesource =  `<img src="data:image/png;base64,${fBase64}" alt="PNG or JPG" style="width:100%;" ">`;
-        //     if (this.isPdfUrl(pdfurl)){
-        //         framesource = `<iframe id="pdfFrame" src="data:application/pdf;base64,${fBase64}" style="width:100%; height:100vh;""></iframe>`
-        //     }
-           
-        //     const htmlContent = `
-        //         <!DOCTYPE html>
-        //         <html>
-        //         <head>
-        //             <title>PDF Viewer</title>
-        //             <script>
-        //                 function printPdf() {
-        //                     const iframe = document.getElementById('pdfFrame');
-        //                     iframe.contentWindow.print();
-        //                 }
-        //                 function printPage() {
-        //                     window.print(); // Diese Zeile druckt die gesamte Seite, einschließlich des iframes
-        //                 }
-        //             </script>
-        //         </head>
-        //         <body>
-        //             ${framesource}  
-        //         </body>
-        //         </html>
-        //     `;
-        //     const dataUrl = `data:text/html;charset=UTF-8,${encodeURIComponent(htmlContent)}`;
-        //     win.loadURL(dataUrl);
-
-        //     win.webContents.on('did-finish-load', () => {
-        //         log.info("ipchandler: printpdf: finished loading content preview window - opening print dialog")
-        //         let jscode = `printPage()`
-        //         if (this.isPdfUrl(pdfurl)){ jscode = `printPdf()` }
-
-        //         win.webContents.executeJavaScript(jscode, true, () => {  // Code executed, now close the window
-        //             win.close();
-        //         }).catch(err => {
-        //             log.error(err);
-        //             win.show()
-        //             win.webContents.openDevTools()
-        //         });
-        //     });
-        // })
-
-
-
-
         ipcMain.handle('printpdf', async (event, pdfurl, defaultPrinter) => {
             log.info(`ipchandler: printpdf: ${pdfurl} defaultprinter: ${defaultPrinter}`)
             
@@ -321,7 +279,50 @@ class IpcHandler {
 
 
 
+        /**
+         * re-check hostip and enable multicast client
+         */ 
+        ipcMain.on('checkhostip', (event) => { 
+            let address = false
+            try { address = this.multicastClient.client.address() }
+            catch (e) { /* log.error("ipcHandler @ checkhostip: multicastclient not running") */ }
+            if (address) { event.returnValue = this.config.hostip }
 
+
+            try { //bind to the correct interface
+                const {gateway, interface: iface} =  defaultGateway.v4.sync()
+                this.config.hostip = ip.address(iface)    // this returns the ip of the interface that has a default gateway..  should work in MOST cases.  probably provide "ip-options" in UI ?
+                this.config.gateway = true
+            }
+            catch (e) {
+                this.config.hostip = false
+                this.config.gateway = false
+            }
+
+            if (!this.config.hostip) {
+                try {
+                    this.config.hostip = ip.address() //this delivers an ip even if gateway is not set
+                }  
+                catch (e) {
+                    log.error("ipcHandler @ checkhostip: Unable to determine ip address")
+                    this.config.hostip = false
+                    this.config.gateway = false
+                }
+            }
+           
+            // check if multicast client is running - otherwise start it
+            if (this.config.hostip == "127.0.0.1") { this.config.hostip = false }
+            if (this.config.hostip && !address ) {  //probably a temporary disconnect
+                this.multicastClient.init(this.config.gateway) 
+                if (server && !server.listening){
+                    server.listen(config.serverApiPort, () => {  // start express API
+                        log.info(`main: Express restarting on https://${config.hostip}:${config.serverApiPort}`)
+                    }) 
+                }
+              
+            }
+            event.returnValue = this.config.hostip 
+        })
 
 
 
@@ -409,9 +410,10 @@ class IpcHandler {
         let configCopy = {
             development: conf.development, 
             showdevtools: conf.showdevtools,
+            bipIntegration: conf.bipIntegration,
             workdirectory: conf.workdirectory,
             tempdirectory: conf.tempdirectory,
-            examdirectory: conf.examdirectory,
+            serverdirectory: conf.serverdirectory,
             serverApiPort: conf.serverApiPort,
             multicastClientPort: conf.multicastClientPort,
             multicastServerClientPort: conf.multicastServerClientPort,

@@ -2,6 +2,8 @@
 
     <!-- HEADER START -->
     <exam-header
+    :serverstatus="serverstatus"
+      :clientinfo="clientinfo"
       :online="online"
       :clientname="clientname"
       :exammode="exammode"
@@ -11,6 +13,7 @@
       :currenttime="currenttime"
       :timesinceentry="timesinceentry"
       :componentName="componentName"
+      :localLockdown="localLockdown"
       @reconnect="reconnect"
       @gracefullyexit="gracefullyexit"
     ></exam-header>
@@ -26,29 +29,39 @@
     </div>
     <!-- filelist end -->
     
+
     <!-- angabe/pdf preview start -->
-    <div id=preview class="fadeinfast p-4">
-        <embed src="" id="pdfembed"/>
+    <div id="preview" class="fadeinfast p-4">
+        <div class="embed-container">
+            <embed src="" id="pdfembed"></embed>
+        </div>
     </div>
     <!-- angabe/pdf preview end -->
-   
 
-    <div id="content">
-        <!-- focus warning start -->
-        <div v-if="!focus" class="focus-container">
-            <div id="focuswarning" class="infodiv p-4 d-block focuswarning" >
-                <div class="mb-3 row">
-                    <div class="mb-3 "> {{$t('editor.leftkiosk')}} <br> {{$t('editor.tellsomeone')}} </div>
-                    <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32" >
-                </div>
+
+    <!-- focus warning start -->
+    <div v-if="!focus" class="focus-container">
+        <div id="focuswarning" class="infodiv p-4 d-block focuswarning" >
+            <div class="mb-3 row">
+                <div class="mb-3 "> {{$t('editor.leftkiosk')}} <br> {{$t('editor.tellsomeone')}} </div>
+                <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32" >
             </div>
         </div>
-        <!-- focuswarning end  -->
-
-        <webview id="webview" autosize="on" :src="url"></webview>
-
     </div>
+    <!-- focuswarning end  -->
+
+
+       
+    <div v-if="isLoading" class="overlay">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <webview id="webview" autosize="on" :src="url" :style="{ visibility: isLoading ? 'hidden' : 'visible' }"></webview>
+
+
 </template>
+
 
 <script>
 import moment from 'moment-timezone';
@@ -56,11 +69,11 @@ import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
 
 
-
 export default {
     data() {
         return {
             componentName: 'Moodle Test',
+       
             online: true,
             focus: true,
             exammode: false,
@@ -79,7 +92,7 @@ export default {
             pincode : this.$route.params.pincode,
             serverstatus: this.$route.params.serverstatus,
             config: this.$route.params.config,
-            
+            localLockdown: this.$route.params.localLockdown,
             clientinfo: null,
             entrytime: 0,
             timesinceentry: 0,
@@ -88,24 +101,26 @@ export default {
             localfiles: null,
             battery: null,
             url: null,
-            currentpreview: null
+            currentpreview: null,
+            isLoading: true
         }
     }, 
     components: { ExamHeader },  
     mounted() {
       
-        if (this.serverstatus.moodleDomain === "eduvidual.at"){
-            this.url =`https://eduvidual.at/mod/${this.serverstatus.moodleTestType}/view.php?id=${this.serverstatus.moodleTestId}`    // https://www.eduvidual.at/mod/quiz/view.php?id=4172287   
-        }
-        else {
-            this.url =`https://${this.serverstatus.moodleDomain}/mod/${this.serverstatus.moodleTestType}/view.php?id=${this.serverstatus.moodleTestId}`    // https://www.eduvidual.at/mod/quiz/view.php?id=4172287  
-        }
+        this.url = this.serverstatus.moodleURL
+
+        // if (this.serverstatus.moodleDomain === "eduvidual.at"){
+        //     this.url =`https://eduvidual.at/mod/${this.serverstatus.moodleTestType}/view.php?id=${this.serverstatus.moodleTestId}`    // https://www.eduvidual.at/mod/quiz/view.php?id=4172287   
+        // }
+        // else {
+        //     this.url =`https://${this.serverstatus.moodleDomain}/mod/${this.serverstatus.moodleTestType}/view.php?id=${this.serverstatus.moodleTestId}`    // https://www.eduvidual.at/mod/quiz/view.php?id=4172287  
+        // }
 
         this.currentFile = this.clientname
         this.entrytime = new Date().getTime()  
          
         this.$nextTick(() => { // Code that will run only after the entire view has been rendered
-            
             
             // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
             this.fetchinfointerval = new SchedulerService(5000);
@@ -130,7 +145,7 @@ export default {
             const iframe = shadowRoot.querySelector('iframe');
             if (iframe) { iframe.style.height = '100%'; } 
 
-   
+         
 
             // add some eventlisteners once
             document.querySelector("#preview").addEventListener("click", function() {  
@@ -139,43 +154,61 @@ export default {
                 URL.revokeObjectURL(this.currentpreview);
             });
 
+ 
 
+            webview.addEventListener('did-finish-load', () => {
 
-            webview.addEventListener('dom-ready', () => {
-                if (config.showdevtools){ webview.openDevTools();   }
-                const css = `
-                    .branding { display: none !important; }
-                    #header { display: none !important; }
-                    .drawer-toggler { display: none !important; }
-                    #page-footer { display: none !important; }
-                    #theme_boost-drawers-courseindex { display: none !important; }
-                    #page.drawers {margin-top:0px !important;}
-                    #page-wrapper {padding-top:0px !important;}
-                    .navbar, #nav-drawer, #page-header {display: none !important;}
-                    body {margin-left: 0px !important;}
-                `;
-                webview.executeJavaScript(`
-                    (() => {  // Anonyme Funktion für eigenen Scope sonst wird beim reload der page (absenden der form ) die variable erneut deklariert und failed
+                if (config.showdevtools) {webview.openDevTools();  }
+
+                const preloadScriptContent = `
+                    (function() {
+                        const css = \`
+                        * {transition: .1s !important;}
+                        .branding { display: none !important; }
+                        #header { display: none !important; }
+                        .drawer-left-toggle { display: none !important; }
+                       .drawer.drawer-right { top:0 !important; height: 100% !important;}
+                        #page-footer { display: none !important; }
+                        #theme_boost-drawers-courseindex { display: none !important; }
+                        #page.drawers {margin-top:0px !important;}
+                        #page-wrapper {padding-top:0px !important;}
+                        .navbar, #nav-drawer, #page-header {display: none !important;}
+                        body {margin-left: 0px !important;}
+                        #page {height: 100% !important}
+                        #page.drawers.show-drawer-left  {margin-left: 0px !important; padding-left: 3rem !important; }
+                        .bycs-header {display: none !important;}
+                        .mbsfooter {display: none !important;}
+                        \`;
+
                         const style = document.createElement('style');
                         style.type = 'text/css';
-                        style.innerHTML = \`${css}\`;
+                        style.innerHTML = css;
                         document.head.appendChild(style);
-
-                    })();  
-                `);
+                    })();
+                `;
+                webview.executeJavaScript(preloadScriptContent)
+                .then(() => {     this.isLoading = false;  })  // Verberge das Overlay und zeige den Webview-Inhalt
+                .catch((err) => { this.isLoading = false;  })
             });
-
+            
+            
+            webview.addEventListener('did-start-loading', () => { this.isLoading = true;   }); // Zeige das Overlay während des Ladens
+            webview.addEventListener('did-stop-loading', () => {   this.isLoading = false;  });           // Verberge das Overlay, wenn das Laden gestoppt ist
+            
             
             // Event abfangen, wenn eine Navigation beginnt
             webview.addEventListener('will-navigate', (event) => {
-                if (!event.url.includes(this.serverstatus.moodleTestId)){  //we block everything except pages that contain the following keyword-combinations
+                console.log(event.url)
+                if (!event.url.includes(this.serverstatus.moodleTestId)){  //we block everything whithout testID except pages that contain the following keyword-combinations
                     console.log(event.url)
                     //check if this an exception (login, init) - if URL doesn't include either of these combinations - block! EXPLICIT is easier to read ;-)
-                    if ( event.url.includes("startattempt.php") && event.url.includes(this.serverstatus.moodleDomain) )        { console.log(" url allowed") }
-                    else if ( event.url.includes("processattempt.php") && event.url.includes(this.serverstatus.moodleDomain) ) { console.log(" url allowed") }
-                    else if ( event.url.includes("login") && event.url.includes("Microsoft") )                                 { console.log(" url allowed") }
+                    if ( event.url.includes("startattempt.php") && event.url.includes(this.serverstatus.moodleDomain) )        { console.log(" url allowed") }  // moodledomain ohne testid
+                    else if ( event.url.includes("processattempt.php") && event.url.includes(this.serverstatus.moodleDomain) ) { console.log(" url allowed") }  // moodledomain ohne testid
+                    else if ( event.url.includes("login") && event.url.includes("Microsoft") )                                 { console.log(" url allowed") }  // microsoft365 login
+                    else if ( event.url.includes("mysignins") && event.url.includes("microsoft") )                             { console.log(" url allowed") }  // 2fa activation
+                    else if ( event.url.includes("account") && event.url.includes("windowsazure") )                            { console.log(" url allowed") }  // microsoft braucht mehr contact information (telnr)
                     else if ( event.url.includes("login") && event.url.includes("Google") )                                    { console.log(" url allowed") }
-                    else if ( event.url.includes("login") && event.url.includes("microsoftonline") )                           { console.log(" url allowed") }
+                    else if ( event.url.includes("login") && event.url.includes("microsoftonline") )                           { console.log(" url allowed") }  // microsoft365 login
                     else if ( event.url.includes("accounts") && event.url.includes("google.com") )                             { console.log(" url allowed") }
                     else if ( event.url.includes("logout") && event.url.includes(this.serverstatus.moodleDomain) )             { console.log(" url allowed") }
                     else if ( event.url.includes("lookup") && event.url.includes("google") )                                   { console.log(" url allowed") }
@@ -193,7 +226,7 @@ export default {
         });
     },
     methods: { 
-     reconnect(){
+        reconnect(){
             this.$swal.fire({
                 title: this.$t("editor.reconnect"),
                 text:  this.$t("editor.info"),
@@ -266,10 +299,11 @@ export default {
         },
 
 
-        // fetch file from disc - show preview
-        async loadPDF(file){
+         // fetch file from disc - show preview
+         async loadPDF(file){
+            URL.revokeObjectURL(this.currentpreview);
             let data = await ipcRenderer.invoke('getpdfasync', file )
-           
+        
             let isvalid = this.isValidPdf(data)
             if (!isvalid){
                 this.$swal.fire({
@@ -287,27 +321,48 @@ export default {
 
             const pdfEmbed = document.querySelector("#pdfembed");
             pdfEmbed.style.backgroundImage = '';
-            pdfEmbed.style.height = "96vh";
-            pdfEmbed.style.marginTop = "-48vh";
+            pdfEmbed.style.height = "95vh";
+            pdfEmbed.style.width = "67vh";
+            pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0`);
 
-            document.querySelector("#pdfembed").setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0`);
             document.querySelector("#preview").style.display = 'block';
         },
 
-
         // fetch file from disc - show preview
         async loadImage(file){
+            URL.revokeObjectURL(this.currentpreview);
             let data = await ipcRenderer.invoke('getpdfasync', file )
             this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "image/jpeg"})) 
             const pdfEmbed = document.querySelector("#pdfembed");
-            pdfEmbed.style.backgroundImage = `url(${this.currentpreview})`;
-            pdfEmbed.style.backgroundSize = 'contain'
-            pdfEmbed.style.backgroundRepeat = 'no-repeat'
-            pdfEmbed.style.backgroundPosition =  'center'
-            pdfEmbed.style.height = "80vh";
-            pdfEmbed.style.marginTop = "-40vh";
+            
+            // Create an image element to determine the dimensions of the image
+            // always resize the pdfembed div to the same aspect ratio of the given image
+            const img = new window.Image();
+            img.onload = function() {
+                const width = img.width;
+                const height = img.height;
+                const aspectRatio = width / height;
+
+                const containerWidth = window.innerWidth * 0.8;
+                const containerHeight = window.innerHeight * 0.8;
+                const containerAspectRatio = containerWidth / containerHeight;
+
+                if (aspectRatio > containerAspectRatio) {
+                    pdfEmbed.style.width = '80vw';
+                    pdfEmbed.style.height = `calc(80vw / ${aspectRatio})`;
+                } else {
+                    pdfEmbed.style.height = '80vh';
+                    pdfEmbed.style.width = `calc(80vh * ${aspectRatio})`;
+                }
+                pdfEmbed.style.backgroundImage = `url(${this.currentpreview})`;
+
+            }.bind(this);
+            img.src = this.currentpreview;
+
+            // clear the pdf viewer
             pdfEmbed.setAttribute("src", "about:blank");
-            document.querySelector("#preview").style.display = 'block';     
+            document.querySelector("#preview").style.display = 'block';    
+
         },
 
 
@@ -354,12 +409,44 @@ export default {
 
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
     },
+
 }
 </script>
 
 <style scoped>
+#toolbar {
+    z-index: 10001;
+    background-color: rgba(var(--bs-dark-rgb))
+}
 
+.overlay {
+  position: fixed;
+  top:45px;
+  left: 0;
+  width: 100%;
+  height: 100%;
 
+  background-color: #eef2f8;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.spinner {
+  border: 16px solid #fff;
+  border-top: 16px solid #3498db;
+  border-radius: 50%;
+  width: 120px;
+  height: 120px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
 
 #webview{
     height: 100% !important;
@@ -404,6 +491,7 @@ iframe{
    
 
 }
+
 #preview {
     display: none;
     position: absolute;
@@ -412,23 +500,28 @@ iframe{
     width:100vw;
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.4);
-    z-index:100000;
+    z-index:100001;
+    backdrop-filter: blur(2px);
 }
 
-#pdfembed { 
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    margin-left: -30vw;
-    margin-top: -45vh;
-    width:60vw;
-    height: 90vh;
-    padding: 10px;
-    background-color: rgba(255, 255, 255, 1);
-    border: 0px solid rgba(255, 255, 255, 0.589);
-    box-shadow: 0 0 15px rgba(22, 9, 9, 0.589);
-    padding: 10px;
+
+#pdfembed {
+    background-color: rgba(255, 255, 255, 0.5);
+    border: 0px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 15px rgba(22, 9, 9, 0.5);
     border-radius: 6px;
+    background-size: 100% 100%;  
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.embed-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: flex-start;
 }
 
 </style>

@@ -28,11 +28,14 @@ import fs from 'fs'
 import qs from 'qs'
 import axios from "axios"
 import { msalConfig } from '../../../../renderer/src/msalutils/authConfig'
-import log from 'electron-log/main';
+import log from 'electron-log';
 
 import WindowHandler from '../../../../main/scripts/windowhandler.js'
 import Tesseract from 'tesseract.js';
 let TesseractWorker = false
+
+
+
 
 /**
  * this route generates the nessesary codeVerifier and codeChallenge für PKCE 
@@ -310,7 +313,7 @@ for (let i = 0; i<16; i++ ){
 
 
 
- router.get('/registerclient/:servername/:pin/:clientname/:clientip/:hostname/:version', function (req, res, next) {
+ router.get('/registerclient/:servername/:pin/:clientname/:clientip/:hostname/:version/:bipuserid', function (req, res, next) {
     const clientname = req.params.clientname
     const clientip = req.params.clientip
     const pin = req.params.pin
@@ -319,6 +322,7 @@ for (let i = 0; i<16; i++ ){
     const token = `csrf-${crypto.randomUUID()}`
     const mcServer = config.examServerList[servername] // get the multicastserver object
     const hostname = req.params.hostname
+    const bipuserID = req.params.bipuserid
 
     log.info("control @ registerclient: ",version)
     // this needs to change once we reached v1.0 (featurefreeze for stable version)
@@ -329,12 +333,25 @@ for (let i = 0; i<16; i++ ){
 
   
     if (!mcServer) {  return res.send({sender: "server", message:t("control.notfound"), status: "error"} )  }
-    if (`${versionteacher}` !== versionstudent ) {  return res.send({sender: "server", message:t("control.versionmismatch"), status: "error"} )  }  
+    if (`${versionteacher}` !== versionstudent ) {  return res.send({sender: "server", message:t("control.versionmismatch"), status: "error", version: config.version, versioninfo: config.info} )  }  
+    
+    if (mcServer.serverstatus.requireBiP && bipuserID == 'false'){ // req.params come as string.. not nice but simple
+        return res.send({sender: "server", message:t("control.biprequired"), status: "error"} ) 
+    }
+    
     if (pin === mcServer.serverinfo.pin) {
         let registeredClient = mcServer.studentList.find(element => element.clientname === clientname)
+       
+        
 
         if (!registeredClient) {   // create client object
             log.info('control @ registerclient: adding new client')
+
+            let group = false;
+            if (mcServer.serverstatus.groupA?.includes(clientname)) { group = 'a'; } 
+            else if (mcServer.serverstatus.groupB?.includes(clientname)) { group = 'b';  }
+
+
             const client = {    // we have a different representation of the clientobject on the server than on the client - why exactly? we could just send the whole client object via POST (as we already do in /update route )
                 clientname: clientname,
                 hostname: hostname,
@@ -345,7 +362,9 @@ for (let i = 0; i<16; i++ ){
                 exammode: false,
                 imageurl:false,
                 virtualized: false,
-                status : {}    // we use this to store (per student) information about whats going on on the serverside (tasklist) and send it back on /update
+                bipuserID: bipuserID,  // we can use this in the future to re-check if this user is in the pre-defined userlist for this specific BIP exam
+                status: { group: group || 'a'},    // we use this to store (per student) information about whats going on on the serverside (tasklist) and send it back on /update
+                // we allow two groups (this is just used for distribution of files by now)
             }
             //create folder for student
             let studentfolder =path.join(config.workdirectory, mcServer.serverinfo.servername , clientname);
@@ -594,7 +613,7 @@ router.post('/sharelink/:servername/:csrfservertoken/:studenttoken', function (r
 
 
 /**
- * Get Serverstatus and return Serverstatus from FILE (from previous interrupted exam in order to resume)
+ * Get previous Serverstatus and return Serverstatus from FILE (from previous interrupted exam in order to resume)
  * @param servername the name of the server 
  * @param csrfservertoken servertoken to authenticate before the request is processed
  */
@@ -614,6 +633,19 @@ router.post('/getserverstatus/:servername/:csrfservertoken', function (req, res,
     catch (error) {  serverstatus = false;  }
     return res.json({sender: "server", status: "success", serverstatus: serverstatus}) 
 })
+
+//get current serverstatus from mcserver
+router.get('/getcurrentserverstatus/:servername/:csrfservertoken', function (req, res, next) {
+    const csrfservertoken = req.params.csrfservertoken
+    const servername = req.params.servername
+    const mcServer = config.examServerList[servername]
+    if (!mcServer) {  return res.send({sender: "server", message:t("control.notfound"), status: "error"} )  }
+    if (csrfservertoken !== mcServer.serverinfo.servertoken) { res.send({sender: "server", message:t("control.tokennotvalid"), status: "error"} )}
+   
+    return res.json({sender: "server", status: "success", serverstatus: mcServer.serverstatus}) 
+})
+
+
 
 
 /**
@@ -669,8 +701,10 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
     
     const printdenied = req.body.printdenied
     const delfolder = req.body.delfolder
-    const allowspellcheck = req.body.allowspellcheck
+    const activatePrivateSpellcheck = req.body.activatePrivateSpellcheck
+    const activatePrivateSuggestions = req.body.activatePrivateSuggestions
     const removeprintrequest = req.body.removeprintrequest
+    const group = req.body.group
 
     if (req.params.csrfservertoken === mcServer.serverinfo.servertoken) {  //first check if csrf token is valid and server is allowed to trigger this api request
         
@@ -688,11 +722,20 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
                     student.printrequest = false  // unset printrequest so that dashboard fetchInfo (which fetches the studentlist) doesnt trigger it again
                 } 
                 if (delfolder)  { student.status.delfolder = true   } // on the next update cycle the student gets informed to delete workfolder
-                if (allowspellcheck) {student.status.allowspellcheck = { suggestions: req.body.suggestions } } // allow spellcheck for this specific student (special cases)
-                if (allowspellcheck == false) { student.status.allowspellcheck = "deactivate" }
+                if (activatePrivateSpellcheck) {    // allow spellcheck for this specific student (special cases)
+                    student.status.activatePrivateSpellcheck = true; 
+                    student.status.activatePrivateSuggestions = activatePrivateSuggestions;
+                }
+                else {
+                    student.status.activatePrivateSpellcheck = false;
+                    student.status.activateSuggestions = false;
+                }
                 if (removeprintrequest == true){ student.printrequest = false }  // unset printrequest so that dashboard fetchInfo (which fetches the studentlist) doesnt trigger it again
-                
-                log.info("control @ setstudentstatus:", req.body)
+                if (group) {student.status.group = group; }
+
+
+
+                //log.info("control @ setstudentstatus:", req.body)
               
             }
         }
@@ -748,7 +791,7 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
     student.status.printdenied = false 
     student.status.delfolder = false 
     student.status.sendexam = false // request only once
-    student.status.allowspellcheck = false
+    //student.status.activatePrivateSpellcheck = false   // activate only once - when student retrieved "studentstatus" we can reset some values of "student.status"
 
     // return current serverinformation to process on clientside
     res.charset = 'utf-8';
@@ -858,7 +901,45 @@ router.post('/heartbeat/:servername/:studenttoken', function (req, res, next) {
 
 
 
+/**
+ * LanguageTool Request 
+ * Students can send a string in order to check for spelling and grammar mistakes
+ * Returns an array of misspelled words with additional descriptions and location in the text
+ * @param servername the name of the server at which the student is registered
+ * @param token the students token to search and update the entry in the list
+ */
+router.post('/languagetool/:servername/:studenttoken', async function (req, res, next) {
+    const studenttoken = req.params.studenttoken
+    const servername = req.params.servername
+    const text = req.body.text
+    const language = req.body.language
+    
+    //check if server exists 
+    const mcServer = config.examServerList[servername]
+    if ( !mcServer) {  return res.send({sender: "server", message:"notavailable", status: "error"} )  }
 
+    //check if student is registered on server
+    let student = mcServer.studentList.find(element => element.token === studenttoken)
+    if ( !student ) {return res.send({ sender: "server", message:"removed", status: "error" }) }
+    
+    const languageToolUrl = 'http://127.0.0.1:8088/v2/check';
+     
+    try {
+        const response = await fetch(languageToolUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+            body: new URLSearchParams({ text: text, language: language}).toString() 
+        });
+        if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`);   }
+        const data = await response.json();
+        //console.log(data)
+        res.send({sender: "server", message:"success", status:"success", data: data.matches })
+    } catch (error) {
+        log.error('control @ languagetool: Error sending text to LanguageTool:', error);
+        res.send({sender: "server", message:"error", status:"error", data: error.message })
+    }
+
+})
 
 
 

@@ -18,7 +18,7 @@
 import { createSocket } from 'dgram'
 import config from '../config.js'
 import crypto from 'crypto';
-import log from 'electron-log/main';
+import log from 'electron-log';
 import {SchedulerService} from './schedulerservice.ts'
 
 

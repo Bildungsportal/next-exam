@@ -5,9 +5,10 @@ export const CharReplacer = (options) => {
     name: 'charReplacer',
 
     addInputRules() {
-      if (options.language === "de") {
+      if (options.language === "de-DE") {
         return [
           textInputRule({ find: /(^|(?<=\s))"(?=\s|$|\w)/g, replace: '„' })
+   
         ];
       }
       return [];

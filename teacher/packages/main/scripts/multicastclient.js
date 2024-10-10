@@ -17,7 +17,7 @@
 
 import dgram from 'dgram';
 import config from '../config.js';  // node not vue (relative path needed)
-import log from 'electron-log/main';
+import log from 'electron-log';
 import {SchedulerService} from './schedulerservice.ts'
 
 
@@ -66,6 +66,7 @@ class MulticastClient {
         const serverInfo = JSON.parse(String(message))
         serverInfo.serverip = rinfo.address
         serverInfo.serverport = rinfo.port
+        serverInfo.timestamp = new Date().getTime()   //record timestamp of last message from server
         
         if (this.isNewExamInstance(serverInfo)) {
             log.info(`multicastclient @ messageReceived: Adding new Exam Instance "${serverInfo.servername}" to Serverlist`)
@@ -93,7 +94,7 @@ class MulticastClient {
         for (let i = 0; i < this.examServerList.length; i++) {
             const now = new Date().getTime()
             if (now - 16000 > this.examServerList[i].timestamp) {
-                log.warn('multicastclient @ isDeprecatedInstance: Removing inactive server from list')
+                log.warn(`multicastclient @ isDeprecatedInstance: Removing inactive server '${this.examServerList[i].servername}' from list`)
                 this.examServerList.splice(i, 1)
             }
         }

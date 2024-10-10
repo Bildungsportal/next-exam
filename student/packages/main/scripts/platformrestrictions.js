@@ -41,8 +41,6 @@ import config from '../config.js';
 import log from 'electron-log/main';
 import {SchedulerService} from './schedulerservice.ts'
 
-
-
 // unfortunately there is no convenient way for gnome-shell to un-set ALL shortcuts at once
 const gnomeKeybindings = [  
     'activate-window-menu','maximize-horizontally','move-to-side-n','move-to-workspace-8','switch-applications','switch-to-workspace-3','switch-windows-backward',
@@ -76,8 +74,8 @@ const gnomeWaylandKeybindings = ['switch-to-session-1','switch-to-session-2','sw
 
 let clipboardInterval;
 
-function enableRestrictions(win){
-    if (config.development) {return}
+function enableRestrictions(winhandler){
+  
     log.info("enabling platform restrictions")
 
 
@@ -85,14 +83,25 @@ function enableRestrictions(win){
     globalShortcut.register('CommandOrControl+Shift+V', () => {console.log('no clipboard')});
     clipboard.clear()  //this should clean the clipboard for the electron app
   
-    clipboardInterval = new SchedulerService( ()=> { clipboard.clear()  }  , 1000)
+    clipboardInterval = new SchedulerService( ()=> {  clipboard.clear();}  , 1000)
     clipboardInterval.start()
 
 
+
+
+
+   // if (config.development) {return}
+
+
+
+
+
+
+
     // list of apps we do not want to run in background
-    // const appsToClose = [ 'zoom.us', 'Google Chrome', 'Microsoft Edge', 'Microsoft Teams','firefox', 'discord', 'zoom', 'chrome', 'msedge', 'teams', 'teamviewer', 'google-chrome','skypeforlinux','skype','brave','opera','anydesk','safari'];
-    const appsToClose = [ 'Teams','ms-teams','zoom.us', 'Microsoft Teams', 'discord', 'zoom', 'teams', 'teamviewer','skypeforlinux','skype','anydesk'];
-    // students tend to download and start the app directly from the browser.. if we kill the browser we kill the app
+    const appsToClose = ['Teams','ms-teams', 'zoom.us', 'Google Chrome', 'Microsoft Edge', 'Microsoft Teams','firefox', 'discord', 'zoom', 'chrome', 'msedge', 'teams', 'teamviewer', 'google-chrome','skypeforlinux','skype','brave','opera','anydesk','safari'];
+   // const appsToClose = [ 'Teams','ms-teams','zoom.us', 'Microsoft Teams', 'discord', 'zoom', 'teams', 'teamviewer','skypeforlinux','skype','anydesk'];
+    // students tend to download and start the app directly from the browser.. if we kill the browser we kill the app ???
 
 
    
@@ -261,7 +270,7 @@ function enableRestrictions(win){
             new TouchBarSpacer({ size: 'flexible' }),
             ]
         })
-        win?.setTouchBar(touchBar)
+        winhandler.examwindow?.setTouchBar(touchBar)
 
         // clear clipboard
         childProcess.exec('pbcopy < /dev/null')
@@ -292,21 +301,21 @@ function enableRestrictions(win){
 
 
 
-function disableRestrictions(win){
+function disableRestrictions(){
     
     if (config.development) {return}
 
     log.info("removing restrictions...")
 
     clipboardInterval.stop()
+
     globalShortcut.unregister('CommandOrControl+V', () => {console.log('no clipboard')});
     globalShortcut.unregister('CommandOrControl+Shift+V', () => {console.log('no clipboard')});
     
     // disable global keyboardshortcuts on PLASMA/KDE
     if (process.platform === 'linux') {
 
-        // Clear Clipboard history 
-        childProcess.execFile('qdbus', ['org.kde.klipper' ,'/klipper', 'org.kde.klipper.klipper.clearClipboardHistory'])
+       
         // on wayland
         childProcess.execFile('wl-copy', ['-c'])
         // clear clipboard gnome and x11  (this will fail unless xclip or xsell are installed)
@@ -314,21 +323,38 @@ function disableRestrictions(win){
         childProcess.exec('xclip -selection clipboard')
         childProcess.exec('xsel -bc')
 
-        // reset all shortcuts KDE
-        childProcess.execFile('qdbus', ['org.kde.kglobalaccel' ,'/kglobalaccel', 'blockGlobalShortcuts', 'false'])
-        // activate ALL 3d Effects (present window, change desktop, etc.) 
-        childProcess.execFile('qdbus', ['org.kde.KWin' ,'/Compositor', 'org.kde.kwin.Compositing.resume'])
-        childProcess.exec('kstart5 kglobalaccel5&')
-        
+
         //enable META Key for Launchermenu
         //childProcess.execFile('sed', ['-i', '-e', 's/global=.*/global=Alt+F1/g', `${config.homedirectory}/.config/plasma-org.kde.plasma.desktop-appletsrc` ])
-        childProcess.execFile('kwriteconfig5', ['--file',`${config.homedirectory}/.config/kwinrc`,'--group','ModifierOnlyShortcuts','--key','Meta','--delete']) 
-        childProcess.execFile('qdbus', ['org.kde.KWin','/KWin','reconfigure'])
         //childProcess.exec('kwin --replace &')
 
 
-        childProcess.exec('kstart5 plasmashell&')
+        
    
+        childProcess.exec('echo $XDG_CURRENT_DESKTOP', (error, stdout, stderr) => {
+            if (error) {
+              console.error(`exec error: ${error}`);
+              return;
+            }
+            if (stdout.trim() === 'KDE') {
+
+                 // Clear Clipboard history 
+                 childProcess.execFile('qdbus', ['org.kde.klipper' ,'/klipper', 'org.kde.klipper.klipper.clearClipboardHistory'])
+                // reset all shortcuts KDE
+                childProcess.execFile('qdbus', ['org.kde.kglobalaccel' ,'/kglobalaccel', 'blockGlobalShortcuts', 'false'])
+                // activate ALL 3d Effects (present window, change desktop, etc.) 
+                childProcess.execFile('qdbus', ['org.kde.KWin' ,'/Compositor', 'org.kde.kwin.Compositing.resume'])
+                // reactivate shortcutssystem
+                childProcess.exec('kstart5 kglobalaccel5&')
+                // enable meta key, kwin and restart plasmashell
+                childProcess.execFile('kwriteconfig5', ['--file',`${config.homedirectory}/.config/kwinrc`,'--group','ModifierOnlyShortcuts','--key','Meta','--delete']) 
+                childProcess.execFile('qdbus', ['org.kde.KWin','/KWin','reconfigure'])
+                childProcess.exec('kstart5 plasmashell&')
+            } 
+        });
+
+
+
 
         // reset specific shortcuts GNOME
         for (let binding of gnomeKeybindings){

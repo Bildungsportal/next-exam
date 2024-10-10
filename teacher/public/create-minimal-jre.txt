@@ -1,0 +1,6 @@
+ 
+
+#das baut eine jre mit den modulen die für languagtool relevant sind (ca 80mb statt 200)
+jlink --module-path /usr/lib/jvm/java-1.11.0-openjdk-amd64/jmods/ --add-modules java.base,jdk.httpserver,java.xml,java.naming,java.desktop --strip-debug --compress=2 --output minimaljre
+
+PS C:\Program Files\OpenLogic\jdk-11.0.23.9-hotspot\bin> .\jlink.exe --module-path jmods --add-modules java.base,jdk.httpserver,java.xml,java.naming,java.desktop --strip-debug --compress=2 --output 'C:\Users\admin\Desktop\minimal-jre\'

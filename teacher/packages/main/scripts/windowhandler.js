@@ -18,7 +18,11 @@
 
 import { app, BrowserWindow, dialog, screen  } from 'electron'
 import { join } from 'path'
-import log from 'electron-log/main';
+import log from 'electron-log';
+
+const __dirname = import.meta.dirname;
+
+
 
 class WindowHandler {
     constructor () {
@@ -41,7 +45,9 @@ class WindowHandler {
         const { width, height } = primaryDisplay ? primaryDisplay.workAreaSize : { width: 800, height: 800 };
 
         this.mainwindow = new BrowserWindow({
-            title: 'Main window',
+            title: 'Next-Exam-Teacher',
+            backgroundColor: '#2e2c29',
+            show: false,
             icon: join(__dirname, '../../public/icons/icon.png'),
             center:true,
             width: width,
@@ -49,9 +55,12 @@ class WindowHandler {
             minWidth: 800,
             minHeight: 800,
             webPreferences: {
-                preload: join(__dirname, '../preload/preload.cjs'),
+                preload: join(__dirname, '../preload/preload.mjs'),
+                // nodeIntegration: false,  
+                // contextIsolation: true,  // Isoliert den Preload- und Renderer-Prozess
                 spellcheck: false
             },
+  
         })
         
         if (app.isPackaged || process.env["DEBUG"]) {
@@ -78,6 +87,20 @@ class WindowHandler {
         });
     
     
+        // this.mainwindow.on('app-command', (e, cmd) => {
+        //     // 'browser-backward' und 'browser-forward' sind die Befehle, die beim Klick auf die Maustasten gesendet werden
+        //     if (cmd === 'browser-backward' || cmd === 'browser-forward') {
+        //         log.warn("no indirect navigation allowed")
+        //         e.preventDefault(); // Verhindern Sie das Standardverhalten
+        //     }
+        // });
+
+
+        this.mainwindow.once('ready-to-show', () => {
+            this.mainwindow?.show()
+            this.mainwindow?.moveTop();
+        })
+
         this.mainwindow.on('close', async  (e) => {   //ask before closing
             if (!this.config.development) {
                 if (this.mainwindow.closetriggered) { app.quit(); return;}
@@ -117,7 +140,7 @@ class WindowHandler {
             minimizable: false,
             icon: join(__dirname, '../../public/icons/icon.png'),
             webPreferences: {
-                preload: join(__dirname, '../preload/preload.cjs'),
+                preload: join(__dirname, '../preload/preload.mjs'),
             },
         });
     

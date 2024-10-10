@@ -2,6 +2,8 @@
 
     <!-- HEADER START -->
     <exam-header
+    :serverstatus="serverstatus"
+      :clientinfo="clientinfo"
       :online="online"
       :clientname="clientname"
       :exammode="exammode"
@@ -11,6 +13,7 @@
       :currenttime="currenttime"
       :timesinceentry="timesinceentry"
       :componentName="componentName"
+      :localLockdown="localLockdown"
       @reconnect="reconnect"
       @gracefullyexit="gracefullyexit"
     ></exam-header>
@@ -79,7 +82,7 @@ export default {
             pincode : this.$route.params.pincode,
             serverstatus: this.$route.params.serverstatus,
             config: this.$route.params.config,
-
+            localLockdown: this.$route.params.localLockdown,
             clientinfo: null,
             entrytime: 0,
             timesinceentry: 0,

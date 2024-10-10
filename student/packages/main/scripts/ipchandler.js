@@ -25,8 +25,16 @@ import{ipcMain, clipboard} from 'electron'
 import defaultGateway from'default-gateway';
 import os from 'os'
 import log from 'electron-log/main';
-import Nodehun from 'nodehun'
+
+
+//import Nodehun from 'nodehun'   
+const NodehunModule = await import('./native-loader.cjs');  // npm rebuild nodehun --update-binary  on mac after build to run in dev mode
+const { default: Nodehun } = NodehunModule;  // Access the default export
+
 import {disableRestrictions} from './platformrestrictions.js';
+import mammoth from 'mammoth';
+
+
 
   ////////////////////////////////
  // IPC handling (Backend) START
@@ -45,13 +53,59 @@ class IpcHandler {
         this.CommunicationHandler = ch
         
 
+
+        /**
+         *  Start LOCAL Lockdown
+         */
+
+        ipcMain.on('locallockdown', (event, args) => {
+            log.info("ipchandler @ locallockdown: locking down client without teacher connection")
+            
+            let serverstatus = {
+                exammode: true,
+                examtype: args.exammode,
+                delfolderonexit: false,
+                spellcheck: true,
+                spellchecklang: 'de',
+                suggestions: false,
+                moodleTestType: '',
+                moodleDomain: '',
+                cmargin: { side: 'right', size: 3 },
+                screenshotinterval: 0,
+                msOfficeFile: false,
+                screenslocked: false,
+                pin: '0000',
+                linespacing: '2',
+                unlockonexit: false,
+                fontfamily: 'sans-serif',
+                moodleTestId: '',
+                languagetool: true,
+                password: args.password,
+                audioRepeat: 4
+            }
+            
+            this.multicastClient.clientinfo.name = args.clientname;
+            this.multicastClient.clientinfo.serverip = "127.0.0.1";
+            this.multicastClient.clientinfo.servername = "localhost";
+            this.multicastClient.clientinfo.pin = "0000";
+            this.multicastClient.clientinfo.token = "0000";
+            this.multicastClient.clientinfo.group = "a";
+            this.multicastClient.clientinfo.localLockdown = true; // this must be set to true in order to stop typical next-exam client/teacher actions
+
+            this.CommunicationHandler.startExam(serverstatus)
+            
+            event.returnValue = "hello from locallockdown"
+        })
+
+
+
         /**
          *  Start BIP Login Sequence
          */
 
-        ipcMain.on('loginBiP', (event) => {
-            log.info("ipchandler @ loginBiP: opening bip window")
-            this.WindowHandler.createBiPLoginWin()
+        ipcMain.on('loginBiP', (event, biptest) => {
+            log.info("ipchandler @ loginBiP: opening bip window. testenvironment:", biptest)
+            this.WindowHandler.createBiPLoginWin(biptest)
             event.returnValue = "hello from bip logon"
         })
 
@@ -66,20 +120,32 @@ class IpcHandler {
         /**
          * Set FOCUS state to false (mouse left exam window)
          */ 
-        ipcMain.on('focuslost', (event) => {  
+        ipcMain.handle('focuslost', (event) => { 
+            let answer = false 
             if (this.config.development || !this.multicastClient.exammode) { 
-                event.returnValue = { sender: "client", focus: true}
-                return 
+                answer = { sender: "client", focus: true}
+                
             }
-            if (this.WindowHandler.screenlockwindows.length > 0) { return }// do nothing if screenlockwindow stole focus // do not trigger an infinite loop between exam window and screenlock window (stealing each others focus)
-            
-            this.WindowHandler.examwindow.moveTop();
-            this.WindowHandler.examwindow.setKiosk(true);
-            this.WindowHandler.examwindow.show();  
-            this.WindowHandler.examwindow.focus();    // we keep focus on the window.. no matter what
-
-            this.multicastClient.clientinfo.focus = false; // block everything and inform teacher  (probably an overkill on mouseleave - needs testing)
-            event.returnValue = { sender: "client", focus: false }
+            else if (this.WindowHandler.screenlockwindows.length > 0) { 
+                answer = { sender: "client", focus: true }
+                
+            }
+            else if (this.WindowHandler.focusTargetAllowed){ 
+                log.warn(`ipchandler @ focuslost: mouseleave event was triggered but target is allowed`)
+                answer = { sender: "client", focus: true }
+                
+            } 
+            else {
+                this.WindowHandler.examwindow.moveTop();
+                this.WindowHandler.examwindow.setKiosk(true);
+                this.WindowHandler.examwindow.show();  
+                this.WindowHandler.examwindow.focus();    // we keep focus on the window.. no matter what
+    
+                this.multicastClient.clientinfo.focus = false; // block everything and inform teacher  (probably an overkill on mouseleave - needs testing)
+                answer = { sender: "client", focus: false }
+            }
+           
+            return answer
         } )
 
 
@@ -95,7 +161,9 @@ class IpcHandler {
         */ 
         ipcMain.on('gracefullyexit', () => {  
             log.info(`ipchandler @ gracefullyexit: gracefully leaving locked exam mode`)
+
             this.CommunicationHandler.gracefullyEndExam() 
+            this.CommunicationHandler.resetConnection() 
         } )
 
         /**
@@ -169,7 +237,7 @@ class IpcHandler {
                 log.info(`ipchandler: storeHTML: creating manual backup as ${htmlfilename}`)
             }
 
-            const htmlfile = path.join(this.config.workdirectory, htmlfilename);
+            const htmlfile = path.join(this.config.examdirectory, htmlfilename);
 
             if (htmlContent) { 
                 // log.info("ipchandler: storeHTML: saving students work to disk...")
@@ -188,9 +256,11 @@ class IpcHandler {
                                 }
                                 else {
                                     log.info("ipchandler @ storeHTML: success!");
+                                    event.reply("loadfilelist")
                                 }
                             }); 
                         }
+                        event.reply("loadfilelist")
                     } ); 
                 }
                 catch(err){
@@ -224,18 +294,18 @@ class IpcHandler {
                     pdffilename = `${args.filename}.pdf`
                     log.info(`ipchandler @ printpdf: creating manual backup as ${pdffilename}`)
                 }
-                const pdffilepath = path.join(this.config.workdirectory, pdffilename);  //the original file "thomas.pdf"
+                const pdffilepath = path.join(this.config.examdirectory, pdffilename);  //the original file "thomas.pdf"
                 const alternatefilename = `${pdffilename}-aux.pdf`    //thomas.pdf-aux.pdf 
                 const alternatebackupfilename = `${pdffilename}-old.pdf`;   //thomas.pdf-old.pdf
 
-                const alternatepath = path.join(this.config.workdirectory, alternatefilename);
+                const alternatepath = path.join(this.config.examdirectory, alternatefilename);
 
                 // aux files are files created if the main pdffilepath is not writeable (opened on windows) and preferred by printrequest and when combining all pdfs. 
-                fs.readdir(this.config.workdirectory, (err, files) => { // rename it if it exists - we don't want old backupfiles to mess up printrequest and combine (if everything is ok and the mainfile is writeable)
+                fs.readdir(this.config.examdirectory, (err, files) => { // rename it if it exists - we don't want old backupfiles to mess up printrequest and combine (if everything is ok and the mainfile is writeable)
                     if (err) {  return; }
                     files.forEach(file => {
                         if (file === alternatefilename) {
-                            const newPath = path.join(this.config.workdirectory, alternatebackupfilename);
+                            const newPath = path.join(this.config.examdirectory, alternatebackupfilename);
                             fs.rename(alternatepath, newPath, err => {
                                 if (err) { 
                                     log.error('ipchandler @ printpdf: Error renaming file:', err);
@@ -284,39 +354,42 @@ class IpcHandler {
         /**
          * activate spellcheck on demand for specific student
          */ 
-        ipcMain.handle('activatespellcheck', (event, spellchecklang) => {  
+        ipcMain.on('activatespellcheck', (event, spellchecklang) => {  
             const dictionaryPath = path.join( __dirname,'../../public/dictionaries');
-            let language = "de"
+            let language = "de-DE"
             if (spellchecklang){ language = spellchecklang }
             if (spellchecklang == "none"){return}  // "other" language selected 
             
             let affix = null;
             let dictionary = null;
 
-            log.info(`ipchandler @ activatespellcheck: activating for lang: ${language}`)
+            log.info(`ipchandler @ activatespellcheck: activating Hunspell Fallback Backend for lang: ${language}`)
 
             try {
-                if (language === "en-GB") {
+                if (language === "en" || language === "en-GB") {
                     affix       = fs.readFileSync(path.join(dictionaryPath, 'en_US.aff'))
                     dictionary  = fs.readFileSync(path.join(dictionaryPath, 'en_US.dic'))
                 }
-                else if (language === "de"){
+                else if (language === "de" || language === "de-DE"){
                     affix       = fs.readFileSync(path.join(dictionaryPath, 'de_DE_frami.aff'))
                     dictionary  = fs.readFileSync(path.join(dictionaryPath, 'de_DE_frami.dic'))
                 }
-                else if (language === "it"){
+                else if (language === "it" || language === "it-IT"){
                     affix       = fs.readFileSync(path.join(dictionaryPath, 'it_IT.aff'))
                     dictionary  = fs.readFileSync(path.join(dictionaryPath, 'it_IT.dic'))
                 }
-                else if (language === "fr"){
+                else if (language === "fr" || language === "fr-FR"){
                     affix       = fs.readFileSync(path.join(dictionaryPath, 'fr.aff'))
                     dictionary  = fs.readFileSync(path.join(dictionaryPath, 'fr.dic'))
                 }
-                else if (language === "es"){
+                else if (language === "es" || language === "es-ES"){
                     affix       = fs.readFileSync(path.join(dictionaryPath, 'es_ES.aff'))
                     dictionary  = fs.readFileSync(path.join(dictionaryPath, 'es_ES.dic'))
                 }
                 this.WindowHandler.nodehun  = new Nodehun(affix, dictionary)
+                
+                //this.multicastClient.clientinfo.privateSpellcheck.activated = true // this is set because communication handler needs to know if this already happened
+                
                 return true
             }
             catch (e) { log.error(e); return false}
@@ -328,11 +401,16 @@ class IpcHandler {
          * Returns all found Servers and the information about this client
          */ 
         ipcMain.handle('getinfoasync', (event) => {   
-            let serverstatus = false
+            let serverstatus = false   
+            // serverstatus objekt wird nur bei beginn des exams an das exam window durchgereicht für basis einstellungen
+            // alle weiteren updates über das serverstatus object werden im communication handler gelesen und ggf. auf das clientinfo object gelegt
+            // dieser kommunikationsfluss muss in 2.0 gestreamlined werden #FIXME
+            
             if (this.WindowHandler.examwindow) { serverstatus = this.WindowHandler.examwindow.serverstatus }
 
+            //count number of files in exam directory
             if (!this.multicastClient.clientinfo.exammode){
-                const workdir = path.join(config.workdirectory,"/")
+                const workdir = path.join(config.examdirectory,"/")
                 if (!fs.existsSync(workdir)){ fs.mkdirSync(workdir, { recursive: true });  } //do not crash if the directory is deleted after the app is started ^^
                 let filelist =  fs.readdirSync(workdir, { withFileTypes: true })
                     .filter(dirent => dirent.isFile())
@@ -389,6 +467,7 @@ class IpcHandler {
             const clientip = ip.address()
             const hostname = os.hostname()
             const version = this.config.version
+            const bipuserID = args.bipuserID
 
             if (this.multicastClient.clientinfo.token){ //#FIXME das sollte eigentlich vom server kommen 
                 event.returnValue = { sender: "client", message: t("control.alreadyregistered"), status:"error" }
@@ -396,7 +475,7 @@ class IpcHandler {
 
 
          
-            const url = `https://${serverip}:${this.config.serverApiPort}/server/control/registerclient/${servername}/${pin}/${clientname}/${clientip}/${hostname}/${version}`;
+            const url = `https://${serverip}:${this.config.serverApiPort}/server/control/registerclient/${servername}/${pin}/${clientname}/${clientip}/${hostname}/${version}/${bipuserID}`;
             const signal = AbortSignal.timeout(8000); // 8000 Millisekunden = 8 Sekunden AbortSignal mit einem Timeout
 
 
@@ -413,10 +492,22 @@ class IpcHandler {
                     this.multicastClient.clientinfo.token = data.token; // we need to store the client token in order to check against it before processing critical api calls
                     this.multicastClient.clientinfo.focus = true;
                     this.multicastClient.clientinfo.pin = pin;
-                    log.info(`ipchandler @ register: successfully registered at ${serverip} as ${clientname}`);
+                    log.info(`ipchandler @ register: successfully registered at ${servername} @ ${serverip} as ${clientname}`);
                     event.returnValue = data;
+
+                    //create exam folder in workfolder
+                    let uniqueexamName = `${servername}-${pin}`
+                    config.examdirectory = path.join(config.workdirectory, uniqueexamName)
+                    if (!fs.existsSync(config.examdirectory)){ fs.mkdirSync(config.examdirectory, { recursive: true }); }
                 } 
                 else {
+                    if (data.version){
+                        // compare versions and display message (teacher needs upgrade.. client needs upgrade)
+                        const comparisonResult = this.compareSoftware(config.version, config.info , data.version, data.versioninfo ) //serverVersion, serverStatus, localVersion, localStatus
+                        if (comparisonResult > 0) {       event.returnValue = { status: "error", message: "Ihre Version von Next-Exam ist neuer als die der Lehrperson!" };   } 
+                        else if (comparisonResult < 0) {  event.returnValue = { status: "error", message: "Ihre Version von Next-Exam ist zu alt. Laden sie sich eine aktuelle Version herunter!" };   } 
+                        else {                            event.returnValue = { status: "error", message: "Unbekannter Fehler beim Verbindungsaufbau." };    }
+                    }
                     event.returnValue = { status: "error", message: data.message };
                 }
             })
@@ -442,7 +533,7 @@ class IpcHandler {
             const content = args.content
             const filename = args.filename
             const reason = args.reason
-            const ggbFilePath = path.join(this.config.workdirectory, filename);
+            const ggbFilePath = path.join(this.config.examdirectory, filename);
             if (content) { 
                 //log.info("ipchandler @ saveGGB: saving students work to disk...")
                 const fileData = Buffer.from(content, 'base64');
@@ -468,7 +559,7 @@ class IpcHandler {
          * @param args contains an object { filename:`${this.clientname}.ggb` }
          */
         ipcMain.handle('loadGGB', (event, filename) => {   
-            const ggbFilePath = path.join(this.config.workdirectory, filename);
+            const ggbFilePath = path.join(this.config.examdirectory, filename);
             try {
                 // Read the file and convert it to base64
                 const fileData = fs.readFileSync(ggbFilePath);
@@ -485,29 +576,17 @@ class IpcHandler {
 
 
         /**
-         * GET PDF from EXAM directory
+         * GET PDF or IMAGE from EXAM directory
          * @param filename if set the content of the file is returned
          */ 
-        ipcMain.on('getpdf', (event, filename) => {   
-            const workdir = path.join(config.workdirectory,"/")
+        ipcMain.handle('getpdfasync', (event, filename, image = false) => {   
+            const workdir = path.join(config.examdirectory,"/")
             if (filename) { //return content of specific file
                 let filepath = path.join(workdir,filename)
                 try {
                     let data = fs.readFileSync(filepath)
-                    event.returnValue = data
-                } 
-                catch (error) {
-                    event.returnValue = { sender: "client", content: false , status:"error" }
-                }    
-            }
-        })
-
-        ipcMain.handle('getpdfasync', (event, filename) => {   
-            const workdir = path.join(config.workdirectory,"/")
-            if (filename) { //return content of specific file
-                let filepath = path.join(workdir,filename)
-                try {
-                    let data = fs.readFileSync(filepath)
+                   
+                    if (image){ return data.toString('base64');  }
                     return data
                 } 
                 catch (error) {
@@ -516,26 +595,53 @@ class IpcHandler {
             }
         })
 
-
-
-
+        /**
+         * returns base64 string of audiofile from workdirectory or public directory
+         */
+        ipcMain.handle('getAudioFile', async (event, filename, publicdir=false) => {   
+            const workdir = path.join(config.examdirectory, "/");
+        
+            if (filename && !publicdir) { // Return content of specific file as string (html) to replace in editor
+                let filepath = path.join(workdir, filename);
+                const audioData = fs.readFileSync(filepath);
+                return audioData.toString('base64');
+            }
+        
+            if (filename && publicdir) {
+                let filepath = path.join(__dirname, "../../public",filename);
+                const audioData = fs.readFileSync(filepath);
+                return audioData.toString('base64');
+            }
+        
+            return false;
+        });
  
 
         /**
-         * ASYNC GET FILE-LIST from workdirectory
+         * ASYNC GET FILE-LIST from examdirectory
          * @param filename if set the content of the file is returned
          */ 
-        ipcMain.handle('getfilesasync', (event, filename, audio=false) => {   
-            const workdir = path.join(config.workdirectory,"/")
+        ipcMain.handle('getfilesasync', async (event, filename, audio=false, docx=false) => {   
+            const workdir = path.join(config.examdirectory,"/")
 
             if (filename) { //return content of specific file as string (html) to replace in editor)
                 let filepath = path.join(workdir,filename)
                 //log.info(filepath)
-                if (audio){
+                if (audio){ // audio file
                     const audioData = fs.readFileSync(filepath);
                     return audioData.toString('base64');
                 }
-                else {
+                else if (docx){  //office open xml file
+                    let result = await mammoth.convertToHtml({path: filepath})
+                    .then((data) => {
+                        return data
+                    })
+                    .catch(function(error) {
+                        console.error(error);
+                    });
+                    return result
+                }
+                else {   //bak file
                     try {
                         let data = fs.readFileSync(filepath, 'utf8')
                         return data
@@ -559,7 +665,8 @@ class IpcHandler {
                         let modified = fs.statSync(   path.join(workdir,file)  ).mtime
                         let mod = modified.getTime()
                         if  (path.extname(file).toLowerCase() === ".pdf"){ files.push( {name: file, type: "pdf", mod: mod})   }         //pdf
-                        else if  (path.extname(file).toLowerCase() === ".bak"){ files.push( {name: file, type: "bak", mod: mod})   }   // editor backup
+                        else if  (path.extname(file).toLowerCase() === ".bak"){ files.push( {name: file, type: "bak", mod: mod})   }   // editor| backup file to replace editor content
+                        else if  (path.extname(file).toLowerCase() === ".docx"){ files.push( {name: file, type: "docx", mod: mod})   }   // editor| content file (from teacher) to replace content and continue writing
                         else if  (path.extname(file).toLowerCase() === ".ggb"){ files.push( {name: file, type: "ggb", mod: mod})   }  // geogebra
                         else if  (path.extname(file).toLowerCase() === ".mp3" || path.extname(file).toLowerCase() === ".ogg" || path.extname(file).toLowerCase() === ".wav" ){ files.push( {name: file, type: "audio", mod: mod})   }  // audio
                         else if  (path.extname(file).toLowerCase() === ".jpg" || path.extname(file).toLowerCase() === ".png" || path.extname(file).toLowerCase() === ".gif" ){ files.push( {name: file, type: "image", mod: mod})   }  // images
@@ -596,31 +703,85 @@ class IpcHandler {
 
 
         /**
-         * this is our manually implemented spellchecker for the editor
+         * this is our manually implemented Hunspell spellchecker for the editor (fallback for languagetool)
          */
-        ipcMain.on('checkword', async (event, selectedWord) => {
-            log.info(`Received selected text: ${selectedWord}`);
-            const suggestions = await this.WindowHandler.nodehun.suggest(selectedWord)
-            //log.info(suggestions)
-            event.returnValue = {  suggestions : suggestions }   
-        });
         ipcMain.on('checktext', async (event, selectedText) => {
             const words = selectedText.split(/[^a-zA-ZäöüÄÖÜßéèêëôûüÔÛÜáíóúñÁÍÓÚÑàèéìòùÀÈÉÌÒÙçÇ]+/);
             const misspelledWords = [];
             for (const word of words) {
-                const correct = await this.WindowHandler.nodehun.spell(word);
-                if (!correct) {
-                    misspelledWords.push(word);
-                   // log.info(word)
+                if (this.WindowHandler.nodehun){
+                    const correct = await this.WindowHandler.nodehun.spell(word);
+
+                    if (!correct) {
+                        const suggestions = await this.WindowHandler.nodehun.suggest(word)
+                        misspelledWords.push( { wrongWord: word, suggestions: suggestions });
+                    }
+                }
+                else {
+                    event.returnValue = {error: "error"};
                 }
             }
             event.returnValue = { misspelledWords };
         });
-        ipcMain.on('add-word-to-dictionary', (event, word) => {
-            log.info("adding word to dictionary")
-            this.WindowHandler.nodehun.add(word)
+
+
+        
+     
+        ipcMain.on('get-cpu-info', (event) => {
+            const cpus = os.cpus().map(cpu => cpu.model.toLowerCase());
+            const vmCpuKeywords = ['qemu', 'virtual', 'vmware', 'kvm', 'xen', 'hyper-v'];
+    
+
+            let virtualCpu = false;
+            cpus.forEach(cpu => {
+                vmCpuKeywords.forEach(keyword => {
+                    if (cpu.includes(keyword)) {
+                        virtualCpu = true;
+                    }
+                });
+            });
+    
+            event.returnValue = virtualCpu;
         });
+
+
+
+
     }
+
+
+
+    compareVersions(versionA, versionB) {
+        const partsA = versionA.split('.').map(Number);
+        const partsB = versionB.split('.').map(Number);
+    
+        for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
+            const numA = partsA[i] || 0; // Fallback auf 0, falls kein Wert vorhanden
+            const numB = partsB[i] || 0;
+    
+            if (numA < numB) return -1;
+            if (numA > numB) return 1;
+        }
+        return 0;
+    }
+    
+    compareReleaseNumbers(statusA, statusB) {
+        const numberA = parseInt(statusA.match(/\d+/), 10) || 0;
+        const numberB = parseInt(statusB.match(/\d+/), 10) || 0;
+    
+        if (numberA < numberB) return -1;
+        if (numberA > numberB) return 1;
+        return 0;
+    }
+
+    compareSoftware(versionA, statusA, versionB, statusB) {
+        const versionComparison = this.compareVersions(versionA, versionB);
+        if (versionComparison !== 0) return versionComparison;
+    
+        return this.compareReleaseNumbers(statusA, statusB);
+    }
+
+
 }
  
 export default new IpcHandler()

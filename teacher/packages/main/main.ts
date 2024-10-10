@@ -27,7 +27,7 @@ import server from "../server/src/server.js"
 import multicastClient from './scripts/multicastclient.js'
 import WindowHandler from './scripts/windowhandler.js'
 import IpcHandler from './scripts/ipchandler.js'
-import log from 'electron-log/main';
+import log from 'electron-log';
 
 WindowHandler.init(multicastClient, config)  // mainwindow, examwindow, blockwindow
 IpcHandler.init(multicastClient, config, WindowHandler)  //controll all Inter Process Communication
@@ -39,7 +39,7 @@ log.transports.file.resolvePathFn = (config) => { return logfile  }
 log.eventLogger.startLogging();
 log.errorHandler.startCatching();
 log.warn(`-------------------`)
-log.warn(`main: starting Next-Exam "${config.version} ${config.info}"`)
+log.warn(`main: starting Next-Exam "${config.version} ${config.info}" (${process.platform})`)
 log.info(`main: Logfilelocation at ${logfile}`)
 log.info('main: Next-Exam Logger initialized...');
 
@@ -97,7 +97,7 @@ app.whenReady().then(()=>{
         log.info(`main: Express listening on https://${config.hostip}:${config.serverApiPort}`)
     }) 
 })
-.then(()=>{
+.then(async ()=>{
     if (config.hostip == "127.0.0.1") { config.hostip = false }
     if (config.hostip) { multicastClient.init(config.gateway)  } //multicast client only tracks other exam instances on the net
     powerSaveBlocker.start('prevent-display-sleep')
@@ -118,4 +118,10 @@ app.whenReady().then(()=>{
             win.webContents.toggleDevTools()
         }
     })
+
+
+    globalShortcut.register('Alt+Left', () => {
+        console.log('Versuch, mit Alt+Left zurückzunavigieren, wurde blockiert.');
+    });
+
 })

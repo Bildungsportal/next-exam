@@ -49,6 +49,14 @@ $theme-colors: (
 .btn-primary:hover  { background-color: $blue-300; border-color:$blue-300;}
 
 
+.cyanback-500 {
+    background-color: $cyan-500;
+}
+.grayback {
+  background-color: $gray-200;
+}
+
+
 
 .form-check-input:checked { 
   background-color: $blue-600;

@@ -30,19 +30,40 @@ import fs from 'fs'
 import os from 'os'
 import forge from 'node-forge'
 forge.options.usePureJavaScript = true; 
-import defaultGateway from'default-gateway';
+import { gateway4sync } from 'default-gateway';
 import multicastClient from '../../main/scripts/multicastclient.js'
 import cookieParser from 'cookie-parser'
 import { app } from 'electron'
-import log from 'electron-log/main';
+import log from 'electron-log';
 
-config.workdirectory = path.join(os.homedir(), config.examdirectory)  //Attention! In Electron this makes sense. the WEBserver version will most likely need another Workdirectory
+
+config.homedirectory = os.homedir()
+config.workdirectory = path.join(config.homedirectory, config.serverdirectory);
 config.tempdirectory = path.join(os.tmpdir(), 'exam-tmp')
-//if (!fs.existsSync(config.workdirectory)){ fs.mkdirSync(config.workdirectory); } //this is done in control.js /start/ anyways
-if (!fs.existsSync(config.tempdirectory)){ fs.mkdirSync(config.tempdirectory); }
+
+if (!fs.existsSync(config.workdirectory)){ fs.mkdirSync(config.workdirectory, { recursive: true }); }
+if (!fs.existsSync(config.tempdirectory)){ fs.mkdirSync(config.tempdirectory, { recursive: true }); }
+
+
+// Define the desktop path based on the platform
+const desktopPath = process.platform === 'win32'
+    ? path.join(process.env['USERPROFILE'], 'Desktop')
+    : path.join(config.homedirectory, 'Desktop');
+
+
+// Check if the desktop folder exists and create if it doesn't
+if (!fs.existsSync(desktopPath)) {  fs.mkdirSync(desktopPath, { recursive: true }); }
+// Define the path for the symbolic link
+const linkPath = path.join(desktopPath, config.serverdirectory);
+// Create the symbolic link
+if (!fs.existsSync(linkPath)) { fs.symlinkSync(config.workdirectory, linkPath, 'junction'); }
+
+
+
+
 
 try {
-    const {gateway, interface: iface} =  defaultGateway.v4.sync()
+    const {gateway, interface: iface} =  gateway4sync()
     config.hostip = ip.address(iface)    // this returns the ip of the interface that has a default gateway..  should work in MOST cases.  probably provide "ip-options" in UI ?
     config.gateway = true
 }
@@ -57,6 +78,7 @@ try {
 
 if (typeof window !== 'undefined'){
     if (window.process.type == "renderer") config.electron = true
+   
 }
 
 
@@ -77,10 +99,10 @@ const publicPath = app.isPackaged
   : path.join('public');
 
 // Kopieren Sie den Inhalt von `public/` in das `config.tempdirectory`.
-fsExtra.copy(publicPath, `${config.tempdirectory}/`, function (err) {
-  if (err) return console.error(err);
-  log.info('server: copied public directory to temp...');
-});
+// fsExtra.copy(publicPath, `${config.tempdirectory}/`, function (err) {
+//   if (err) return console.error(err);
+//   log.info('server: copied public directory to temp...');
+// });
 
 
 

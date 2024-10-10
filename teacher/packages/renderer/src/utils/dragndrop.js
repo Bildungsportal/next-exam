@@ -33,7 +33,8 @@ class EmptyWidget {
     constructor() {
         this.clientname = false
         this.token = uuidv4()
-        this.imageurl="user-black.svg"    
+        this.imageurl="user-black.svg"  
+        this.group = 'a'  
     }
 }
 

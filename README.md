@@ -1,18 +1,18 @@
 # next-exam
 
-the next iteration of the life-exam project
+the next iteration of the [life-exam](https://gitlab.com/valueerror/life-exam) project
 
 # technologies used
 * electron
 * vite
-* node.js
+* node
 * node-express
-* vue.js
-* bootstrap.css
-* jquery
+* vue
+* bootstrap
 
 
-Node v20.1.0
+
+Node v22.8.0
 
 ## install necessary modules 
 

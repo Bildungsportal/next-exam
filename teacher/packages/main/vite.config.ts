@@ -1,6 +1,11 @@
-import { builtinModules } from 'module'
-import { defineConfig } from 'vite'
-import pkg from '../../package.json'
+import { builtinModules } from 'module';
+import { defineConfig } from 'vite';
+import pkg from '../../package.json';
+
+const __dirname = import.meta.dirname;
+
+
+
 
 export default defineConfig({
   define: {
@@ -8,14 +13,23 @@ export default defineConfig({
     '__VUE_PROD_DEVTOOLS__': false
   },
   root: __dirname,
+  plugins: [
+    // externalizeDepsPlugin({
+    //   //include: ['electron-log'], // Stelle sicher, dass electron-log eingeschlossen ist
+    // }),
+ 
+  ],
+  optimizeDeps: {
+    //exclude: ['electron'], // Schließe Electron aus, damit es nicht durch Vite verarbeitet wird
+  },
   build: {
     outDir: '../../dist/main',
     emptyOutDir: true,
 
     lib: {
       entry: 'main.ts',
-      formats: ['cjs'],
-      fileName: () => '[name].cjs',
+      formats: ['es'],  // Ändere 'cjs' zu 'es' für ESModule
+      fileName: () => '[name].mjs',  // Ändere Dateiendung zu '.mjs' für ESModule
     },
     minify: true,
     sourcemap: true,
@@ -29,4 +43,4 @@ export default defineConfig({
       ],
     },
   },
-})
+});

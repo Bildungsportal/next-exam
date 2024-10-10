@@ -29,17 +29,18 @@
             {{$t("general.slist")}}
         </router-link> 
     
-        <div v-if="!advanced" id="adv"  class="btn btn-sm btn-outline-secondary mt-2" @click="toggleAdvanced();"> {{ $t("startserver.advanced") }}</div>
-        <div v-if="advanced" id="adv"  class="btn btn-sm btn-outline-secondary mt-2" @click="toggleAdvanced();"> {{ $t("startserver.simple") }}</div> 
+       
         <div v-if="freeDiscspace < 0.1" class="warning">  {{ $t("startserver.freespacewarning") }}   </div>
         
         <div id="previous" class="mt-4" v-if="previousExams && previousExams.length > 0">
             <span class="small">{{$t("startserver.previousexams")}}</span>
             <div v-for="exam of previousExams">
-                <div class="input-group">
+                <div class="input-group" style="display:inline;">
                     <div class="btn btn-sm btn-warning mt-1" @click="delPreviousExam(exam)">x</div>
-                    <div class="btn btn-sm btn-secondary mt-1" :id="exam" @click="setPreviousExam(exam)">{{exam}}</div>
+                    <div v-if="servername !== exam" class="btn btn-sm btn-secondary mt-1" :id="exam" @click="setPreviousExam(exam)">{{exam}}</div>
+                    <div v-if="servername === exam" class="btn btn-sm btn-info mt-1" :id="exam" @click="setPreviousExam(exam)">{{exam}}</div>  
                 </div>
+                <img v-if="servername === exam" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
                 
             </div>
         </div>
@@ -57,27 +58,35 @@
     <!-- maincontent -->
     <div id="content" class="fadeinslow p-3">
         <div class="col8">
-            <div class="input-group  mb-1">
-                <span class="input-group-text col-2"  id="inputGroup-sizing-lg" style="width:150px;max-width:150px;min-width:150px;">{{$t("startserver.examname")}}</span>
+            <div class="input-group  mb-1 mt-0">
+                <span class="input-group-text col-2 grayback" id="inputGroup-sizing-lg" style="width:160px;max-width:160px;min-width:160px;">{{$t("startserver.examname")}}</span>
                 <input v-model="servername" maxlength="20" type="text" class="form-control" id="servername" placeholder="Mathe-5a" style="width:200px;max-width:200px;min-width:135px;">
     
             </div>   
-            <div class="input-group  mb-3" :class="(electron) ? 'hidden':''"> <!-- we do not need to display the password in electron standalone version because no other exams are ever listed and you can not leave the exam without ending the server -->
+            <div class="input-group mb-3" style="max-width: fit-content">  
+                <span id="workdir" class="input-group-text col-2 grayback"  style="width:160px;">{{$t("startserver.workfolder")}}</span>
+                <span class="form-control " style="font-family: monospace; font-size: 0.9em; padding-top: 8px; white-space: pre;">{{ workdir }}</span>
+                <button @click="setWorkdir()" id="workdir" class="btn btn-info p-0" style="width:40px;" :title="$t('startserver.select')">
+                   
+                    <img src="/src/assets/img/svg/settings.svg" style="vertical-align: sub;" class="" width="18" height="18" >
+                </button>
+            </div>
+
+
+
+            
+            <!-- we do not need to display the password in electron standalone version because no other exams are ever listed and you can not leave the exam without ending the server -->
+            <div class="input-group  mb-3" :class="(electron) ? 'hidden':''"> 
                 <input v-model="password" type="text" class="form-control " id="password" placeholder="password" style="width:135px;max-width:135px;min-width:135px;">
                 <span class="input-group-text col-4" style="width:135px;" id="inputGroup-sizing-lg">{{$t("startserver.pwd")}}</span>
             </div>
-     
+
             <button @click="startServer()" :class="(!hostip) ? 'disabled':''" id="examstart" class="mb-5 btn btn-success" value="start exam" style="width:150px;max-width:150px;min-width:120px;">{{$t("startserver.start")}}</button>
             
         </div>
 
         
-        <div v-if="advanced" id="list" class="">
-            <div class="input-group input-group-sm" style="max-width: fit-content">  
-                <button @click="setWorkdir()" id="examstart" class="btn btn-sm btn-info" value="start exam" style="width:195px;">{{$t("startserver.select")}}</button>
-                <span class="form-control " style="font-family: monospace; white-space: pre; font-size:0.8em; padding-top: 5px;">{{ workdir }}</span>
-            </div>
-        </div>
+
 
     </div>
 </div>
@@ -87,6 +96,7 @@
 
 <script>
 import log from 'electron-log/renderer';
+import {SchedulerService} from '../utils/schedulerservice.js'
 
 
 // Erfassen von unhandled promise rejections
@@ -121,6 +131,13 @@ export default {
     },
     components: {},
     methods: {
+
+        async fetchInfo() {
+            this.hostip = ipcRenderer.sendSync('checkhostip')
+            if (!this.hostip) return; 
+
+        },
+
         async checkDiscspace(){   // achtung: custom workdir spreizt sich mit der idee die teacher instanz als reine webversion laufen zulassen - wontfix?
            this.freeDiscspace = await ipcRenderer.invoke('checkDiscspace')
         },
@@ -218,13 +235,11 @@ export default {
         },
         showCopyleft(){
             this.$swal.fire({
-                title: "<span style='display:inline-block; transform: scaleX(-1); vertical-align: middle; cursor: pointer;'>&copy;</span>",
+                title: "<span id='cpleft' class='active' style='display:inline-block; transform: scaleX(-1); vertical-align: middle; cursor: pointer;'>&copy;</span> <span style='font-size:0.8em'>Thomas Michael Weissel </span>",
                 icon: 'info',
                 html: `
-                Thomas Michael Weissel <br>
-                <span style="font-size:0.8em">
-                  <a href="https://next-exam.at/#kontakt" target="_blank">next-exam.at</a>
-                </span><br><br>
+                <a href="https://linux-bildung.at" target="_blank"><img style="width: 50px; opacity:0.7;" src="./osos.svg"></a> <br>
+                <span style="font-size:0.8em"> <a href="https://next-exam.at/#kontakt" target="_blank">next-exam.at</a> </span><br><br>
                 <span style="font-size:0.8em">Version: ${this.version} ${this.info}</span>
                 `,
             })
@@ -283,11 +298,15 @@ export default {
             this.getPreviousExams()
         }
 
+
+        // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
+        this.fetchinterval = new SchedulerService(4000);
+        this.fetchinterval.addEventListener('action',  this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+        this.fetchinterval.start(); 
+
         // add event listener to exam input field to supress all special chars 
         document.getElementById("servername").addEventListener("keypress", this.validateInput);
         document.getElementById("servername").addEventListener("keyup",  this.handleKeyupEvent);
-
-
     },
     beforeUnmount() {
         document.getElementById("servername").removeEventListener("keyup",  this.handleKeyupEvent);  // sollte eigentlich nicht notwendig sein, aber bei singlepage apps vielleicht besser und sauberer so
@@ -327,6 +346,11 @@ export default {
     background-color:  #dc3545c7;
 }
 
+#previous .printercheck {
+    margin-left:4px;
+    margin-top: 4px;
+    filter: saturate(100%) hue-rotate(90deg) ;
+}
 
 /* CSS classes for fade-in and fade-out */
 .fade-in {

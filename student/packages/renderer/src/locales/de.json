@@ -3,7 +3,7 @@
         "exams": "Aktive Prüfungen",
         "username": "Benutzername",
         "pin": "Pincode",
-        "ip":"IP Adresse",
+        "ip":"Server Adresse",
         "examname":"Prüfungsname",
         "advanced": "fortgeschritten",
         "simple": "einfach",
@@ -42,6 +42,8 @@
         "nofiles": "Es wurden keine Dateien hochgeladen"
     },
     "editor": {
+        "update": "Aktualisieren",
+        "splitview": "Spaltenansicht",
         "leftkiosk": "Sie haben den abgesicherten Modus verlassen!",
         "tellsomeone": "Melden Sie sich umgehend bei der Aufsichtsperson!",
         "replacecontent1": "Wollen Sie den Inhalt des Editors durch den Inhalt der Datei",
@@ -69,6 +71,7 @@
         "heading3":"Überschrift 3",
         "heading4":"Überschrift 4",
         "heading5":"Überschrift 5",
+        "heading6":"Überschrift 6",
         "subscript":"tiefgestellt",
         "superscript":"hochgestellt",
         "bulletlist":"ungeordnete Liste",
@@ -98,12 +101,18 @@
         "paste":"einfügen",
         "copy":"kopieren",
         "spellcheck": "Rechtschreibprüfung aktivieren",
-        "spellcheckdeactivate": "Rechtschreibprüfung deaktieren",
+        "spellcheckdeactivate": "Rechtschreibprüfung deaktivieren",
         "reload": "Neu laden",
         "reloadtext": "Wollen sie den Texteditor neu initialisieren?",
         "reloadcontent": "Inhalt beibehalten",
         "specialchar":"Sonderzeichen einfügen",
-        "print": "drucken"
+        "print": "drucken",
+        "playaudio":"Audio abspielen",
+        "reallyplay":"Wollen Sie das Hörbeispiel jetzt abspielen?",
+        "audioremaining":"Verbleibende Durchläufe:",
+        "audionotallowed":"Sie haben keine Berechtigung die Audiodatei erneut abzuspielen!",
+        "insert":"Bild einfügen",
+        "insertmug":"Mugshot einfügen"
     },
     "math": {
         "exit":"Abgesicherten Modus beenden?",

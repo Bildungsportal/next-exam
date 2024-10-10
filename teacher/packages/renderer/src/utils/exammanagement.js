@@ -20,7 +20,7 @@ function startExam(){
 
 // disable exammode 
 function endExam(){
-    this.getFiles('all') // fetch files from students before ending exam for everybody
+    if (this.hostip){  this.getFiles('all') }  // fetch files from students before ending exam for everybody
     this.$swal.fire({
         title: this.$t("dashboard.sure"),
         html: `<div>
@@ -51,7 +51,8 @@ function endExam(){
  * Stop and Exit Exam Server Instance
  */
 function stopserver(){
-    this.getFiles('all') // fetch files from students before ending exam for everybody - this takes up to 8 seconds and may fail - so this is just a emergency backup and should be properly handled by the teacher
+
+    if (this.hostip){  this.getFiles('all') }      // fetch files from students before ending exam for everybody - this takes up to 8 seconds and may fail - so this is just a emergency backup and should be properly handled by the teacher
     let message = this.$t("dashboard.exitexam")
     if (!this.serverstatus.exammode) { message = this.$t("dashboard.exitexaminfo")}
 
@@ -65,12 +66,17 @@ function stopserver(){
     })
     .then( async (result) => {
         if (result.isConfirmed) {
+            if (!this.hostip){   // somehow the teacher disconnected - stop everything without network address
+                await ipcRenderer.invoke("stopserver", this.servername)  // need to stop server first otherwise router.js won't route back
+                this.$router.push({ path: '/startserver' });  // route back to startserver view
+                return;  
+            }
             axios.get(`https://${this.serverip}:${this.serverApiPort}/server/control/stopserver/${this.servername}/${this.servertoken}`)
             .then( async (response) => {
                 this.status(response.data.message);
                 //log.info(response.data);
                 await this.sleep(2000);
-                this.$router.push({ path: '/startserver' })
+                this.$router.push({ path: '/startserver' });  // route back to startserver view
             }).catch( err => {log.error(err)});
         } 
     });    
@@ -139,12 +145,13 @@ function setAbgabeInterval(){
             log.info("exammanagment @ setAbgabeInterval: starting submission intervall", this.abgabeintervalPause)
             this.abgabeinterval.interval = 60000 * this.abgabeintervalPause
             this.abgabeinterval.start();
-
+            this.setServerStatus()
         })
     }
     else {
         log.info("exammanagment @ setAbgabeInterval: stopping submission interval")
         this.abgabeinterval.stop();
+        this.setServerStatus()
     }
 }
 
@@ -152,7 +159,7 @@ function setAbgabeInterval(){
 // get finished exams (ABGABE) from students
 function getFiles(who='all', feedback=false, quiet=false){
     this.checkDiscspace()
-    if ( this.studentlist.length <= 0 ) { this.status(this.$t("dashboard.noclients")); log.warn("exammanagement @ getFiles: no clients connected"); return; }
+    if ( this.studentlist.length <= 0 ) { this.status(this.$t("dashboard.noclients")); return; }
 
     if (this.serverstatus.examtype === "microsoft365"){ //fetch files from onedrive
         this.downloadFilesFromOneDrive()
@@ -195,12 +202,8 @@ function getFiles(who='all', feedback=false, quiet=false){
         input: 'range',
         html: `${this.$t("dashboard.screenshotquestion")} <br>  ${this.$t("dashboard.screenshothint")}
         <br><br>
-
         <input class="form-check-input" type="checkbox" id="screenshotocr">
         <label class="form-check-label" for="screenshotocer"> ${this.$t("dashboard.ocr")} </label> <br>
-
-
-        
         `,
         inputAttributes: {
             min: 0,
@@ -214,7 +217,6 @@ function getFiles(who='all', feedback=false, quiet=false){
     }).then((result) => {
         const inputInteger = parseInt(result.value, 10); // Convert to integer
         this.serverstatus.screenshotinterval = inputInteger
-       
         this.serverstatus.screenshotocr = document.getElementById('screenshotocr').checked;
 
         if (!this.serverstatus.screenshotinterval || !Number.isInteger(this.serverstatus.screenshotinterval)){
@@ -246,9 +248,27 @@ function lockscreens(state, feedback=true){
 //upload files to all students
 function sendFiles(who) {
     if (this.studentlist.length === 0) { this.status(this.$t("dashboard.noclients")); return;}
+    let htmlcontent = `
+        ${this.$t("dashboard.filesendtext")} <br>
+        <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>`
+
+    if (this.serverstatus.groups && who == "all"){ //wenn who != "all" sondern ein studenttoken ist dann soll die datei an eine einzelne person gesandt werden
+        htmlcontent =  `
+            ${this.$t("dashboard.filesendtext")} <br>
+            <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
+            <br>  <br> 
+            Gruppe<br>
+            <button id="fbtnA" class="swal2-button btn btn-info m-2" style="width: 42px; height: 42px;">A</button>
+            <button id="fbtnB" class="swal2-button btn btn-warning m-2" style="width: 42px; height: 42px;filter: grayscale(90%);">B</button>
+            <button id="fbtnC" class="swal2-button btn btn-warning m-2" style="padding:0px;width: 42px; height: 42px;filter: grayscale(90%); background: linear-gradient(-60deg, #0dcaf0 50%, #ffc107 50%);">AB</button>
+        `
+    }
+         
+    let activeGroup = "a"
+
     this.$swal.fire({
         title: this.$t("dashboard.filesend"),
-        text: this.$t("dashboard.filesendtext"),
+        html: htmlcontent,
         icon: "info",
         input: 'file',
         showCancelButton: true,
@@ -260,7 +280,39 @@ function sendFiles(who) {
             id: "swalFile",
             class:"form-control",
             multiple:"multiple",
-            accept: ".pdf, .bak, .ogg, .wav, .mp3, .jpg"
+            accept: ".pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb"
+        },
+        didRender: () => {
+            const btnA = document.getElementById('fbtnA');
+            const btnB = document.getElementById('fbtnB');
+            const btnC = document.getElementById('fbtnC');
+            if (btnA && !btnA.dataset.listenerAdded) {
+                btnA.addEventListener('click', () => {
+                    btnA.style.filter = "grayscale(0%)"
+                    btnB.style.filter = "grayscale(90%)"
+                    btnC.style.filter = "grayscale(90%)"
+                    activeGroup = "a"
+                });
+                btnA.dataset.listenerAdded = 'true';
+            }
+            if (btnB && !btnB.dataset.listenerAdded) {
+                btnB.addEventListener('click', () => {
+                    btnA.style.filter = "grayscale(90%)"
+                    btnB.style.filter = "grayscale(0%)"
+                    btnC.style.filter = "grayscale(90%)"
+                    activeGroup = "b"
+                });
+                btnB.dataset.listenerAdded = 'true';
+            }
+            if (btnC && !btnC.dataset.listenerAdded) {
+                btnC.addEventListener('click', () => {
+                    btnA.style.filter = "grayscale(90%)"
+                    btnB.style.filter = "grayscale(90%)"
+                    btnC.style.filter = "grayscale(0%)"
+                    activeGroup = "all"
+                });
+                btnC.dataset.listenerAdded = 'true';
+            }
         }
     })
     .then((input) => {
@@ -278,12 +330,15 @@ function sendFiles(who) {
             formData.append('files', this.files[i], filename)  // single file is sent as object.. multiple files as array..
         }
         
+        // group managment - send files to specific group
+        if (this.serverstatus.groups && who == "all"){ who = activeGroup}  //nur wenn who == all wurde der allgemeine filesend dialog aufgeruden. who kann auch ein student token sein
+
         axios({
             method: "post", 
             url: `https://${this.serverip}:${this.serverApiPort}/server/data/upload/${this.servername}/${this.servertoken}/${who}`, 
             data: formData, 
         })
-        .then( (response) => {log.info(response.data) })
+        .then( (response) => {log.info("exmmmanagment @ sendFiles:", response.data) })
         .catch( err =>{ log.error(`${err}`) })
     });    
 }
@@ -304,11 +359,9 @@ function toggleScreenshot(){
 function delfolderquestion(token="all"){
     if (this.studentlist.length === 0) { this.status(this.$t("dashboard.noclients")); return;}
     let text =  this.$t("dashboard.delsure")
-    
     if (token !== "all"){ 
         text = this.$t("dashboard.delsinglesure")
     }
-
     this.$swal.fire({
         title: this.$t("dashboard.attention"),
         text:  text,
@@ -316,13 +369,9 @@ function delfolderquestion(token="all"){
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
         reverseButtons: true,
-        
     })
-
-
     .then((result) => {
         if (result.isConfirmed) {
-        
                 // inform student that folder needs to be deleted
             fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${token}`, { 
                 method: 'POST',
@@ -346,7 +395,8 @@ function delfolderquestion(token="all"){
  * der editor (frontend) sieht dann allowspellcheck und aktiviert mittels IPC invoke (ipchandler.js) dann nodehun() und macht den spellcheckbutton sichtbar
  */
 async function activateSpellcheckForStudent(token, clientname){
-  
+    const student = this.studentlist.find(obj => obj.token === token);  //get specific student (status)
+    console.log(student.status)
     await this.$swal.fire({
         customClass: {
             popup: 'my-popup',
@@ -359,52 +409,70 @@ async function activateSpellcheckForStudent(token, clientname){
         html: `
         <div style="padding: 4px; font-size: 0.9em; text-align: left;">
             <h5>${this.$t("dashboard.allowspellcheck")}</h5>
-            <input class="form-check-input" type="checkbox" id="checkboxspellcheck">
-            <label class="form-check-label" for="checkboxspellcheck"> ${this.$t("dashboard.spellcheckactivate")} </label> <br>
+            <br>
+            <input class="form-check-input" type="checkbox" id="checkboxLT">
+            <label class="form-check-label" for="checkboxLT"> LanguageTool ${this.$t("dashboard.activate")} </label> <br>
             <input class="form-check-input" type="checkbox" id="checkboxsuggestions">
             <label class="form-check-label" for="checkboxsuggestions"> ${this.$t("dashboard.suggest")} </label>
         </div>`,
         focusConfirm: false,
-        preConfirm: () => {
-             
+        didOpen: () => {
+            if (student.status.activatePrivateSpellcheck == true){
+                document.getElementById('checkboxLT').checked = student.status.activatePrivateSpellcheck
+                document.getElementById('checkboxsuggestions').checked = student.status.activatePrivateSuggestions
+            }
+            else {
+                document.getElementById('checkboxLT').checked = false
+                document.getElementById('checkboxsuggestions').checked = false
+            }   
         }
-    }).then((input) => {
+    }).then(async (input) => {
+        if (!input.isConfirmed) {return}
 
-        let spellcheck = document.getElementById('checkboxspellcheck').checked; 
         let suggestions = document.getElementById('checkboxsuggestions').checked;
+        let languagetool = document.getElementById('checkboxLT').checked;
 
-        if (!spellcheck){
-            spellcheck = false
+        if (!languagetool){
             console.log(`de-activating spellcheck for user: ${clientname} `)
-            
             // inform student that spellcheck can be activated
             fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${token}`, { 
                 method: 'POST',
                 headers: {'Content-Type': 'application/json' },
-                body: JSON.stringify({ allowspellcheck : false } )
+                body: JSON.stringify({ activatePrivateSpellcheck : false } )
             })
             .then( res => res.json() )
-            .then( result => { log.info(result)});
+            .then( result => { log.info(result); this.fetchInfo();});
         }
         else {
             console.log(`activating spellcheck for user: ${clientname} `)
-         
+    
+            let response = await ipcRenderer.invoke("startLanguageTool")        //start languagetool server api
+            if (response){
+                // this.$swal.fire({
+                //     text: "LanguageTool started!",
+                //     timer: 1000,
+                //     timerProgressBar: true,
+                //     didOpen: () => { this.$swal.showLoading() }
+                // });
+            }
+            else {
+                this.$swal.fire({
+                    text: "LanguageTool Error!",
+                    timer: 1000,
+                    timerProgressBar: true,
+                    didOpen: () => { this.$swal.showLoading() }
+                });
+            }
             // inform student that spellcheck can be activated
             fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${token}`, { 
                 method: 'POST',
                 headers: {'Content-Type': 'application/json' },
-                body: JSON.stringify({ allowspellcheck : true, suggestions: suggestions } )
+                body: JSON.stringify({ activatePrivateSpellcheck : true, activatePrivateSuggestions: suggestions} )
             })
             .then( res => res.json() )
-            .then( result => { log.info(result)});
+            .then( result => { log.info(result); this.fetchInfo();});
         }
-
-    }) 
-    
-    
-    
-        
-     
+    })  
 }
 
 

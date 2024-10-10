@@ -3,6 +3,8 @@
 
     <!-- HEADER START -->
     <exam-header
+      :serverstatus="serverstatus"
+      :clientinfo="clientinfo"
       :online="online"
       :clientname="clientname"
       :exammode="exammode"
@@ -12,15 +14,15 @@
       :currenttime="currenttime"
       :timesinceentry="timesinceentry"
       :componentName="componentName"
+      :localLockdown="localLockdown"
       @reconnect="reconnect"
       @gracefullyexit="gracefullyexit"
     ></exam-header>
      <!-- HEADER END -->
 
 
-    <div id="suggestion-menu" style="display:none; position:fixed;"></div>
-
-    <div class="w-100 p-0 m-0 text-white shadow-sm text-center" style=" top: 66px; z-index: 10001 !important; background-color: white;">
+   
+    <div class="w-100 p-0 m-0 text-white shadow-sm text-center" style="top: 66px; z-index: 10001 !important; background-color: white;">
         
         <!-- toolbar start -->
         <div v-if="editor" class="m-2" id="editortoolbar" style="text-align:left;"> 
@@ -37,7 +39,10 @@
             <button :title="$t('editor.heading2')" @click="editor.chain().focus().toggleHeading({ level: 2 }).run()" :class="{ 'is-active': editor.isActive('heading', { level: 2 }) }" class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img src="/src/assets/img/svg/h2.svg" width="22" height="22"></button>
             <button :title="$t('editor.heading3')" @click="editor.chain().focus().toggleHeading({ level: 3 }).run()" :class="{ 'is-active': editor.isActive('heading', { level: 3 }) }" class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img src="/src/assets/img/svg/h3.svg" width="22" height="22"></button>
             <button :title="$t('editor.heading4')" @click="editor.chain().focus().toggleHeading({ level: 4 }).run()" :class="{ 'is-active': editor.isActive('heading', { level: 4 }) }" class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img src="/src/assets/img/svg/h4.svg" width="22" height="22"></button>
-            <button :title="$t('editor.heading5')" @click="editor.chain().focus().toggleHeading({ level: 5 }).run()" :class="{ 'is-active': editor.isActive('heading', { level: 5 }) }" class="invisible-button btn btn-outline-secondary p-1 me-2 mb-1 btn-sm"><img src="/src/assets/img/svg/h5.svg" width="22" height="22"></button>
+            <button :title="$t('editor.heading5')" @click="editor.chain().focus().toggleHeading({ level: 5 }).run()" :class="{ 'is-active': editor.isActive('heading', { level: 5 }) }" class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img src="/src/assets/img/svg/h5.svg" width="22" height="22"></button>
+            <button :title="$t('editor.heading6')" @click="editor.chain().focus().toggleHeading({ level: 6 }).run()" :class="{ 'is-active': editor.isActive('heading', { level: 6 }) }" class="invisible-button btn btn-outline-secondary p-1 me-2 mb-1 btn-sm"><img src="/src/assets/img/svg/h6.svg" width="22" height="22"></button>
+
+            
             <button :title="$t('editor.subscript')" @click="editor.chain().focus().toggleSubscript().run()" :class="{ 'is-active': editor.isActive('subscript') }" class="invisible-button btn btn-outline-success p-1 me-0 mb-1 btn-sm"><img src="/src/assets/img/svg/format-text-subscript.svg" class="white" width="22" height="22" ></button>
             <button :title="$t('editor.superscript')" @click="editor.chain().focus().toggleSuperscript().run()" :class="{ 'is-active': editor.isActive('superscript') }" class="invisible-button btn btn-outline-success p-1 me-2 mb-1 btn-sm"><img src="/src/assets/img/svg/format-text-superscript.svg" class="white" width="22" height="22" ></button>
             <button :title="$t('editor.bulletlist')" @click="editor.chain().focus().toggleBulletList().run()" :class="{ 'is-active': editor.isActive('bulletList') }" class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm"><img src="/src/assets/img/svg/format-list-unordered.svg" class="white" width="22" height="22" > </button>
@@ -55,13 +60,13 @@
             <button :title="$t('editor.copy')"  @click="copySelection()" class="invisible-button btn btn-outline-success p-1 mb-1 btn-sm"><img src="/src/assets/img/svg/edit-copy.svg" class="" width="22" height="22" ></button>
             <button :title="$t('editor.paste')"  @click="pasteSelection()" class="invisible-button btn btn-outline-success p-1 me-2 mb-1 btn-sm"><img src="/src/assets/img/svg/edit-paste-style.svg" class="" width="22" height="22" ></button>
            
-            <button :title="$t('editor.specialchar')"  @click="showInsertSpecial()" class="invisible-button btn btn-outline-warning p-1 me-2 mb-1 btn-sm"><img src="/src/assets/img/svg/sign.svg" class="" width="22" height="22" ></button>
+            <button :title="$t('editor.specialchar')"  @click="showInsertSpecial();this.LTdisable()" class="invisible-button btn btn-outline-warning p-1 me-0 mb-1 btn-sm"><img src="/src/assets/img/svg/sign.svg" class="" width="22" height="22" ></button>
+            <button :title="$t('editor.insertmug')"  @click="showInsertMugshot();this.LTdisable()" class="invisible-button btn btn-outline-warning p-1 me-2 mb-1 btn-sm"><img src="/src/assets/img/svg/person-fill.svg" class="" width="22" height="22" ></button>
+           
 
 
-            <button v-if="(serverstatus.spellcheck || allowspellcheck) && spellcheck"  :title="$t('editor.spellcheckdeactivate')"  @click="deactivateSpellcheck()" class="invisible-button btn btn-outline-danger p-1 me-2 mb-1 btn-sm"><img src="/src/assets/img/svg/autocorrection.svg" class="" width="22" height="22" ></button>
-            <button v-if="(serverstatus.spellcheck || allowspellcheck) && !spellcheck" :title="$t('editor.spellcheck')"  @click="activateSpellcheck()" class="invisible-button btn btn-outline-success p-1 me-2 mb-1 btn-sm"><img src="/src/assets/img/svg/autocorrection.svg" class="" width="22" height="22" ></button>
-
-            <button :title="$t('editor.more')" id="more" @click="showMore()" class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img src="/src/assets/img/svg/view-more-horizontal-symbolic.svg" class="white" width="22" height="22" ></button>
+   
+            <button :title="$t('editor.more')" id="more" @click="showMore();this.LTdisable()" class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img src="/src/assets/img/svg/view-more-horizontal-symbolic.svg" class="white" width="22" height="22" ></button>
             <div id="moreoptions" style="display:none;">
                 <button :title="$t('editor.inserttable')" @click="editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()" class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm"><img src="/src/assets/img/svg/insert-table.svg" width="22" height="22" ></button>
                 <button :title="$t('editor.deletetable')" @click="editor.chain().focus().deleteTable().run()" :disabled="!editor.can().deleteTable()" class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm"><img src="/src/assets/img/svg/deletecell.svg" width="22" height="22" ></button>
@@ -86,22 +91,43 @@
 
 
             <br>
-           <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
-                <div v-if="(file.type == 'bak')" class="btn btn-success p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
+            <button :title="$t('editor.splitview')"  @click="toggleSplitview()" style="vertical-align: top;" class="invisible-button btn btn-outline-warning p-0 ms-1 me-2 mb-0 btn-sm"><img src="/src/assets/img/svg/view-split-left-right.svg" class="white" width="22" height="22" ></button>
+            <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
+                <div v-if="(file.type == 'bak')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
+                <div v-if="(file.type == 'docx')" class="btn btn-success p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadDOCX(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
+                
                 <div v-if="(file.type == 'pdf')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
                 <div v-if="(file.type == 'audio')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="playAudio(file.name)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
-                <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
+                <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
             </div>
         
         </div>
         <!-- toolbar end -->
     </div>
 
-    <!-- angabe/pdf preview start -->
-    <div id=preview class="fadeinfast p-4">
-        <embed src="" id="pdfembed">
+
+
+    <!-- mugshot preview start -->
+    <div id="mugshotpreview">
+        <div class="mugshot-container">
+            <img @click="insertMugshot('mug1')" id="mug1" src="/src/assets/img/mugshots/1.png" class="mugshot">
+            <img @click="insertMugshot('mug2')" id="mug2" src="/src/assets/img/mugshots/2.png" class="mugshot">
+            <img @click="insertMugshot('mug3')" id="mug3" src="/src/assets/img/mugshots/3.png" class="mugshot" >
+            <img @click="insertMugshot('mug4')" id="mug4" src="/src/assets/img/mugshots/4.png" class="mugshot" >
+            <img @click="insertMugshot('mug5')" id="mug5" src="/src/assets/img/mugshots/5.png" class="mugshot" >
+            <img @click="insertMugshot('mug6')" id="mug6" src="/src/assets/img/mugshots/6.png" class="mugshot" >
+            <img @click="insertMugshot('mug7')" id="mug7" src="/src/assets/img/mugshots/7.png" class="mugshot" >
+            <img @click="insertMugshot('mug8')" id="mug8" src="/src/assets/img/mugshots/8.png" class="mugshot" >
+            <img @click="insertMugshot('mug9')" id="mug9" src="/src/assets/img/mugshots/9.png" class="mugshot" >
+            <img @click="insertMugshot('mug10')" id="mug10" src="/src/assets/img/mugshots/10.png" class="mugshot" >
+            <img @click="insertMugshot('mug11')" id="mug11" src="/src/assets/img/mugshots/11.png" class="mugshot" >
+            <img @click="insertMugshot('mug12')" id="mug12" src="/src/assets/img/mugshots/12.png" class="mugshot" >
+        </div>
     </div>
-    <!-- angabe/pdf preview end -->
+    <!-- mugshot preview end -->
+
+
+
 
     <!-- focus warning start -->
     <div v-if="!focus" class="focus-container">
@@ -114,10 +140,7 @@
     </div>
     <!-- focuswarning end  -->
 
-
-
-
-
+    
      <!-- AUDIO Player start -->
         <div id="aplayer">
             <audio id="audioPlayer" controls controlsList="nodownload">
@@ -129,26 +152,104 @@
     <!-- AUDIO Player end -->
 
 
+    <!-- angabe/pdf preview start -->
+    <div v-if="!splitview" id="preview" class="fadeinfast p-4">
+        <div class="embed-container">
+        <embed src="" id="pdfembed"></embed>
+        <div class="btn btn-warning shadow " id="insert-button" @click="insertImage(selectedFile)" :title="$t('editor.insert')">
+            <img src="/src/assets/img/svg/edit-download.svg" class="white" width="22" height="32">
+        </div>
+            <div id="pdfZoom" style="display:none; position: absolute; top:20px; right: 100px;">
+                <button class="btn btn-warning btn-small" style="width:28px;" id="zoomIn"><img src="/src/assets/img/svg/zoom-in.svg">  </button>
+                <button class="btn btn-warning btn-small" style="width:28px;" id="zoomOut"><img src="/src/assets/img/svg/zoom-out.svg"></button>
+            </div>
+        </div>
+    </div>
+    <!-- angabe/pdf preview end -->
+
     <!-- EDITOR START -->
-    <div id="editormaincontainer" style="position: relative; height: 100%; overflow-x:auto; overflow-y: scroll; background-color: #eeeefa;">
+    <div v-if="!splitview" id="editormaincontainer" style="height: 100%; overflow-x:auto; overflow-y: scroll; background-color: #eeeefa;">
         <div id="editorcontainer" class="shadow" style="">
             <editor-content :editor="editor" class='p-0' id="editorcontent" style="background-color: #fff; border-radius:0;" />
+            <canvas id="highlight-layer"></canvas>
         </div>
-
     </div>
+    <!-- EDITOR END -->
+
+
+    <!-- SPLITVIEW START -->
+    <div v-if="splitview" class="split-view-container" style="overflow: hidden; display: flex !important; flex-direction: row !important; height: 100% !important;">
+        <!-- PDF Preview Container -->
+        <div id="preview" class="fadeinfast" style="background-image: url(/src/assets/img/svg/edit-copy-light.svg); background-repeat: no-repeat; background-position: center; flex-grow: 1 !important; display: block !important; position: static !important; top: auto !important; left: auto !important; width: auto !important; height: auto !important; background-color: transparent !important; z-index: auto !important; backdrop-filter: none !important;">
+            <div class="embed-container" style="position: relative !important; top: 0 !important; left: 0 !important; transform: none !important; display: block !important; height:100% !important">
+                <embed src="" id="pdfembed" style="border-radius:0 !important; background-size:contain; width:100% !important; height: 100% !important; background-color:transparent !important;"></embed>
+                <div class="btn btn-warning shadow" id="insert-button" @click="insertImage(selectedFile)" :title="$t('editor.insert')" style="position: absolute; top: 40px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-image: url('/src/assets/img/svg/edit-download-black.svg'); background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
+                <div id="pdfZoom" style="display:none; position: absolute; top:40px; right:20px; z-index:100000; height: 100px;">
+                    <button class="btn btn-warning btn-small shadow" style="width:70px; height: 32px; margin-bottom:2px; background-image: url(/src/assets/img/svg/zoom-in.svg); background-repeat: no-repeat; background-position: center; " id="zoomIn"></button><br>
+                    <button class="btn btn-warning btn-small shadow" style="width:70px; height: 32px; margin-bottom:2px; background-image: url(/src/assets/img/svg/zoom-out.svg); background-repeat: no-repeat; background-position: center;" id="zoomOut"></button>
+                </div>
+
+            </div>
+        </div>
+        <!-- Editor Container -->
+        <div id="editormaincontainer" style="min-width:230mm!important;padding:10px; overflow-x: auto !important; overflow-y: scroll !important; background-color: #eeeefa !important;">
+            <div id="editorcontainer" class="shadow">
+                <editor-content :editor="editor" class="p-0" id="editorcontent" style="background-color: #fff !important; border-radius: 0 !important;" />
+                <canvas id="highlight-layer"></canvas>
+            </div>
+        </div>
+    </div>
+    <!-- SPLITVIEW END -->
+
+
+
+
+
+
+    
+    <!-- LANGUAGE TOOL START -->
+    <div id="languagetool" v-if="serverstatus.languagetool || privateSpellcheck.activated">
+        <div id="ltcheck" @click="LTcheckAllWords();"> <div id="eye" class="darkgreen eyeopen"></div> &nbsp;LanguageTool</div>
+        <div class="ltscrollarea"> 
+            <div @click="LTcheckAllWords(false);" class="btn btn-sm btn-success center" style="text-align: center;  margin-left:10px;"> {{$t('editor.update')}}</div> 
+
+            <div v-if="hunspellFallback"  style="text-align: center; font-size: 0.8em;"> Hunspell Fallback <br> LanguageTool nicht verfügbar </div> 
+            <div v-if="misspelledWords.length == 0"  style="text-align: center; font-size: 0.8em;"> {{this.LTinfo}}</div> 
+            <div v-for="entry in misspelledWords" :key="entry.wrongWord" class="error-entry" @click="LTshowWord(entry)">
+                <div :style="'background-color:' + entry.color " class="color-circle"></div>
+                <div class="error-word">{{ entry.wrongWord }}  <span v-if="entry.whitespace">' &nbsp;  '</span></div>
+                <div v-if="entry.message" class="fw-bold">{{ entry.rule.category.name}}</div>
+                <div v-if="serverstatus.suggestions || privateSpellcheck.suggestions">
+                  <div v-if="entry.message">{{ entry.message}}</div>
+                     <div v-if="entry.replacements" class="replacement">
+                        <span v-if="entry.replacements[0]">  {{ entry.replacements[0].value }}</span>
+                        <span v-if="entry.replacements[1]">, {{ entry.replacements[1].value }}</span>
+                        <span v-if="entry.replacements[2]">, {{ entry.replacements[2].value }}</span>
+                        <span v-if="entry.replacements[3]">, {{ entry.replacements[3].value }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- LANGUAGE TOOL END -->
+
+
+
+
     <div id="statusbar">
         <!-- Statischer Text mit v-once, um das Neurendern zu verhindern da $t offenbar jedesmal performance measures durchführt die zu memory bloat führen -->
             <span v-once>{{ $t("editor.words") }}:</span> <span>{{ wordcount }}</span> | <span v-once>{{ $t("editor.chars") }}:</span> <span>{{ charcount }}</span>  
             &nbsp;
-            <span v-once> {{ $t("editor.selected") }}: </span> <span id="editselected"> {{ selectedWordCount }}/{{ selectedCharCount }}</span>
-            <img @click="zoomin()" src="/src/assets/img/svg/zoom-in.svg" class="zoombutton">  
-            <img @click="zoomout()" src="/src/assets/img/svg/zoom-out.svg" class="zoombutton">
+            <span v-once id="editselectedtext"> {{ $t("editor.selected") }}: </span> <span id="editselected"> {{ selectedWordCount }}/{{ selectedCharCount }}</span>
+            <img @click="zoomin(); LTupdateHighlights();" src="/src/assets/img/svg/zoom-in.svg" class="zoombutton">  
+            <img @click="zoomout(); LTupdateHighlights();" src="/src/assets/img/svg/zoom-out.svg" class="zoombutton">
         </div>
     <!-- EDITOR END -->
 </template>
 
 <script>
 import { Editor, EditorContent, VueNodeViewRenderer } from '@tiptap/vue-3'
+import Image from '@tiptap/extension-image';
 import TextAlign from '@tiptap/extension-text-align'
 import Document from '@tiptap/extension-document'
 import Paragraph from '@tiptap/extension-paragraph'
@@ -179,44 +280,18 @@ import TableRow from '@tiptap/extension-table-row'
 import TableHeader from '@tiptap/extension-table-header'
 import { SmilieReplacer } from '../components/SmilieReplacer'
 import { CharReplacer } from '../components/CharReplacer'
-import { lowlight } from "lowlight/lib/common.js";
+
+
+import {common, createLowlight} from 'lowlight'
+const lowlight = createLowlight(common)
+
 import { Color } from '@tiptap/extension-color'
 import TextStyle from '@tiptap/extension-text-style'
-import { Node, mergeAttributes } from '@tiptap/core'   //we need this for our custom editor extension that allows to insert span elements
-import SpellChecker from '../utils/spellcheck'
 import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
-
-
-
-// in order to insert <span> elements (used for highlighting misspelled words) we need our own tiptap extenison
-const CustomSpan = Node.create({
-    name: 'customSpan',
-    addOptions: { HTMLAttributes: {},    },
-    inline: true,
-    group: 'inline',
-    atom: false,
-    content: 'inline*',
-    addAttributes() {
-        return {
-        id: {
-            default: null,
-            parseHTML: element => ( element.getAttribute('id')),
-            renderHTML: attributes => ({  id: attributes.id }),
-        },
-        class: {
-            default: null,
-            parseHTML: element => ( element.getAttribute('class')),
-            renderHTML: attributes => ({ class: attributes.class }),
-        },
-        }
-    },
-    parseHTML() { return [ { tag: 'span', }, ] },
-    renderHTML({ HTMLAttributes }) { return ['span', mergeAttributes(HTMLAttributes), 0] },
-})
-
-
+import { LTcheckAllWords, LTfindWordPositions, LThighlightWords, LTdisable, LThandleMisspelled } from '../utils/languagetool.js'
+import DOMPurify from 'dompurify';
 
 export default {
     components: {
@@ -225,6 +300,7 @@ export default {
     },
     data() {
         return {
+            index: 0,
             componentName: 'Writer',
             online: true,
             focus: true,
@@ -241,6 +317,7 @@ export default {
             serverip: this.$route.params.serverip,
             token: this.$route.params.token,
             clientname: this.$route.params.clientname,
+            localLockdown: this.$route.params.localLockdown,
             localfiles: null,
             serverApiPort: this.$route.params.serverApiPort,
             clientApiPort: this.$route.params.clientApiPort,
@@ -264,14 +341,27 @@ export default {
             currentRange:0,
             word:"",
             editorcontentcontainer:null,
-            spellcheck: false,
             serverstatus: this.$route.params.serverstatus,
             linespacing: this.$route.params.serverstatus.linespacing ? this.$route.params.serverstatus.linespacing : '2',
             fontfamily:  this.$route.params.serverstatus.fontfamily  ? this.$route.params.serverstatus.fontfamily : "sans-serif", 
-            allowspellcheck: false, // this is a per student override (for students with legasthenie)
+            privateSpellcheck: {activate: false, activated: false, suggestions: false}, // this is a per student override (for students with legasthenie)
             individualSpellcheckActivated: false,
             audioSource: null,
-            currentpreview: null
+            currentpreview: null,
+            audiofiles: [],
+            misspelledWords:[],
+            textContainer : null,
+            canvas : null,
+            ctx : null,
+            text: null,
+            currentLTword:"",
+            currentLTwordPos:null,
+            LTinfo: "searching...",
+            LTactive: false,
+            hunspellFallback: false,
+            splitview: false,
+            currentPDFZoom: 80,
+            currentPDFData: null
         }
     },
     computed: {
@@ -285,31 +375,157 @@ export default {
 
 
     methods: {
-        checkAllWords:SpellChecker.checkAllWords,
-        checkSelectedWords:SpellChecker.checkSelectedWords,  //just checks the selection for mistakes
-        highlightMisspelledWords:SpellChecker.highlightMisspelledWords,
-        getWord:SpellChecker.getWord,  // get rightklicked word and show suggestions
-        showSuggestions:SpellChecker.showSuggestions,     // Function to display suggestions
-        replaceWord:SpellChecker.replaceWord,  //replace misspelled word with suggestion - remove highlight
-        getSpanIdFromRange:SpellChecker.getSpanIdFromRange,
-        removeHighlight:SpellChecker.removeHighlight,
-        removeAllHighlightsByClass:SpellChecker.removeAllHighlightsByClass, //searches fer the highlight class and removes every object
-        removeElementsByClassFromString:SpellChecker.removeElementsByClassFromString,  // this removes html elements from a string that contains html elements
-        hideSpellcheckMenu:SpellChecker.hideSpellcheckMenu, // hides the spellcheck context menu
-        checkAllWordsOnSpacebar:SpellChecker.checkAllWordsOnSpacebar,  //does a complete spellcheck after hitting spacebar while writing
-   
-        async playAudio(file) {
-       
-            document.querySelector("#aplayer").style.display = 'block';
 
+        LTcheckAllWords:LTcheckAllWords,
+        LTfindWordPositions:LTfindWordPositions,
+        LThighlightWords:LThighlightWords,
+        LTdisable:LTdisable,
+        LThandleMisspelled: LThandleMisspelled,
+
+        LTshowWord(word){
+            this.currentLTword = word
+            this.LTupdateHighlights()
+            if (word.range){  this.setCursorAtStartOfRange(word.range) }
+           
+        },
+        async LTupdateHighlights(){
+            if (!this.LTactive){return}
+            await this.LTfindWordPositions()
+            this.LThighlightWords()
+        },
+
+        setCursorAtStartOfRange(range) {
+            // Stellen Sie sicher, dass der Bereich in ein editierbares Element gesetzt wird
+            const editableElement = range.startContainer.parentNode; // Das sollte das editierbare Element sein
+            if (editableElement.isContentEditable) {
+                const caretRange = document.createRange();
+                caretRange.setStart(range.startContainer, range.startOffset);
+                caretRange.setEnd(range.startContainer, range.startOffset);
+
+                // Setze den Auswahlbereich (Selection) auf den Anfang des Range-Objekts
+                const selection = window.getSelection();
+                selection.removeAllRanges(); // Entferne alle bestehenden Bereiche aus der aktuellen Auswahl
+                selection.addRange(caretRange); // Fügt die neue Range hinzu, die den Caret positioniert
+
+                // Optional: Scroll das Element in die Sicht, falls nötig
+                editableElement.focus(); // Richtet den Fokus auf das editierbare Element
+                caretRange.startContainer.parentNode.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+            }
+        },
+
+
+        async fetchInfo() {
+            let getinfo = await ipcRenderer.invoke('getinfoasync')  // we need to fetch the updated version of the systemconfig from express api (server.js)
+            this.clientinfo = getinfo.clientinfo;
+            this.token = this.clientinfo.token
+            this.focus = this.clientinfo.focus
+            this.clientname = this.clientinfo.name
+            this.exammode = this.clientinfo.exammode
+            this.pincode = this.clientinfo.pin
+            this.privateSpellcheck = this.clientinfo.privateSpellcheck
+            this.serverstatus =  getinfo.serverstatus
+           
+           // console.log(this.serverstatus)
+            if (this.pincode !== "0000"){this.localLockdown = false}  // pingcode is 0000 only in localmode
+            if (!this.focus){  this.entrytime = new Date().getTime()}
+            if (this.clientinfo && this.clientinfo.token){  this.online = true  } else { this.online = false  }
+
+            this.battery = await navigator.getBattery().then(battery => { return battery }).catch(error => { console.error("Error accessing the Battery API:", error);  });
+
+            //handle individual spellcheck (only if not globally activated anyways)
+            if (this.serverstatus.languagetool === false) {   
+                if (this.privateSpellcheck.activate == false && this.LTactive) {
+                    this.LTdisable()
+                    this.privateSpellcheck.activated = false   // das wird eigentlich eh im communication handler für clientinfo bereits auf false gesetzt und bei fetchinfo() übernommen
+                }
+            }
+        }, 
+
+
+        /**
+         * plays an audiofile
+         * either shows dialog with limited amount of replays or player controls if unlimited
+         * @param {*} filename the name of the audiofile to be played
+         */
+        async playAudio(filename) {
+            const audioFile = this.audiofiles.find(obj => obj.name === filename);  // search for file in this.audiofiles - get object
+            this.LTdisable()  // close langugagetool
+     
+       
+            if (this.serverstatus.audioRepeat > 0){
+                this.$swal.fire({
+                    title: audioFile.name,
+                    text:  this.$t("editor.reallyplay"),
+                    icon: "question",
+                    showCancelButton: true,
+                    cancelButtonText: this.$t("editor.cancel"),
+                    reverseButtons: true,
+
+                    html: audioFile.playbacks > 0 ? `
+                       
+                        <span class="col-3" style="">${this.$t("editor.audioremaining")} ${audioFile.playbacks} </span> <br>
+                        <div id="soundtest" class="btn btn-info btn-sm m-2">Soundtest</div><br>
+                        <h6>${this.$t("editor.reallyplay")}</h6>
+                    ` : `
+                         <div id="soundtest" class="btn btn-info btn-sm m-2">Soundtest</div><br>
+                        <span class="col-3" style="">${this.$t("editor.audionotallowed")}</span> 
+                    `,
+                    didRender: () => {
+                        document.getElementById('soundtest').onclick = () => this.soundtest();
+                    }
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        if (audioFile.playbacks > 0){
+                            try {
+                                const base64Data = await ipcRenderer.invoke('getfilesasync', filename, true);
+                                if (base64Data) {
+                                    this.audioSource = `data:audio/mp3;base64,${base64Data}`;
+                                    audioPlayer.load(); // Lädt die neue Quelle
+                                    audioPlayer.play().then(() => { 
+                                        console.log('Playback started');
+                                        audioFile.playbacks -= 1
+                                    }).catch(e => { console.error('Playback failed:', e); });
+                                } else { console.error('Keine Daten empfangen'); }
+                            } catch (error) { console.error('Fehler beim Empfangen der MP3-Datei:', error); }   
+                        }
+                    } 
+                }); 
+            }
+            if (this.serverstatus.audioRepeat == 0){
+                document.querySelector("#aplayer").style.display = 'block';
+                try {
+                    const base64Data = await ipcRenderer.invoke('getfilesasync', filename, true);
+                    if (base64Data) {
+                        this.audioSource = `data:audio/mp3;base64,${base64Data}`;
+                        audioPlayer.load(); // Lädt die neue Quelle
+                       
+                    } else { console.error('Keine Daten empfangen'); }
+                } catch (error) { console.error('Fehler beim Empfangen der MP3-Datei:', error); } 
+            }
+        },
+
+        async soundtest(){
             try {
-                const base64Data = await ipcRenderer.invoke('getfilesasync', file, true);
+                const base64Data = await ipcRenderer.invoke('getAudioFile', 'attention.wav', true);
                 if (base64Data) {
+                    let soundtest = document.getElementById('soundtest')
+
+                    if (soundtest){
+                        soundtest.classList.add('btn-success')
+                        soundtest.classList.remove('btn-info')
+                    }
+                   
                     this.audioSource = `data:audio/mp3;base64,${base64Data}`;
                     audioPlayer.load(); // Lädt die neue Quelle
-                    audioPlayer.play().then(() => { console.log('Playback started'); }).catch(e => { console.error('Playback failed:', e); });
+                    audioPlayer.play().then(async () => { 
+                        await this.sleep(2000)
+                        if (soundtest){
+                            soundtest.classList.remove('btn-success')
+                            soundtest.classList.add('btn-info')
+                        }
+                    }).catch(e => { console.error('Playback failed:', e); });
                 } else { console.error('Keine Daten empfangen'); }
-            } catch (error) { console.error('Fehler beim Empfangen der MP3-Datei:', error); }
+            } catch (error) { console.error('Fehler beim Empfangen der MP3-Datei:', error); }   
         },
 
         showInsertSpecial(){
@@ -353,6 +569,11 @@ export default {
                 sel.removeAllRanges();
                 sel.addRange(range);
             }
+
+            if(this.serverstatus.languagetool || this.privateSpellcheck){
+                this.LTupdateHighlights()
+            }
+
         },
         rgbToHex(rgb) {
             const [r, g, b] = rgb.match(/\d+/g).map(Number);
@@ -369,40 +590,7 @@ export default {
             this.timesinceentry =  new Date(this.now - this.entrytime).toISOString().substr(11, 8)
             this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
         },
-        async fetchInfo() {
-            let getinfo = await ipcRenderer.invoke('getinfoasync')  // we need to fetch the updated version of the systemconfig from express api (server.js)
-            this.clientinfo = getinfo.clientinfo;
-            this.token = this.clientinfo.token
-            this.focus = this.clientinfo.focus
-            this.clientname = this.clientinfo.name
-            this.exammode = this.clientinfo.exammode
-            this.pincode = this.clientinfo.pin
-            this.allowspellcheck = this.clientinfo.allowspellcheck
-            this.serverstatus =  getinfo.serverstatus
 
-            if (!this.focus){  this.entrytime = new Date().getTime()}
-            if (this.clientinfo && this.clientinfo.token){  this.online = true  }
-            else { this.online = false  }
-
-            this.battery = await navigator.getBattery().then(battery => { return battery })
-            .catch(error => { console.error("Error accessing the Battery API:", error);  });
-
-            if (this.serverstatus.spellcheck === false) {  //handle individual spellcheck (only if not globally activated anyways)
-                if (!this.individualSpellcheckActivated){ // nur wenn nicht eh schon aktiv
-                    if (this.allowspellcheck) {  //this handles individual spellcheck (independend of global spellcheck)
-                        let ipcResponse = await ipcRenderer.invoke('activatespellcheck', this.serverstatus.spellchecklang )  // this.allowspellcheck contains an object with spell config
-                        if (ipcResponse == false) { this.allowspellcheck = false}  // something went wrong on the backend - do not show spellchecker button
-                        if (ipcResponse == true) {this.individualSpellcheckActivated = true}  // setz auf aktiviert (wurde im backend aktiviert 1x reicht)
-                    }
-                }
-                else {
-                    if (!this.allowspellcheck) {
-                        this.deactivateSpellcheck() 
-                        this.individualSpellcheckActivated = false
-                    }
-                }
-            }
-        }, 
         reconnect(){
             this.$swal.fire({
                 title: this.$t("editor.reconnect"),
@@ -447,21 +635,50 @@ export default {
                 icon: "question",
                 showCancelButton: true,
                 cancelButtonText: this.$t("editor.cancel"),
-                reverseButtons: true
+                reverseButtons: true,
+
+                html: this.localLockdown ? `
+                    <div class="m-2 mt-4"> 
+                        <div class="input-group m-1 mb-1"> 
+                            <span class="input-group-text col-3" style="width:140px;">Passwort</span>
+                            <input class="form-control" type="text" id="localpassword" placeholder='Passwort'>
+                        </div>
+                    </div>
+                ` : '',
             })
             .then((result) => {
                 if (result.isConfirmed) {
-                    ipcRenderer.send('gracefullyexit')
+                    if (this.localLockdown){
+                        let password = document.getElementById('localpassword').value; 
+                        if (password == this.serverstatus.password){ ipcRenderer.send('gracefullyexit')  }
+                    }
+                    else {
+                        ipcRenderer.send('gracefullyexit')
+                    }  
                 } 
             }); 
         },
+
+
         //get all files in user directory
         async loadFilelist(){
             let filelist = await ipcRenderer.invoke('getfilesasync', null)
             this.localfiles = filelist;
+            
+            // handle audio file objects (playback limitations)
+            this.localfiles.forEach( file =>{
+                if (file.type == "audio"){
+                    const existingaudiofile = this.audiofiles.find(obj => obj.name === file.name);
+                    if (!existingaudiofile){
+                        this.audiofiles.push({name: file.name, playbacks: this.serverstatus.audioRepeat})
+                    } 
+                }
+            })
         },
-        // get file from local workdirectory and replace editor content with it
+
+        // get file from local examdirectory and replace editor content with it
         async loadHTML(file){
+            this.LTdisable()
             this.$swal.fire({
                 title: this.$t("editor.replace"),
                 html:  `${this.$t("editor.replacecontent1")} <b>${file}</b> ${this.$t("editor.replacecontent2")}`,
@@ -477,6 +694,71 @@ export default {
                     this.editor.commands.insertContent(data)  
                 } 
             }); 
+        },
+
+
+        // get file from local examdirectory and replace editor content with it
+        async loadDOCX(file){
+            this.LTdisable()
+            this.$swal.fire({
+                title: this.$t("editor.replace"),
+                html:  `${this.$t("editor.replacecontent1")} <b>${file}</b> ${this.$t("editor.replacecontent2")}`,
+                icon: "question",
+                showCancelButton: true,
+                cancelButtonText: this.$t("editor.cancel"),
+                reverseButtons: true
+            })
+            .then(async (result) => {
+                if (result.isConfirmed) {
+                    let data = await ipcRenderer.invoke('getfilesasync', file, false, true )   //signal, filename, audiofile, docxfile
+                    
+                    //replace editor content ??? or not ??
+                    this.editor.commands.clearContent(true)
+            
+                    const cleanHtml = DOMPurify.sanitize(data.value);
+                    const body = this.parseHTMLString(cleanHtml);
+                    
+                    this.editor.commands.insertContent(cleanHtml)
+                   // body.childNodes.forEach(node => {  this.processNode(node); });
+                } 
+            }); 
+        },
+        processNode(node) {           
+            let nodestring = node.innerHTML
+            let outernodestring = node.outerHTML
+           
+            if (nodestring.includes("data:image")){
+                for (let childnode of node.childNodes){
+                    let childnodestring = childnode.outerHTML
+                    if (childnodestring.includes("data:image")){
+                        let childnodesource = childnode.src 
+                       
+                        this.editor.commands.insertContent(nodestring)
+                        this.editor.chain().focus().setImage({ src:  childnodesource }).run();
+                    }
+                }
+            }
+            else if (nodestring.includes("tr")){
+                console.log("found table")
+                this.editor.commands.insertContent(outernodestring)
+            }
+
+            else {
+               
+                this.editor.commands.insertContent(outernodestring)
+            }
+        },
+
+        parseHTMLString(htmlString) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlString, 'text/html');
+
+            doc.querySelectorAll('td').forEach(td => {
+                if (!td.innerHTML.trim()) {
+                td.innerHTML = '<p></p>'; // Ensure empty cells have a paragraph with a line break
+                }
+            });
+            return doc.body;
         },
 
         //checks if arraybuffer contains a valid pdf file
@@ -511,14 +793,58 @@ export default {
             }
 
             this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "application/pdf"})) 
-
+            
             const pdfEmbed = document.querySelector("#pdfembed");
-            pdfEmbed.style.backgroundImage = '';
-            pdfEmbed.style.height = "96vh";
-            pdfEmbed.style.marginTop = "-48vh";
             pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0`);
 
+            if (this.splitview) {
+                this.currentPDFData = data
+                this.currentPDFZoom = 80
+                const zoomInButton = document.getElementById("zoomIn");
+                const zoomOutButton = document.getElementById("zoomOut");
+                const pdfZoom = document.getElementById("pdfZoom");
+                pdfZoom.style.display = "block"
+
+                // Entferne bestehende Event-Listener, bevor neue hinzugefügt werden
+                zoomInButton.removeEventListener('click', this.zoomInHandler);
+                zoomOutButton.removeEventListener('click', this.zoomOutHandler);
+
+                // Definiere neue Event-Listener
+                this.zoomInHandler = () => {
+                    let pdfEmbed = document.querySelector("#pdfembed");
+                    this.currentPDFZoom += 10; // Erhöht den Zoom um 10%
+                    URL.revokeObjectURL(this.currentpreview);
+                    this.currentpreview = URL.createObjectURL(new Blob([this.currentPDFData], { type: 'application/pdf' }));
+                    pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=${this.currentPDFZoom}`);
+                };
+                this.zoomOutHandler = () => {
+                    let pdfEmbed = document.querySelector("#pdfembed");
+                    this.currentPDFZoom = Math.max(10, this.currentPDFZoom - 10); // Verhindert, dass der Zoom unter 10% geht
+                    URL.revokeObjectURL(this.currentpreview);
+                    this.currentpreview = URL.createObjectURL(new Blob([this.currentPDFData], { type: 'application/pdf' }));
+                    pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=${this.currentPDFZoom}`);
+                };
+
+                // Füge die Event-Listener erneut hinzu
+                zoomInButton.addEventListener('click', this.zoomInHandler);
+                zoomOutButton.addEventListener('click', this.zoomOutHandler);
+
+                // pdf anzeigen
+                pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=${this.currentPDFZoom}`);
+            }
+<<<<<<< HEAD
+=======
+            
+            
+
+>>>>>>> 8407679ed0b6f2883e83c25e860c9bba1f448ca8
+            if(!this.splitview){
+                pdfEmbed.style.backgroundImage = '';
+                pdfEmbed.style.height = "95vh";
+                pdfEmbed.style.width = "67vh";  
+            }
             document.querySelector("#preview").style.display = 'block';
+            document.querySelector("#insert-button").style.display = 'none';
         },
 
 
@@ -527,20 +853,80 @@ export default {
             URL.revokeObjectURL(this.currentpreview);
             let data = await ipcRenderer.invoke('getpdfasync', file )
             this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "image/jpeg"})) 
-
             const pdfEmbed = document.querySelector("#pdfembed");
-            pdfEmbed.style.backgroundImage = `url(${this.currentpreview})`;
-            pdfEmbed.style.backgroundSize = 'contain'
-            pdfEmbed.style.backgroundRepeat = 'no-repeat'
-            pdfEmbed.style.backgroundPosition =  'center'
-           
-            pdfEmbed.style.height = "80vh";
-            pdfEmbed.style.marginTop = "-40vh";
-            pdfEmbed.setAttribute("src", "about:blank");
+            
+            // Create an image element to determine the dimensions of the image
+            // always resize the pdfembed div to the same aspect ratio of the given image
+            const img = new window.Image();
+            img.onload = function() {
+                const width = img.width;
+                const height = img.height;
+                const aspectRatio = width / height;
 
-            document.querySelector("#preview").style.display = 'block';     
+                const containerWidth = window.innerWidth * 0.8;
+                const containerHeight = window.innerHeight * 0.8;
+                const containerAspectRatio = containerWidth / containerHeight;
+
+                if(!this.splitview){
+                    if (aspectRatio > containerAspectRatio) {
+                        pdfEmbed.style.width = '80vw';
+                        pdfEmbed.style.height = `calc(80vw / ${aspectRatio})`;
+                    } else {
+                        pdfEmbed.style.height = '80vh';
+                        pdfEmbed.style.width = `calc(80vh * ${aspectRatio})`;
+                    }
+                }
+
+                pdfEmbed.style.backgroundImage = `url(${this.currentpreview})`;
+            }.bind(this);
+            img.src = this.currentpreview;
+
+            // clear the pdf viewer
+            pdfEmbed.setAttribute("src", "about:blank");
+            document.querySelector("#insert-button").style.display = 'flex';
+            document.querySelector("#preview").style.display = 'block';  
+            document.querySelector("#pdfZoom").style.display = 'none';
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8407679ed0b6f2883e83c25e860c9bba1f448ca8
         },
 
+        // show mugshot preview panel
+        showInsertMugshot(){
+            document.querySelector("#mugshotpreview").style.display = 'block'; 
+        },
+        // insert mugshot image into editor
+        insertMugshot(id){
+            const img = document.getElementById(id);
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0, img.width, img.height);
+            // Base64-String des Bildes erhalten
+            const base64String = canvas.toDataURL('image/png');
+            const tableHtml = `<table style="width: 100%; height: 100%;"><tr><td style="max-width: 100%; max-height: 100%;"><img src="${base64String}" style="max-width: 100%; max-height: 100%;" class="img-max-size" /></td></tr></table>`;
+            this.editor.chain().focus().insertContent(tableHtml).run();
+        },
+
+        // insert image from workfolder into editor
+        async insertImage(file){
+            let data = await ipcRenderer.invoke('getpdfasync', file, true )   //fileurl, image=true > delivers an image as base64string
+            const base64String = this.uint8ArrayToBase64(data);
+            const imgSrc = `data:image/png;base64,${base64String}`;
+           // this.editor.chain().focus().setImage({ src: imgSrc }).run()
+            const tableHtml = `<table style="width: 100%; height: 100%;"><tr><td style="max-width: 100%; max-height: 100%;"><img src="${imgSrc}" style="max-width: 100%; max-height: 100%;" class="img-max-size" /></td></tr></table>`;
+            this.editor.chain().focus().insertContent(tableHtml).run();
+        },
+        uint8ArrayToBase64(uint8Array) {
+            let binary = '';
+            const len = uint8Array.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(uint8Array[i]);
+            }
+            return btoa(binary);
+        },
 
         // display the table part of the toolbar
         showMore(){
@@ -554,8 +940,6 @@ export default {
         },
         /** Converts the Editor View into a multipage PDF */
         async saveContent(backup, why) {     
-            
-         
             let filename = false  // this is set manually... otherwise use clientname
             if (why === "manual"){
                 await this.$swal({
@@ -669,18 +1053,21 @@ export default {
             const selection = window.getSelection();
             const range = selection.getRangeAt(0);
             const div = document.createElement('div');
+            div.appendChild(range.cloneContents()); // Fügt den ausgewählten Bereich zum Div-Element hinzu
 
-            // Fügt den ausgewählten Bereich zum Div-Element hinzu
-            div.appendChild(range.cloneContents());
+            this.selectedText = div.innerHTML
+           // this.selectedText = div.innerHTML.replace(/<\s*p[^>]*>/gi, '').replace(/<\/\s*p\s*>/gi, '<br>'); // Ersetzt <p> durch <br>
 
-            // Speichert den HTML-Inhalt
-            this.selectedText = div.innerHTML;
         },
         pasteSelection(){
             if (!this.selectedText || this.selectedText == "") {return}
             console.log("[pasteSelection] pasted:",this.selectedText)
-            //paste previously selected html code
-            this.editor.commands.insertContent(this.selectedText)         
+            
+            this.editor.commands.insertContent(this.selectedText, { parseOptions: { preserveWhitespace: 'full' } });
+            // FIXME:  einfügen in den editor (auch ohne tiptap command) verursacht ein <p> element das nicht
+            // als korrekte node erkannt wird und dann auch beim languagetool parsing irgendwie ignoriert wird
+            // wenn ich der bewussten textnode ein wort hinzufüge bzw. irgendwas veränder wird das wort auch indieser map
+            // aufgeführt
         },
         // implementing a sleep (wait) function
         sleep(ms) {
@@ -694,24 +1081,19 @@ export default {
                 return v.toString(16);
             });
         },
-        activateSpellcheck(){
-            if (this.serverstatus.spellcheck || this.allowspellcheck) {
-                console.log("[activateSpellcheck] spellcheck activated")
-                document.addEventListener('input', this.checkAllWordsOnSpacebar)  // do a spellcheck when the user hits space
-                if (this.serverstatus.suggestions || (this.allowspellcheck && this.allowspellcheck.suggestions)){
-                    console.log("[activateSpellcheck] suggestions activated")
-                    document.addEventListener('click', this.hideSpellcheckMenu); // Hide suggestion menu when clicking elsewhere
-                    this.editorcontentcontainer.addEventListener('contextmenu', this.getWord );   // show the context menu
-                } 
+        //switch from ovewlay pdf/jpg preview zu splitview mode
+        async toggleSplitview(){
+            this.splitview = !this.splitview;
+
+
+            if (this.splitview === false){
+                await this.sleep(1000) //wait for re-rendering of #preview div 
+                document.querySelector("#preview").addEventListener("click", function() {  
+                    this.style.display = 'none';
+                    this.setAttribute("src", "about:blank");
+                    URL.revokeObjectURL(this.currentpreview);
+                });
             }
-            this.spellcheck = true
-            this.checkAllWords()
-        },
-        deactivateSpellcheck(){
-            this.editorcontentcontainer.removeEventListener('contextmenu', this.getWord );
-            document.removeEventListener('input', this.checkAllWordsOnSpacebar)
-            this.removeAllHighlightsByClass()
-            this.spellcheck = false
         },
         reloadAll(){
             this.$swal.fire({
@@ -746,8 +1128,8 @@ export default {
             }); 
 
         },
-        sendFocuslost(){
-            let response = ipcRenderer.send('focuslost')  // refocus, go back to kiosk, inform teacher
+        async sendFocuslost(){
+            let response = await ipcRenderer.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
             if (!this.config.development && !response.focus){  //immediately block frontend
                 this.focus = false 
                 const editorcontentcontainer = document.getElementById('editorcontent');
@@ -758,8 +1140,12 @@ export default {
         createEditor(){
             this.editor = new Editor({
                 extensions: [
-                    CustomSpan,
                     Typography,
+                   
+                    Image.configure({
+                         inline: true,
+                         allowBase64: true,
+                    }),
                     SmilieReplacer,
                     this.charReplacerExtension,
                     Table.configure({
@@ -876,6 +1262,10 @@ export default {
             URL.revokeObjectURL(this.currentpreview);
         });
 
+        document.querySelector("#mugshotpreview").addEventListener("click", function() {  
+            this.style.display = 'none';
+        });
+
         document.querySelector("#audioclose").addEventListener("click", function(e) {
             audioPlayer.pause();
             console.log('editor @ audioclose: Playback stopped');
@@ -914,7 +1304,10 @@ export default {
         this.editorcontentcontainer.addEventListener('mouseup',  this.getSelectedTextInfo );   // show amount of words and characters
         this.editorcontentcontainer.addEventListener('keydown', this.insertSpaceInsteadOfTab)   //this changes the tab behaviour and allows tabstops   
         
-        
+        // update LThighlights positions on scroll
+        document.getElementById('editormaincontainer').addEventListener('scroll', this.LTupdateHighlights, { passive: true });
+
+        // block editor on escape
         document.body.addEventListener('mouseleave', this.sendFocuslost);
 
 
@@ -926,12 +1319,17 @@ export default {
         */
         this.editorcontentcontainer.removeEventListener('keydown', this.insertSpaceInsteadOfTab)
         this.editorcontentcontainer.removeEventListener('contextmenu', this.getWord );
-        document.removeEventListener('input', this.checkAllWordsOnSpacebar)
+
+
+        //document.removeEventListener('input', this.checkAllWordsOnSpacebar)
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
         document.removeEventListener('click', this.hideSpellcheckMenu);
         this.editorcontentcontainer.removeEventListener('mouseup',  this.getSelectedTextInfo );
         
+
+        document.getElementById('editormaincontainer').removeEventListener('scroll', this.LTupdateHighlights, { passive: true });
+
         this.editor.destroy()
 
         
@@ -967,14 +1365,15 @@ export default {
 
 
 
-
-
+<!-- achtung.. dieser style ist nicht scoped und hat daher auswirkungen auf alle anderen exam modi - testen und scopen oder gleich global arbeiten -->
 <style lang="scss">
 
 @media print {  //this controls how the editor view is printed (to pdf)
-    #editortoolbar, #apphead, #editselected, #focuswarning, .focus-container, #specialcharsdiv, #aplayer,  span.NXTEhighlight::after {
+    #editortoolbar, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer,  span.NXTEhighlight::after, #highlight-layer, #languagetool  {
         display: none !important;
     }
+    body {position: relative  !important;}  //body ist "fixed" um beim autoscrollen nicht zu verscheben - mehrseitiger print wird dadurch aber auf 1seite beschränkt
+
     #statusbar {
         position: relative !important;
         box-shadow: 0px 0px 0px transparent !important;
@@ -1084,49 +1483,6 @@ audio::-webkit-media-controls-panel {
 }
 
 
-/**
-NodeHun Custom Spellchecker Styles 
-*/
-#suggestion-menu{
-    z-index:100000;
-    padding: 4px;
-    background-color: #f3f8fd;
-    border: 1px solid #d3e5ff;
-    cursor: pointer;
-    border-radius: 4px;
-    box-shadow: 0px 0px 10px #00000047;
-}
-#suggestion-menu div {
-    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    font-size: 0.8em;
-    padding: 2px 6px 2px 6px;
-    transition:0.2s;
-    border-radius:4px;
-    
-}
-#suggestion-menu div:hover {
-    box-shadow: 0px 0px 10px inset #bacbe4;
-}
-
-span.NXTEhighlight {
-    position: relative;
-}
-/* Create the glowing underline */
-span.NXTEhighlight::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    width: 100%;
-    height: 1px;
-    background: lightcoral; /* Light red color */
-    box-shadow: 0 0 5px lightcoral;
-}
-.menu-separator {
-    border-top: 1px solid #ccc;
-    margin: 5px 0;
-}
-
 
 
 /**
@@ -1184,7 +1540,7 @@ Other Styles
 
 
 
-#preview {
+#mugshotpreview {
     display: none;
     position: absolute;
     top:0;
@@ -1195,21 +1551,89 @@ Other Styles
     z-index:100001;
 }
 
-#pdfembed { 
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    margin-left: -30vw;
-    margin-top: -45vh;
-    width:60vw;
-    height: 90vh;
-    padding: 10px;
-    background-color: rgba(255, 255, 255, 1);
-    border: 0px solid rgba(255, 255, 255, 0.589);
-    box-shadow: 0 0 15px rgba(22, 9, 9, 0.589);
-    padding: 10px;
-    border-radius: 6px;
+.mugshot-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  height: 114px;
+  width: 100vw;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #eeeeee;
+  padding: 20px;
+
 }
+
+.mugshot {
+    width: 56px;
+    z-index:100002;
+    transition: .2s;
+    cursor: pointer;
+}
+.mugshot:hover{
+    margin: 2px;
+    width: 66px;
+    box-shadow: inset 0 0 15px white;
+}
+
+
+
+
+#preview {
+    display: none;
+    position: absolute;
+    top:0;
+    left: 0;
+    width:100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.4);
+    z-index:100001;
+    backdrop-filter: blur(2px);
+  
+}
+
+
+#pdfembed {
+    background-color: rgba(255, 255, 255, 0.5);
+    border: 0px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 15px rgba(22, 9, 9, 0.5);
+    border-radius: 6px;
+    background-size: 100% 100%;  
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.embed-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: flex-start;
+}
+
+#insert-button {
+  border: none;
+  border-radius: 0;
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+#insert-button img {
+  width: 22px;
+  height: 52px;
+}
+
+
 
 
 /* Basic editor styles */
@@ -1406,6 +1830,12 @@ Other Styles
   }
 }
 
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+}
+
+
 .tableWrapper {
   overflow-x: auto;
 }
@@ -1414,6 +1844,135 @@ Other Styles
   cursor: ew-resize;
   cursor: col-resize;
 }
+
+
+/** LANGUAGE TOOL STYLES */
+#highlight-layer {
+    position: absolute; 
+    top: 20px ;
+    left: 50% ;
+    width: var(--js-editorWidth) !important;
+    min-height: 60vh;
+    pointer-events: none;
+}
+
+#languagetool {
+    position: fixed;
+    z-index: 100000; 
+    width: 280px;
+    height: 100%;
+    right: -282px;
+    top: 52px;
+    background-color: var(--bs-gray-100);
+    box-shadow: -2px 1px 2px rgba(0, 0, 0, 0);
+    transition: 0.3s;
+    padding: 6px;
+    padding-bottom: 100px;
+}
+
+#ltcheck {
+    position: absolute;
+    margin-left: -6px;
+    margin-top: 130px;
+    padding: 10px;
+    background-color: var(--bs-gray-100);
+    box-shadow: 1px 2px 2px rgba(0,0,0,0.2);
+    width: 160px;
+    height: 45px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    cursor: pointer;
+    color:#616161;
+
+    transform: rotate(90deg); 
+    transform-origin: top left; 
+}
+#ltcheck:hover{
+    background-color: var(--bs-gray-200);
+}
+#ltcheck img{
+    vertical-align: bottom;
+
+}
+#ltcheck #eye {
+    width: 20px;
+    height: 20px;
+    background-size: cover;
+    display:inline-block;
+    vertical-align: text-bottom;
+}
+
+#ltcheck .eyeopen {
+    background-image: url('/src/assets/img/svg/eye-fill.svg');
+   
+}
+#ltcheck .eyeclose {
+    background-image: url('/src/assets/img/svg/eye-slash-fill.svg');
+}
+
+#languagetool .ltscrollarea {
+    height: calc(100vh - 52px);
+    width: 268px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: absolute;
+    top: 0px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+#languagetool .error-entry {
+    margin: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    background-color:   rgb(238, 238, 250);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    font-size: 0.8em;
+    cursor: pointer;
+}
+
+#languagetool .error-entry:hover {
+  background-color:   rgba(238, 238, 250, 0.508);
+}
+
+.darkgreen {
+    filter: invert(36%) sepia(100%) saturate(2200%) hue-rotate(95deg) brightness(75%);
+}
+.darkred {
+    filter: invert(28%) sepia(99%) saturate(7476%) hue-rotate(345deg) brightness(65%);
+
+}
+#languagetool .error-word {
+  padding: 5px;
+  border: none;
+  background-color: transparent;
+  color: var(--bs-info-text-emphasis);
+  font-size: 1.1em;
+  display: inline-block;
+ 
+}
+
+#languagetool .color-circle {
+  height: 10px;
+  width: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+#languagetool .replacement {
+    padding: 2px;
+    padding-left: 0px;
+    margin-top: 4px;
+    border-top: 1px solid var(--bs-cyan);
+    color: var(--bs-green);
+    border-radius: 0px;
+}
+
+
+
+
+
+
 
 
 </style>

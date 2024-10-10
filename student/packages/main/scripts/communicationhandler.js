@@ -24,7 +24,7 @@ import extract from 'extract-zip'
 import screenshot from 'screenshot-desktop'
 // import FormData from 'form-data/lib/form_data.js';     //we need to import the file directly otherwise it will introduce a "window" variable in the backend and fail
 import { join } from 'path'
-import { screen } from 'electron'
+import { screen, ipcMain } from 'electron'
 import WindowHandler from './windowhandler.js'
 import sharp from 'sharp'
 import { execSync } from 'child_process';
@@ -53,18 +53,13 @@ let TesseractWorker = false
     init (mc, config) {
         this.multicastClient = mc
         this.config = config
-
         this.heartbeatScheduler = new SchedulerService(this.sendHeartbeat.bind(this), 4000)
         this.heartbeatScheduler.start()
-
         this.updateScheduler = new SchedulerService(this.requestUpdate.bind(this), 5000)
         this.updateScheduler.start()
-
         this.screenshotScheduler = new SchedulerService(this.sendScreenshot.bind(this), this.multicastClient.clientinfo.screenshotinterval)
         this.screenshotScheduler.start()
-
-   
-        if (process.platform !== 'linux' || (  !this.isWayland() && this.imagemagickAvailable()  )){ this.screenshotAbility = true } // only on linux we need to check for wayland or the absence of imagemagick - other os have other problems ^^
+        if (process.platform !== 'linux' || (  !this.isWayland() && this.imagemagickAvailable() || (this.isWayland() && this.flameshotAvailable() )  )){ this.screenshotAbility = true } // only on linux we need to check for wayland or the absence of imagemagick - other os have other problems ^^
     }
  
     /**
@@ -72,14 +67,7 @@ let TesseractWorker = false
      * @returns true or false
      */
     isWayland(){
-        try{ 
-            let output = shell(`loginctl show-session $(loginctl | grep $(whoami) | awk '{print $1}') -p Type`); 
-            if (output.includes('wayland')){ return true } 
-            return false
-        } catch(error){
-            log.error("Next-Exam detected a Wayland Session - Screenshots are not supported yet")
-            return false
-        }
+        return process.env.XDG_SESSION_TYPE === 'wayland'; 
     }
     
     /**
@@ -89,16 +77,26 @@ let TesseractWorker = false
     imagemagickAvailable(){
         try{ shell(`which import`); return true}
         catch(error){
-            log.error("ImageMagick is required to take screenshots on linux")
+            log.error("communicationhandler @ imagemagickAvailable: ImageMagick is required to take screenshots on linux")
             return false
         }
     }
+    flameshotAvailable(){
+        try{ shell(`which flameshot`); return true}
+        catch(error){
+            log.error("communicationhandler @ flameshotAvailable: flameshot is required to take screenshots on wayland")
+            return false
+        }
+    }
+
 
     /** 
      * SEND HEARTBEAT in order to set Online/Offline Status 
      * 5 Heartbeats lost is considered offline 
      */
     async sendHeartbeat(){
+        if (this.multicastClient.clientinfo.localLockdown){return}
+
         // CONNECTION LOST - UNLOCK SCREEN
         if (this.multicastClient.beaconsLost >= 5 ){ // no serversignal for 20 seconds
             log.warn("communicationhandler @ sendHeartbeat: Connection to Teacher lost! Removing registration.") //remove server registration locally (same as 'kick')
@@ -137,6 +135,7 @@ let TesseractWorker = false
      * Update current Serverstatus + Studenttstatus (every 5 seconds)
      */
     async requestUpdate(){
+        if (this.multicastClient.clientinfo.localLockdown){return}
         if (this.multicastClient.clientinfo.serverip) {  //check if server connected - get ip
             const clientInfo = JSON.stringify(this.multicastClient.clientinfo);
 
@@ -180,8 +179,10 @@ let TesseractWorker = false
 
     /** 
      * Update Screenshot on Server  (every 4 seconds - or depending on the server setting)
+     * if no screenshot is possible (wayland) capture application window via electron webcontents
      */
     async sendScreenshot(){
+        if (this.multicastClient.clientinfo.localLockdown){return}
         if (this.multicastClient.clientinfo.serverip) {  //check if server connected - get ip
             let img = null
             if (this.screenshotAbility){   // "imagemagick" has to be installed for linux - wayland is not (yet) supported by imagemagick !!
@@ -309,9 +310,9 @@ let TesseractWorker = false
                 log.info("communicationhandler @ processUpdatedServerstatus: cleaning exam workfolder")
                 let delfolder = true
                 try {
-                    if (fs.existsSync(this.config.workdirectory)){   // set by server.js (desktop path + examdir)
-                        fs.rmSync(this.config.workdirectory, { recursive: true });
-                        fs.mkdirSync(this.config.workdirectory);
+                    if (fs.existsSync(this.config.examdirectory)){   // set by server.js (desktop path + examdir)
+                        fs.rmSync(this.config.examdirectory, { recursive: true });
+                        fs.mkdirSync(this.config.examdirectory);
                     }
                 } catch (error) { 
                     delfolder = false
@@ -320,11 +321,11 @@ let TesseractWorker = false
                 }
 
                 if (delfolder == false){  //try deleting file by file (the one that causes the problem will stay in the folder)
-                    if (fs.existsSync(this.config.workdirectory)) {
-                        const files = fs.readdirSync(this.config.workdirectory);
+                    if (fs.existsSync(this.config.examdirectory)) {
+                        const files = fs.readdirSync(this.config.examdirectory);
 
                         files.forEach(file => {
-                            const filePath = join(this.config.workdirectory, file);
+                            const filePath = join(this.config.examdirectory, file);
                             try {
                                 const stats = fs.statSync(filePath);
                                 if (stats.isDirectory()) { fs.rmSync(filePath, { recursive: true }); }  // Versuche, das Verzeichnis rekursiv zu löschen
@@ -350,14 +351,21 @@ let TesseractWorker = false
                
 
             }
-            if (studentstatus.allowspellcheck && studentstatus.allowspellcheck !== "deactivate"){
+           
+            if (studentstatus.activatePrivateSpellcheck == true && this.multicastClient.clientinfo.privateSpellcheck.activated == false  ){
                 log.info("communicationhandler @ processUpdatedServerstatus: activating spellcheck for student")
-                this.multicastClient.clientinfo.allowspellcheck = {...studentstatus.allowspellcheck}  // object with {spellchecklang, suggestions}  (flat copy)
+                this.multicastClient.clientinfo.privateSpellcheck.activate = true  //clientinfo.privateSpellcheck will be put on this.privateSpellcheck in editor updated via fetchInfo()
+                this.multicastClient.clientinfo.privateSpellcheck.activated = true
+                ipcMain.emit('activatespellcheck', serverstatus.spellchecklang ) 
             }
-            if (studentstatus.allowspellcheck === "deactivate") {
+            if (studentstatus.activatePrivateSpellcheck == false && this.multicastClient.clientinfo.privateSpellcheck.activated == true ) {
                 log.info("communicationhandler @ processUpdatedServerstatus: de-activating spellcheck for student")
-                this.multicastClient.clientinfo.allowspellcheck = false
+                this.multicastClient.clientinfo.privateSpellcheck.activate = false
+                this.multicastClient.clientinfo.privateSpellcheck.activated = false 
             }
+
+            this.multicastClient.clientinfo.privateSpellcheck.suggestions = studentstatus.activatePrivateSuggestions
+
             if (studentstatus.sendexam === true){
                 this.sendExamToTeacher()
             }
@@ -369,6 +377,10 @@ let TesseractWorker = false
                 //set or update sharing link - it will be used in "microsoft365" exam mode
                 this.multicastClient.clientinfo.msofficeshare = studentstatus.msofficeshare  
             }
+            if (studentstatus.group){
+                //set or update group 
+                this.multicastClient.clientinfo.group = studentstatus.group  
+            }
 
         }
 
@@ -376,8 +388,13 @@ let TesseractWorker = false
         if (serverstatus.screenslocked && !this.multicastClient.clientinfo.screenlock) {  this.activateScreenlock() }
         else if (!serverstatus.screenslocked ) { this.killScreenlock() }
 
+        // screenshot safety (OCR searches for next-exam string)
         if (serverstatus.screenshotocr) { this.multicastClient.clientinfo.screenshotocr = true  }
         else { this.multicastClient.clientinfo.screenshotocr = false   }
+
+        // Groups handling
+        if (serverstatus.groups){ this.multicastClient.clientinfo.groups = true}
+        else { this.multicastClient.clientinfo.groups = false}
 
         //update screenshotinterval
         if (serverstatus.screenshotinterval || serverstatus.screenshotinterval === 0) { //0 is the same as false or undefined but should be treated as number
@@ -471,6 +488,7 @@ let TesseractWorker = false
         this.multicastClient.clientinfo.exammode = true
         this.multicastClient.clientinfo.cmargin = serverstatus.cmargin  // this is used to configure margin settings for the editor
         this.multicastClient.clientinfo.linespacing = serverstatus.linespacing // we try to double linespacing on demand in pdf creation
+        this.multicastClient.clientinfo.audioRepeat = serverstatus.audioRepeat // restrict repetition of audio files (for listening comprehension)
 
         if (!WindowHandler.examwindow){  // why do we check? because exammode is left if the server connection gets lost but students could reconnect while the exam window is still open and we don't want to create a second one
             log.info("communicationhandler @ startExam: creating exam window")
@@ -484,7 +502,7 @@ let TesseractWorker = false
                 if (!this.config.development) { 
                     WindowHandler.examwindow.setFullScreen(true)  //go fullscreen again
                     WindowHandler.examwindow.setAlwaysOnTop(true, "screen-saver", 1)  //make sure the window is 1 level above everything
-                    enableRestrictions(WindowHandler.examwindow)
+                    enableRestrictions(WindowHandler)
                     await this.sleep(2000) // wait an additional 2 sec for windows restrictions to kick in (they steal focus)
                     WindowHandler.addBlurListener();
                 }   
@@ -513,15 +531,16 @@ let TesseractWorker = false
             WindowHandler.blockwindows.forEach( (blockwin) => {
                 blockwin.moveTop();
             })
-
         }
-       
     }
 
 
+    //returns true if a number is within tolerance 
     isApproximatelyEqual(x1, x2, tolerance = 4) {
         return Math.abs(x1 - x2) <= tolerance;
     }
+
+
 
     /**
      * Disables Exam mode
@@ -534,17 +553,16 @@ let TesseractWorker = false
         if (serverstatus.delfolderonexit === true){
             log.info("communicationhandler @ endExam: cleaning exam workfolder on exit")
             try {
-                if (fs.existsSync(this.config.workdirectory)){   // set by server.js (desktop path + examdir)
-                    fs.rmSync(this.config.workdirectory, { recursive: true });
-                    fs.mkdirSync(this.config.workdirectory);
+                if (fs.existsSync(this.config.examdirectory)){   // set by server.js (desktop path + examdir)
+                    fs.rmSync(this.config.examdirectory, { recursive: true });
+                    fs.mkdirSync(this.config.examdirectory);
                 }
             } catch (error) { log.error("communicationhandler @ endExam: ",error); }
         }
         WindowHandler.removeBlurListener();
-        disableRestrictions(WindowHandler.examwindow)
+        disableRestrictions()
 
-        if (WindowHandler.examwindow){ // in some edge cases in development this is set but still unusable - use try/catch
-            
+        if (WindowHandler.examwindow){ // in some edge cases in development this is set but still unusable - use try/catch   
             try {  //send save trigger to exam window
                 if (!serverstatus.delfolderonexit){
                     WindowHandler.examwindow.webContents.send('save', 'exitexam') //trigger, why
@@ -552,7 +570,6 @@ let TesseractWorker = false
                 }
                 WindowHandler.examwindow.close(); 
                 WindowHandler.examwindow.destroy(); 
-                WindowHandler.examwindow = null;
             }
             catch(e){ log.error(e)}
            
@@ -564,11 +581,11 @@ let TesseractWorker = false
                 }
             } catch (e) { 
                 WindowHandler.blockwindows = []
-                console.error("communicationhandler @ endExam: no functional blockwindow to handle")
-            } 
-            WindowHandler.blockwindows = []
+                log.error("communicationhandler @ endExam: no functional blockwindow to handle")
+            }  
         }
-        
+        WindowHandler.blockwindows = []
+        WindowHandler.examwindow = null;
         this.multicastClient.clientinfo.exammode = false
         this.multicastClient.clientinfo.focus = true
     }
@@ -576,17 +593,17 @@ let TesseractWorker = false
 
     // this is manually  triggered if connection is lost during exam - we allow the student to get out of the kiosk mode but keep his work in the editor
     gracefullyEndExam(){
+        disableRestrictions()
+
         if (WindowHandler.examwindow){ 
             this.multicastClient.clientinfo.exammode = false
             log.warn("communicationhandler @ gracefullyEndExam: Manually Unlocking Workstation")
             try {
                 // remove listener
                 WindowHandler.removeBlurListener();
-                disableRestrictions(WindowHandler.examwindow)
-
-                WindowHandler.examwindow.setKiosk(false)
-                WindowHandler.examwindow.setAlwaysOnTop(false)
-                WindowHandler.examwindow.alwaysOnTop = false
+                WindowHandler.examwindow.close(); 
+                WindowHandler.examwindow.destroy(); 
+                WindowHandler.examwindow = null
               
             } catch (e) { 
                 WindowHandler.examwindow = null
@@ -602,13 +619,30 @@ let TesseractWorker = false
             } catch (e) { 
                 WindowHandler.blockwindows = []
                 console.error("communicationhandler @ gracefullyEndExam: no functional blockwindow to handle")
-            } 
-            WindowHandler.blockwindows = []
-
-            this.multicastClient.clientinfo.focus = true
-            this.multicastClient.clientinfo.exammode = false
+            }   
         }
+      
+        WindowHandler.blockwindows = []
+        WindowHandler.examwindow = null
+        this.multicastClient.clientinfo.focus = true
+        this.multicastClient.clientinfo.exammode = false
+        this.multicastClient.clientinfo.localLockdown = false;
     }
+
+    // reset all variables that signal or need a valid teacher connection
+    resetConnection(){
+        this.multicastClient.clientinfo.token = false
+        this.multicastClient.clientinfo.ip = false
+        this.multicastClient.clientinfo.serverip = false
+        this.multicastClient.clientinfo.servername = false
+        this.multicastClient.clientinfo.focus = true  // we are focused 
+        //this.multicastClient.clientinfo.exammode = false   // do not set to false until exam window is manually closed
+        this.multicastClient.clientinfo.timestamp = false
+        this.multicastClient.clientinfo.localLockdown = false
+        //this.multicastClient.clientinfo.virtualized = false  // this check happens only at the application start.. do not reset once set
+    }
+ 
+
 
 
     /**
@@ -643,7 +677,7 @@ let TesseractWorker = false
             fs.writeFile(absoluteFilepath, Buffer.from(buffer), (err) => {
                 if (err) { log.error(err);  } 
                 else {
-                    extract(absoluteFilepath, { dir: this.config.workdirectory }) 
+                    extract(absoluteFilepath, { dir: this.config.examdirectory }) 
                     .then(() => {
                         log.info("CommunicationHandler @ requestFileFromServer: files received and extracted");
                         return fs.promises.unlink(absoluteFilepath); // Verwendung der Promise-basierten API von fs
@@ -665,17 +699,7 @@ let TesseractWorker = false
     }
 
 
-    resetConnection(){
-        this.multicastClient.clientinfo.token = false
-        this.multicastClient.clientinfo.ip = false
-        this.multicastClient.clientinfo.serverip = false
-        this.multicastClient.clientinfo.servername = false
-        this.multicastClient.clientinfo.focus = true  // we are focused 
-        //this.multicastClient.clientinfo.exammode = false   // do not set to false until exam window is manually closed
-        this.multicastClient.clientinfo.timestamp = false
-        //this.multicastClient.clientinfo.virtualized = false  // this check happens only at the application start.. do not reset once set
-    }
- 
+
 
     async sendExamToTeacher(){
         //send save trigger to exam window
@@ -709,7 +733,7 @@ let TesseractWorker = false
 
         let base64File = null
         try {
-            await this.zipDirectory(this.config.workdirectory, zipfilepath)
+            await this.zipDirectory(this.config.examdirectory, zipfilepath)
             const fileContent = fs.readFileSync(zipfilepath);
             base64File = fileContent.toString('base64');
         }catch (e){  log.error(e)  }

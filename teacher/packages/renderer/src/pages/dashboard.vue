@@ -14,8 +14,8 @@
 
     <span class="fs-4 align-middle ms-3" style="float: right">Dashboard</span>
     <div class="btn btn-sm btn-danger m-0 mt-1" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style="float: right">{{$t('dashboard.stopserver')}}&nbsp; <img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" ></div>
-    <div class="btn btn-sm btn-secondary me-1 mt-1" style="float: right; padding:3px;" @click="setupDefaultPrinter()"  @mouseover="showDescription($t('dashboard.defaultprinter'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white" width="22" height="22" > </div>
-
+    <div class="btn btn-sm btn-secondary me-1 mt-1" style="float: right; padding:3px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white" width="22" height="22" > </div>
+    <div v-if="!hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 me-1 " style="cursor: unset; float: right">{{ $t("general.offline") }}</div>
 </div>
  <!-- Header END -->
 
@@ -48,9 +48,9 @@
     <div :key="2" id=preview class="fadeinslow ">
         <div id=workfolder style="overflow-y:hidden">
             <button id="closefilebrowser" type="button" class=" btn-close pt-2 pe-2 float-end" title="close"></button>
-            <h4>{{$t('dashboard.filesfolder')}}: <br> <h6 class="ms-3 mb-3"><strong> {{currentdirectory}}</strong>  </h6></h4>
+            <h4>{{$t('dashboard.filesfolder')}}: <br> <span class="ms-3 mb-3"><strong> {{currentdirectory}}</strong>  </span></h4>
             <div class="btn btn-dark pe-3 ps-3 me-1 mb-3 btn-sm" @click="loadFilelist(workdirectory) "><img src="/src/assets/img/svg/go-home.svg" class="" width="22" height="22" > </div>
-            <div :class="( serverstatus.examtype === 'eduvidual' || serverstatus.examtype === 'website' )? 'disabledblue':''" class="btn btn-primary pe-3 ps-3 me-1 mb-3 btn-sm" style="float: right;" :title="$t('dashboard.summarizepdf')" @click="getLatest() "><img src="/src/assets/img/svg/edit-copy.svg" class="" width="22" height="22" >{{$t('dashboard.summarizepdfshort')}}</div>
+            <div :class="( serverstatus.examtype === 'eduvidual' || serverstatus.examtype === 'website'|| serverstatus.examtype === 'math' )? 'disabledblue':''" class="btn btn-primary pe-3 ps-3 me-1 mb-3 btn-sm" style="float: right;" :title="$t('dashboard.summarizepdf')" @click="getLatest() "><img src="/src/assets/img/svg/edit-copy.svg" class="" width="22" height="22" >{{$t('dashboard.summarizepdfshort')}}</div>
             <div  v-if="(currentdirectory !== workdirectory)" class="btn btn-dark pe-3 ps-3 me-1 mb-3 btn-sm" @click="loadFilelist(currentdirectoryparent) "><img src="/src/assets/img/svg/edit-undo.svg" class="" width="22" height="22" >up </div>
             <div :key="3" style="height: 76vh; overflow-y:auto;">
                 <div v-for="file in localfiles" :key="file.path" class="d-inline">
@@ -80,13 +80,16 @@
 
 
     <!-- pdf preview start -->
-    <div :key="4" id="pdfpreview" class="fadeinslow p-4">
-        <div class="btn btn-danger me-2  shadow" style="float: right;" @click="hidepreview()" :title="$t('dashboard.close')"><img src="/src/assets/img/svg/dialog-cancel.svg" class="" width="22" height="32" > </div>
-        <div class="btn btn-warning me-2 shadow" style="float: right;" id="printPDF" @click="print()"  :title="$t('dashboard.print')"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="32" > </div>
-        <div class="btn btn-dark me-2 shadow" style="float: right;" @click="downloadFile('current')" :title="$t('dashboard.download')"><img src="/src/assets/img/svg/edit-download.svg" class="" width="22" height="32" > </div>
-        <div class="btn btn-dark me-2 shadow" style="float: right;" @click="openFileExternal(currentpreviewPath)" :title="$t('dashboard.open')"><img src="/src/assets/img/svg/stock_exit_up.svg" class="" width="22" height="32" > </div>
-
+    <div :key="4" id="pdfpreview" class="fadeinfast p-4">
+        <div class="embed-container">
         <iframe src="" id="pdfembed"></iframe>
+        <div id="previewbuttons">
+            <div class="insert-button btn btn-danger me-2  shadow" style="float: right;" @click="hidepreview()" :title="$t('dashboard.close')"><img src="/src/assets/img/svg/dialog-cancel.svg" class="" width="22" height="32" > </div>
+            <div class="insert-button btn btn-warning me-2 shadow" style="float: right;" id="printPDF" @click="print()"  :title="$t('dashboard.print')"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="32" > </div>
+            <div class="insert-button btn btn-dark me-2 shadow" style="float: right;" @click="downloadFile('current')" :title="$t('dashboard.download')"><img src="/src/assets/img/svg/edit-download.svg" class="" width="22" height="32" > </div>
+            <div class="insert-button btn btn-dark me-2 shadow" style="float: right;" @click="openFileExternal(currentpreviewPath)" :title="$t('dashboard.open')"><img src="/src/assets/img/svg/stock_exit_up.svg" class="" width="22" height="32" > </div>
+        </div>
+        </div>
     </div>
     <!-- pdf preview end -->
    
@@ -98,7 +101,7 @@
         <div class="btn btn-light m-1 text-start infobutton" @click="showinfo()">{{$t('dashboard.server')}} <br><b>{{serverip}}</b> </div><br>
         <div class="btn btn-light m-1 mb-3 text-start infobutton" @click="showinfo()">{{$t('dashboard.pin')}}<br><b> {{ serverstatus.pin }} </b>  </div><br>
         
-        <div style="font-size:0.9em">
+        <div style="font-size:0.9em; width: 220px">
             <!-- geogebra -->
             <div class="form-check m-1 mb-1"  :class="(serverstatus.exammode)? 'disabledexam':''">
                 <input v-model="serverstatus.examtype" value="math" class="form-check-input" type="radio" name="examtype" id="examtype2" checked>
@@ -107,7 +110,7 @@
             <!-- editor -->
             <div class="form-check m-1" :class="(serverstatus.exammode)? 'disabledexam':''">
                 <input v-model="serverstatus.examtype" @click="activateSpellcheck()" value="editor" class="form-check-input" type="radio" name="examtype" id="examtype1">
-                <label class="form-check-label" for="examtype1"> {{$t('dashboard.lang')}} <span class="text-white-50" v-if="(serverstatus.spellcheck)">({{serverstatus.spellchecklang}})</span></label>
+                <label class="form-check-label" for="examtype1"> {{$t('dashboard.lang')}}<span class="text-white-50" v-if="(serverstatus.languagetool)">|{{serverstatus.spellchecklang}}</span></label>
             </div>
             <!-- eduvidual -->
             <div class="form-check m-1 mb-1" :class="(serverstatus.exammode)? 'disabledexam':''">
@@ -120,10 +123,11 @@
                 <label class="form-check-label" for="examtype5"> {{$t('dashboard.gforms')}}  </label>
             </div>
             <!-- website -->
-            <div class="form-check m-1 mb-1" :class="(serverstatus.exammode)? 'disabledexam':''">
+            <div class="form-check m-1 mb-1" :class="(serverstatus.exammode)? 'disabledexam':''" style="max-height:24px">
                 <input v-model="serverstatus.examtype" @click="getTestURL()" value="website" class="form-check-input" type="radio" name="examtype" id="examtype6">
-                <label class="form-check-label" for="examtype6"> Website <br>
-                    <div class="text-white-50" style="width: 160px; display:inline-block; overflow: hidden; text-overflow: ellipsis;" v-if="(serverstatus.domainname)">({{serverstatus.domainname}}</div><div v-if="(serverstatus.domainname)" style="overflow: hidden; display:inline-block;" class="text-white-50">)</div>   
+                <label class="form-check-label" for="examtype6"> 
+                    <div style="display:inline-block; overflow: hidden; text-overflow: ellipsis;">Website</div>  <!--overflow hidden with text-overflow ellipsis adds 3 pixel to the height of the sourrounding div element.. what the f..? -->
+                    <div style="width: 134px; display:inline-block; overflow: hidden; text-overflow: ellipsis;" class="text-white-50" v-if="(serverstatus.domainname)">|{{serverstatus.domainname}}</div>  
                 </label>
             </div>
 
@@ -147,30 +151,11 @@
                     <span style="padding: 0 6px 0 4px; vertical-align:middle;">{{serverstatus.msOfficeFile.name}} </span>
                 </button>
 
-
                 <button v-if="(serverstatus.examtype === 'microsoft365' && this.config.accessToken )"  @click="logout365()" class="btn btn-sm btn-warning mt-1" style=" white-space: nowrap;  width: 170px;overflow: hidden; text-overflow: ellipsis; ">
                     <img  src="/src/assets/img/svg/win.svg" xmlns="http://www.w3.org/2000/svg"  width="24" height="24">
                     <span style="padding: 0 6px 0 4px; vertical-align:middle;"> Logout </span>
                 </button>
 
-            </div>
-
-            <!-- other options -->
-            <div class="form-check form-switch  m-1 mb-2" :class="(serverstatus.examtype === 'eduvidual' || serverstatus.examtype === 'gforms')? 'disabledexam':''">
-                <input  @click="setAbgabeInterval()" v-model="autoabgabe" class="form-check-input" type="checkbox" id="autoabgabe">
-                <label class="form-check-label" for="flexSwitchCheckDefault">{{$t('dashboard.autoget')}}</label>
-                <span v-if="autoabgabe" class="text-white-50"> ({{ abgabeintervalPause }}min)</span>
-            </div>
-            <div class="form-check form-switch  m-1 mb-2">
-                <input v-if="serverstatus.screenshotinterval > 0" @change="toggleScreenshot()" @click="setScreenshotInterval()" checked class="form-check-input" type="checkbox" id="screenshotinterval">
-                <input v-if="serverstatus.screenshotinterval == 0" @change="toggleScreenshot()" @click="setScreenshotInterval()" class="form-check-input" type="checkbox" id="screenshotinterval">
-                <label class="form-check-label" for="flexSwitchCheckDefault">{{$t('dashboard.screenshot')}}</label>
-                <span v-if="serverstatus.screenshotinterval > 0" class="text-white-50"> ({{ serverstatus.screenshotinterval }}s)</span>
-            </div>
-            <div class="form-check form-switch  m-1 mb-2">
-                <input v-model=directPrintAllowed @click="checkforDefaultprinter()" @mouseover="showDescription( $t('dashboard.allowdirectprint') )" @mouseout="hideDescription" checked=false class="form-check-input" type="checkbox" id="directprint">
-                <label class="form-check-label">{{$t('dashboard.directprint')}}   </label><br>
-                <div v-if="defaultPrinter" class="ellipsis text-white-50"> {{ defaultPrinter }}</div>
             </div>
         </div>
         <br>
@@ -188,11 +173,42 @@
 
 
 
-    <!-- PRINT Setup START -->
-    <div :key="6" id="printselectoverlay" class="fadeinslow" @click="setupDefaultPrinter()">
-        <div id="availablePrinters">
+    <!-- SETUP DIALOG START -->
+    <div :key="6" id="setupoverlay" class="fadeinslow" @click="hideSetup()">
+        <div id="setupdiv">
             <!-- <div class="swal2-icon swal2-question swal2-icon-show" style="display: flex;"><div class="swal2-icon-content">?</div></div> -->
-            <span><h5 style="display: inline">{{ $t('dashboard.defaultprinter') }}</h5></span>
+            <span><h5 style="display: inline">{{ $t('dashboard.extendedsettings') }}</h5></span>
+            
+            <div class="form-check form-switch  m-1 mb-2">
+                <input v-model=serverstatus.groups @click="setupGroups()" checked=false class="form-check-input" type="checkbox" id="activategroups">
+                <label class="form-check-label">{{$t('dashboard.groups')}}   </label><br>
+            </div>
+            <div v-if="config.bipIntegration" class="form-check form-switch  m-1 mb-2" >
+                <input v-model=serverstatus.requireBiP @click="activateBiP()" :title="$t('control.biprequired')" checked=false class="form-check-input" type="checkbox" id="activatebip">
+                <label class="form-check-label">{{$t('dashboard.bildungsportal')}}   </label><br>
+            </div>
+
+            <div class="form-check form-switch  m-1 mb-2" :class="(serverstatus.examtype === 'eduvidual' || serverstatus.examtype === 'gforms')? 'disabledexam':''">
+                <input  @click="setAbgabeInterval()" v-model="autoabgabe" class="form-check-input" type="checkbox" id="autoabgabe">
+                <label class="form-check-label" for="flexSwitchCheckDefault">{{$t('dashboard.autoget')}}</label>
+                <span v-if="autoabgabe" class="text-black-50">|{{ abgabeintervalPause }}min</span>
+            </div>
+            <div class="form-check form-switch  m-1 mb-2">
+                <input v-if="serverstatus.screenshotinterval > 0" @change="toggleScreenshot()" @click="setScreenshotInterval()" checked class="form-check-input" type="checkbox" id="screenshotinterval">
+                <input v-if="serverstatus.screenshotinterval == 0" @change="toggleScreenshot()" @click="setScreenshotInterval()" class="form-check-input" type="checkbox" id="screenshotinterval">
+                <label class="form-check-label" for="flexSwitchCheckDefault">{{$t('dashboard.screenshot')}}</label>
+                <span v-if="serverstatus.screenshotinterval > 0" class="text-black-50">|{{ serverstatus.screenshotinterval }}s</span>
+            </div>
+            <div class="form-check form-switch  m-1 mb-2">
+                <input v-model=directPrintAllowed @click="checkforDefaultprinter()" checked=false class="form-check-input" type="checkbox" id="directprint">
+                <label class="form-check-label">{{$t('dashboard.directprint')}}   </label><br>
+                <div v-if="defaultPrinter" class="ellipsis text-black-50"> {{ defaultPrinter }}</div>
+                <div v-if="!defaultPrinter" class="ellipsis text-black-50"> kein Drucker gewählt</div>
+            </div>
+
+            <hr>
+
+            <span><h6 style="display: inline">{{ $t('dashboard.defaultprinter') }}</h6></span>
             <div v-if="(availablePrinters.length < 1)">
                 <button class="btn btn-secondary mt-1 mb-0"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" >  no printer found </button>
             </div>
@@ -202,11 +218,16 @@
                 </button>
                 <img v-if="(printer == defaultPrinter)" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
             </div>
-            <div id="okButton" class="btn mt-3 btn-success" @click="setupDefaultPrinter()">OK</div>
-
+            <div v-if="currentpreviewPath && defaultPrinter">
+                <button id="printButton" class="btn btn-dark mt-1 mb-0" @click="print();hideSetup()"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" > Print: {{ currentpreviewname }} </button>
+            </div> 
+               
+            <div>  <!-- ok button resets currentpreviewPath / print button only appears if currentpreviewPath is set and defaultprinter is set -->
+                <div id="okButton" class="btn mt-3 btn-success" @click="hideSetup(); this.currentpreviewPath=null;">OK</div>
+            </div>
         </div>
     </div>
-  <!-- PRINT Setup END -->
+  <!-- SETUP DIALOG END -->
 
    
     <div :key="7" id="content" class="fadeinslow p-3">
@@ -225,19 +246,21 @@
         <!-- studentlist start -->
         <div id="studentslist" class="pt-1">        
             <draggable v-model="studentwidgets" :move="handleMoveItem" @end="handleDragEndItem" ghost-class="ghost">
-                <div v-for="student in studentwidgets" :key="student.token" style="cursor:auto" v-bind:class="(!student.focus)?'focuswarn':''" class="studentwidget btn rounded-3 btn-block ">
+                <div v-for="student in studentwidgets" :key="student.token" style="cursor:auto" v-bind:class="(!student.focus)?'focuswarn':''" class="studentwidget btn rounded-3 btn-block">
                     <div v-if="student.clientname">
                         <div class="studentimage rounded" style="position: relative; height:132px;">  
-                            <button v-if="serverstatus.examtype === 'editor' && !this.serverstatus.spellcheck && this.serverstatus.spellchecklang !== 'none'" @mouseover="showDescription($t('dashboard.allowspellcheck'))" @mouseout="hideDescription" @click='activateSpellcheckForStudent(student.token,student.clientname)' type="button" class="btn btn-sm pt-1 mt-2 pe-1 float-end" style="z-index:1000; position:relative;"><img src="/src/assets/img/svg/autocorrection.svg" class="widgetbutton" width="22" height="22" ></button> 
+                            <button v-if="serverstatus.examtype === 'editor' && !this.serverstatus.languagetool && this.serverstatus.spellchecklang !== 'none'" @mouseover="showDescription($t('dashboard.allowspellcheck'))" @mouseout="hideDescription" @click='activateSpellcheckForStudent(student.token,student.clientname)' type="button" class="btn btn-sm pt-1 mt-2 pe-1 float-end" style="z-index:1000; position:relative;"><img src="/src/assets/img/svg/autocorrection.svg" class="widgetbutton" width="22" height="22" ></button> 
                             <div v-cloak :id="student.token" style="position: relative;background-size: cover; height: 132px;" v-bind:style="(student.imageurl && now - 20000 < student.timestamp)? `background-image: url('${student.imageurl}')`:'background-image: url(user-red.svg)'"></div>
-                            <div v-if="student.virtualized" class="virtualizedinfo" >{{$t("dashboard.virtualized")}}</div>
-                            <div v-if="!student.focus" class="kioskwarning" >{{$t("dashboard.leftkiosk")}}</div>
-                            <div v-if="student.status.sendexam" class="examrequest" >{{$t("dashboard.examrequest")}}</div>
+                           
+                            <div v-if="student.virtualized && now - 20000 < student.timestamp" class="virtualizedinfo" >{{$t("dashboard.virtualized")}}</div>
+                            <div v-if="!student.focus && now - 20000 < student.timestamp" class="kioskwarning" >{{$t("dashboard.leftkiosk")}}</div>
+                            <div v-if="student.status.sendexam && now - 20000 < student.timestamp" class="examrequest" >{{$t("dashboard.examrequest")}}</div>
+                            
                             <span>   
-                                <div style="display: inline-block; overflow: hidden; width: 140px; height: 22px" v-bind:title="(student.files) ? 'Documents: '+student.files : ''"> 
+                                <div v-if="now - 20000 < student.timestamp" style="display: inline-block; overflow: hidden; width: 140px; height: 22px" v-bind:title="(student.files) ? 'Documents: '+student.files : ''"> 
                                     <img v-for="file in student.files" style="width:22px; margin-left:-4px; position: relative; filter: sepia(10%) hue-rotate(306deg) brightness(0.3) saturate(75);" class="" src="/src/assets/img/svg/document.svg">
                                 </div>
-                                <div style="display: inline-block; margin: 0px; position: absolute; right: 4px;" >
+                                <div v-if="now - 20000 < student.timestamp" style="display: inline-block; margin: 0px; position: absolute; right: 4px;" >
                                     <img src="/src/assets/img/svg/edit-delete.svg" width="22" height="22" class="delfolderstudent" @click="delfolderquestion(student.token)"  @mouseover="showDescription($t('dashboard.delsingle'))" @mouseout="hideDescription" >
                                 </div>
 
@@ -251,6 +274,8 @@
                             <button v-if="(now - 20000 > student.timestamp)" type="button" class="btn btn-outline-danger btn-sm " style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">{{$t('dashboard.offline')}} </button>
                             <button v-if="(now - 20000 < student.timestamp) && student.exammode && student.focus"  @click='showStudentview(student)' type="button" class="btn btn-outline-warning btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;">{{$t('dashboard.secure')}}</button>
                             <button v-if="(now - 20000 < student.timestamp) && !student.focus "   @click='restore(student.token)' type="button" class="btn btn-danger btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> {{$t('dashboard.restore')}} </button>
+                            <button v-if="(now - 20000 < student.timestamp) && serverstatus.groups && student.status.group == 'a' "   @click='quickSetGroup(student)' type="button" class="btn-click-feedback2 btn btn-info btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> A  </button>
+                            <button v-if="(now - 20000 < student.timestamp) && serverstatus.groups && student.status.group == 'b' "  @click='quickSetGroup(student)' type="button" class="btn-click-feedback1 btn btn-warning btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> B  </button>
                         </div>
                     </div>
                 </div> 
@@ -310,6 +335,7 @@ export default {
             electron: this.$route.params.electron,
             hostname: window.location.hostname,
             config :this.$route.params.config,
+            hostip: this.$route.params.config.hostip,
             now : null,
             files: null,
             autoabgabe: true,
@@ -317,7 +343,7 @@ export default {
             localfiles: null,
             currentpreview: null,
             currentpreviewname: null,
-            currencpreviewPath: null,
+            currentpreviewPath: null,
             numberOfConnections: 0,
             studentwidgets: [],
             originalIndex: 20,
@@ -334,12 +360,11 @@ export default {
                 exammode: false,
                 examtype: 'math',
                 delfolderonexit: false,
-                spellcheck: false,
-                spellchecklang: 'de',
+                spellchecklang: 'de-DE',
                 suggestions: false,
                 moodleTestId: null,
-                moodleTestType: null,
                 moodleDomain: 'eduvidual.at',
+                moodleURL:null,
                 cmargin: { side: 'right', size: 3 },
                 gformsTestId: null,
                 screenshotinterval: 4,
@@ -347,7 +372,11 @@ export default {
                 screenslocked: false,
                 pin: this.$route.params.pin,
                 linespacing: 1,
-                unlockonexit: false
+                unlockonexit: false,
+                requireBiP: false,
+                groups: false,
+                groupA: [],
+                groupB: []
             }
         };
     },
@@ -357,7 +386,7 @@ export default {
         /**
          * Microsoft OneDrive API Authentication and File Handling
          */
-        openAuthWindow(){ ipcRenderer.send('openmsauth')  },
+        openAuthWindow(){ ipcRenderer.send('openmsauth'); this.setServerStatus()  },
         onedriveUploadselect: uploadselect,
         onedriveUpload: onedriveUpload,
         onedriveUploadSingle : onedriveUploadSingle,
@@ -423,6 +452,9 @@ export default {
             }
             this.now = new Date().getTime()
 
+            this.hostip = ipcRenderer.sendSync('checkhostip')
+            if (!this.hostip) return; 
+
             fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/studentlist/${this.servername}/${this.servertoken}`)
             .then(response => {
                 if (!response.ok) { throw new Error('Network response was not ok');  }
@@ -440,6 +472,7 @@ export default {
 
                 if (this.studentlist && this.studentlist.length > 0){
                     this.studentlist.forEach( student => { 
+                      
                         if (this.activestudent && student.token === this.activestudent.token) { this.activestudent = student}  // on studentlist-receive update active student (for student-details)
                         if (!student.imageurl){ student.imageurl = "user-black.svg"  }
                         
@@ -490,46 +523,12 @@ export default {
                         }
                     } 
                 }
-            }).catch( err => {console.log(err)});
+            }).catch( err => {console.log(`dashboard @ fetchinfo:`,err)});
         }, 
 
 
 
-        async showDescription(description) {
-            this.currentDescription = description;
-            this.showDesc = true;
-        },
-        hideDescription() {
-            this.showDesc = false;
-        },
-        visualfeedback(message, timeout=1000){
-             this.$swal.fire({
-                text: message,
-                timer: timeout,
-                timerProgressBar: true,
-                didOpen: () => { this.$swal.showLoading() }
-            });
-        },
-        visualfeedbackClosemanually(message){
-            const closeWhenFinished = async () => {
-                while (!this.serverstatus.msOfficeFile) {
-                    await new Promise((resolve) => setTimeout(resolve, 100));
-                }
-                this.$swal.close();
-            };
-            // Your existing Swal configuration
-            this.$swal.fire({
-                text: message,
-                timerProgressBar: true,
-                didOpen: () => {
-                    this.$swal.showLoading();
-                    closeWhenFinished();
-                },
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                allowEnterKey: false,
-            });
-        },
+   
 
         /**
          * Google Forms
@@ -549,8 +548,12 @@ export default {
                 }
             }).then((input) => {
                 if (!input.value) {document.getElementById('examtype2').checked = true; this.serverstatus.examtype = "math"}
-                this.serverstatus.gformsTestId = input.value
-                console.log(this.serverstatus.examtype)
+                else {
+                    this.serverstatus.gformsTestId = input.value
+                    this.abgabeinterval.stop();
+                    this.autoabgabe = false;
+                }
+                this.setServerStatus()
             })  
         },
 
@@ -562,40 +565,37 @@ export default {
                 title: this.$t("dashboard.eduvidualid"),
                 icon: 'question',
                 input: 'number',
-                html: `
-                    <div class="row m-4 mt-1">                   
-                        
-                        ${this.$t("dashboard.eduvidualdomain")}
-                        <input class="form-control col-sm-2" type=text id=moodledomain placeholder="eduvidual.at">
-                    </div>
-                    
-                    <div  style="text-align: left; width: 150px; margin: auto auto;">
-                            <input class="form-check-input" name=etesttype type="radio" id="quiz" value="quiz" checked>
-                            <label class="form-check-label" for="quiz"> 
-                                <img  width="24" height="24" src="data:image/png;base64,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"/>
-                                Test 
-                            </label>
-                            <br>
-                            <input class="form-check-input"  name=etesttype type="radio" id="activequiz" value="activequiz">
-                            <label class="form-check-label" for="activequiz"> 
-                                <img  width="24" height="24" src="data:image/png;base64,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"/>
-                                LiveTest
-                            </label>
+                input: 'url',
+                inputLabel: this.$t("dashboard.eduvidualidhint"),
+                inputPlaceholder: 'https://www.eduvidual.at/mod/quiz/view.php?id=6153159',
+                html: `                    
+                    <div  style="text-align: center; width: 150px; margin: auto auto;">
+                        <img  width="24" height="24" src="data:image/png;base64,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"/>
+                        <img  width="24" height="24" src="data:image/png;base64,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"/>
                     </div>
                     <br>
-                    ${this.$t("dashboard.eduvidualidhint")} <br>
-                    <span style="font-size:0.8em">(https://www.eduvidual.at/mod/quiz/view.php?id=<span style="background-color: lightblue; padding:0 3px 0 3px;">2546250</span>)</span>`,
+                `,
                 inputValidator: (value) => {
-                    if (!value) {return 'No ID given!'}
-                },
-                preConfirm: () => {
-                    this.serverstatus.moodleTestType =  document.querySelector('input[name="etesttype"]:checked').value;  
+                    if (!value || !this.isValidMoodleDomainName(value) ) {return 'No valid domain given!'}
+                    let { moodledomain, testid } = this.extractDomainAndId(value);
+                    if ( !testid) { return 'No valid ID given!'}
                 }
             }).then((input) => {
-                if (!input.value) {document.getElementById('examtype2').checked = true; this.serverstatus.examtype = "math"}
-                this.serverstatus.moodleTestId = input.value
-                this.serverstatus.moodleDomain = this.isValidDomainName(  document.getElementById('moodledomain').value ) ? document.getElementById('moodledomain').value : "eduvidual.at"
-                console.log( this.serverstatus.moodleDomain )
+                if (!input.value ) {
+                    document.getElementById('examtype2').checked = true; 
+                    this.serverstatus.examtype = "math";
+                    return;
+                }
+
+                let { moodledomain, testid } = this.extractDomainAndId(input.value);
+
+                this.serverstatus.moodleTestId = testid
+                this.serverstatus.moodleDomain = moodledomain
+                this.serverstatus.moodleURL = input.value
+
+                this.abgabeinterval.stop(); 
+                this.autoabgabe = false;  // no autoabgabe in this exam mode
+                this.setServerStatus()
             })  
         },
 
@@ -622,22 +622,12 @@ export default {
                 this.serverstatus.domainname = this.isValidFullDomainName(  domainname ) ? domainname : null
 
                 if (!this.serverstatus.domainname) {document.getElementById('examtype2').checked = true; this.serverstatus.examtype = "math"}
+                else { this.abgabeinterval.stop(); this.autoabgabe = false;}  // no autoabgabe in this exam mode
                 //console.log( this.serverstatus.domainname )
+                this.setServerStatus()
             })  
         },
 
-
-        isValidDomainName(str) {
-            // Regex for matching a simple domain name structure
-            var regex = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i;
-            return regex.test(str);
-        },
-
-        isValidFullDomainName(str) {
-            // Regex for matching a simple domain name structure
-            var regex = /^(https?:\/\/)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i;
-            return regex.test(str);
-        },
 
         /**
          * Text Editor
@@ -646,11 +636,11 @@ export default {
             const inputOptions = new Promise((resolve) => {
                 setTimeout(() => {
                     resolve({
-                        'de': this.$t("dashboard.de"),
+                        'de-DE': this.$t("dashboard.de"),
                         'en-GB': this.$t("dashboard.en"),
-                        'fr': this.$t("dashboard.fr"),
-                        'es': this.$t("dashboard.es"),
-                        'it': this.$t("dashboard.it"),
+                        'fr-FR': this.$t("dashboard.fr"),
+                        'es-ES': this.$t("dashboard.es"),
+                        'it-IT': this.$t("dashboard.it"),
                         'none':this.$t("dashboard.none"),
                     })
                 }, 100)
@@ -672,7 +662,7 @@ export default {
                 },
                 title: this.$t("dashboard.texteditor"),
                 html: `
-                <div style="font-size: 0.8em !important; text-align:left; margin-left:10px;">
+                <div class="my-content" style="font-size: 0.8em !important; text-align:left; margin-left:10px;">
                     <div>
                         <label >
                             <h6>${this.$t("dashboard.cmargin-value")}</h6>
@@ -688,22 +678,36 @@ export default {
                             <input type="radio" name="correction_margin" value="right" checked/>
                             ${this.$t("dashboard.cmargin-right")}
                         </label>
-                    </div><br> 
+                    </div>
                     <div> 
                         <h6> ${this.$t("dashboard.linespacing")}</h6>
                         <label><input type="radio" name="linespacing" value="1"/> 1</label> &nbsp;
                         <label><input type="radio" name="linespacing" value="2" checked/> 2</label> &nbsp;
                         <label><input type="radio" name="linespacing" value="3"/> 3</label> &nbsp;
-                    </div><br>
+                    </div>
                     <div> 
                         <h6>${this.$t("dashboard.fontfamily")}</h6>
                         <label><input type="radio" name="fontfamily" value="serif"/> serif</label> &nbsp;
                         <label><input type="radio" name="fontfamily" value="sans-serif" checked/> sans-serif</label> &nbsp;
-                    </div><br>
+                    </div>
+                    <hr>
+                    <div>
+                        <h6>${this.$t("dashboard.audiorepeattitle")}</h6>
+                        <select id="audiorepeat" class="my-select">
+                            <option value="0">${this.$t("dashboard.audioallow")}</option>
+                            <option value="1">1 ${this.$t("dashboard.audiorepeat1")}</option>
+                            <option value="2">2 ${this.$t("dashboard.audiorepeat2")}</option>
+                            <option value="3">3 ${this.$t("dashboard.audiorepeat2")}</option>
+                            <option value="4">4 ${this.$t("dashboard.audiorepeat2")}</option>
+                        </select>
+                    </div>
+                   
+                    <hr>
                     <div>
                         <h6>${this.$t("dashboard.spellcheck")}</h6>
-                        <input class="form-check-input" type="checkbox" id="checkboxspellcheck">
-                        <label class="form-check-label" for="checkboxspellcheck"> ${this.$t("dashboard.spellcheckactivate")} </label> <br>
+                       
+                        <input class="form-check-input" type="checkbox" id="checkboxLT">
+                        <label class="form-check-label" for="checkboxLT"> LanguageTool ${this.$t("dashboard.activate")} </label> <br>
                         <input class="form-check-input" type="checkbox" id="checkboxsuggestions">
                         <label class="form-check-label" for="checkboxsuggestions"> ${this.$t("dashboard.suggest")} </label><br><br>
                         <h6>${this.$t("dashboard.spellcheckchoose")}</h6>
@@ -715,6 +719,8 @@ export default {
                 didOpen: () => {
                     const marginValueInput = document.getElementById('marginValue');
                     marginValueInput.addEventListener('input', updateMarginValueDisplay);
+                    document.getElementById('checkboxLT').checked = this.serverstatus.languagetool
+                    document.getElementById('checkboxsuggestions').checked = this.serverstatus.suggestions
                 },
                 willClose: () => {
                     const marginValueInput = document.getElementById('marginValue');
@@ -727,12 +733,14 @@ export default {
                 },
                 preConfirm: () => {
                     this.serverstatus.suggestions = document.getElementById('checkboxsuggestions').checked; 
-                    this.serverstatus.spellcheck = document.getElementById('checkboxspellcheck').checked; 
+                    this.serverstatus.languagetool = document.getElementById('checkboxLT').checked; 
+
                     const radioButtons = document.querySelectorAll('input[name="correction_margin"]');
                     const marginValue = document.getElementById('marginValue').value;
                     const linespacingradioButtons = document.querySelectorAll('input[name="linespacing"]');
                     const fontfamilyradioButtons = document.querySelectorAll('input[name="fontfamily"]');
-
+                    const audioRepeat = document.getElementById('audiorepeat').value;
+     
                     let selectedMargin = '';
                     radioButtons.forEach((radio) => {
                         if (radio.checked) {
@@ -759,24 +767,113 @@ export default {
                             side: selectedMargin,
                             size: parseFloat(marginValue)
                         }
-                        console.log( this.serverstatus.cmargin)
+                       // console.log( this.serverstatus.cmargin)
                     }
 
                     this.serverstatus.linespacing = selectedSpacing
                     this.serverstatus.fontfamily = selectedFont
+                    this.serverstatus.audioRepeat = audioRepeat
                 }
             })
             if (language) {
                 this.serverstatus.spellchecklang = language
-                if (language === 'none'){this.serverstatus.spellcheck = false}
+                if (language === 'none'){this.serverstatus.languagetool = false}
             }  
             else {
-                this.serverstatus.spellchecklang = 'de'
+                this.serverstatus.spellchecklang = 'de-DE'
             }
+            if (this.serverstatus.languagetool){
+                let response = await ipcRenderer.invoke("startLanguageTool")
+                if (response){
+                    this.$swal.fire({
+                        text: "LanguageTool started!",
+                        timer: 1000,
+                        timerProgressBar: true,
+                        didOpen: () => { this.$swal.showLoading() }
+                    });
+                }
+                else {
+                    this.$swal.fire({
+                        text: "LanguageTool Error!",
+                        timer: 1000,
+                        timerProgressBar: true,
+                        didOpen: () => { this.$swal.showLoading() }
+                    });
+                }
+            }
+            this.setServerStatus()
         },
 
+        extractDomainAndId(url) {
+            // Extract the full domain including subdomains
+            var domainRegex = /^(https?:\/\/)?([^\/]+)/i;
+            var match = url.match(domainRegex);
+            var fullDomain = match ? match[2] : null;
 
+            // Extract only the domain and TLD
+            var domainParts = fullDomain.split('.').slice(-2).join('.');
+            var moodledomain = domainParts;
 
+            var idRegex = /id=(\d+)/;
+            var idMatch = url.match(idRegex);
+            var testid = idMatch ? idMatch[1] : null;
+            return { moodledomain, testid };
+        },
+
+        isValidMoodleDomainName(url) {
+            // Improved regex for matching a domain name structure with optional protocol
+            var regex = /^(https?:\/\/)?(([a-z0-9-]+\.)+[a-z]{2,})(\/.*)?$/i;
+            return regex.test(url);
+        },
+
+        isValidDomainName(str) {
+            // Regex for matching a simple domain name structure
+           // var regex = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i;
+            var regex = /^([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+            return regex.test(str);
+        },
+
+        isValidFullDomainName(str) {
+            // Regex for matching a simple domain name structure
+            var regex = /^(https?:\/\/)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i;
+            return regex.test(str);
+        },
+        async showDescription(description) {
+            this.currentDescription = description;
+            this.showDesc = true;
+        },
+        hideDescription() {
+            this.showDesc = false;
+        },
+        visualfeedback(message, timeout=1000){
+             this.$swal.fire({
+                text: message,
+                timer: timeout,
+                timerProgressBar: true,
+                didOpen: () => { this.$swal.showLoading() }
+            });
+        },
+        // show visual feedback 
+        visualfeedbackClosemanually(message){
+            const closeWhenFinished = async () => {
+                while (!this.serverstatus.msOfficeFile) {
+                    await new Promise((resolve) => setTimeout(resolve, 100));
+                }
+                this.$swal.close();
+            };
+            // Your existing Swal configuration
+            this.$swal.fire({
+                text: message,
+                timerProgressBar: true,
+                didOpen: () => {
+                    this.$swal.showLoading();
+                    closeWhenFinished();
+                },
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                allowEnterKey: false,
+            });
+        },
         //display student specific actions
         showStudentview(student) {
             document.querySelector("#studentinfocontainer").style.display = 'block';
@@ -794,9 +891,18 @@ export default {
         showinfo(){
             let info = `<span> IP: <strong>${this.serverip}</strong> \nName: ${this.servername}  \nPin: ${this.serverstatus.pin} </span>`
             this.$swal.fire({ 
-                title: `<span style="font-weight:normal"> IP:</span>  ${this.serverip} </span> 
-                        <span style="font-weight:normal"> Name:</span>  ${this.servername}  
-                        <span style="font-weight:normal"> Pin:</span> ${this.serverstatus.pin}`,
+                title: `<div style="display: flex; margin-top:0; justify-content: center">
+                            <div style="text-align: right; margin-right: 10px; font-weight:normal; font-size: 0.8em;">${this.$t("dashboard.name")}:
+                            ${this.$t("dashboard.server")}:
+                            ${this.$t("dashboard.pin")}:
+                            </div>
+                            <div style="text-align: left;font-size: 0.8em;">${this.servername}
+                            ${this.serverip}
+                            ${this.serverstatus.pin}
+                            
+
+                            </div>
+                        </div>`,
                 icon: "info",
                 customClass: {
                     popup: 'custom-swal2-popup',
@@ -858,15 +964,42 @@ export default {
             })    
         },
 
+        activateBiP(){
+            this.$swal.fire({
+                title: "Bildungsportal",
+                icon: 'info',
+                text: 'Dies erzwingt die Authentifizierung der Schüler:innen durch das Bildungsportal.',
+                showCancelButton: true,
+                cancelButtonText: this.$t("dashboard.cancel"),
+                confirmButtonText:  this.$t("dashboard.Activate"),
+                reverseButtons: true,
+          
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    console.log(this.serverstatus)
+                    this.serverstatus.requireBiP = true
+                    document.getElementById('activatebip').checked = true
+                    this.setServerStatus()
+                }
+                else {
+                    this.serverstatus.requireBiP = false
+                    document.getElementById('activatebip').checked = false
+                    console.log(this.serverstatus)
+                    this.setServerStatus()
+                }
+            })    
+        },
+
         truncatedClientName(value, len=18) {
             if (!value) return
             return value.length > len ? value.substr(0, len) + '...' : value;
         },
+
         // we save serverstatus everytime we start an exam - therefore exams can be resumed easily by the teacher if something wicked happens
         getPreviousServerStatus(){
             fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/getserverstatus/${this.servername}/${this.servertoken}`, { method: 'POST', headers: {'Content-Type': 'application/json' },})
             .then( res => res.json())
-            .then( response => {
+            .then( async (response) => {
                 if (response.serverstatus === false) {return}
                 this.serverstatus = response.serverstatus // we slowly move things over to a centra serverstatus object
          
@@ -880,19 +1013,36 @@ export default {
                     })
                 }
 
+                if (this.serverstatus.languagetool){
+                    let response = await ipcRenderer.invoke("startLanguageTool")
+                    if (response){
+                        this.$swal.fire({
+                            text: "LanguageTool started!",
+                            timer: 1000,
+                            timerProgressBar: true,
+                            didOpen: () => { this.$swal.showLoading() }
+                        });
+                    }
+                    else {
+                        this.$swal.fire({
+                            text: "LanguageTool Error!",
+                            timer: 1000,
+                            timerProgressBar: true,
+                            didOpen: () => { this.$swal.showLoading() }
+                        });
+                    }
+                }
                 this.setServerStatus()  //  we fetched a backup of serverstatus and now we make sure the backend has the updated settings for the students to fetch
             })
             .catch(err => { console.warn(err) })
         },
         showCopyleft(){
             this.$swal.fire({
-                title: "<span style='display:inline-block; transform: scaleX(-1); vertical-align: middle; cursor: pointer;'>&copy;</span>",
+                title: "<span id='cpleft' class='active' style='display:inline-block; transform: scaleX(-1); vertical-align: middle; cursor: pointer;'>&copy;</span> <span style='font-size:0.8em'>Thomas Michael Weissel </span>",
                 icon: 'info',
                 html: `
-                Thomas Michael Weissel <br>
-                <span style="font-size:0.8em">
-                  <a href="https://next-exam.at/#kontakt" target="_blank">next-exam.at</a>
-                </span><br><br>
+                <a href="https://linux-bildung.at" target="_blank"><img style="width: 50px; opacity:0.7;" src="./osos.svg"></a> <br>
+                <span style="font-size:0.8em"> <a href="https://next-exam.at/#kontakt" target="_blank">next-exam.at</a> </span><br><br>
                 <span style="font-size:0.8em">Version: ${this.version} ${this.info}</span>
                 `,
             })
@@ -902,16 +1052,120 @@ export default {
          * this should be the goTo function from now on to update the backend in a single request
         */
         setServerStatus(){
-            console.log(this.serverstatus)
+            //console.log(this.serverstatus)
             fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setserverstatus/${this.servername}/${this.servertoken}`, { 
                 method: 'POST',
                 headers: {'Content-Type': 'application/json' },
                 body: JSON.stringify({ serverstatus: this.serverstatus })
             })
             .then( res => res.json())
-            .then( response => { console.log(response.message)})
+            .then( response => { /*console.log(response.message)*/  })
             .catch(err => { console.warn(err) })
         },
+
+
+        async setupGroups(){
+            if (!this.serverstatus.groupA){   //temp fix for old exams (resume) without groups 
+                this.serverstatus.groupA = []
+                this.serverstatus.groupB = []
+            }
+            // prepopulate group A
+            if (this.serverstatus.groupA.length == 0){
+                for (let student of this.studentlist) {
+                    student.status.group = "a"
+                    if (!this.serverstatus.groupA.includes(student.clientname)) {
+                        this.serverstatus.groupA.push(student.clientname)
+                    } 
+                }
+            }
+            await this.sleep(1000)
+            this.setServerStatus()
+        },
+
+        quickSetGroup(student){
+            // Remove student from groups if present
+            const indexA = this.serverstatus.groupA.indexOf(student.clientname);
+            const indexB = this.serverstatus.groupB.indexOf(student.clientname);
+            if (indexA > -1) { this.serverstatus.groupA.splice(indexA, 1);  }
+            if (indexB > -1) { this.serverstatus.groupB.splice(indexB, 1);  }
+            
+            let studentWidget = this.studentwidgets.find(el => el.token === student.token);
+
+            if (student.status.group == "a"){
+                //Add and Set         
+                this.serverstatus.groupB.push(student.clientname)  //update group arrays
+                this.setStudentStatus({group:"b"}, student.token)  //set student object (and inform student about group)
+                this.setServerStatus()
+                if(studentWidget){ studentWidget.status.group = "b"}                          
+            }
+            else {
+                //Add and Set
+                this.serverstatus.groupA.push(student.clientname)
+                this.setStudentStatus({group:"a"}, student.token) 
+                this.setServerStatus()
+                if(studentWidget){ studentWidget.status.group = "a"}
+            }
+        },
+
+
+
+        setGroup(student) {
+            this.$swal.fire({
+                title: 'Gruppe wählen',
+                html: `
+                    <h3>${student.status.group.toUpperCase()}</h3>
+                    <button id="btnA" class="swal2-button btn btn-info m-2" style="width: 64px; height: 64px;">A</button>
+                    <button id="btnB" class="swal2-button btn btn-warning m-2" style="width: 64px; height: 64px;">B</button>
+                `,
+                showConfirmButton: false,
+                didRender: () => {
+                    const btnA = document.getElementById('btnA');
+                    const btnB = document.getElementById('btnB');
+
+                    if (btnA && !btnA.dataset.listenerAdded) {
+                        btnA.addEventListener('click', () => {
+                            console.log('set to group A');
+    
+                            // Remove student from group A if present
+                            const indexA = this.serverstatus.groupA.indexOf(student.clientname);
+                            if (indexA > -1) { this.serverstatus.groupA.splice(indexA, 1);  }
+                            // Remove student from group B if present
+                            const indexB = this.serverstatus.groupB.indexOf(student.clientname);
+                            if (indexB > -1) { this.serverstatus.groupB.splice(indexB, 1);  }
+
+                            //Add and Set
+                            this.serverstatus.groupA.push(student.clientname)
+                            this.setStudentStatus({group:"a"}, student.token) 
+                            this.fetchInfo()
+                            this.$swal.close();
+                        });
+                        btnA.dataset.listenerAdded = 'true';
+                    }
+
+                    if (btnB && !btnB.dataset.listenerAdded) {
+                        btnB.addEventListener('click', () => {
+                            console.log('set to group B');
+                            // Remove student from group A if present
+                            const indexA = this.serverstatus.groupA.indexOf(student.clientname);
+                            if (indexA > -1) { this.serverstatus.groupA.splice(indexA, 1);  }
+                            // Remove student from group B if present
+                            const indexB = this.serverstatus.groupB.indexOf(student.clientname);
+                            if (indexB > -1) { this.serverstatus.groupB.splice(indexB, 1);  }
+
+                            //Add and Set
+                          
+                            this.serverstatus.groupB.push(student.clientname)
+                            this.setStudentStatus({group:"b"}, student.token) 
+                            this.fetchInfo()
+                            this.$swal.close();
+                        });
+                        btnB.dataset.listenerAdded = 'true';
+                    }
+                }
+            });
+        },
+
+
 
         /**
          * set student.studentstatus or student attributes serverside
@@ -930,38 +1184,39 @@ export default {
         },
 
 
-        async setupDefaultPrinter(){
-            this.availablePrinters = await ipcRenderer.invoke("getprinters")
-            if (document.getElementById("printselectoverlay").style.display == "flex"){
-                if (!this.defaultPrinter){
-                    document.getElementById('directprint').checked = false
-                }
-                document.querySelector("#printselectoverlay").style.opacity = 0;
-                document.getElementById('availablePrinters').classList.remove('scaleIn');
-                document.getElementById('availablePrinters').classList.add('scaleOut');
-                await this.sleep(200)  //the transition setting is set to .3s
-                document.querySelector("#printselectoverlay").style.display = "none";
-            }
-            else { 
-                document.getElementById("printselectoverlay").style.display = "flex";
-                document.querySelector("#printselectoverlay").style.opacity = 1;
-                document.getElementById('availablePrinters').classList.remove('scaleOut');
-                document.getElementById('availablePrinters').classList.add('scaleIn');  
-            } 
-        },
+
         selectPrinter(printer){
             this.defaultPrinter = printer
             console.log(`dashboard: selected default printer: ${this.defaultPrinter}`)
             console.log(`dashboard: allow direct print: ${this.directPrintAllowed}`)
         },
         checkforDefaultprinter(){
-            if (!this.defaultPrinter){ this.setupDefaultPrinter()}
+            if (!this.defaultPrinter){ document.getElementById('directprint').checked = false }
+        },
+        async hideSetup(){
+            if (!this.defaultPrinter){ document.getElementById('directprint').checked = false  }
+            
+            document.getElementById("setupoverlay").style.opacity = 0;
+            document.getElementById('setupdiv').classList.remove('scaleIn');
+            document.getElementById('setupdiv').classList.add('scaleOut');
+           
+            await this.sleep(200)  //the transition setting is set to .3s
+            document.getElementById("setupoverlay").style.display = "none";
+        },
+        async showSetup(){
+            this.availablePrinters = await ipcRenderer.invoke("getprinters")
+
+            document.getElementById("setupoverlay").style.display = "flex";
+            document.getElementById("setupoverlay").style.opacity = 1;
+            document.getElementById('setupdiv').classList.remove('scaleOut');
+            document.getElementById('setupdiv').classList.add('scaleIn'); 
         },
 
   
-
-
     },
+
+
+
     mounted() {  // when ready
         this.$nextTick(function () { // Code that will run only after the entire view has been rendered
        
@@ -984,13 +1239,13 @@ export default {
 
 
 
-            this.pdfPreviewEventlisterenCallback = () => { document.querySelector("#pdfpreview").style.display = 'none';  document.querySelector("#pdfembed").setAttribute("src", "about:blank"); URL.revokeObjectURL(this.currentpreview);} //unload pdf
+            this.pdfPreviewEventlisterenCallback = () => { document.querySelector("#pdfpreview").style.display = 'none';  document.querySelector("#pdfembed").setAttribute("src", "about:blank"); URL.revokeObjectURL(this.currentpreview);  } //unload pdf
             this.fileBrowserEventlistenerCallback = () => { document.querySelector("#preview").style.display = "none"; }
 
             // Add event listener to #closefilebrowser  (only once - do not accumulate event listeners)
             document.querySelector("#closefilebrowser").addEventListener("click", this.fileBrowserEventlistenerCallback);
             document.querySelector('#workfolder').addEventListener("click", function(e) { e.stopPropagation(); }); // Prevent event propagation for clicks on #workfolder
-            document.getElementById('availablePrinters').addEventListener('click', function(e) { e.stopPropagation();});
+            document.getElementById('setupdiv').addEventListener('click', function(e) { e.stopPropagation();});
             document.querySelector("#pdfpreview").addEventListener("click", this.pdfPreviewEventlisterenCallback); // Set the event listener for #pdfpreview click to hide pdfpreview
 
         })
@@ -1042,7 +1297,7 @@ export default {
 
 <style scoped>
 
-#availablePrinters {
+#setupdiv {
     position: absolute;        /* Fixiert den div über allem anderen */
     top: 50%;               /* Zentriert vertikal */
     left: 50%;              /* Zentriert horizontal */
@@ -1055,6 +1310,32 @@ export default {
     box-shadow: 0 0 1em rgba(0, 0, 0, 0.5);
     width: 340px;
 }
+
+
+@keyframes clickFeedback1 {
+  0% { transform: scale(1); background-color: #0dcaf0;      border-color: #0dcaf0; }
+  50% { transform: scale(1.4); background-color: #ffffff; border-radius:5px; border-color: #fff;}
+  100% { transform: scale(1); background-color: #ffcd39;   }
+}
+
+.btn-click-feedback1 {
+  animation: clickFeedback1 0.5s ease-in-out;
+}
+
+@keyframes clickFeedback2 {
+  0% { transform: scale(1); background-color: #ffcd39;   border-color: #ffcd39; }
+  50% { transform: scale(1.4); background-color: #ffffff; border-radius:5px; border-color: #fff;}
+  100% { transform: scale(1); background-color:  #0dcaf0;}
+}
+
+.btn-click-feedback2 {
+  animation: clickFeedback2 0.5s ease-in-out;;
+}
+
+.fade-enter-active {
+  transition: opacity 1.5s ease;
+}
+
 
 
 @keyframes swalIn {
@@ -1088,7 +1369,7 @@ export default {
     animation: swalIn 0.2s; 
 }
 
-#availablePrinters button {
+#setupdiv button {
     display: inline-block;
     max-width: 270px; /* oder eine gewünschte feste Breite */
     overflow: hidden;
@@ -1099,18 +1380,18 @@ export default {
     border:0;
 }
 
-#availablePrinters span {
+#setupdiv span {
     width: 100%;
     margin-bottom:6px;
     margin-top: 10px;
 }
-#availablePrinters .printercheck {
+#setupdiv .printercheck {
     margin-left:4px;
     filter: brightness(0) saturate(100%) hue-rotate(90deg) brightness(1.2) contrast(0.2);
 
 }
 
-#printselectoverlay {
+#setupoverlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -1118,7 +1399,7 @@ export default {
     bottom: 0;
     background-color: rgba(0, 0, 0, 0.4); /* Abdunkeln des Hintergrunds */
     backdrop-filter: blur(2px); /* Unscharf-Effekt */
-    z-index: 10999; /* Unter dem Dialog */
+    z-index: 1999; /* Unter dem Dialog */
     display: none; /* Standardmäßig nicht angezeigt */
    transition: 0.3s;
 }
@@ -1251,13 +1532,13 @@ export default {
 }
 
 .disabledblue {
-    filter: contrast(100%) grayscale(50%) brightness(120%) blur(0.9px);
+    filter: contrast(140%) grayscale(80%) brightness(150%) blur(0.9px);
    pointer-events: none;
    color: #adebff;
 }
 
 .disabledgreen {
-    filter: contrast(100%) grayscale(50%) brightness(120%) blur(0.9px);
+    filter: contrast(140%) grayscale(80%) brightness(150%) blur(0.9px);
    pointer-events: none;
    color: #d6ffe1
 }
@@ -1268,6 +1549,8 @@ export default {
 }
 
 
+
+
 #pdfpreview {
     display: none;
     position: absolute;
@@ -1276,29 +1559,58 @@ export default {
     width:100vw;
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.4);
-    z-index:10000;
+    z-index:100001;
     backdrop-filter: blur(3px);
 }
 #pdfembed { 
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    margin-left: -30vw;
-    margin-top: -48vh;
-    width:60vw;
-    height: 96vh;
-   
-    background-color: rgba(255, 255, 255, 1);
-    border: 2px solid #212529;
-    box-shadow: 0 0 15px rgba(22, 9, 9, 0.589);
-    
+    background-color: rgba(255, 255, 255, 0.5);
+    border: 0px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 15px rgba(22, 9, 9, 0.5);
     border-radius: 6px;
-    background-size: contain;
+    background-size: 100% 100%;  
     background-repeat: no-repeat;
     background-position: center;
-    background-color: #212529;
-    z-index:-1;
 }
+
+.embed-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: flex-start;
+}
+
+.insert-button {
+  border: none;
+  border-radius: 0;
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.insert-button img {
+  width: 22px;
+  height: 52px;
+}
+
+#previewbuttons {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column; 
+}
+
+
+
+
+
+
 
 
 
@@ -1425,11 +1737,22 @@ hr {
 
 .swal2-container {
     backdrop-filter: blur(2px); 
+    z-index: 100000 !important;
 } 
 
-.my-popup {
-   
+
+
+
+.my-select{
+    font-size: 1.125em;
+    margin: 0em 0em 3px;
+    min-height: 1.2em;
+    padding: 0.5em;
+    color: #545454;
+    width: 99%;
 }
+
+
 
 .my-title {
     text-align: left;
@@ -1444,6 +1767,13 @@ hr {
     font-size: 1em;
     margin-bottom: 0px;
 }
+
+.my-content h6 {
+   
+    margin-bottom: 1px;
+    margin-top:8px;
+}
+
 
 .my-custom-input {
     margin-top: 0px;

@@ -49,7 +49,10 @@ class MulticastClient {
             screenlock: false,
             msofficeshare: false,
             screenshotinterval: 4000,   //milliseconds
-            printrequest : false
+            printrequest : false,
+            privateSpellcheck: {activated: false},
+            localLockdown: false,
+            group: 'a'
         }
     }
 
@@ -94,6 +97,7 @@ class MulticastClient {
         serverInfo.serverip = rinfo.address
         serverInfo.serverport = rinfo.port
         serverInfo.reachable = true
+        serverInfo.timestamp = new Date().getTime()   //record timestamp of last message from server (ignore servertimestamp because it may have a different system time)
         
         if (this.isNewExamInstance(serverInfo)) {
             log.info(`multicastclient @ messageReceived: Adding new Exam Instance "${serverInfo.servername}" to Serverlist`)
@@ -121,8 +125,9 @@ class MulticastClient {
     isDeprecatedInstance () {
         for (let i = 0; i < this.examServerList.length; i++) {
             const now = new Date().getTime()
+
             if (now - 16000 > this.examServerList[i].timestamp) {
-                log.warn(`multicastclient @ isDeprecatedInstance: Removing inactive server from list`)
+                log.warn(`multicastclient @ isDeprecatedInstance: Removing inactive server '${this.examServerList[i].servername}' from list`)
                 this.examServerList.splice(i, 1)
             }
         }
