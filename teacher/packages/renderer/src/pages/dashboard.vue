@@ -180,10 +180,10 @@
             <div class="mb-3"><h5 style="display: inline">{{ $t('dashboard.extendedsettings') }}</h5></div>
             <div class="m-1 mb-2" :class="(serverstatus.examtype === 'eduvidual' || serverstatus.examtype === 'gforms') ? 'disabledexam' : ''">
                 <label for="abgabeintervalSlider" class="form-check-label"> {{$t('dashboard.autoget')}} </label>
-                <span v-if="abgabeintervalPause > 0" class="ms-2 text-black-50">| {{abgabeintervalPause}}min </span>
+                <span v-if="serverstatus.abgabeintervalPause > 0" class="ms-2 text-black-50">| {{serverstatus.abgabeintervalPause}}min </span>
                 <span v-else class="ms-2 text-black-50">| {{$t('dashboard.disabled')}}</span>
                 <input id="abgabeintervalSlider" type="range" 
-                    v-model="abgabeintervalPause" 
+                    v-model="serverstatus.abgabeintervalPause" 
                     :title="$t('dashboard.abgabeautoquestion')"
                     :min="0" :max="20" step="1" 
                     class="form-range custom-slider" 
@@ -343,7 +343,7 @@ export default {
             title: document.title,
             fetchinterval: null,
             abgabeinterval: null,
-            abgabeintervalPause:6,
+            
             studentlist: [],
             workdirectory: `${this.$route.params.workdirectory}/${this.$route.params.servername}`,
             currentdirectory: this.$route.params.workdirectory,
@@ -390,6 +390,7 @@ export default {
                 cmargin: { side: 'right', size: 3 },
                 gformsTestId: null,
                 screenshotinterval: 4,
+                abgabeintervalPause:6,
                 msOfficeFile: null,
                 screenslocked: false,
                 pin: this.$route.params.pin,
@@ -549,7 +550,7 @@ export default {
          * starts or stops the autofetch feature
          */
         updateAbgabeInterval() {
-            const interval = parseInt(this.abgabeintervalPause, 10); // Ensure it's an integer
+            const interval = parseInt(this.serverstatus.abgabeintervalPause, 10); // Ensure it's an integer
             if (interval === 0) {
                 console.info("dashboard @ updateAbgabeInterval: stopping submission interval");
                 this.abgabeinterval.stop();
@@ -1273,7 +1274,7 @@ export default {
             this.fetchinterval.start();
 
             this.abgabeCallback = () => this.getFiles('all');  //selbst wenn 'all' default ist.. über den eventlistener wird das erste attribut zu "event"
-            this.abgabeinterval = new SchedulerService(60000 * this.abgabeintervalPause);
+            this.abgabeinterval = new SchedulerService(60000 * this.serverstatus.abgabeintervalPause);
             this.abgabeinterval.addEventListener('action',  this.abgabeCallback);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
             this.abgabeinterval.start();
 
