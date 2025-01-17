@@ -116,6 +116,7 @@ function loadPDF(filepath, filename){
         let isvalid = isValidPdf(data)
         log.info("filemanager @ loadPDF: pdf is valid: ", isvalid)
 
+        this.currentpreviewBase64 = btoa(String.fromCharCode(...new Uint8Array(data)));
         this.currentpreview = URL.createObjectURL(new Blob([data], {type: "application/pdf"})) 
         this.currentpreviewname = filename   //needed for preview buttons
         this.currentpreviewPath = filepath
@@ -361,6 +362,20 @@ async function print(){
     ipcRenderer.invoke("printpdf", this.currentpreviewPath, this.defaultPrinter)  //default printer could be set upfront and students may print directly
 }
 
+async function printBase64(){
+    if (!this.defaultPrinter){
+        this.showSetup()
+        return
+    }
+    this.status(`Druckauftrag an Drucker übertragen`)
+
+    //console.log(this.currentpreviewBase64)
+    ipcRenderer.invoke("printpdfBase64", this.currentpreviewBase64, this.defaultPrinter) 
+
+
+}
+
+
 function loadFilelist(directory){
     fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/getfiles/${this.servername}/${this.servertoken}`, { 
         method: 'POST',
@@ -379,4 +394,4 @@ function loadFilelist(directory){
     }).catch(err => { log.error(err)});
 }
  
-export {loadFilelist, print, getLatest, getLatestFromStudent, loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder  }
+export {loadFilelist, print, getLatest, getLatestFromStudent, loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64  }

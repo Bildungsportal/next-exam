@@ -20,7 +20,7 @@
 import fs from 'fs'
 //import i18n from '../../renderer/src/locales/locales.js'
 //const { t } = i18n.global
-import {  ipcMain, dialog } from 'electron'
+import { BrowserWindow, ipcMain, dialog } from 'electron'
 import {join} from 'path'
 import log from 'electron-log';
 
@@ -289,6 +289,54 @@ class IpcHandler {
             }
             
         })
+
+
+        /**
+         * Print a PDF as base64 string via webcontents.print() without specific platformdependent libraries
+         */
+        ipcMain.handle('printpdfBase64', async (event, pdfBase64, printerName) => {
+            let hiddenWin = new BrowserWindow({
+                show: false,
+                webPreferences: {plugins: true,  webSecurity: false }
+            });
+            
+            const dataUrl = `data:application/pdf;base64,${pdfBase64}`;
+            await hiddenWin.loadURL(dataUrl);
+            hiddenWin.on('closed', () => { hiddenWin = null; });
+
+            hiddenWin.webContents.on('did-stop-loading', async () => {
+                const isPDFRendered = await hiddenWin.webContents.executeJavaScript(`
+                    new Promise(resolve => {
+                        let elapsed = 0;
+                        const interval = 100; // Prüfe alle 100 ms
+                        const timeout = 1000; // Maximal 1 Sekunde warten
+                        const checkPDFLoaded = () => {
+                            const embed = document.querySelector('embed[type="application/pdf"]');
+                            if (embed && embed.clientHeight > 0) {
+                                clearInterval(timer);
+                                resolve(true); // PDF ist vollständig gerendert
+                            } else if (elapsed >= timeout) {
+                                clearInterval(timer);
+                                resolve(false); // Zeit abgelaufen, nicht gerendert
+                            } 
+                            else { elapsed += interval; }
+                        };
+                        const timer = setInterval(checkPDFLoaded, interval);
+                    });
+                `);
+                if (isPDFRendered) {
+                    log.info('ipchandler @ printbase64: base64 file received - printing on: ',printerName)
+                    hiddenWin.webContents.print({ silent: true, deviceName: printerName }, () => {
+                        if (hiddenWin && !hiddenWin.isDestroyed()) {
+                            hiddenWin.close();
+                        }
+                    });
+                }
+                else {
+                    log.error('ipchandler @ printbase64: PDF-Rendering fehlgeschlagen!');
+                }
+            });
+        });
 
 
 
