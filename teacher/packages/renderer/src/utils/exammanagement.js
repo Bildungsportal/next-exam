@@ -24,7 +24,7 @@ function endExam(){
     this.$swal.fire({
         title: this.$t("dashboard.sure"),
         html: `<div>
-            <input class="form-check-input" type="checkbox" id="checkboxdel" checked>
+            <input class="form-check-input" type="checkbox" id="checkboxdel">
             <label class="form-check-label" for="checkboxdel"> ${this.$t("dashboard.exitdelete")} </label>
             <br><br>
             <span>${this.$t("dashboard.exitkiosk")}</span>

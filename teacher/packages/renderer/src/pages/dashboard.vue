@@ -367,6 +367,7 @@ export default {
             currentpreviewname: null,
             currentpreviewPath: null,
             currentpreviewBase64: null,
+            currentpreviewType: 'pdf',
             numberOfConnections: 0,
             studentwidgets: [],
             originalIndex: 20,

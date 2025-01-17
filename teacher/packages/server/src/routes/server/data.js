@@ -165,10 +165,10 @@ import pdf from '@bingsjs/pdf-parse';
                 else if (exactMatchFile)       { selectedFile = exactMatchFile; }
             
                 latestPDFpath = selectedFile ? path.join(studentDir.latestFolder.path, selectedFile) : null;
-                //log.info('data @ getlatestfromstudent: Neueste Datei gefunden: ', latestPDFpath);
+                //log.info('data @ getlatest: Neueste Datei gefunden: ', latestPDFpath);
             } 
             catch (error) {
-                log.error('data @ getlatestfromstudent: Fehler beim Lesen des Verzeichnisses:', error);
+                log.error('data @ getlatest: Fehler beim Lesen des Verzeichnisses:', error);
                 latestPDFpath = null; 
             }
         }

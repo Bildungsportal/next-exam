@@ -155,10 +155,18 @@
     <!-- angabe/pdf preview start -->
     <div v-if="!splitview" id="preview" class="fadeinfast p-4">
         <div class="embed-container">
-        <embed src="" id="pdfembed"></embed>
-        <div class="btn btn-warning shadow " id="insert-button" @click="insertImage(selectedFile)" :title="$t('editor.insert')">
-            <img src="/src/assets/img/svg/edit-download.svg" class="white" width="22" height="32">
-        </div>
+            <embed src="" id="pdfembed"></embed>
+            <div style="display:block">
+                 <div class="btn btn-warning shadow " id="insert-button" @click="insertImage(selectedFile)" :title="$t('editor.insert')">
+                    <img src="/src/assets/img/svg/edit-download.svg" class="white" width="22" height="32">
+                </div>
+                <br>
+                <div class="btn btn-warning shadow " id="print-button" @click="printBase64()" :title="$t('editor.print')">
+                    <img src="/src/assets/img/svg/print.svg" class="white" width="22" height="32">
+                </div>
+            </div>
+           
+
             <div id="pdfZoom" style="display:none; position: absolute; top:20px; right: 100px;">
                 <button class="btn btn-warning btn-small" style="width:28px;" id="zoomIn"><img src="/src/assets/img/svg/zoom-in.svg">  </button>
                 <button class="btn btn-warning btn-small" style="width:28px;" id="zoomOut"><img src="/src/assets/img/svg/zoom-out.svg"></button>
@@ -183,10 +191,11 @@
         <div id="preview" class="fadeinfast splitback" style="background-repeat: no-repeat; background-position: center; flex-grow: 1 !important; display: block !important; position: static !important; top: auto !important; left: auto !important; width: auto !important; height: auto !important; background-color: transparent !important; z-index: auto !important; backdrop-filter: none !important;">
             <div class="embed-container" style="position: relative !important; top: 0 !important; left: 0 !important; transform: none !important; display: block !important; height:100% !important">
                 <embed src="" id="pdfembed" style="border-radius:0 !important; background-size:contain; width:100% !important; height: 100% !important; background-color:transparent !important;"></embed>
-                <div class="btn btn-warning shadow splitinsert" id="insert-button" @click="insertImage(selectedFile)" :title="$t('editor.insert')" style="position: absolute; top: 40px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
+                <div class="btn  white splitinsert" id="insert-button" @click="insertImage(selectedFile)" :title="$t('editor.insert')" style="position: absolute; top: 80px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
+                <div class="btn  splitprint" id="print-button" @click="printBase64()" :title="$t('editor.print')" style="position: absolute; top: 110px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
                 <div id="pdfZoom" style="display:none; position: absolute; top:40px; right:20px; z-index:100000; height: 100px;">
-                    <button class="btn btn-warning btn-small shadow splitzoomin" style="width:70px; height: 32px; margin-bottom:2px;  background-repeat: no-repeat; background-position: center; " id="zoomIn"></button><br>
-                    <button class="btn btn-warning btn-small shadow splitzoomout" style="width:70px; height: 32px; margin-bottom:2px; background-repeat: no-repeat; background-position: center;" id="zoomOut"></button>
+                    <button class="btn white   splitzoomin" style="width:70px; height: 32px; margin-bottom:2px;  background-repeat: no-repeat; background-position: center; " id="zoomIn"></button><br>
+                    <button class="btn white   splitzoomout" style="width:70px; height: 32px; margin-bottom:2px; background-repeat: no-repeat; background-position: center;" id="zoomOut"></button>
                 </div>
 
             </div>
@@ -306,6 +315,7 @@ import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import { LTcheckAllWords, LTfindWordPositions, LThighlightWords, LTdisable, LThandleMisspelled, LTignoreWord, LTresetIgnorelist } from '../utils/languagetool.js'
 import DOMPurify from 'dompurify';
+import { Buffer } from 'buffer';
 
 export default {
     components: {
@@ -362,6 +372,7 @@ export default {
             individualSpellcheckActivated: false,
             audioSource: null,
             currentpreview: null,
+            currentpreviewBase64: null,
             audiofiles: [],
             misspelledWords:[],
             textContainer : null,
@@ -856,7 +867,9 @@ export default {
             }
 
             this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "application/pdf"})) 
-            
+            this.currentpreviewBase64 = Buffer.from(data).toString('base64');
+
+
             const pdfEmbed = document.querySelector("#pdfembed");
             pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0`);
 
@@ -904,6 +917,7 @@ export default {
 
             document.querySelector("#preview").style.display = 'block';
             document.querySelector("#insert-button").style.display = 'none';
+            document.querySelector("#print-button").style.display = 'flex';
         },
 
 
@@ -912,6 +926,8 @@ export default {
             URL.revokeObjectURL(this.currentpreview);
             let data = await ipcRenderer.invoke('getpdfasync', file )
             this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "image/jpeg"})) 
+            this.currentpreviewBase64 = Buffer.from(data).toString('base64');
+
             const pdfEmbed = document.querySelector("#pdfembed");
             
             // Create an image element to determine the dimensions of the image
@@ -942,6 +958,7 @@ export default {
             // clear the pdf viewer
             pdfEmbed.setAttribute("src", "about:blank");
             document.querySelector("#insert-button").style.display = 'flex';
+            document.querySelector("#print-button").style.display = 'none';
             document.querySelector("#preview").style.display = 'block';  
             document.querySelector("#pdfZoom").style.display = 'none';
         },
@@ -966,21 +983,12 @@ export default {
 
         // insert image from workfolder into editor
         async insertImage(file){
-            let data = await ipcRenderer.invoke('getpdfasync', file, true )   //fileurl, image=true > delivers an image as base64string
-            const base64String = this.uint8ArrayToBase64(data);
-            const imgSrc = `data:image/png;base64,${base64String}`;
+            const imgSrc = `data:image/png;base64,${this.currentpreviewBase64}`;
            // this.editor.chain().focus().setImage({ src: imgSrc }).run()
             const tableHtml = `<table style="width: 100%; height: 100%;"><tr><td style="max-width: 100%; max-height: 100%;"><img src="${imgSrc}" style="max-width: 100%; max-height: 100%;" class="img-max-size" /></td></tr></table>`;
             this.editor.chain().focus().insertContent(tableHtml).run();
         },
-        uint8ArrayToBase64(uint8Array) {
-            let binary = '';
-            const len = uint8Array.byteLength;
-            for (let i = 0; i < len; i++) {
-                binary += String.fromCharCode(uint8Array[i]);
-            }
-            return btoa(binary);
-        },
+
 
         // display the table part of the toolbar
         showMore(){
@@ -1052,6 +1060,35 @@ export default {
             
       
         },
+
+        printBase64(){
+            this.saveContent(true, 'auto')  //first make sure the current work is saved
+            
+            // this currentpreviewBase64 contains the current visible pdf as base64 string
+            // send direct api request for print here
+
+            const url = `https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/printrequest`;
+
+            fetch(url, {
+                method: "POST",
+                cache: "no-store",
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            })
+            .then(response => { return response.json();  })
+            .then(data => {
+               console.log(data)
+            })
+            .catch(error => {  
+                console.log(error)    
+            });
+
+        },
+
+
+
         //send a printrequest to the teacher
         print(){
            //make sure to post print request to teacher for the latest work
@@ -1754,7 +1791,7 @@ Other Styles
 
 #insert-button {
   border: none;
-  border-radius: 0;
+  border-radius: 0px;
   border-top-right-radius: 6px;
   border-bottom-right-radius: 6px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
@@ -1763,6 +1800,8 @@ Other Styles
   display: flex;
   align-items: center;
   justify-content: center;
+  
+ 
   margin-top: 30px;
 }
 
@@ -1771,7 +1810,25 @@ Other Styles
   height: 52px;
 }
 
+#print-button {
+  border: none;
+  border-radius: 0px;
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  margin-top: 30px;
+}
 
+#print-button img {
+  width: 22px;
+  height: 52px;
+}
 
 
 /* Basic editor styles */
@@ -2078,7 +2135,9 @@ Other Styles
 .splitinsert {
     background-image: url('/src/assets/img/svg/edit-download-black.svg');
 }
-
+.splitprint {
+    background-image: url('/src/assets/img/svg/print.svg');
+}
 
 #languagetool .ltscrollarea {
     height: calc(100vh - 52px);

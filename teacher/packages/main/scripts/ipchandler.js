@@ -292,15 +292,28 @@ class IpcHandler {
 
 
         /**
-         * Print a PDF as base64 string via webcontents.print() without specific platformdependent libraries
+         * Print a Document as base64 string via webcontents.print() without specific platformdependent libraries
+         * INFO: es ist derzeit nicht möglich vom chrome-pdf-plugin ein "finished-rendering" event zu erhalten. daher wird mit timeouts gearbeitet als workaround
          */
-        ipcMain.handle('printpdfBase64', async (event, pdfBase64, printerName) => {
+        ipcMain.handle('printBase64', async (event, docBase64, printerName, previewType) => {
             let hiddenWin = new BrowserWindow({
                 show: false,
                 webPreferences: {plugins: true,  webSecurity: false }
             });
             
-            const dataUrl = `data:application/pdf;base64,${pdfBase64}`;
+    
+            let dataUrl = ``;
+            if (previewType === "pdf") {
+                dataUrl = `data:application/pdf;base64,${docBase64}`;
+            } 
+            else if (previewType === "image") {
+                dataUrl = `data:image/jpeg;base64,${docBase64}`;
+            } else {
+                log.error('ipchandler @ printbase64: Rendering/Druck fehlgeschlagen!');
+                return
+            }
+
+
             await hiddenWin.loadURL(dataUrl);
             hiddenWin.on('closed', () => { hiddenWin = null; });
 
@@ -308,14 +321,26 @@ class IpcHandler {
                 const isPDFRendered = await hiddenWin.webContents.executeJavaScript(`
                     new Promise(resolve => {
                         let elapsed = 0;
-                        const interval = 100; // Prüfe alle 100 ms
-                        const timeout = 1000; // Maximal 1 Sekunde warten
+                        const interval = 500; // Prüfe alle 100 ms
+                        const timeout = 2000; // Maximal 1 Sekunde warten
                         const checkPDFLoaded = () => {
+                            
+
                             const embed = document.querySelector('embed[type="application/pdf"]');
+                            const img = document.querySelector('img');
+
+
                             if (embed && embed.clientHeight > 0) {
                                 clearInterval(timer);
-                                resolve(true); // PDF ist vollständig gerendert
-                            } else if (elapsed >= timeout) {
+                                 setTimeout(() => {
+                                    resolve(true); // PDF wird als vollständig gerendert angenommen
+                                }, 1000);
+                            } 
+                            else if (img && img.clientHeight > 0) {
+                                clearInterval(timer);
+                                resolve(true); // Bild ist vollständig gerendert
+                            }    
+                            else if (elapsed >= timeout) {
                                 clearInterval(timer);
                                 resolve(false); // Zeit abgelaufen, nicht gerendert
                             } 
@@ -325,7 +350,7 @@ class IpcHandler {
                     });
                 `);
                 if (isPDFRendered) {
-                    log.info('ipchandler @ printbase64: base64 file received - printing on: ',printerName)
+                    log.info(`ipchandler @ printbase64: base64 ${previewType} received - printing on: ${printerName}`)
                     hiddenWin.webContents.print({ silent: true, deviceName: printerName }, () => {
                         if (hiddenWin && !hiddenWin.isDestroyed()) {
                             hiddenWin.close();
@@ -333,7 +358,7 @@ class IpcHandler {
                     });
                 }
                 else {
-                    log.error('ipchandler @ printbase64: PDF-Rendering fehlgeschlagen!');
+                    log.error('ipchandler @ printbase64: Rendering/Druck fehlgeschlagen!');
                 }
             });
         });

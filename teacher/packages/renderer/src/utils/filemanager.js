@@ -1,4 +1,6 @@
 import log from 'electron-log/renderer';
+import { Buffer } from 'buffer';
+
 
 // DASHBOARD EXPLORER
 
@@ -120,6 +122,7 @@ function loadPDF(filepath, filename){
         this.currentpreview = URL.createObjectURL(new Blob([data], {type: "application/pdf"})) 
         this.currentpreviewname = filename   //needed for preview buttons
         this.currentpreviewPath = filepath
+        this.currentpreviewType = "pdf"
 
         const pdfEmbed = document.querySelector("#pdfembed");
         pdfEmbed.style.backgroundImage = '';
@@ -159,7 +162,11 @@ function loadImage(file){
             this.currentpreviewPath = file
             this.currentpreviewname = file.split('/').pop(); //needed for preview buttons
   
-            this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "application/pdf"})) 
+            
+
+            this.currentpreviewBase64 = Buffer.from(data).toString('base64');
+            this.currentpreviewType = "image"
+            this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "image/jpeg"})) 
             // wanted to save code here but images need to be presented in a different way than pdf.. so...
             const pdfEmbed = document.querySelector("#pdfembed");
             const img = new window.Image();
@@ -262,7 +269,12 @@ async function getLatestFromStudent(student){
                 return
             }
             this.currentpreviewPath = responseObj.pdfPath 
-            this.print()
+            this.currentpreviewType = "pdf"
+            this.currentpreviewBase64 = Buffer.from(responseObj.pdfBuffer).toString('base64');
+
+
+            this.printBase64()
+
         }).catch(err => { log.error(err)});
         return
     }
@@ -368,11 +380,7 @@ async function printBase64(){
         return
     }
     this.status(`Druckauftrag an Drucker übertragen`)
-
-    //console.log(this.currentpreviewBase64)
-    ipcRenderer.invoke("printpdfBase64", this.currentpreviewBase64, this.defaultPrinter) 
-
-
+    ipcRenderer.invoke("printBase64", this.currentpreviewBase64, this.defaultPrinter, this.currentpreviewType) 
 }
 
 
