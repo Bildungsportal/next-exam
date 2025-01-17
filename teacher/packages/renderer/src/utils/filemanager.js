@@ -239,64 +239,35 @@ async function getLatest(){
 
 
 
-// PRINT REQUEST: fetches latest file of specific student
-// show info (who sent the request) and wait for confirmation // handle multiple print requests (send "printrequest denied" if there is already an ongoing request)
-// introduce printlock variable that blocks additional popups
-async function getLatestFromStudent(student){
+/** 
+ *  PRINT REQUEST
+ *  show info (who sent the request) and wait for confirmation // handle multiple print requests (send "printrequest denied" if there is already an ongoing request)
+ *  introduce printlock variable that blocks additional popups
+ */
+async function processPrintrequest(student){
 
     if (this.directPrintAllowed){
         log.info(`filemanager @ managePrintrequest: direct print from ${student.clientname} accepted`)
         this.status(`Druckauftrag von ${student.clientname} verarbeitet`)
-        this.getFiles(student.token, false, true)
-        log.info("filemanager @ managePrintrequest: requesting latest file from student") 
-        await this.sleep(5000);  // give it some time
-    
-        fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/getLatestFromStudent/${this.servername}/${this.servertoken}/${student.clientname}/${student.token}`, { 
-            method: 'POST',
-            headers: {'Content-Type': 'application/json' },
-        })
-        .then( response => response.json() )
-        .then( async(responseObj) => {
-            if (!responseObj.pdfPath ){
-                log.info("filemanager @ managePrintrequest: nothing found")
-                this.visualfeedback(this.$t("dashboard.nopdf"))
-                return
-            }
-
-            if (responseObj.warning){  // if the file is older than 1minute the getFiles() function failed to deliver.. do not print
-                this.$swal.close();
-                this.visualfeedback(this.$t("dashboard.oldpdfwarningsingle",2000))
-                return
-            }
-            this.currentpreviewPath = responseObj.pdfPath 
-            this.currentpreviewType = "pdf"
-            this.currentpreviewBase64 = Buffer.from(responseObj.pdfBuffer).toString('base64');
-
-
-            this.printBase64()
-
-        }).catch(err => { log.error(err)});
-        return
+       
+        this.printBase64(student.printrequest, 'pdf')
+        return                   //if direct print is allowed this task ends here
     }
 
-    /** If there already is an ongoing printrequest - denie */
+    // If there already is an ongoing printrequest - deny and delete printrequest
     if (this.printrequest){  // inform student that request was denied
         log.info("filemanager @ managePrintrequest: decline ")
         this.setStudentStatus({printdenied:true}, student.token)
-        return
+        return                    //print denied because the teacher is already reviewing another one
     }
 
 
+
+
+    //print allowed block others for now
     this.printrequest = student.clientname // we allow it and block others for the time beeing (we store student name to compare in dashboard)
     log.info("filemanager @ managePrintrequest: print request accepted")
     
-    // this informs the student that an exam upload is requested. 
-    // this could need 4sek for the student to react because of the current update interval  
-    // so if the teacher is faster than that it could happen that no pdf file is found or an old one - a warning will be displayed
-    // FIXME: implement a way to start a listener that waits for a signal that is fired when the student (or all students) deliverd their work
-    this.getFiles(student.token, false, true)
-    log.info("filemanager @ managePrintrequest: requesting current file from student", student.clientname) 
-    await this.sleep(5000);  // give it some time
 
     this.$swal.fire({
         title: this.$t("dashboard.printrequest"),
@@ -309,34 +280,49 @@ async function getLatestFromStudent(student){
     .then((result) => {
         this.printrequest = false // allow new requests
         if (result.isConfirmed) {
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/getLatestFromStudent/${this.servername}/${this.servertoken}/${student.clientname}/${student.token}`, { 
-                method: 'POST',
-                headers: {'Content-Type': 'application/json' },
-            })
-            .then( response => response.json() )
-            .then( async(responseObj) => {
-                if (!responseObj.pdfBuffer ){
-                    log.info("filemanager @ managePrintrequest: nothing found")
-                    this.visualfeedback(this.$t("dashboard.nopdf"))
-                    return
-                }
-              
-                if (responseObj.warning){  // warn if getFiles() failed an file is older than 60 seconds
-                    this.$swal.close();
-                    this.visualfeedback(this.$t("dashboard.oldpdfwarningsingle",2000))
-                    await sleep(2000)
-                }
+         
+            // show pdf preview
+        
+            this.currentpreviewBase64 = student.printrequest
 
-                // show pdf
-                this.loadPDF(responseObj.pdfPath, student.clientname)
-                
-            }).catch(err => { log.error("filemanager @ managePrintrequest:",err)});
+
+
+            this.currentpreview = `data:application/pdf;base64,${this.currentpreviewBase64}`;
+            this.currentpreviewname = `${student.clientname}.pdf`;  // Wird für die Vorschau-Buttons benötigt
+            //this.currentpreviewPath = filepath;
+            this.currentpreviewType = "pdf";
+            
+            // PDF in das Embed-Element laden
+            const pdfEmbed = document.querySelector("#pdfembed");
+            pdfEmbed.style.backgroundImage = '';
+            pdfEmbed.style.height = "95vh";
+            pdfEmbed.style.width = "67vh";
+            
+            pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0`);
+            document.querySelector("#pdfpreview").style.display = 'block';
+
+
+
+          
         }
         else {
             this.setStudentStatus({printdenied:true}, student.token)  //inform student that request was denied
         }
     }).catch(err => { log.error(err)});
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 function openLatestFolder(student){
@@ -374,13 +360,13 @@ async function print(){
     ipcRenderer.invoke("printpdf", this.currentpreviewPath, this.defaultPrinter)  //default printer could be set upfront and students may print directly
 }
 
-async function printBase64(){
+async function printBase64(documentBase64 = this.currentpreviewBase64, type=this.currentpreviewType){   //use currentpreview or a given base64 document
     if (!this.defaultPrinter){
         this.showSetup()
         return
     }
     this.status(`Druckauftrag an Drucker übertragen`)
-    ipcRenderer.invoke("printBase64", this.currentpreviewBase64, this.defaultPrinter, this.currentpreviewType) 
+    ipcRenderer.invoke("printBase64", documentBase64, this.defaultPrinter, type) 
 }
 
 
@@ -402,4 +388,4 @@ function loadFilelist(directory){
     }).catch(err => { log.error(err)});
 }
  
-export {loadFilelist, print, getLatest, getLatestFromStudent, loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64  }
+export {loadFilelist, print, getLatest, processPrintrequest, loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64  }

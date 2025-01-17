@@ -756,8 +756,7 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
     student.timestamp = new Date().getTime()   //last seen  / this is like a heartbeat - update lastseen
     student.exammode = exammode  
     student.files = clientinfo.numberOfFiles
-    student.printrequest = clientinfo.printrequest
-
+   
     if (clientinfo.focus) { student.status.restorefocusstate = false }  // remove task because its obviously done
     if (clientinfo.screenshotinterval == 0){ student.imageurl = "person-lines-fill.svg"  }
 
@@ -793,17 +792,11 @@ router.post('/updatescreenshot', async function (req, res, next) {
     let student = mcServer.studentList.find(element => element.token === studenttoken)
     if ( !student ) {return res.send({ sender: "server", message:"removed", status: "error" }) } //check if the student is registered on this server
   
-
-
     if (req.body.screenshot ) {
         const screenshotBase64 = req.body.screenshot;   // Der Base64-String muss nicht konvertiert werden, er kann direkt verwendet werden
         //let hash = crypto.createHash('md5').update(Buffer.from(screenshotBase64, 'base64')).digest("hex");  // Berechnen des MD5-Hashs des Base64-Strings
         
             student.imageurl = 'data:image/jpeg;base64,' + screenshotBase64; // oder 'data:image/png;base64,' je nach tatsächlichem Bildformat  
-            
-
-
-
 
             // only scan screenshot in exam mode and NOT if a restoring/unlocking operation is already in process (otherwise it will lock the unlocked again)
             if (mcServer.serverstatus.exammode && mcServer.serverstatus.screenshotocr && !student.status.restorefocusstate && student.focus){
@@ -858,15 +851,14 @@ router.post('/updatescreenshot', async function (req, res, next) {
 
 
 /**
- * HEARTBEAT ! /// DEPRECATED BUT KEEP FOR 1.0.0 LTS !!!!
- * 
- * This is used only to determine online/offline status of the students
+ * Receive PRINTREQUEST From Student
  * @param servername the name of the server at which the student is registered
  * @param token the students token to search and update the entry in the list
  */
-router.post('/heartbeat/:servername/:studenttoken', function (req, res, next) {
+router.post('/printrequest/:servername/:studenttoken', function (req, res, next) {
     const studenttoken = req.params.studenttoken
     const servername = req.params.servername
+    const pdfDocument = req.body.document
 
     //check if server exists 
     const mcServer = config.examServerList[servername]
@@ -876,7 +868,11 @@ router.post('/heartbeat/:servername/:studenttoken', function (req, res, next) {
     let student = mcServer.studentList.find(element => element.token === studenttoken)
     if ( !student ) {return res.send({ sender: "server", message:"removed", status: "error" }) }
     
-    student.timestamp = new Date().getTime()   //update last seen for UI
+   
+    student.printrequest = pdfDocument  // we put the base64 string of the document on printrequest which is checkt by the frontend on every fetch cycle
+
+
+
     res.send({sender: "server", message:"success", status:"success" })
 })
 
@@ -885,53 +881,16 @@ router.post('/heartbeat/:servername/:studenttoken', function (req, res, next) {
 
 
 
-/**
- * LanguageTool Request 
- * Students can send a string in order to check for spelling and grammar mistakes
- * Returns an array of misspelled words with additional descriptions and location in the text
- * @param servername the name of the server at which the student is registered
- * @param token the students token to search and update the entry in the list
- */
-router.post('/languagetool/:servername/:studenttoken', async function (req, res, next) {
-    const studenttoken = req.params.studenttoken
-    const servername = req.params.servername
-    const text = req.body.text
-    const language = req.body.language
-    
-    //check if server exists 
-    const mcServer = config.examServerList[servername]
-    if ( !mcServer) {  return res.send({sender: "server", message:"notavailable", status: "error"} )  }
 
-    //check if student is registered on server
-    let student = mcServer.studentList.find(element => element.token === studenttoken)
-    if ( !student ) {return res.send({ sender: "server", message:"removed", status: "error" }) }
-    
-    const languageToolUrl = 'http://127.0.0.1:8088/v2/check';
-     
-    try {
-        const response = await fetch(languageToolUrl, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
-            body: new URLSearchParams({ text: text, language: language}).toString() 
-        });
-        if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`);   }
-        const data = await response.json();
-        //console.log(data)
-        res.send({sender: "server", message:"success", status:"success", data: data.matches })
-    } catch (error) {
-        log.error('control @ languagetool: Error sending text to LanguageTool:', error);
-        res.send({sender: "server", message:"error", status:"error", data: error.message })
-    }
 
-})
+
+
+
+
+
 
 
 export default router
-
-
-
-
-
 
 
 
@@ -944,9 +903,6 @@ function requestSourceAllowed(req,res){
     res.json('Request denied') 
     return false 
 }
-
-
-
 //this is needed by the /oauth and /msauth routes 
 function generateCodeVerifier() {
     return crypto.randomBytes(32).toString('hex');

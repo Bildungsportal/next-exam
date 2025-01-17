@@ -1,6 +1,6 @@
 {
     "name": "next-exam-teacher",
-    "version": "1.0.1-250115",
+    "version": "2.0.0-250117",
     "main": "dist/main/main.mjs",
     "author": {
         "name": "Thomas Michael Weissel",
@@ -41,10 +41,7 @@
             "artifactName": "${productName}_${version}.${ext}",
             "files": [
                 "dist",
-                "public",
-                "!public/minimal-jre-11-win/**/*",
-                "!public/minimal-jre-11-mac/**/*",
-                "!public/minimal-jre-11-mac-arm64/**/*"
+                "public"
             ]
         },
         "mac": {
@@ -64,9 +61,7 @@
             },
             "files": [
                 "dist",
-                "public",
-                "!public/minimal-jre-11-win/**/*",
-                "!public/minimal-jre-11-lin/**/*"
+                "public"
             ]
         },
         "dmg": {
@@ -106,10 +101,7 @@
             },
             "files": [
                 "dist",
-                "public",
-                "!public/minimal-jre-11-mac/**/*",
-                "!public/minimal-jre-11-mac-arm64/**/*",
-                "!public/minimal-jre-11-lin/**/*"
+                "public"
             ]
         }
     },

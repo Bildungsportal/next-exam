@@ -1061,25 +1061,30 @@ export default {
       
         },
 
-        printBase64(){
-            this.saveContent(true, 'auto')  //first make sure the current work is saved
-            
+        // send direct print request to teacher and append current document as base64
+        printBase64(){        
             // this currentpreviewBase64 contains the current visible pdf as base64 string
-            // send direct api request for print here
-
-            const url = `https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/printrequest`;
-
+            const url = `https://${this.serverip}:${this.serverApiPort}/server/control/printrequest/${this.servername}/${this.token}`;
+            const payload = {
+                document: this.currentpreviewBase64
+            }
             fetch(url, {
                 method: "POST",
                 cache: "no-store",
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload),
             })
             .then(response => { return response.json();  })
             .then(data => {
-               console.log(data)
+                if (data.message == "success"){
+                    this.$swal.fire({
+                        title: this.$t("editor.requestsent"),
+                        icon: "info",
+                        timer: 1500,
+                        timerProgressBar: true,
+                        didOpen: () => { this.$swal.showLoading() }
+                    })
+                }
             })
             .catch(error => {  
                 console.log(error)    
@@ -1089,19 +1094,15 @@ export default {
 
 
 
-        //send a printrequest to the teacher
-        print(){
-           //make sure to post print request to teacher for the latest work
-           ipcRenderer.sendSync('sendPrintRequest') 
-           console.log("editor @ print: sending printrequest")
-           this.$swal.fire({
-                title: this.$t("editor.requestsent"),
-                icon: "info",
-                timer: 1500,
-                timerProgressBar: true,
-                didOpen: () => { this.$swal.showLoading() }
-            })
+        //save file and open print preview
+        async print(){
+            this.saveContent(true, "auto")
+            await this.sleep(1000)
+            this.loadPDF(`${this.clientname}.pdf`)
         },
+
+
+
         // display print denied message and reason
         printdenied(why){
             console.log("editor @ printdenied: Print request denied")

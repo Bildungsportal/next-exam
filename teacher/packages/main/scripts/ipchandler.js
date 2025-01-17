@@ -32,7 +32,7 @@ import { print } from "unix-print";
 import { exec } from 'child_process';
 import defaultGateway from'default-gateway';
 import ip from 'ip'
-import languageToolServer from './lt-server';
+
 import server from "../../server/src/server.js"
 import checkDiskSpace from 'check-disk-space';
 
@@ -50,22 +50,6 @@ class IpcHandler {
         this.CommunicationHandler = ch
 
 
-
-        /**
-         * Start languageTool API Server (with Java JRE)
-         * Runs at localhost 8088
-         * students can access the api via teacher api on 22422
-         * (we do not expose the lt api because it makes it more complex and would need yet anoter port to open)
-        */ 
-        ipcMain.handle('startLanguageTool', (event) => { 
-            try{
-                languageToolServer.startServer();
-            }
-            catch(err){
-                return false
-            }
-            return true
-        }) 
 
         // returns the current serverstatus object of the given server(name)
         ipcMain.handle('getserverstatus', (event, servername) => { 

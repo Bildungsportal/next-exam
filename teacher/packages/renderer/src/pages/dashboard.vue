@@ -318,7 +318,7 @@
 import { VueDraggableNext } from 'vue-draggable-next'
 import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile, createSharingLink, fileExistsInAppFolder, downloadFilesFromOneDrive} from '../msalutils/onedrive'
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
-import { loadFilelist, print, getLatest, getLatestFromStudent,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64 } from '../utils/filemanager'
+import { loadFilelist, print, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64 } from '../utils/filemanager'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore } from '../utils/exammanagement.js'
 import { v4 as uuidv4 } from 'uuid'
 import {SchedulerService} from '../utils/schedulerservice.js'
@@ -437,7 +437,7 @@ export default {
         print:print,                                // check for default printer and trigger print operation
         printBase64: printBase64,                   // print the base64pdf via webcontens print
         getLatest:getLatest,                        // get latest files from all students and concatenate all pdf files
-        getLatestFromStudent:getLatestFromStudent,  // handles a print request and first fetches the latest version from a specific student
+        processPrintrequest:processPrintrequest,  // handles a print request and first fetches the latest version from a specific student
         loadImage:loadImage,                        // displays an image in the preview panel
         loadPDF:loadPDF,                            // displays a pdf in the preview panel
         dashboardExplorerSendFile:dashboardExplorerSendFile,        // sends a given file to the selected student
@@ -506,10 +506,11 @@ export default {
                     }
                     if (student.printrequest){  // student sent a printrequest to the teacher
                         //printrequest sollte am client auch sofort auf false gesetzt werden sobald abgeschickt jedoch könnte der client genau hier ja disconnecten
-                        this.setStudentStatus({removeprintrequest:true}, student.token)  //request received.. remove it from the servers student object
                         if (student.clientname !== this.printrequest)  {  //this.printrequest contains the name of the student who requested
-                            this.getLatestFromStudent(student) //do not trigger twice from same student
+                            this.processPrintrequest(student) //do not trigger twice from same student
                         } 
+                        this.setStudentStatus({removeprintrequest:true}, student.token)  //request received.. remove it from the servers student object
+
                     }   
                 });
 
@@ -834,25 +835,7 @@ export default {
             else {
                 this.serverstatus.spellchecklang = 'de-DE'
             }
-            if (this.serverstatus.languagetool){
-                let response = await ipcRenderer.invoke("startLanguageTool")
-                if (response){
-                    this.$swal.fire({
-                        text: "LanguageTool started!",
-                        timer: 1000,
-                        timerProgressBar: true,
-                        didOpen: () => { this.$swal.showLoading() }
-                    });
-                }
-                else {
-                    this.$swal.fire({
-                        text: "LanguageTool Error!",
-                        timer: 1000,
-                        timerProgressBar: true,
-                        didOpen: () => { this.$swal.showLoading() }
-                    });
-                }
-            }
+
             this.setServerStatus()
         },
 
