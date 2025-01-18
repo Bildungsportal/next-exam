@@ -231,12 +231,23 @@
                 <button class="btn btn-secondary mt-1 mb-0"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" >  no printer found </button>
             </div>
             
-            <div v-for="printer in availablePrinters">
-                <button  :key="printer" @click="selectPrinter(printer)" :title="printer" :class="(defaultPrinter == printer)? 'btn-cyan':'' " class="btn btn-secondary mt-1 mb-0">
-                    <img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" >  {{ printer }} 
-                </button>
-                <img v-if="(printer == defaultPrinter)" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
+
+
+
+            <div v-for="printer in availablePrinters" :key="printer" style="position: relative;">
+               
+                <button @click="selectPrinter(printer)" :class="{'btn-cyan': defaultPrinter === printer}" class="printerbutton btn btn-secondary mt-1 mb-0" @mouseenter="visiblePrinter = printer" @mouseleave="visiblePrinter = null"><img src="/src/assets/img/svg/print.svg" alt="print" width="22" height="22" /> {{ printer }} </button>
+                <div v-if="visiblePrinter === printer" class="tooltip-content"> {{ printer }} </div>
+
+                <!-- Icon für den Standarddrucker -->
+                <img v-if="printer === defaultPrinter" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" />
             </div>
+
+
+
+
+
+            
             <div v-if="currentpreviewPath && defaultPrinter">
                 <button id="printButton" class="btn btn-dark mt-1 mb-0" @click="printBase64();hideSetup()"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" > Print: {{ currentpreviewname }} </button>
             </div> 
@@ -245,6 +256,7 @@
                 <div id="okButton" class="btn mt-3 btn-success" @click="hideSetup(); this.currentpreviewPath=null;">OK</div>
             </div>
         </div>
+       
     </div>
   <!-- SETUP DIALOG END -->
 
@@ -380,6 +392,7 @@ export default {
             defaultPrinter: false,
             availablePrinters: [],
             directPrintAllowed: false,
+            visiblePrinter: null,
             serverstatus:{   // this object contains all neccessary information for students about the current exam settings
                 exammode: false,
                 examtype: 'math',
@@ -1404,7 +1417,7 @@ export default {
 
 #setupdiv button {
     display: inline-block;
-    max-width: 360px; /* oder eine gewünschte feste Breite */
+    max-width: 320px; /* oder eine gewünschte feste Breite */
     overflow: hidden;
     text-overflow: ellipsis;
     text-align: left;
@@ -1820,23 +1833,26 @@ hr {
     margin-left: 1.9em;
   justify-content: flex-start !important; /* Richtet die Buttons linksbündig aus */
 }
-
-
-.custom-tooltip {
-  position: relative; /* container */
+.printerbutton {
+    position: relative;
 }
-.custom-tooltip:hover .tooltip-content {
-  display: block; /* show tooltip on hover */
-}
+
 .tooltip-content {
-  display: none; /* hidden by default */
-  position: absolute; /* absolute position */
-  top: 100%; left: 50%; transform: translateX(-50%);
-  background: #333; color: #fff; padding: 6px; border-radius: 4px;
-  white-space: normal; width: 200px; /* wraps text */
+  display: block; /* hidden by default */
+  position: absolute; /* use absolute to position relative to .custom-tooltip */
+  top: 105%; /* position below the tooltip container */
+  right: 0px; 
+  background: #20c996dc;
+  color: #fff; 
+  padding: 6px; 
+  border-radius: 4px;
+  white-space: normal; 
+  max-width: 300px; /* wraps text */
+  z-index: 99999999;
+  pointer-events: none;
+  font-size: 0.8em;
+
 }
-
-
 
 
 
