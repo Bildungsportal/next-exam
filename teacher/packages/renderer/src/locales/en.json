@@ -25,8 +25,9 @@
         "select": "Select Workdirectory",
         "freespacewarning" : "Not enough free discspace",
         "directoryerror": "Directory not writeable",
-        "previousexams": "Previous Exams",
-        "folderdelete": "Delete local exam folder?"
+        "previousexams": "Local previous Exams",
+        "folderdelete": "Delete local exam folder?",
+        "onlineexams": "BiP Exams"
     },
     "dashboard":{
         "server": "Server",

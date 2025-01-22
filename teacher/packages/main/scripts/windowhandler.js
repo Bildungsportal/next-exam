@@ -40,6 +40,89 @@ class WindowHandler {
         this.config = config
     }
 
+
+
+
+    createBiPLoginWin(biptest) {
+        this.bipwindow = new BrowserWindow({
+            title: 'Next-Exam',
+            icon: join(__dirname, '../../public/icons/icon.png'),
+            center:true,
+            width: 1000,
+            height:800,
+            alwaysOnTop: true,
+            skipTaskbar:true,
+            autoHideMenuBar: true,
+           // resizable: false,
+            minimizable: false,
+           // movable: false,
+           // frame: false,
+            show: false,
+           // transparent: true
+        })
+     
+        if (biptest){   this.bipwindow.loadURL(`https://q.bildung.gv.at/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)   }
+        else {          this.bipwindow.loadURL(`https://www.bildung.gv.at/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)   }
+
+        this.bipwindow.once('ready-to-show', () => {
+            this.bipwindow.show()
+        });
+
+        this.bipwindow.webContents.on('did-navigate', (event, url) => {    // a pdf could contain a link ^^
+            log.info("did-navigate")
+            log.info(url)
+        })
+        this.bipwindow.webContents.on('will-navigate', (event, url) => {    // a pdf could contain a link ^^
+            log.info("will-navigate")
+            log.info(url)
+        })
+
+         this.bipwindow.webContents.on('new-window', (event, url) => {  // if a new window should open triggered by window.open()
+            log.info("new-window")
+            log.info(url)
+            event.preventDefault();    // Prevent the new window from opening
+        }); 
+     
+         
+         this.bipwindow.webContents.setWindowOpenHandler(({ url }) => { // if a new window should open triggered by target="_blank"
+            log.info("target: _blank")
+            log.info(url)
+            return { action: 'deny' };   // Prevent the new window from opening
+        }); 
+
+        this.bipwindow.webContents.on('will-redirect', (event, url) => {
+            log.info('Redirecting to:', url);
+            // Prüfen, ob die URL das gewünschte Format hat
+            if (url.startsWith('bildungsportal://')) {
+                event.preventDefault(); // Verhindert den Standard-Redirect
+                const prefix = 'bildungsportal://token=';
+
+                const token = url.substring(prefix.length);
+                
+    
+                log.info('Captured Token:');
+                log.info(token);
+                this.mainwindow.webContents.send('bipToken', token);
+                this.bipwindow.close();
+            }
+          });
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     createWindow() {
         const primaryDisplay = screen.getPrimaryDisplay();
         const { width, height } = primaryDisplay ? primaryDisplay.workAreaSize : { width: 800, height: 800 };

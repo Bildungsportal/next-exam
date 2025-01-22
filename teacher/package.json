@@ -12,7 +12,8 @@
     "description": "An exam managment tool for digital exams",
     "type": "module",
     "scripts": {
-        "dev": "cross-env NODE_ENV=development node scripts/watch.mjs",
+        "dev": "concurrently --prefix-colors \"green,blue\" \"node bip-demo-api/api.js\" \"cross-env NODE_ENV=development node scripts/watch.mjs\"",
+        
         "prod": "cross-env NODE_ENV=production node scripts/build.mjs",
         "build": "node scripts/build.mjs && electron-builder -l",
         "build:win": "node scripts/build.mjs && electron-builder -w",
@@ -114,6 +115,7 @@
         "@types/jquery": "^3.5.30",
         "@types/screenshot-desktop": "^1.12.3",
         "@vitejs/plugin-vue": "^5.1.4",
+        "concurrently": "^9.1.2",
         "electron": "^32.1.0",
         "electron-builder": "^25.0.5",
         "nodemon": "^3.1.5",

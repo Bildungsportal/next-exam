@@ -34,7 +34,7 @@
                     <div style="font-size: 0.6em; margin-bottom: 0px;">{{activestudent.clientip}}</div>
                     <div style="font-size: 0.6em; margin-top: 0px;">{{activestudent.hostname}}</div>
                     <div class="col d-inlineblock btn btn-info m-1 btn-sm"      @click="sendFiles(activestudent.token)" style="width: 110px">{{$t('dashboard.sendfileSingle')}}</div>
-                    <div class="col d-inlineblock btn btn-info m-1 btn-sm"      @click="getFiles(activestudent.token, true)" :class="(serverstatus.examtype === 'eduvidual' || serverstatus.examtype === 'gforms')? 'disabledblue':''" style="width: 110px">{{$t('dashboard.getfileSingle')}}</div>
+                    <div class="col d-inlineblock btn btn-info m-1 btn-sm"      @click="getFiles(activestudent.token, true)" :class="(serverstatus.examSections[serverstatus.activeSection].examtype === 'eduvidual' || serverstatus.examSections[serverstatus.activeSection].examtype === 'gforms')? 'disabledblue':''" style="width: 110px">{{$t('dashboard.getfileSingle')}}</div>
                     <div class="col d-inlineblock btn btn-dark m-1 btn-sm "     @click="openLatestFolder(activestudent)"  style="width: 110px;">{{$t('dashboard.shownewestfolder')}} </div>
                     <div class="col d-inlineblock btn btn-warning m-1 btn-sm"   @click='kick(activestudent.token,activestudent.clientip);hideStudentview()'  style="width: 110px">{{$t('dashboard.kick')}}</div>
                 </div>
@@ -50,7 +50,7 @@
             <button id="closefilebrowser" type="button" class=" btn-close pt-2 pe-2 float-end" title="close"></button>
             <h4>{{$t('dashboard.filesfolder')}}: <br> <span class="ms-3 mb-3"><strong> {{currentdirectory}}</strong>  </span></h4>
             <div class="btn btn-dark pe-3 ps-3 me-1 mb-3 btn-sm" @click="loadFilelist(workdirectory) "><img src="/src/assets/img/svg/go-home.svg" class="" width="22" height="22" > </div>
-            <div :class="( serverstatus.examtype === 'eduvidual' || serverstatus.examtype === 'website'|| serverstatus.examtype === 'math' )? 'disabledblue':''" class="btn btn-primary pe-3 ps-3 me-1 mb-3 btn-sm" style="float: right;" :title="$t('dashboard.summarizepdf')" @click="getLatest() "><img src="/src/assets/img/svg/edit-copy.svg" class="" width="22" height="22" >{{$t('dashboard.summarizepdfshort')}}</div>
+            <div :class="( serverstatus.examSections[serverstatus.activeSection].examtype === 'eduvidual' || serverstatus.examSections[serverstatus.activeSection].examtype === 'website'|| serverstatus.examSections[serverstatus.activeSection].examtype === 'math' )? 'disabledblue':''" class="btn btn-primary pe-3 ps-3 me-1 mb-3 btn-sm" style="float: right;" :title="$t('dashboard.summarizepdf')" @click="getLatest() "><img src="/src/assets/img/svg/edit-copy.svg" class="" width="22" height="22" >{{$t('dashboard.summarizepdfshort')}}</div>
             <div  v-if="(currentdirectory !== workdirectory)" class="btn btn-dark pe-3 ps-3 me-1 mb-3 btn-sm" @click="loadFilelist(currentdirectoryparent) "><img src="/src/assets/img/svg/edit-undo.svg" class="" width="22" height="22" >up </div>
             <div :key="3" style="height: 76vh; overflow-y:auto;">
                 <div v-for="file in localfiles" :key="file.path" class="d-inline">
@@ -64,7 +64,7 @@
                     <!-- other files -->
                     <div v-if="(file.type == 'file' && !(file.ext === '.pdf' || file.ext === '.png'|| file.ext === '.jpg'|| file.ext === '.webp'|| file.ext === '.jpeg' )  )" class="btn btn-info pe-3 ps-3 me-3 mb-2 btn-sm"  style=" max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default;"><img src="/src/assets/img/svg/document.svg" class="" width="22" height="22" > {{file.name}} </div>
 
-                    <div v-if="(file.type == 'file')" :class="(studentlist.length == 0 || serverstatus.examtype === 'eduvidual'|| serverstatus.examtype === 'microsoft365')? 'disabledexam':''"    class="btn btn-dark  me-1 mb-2 btn-sm " style="float: right;" @click="dashboardExplorerSendFile(file)" :title="$t('dashboard.send')"><img src="/src/assets/img/svg/document-send.svg" class="" width="22" height="22" ></div>
+                    <div v-if="(file.type == 'file')" :class="(studentlist.length == 0 || serverstatus.examSections[serverstatus.activeSection].examtype === 'eduvidual'|| serverstatus.examSections[serverstatus.activeSection].examtype === 'microsoft365')? 'disabledexam':''"    class="btn btn-dark  me-1 mb-2 btn-sm " style="float: right;" @click="dashboardExplorerSendFile(file)" :title="$t('dashboard.send')"><img src="/src/assets/img/svg/document-send.svg" class="" width="22" height="22" ></div>
                     <div v-if="(file.type == 'file')" class="btn btn-dark  me-1 mb-2 btn-sm " style="float: right;" @click="downloadFile(file)" :title="$t('dashboard.download')"><img src="/src/assets/img/svg/edit-download.svg" class="" width="22" height="22" ></div>
                     <div v-if="(file.type == 'file' && file.ext === '.pdf')" class="btn btn-dark me-1 mb-2 btn-sm" style="float: right;" @click="loadPDF(file.path, file.name)" :title="$t('dashboard.preview')"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" ></div>
                     <div v-if="(file.type == 'file' && (file.ext === '.png'|| file.ext === '.jpg'|| file.ext === '.webp'|| file.ext === '.jpeg' ))" class="btn btn-dark me-1 mb-2 btn-sm" style="float: right;" @click="loadImage(file.path)" :title="$t('dashboard.preview')"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" ></div>
@@ -104,54 +104,54 @@
         <div style="font-size:0.9em; width: 220px">
             <!-- geogebra -->
             <div class="form-check m-1 mb-1"  :class="(serverstatus.exammode)? 'disabledexam':''">
-                <input v-model="serverstatus.examtype" value="math" class="form-check-input" type="radio" name="examtype" id="examtype2" checked>
+                <input v-model="serverstatus.examSections[serverstatus.activeSection].examtype" value="math" class="form-check-input" type="radio" name="examtype" id="examtype2" checked>
                 <label class="form-check-label" for="examtype2"> {{$t('dashboard.math')}}  </label>
             </div>
             <!-- editor -->
             <div class="form-check m-1" :class="(serverstatus.exammode)? 'disabledexam':''">
-                <input v-model="serverstatus.examtype" @click="activateSpellcheck()" value="editor" class="form-check-input" type="radio" name="examtype" id="examtype1">
-                <label class="form-check-label" for="examtype1"> {{$t('dashboard.lang')}}<span class="text-white-50" v-if="(serverstatus.languagetool)">|{{serverstatus.spellchecklang}}</span></label>
+                <input v-model="serverstatus.examSections[serverstatus.activeSection].examtype" @click="activateSpellcheck()" value="editor" class="form-check-input" type="radio" name="examtype" id="examtype1">
+                <label class="form-check-label" for="examtype1"> {{$t('dashboard.lang')}}<span class="text-white-50" v-if="(serverstatus.examSections[serverstatus.activeSection].languagetool)">|{{serverstatus.examSections[serverstatus.activeSection].spellchecklang}}</span></label>
             </div>
             <!-- eduvidual -->
             <div class="form-check m-1 mb-1" :class="(serverstatus.exammode)? 'disabledexam':''">
-                <input v-model="serverstatus.examtype" @click="getTestID()" value="eduvidual" class="form-check-input" type="radio" name="examtype" id="examtype3">
+                <input v-model="serverstatus.examSections[serverstatus.activeSection].examtype" @click="getTestID()" value="eduvidual" class="form-check-input" type="radio" name="examtype" id="examtype3">
                 <label class="form-check-label" for="examtype3"> {{$t('dashboard.eduvidual')}}  </label>
             </div>
             <!-- google forms -->
             <div class="form-check m-1 mb-1" :class="(serverstatus.exammode)? 'disabledexam':''">
-                <input v-model="serverstatus.examtype" @click="getFormsID()" value="gforms" class="form-check-input" type="radio" name="examtype" id="examtype5">
+                <input v-model="serverstatus.examSections[serverstatus.activeSection].examtype" @click="getFormsID()" value="gforms" class="form-check-input" type="radio" name="examtype" id="examtype5">
                 <label class="form-check-label" for="examtype5"> {{$t('dashboard.gforms')}}  </label>
             </div>
             <!-- website -->
             <div class="form-check m-1 mb-1" :class="(serverstatus.exammode)? 'disabledexam':''" style="max-height:24px">
-                <input v-model="serverstatus.examtype" @click="getTestURL()" value="website" class="form-check-input" type="radio" name="examtype" id="examtype6">
+                <input v-model="serverstatus.examSections[serverstatus.activeSection].examtype" @click="getTestURL()" value="website" class="form-check-input" type="radio" name="examtype" id="examtype6">
                 <label class="form-check-label" for="examtype6"> 
                     <div style="display:inline-block; overflow: hidden; text-overflow: ellipsis;">Website</div>  <!--overflow hidden with text-overflow ellipsis adds 3 pixel to the height of the sourrounding div element.. what the f..? -->
-                    <div style="width: 134px; height: 22px; display:inline-block; overflow: hidden; text-overflow: ellipsis;" class="text-white-50" v-if="(serverstatus.domainname)">|{{serverstatus.domainname}}</div>  
+                    <div style="width: 134px; height: 22px; display:inline-block; overflow: hidden; text-overflow: ellipsis;" class="text-white-50" v-if="(serverstatus.examSections[serverstatus.activeSection].domainname)">|{{serverstatus.examSections[serverstatus.activeSection].domainname}}</div>  
                 </label>
             </div>
 
             <!-- microsoft365 -->
             <div class="form-check m-1 mb-3" :class="(serverstatus.exammode && this.config.accessToken )? 'disabledexam':''">
-                <input v-model="serverstatus.examtype" value="microsoft365" class="form-check-input" type="radio" name="examtype" id="examtype4">
+                <input v-model="serverstatus.examSections[serverstatus.activeSection].examtype" value="microsoft365" class="form-check-input" type="radio" name="examtype" id="examtype4">
                 <label class="form-check-label" for="examtype4"> Microsoft365 <span v-if="(this.config.accessToken)">({{$t('dashboard.connected')}})</span> </label>
                 
-                <button v-if="(serverstatus.examtype === 'microsoft365' && !this.config.accessToken)"  @click="openAuthWindow()" class="btn btn-sm btn-primary mt-1  ">
+                <button v-if="(serverstatus.examSections[serverstatus.activeSection].examtype === 'microsoft365' && !this.config.accessToken)"  @click="openAuthWindow()" class="btn btn-sm btn-primary mt-1  ">
                     <img  src="/src/assets/img/svg/win.svg" xmlns="http://www.w3.org/2000/svg"  width="24" height="24">
                     <span style="padding: 0 6px 0 4px; vertical-align:middle;"> Verbinden </span>
                 </button>
 
-                <button v-if="(serverstatus.examtype === 'microsoft365' && this.config.accessToken && !serverstatus.msOfficeFile)"  @click="onedriveUploadselect()" class="btn btn-sm btn-info mt-1" style=" white-space: nowrap;  width: 170px;overflow: hidden; text-overflow: ellipsis; ">
+                <button v-if="(serverstatus.examSections[serverstatus.activeSection].examtype === 'microsoft365' && this.config.accessToken && !serverstatus.examSections[serverstatus.activeSection].msOfficeFile)"  @click="onedriveUploadselect()" class="btn btn-sm btn-info mt-1" style=" white-space: nowrap;  width: 170px;overflow: hidden; text-overflow: ellipsis; ">
                     <img  src="/src/assets/img/svg/win.svg" xmlns="http://www.w3.org/2000/svg"  width="24" height="24">
                     <span style="padding: 0 6px 0 4px; vertical-align:middle;"> Datei wählen </span>
                 </button>
 
-                <button v-if="(serverstatus.examtype === 'microsoft365' && this.config.accessToken && serverstatus.msOfficeFile)"  @click="onedriveUploadselect()" class="btn btn-sm btn-success mt-1" style=" white-space: nowrap;  width: 170px;overflow: hidden; text-overflow: ellipsis; ">
+                <button v-if="(serverstatus.examSections[serverstatus.activeSection].examtype === 'microsoft365' && this.config.accessToken && serverstatus.examSections[serverstatus.activeSection].msOfficeFile)"  @click="onedriveUploadselect()" class="btn btn-sm btn-success mt-1" style=" white-space: nowrap;  width: 170px;overflow: hidden; text-overflow: ellipsis; ">
                     <img  src="/src/assets/img/svg/win.svg" xmlns="http://www.w3.org/2000/svg"  width="24" height="24">
-                    <span style="padding: 0 6px 0 4px; vertical-align:middle;">{{serverstatus.msOfficeFile.name}} </span>
+                    <span style="padding: 0 6px 0 4px; vertical-align:middle;">{{serverstatus.examSections[serverstatus.activeSection].msOfficeFile.name}} </span>
                 </button>
 
-                <button v-if="(serverstatus.examtype === 'microsoft365' && this.config.accessToken )"  @click="logout365()" class="btn btn-sm btn-warning mt-1" style=" white-space: nowrap;  width: 170px;overflow: hidden; text-overflow: ellipsis; ">
+                <button v-if="(serverstatus.examSections[serverstatus.activeSection].examtype === 'microsoft365' && this.config.accessToken )"  @click="logout365()" class="btn btn-sm btn-warning mt-1" style=" white-space: nowrap;  width: 170px;overflow: hidden; text-overflow: ellipsis; ">
                     <img  src="/src/assets/img/svg/win.svg" xmlns="http://www.w3.org/2000/svg"  width="24" height="24">
                     <span style="padding: 0 6px 0 4px; vertical-align:middle;"> Logout </span>
                 </button>
@@ -178,7 +178,7 @@
         <div id="setupdiv">
             <!-- <div class="swal2-icon swal2-question swal2-icon-show" style="display: flex;"><div class="swal2-icon-content">?</div></div> -->
             <div class="mb-3"><h5 style="display: inline">{{ $t('dashboard.extendedsettings') }}</h5></div>
-            <div class="m-1 mb-2" :class="(serverstatus.examtype === 'eduvidual' || serverstatus.examtype === 'gforms') ? 'disabledexam' : ''">
+            <div class="m-1 mb-2" :class="(serverstatus.examSections[serverstatus.activeSection].examtype === 'eduvidual' || serverstatus.examSections[serverstatus.activeSection].examtype === 'gforms') ? 'disabledexam' : ''">
                 <label for="abgabeintervalSlider" class="form-check-label"> {{$t('dashboard.autoget')}} </label>
                 <span v-if="serverstatus.abgabeintervalPause > 0" class="ms-2 text-black-50">| {{serverstatus.abgabeintervalPause}}min </span>
                 <span v-else class="ms-2 text-black-50">| {{$t('dashboard.disabled')}}</span>
@@ -208,7 +208,7 @@
             </div>
 
             <div class="form-check form-switch  m-1 mb-2">
-                <input v-model=serverstatus.groups @click="setupGroups()" :title="$t('dashboard.groupinfo')" checked=false class="form-check-input" type="checkbox" id="activategroups">
+                <input v-model=serverstatus.examSections[serverstatus.activeSection].groups @click="setupGroups()" :title="$t('dashboard.groupinfo')" checked=false class="form-check-input" type="checkbox" id="activategroups">
                 <label class="form-check-label">{{$t('dashboard.groups')}}   </label><br>
             </div>
 
@@ -266,9 +266,9 @@
         <div v-if="(serverstatus.exammode && numberOfConnections == 1)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:128px; height:62px;" @click="endExam();hideDescription();"  @mouseover="showDescription($t('dashboard.exitkiosk'))" @mouseout="hideDescription"  >                                                                                                                                         <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.stopexamsingle')}} </div></div>
         <div v-if="(serverstatus.exammode && numberOfConnections != 1)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:128px; height:62px;" @click="endExam();hideDescription();"  @mouseover="showDescription($t('dashboard.exitkiosk'))" @mouseout="hideDescription"  >                                                                                                                                         <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.stopexam')}} </div></div>
 
-        <div v-if="(!serverstatus.exammode)" class="btn btn-teal m-1 mt-0 text-start ms-0"  @click="startExam();hideDescription();"  @mouseover="showDescription($t('dashboard.startexamdesc'))" @mouseout="hideDescription" :class="(serverstatus.examtype === 'microsoft365' && (!this.config.accessToken || !serverstatus.msOfficeFile))? 'disabledgreen':''" style="width:128px; height:62px;">  <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.startexam')}}</div></div>
+        <div v-if="(!serverstatus.exammode)" class="btn btn-teal m-1 mt-0 text-start ms-0"  @click="startExam();hideDescription();"  @mouseover="showDescription($t('dashboard.startexamdesc'))" @mouseout="hideDescription" :class="(serverstatus.examSections[serverstatus.activeSection].examtype === 'microsoft365' && (!this.config.accessToken || !serverstatus.examSections[serverstatus.activeSection].msOfficeFile))? 'disabledgreen':''" style="width:128px; height:62px;">  <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.startexam')}}</div></div>
         <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="sendFiles('all');hideDescription();"   @mouseover="showDescription($t('dashboard.sendfile'))" @mouseout="hideDescription"  style="width:62px; height:62px;"><img src="/src/assets/img/svg/document-send.svg" class="mt-2" width="32" height="32"></div>
-        <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="getFiles('all', true);hideDescription();"  @mouseover="showDescription($t('dashboard.getfile'))" @mouseout="hideDescription"  :class="(serverstatus.examtype === 'eduvidual' || serverstatus.examtype === 'gforms'|| serverstatus.examtype === 'website')? 'disabledblue':''"  style="width:62px; height:62px;" ><img src="/src/assets/img/svg/edit-download.svg" class="mt-2" width="32" height="32"></div>
+        <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="getFiles('all', true);hideDescription();"  @mouseover="showDescription($t('dashboard.getfile'))" @mouseout="hideDescription"  :class="(serverstatus.examSections[serverstatus.activeSection].examtype === 'eduvidual' || serverstatus.examSections[serverstatus.activeSection].examtype === 'gforms'|| serverstatus.examSections[serverstatus.activeSection].examtype === 'website')? 'disabledblue':''"  style="width:62px; height:62px;" ><img src="/src/assets/img/svg/edit-download.svg" class="mt-2" width="32" height="32"></div>
         <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="loadFilelist(workdirectory);hideDescription();"  @mouseover="showDescription($t('dashboard.showworkfolder'))" @mouseout="hideDescription"  style="width: 62px; height:62px;"><img src="/src/assets/img/svg/folder-open.svg" class="mt-2" width="32" height="32" ></div>
         <div v-if="(serverstatus.screenslocked)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:62px; height:62px;" @click="lockscreens(false);hideDescription();"> <img src="/src/assets/img/svg/eye-fill.svg" class="white mt-2" width="32" height="32" >   </div>
         <div v-if="(!serverstatus.screenslocked)" class="btn btn-dark m-1 mt-0 text-start ms-0 " style="width:62px; height:62px;" @click="lockscreens(true);hideDescription();"  @mouseover="showDescription($t('dashboard.lock'))" @mouseout="hideDescription" > <img src="/src/assets/img/svg/eye-slash-fill.svg" class="white mt-2" width="32" height="32" >  </div>
@@ -282,7 +282,7 @@
                 <div v-for="student in studentwidgets" :key="student.token" style="cursor:auto" v-bind:class="(!student.focus)?'focuswarn':''" class="studentwidget btn rounded-3 btn-block">
                     <div v-if="student.clientname">
                         <div class="studentimage rounded" style="position: relative; height:132px;">  
-                            <button v-if="serverstatus.examtype === 'editor' && !this.serverstatus.languagetool && this.serverstatus.spellchecklang !== 'none'" @mouseover="showDescription($t('dashboard.allowspellcheck'))" @mouseout="hideDescription" @click='activateSpellcheckForStudent(student.token,student.clientname)' type="button" class="btn btn-sm pt-1 mt-2 pe-1 float-end" style="z-index:1000; position:relative;"><img src="/src/assets/img/svg/autocorrection.svg" class="widgetbutton" width="22" height="22" ></button> 
+                            <button v-if="serverstatus.examSections[serverstatus.activeSection].examtype === 'editor' && !this.serverstatus.examSections[serverstatus.activeSection].languagetool && this.serverstatus.examSections[serverstatus.activeSection].spellchecklang !== 'none'" @mouseover="showDescription($t('dashboard.allowspellcheck'))" @mouseout="hideDescription" @click='activateSpellcheckForStudent(student.token,student.clientname)' type="button" class="btn btn-sm pt-1 mt-2 pe-1 float-end" style="z-index:1000; position:relative;"><img src="/src/assets/img/svg/autocorrection.svg" class="widgetbutton" width="22" height="22" ></button> 
                             <div v-cloak :id="student.token" style="position: relative;background-size: cover; height: 132px;" v-bind:style="(student.imageurl && now - 20000 < student.timestamp)? `background-image: url('${student.imageurl}')`:'background-image: url(user-red.svg)'"></div>
                            
                             <div v-if="student.virtualized && now - 20000 < student.timestamp" class="virtualizedinfo" >{{$t("dashboard.virtualized")}}</div>
@@ -307,8 +307,8 @@
                             <button v-if="(now - 20000 > student.timestamp)" type="button" class="btn btn-outline-danger btn-sm " style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">{{$t('dashboard.offline')}} </button>
                             <button v-if="(now - 20000 < student.timestamp) && student.exammode && student.focus"  @click='showStudentview(student)' type="button" class="btn btn-outline-warning btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;">{{$t('dashboard.secure')}}</button>
                             <button v-if="(now - 20000 < student.timestamp) && !student.focus "   @click='restore(student.token)' type="button" class="btn btn-danger btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> {{$t('dashboard.restore')}} </button>
-                            <button v-if="(now - 20000 < student.timestamp) && serverstatus.groups && student.status.group == 'a' "   @click='quickSetGroup(student)' type="button" class="btn-click-feedback2 btn btn-info btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> A  </button>
-                            <button v-if="(now - 20000 < student.timestamp) && serverstatus.groups && student.status.group == 'b' "  @click='quickSetGroup(student)' type="button" class="btn-click-feedback1 btn btn-warning btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> B  </button>
+                            <button v-if="(now - 20000 < student.timestamp) && serverstatus.examSections[serverstatus.activeSection].groups && student.status.group == 'a' "   @click='quickSetGroup(student)' type="button" class="btn-click-feedback2 btn btn-info btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> A  </button>
+                            <button v-if="(now - 20000 < student.timestamp) && serverstatus.examSections[serverstatus.activeSection].groups && student.status.group == 'b' "  @click='quickSetGroup(student)' type="button" class="btn-click-feedback1 btn btn-warning btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> B  </button>
                         </div>
                     </div>
                 </div> 
@@ -394,27 +394,47 @@ export default {
             directPrintAllowed: false,
             visiblePrinter: null,
             serverstatus:{   // this object contains all neccessary information for students about the current exam settings
+                bip: false,
+                id: "1234",
+                examName: this.servername,
+                examDate: new Date().toISOString().slice(0, 19),
+                examDurationMinutes: 100, 
+                pin: this.$route.params.pin,
+                requireBiP: false,
                 exammode: false,
-                examtype: 'math',
                 delfolderonexit: true,
-                spellchecklang: 'de-DE',
-                suggestions: false,
-                moodleTestId: null,
-                moodleDomain: 'eduvidual.at',
-                moodleURL:null,
-                cmargin: { side: 'right', size: 3 },
-                gformsTestId: null,
                 screenshotinterval: 4,
                 abgabeintervalPause:6,
-                msOfficeFile: null,
                 screenslocked: false,
-                pin: this.$route.params.pin,
-                linespacing: 1,
-                unlockonexit: false,
-                requireBiP: false,
-                groups: false,
-                groupA: [],
-                groupB: []
+                screenshotocr: false,
+                examTeachers: [],
+                examSecurityKey: "oI9xGzHkUFe7Lg2iTXHkYp4pDab3Nvj4kFEOqA93cZE=",
+                activeSection: 1,
+                examSections: {
+                    1: {
+                        examtype: 'math',   
+                        spellchecklang: 'de-DE', 
+                        suggestions: false, 
+
+                        moodleTestId: null, 
+                        moodleDomain: 'eduvidual.at',
+                        moodleURL:null, 
+                        cmargin: { side: 'right', size: 3 }, 
+
+                        gformsTestId: null,
+                        msOfficeFile: null, 
+                        linespacing: 2, 
+                        languagetool: false,
+                        fontfamily: "sans-serif", 
+                        audioRepeat: 0,
+                        domainname: false,
+
+                        groups: false, 
+                        groupA: [], 
+                        groupB: []
+                    },
+                    2: {}
+                },                
             }
         };
     },
@@ -483,7 +503,7 @@ export default {
          * Checks Screenshots and MSO Share Links
          */
         async fetchInfo() {
-            if (!this.config.accessToken && this.serverstatus.examtype === "microsoft365"){
+            if (!this.config.accessToken && this.serverstatus.examSections[this.serverstatus.activeSection].examtype === "microsoft365"){
                 this.config = await ipcRenderer.invoke('getconfigasync')  // this is only needed in order to get the accesstoken from the backend for MSAuthentication
             }
             this.now = new Date().getTime()
@@ -511,10 +531,10 @@ export default {
                     if (!student.imageurl){ student.imageurl = "user-black.svg"  }
                     
                     // if the chosen exam mode is OFFICE and everything is Setup already check if students already got their share link (re-connect, late-connect)
-                    if (this.serverstatus.examtype === "microsoft365" && this.config.accessToken && this.serverstatus.msOfficeFile){
+                    if (this.serverstatus.examSections[this.serverstatus.activeSection].examtype === "microsoft365" && this.config.accessToken && this.serverstatus.examSections[this.serverstatus.activeSection].msOfficeFile){
                         if (!student.status.msofficeshare) {  // this one is late to the party
                             console.log("dashboard @ fetchInfo: this student has no sharing link yet")
-                            this.onedriveUploadSingle(student, this.serverstatus.msOfficeFile)   // trigger upload of this.serverstatus.msOfficeFile, create sharelink and set student.status.msofficeshare to sharelink
+                            this.onedriveUploadSingle(student, this.serverstatus.examSections[this.serverstatus.activeSection].msOfficeFile)   // trigger upload of this.serverstatus.msOfficeFile, create sharelink and set student.status.msofficeshare to sharelink
                         }
                     }
                     if (student.printrequest){  // student sent a printrequest to the teacher
@@ -613,9 +633,9 @@ export default {
                     if (!value) {return 'No ID given!'}
                 }
             }).then((input) => {
-                if (!input.value) {document.getElementById('examtype2').checked = true; this.serverstatus.examtype = "math"}
+                if (!input.value) {document.getElementById('examtype2').checked = true; this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math"}
                 else {
-                    this.serverstatus.gformsTestId = input.value
+                    this.serverstatus.examSections[this.serverstatus.activeSection].gformsTestId = input.value
                     this.abgabeinterval.stop();
                     this.autoabgabe = false;
                 }
@@ -649,15 +669,15 @@ export default {
             }).then((input) => {
                 if (!input.value ) {
                     document.getElementById('examtype2').checked = true; 
-                    this.serverstatus.examtype = "math";
+                    this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math";
                     return;
                 }
 
                 let { moodledomain, testid } = this.extractDomainAndId(input.value);
 
-                this.serverstatus.moodleTestId = testid
-                this.serverstatus.moodleDomain = moodledomain
-                this.serverstatus.moodleURL = input.value
+                this.serverstatus.examSections[this.serverstatus.activeSection].moodleTestId = testid
+                this.serverstatus.examSections[this.serverstatus.activeSection].moodleDomain = moodledomain
+                this.serverstatus.examSections[this.serverstatus.activeSection].moodleURL = input.value
 
                 this.abgabeinterval.stop(); 
                 this.autoabgabe = false;  // no autoabgabe in this exam mode
@@ -685,9 +705,9 @@ export default {
             })
             .then((input) => {
                 let domainname = input.value
-                this.serverstatus.domainname = this.isValidFullDomainName(  domainname ) ? domainname : null
+                this.serverstatus.examSections[this.serverstatus.activeSection].domainname = this.isValidFullDomainName(  domainname ) ? domainname : null
 
-                if (!this.serverstatus.domainname) {document.getElementById('examtype2').checked = true; this.serverstatus.examtype = "math"}
+                if (!this.serverstatus.examSections[this.serverstatus.activeSection].domainname) {document.getElementById('examtype2').checked = true; this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math"}
                 else { this.abgabeinterval.stop(); this.autoabgabe = false;}  // no autoabgabe in this exam mode
                 //console.log( this.serverstatus.domainname )
                 this.setServerStatus()
@@ -732,8 +752,8 @@ export default {
                     <div>
                         <label >
                             <h6>${this.$t("dashboard.cmargin-value")}</h6>
-                            <input style="width:100px" type="range" id="marginValue" name="margin_value" min="2" max="5" step="0.5" value="${this.serverstatus.cmargin.size}" />
-                            <div style="width:32px; display: inline-block"  id="marginValueDisplay">${this.serverstatus.cmargin.size}</div>(cm)
+                            <input style="width:100px" type="range" id="marginValue" name="margin_value" min="2" max="5" step="0.5" value="${this.serverstatus.examSections[this.serverstatus.activeSection].cmargin.size}" />
+                            <div style="width:32px; display: inline-block"  id="marginValueDisplay">${this.serverstatus.examSections[this.serverstatus.activeSection].cmargin.size}</div>(cm)
                         </label>
                         <br>
                         <label>
@@ -785,8 +805,8 @@ export default {
                 didOpen: () => {
                     const marginValueInput = document.getElementById('marginValue');
                     marginValueInput.addEventListener('input', updateMarginValueDisplay);
-                    document.getElementById('checkboxLT').checked = this.serverstatus.languagetool
-                    document.getElementById('checkboxsuggestions').checked = this.serverstatus.suggestions
+                    document.getElementById('checkboxLT').checked = this.serverstatus.examSections[this.serverstatus.activeSection].languagetool
+                    document.getElementById('checkboxsuggestions').checked = this.serverstatus.examSections[this.serverstatus.activeSection].suggestions
                 },
                 willClose: () => {
                     const marginValueInput = document.getElementById('marginValue');
@@ -798,8 +818,8 @@ export default {
                     }
                 },
                 preConfirm: () => {
-                    this.serverstatus.suggestions = document.getElementById('checkboxsuggestions').checked; 
-                    this.serverstatus.languagetool = document.getElementById('checkboxLT').checked; 
+                    this.serverstatus.examSections[this.serverstatus.activeSection].suggestions = document.getElementById('checkboxsuggestions').checked; 
+                    this.serverstatus.examSections[this.serverstatus.activeSection].languagetool = document.getElementById('checkboxLT').checked; 
 
                     const radioButtons = document.querySelectorAll('input[name="correction_margin"]');
                     const marginValue = document.getElementById('marginValue').value;
@@ -829,24 +849,24 @@ export default {
                     });
 
                     if (marginValue && selectedMargin) {
-                        this.serverstatus.cmargin = {
+                        this.serverstatus.examSections[this.serverstatus.activeSection].cmargin = {
                             side: selectedMargin,
                             size: parseFloat(marginValue)
                         }
                        // console.log( this.serverstatus.cmargin)
                     }
 
-                    this.serverstatus.linespacing = selectedSpacing
-                    this.serverstatus.fontfamily = selectedFont
-                    this.serverstatus.audioRepeat = audioRepeat
+                    this.serverstatus.examSections[this.serverstatus.activeSection].linespacing = selectedSpacing
+                    this.serverstatus.examSections[this.serverstatus.activeSection].fontfamily = selectedFont
+                    this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat = audioRepeat
                 }
             })
             if (language) {
-                this.serverstatus.spellchecklang = language
-                if (language === 'none'){this.serverstatus.languagetool = false}
+                this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang = language
+                if (language === 'none'){this.serverstatus.examSections[this.serverstatus.activeSection].languagetool = false}
             }  
             else {
-                this.serverstatus.spellchecklang = 'de-DE'
+                this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang = 'de-DE'
             }
 
             this.setServerStatus()
@@ -917,7 +937,7 @@ export default {
         // show visual feedback 
         visualfeedbackClosemanually(message){
             const closeWhenFinished = async () => {
-                while (!this.serverstatus.msOfficeFile) {
+                while (!this.serverstatus.examSections[this.serverstatus.activeSection].msOfficeFile) {
                     await new Promise((resolve) => setTimeout(resolve, 100));
                 }
                 this.$swal.close();
@@ -1039,9 +1059,9 @@ export default {
                 if (response.serverstatus === false) {return}
                 this.serverstatus = response.serverstatus // we slowly move things over to a centra serverstatus object
          
-                if (this.serverstatus.examtype === "microsoft365"){  // unfortunately we can't automagically reconnect the teacher without violating privacy
+                if (this.serverstatus.examSections[this.serverstatus.activeSection].examtype === "microsoft365"){  // unfortunately we can't automagically reconnect the teacher without violating privacy
                     this.serverstatus.exammode = false
-                    this.serverstatus.msOfficeFile = false
+                    this.serverstatus.examSections[this.serverstatus.activeSection].msOfficeFile = false
                     this.$swal.fire({
                         title: this.$t("dashboard.attention"),
                         text: this.$t("dashboard.msoWarn"),
@@ -1049,25 +1069,6 @@ export default {
                     })
                 }
 
-                if (this.serverstatus.languagetool){
-                    let response = await ipcRenderer.invoke("startLanguageTool")
-                    if (response){
-                        this.$swal.fire({
-                            text: "LanguageTool started!",
-                            timer: 1000,
-                            timerProgressBar: true,
-                            didOpen: () => { this.$swal.showLoading() }
-                        });
-                    }
-                    else {
-                        this.$swal.fire({
-                            text: "LanguageTool Error!",
-                            timer: 1000,
-                            timerProgressBar: true,
-                            didOpen: () => { this.$swal.showLoading() }
-                        });
-                    }
-                }
                 this.setServerStatus()  //  we fetched a backup of serverstatus and now we make sure the backend has the updated settings for the students to fetch
             })
             .catch(err => { console.warn(err) })
@@ -1104,16 +1105,16 @@ export default {
 
 
         async setupGroups(){
-            if (!this.serverstatus.groupA){   //temp fix for old exams (resume) without groups 
-                this.serverstatus.groupA = []
-                this.serverstatus.groupB = []
+            if (!this.serverstatus.examSections[this.serverstatus.activeSection].groupA){   //temp fix for old exams (resume) without groups 
+                this.serverstatus.examSections[this.serverstatus.activeSection].groupA = []
+                this.serverstatus.examSections[this.serverstatus.activeSection].groupB = []
             }
             // prepopulate group A
-            if (this.serverstatus.groupA.length == 0){
+            if (this.serverstatus.examSections[this.serverstatus.activeSection].groupA.length == 0){
                 for (let student of this.studentlist) {
                     student.status.group = "a"
-                    if (!this.serverstatus.groupA.includes(student.clientname)) {
-                        this.serverstatus.groupA.push(student.clientname)
+                    if (!this.serverstatus.examSections[this.serverstatus.activeSection].groupA.includes(student.clientname)) {
+                        this.serverstatus.examSections[this.serverstatus.activeSection].groupA.push(student.clientname)
                     } 
                 }
             }
@@ -1123,23 +1124,23 @@ export default {
 
         quickSetGroup(student){
             // Remove student from groups if present
-            const indexA = this.serverstatus.groupA.indexOf(student.clientname);
-            const indexB = this.serverstatus.groupB.indexOf(student.clientname);
-            if (indexA > -1) { this.serverstatus.groupA.splice(indexA, 1);  }
-            if (indexB > -1) { this.serverstatus.groupB.splice(indexB, 1);  }
+            const indexA = this.serverstatus.examSections[this.serverstatus.activeSection].groupA.indexOf(student.clientname);
+            const indexB = this.serverstatus.examSections[this.serverstatus.activeSection].groupB.indexOf(student.clientname);
+            if (indexA > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.splice(indexA, 1);  }
+            if (indexB > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupB.splice(indexB, 1);  }
             
             let studentWidget = this.studentwidgets.find(el => el.token === student.token);
 
             if (student.status.group == "a"){
                 //Add and Set         
-                this.serverstatus.groupB.push(student.clientname)  //update group arrays
+                this.serverstatus.examSections[this.serverstatus.activeSection].groupB.push(student.clientname)  //update group arrays
                 this.setStudentStatus({group:"b"}, student.token)  //set student object (and inform student about group)
                 this.setServerStatus()
                 if(studentWidget){ studentWidget.status.group = "b"}                          
             }
             else {
                 //Add and Set
-                this.serverstatus.groupA.push(student.clientname)
+                this.serverstatus.examSections[this.serverstatus.activeSection].groupA.push(student.clientname)
                 this.setStudentStatus({group:"a"}, student.token) 
                 this.setServerStatus()
                 if(studentWidget){ studentWidget.status.group = "a"}
@@ -1166,14 +1167,14 @@ export default {
                             console.log('set to group A');
     
                             // Remove student from group A if present
-                            const indexA = this.serverstatus.groupA.indexOf(student.clientname);
-                            if (indexA > -1) { this.serverstatus.groupA.splice(indexA, 1);  }
+                            const indexA = this.serverstatus.examSections[this.serverstatus.activeSection].groupA.indexOf(student.clientname);
+                            if (indexA > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.splice(indexA, 1);  }
                             // Remove student from group B if present
-                            const indexB = this.serverstatus.groupB.indexOf(student.clientname);
-                            if (indexB > -1) { this.serverstatus.groupB.splice(indexB, 1);  }
+                            const indexB = this.serverstatus.examSections[this.serverstatus.activeSection].groupB.indexOf(student.clientname);
+                            if (indexB > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupB.splice(indexB, 1);  }
 
                             //Add and Set
-                            this.serverstatus.groupA.push(student.clientname)
+                            this.serverstatus.examSections[this.serverstatus.activeSection].groupA.push(student.clientname)
                             this.setStudentStatus({group:"a"}, student.token) 
                             this.fetchInfo()
                             this.$swal.close();
@@ -1185,15 +1186,15 @@ export default {
                         btnB.addEventListener('click', () => {
                             console.log('set to group B');
                             // Remove student from group A if present
-                            const indexA = this.serverstatus.groupA.indexOf(student.clientname);
-                            if (indexA > -1) { this.serverstatus.groupA.splice(indexA, 1);  }
+                            const indexA = this.serverstatus.examSections[this.serverstatus.activeSection].groupA.indexOf(student.clientname);
+                            if (indexA > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.splice(indexA, 1);  }
                             // Remove student from group B if present
-                            const indexB = this.serverstatus.groupB.indexOf(student.clientname);
-                            if (indexB > -1) { this.serverstatus.groupB.splice(indexB, 1);  }
+                            const indexB = this.serverstatus.examSections[this.serverstatus.activeSection].groupB.indexOf(student.clientname);
+                            if (indexB > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupB.splice(indexB, 1);  }
 
                             //Add and Set
                           
-                            this.serverstatus.groupB.push(student.clientname)
+                            this.serverstatus.examSections[this.serverstatus.activeSection].groupB.push(student.clientname)
                             this.setStudentStatus({group:"b"}, student.token) 
                             this.fetchInfo()
                             this.$swal.close();

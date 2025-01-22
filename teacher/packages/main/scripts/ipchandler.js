@@ -51,6 +51,19 @@ class IpcHandler {
 
 
 
+        /**
+         *  Start BIP Login Sequence
+         */
+        ipcMain.on('loginBiP', (event, biptest) => {
+            log.info("ipchandler @ loginBiP: opening bip window. testenvironment:", biptest)
+            this.WindowHandler.createBiPLoginWin(biptest)
+            event.returnValue = "hello from bip logon"
+        })
+
+
+
+
+
         // returns the current serverstatus object of the given server(name)
         ipcMain.handle('getserverstatus', (event, servername) => { 
             const mcServer = this.config.examServerList[servername]
@@ -197,6 +210,30 @@ class IpcHandler {
             }
             else {  event.returnValue = {workdir: config.workdirectory, message : 'canceled'} }
         })
+
+
+        ipcMain.handle('createBipExamdirectory', async (event, exam) => {
+            let message = ""
+            const workdir = join(config.workdirectory, exam.examName)
+            const filePath = join(workdir, 'serverstatus.json');
+            
+
+            try {
+                if (!fs.existsSync(workdir)){fs.mkdirSync(workdir)}
+                message = "success"
+            }
+            catch (e){
+                message = e.message
+                log.error(e)
+            }
+
+            try {  fs.writeFileSync(filePath, JSON.stringify(exam, null, 2));  }   // mcServer.serverstatus als JSON-Datei speichern
+            catch (error) {  log.error(error) }
+                  
+            event.returnValue = {message : message}
+
+        })
+
 
 
         /**

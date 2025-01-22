@@ -45,6 +45,43 @@
             </div>
         </div>
 
+       
+        <div v-if="config.bipIntegration">
+            <br> <br>
+            <span class="small">{{$t("dashboard.bildungsportal")}}</span>
+
+            <div id="biploginbutton" @click="loginBiP()" class="btn btn-info mb-1 me-0 mt-1" style="padding:0;">
+                <img id="biplogo" style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
+                <span id="biploginbuttonlabel">Login</span>
+            </div> 
+        
+           
+
+
+
+
+
+            <div id="onlineexams" class="mt-4" v-if="onlineExams && onlineExams.length > 0">
+                <span class="small">{{$t("startserver.onlineexams")}}</span>
+                <div v-for="exam of onlineExams">
+                    <div class="input-group" style="display:inline;">
+                        <div v-if="servername !== exam" class="btn btn-sm btn-secondary mt-1" :id="exam" @click="setOnlineExam(exam)">{{exam}}</div>
+                        <div v-if="servername === exam" class="btn btn-sm btn-info mt-1" :id="exam" @click="setOnlineExam(exam)">{{exam}}</div>  
+                    </div>
+                    <img v-if="servername === exam" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
+                </div>
+            </div>
+
+
+
+
+
+
+
+        </div>
+        
+
+
         <br> <br>
         <div id="statusdiv" class="btn btn-warning">{{$t("startserver.connected")}}</div>
         <br>
@@ -115,6 +152,7 @@ export default {
         return {
             version: this.$route.params.version,
             info: config.info,
+            config: config,
             title: document.title,
             servername : this.$route.params.config.development ? "Mathe5A":"",
             password: this.$route.params.config.development ? "password": Math.floor(1000 + Math.random() * 9000),   //we could use this password to allow students to manually leave exam mode 
@@ -126,11 +164,194 @@ export default {
             advanced: false,
             workdir: this.$route.params.config.workdirectory,
             freeDiscspace: 100,
-            previousExams: []
+            previousExams: [],
+            onlineExams: [],
+            biplogin: false,
+            biptest:false,
+            bipToken:false,
+            bipuserID: false,
+            bipUsername: ""
         };
     },
     components: {},
     methods: {
+
+
+        loginBiP(){
+            if (this.config.development){   // skip bip logon and fake bip info
+               
+                this.bipUsername = "Weissel Thomas"
+                this.bipuserID = 92136
+                this.bipToken = "aoeiaioeaoei"
+                
+                document.querySelector("#biploginbuttonlabel").textContent = this.bipUsername
+                document.querySelector("#biploginbutton").classList.remove('btn-info')
+                document.querySelector("#biploginbutton").classList.add('btn-success')
+                document.querySelector("#biplogo").style.filter = "hue-rotate(140deg)"
+                document.getElementById("biploginbutton").classList.add("disabledbutton");
+
+                this.fetchBipExams()
+
+                return
+            }
+
+
+            let IPCresponse = ipcRenderer.sendSync('loginBiP', this.biptest)
+            console.log(IPCresponse)
+        },
+
+        fetchBiPData(base64String){
+            const tokens = this.decodeBase64AndExtractTokens(base64String);
+            console.log(tokens); // Zeigt die extrahierten Tokens, falls vorhanden
+            let token = tokens[1]
+
+            let url = `https://www.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json`
+            if (this.biptest){ url = `https://q.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json` }
+
+            fetch(url, { method: 'POST'})
+            .then( res => res.json() )
+            .then( response => {
+                console.log(response)
+ 
+                if (response.fullname){
+                    this.$swal.fire({
+                        title: "BiP Response",
+                        text: "Verbindung hergestellt",
+                        icon: 'info',
+                        showCancelButton: false,
+                    })
+
+                    this.bipUsername = response.fullname
+                    this.bipuserID = response.userid
+
+                    document.querySelector("#biploginbuttonlabel").textContent = this.bipUsername;
+                    document.querySelector("#biploginbutton").classList.remove('btn-info')
+                    document.querySelector("#biploginbutton").classList.add('btn-success')
+                    document.querySelector("#biplogo").style.filter = "hue-rotate(140deg)"
+                    document.getElementById("biploginbutton").classList.add("disabledbutton");
+
+
+                    this.fetchBipExams()
+                }
+                else {
+                    this.$swal.fire({
+                        title: "BiP Response",
+                        text: "Verbindung konnte nicht hergestellt werden",
+                        icon: 'info',
+                        showCancelButton: false,
+                    })
+
+                }
+            })
+            .catch(err => { console.warn(err) })
+        },
+
+
+        fetchBipExams(){
+            if (this.config.development){
+                let url= "http://localhost:3000/teacher"
+
+                fetch(url, {
+                    method: "GET",
+                    headers: {"Content-Type": "application/json" }
+                })
+                .then(response => { return response.json(); } )                  
+                .then(data => {
+                    console.log("Daten von der API:", data);
+                    this.bipData = data   // store all of the information in data
+
+                    data.exams.forEach( exam => {
+                        this.onlineExams.push(exam.examName)
+                    })
+
+                })
+                .catch(error => { console.error("Fehler beim API-Aufruf:", error);});
+            }
+            else {
+                // Do actual BIP API Call
+
+                // let url= "https://www.bildung.gv.at/webservice/rest/next-exam/teacher"
+
+                // fetch(url, {
+                //     method: "GET",
+                //     headers: {"Content-Type": "application/json" }
+                // })
+                // .then(response => { return response.json(); } )                  
+                // .then(data => {
+                //     console.log("Daten von der API:", data);
+                //     this.bipData = data   // store all of the information in data
+
+                //     data.exams.forEach( exam => {
+                //         this.onlineExams.push(exam.examName)
+                //     })
+
+                // })
+                // .catch(error => { console.error("Fehler beim API-Aufruf:", error);});
+
+            }
+        },
+
+
+        setOnlineExam(name){
+            document.getElementById('servername').value = name
+            this.servername = name
+
+            // save the selected exam information to local serverstatus.json / create local exam folder
+            this.bipData.exams.forEach(exam =>{
+                if (exam.examName === name){
+                    ipcRenderer.invoke('createBipExamdirectory', exam)
+                }
+            })
+
+            
+        
+        },
+
+
+
+
+
+
+
+        // Überprüfen, ob der String Base64-codiert ist
+        isBase64(str) {
+            try {
+                return btoa(atob(str)) === str;
+            } catch (err) {
+                return false;
+            }
+        },
+
+        // Base64-String dekodieren und mögliche Tokens extrahieren
+        decodeBase64AndExtractTokens(base64Str) {
+            if (!this.isBase64(base64Str)) {
+                return null;
+            }
+            const decodedStr = atob(base64Str);
+            const tokens = decodedStr.split(/[:\s,]+/); // Trennzeichen anpassen, falls nötig
+            return tokens;
+        },
+
+
+
+
+
+
+        easter(){
+            if (this.biptest){
+                this.biptest = false
+                document.getElementById('cpleft').classList.toggle('active');
+                document.getElementById('cpleft').classList.toggle('inactive');
+            } 
+            else { 
+                this.biptest = true
+                document.getElementById('cpleft').classList.toggle('active');
+                document.getElementById('cpleft').classList.toggle('inactive');
+            }
+            console.log("biptest:", this.biptest)
+        },
+
+
 
         async fetchInfo() {
             this.hostip = ipcRenderer.sendSync('checkhostip')
@@ -148,6 +369,8 @@ export default {
             this.config = await ipcRenderer.invoke('getconfigasync') 
             this.workdir = this.config.workdirectory   // just in case this is already altered in the backend make sure to display current settings
         },
+
+
 
         setPreviousExam(name){
             document.getElementById('servername').value = name
@@ -235,7 +458,7 @@ export default {
         },
         showCopyleft(){
             this.$swal.fire({
-                title: "<span id='cpleft' class='active' style='display:inline-block; transform: scaleX(-1); vertical-align: middle;'>&copy;</span> <span style='font-size:0.8em'>Thomas Michael Weissel </span>",
+                title: "<span id='cpleft' class='active' style='display:inline-block; transform: scaleX(-1); vertical-align: middle;cursor: pointer;'>&copy;</span> <span style='font-size:0.8em'>Thomas Michael Weissel </span>",
                 icon: 'info',
                 html: `
                 <a href="https://www.bmbwf.gv.at/Themen/schule/zrp/dibi/foss.html" target="_blank"><img style="width: 230px; opacity:1;" src="./BMBWF_Logo_srgb.png"></a>
@@ -245,6 +468,9 @@ export default {
                 <span style="font-size:0.8em"> <a href="https://next-exam.at/#kontakt" target="_blank">next-exam.at</a> </span> <br>
                 <span style="font-size:0.8em">Version: ${this.version} ${this.info}</span>
                 `,
+                didRender: () => {
+                    document.getElementById('cpleft').onclick = () => this.easter();
+                }
             })
         },
         //show status message
@@ -295,11 +521,18 @@ export default {
             document.querySelector("#pin").value = "";
             document.querySelector("#password").value = "";
         }
-        if (this.electron){
-            this.hostname = "localhost"
-            this.checkDiscspace()
-            this.getPreviousExams()
-        }
+      
+        this.hostname = "localhost"
+        this.checkDiscspace()
+        this.getPreviousExams()
+      
+
+        ipcRenderer.on('bipToken', (event, token) => {  
+            console.log("token received: ",token)
+            this.bipToken = token
+            this.fetchBiPData(token)
+        });
+
 
 
         // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
@@ -319,7 +552,24 @@ export default {
 </script>
 
 
+
+<style>
+.active {
+    filter: contrast(100%) grayscale(100%) brightness(80%) !important;
+}
+.inactive {
+    filter: contrast(40%) grayscale(100%) brightness(130%) blur(0.6px) !important;
+}
+
+</style>
+
+
+
 <style scoped>
+
+.disabledbutton {
+    pointer-events: none; /* Deaktiviert Klicks */
+}
 
 #statusdiv {
     display: block !important;

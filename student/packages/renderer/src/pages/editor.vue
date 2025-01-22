@@ -220,7 +220,7 @@
 
     
     <!-- LANGUAGE TOOL START -->
-    <div id="languagetool" v-if="serverstatus.languagetool || privateSpellcheck.activated">
+    <div id="languagetool" v-if="serverstatus.examSections[serverstatus.activeSection].languagetool || privateSpellcheck.activated">
         <div id="ltcheck" @click="LTcheckAllWords();"> <div id="eye" class="darkgreen eyeopen"></div> &nbsp;LanguageTool</div>
         <div class="ltscrollarea"> 
             
@@ -245,7 +245,7 @@
                 </div>   
                 
                 <div v-if="entry.message" class="fw-bold">{{ entry.rule.category.name}}</div>
-                <div v-if="serverstatus.suggestions || privateSpellcheck.suggestions">
+                <div v-if="serverstatus.examSections[serverstatus.activeSection].suggestions || privateSpellcheck.suggestions">
                   <div v-if="entry.message">{{ entry.message}}</div>
                      <div v-if="entry.replacements" class="replacement">
                         <span v-if="entry.replacements[0]">  {{ entry.replacements[0].value }}</span>
@@ -368,8 +368,8 @@ export default {
             word:"",
             editorcontentcontainer:null,
             serverstatus: this.$route.params.serverstatus,
-            linespacing: this.$route.params.serverstatus.linespacing ? this.$route.params.serverstatus.linespacing : '2',
-            fontfamily:  this.$route.params.serverstatus.fontfamily  ? this.$route.params.serverstatus.fontfamily : "sans-serif", 
+            linespacing: this.$route.params.serverstatus.linespacing ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].linespacing : '2',
+            fontfamily:  this.$route.params.serverstatus.fontfamily  ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontfamily : "sans-serif", 
             privateSpellcheck: {activate: false, activated: false, suggestions: false}, // this is a per student override (for students with legasthenie)
             individualSpellcheckActivated: false,
             audioSource: null,
@@ -465,7 +465,7 @@ export default {
             this.battery = await navigator.getBattery().then(battery => { return battery }).catch(error => { console.error("Error accessing the Battery API:", error);  });
 
             //handle individual spellcheck (only if not globally activated anyways)
-            if (this.serverstatus.languagetool === false) {   
+            if (this.serverstatus.examSections[this.serverstatus.activeSection].languagetool === false) {   
                 if (this.privateSpellcheck.activate == false && this.LTactive) {
                     this.LTdisable()
                     this.privateSpellcheck.activated = false   // das wird eigentlich eh im communication handler für clientinfo bereits auf false gesetzt und bei fetchinfo() übernommen
@@ -486,7 +486,7 @@ export default {
             this.LTdisable()  // close langugagetool
      
        
-            if (this.serverstatus.audioRepeat > 0){
+            if (this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat > 0){
                 this.$swal.fire({
                     title: audioFile.name,
                     text:  this.$t("editor.reallyplay"),
@@ -525,7 +525,7 @@ export default {
                     } 
                 }); 
             }
-            if (this.serverstatus.audioRepeat == 0){
+            if (this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat == 0){
                 document.querySelector("#aplayer").style.display = 'block';
                 try {
                     const base64Data = await ipcRenderer.invoke('getfilesasync', filename, true);
@@ -603,7 +603,7 @@ export default {
                 sel.addRange(range);
             }
 
-            if(this.serverstatus.languagetool || this.privateSpellcheck){
+            if(this.serverstatus.examSections[this.serverstatus.activeSection].languagetool || this.privateSpellcheck){
                 this.LTupdateHighlights()
             }
 
@@ -612,7 +612,7 @@ export default {
             // bekommt ohne ersichtlichen grund ein deutsches oberes hochkomma wenn es das erste " in einer neuen zeile ist
             // Prüfen, ob wir vl gerade erst einen Code-Block erstellen (erstes zeichen auch erkennen)
             
-            if (this.serverstatus.spellchecklang === 'de-DE') {
+            if (this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang === 'de-DE') {
                 if (e.key === '"') {
                     const selection = window.getSelection();
                     const range = selection.getRangeAt(0);
@@ -746,7 +746,7 @@ export default {
                 if (file.type == "audio"){
                     const existingaudiofile = this.audiofiles.find(obj => obj.name === file.name);
                     if (!existingaudiofile){
-                        this.audiofiles.push({name: file.name, playbacks: this.serverstatus.audioRepeat})
+                        this.audiofiles.push({name: file.name, playbacks: this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat})
                     } 
                 }
             })
@@ -1256,7 +1256,7 @@ export default {
             }
         },
         async startLanguageTool(){
-            if (this.serverstatus.languagetool && !this.ltRunning){
+            if (this.serverstatus.examSections[this.serverstatus.activeSection].languagetool && !this.ltRunning){
                 
 
 
@@ -1378,8 +1378,7 @@ export default {
         this.setCSSVariable('--js-fontfamily', `${this.fontfamily}`); 
 
 
-        //this.charReplacerExtension = CharReplacer({ language: this.serverstatus.spellchecklang });
-
+      
         this.createEditor(); // this initializes the editor
 
        

@@ -739,15 +739,24 @@ router.post('/upload/:servername/:servertoken/:studenttoken', async (req, res, n
         }
         else if (studenttoken == "a" || studenttoken == "b"){
             let groupArray = []
-            if (studenttoken == "a"){groupArray = mcServer.serverstatus.groupA }
-            if (studenttoken == "b"){groupArray = mcServer.serverstatus.groupB }
-            for (let name of groupArray){
-                let student = mcServer.studentList.find(element => element.clientname === name)
-                if (student) {  
-                    student.status['fetchfiles']= true 
-                    student.status['files'] = files
-                }   
+            if (studenttoken == "a"){groupArray = mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupA }
+            if (studenttoken == "b"){groupArray = mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupB }
+
+            if (groupArray.length > 0) {
+                for (let name of groupArray){
+                    let student = mcServer.studentList.find(element => element.clientname === name)
+                    if (student) {  
+                        student.status['fetchfiles']= true 
+                        student.status['files'] = files
+                    }   
+                }
             }
+            else {
+                res.json({ status:"error",  sender: "server", message:t("data.nofilereceived") })
+                return
+            }
+         
+
         }
         else {
             let student = mcServer.studentList.find(element => element.token === studenttoken)

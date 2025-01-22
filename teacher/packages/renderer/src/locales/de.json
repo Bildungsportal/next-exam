@@ -25,8 +25,9 @@
         "select": "Arbeitsverzeichnis wählen",
         "freespacewarning" : "Zu wenig freier Speicherplatz",
         "directoryerror": "Fehlende Schreibrechte im gewählten Verzeichnis",
-        "previousexams": "Gesicherte Prüfungen",
-        "folderdelete": "Wollen Sie die den lokalen Prüfungsordner löschen?"
+        "previousexams": "Lokal gesicherte Prüfungen",
+        "folderdelete": "Wollen Sie die den lokalen Prüfungsordner löschen?",
+        "onlineexams": "BiP Prüfungen"
     },
     "dashboard":{
         "server": "Server-Adresse",

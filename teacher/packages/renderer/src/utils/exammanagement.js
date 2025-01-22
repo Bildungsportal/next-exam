@@ -125,7 +125,7 @@ function getFiles(who='all', feedback=false, quiet=false){
     this.checkDiscspace()
     if ( this.studentlist.length <= 0 ) { this.status(this.$t("dashboard.noclients")); return; }
 
-    if (this.serverstatus.examtype === "microsoft365"){ //fetch files from onedrive
+    if (this.serverstatus.examSections[this.serverstatus.activeSection].examtype === "microsoft365"){ //fetch files from onedrive
         this.downloadFilesFromOneDrive()
         if (feedback){ this.visualfeedback(this.$t("dashboard.examrequest"), 2000) }
         else { 
@@ -176,7 +176,7 @@ function sendFiles(who) {
         ${this.$t("dashboard.filesendtext")} <br>
         <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>`
 
-    if (this.serverstatus.groups && who == "all"){ //wenn who != "all" sondern ein studenttoken ist dann soll die datei an eine einzelne person gesandt werden
+    if (this.serverstatus.examSections[this.serverstatus.activeSection].groups && who == "all"){ //wenn who != "all" sondern ein studenttoken ist dann soll die datei an eine einzelne person gesandt werden
         htmlcontent =  `
             ${this.$t("dashboard.filesendtext")} <br>
             <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
@@ -255,7 +255,7 @@ function sendFiles(who) {
         }
         
         // group managment - send files to specific group
-        if (this.serverstatus.groups && who == "all"){ who = activeGroup}  //nur wenn who == all wurde der allgemeine filesend dialog aufgeruden. who kann auch ein student token sein
+        if (this.serverstatus.examSections[this.serverstatus.activeSection].groups && who == "all"){ who = activeGroup}  //nur wenn who == all wurde der allgemeine filesend dialog aufgeruden. who kann auch ein student token sein
 
         axios({
             method: "post", 
@@ -296,7 +296,7 @@ function delfolderquestion(token="all"){
                 body: JSON.stringify({ delfolder : true } )
             })
             .then( res => res.json() )
-            .then( result => { log.info(result)});
+            .then( result => { log.info("exmmmanagment @ delfolderquestion:", result.message)});
         } 
     });  
 }
@@ -313,7 +313,7 @@ function delfolderquestion(token="all"){
  */
 async function activateSpellcheckForStudent(token, clientname){
     const student = this.studentlist.find(obj => obj.token === token);  //get specific student (status)
-    console.log(student.status)
+    //console.log(student.status)
     await this.$swal.fire({
         customClass: {
             popup: 'my-popup',
@@ -358,28 +358,10 @@ async function activateSpellcheckForStudent(token, clientname){
                 body: JSON.stringify({ activatePrivateSpellcheck : false } )
             })
             .then( res => res.json() )
-            .then( result => { log.info(result); this.fetchInfo();});
+            .then( result => { log.info("exammanagement @ activatespellcheckforstudent: " ,result.message); this.fetchInfo();});
         }
         else {
-            console.log(`activating spellcheck for user: ${clientname} `)
-    
-            let response = await ipcRenderer.invoke("startLanguageTool")        //start languagetool server api
-            if (response){
-                // this.$swal.fire({
-                //     text: "LanguageTool started!",
-                //     timer: 1000,
-                //     timerProgressBar: true,
-                //     didOpen: () => { this.$swal.showLoading() }
-                // });
-            }
-            else {
-                this.$swal.fire({
-                    text: "LanguageTool Error!",
-                    timer: 1000,
-                    timerProgressBar: true,
-                    didOpen: () => { this.$swal.showLoading() }
-                });
-            }
+
             // inform student that spellcheck can be activated
             fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${token}`, { 
                 method: 'POST',
@@ -387,7 +369,7 @@ async function activateSpellcheckForStudent(token, clientname){
                 body: JSON.stringify({ activatePrivateSpellcheck : true, activatePrivateSuggestions: suggestions} )
             })
             .then( res => res.json() )
-            .then( result => { log.info(result); this.fetchInfo();});
+            .then( result => { log.info("exammanagement @ activatespellcheckforstudent: " ,result.message); this.fetchInfo();});
         }
     })  
 }

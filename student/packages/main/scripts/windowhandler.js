@@ -503,7 +503,7 @@ class WindowHandler {
         /***************************
          *  Texteditor
          ***************************/
-        if (serverstatus.examtype === "editor" ){  // do not under any circumstances allow navigation away from the editor
+        if (serverstatus.examSections[serverstatus.activeSection].examtype === "editor" ){  // do not under any circumstances allow navigation away from the editor
             this.examwindow.webContents.on('will-navigate', (event, url) => {    // a pdf could contain a link ^^
                 event.preventDefault()
             })
@@ -512,7 +512,7 @@ class WindowHandler {
         /***************************
          *  Microsoft Excel/Word
          ***************************/
-        if ( serverstatus.examtype === "microsoft365"){  // do not under any circumstances allow navigation away from the current exam url
+        if ( serverstatus.examSections[serverstatus.activeSection].examtype === "microsoft365"){  // do not under any circumstances allow navigation away from the current exam url
             const browserView = this.examwindow.getBrowserView(0);
 
             // if the user wants to navigate away from this page

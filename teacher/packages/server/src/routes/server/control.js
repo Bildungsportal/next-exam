@@ -638,13 +638,20 @@ router.post('/setserverstatus/:servername/:csrfservertoken', function (req, res,
     if (csrfservertoken !== mcServer.serverinfo.servertoken) { res.send({sender: "server", message:t("control.tokennotvalid"), status: "error"} )}
     
     mcServer.serverstatus = req.body.serverstatus
-    mcServer.serverstatus.msOfficeFile = false  // we cant store a file object as json
+    mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].msOfficeFile = false  // we cant store a file object as json
 
     //console.log("control:", mcServer.serverstatus)
-    log.info("control @ serverstatus: saving server status to disc")
+    log.info("control @ setserverstatus: saving server status to disc")
+    
+    const workdir = path.join(config.workdirectory, mcServer.serverinfo.servername)
     const filePath = path.join(config.workdirectory, mcServer.serverinfo.servername, 'serverstatus.json');
-    try {  fs.writeFileSync(filePath, JSON.stringify(mcServer.serverstatus, null, 2));  }   // mcServer.serverstatus als JSON-Datei speichern
-    catch (error) {  log.error(error) }
+
+    try {  
+        if (!fs.existsSync(workdir)){fs.mkdirSync(workdir)}
+
+        fs.writeFileSync(filePath, JSON.stringify(mcServer.serverstatus, null, 2));  
+    }   // mcServer.serverstatus als JSON-Datei speichern
+    catch (error) {  log.error(`control @ setserverstatus: ${error}` ) }
 
     res.json({ sender: "server", message:t("general.ok"), status: "success" })
 })
@@ -837,9 +844,9 @@ router.post('/updatescreenshot', async function (req, res, next) {
                     if (!fs.existsSync(filepath)) {fs.mkdirSync(filepath, { recursive: true }); }
                     let screenshotBuffer = Buffer.from(req.body.screenshot, 'base64');    // Konvertieren des Base64-Strings in einen Buffer und Speichern der Datei
                     fs.writeFile(absoluteFilename, screenshotBuffer, err => {
-                        if (err) { log.error(err); }
+                        if (err) { log.error( `control @ updatescreenshot: ${err}` ); }
                     });
-                } catch (err) { log.error(err); }
+                } catch (err) { log.error(`control @ updatescreenshot: ${err}` ); }
             }
       
     } else {
