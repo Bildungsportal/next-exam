@@ -25,7 +25,7 @@ app.post('/teacher', (req, res) => {
     let examStatus = req.body.status
     let examID = req.body.examID
 
-    
+    console.log("teacher route called", req.body)
     //update exam status in corresponding student exam object
     studentInfo.exams.forEach(exam => {
 
@@ -64,7 +64,7 @@ app.post('/teacher', (req, res) => {
 
 
 
-    res.json({ message: 'Teacher Write Route', data: req.body });
+    res.json({ message: 'Data updated!', data: req.body });
 });
 
 // Server starten

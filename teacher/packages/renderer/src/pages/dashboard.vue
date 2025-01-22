@@ -393,6 +393,11 @@ export default {
             availablePrinters: [],
             directPrintAllowed: false,
             visiblePrinter: null,
+
+            bipToken:false,
+            bipuserID: false,
+            bipUsername: "",
+
             serverstatus:{   // this object contains all neccessary information for students about the current exam settings
                 bip: false,
                 id: "1234",
@@ -1053,12 +1058,14 @@ export default {
 
         // we save serverstatus everytime we start an exam - therefore exams can be resumed easily by the teacher if something wicked happens
         getPreviousServerStatus(){
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/getserverstatus/${this.servername}/${this.servertoken}`, { method: 'POST', headers: {'Content-Type': 'application/json' },})
+            let result = fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/getserverstatus/${this.servername}/${this.servertoken}`, { method: 'POST', headers: {'Content-Type': 'application/json' },})
             .then( res => res.json())
             .then( async (response) => {
                 if (response.serverstatus === false) {return}
                 this.serverstatus = response.serverstatus // we slowly move things over to a centra serverstatus object
          
+                
+
                 if (this.serverstatus.examSections[this.serverstatus.activeSection].examtype === "microsoft365"){  // unfortunately we can't automagically reconnect the teacher without violating privacy
                     this.serverstatus.exammode = false
                     this.serverstatus.examSections[this.serverstatus.activeSection].msOfficeFile = false
@@ -1070,9 +1077,13 @@ export default {
                 }
 
                 this.setServerStatus()  //  we fetched a backup of serverstatus and now we make sure the backend has the updated settings for the students to fetch
+                return true
             })
             .catch(err => { console.warn(err) })
+            return result
         },
+
+
         showCopyleft(){
             this.$swal.fire({
                 title: "<span id='cpleft' class='active' style='display:inline-block; transform: scaleX(-1); vertical-align: middle;'>&copy;</span> <span style='font-size:0.8em'>Thomas Michael Weissel </span>",
@@ -1253,17 +1264,61 @@ export default {
             document.getElementById('setupdiv').classList.add('scaleIn'); 
         },
 
+
+         /** 
+         * if this is a bip exam configured online that needs students to login into bip too
+         * update exam info on server via api
+         */
+        async updateServerInfo(){
+       
+        
+            console.log("bip exam started - updating server info")
+            let payload = {
+                teacherIP: this.serverip,
+                teacherID: this.bipuserID,   /// wird von student.vue nicht nach dashboard.vue übertragen.. ebenso token
+                pin: this.serverstatus.pin,
+                status: "active",
+                examID: this.serverstatus.id
+            }
+
+            if (this.config.development){  // call to demo api
+
+                let url= "http://localhost:3000/teacher"
+
+
+                fetch(url, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json" },
+                    body: JSON.stringify(payload) // Daten als JSON-String senden
+                })
+                .then(response => { return response.json(); } )                  
+                .then(data => {
+                    console.log(data.message, data.data);
+                   
+
+                })
+                .catch(error => { console.error("Fehler beim API-Aufruf:", error.message);});
+            }
+            else{
+                //call to real bip api
+            }
+
+        }
+
+
+        
+
   
     },
 
 
 
     mounted() {  // when ready
-        this.$nextTick(function () { // Code that will run only after the entire view has been rendered
+        this.$nextTick( async function () { // Code that will run only after the entire view has been rendered
        
             document.querySelector("#statusdiv").style.visibility = "hidden";
            
-            this.getPreviousServerStatus()
+            await this.getPreviousServerStatus()
             this.fetchInfo()
             this.initializeStudentwidgets()
 
@@ -1289,23 +1344,29 @@ export default {
             document.getElementById('setupdiv').addEventListener('click', function(e) { e.stopPropagation();});
             document.querySelector("#pdfpreview").addEventListener("click", this.pdfPreviewEventlisterenCallback); // Set the event listener for #pdfpreview click to hide pdfpreview
 
+          
+            if (this.serverstatus.bip){
+                
+                this.updateServerInfo()
+            }
+
         })
-        if (this.electron){
-            this.hostname = "localhost"
-            this.currentdirectory = ipcRenderer.sendSync('getCurrentWorkdir')  //in case user changed it to different location
-            this.workdirectory= `${this.currentdirectory}/${this.servername}`
 
-           
-            ipcRenderer.on('reconnected', (event, student) => {  
-               
-                this.$swal.fire({
-                        title: this.$t("dashboard.attention"),
-                        text: `${student.clientname} hat sich neu verbunden!`,
-                        icon: "info"
-                    })  
-            }); 
+      
+        this.hostname = "localhost"
+        this.currentdirectory = ipcRenderer.sendSync('getCurrentWorkdir')  //in case user changed it to different location
+        this.workdirectory= `${this.currentdirectory}/${this.servername}`
 
-        }
+        
+        ipcRenderer.on('reconnected', (event, student) => {  
+            this.$swal.fire({
+                    title: this.$t("dashboard.attention"),
+                    text: `${student.clientname} hat sich neu verbunden!`,
+                    icon: "info"
+                })  
+        }); 
+
+
 
 
 
