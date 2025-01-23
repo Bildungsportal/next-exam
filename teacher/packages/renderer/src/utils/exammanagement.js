@@ -77,6 +77,17 @@ function stopserver(){
                 //log.info(response.data);
                 await this.sleep(2000);
                 this.$router.push({ path: '/startserver' });  // route back to startserver view
+
+                this.$router.push({  // for some reason this doesn't work on mobile
+                    name: 'startserver', 
+                    params:{
+                        bipToken: this.bipToken,
+                        bipUsername: this.bipUsername,
+                        bipuserID:this.bipuserID
+                    }
+                })
+
+
             }).catch( err => {log.error(err)});
         } 
     });    

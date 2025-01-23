@@ -25,7 +25,6 @@ app.post('/teacher', (req, res) => {
     let examStatus = req.body.status
     let examID = req.body.examID
 
-    console.log("teacher route called", req.body)
     //update exam status in corresponding student exam object
     studentInfo.exams.forEach(exam => {
 
@@ -104,7 +103,7 @@ let studentInfo = {
         {
             bip: true,
             id: "d10cdfc7-ba91-4845-818e-eaae81595dfa", // eindeutige ID im BiP
-            examName: "5A-Englisch", // Name der Prüfung wie sie am Client dargstellt werden soll
+            examName: "5A-English", // Name der Prüfung wie sie am Client dargstellt werden soll
             examDate: "2024-10-02T10:30:00", // geplanter Beginn der Prüfung
             examDurationMinutes: 100, // Dauer der Prüfung in Minuten
             pin: 1337, // exam pin

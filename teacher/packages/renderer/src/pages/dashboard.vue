@@ -3,18 +3,17 @@
 
 <!-- Header  -->
 <div :key="0" class="w-100 p-3 text-white bg-dark shadow text-right">
-    <router-link v-if="!electron" to="/" class="text-white m-1">
-        <img src="/src/assets/img/svg/speedometer.svg" class="white me-2  " width="32" height="32" >
-        <span class="fs-4 align-middle me-1 ">Next-Exam</span>
-    </router-link>
-    <span v-if="electron" class="text-white m-1">
+
+    <span class="text-white m-1">
         <img src="/src/assets/img/svg/speedometer.svg" class="white me-2  " width="32" height="32" >
         <span class="fs-4 align-middle me-1 ">Next-Exam</span>
     </span>
 
     <span class="fs-4 align-middle ms-3" style="float: right">Dashboard</span>
-    <div class="btn btn-sm btn-danger m-0 mt-1" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style="float: right">{{$t('dashboard.stopserver')}}&nbsp; <img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" ></div>
-    <div class="btn btn-sm btn-secondary me-1 mt-1" style="float: right; padding:3px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white" width="22" height="22" > </div>
+ <div class="btn btn-sm btn-secondary m-0 me-1 mt-1" style="float: right; padding:3px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white" width="22" height="22" > </div>
+    <div class="btn btn-sm btn-danger m-0 me-1 mt-1" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style="float: right"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" > {{$t('dashboard.stopserver')}}&nbsp; </div>
+   
+
     <div v-if="!hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 me-1 " style="cursor: unset; float: right">{{ $t("general.offline") }}</div>
 </div>
  <!-- Header END -->
@@ -158,7 +157,18 @@
 
             </div>
         </div>
+        
+
+
+        <!-- BIP Button -->
+        <div v-if="bipToken" id="biploginbutton" @click="showBipInfo()" class="disabledbutton btn btn-success m-1" style="padding:0;">
+            <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
+            <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
+        </div> 
+  
+        <!-- BIP Button -->
         <br>
+
 
         <div id="description" class="btn m-1"  v-if="showDesc">{{ currentDescription }}</div>
         <div id="statusdiv" class="btn btn-warning m-1"> {{$t('dashboard.connected')}}  </div>
@@ -231,23 +241,13 @@
                 <button class="btn btn-secondary mt-1 mb-0"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" >  no printer found </button>
             </div>
             
-
-
-
             <div v-for="printer in availablePrinters" :key="printer" style="position: relative;">
-               
                 <button @click="selectPrinter(printer)" :class="{'btn-cyan': defaultPrinter === printer}" class="printerbutton btn btn-secondary mt-1 mb-0" @mouseenter="visiblePrinter = printer" @mouseleave="visiblePrinter = null"><img src="/src/assets/img/svg/print.svg" alt="print" width="22" height="22" /> {{ printer }} </button>
                 <div v-if="visiblePrinter === printer" class="tooltip-content"> {{ printer }} </div>
-
                 <!-- Icon für den Standarddrucker -->
                 <img v-if="printer === defaultPrinter" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" />
             </div>
 
-
-
-
-
-            
             <div v-if="currentpreviewPath && defaultPrinter">
                 <button id="printButton" class="btn btn-dark mt-1 mb-0" @click="printBase64();hideSetup()"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" > Print: {{ currentpreviewname }} </button>
             </div> 
@@ -394,9 +394,9 @@ export default {
             directPrintAllowed: false,
             visiblePrinter: null,
 
-            bipToken:this.$route.params.bipToken,
-            bipuserID: this.$route.params.bipuserID,
-            bipUsername:this.$route.params.bipUsername,
+            bipToken:this.$route.params.bipToken === 'false' ?  false : this.$route.params.bipToken,   // parameter werden immer als string "false" übergeben, convert to bool
+            bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
+            bipUsername:this.$route.params.bipUsername === 'false' ?  false : this.$route.params.bipUsername,
 
             serverstatus:{   // this object contains all neccessary information for students about the current exam settings
                 bip: false,
@@ -585,6 +585,13 @@ export default {
             }
            
         }, 
+
+
+        showBipInfo(){
+            console.log(this.bipToken, this.bipUsername, this.bipuserID)
+        },
+
+
 
 
         /**
@@ -1269,46 +1276,32 @@ export default {
          * if this is a bip exam configured online that needs students to login into bip too
          * update exam info on server via api
          */
-        async updateServerInfo(){
-       
-        
+        async updateServerInfo(status){
             console.log("bip exam started - updating server info")
             let payload = {
                 teacherIP: this.serverip,
                 teacherID: this.bipuserID,   /// wird von student.vue nicht nach dashboard.vue übertragen.. ebenso token
                 pin: this.serverstatus.pin,
-                status: "active",
+                status: status,
                 examID: this.serverstatus.id
             }
 
             if (this.config.development){  // call to demo api
-
                 let url= "http://localhost:3000/teacher"
-
-
                 fetch(url, {
                     method: "POST",
                     headers: {"Content-Type": "application/json" },
                     body: JSON.stringify(payload) // Daten als JSON-String senden
                 })
                 .then(response => { return response.json(); } )                  
-                .then(data => {
-                    console.log(data.message, data.data);
-                   
-
+                .then(data => { console.log(data.message, data.data);
                 })
                 .catch(error => { console.error("Fehler beim API-Aufruf:", error.message);});
             }
             else{
                 //call to real bip api
             }
-
         }
-
-
-        
-
-  
     },
 
 
@@ -1347,7 +1340,7 @@ export default {
           
             if (this.serverstatus.bip){
                 
-                this.updateServerInfo()
+                this.updateServerInfo("active")
             }
 
         })

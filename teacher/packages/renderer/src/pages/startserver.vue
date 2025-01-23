@@ -39,13 +39,15 @@
                     <div class="btn btn-sm btn-warning mt-1" @click="delPreviousExam(exam.dirname)">x</div>
                     
                     <div v-if="servername === exam.dirname" class="btn btn-sm btn-info mt-1" :id="exam.dirname" @click="setPreviousExam(exam.dirname)">{{exam.dirname}}</div>  
+                    <div v-else class="btn btn-sm btn-secondary mt-1" :id="exam.dirname" @click="setPreviousExam(exam.dirname)">{{exam.dirname}}</div> 
                     
-                    <div v-else-if="servername !== exam.dirname && exam.serverstatus.bip" class="btn btn-sm btn-teal mt-1" :id="exam.dirname" @click="setPreviousExam(exam.dirname)">{{exam.dirname}}</div>  
-                    <div v-else class="btn btn-sm btn-secondary mt-1" :id="exam.dirname" @click="setPreviousExam(exam.dirname)">{{exam.dirname}}</div>
+                    <div v-if="exam.serverstatus.bip" class="btn btn-sm btn-cyan mt-1" style="width:14px; height: 31px;">
+                        <div style="writing-mode:vertical-rl; font-size:0.8em; margin-left:-10px; margin-top:2px;color: whitesmoke;">BiP</div>
+                    </div>
 
                 </div>
+
                 <img v-if="servername === exam.dirname" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
-                
             </div>
         </div>
 
@@ -54,11 +56,15 @@
             <br> <br>
             <span class="small">{{$t("dashboard.bildungsportal")}}</span>
 
-            <div id="biploginbutton" @click="loginBiP()" class="btn btn-info mb-1 me-0 mt-1" style="padding:0;">
-                <img id="biplogo" style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
-                <span id="biploginbuttonlabel">Login</span>
+            
+            <div v-if="bipToken" id="biploginbutton" @click="loginBiP()" class="disabledbutton btn btn-success mb-1 me-0 mt-1" style="padding:0;">
+                <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
+                <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
             </div> 
-        
+            <div v-else id="biploginbutton" @click="loginBiP()" class="btn btn-info mb-1 me-0 mt-1" style="padding:0;">
+                <img id="biplogo" style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
+                <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
+            </div> 
            
 
 
@@ -70,7 +76,12 @@
                 <div v-for="exam of onlineExams">
                     <div class="input-group" style="display:inline;">
                         <div v-if="servername !== exam" class="btn btn-sm btn-teal mt-1" :id="exam" @click="setOnlineExam(exam)">{{exam}}</div>
-                        <div v-if="servername === exam" class="btn btn-sm btn-info mt-1" :id="exam" @click="setOnlineExam(exam)">{{exam}}</div>  
+                        <div v-if="servername === exam" class="btn btn-sm btn-info mt-1" :id="exam" @click="setOnlineExam(exam)">{{exam}}</div> 
+                        
+                        <div class="btn btn-sm btn-cyan mt-1" style="width:14px; height: 31px;">
+                            <div style="writing-mode:vertical-rl; font-size:0.8em; margin-left:-10px; margin-top:2px; color: whitesmoke;">BiP</div>
+                        </div>
+
                     </div>
                     <img v-if="servername === exam" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
                 </div>
@@ -175,9 +186,9 @@ export default {
             onlineExams: [],
             biptest:false,   //switches between production and q
 
-            bipToken:false,
-            bipuserID: false,
-            bipUsername: false
+            bipToken:this.$route.params.bipToken === 'false' || !this.$route.params.bipToken ?  false : this.$route.params.bipToken,   // parameter werden immer als string "false" übergeben, convert to bool
+            bipuserID: this.$route.params.bipuserID === 'false' || !this.$route.params.bipuserID ?  false : this.$route.params.bipuserID,
+            bipUsername:this.$route.params.bipUsername === 'false' || !this.$route.params.bipUsername ?  false : this.$route.params.bipUsername,
         };
     },
     components: {},
@@ -186,20 +197,13 @@ export default {
 
         loginBiP(){
             if (this.config.development){   // skip bip logon and fake bip info
-               
+                // fake bip info
                 this.bipUsername = "Weissel Thomas"
                 this.bipuserID = 92136
-                this.bipToken = "aoeiaioeaoei"
+                this.bipToken = "4hedh443gc34lm34wb43moeinlz0082droeib45beio"
                 
-                document.querySelector("#biploginbuttonlabel").textContent = this.bipUsername
-                document.querySelector("#biploginbutton").classList.remove('btn-info')
-                document.querySelector("#biploginbutton").classList.add('btn-success')
-                document.querySelector("#biplogo").style.filter = "hue-rotate(140deg)"
-                document.getElementById("biploginbutton").classList.add("disabledbutton");
-
                 this.fetchBipExams()
-
-                return
+                return  //skip real login
             }
 
 
@@ -207,6 +211,11 @@ export default {
             console.log(IPCresponse)
         },
 
+
+        /**
+         * holt userdaten sobald das login token erhalten wurde
+         * @param base64String contains 2 base64 encoded tokens
+         */
         fetchBiPData(base64String){
             const tokens = this.decodeBase64AndExtractTokens(base64String);
             console.log(tokens); // Zeigt die extrahierten Tokens, falls vorhanden
@@ -231,7 +240,7 @@ export default {
                     this.bipUsername = response.fullname
                     this.bipuserID = response.userid
 
-                    document.querySelector("#biploginbuttonlabel").textContent = this.bipUsername;
+                    
                     document.querySelector("#biploginbutton").classList.remove('btn-info')
                     document.querySelector("#biploginbutton").classList.add('btn-success')
                     document.querySelector("#biplogo").style.filter = "hue-rotate(140deg)"
@@ -253,8 +262,12 @@ export default {
             .catch(err => { console.warn(err) })
         },
 
-
+        /**
+         * lädt vorkonfigurierte exams vom bildungsportal via bip/api
+         */
         fetchBipExams(){
+            if (!this.bipToken) return;  // cannot fetch from bip api without valid token
+
             if (this.config.development){
                 let url= "http://localhost:3000/teacher"
 
@@ -552,6 +565,10 @@ export default {
         this.fetchinterval = new SchedulerService(4000);
         this.fetchinterval.addEventListener('action',  this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
         this.fetchinterval.start(); 
+
+
+        if (this.bipToken !== false){ this.fetchBipExams(); console.log(this.bipToken) }
+
 
         // add event listener to exam input field to supress all special chars 
         document.getElementById("servername").addEventListener("keypress", this.validateInput);
