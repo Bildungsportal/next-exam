@@ -104,10 +104,10 @@ let studentInfo = {
         {
             bip: true,
             id: "d10cdfc7-ba91-4845-818e-eaae81595dfa", // eindeutige ID im BiP
-            examName: "5a_2_E-Schularbeit", // Name der Prüfung wie sie am Client dargstellt werden soll
+            examName: "5A-Englisch", // Name der Prüfung wie sie am Client dargstellt werden soll
             examDate: "2024-10-02T10:30:00", // geplanter Beginn der Prüfung
             examDurationMinutes: 100, // Dauer der Prüfung in Minuten
-            pin: null, // exam pin
+            pin: 1337, // exam pin
             requireBiP: true,  // müssen die clients am bip authentifizieren damit sie zur teacher instanz verbinden können?
             exammode: true,       // clients werden sofort abgesichert true/false
             delfolderonexit: false,  // ordner der clients beim beenden des abgesicherten modus löschen (am client)
@@ -201,10 +201,10 @@ let studentInfo = {
         {
             bip: true,
             id: "uy5cdfc7-cu91-4845-818e-eaae8159uui", // eindeutige ID im BiP
-            examName: "5b_D-Schularbeit", // Name der Prüfung wie sie am Client dargstellt werden soll
+            examName: "5B-Deutsch-2", // Name der Prüfung wie sie am Client dargstellt werden soll
             examDate: "2025-02-02T10:30:00", // geplanter Beginn der Prüfung
             examDurationMinutes: 100, // Dauer der Prüfung in Minuten
-            pin: null, // exam pin
+            pin: 1337, // exam pin
             requireBiP: true,  // müssen die clients am bip authentifizieren damit sie zur teacher instanz verbinden können?
             exammode: true,       // clients werden sofort abgesichert true/false
             delfolderonexit: false,  // ordner der clients beim beenden des abgesicherten modus löschen (am client)

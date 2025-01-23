@@ -36,11 +36,15 @@
             <span class="small">{{$t("startserver.previousexams")}}</span>
             <div v-for="exam of previousExams">
                 <div class="input-group" style="display:inline;">
-                    <div class="btn btn-sm btn-warning mt-1" @click="delPreviousExam(exam)">x</div>
-                    <div v-if="servername !== exam" class="btn btn-sm btn-secondary mt-1" :id="exam" @click="setPreviousExam(exam)">{{exam}}</div>
-                    <div v-if="servername === exam" class="btn btn-sm btn-info mt-1" :id="exam" @click="setPreviousExam(exam)">{{exam}}</div>  
+                    <div class="btn btn-sm btn-warning mt-1" @click="delPreviousExam(exam.dirname)">x</div>
+                    
+                    <div v-if="servername === exam.dirname" class="btn btn-sm btn-info mt-1" :id="exam.dirname" @click="setPreviousExam(exam.dirname)">{{exam.dirname}}</div>  
+                    
+                    <div v-else-if="servername !== exam.dirname && exam.serverstatus.bip" class="btn btn-sm btn-teal mt-1" :id="exam.dirname" @click="setPreviousExam(exam.dirname)">{{exam.dirname}}</div>  
+                    <div v-else class="btn btn-sm btn-secondary mt-1" :id="exam.dirname" @click="setPreviousExam(exam.dirname)">{{exam.dirname}}</div>
+
                 </div>
-                <img v-if="servername === exam" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
+                <img v-if="servername === exam.dirname" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
                 
             </div>
         </div>
@@ -65,7 +69,7 @@
                 <span class="small">{{$t("startserver.onlineexams")}}</span>
                 <div v-for="exam of onlineExams">
                     <div class="input-group" style="display:inline;">
-                        <div v-if="servername !== exam" class="btn btn-sm btn-secondary mt-1" :id="exam" @click="setOnlineExam(exam)">{{exam}}</div>
+                        <div v-if="servername !== exam" class="btn btn-sm btn-teal mt-1" :id="exam" @click="setOnlineExam(exam)">{{exam}}</div>
                         <div v-if="servername === exam" class="btn btn-sm btn-info mt-1" :id="exam" @click="setOnlineExam(exam)">{{exam}}</div>  
                     </div>
                     <img v-if="servername === exam" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
@@ -112,7 +116,10 @@
 
 
             
-            <!-- we do not need to display the password in electron standalone version because no other exams are ever listed and you can not leave the exam without ending the server -->
+            <!-- 
+                we do not need to display the password in electron standalone version because no other exams are ever listed and you can not leave the exam without ending the server 
+                could be used to set an ESCAPE PASSWORD for students to make it harder to leave on connection loss
+            -->
             <div class="input-group  mb-3" :class="(electron) ? 'hidden':''"> 
                 <input v-model="password" type="text" class="form-control " id="password" placeholder="password" style="width:135px;max-width:135px;min-width:135px;">
                 <span class="input-group-text col-4" style="width:135px;" id="inputGroup-sizing-lg">{{$t("startserver.pwd")}}</span>
@@ -154,7 +161,7 @@ export default {
             info: config.info,
             config: config,
             title: document.title,
-            servername : this.$route.params.config.development ? "Mathe5A":"",
+            servername : this.$route.params.config.development ? "5A-Mathematik":"",
             password: this.$route.params.config.development ? "password": Math.floor(1000 + Math.random() * 9000),   //we could use this password to allow students to manually leave exam mode 
             prod : false,
             serverApiPort: this.$route.params.serverApiPort,
@@ -166,11 +173,11 @@ export default {
             freeDiscspace: 100,
             previousExams: [],
             onlineExams: [],
-            biplogin: false,
-            biptest:false,
+            biptest:false,   //switches between production and q
+
             bipToken:false,
             bipuserID: false,
-            bipUsername: ""
+            bipUsername: false
         };
     },
     components: {},
@@ -301,10 +308,7 @@ export default {
                 if (exam.examName === name){
                     ipcRenderer.invoke('createBipExamdirectory', exam)
                 }
-            })
-
-            
-        
+            }) 
         },
 
 
@@ -371,20 +375,25 @@ export default {
         },
 
 
-
+        /**  setzt das feld prüfungsname auf den namen des angeklickten prüfungsverzeichnisses */
         setPreviousExam(name){
             document.getElementById('servername').value = name
             this.servername = name
             this.checkExistingExam()
         },
 
+
+        /** sucht unter den gesicherten verzeichnissen und ändert den text am startbutton */
         checkExistingExam(){
-            if (this.previousExams.includes(this.servername)){
-                document.getElementById('examstart').innerHTML = this.$t("startserver.resume")
-            }
-            else {
-                document.getElementById('examstart').innerHTML = this.$t("startserver.start")
-            }
+            for (let i = 0; i < this.previousExams.length; i++) {
+                const previousExam = this.previousExams[i] // current exam object
+                if (previousExam.dirname === this.servername) {
+                    document.getElementById('examstart').innerHTML = this.$t("startserver.resume")
+                    break
+                } else {
+                    document.getElementById('examstart').innerHTML = this.$t("startserver.start")
+                }
+            }        
         },
 
         delPreviousExam(name){
@@ -439,11 +448,15 @@ export default {
                         this.status(response.message);
                         await this.sleep(1000);
                         if (this.electron){
+                        
                             this.$router.push({  // for some reason this doesn't work on mobile
                                 name: 'dashboard', 
                                 params:{
                                     servername: this.servername, 
-                                    passwd: this.password
+                                    passwd: this.password,
+                                    bipToken: this.bipToken,
+                                    bipUsername: this.bipUsername,
+                                    bipuserID:this.bipuserID
                                 }
                             })
                         }

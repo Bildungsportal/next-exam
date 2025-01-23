@@ -394,9 +394,9 @@ export default {
             directPrintAllowed: false,
             visiblePrinter: null,
 
-            bipToken:false,
-            bipuserID: false,
-            bipUsername: "",
+            bipToken:this.$route.params.bipToken,
+            bipuserID: this.$route.params.bipuserID,
+            bipUsername:this.$route.params.bipUsername,
 
             serverstatus:{   // this object contains all neccessary information for students about the current exam settings
                 bip: false,

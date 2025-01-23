@@ -239,15 +239,26 @@ class IpcHandler {
         /**
          * returns old exam folders in workdirectory
          */
+
         ipcMain.handle('scanWorkdir', async (event, arg) => {
-            let examfolders = []
-            if (fs.existsSync(config.workdirectory)){
-                    examfolders = fs.readdirSync(config.workdirectory, { withFileTypes: true })
-                .filter(dirent => dirent.isDirectory())
-                .map(dirent => dirent.name);
+            let examfolders = [] // array for results
+            if (fs.existsSync(config.workdirectory)) { // check if base dir exists
+                const folders = fs.readdirSync(config.workdirectory, { withFileTypes: true })
+                    .filter(dirent => dirent.isDirectory())
+                    .map(dirent => dirent.name)
+                for (const dirname of folders) { // iterate over directory names
+                    const serverstatusPath = join(config.workdirectory, dirname, 'serverstatus.json')
+                    if (fs.existsSync(serverstatusPath)) { // check if file exists
+                    
+                    const serverstatus = JSON.parse(fs.readFileSync(serverstatusPath, 'utf-8')) // parse JSON to object
+
+                    examfolders.push({ dirname, serverstatus }) // add object to array
+                    }
+                }
             }
-            return examfolders
-        })
+            return examfolders // return results
+          })
+
 
 
         /**
