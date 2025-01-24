@@ -27,7 +27,8 @@
         "directoryerror": "Directory not writeable",
         "previousexams": "Local previous Exams",
         "folderdelete": "Delete local exam folder?",
-        "onlineexams": "BiP Exams"
+        "onlineexams": "BiP Exams",
+        "bipnotloggedin": "Please log in to BiP before starting the exam"
     },
     "dashboard":{
         "server": "Server",

@@ -330,7 +330,7 @@ class WindowHandler {
             x: px + 0,
             y: py + 0,
             title: 'Exam',
-            width: 1024,
+            width: 1440,
             height: 768,
             // parent: win,  //this doesnt work together with kiosk on ubuntu gnome ?? wtf
             // modal: true,  // this blocks the main window on windows while the exam window is open

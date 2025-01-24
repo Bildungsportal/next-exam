@@ -1047,7 +1047,7 @@ export default {
                 navigator.clipboard.writeText(text).then(function() {
                     console.log('editor @ savecontent: Text erfolgreich kopiert');
                 }).catch(function(err) {
-                    console.log('editor @ savecontent: Fehler beim Kopieren des Textes: ', err);
+                    console.log('editor @ savecontent: Fehler beim Kopieren des Textes: ', err.message);
                 });
             }
            

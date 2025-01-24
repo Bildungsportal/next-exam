@@ -66,6 +66,12 @@ function stopserver(){
     })
     .then( async (result) => {
         if (result.isConfirmed) {
+
+            if (this.serverstatus.bip) {
+                console.log("exam ended - updating server info")
+                await this.updateBiPServerInfo("offline");
+            }
+
             if (!this.hostip){   // somehow the teacher disconnected - stop everything without network address
                 await ipcRenderer.invoke("stopserver", this.servername)  // need to stop server first otherwise router.js won't route back
                 this.$router.push({ path: '/startserver' });  // route back to startserver view

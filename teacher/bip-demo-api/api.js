@@ -29,8 +29,9 @@ app.post('/teacher', (req, res) => {
     studentInfo.exams.forEach(exam => {
 
         if (exam.id == examID){
+            console.log("API: update exam status in corresponding student exam object")
+            
             let teachers = exam.examTeachers
-
             teachers.forEach(teacher => {
                 if (teacher.teacherID == teacherID) {
                     teacher.teacherIP = teacherIP; // update current local teacher ip
@@ -45,13 +46,16 @@ app.post('/teacher', (req, res) => {
 
     teacherInfo.exams.forEach(exam =>{
         if (exam.id == examID){
+            exam.lastUpdate = new Date().getTime()  //update timestamp of last update
 
             let teachers = exam.examTeachers
-
             teachers.forEach(teacher => {
                     if (teacher.teacherID == teacherID) {
                         teacher.teacherIP = teacherIP;   // update current local teacher ip
                     }
+                    else {
+                        teacher.teacherIP = null;  // reset teacher ip if not the current teacher
+                    }   
             });
 
             exam.pin = examPin   // update pin to allow direct connection
@@ -75,24 +79,62 @@ app.listen(3000, () => {
 
 
 
+// Start interval check when API initializes
+const startExamStatusCheck = () => {
+    setInterval(() => {
+        const currentTime = new Date().getTime() // current timestamp
+        if (teacherInfo?.exams) {
+          Object.keys(teacherInfo.exams).forEach(examId => {
+            const exam = teacherInfo.exams[examId];
 
+            if (currentTime - exam.lastUpdate > 10*1000 && studentInfo?.exams?.[examId].examStatus !== "offline") {
+              console.log("API @ examstatuscheck: updating stale exam"); // remove from teacherInfo
+             
+              if (studentInfo?.exams?.[examId]) {
+                studentInfo.exams[examId].examStatus = 'offline';
+              }
+            }
+          });
+        }
+      }, 10000);
+};
+
+// Call this when your API initializes
+startExamStatusCheck();
 
 
 let studentInfo = {
     exams: [{
         id: "d10cdfc7-ba91-4845-818e-eaae81595dfa", // eindeutige ID im BiP
-        examName: "5a_2_E-Schularbeit", // Name der Prüfung wie sie am Client dargstellt werden soll
-        examdate: "2024-10-02T10:30:00", // geplanter Beginn der Prüfung
+        examName: "5A-English", // Name der Prüfung wie sie am Client dargstellt werden soll
+        examdate: "2025-10-02T10:30:00", // geplanter Beginn der Prüfung
         examDurationMinutes: 100, // Dauer der Prüfung in Minuten
-        examStatus: "idle",
+        examStatus: "offline",
         examPin: null,
         examTeachers: [
             { 
-                teacherID: null, // BiP-ID der Lehrperson
+                teacherID: 92136, // BiP-ID der Lehrperson
                 teacherIP: null // automatisch gesetzt sobald der Lehrer eine Prüfung im BiP startet. 
             }
         ]
-    }] 
+    },
+    {
+        id: "udhdhdfc7-bau91-4u5-214u-uuuiu8159iuhh", // eindeutige ID im BiP
+        examName: "5A-Deutsch", // Name der Prüfung wie sie am Client dargstellt werden soll
+        examdate: "2025-12-02T10:30:00", // geplanter Beginn der Prüfung
+        examDurationMinutes: 100, // Dauer der Prüfung in Minuten
+        examStatus: "offline",
+        examPin: null,
+        examTeachers: [
+            { 
+                teacherID: 22136, // BiP-ID der Lehrperson
+                teacherIP: null // automatisch gesetzt sobald der Lehrer eine Prüfung im BiP startet. 
+            }
+        ]
+    },
+
+
+    ] 
 }
   
 
@@ -101,12 +143,13 @@ let studentInfo = {
 
     exams: [
         {
+            lastUpdate: new Date().getTime(),
             bip: true,
             id: "d10cdfc7-ba91-4845-818e-eaae81595dfa", // eindeutige ID im BiP
             examName: "5A-English", // Name der Prüfung wie sie am Client dargstellt werden soll
             examDate: "2024-10-02T10:30:00", // geplanter Beginn der Prüfung
             examDurationMinutes: 100, // Dauer der Prüfung in Minuten
-            pin: 1337, // exam pin
+            pin: 2222, // exam pin
             requireBiP: true,  // müssen die clients am bip authentifizieren damit sie zur teacher instanz verbinden können?
             exammode: true,       // clients werden sofort abgesichert true/false
             delfolderonexit: false,  // ordner der clients beim beenden des abgesicherten modus löschen (am client)
@@ -114,6 +157,19 @@ let studentInfo = {
             abgabeintervalPause: 6, // in welchem intervall sollen die abgaben von den clients gesichert werden
             screenslocked: false, // sind die client screens abgesperrt (abgedunkelt)
             screenshotocr: false,   // soll als zusätzliche sicherheit im screenshot der clients nach dem exam pin gesucht werden
+
+            examStudents: [
+                {
+                    studentID: 123456,
+                    studentName: "Max Mustermann",
+                    studentSeat: "1"  //für optionalen sitzplatzplan
+                },
+                {
+                    studentID: 123457,
+                    studentName: "Eva Musterfrau",
+                    studentSeat: "2"
+                }
+            ],
 
             examTeachers: [
                 { 
@@ -145,8 +201,8 @@ let studentInfo = {
                     groups: true,   // sollen die clients in 2 gruppen A / B aufgeteilt werden
                     groupA: {
                         users : [   // gruppeneinteilung A - Für die Clientnamen werden die Benutzernamen des BiP herangezogen.
-                            "thomas.weissel@bildung.gv.at",    // client name
-                            "gerald.landl@bildung.gv.at"
+                            "Weissel Thomas",    // clientname
+                            "Robert Schrenk"
                         ],
                         examInstructionFiles: [
                             {
@@ -157,7 +213,10 @@ let studentInfo = {
                         ]
                     },
                     groupB: { 
-                        users: ["rene.braunshier@bildung.gv.at"],
+                        users: [
+                            "Rene Braunshier", 
+                            "Gerald Landl"
+                        ],
                         examInstructionFiles: [
                             {
                                 filename: "angabe2.pdf",
@@ -198,12 +257,13 @@ let studentInfo = {
             }
         },
         {
+            lastUpdate: new Date().getTime(),
             bip: true,
             id: "uy5cdfc7-cu91-4845-818e-eaae8159uui", // eindeutige ID im BiP
             examName: "5B-Deutsch-2", // Name der Prüfung wie sie am Client dargstellt werden soll
             examDate: "2025-02-02T10:30:00", // geplanter Beginn der Prüfung
             examDurationMinutes: 100, // Dauer der Prüfung in Minuten
-            pin: 1337, // exam pin
+            pin: 3434, // exam pin
             requireBiP: true,  // müssen die clients am bip authentifizieren damit sie zur teacher instanz verbinden können?
             exammode: true,       // clients werden sofort abgesichert true/false
             delfolderonexit: false,  // ordner der clients beim beenden des abgesicherten modus löschen (am client)

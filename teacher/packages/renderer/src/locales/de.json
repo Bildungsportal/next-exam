@@ -27,7 +27,8 @@
         "directoryerror": "Fehlende Schreibrechte im gewählten Verzeichnis",
         "previousexams": "Lokal gesicherte Prüfungen",
         "folderdelete": "Wollen Sie die den lokalen Prüfungsordner löschen?",
-        "onlineexams": "BiP Prüfungen"
+        "onlineexams": "BiP Prüfungen",
+        "bipnotloggedin": "Bitte melden Sie sich am BiP an, bevor Sie die Prüfung starten"
     },
     "dashboard":{
         "server": "Server-Adresse",

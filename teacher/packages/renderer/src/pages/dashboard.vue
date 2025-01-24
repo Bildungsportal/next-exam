@@ -160,14 +160,19 @@
         
 
 
-        <!-- BIP Button -->
-        <div v-if="bipToken" id="biploginbutton" @click="showBipInfo()" class="disabledbutton btn btn-success m-1" style="padding:0;">
-            <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
-            <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
-        </div> 
-  
-        <!-- BIP Button -->
-        <br>
+        <!-- BIP Section START -->
+        <div v-if="bipToken && this.serverstatus.bip" class="mb-4">
+            <span class="small m-1">{{$t("dashboard.bildungsportal")}}</span>
+            <div id="biploginbutton" @click="showBipInfo()" class="disabledbutton btn btn-success m-1" style="padding:0;">
+                <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
+                <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
+            </div> 
+        
+            <span class="small m-1">BiP Exam Status</span><br>
+            <button class="btn btn-sm m-1" :class="bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'" @click="toggleBipStatus" style="width: 100px;">{{bipStatus}}</button>
+        </div>
+        <!-- BIP Section END -->
+        
 
 
         <div id="description" class="btn m-1"  v-if="showDesc">{{ currentDescription }}</div>
@@ -179,7 +184,7 @@
         </span>
        
     </div>
-    <!-- SIDEBAR end -->
+    <!-- SIDEBAR END -->
 
 
 
@@ -397,11 +402,12 @@ export default {
             bipToken:this.$route.params.bipToken === 'false' ?  false : this.$route.params.bipToken,   // parameter werden immer als string "false" übergeben, convert to bool
             bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
             bipUsername:this.$route.params.bipUsername === 'false' ?  false : this.$route.params.bipUsername,
+            bipStatus: "closed", // "open" or "closed" or "offline"
 
             serverstatus:{   // this object contains all neccessary information for students about the current exam settings
                 bip: false,
                 id: "1234",
-                examName: this.servername,
+                examName: this.$route.params.servername,
                 examDate: new Date().toISOString().slice(0, 19),
                 examDurationMinutes: 100, 
                 pin: this.$route.params.pin,
@@ -516,6 +522,8 @@ export default {
             this.hostip = ipcRenderer.sendSync('checkhostip')
             if (!this.hostip) return; 
 
+            this.updateBiPServerInfo(this.bipStatus);
+
 
             let result = await ipcRenderer.invoke('studentlist', this.servername)
 
@@ -585,12 +593,6 @@ export default {
             }
            
         }, 
-
-
-        showBipInfo(){
-            console.log(this.bipToken, this.bipUsername, this.bipuserID)
-        },
-
 
 
 
@@ -938,6 +940,9 @@ export default {
         hideDescription() {
             this.showDesc = false;
         },
+
+
+
         visualfeedback(message, timeout=1000){
              this.$swal.fire({
                 text: message,
@@ -946,7 +951,10 @@ export default {
                 didOpen: () => { this.$swal.showLoading() }
             });
         },
-        // show visual feedback 
+
+
+
+        // show visual feedback for microsoft office files uploading
         visualfeedbackClosemanually(message){
             const closeWhenFinished = async () => {
                 while (!this.serverstatus.examSections[this.serverstatus.activeSection].msOfficeFile) {
@@ -991,8 +999,7 @@ export default {
                             </div>
                             <div style="text-align: left;font-size: 0.8em;">${this.servername}
                             ${this.serverip}
-                            ${this.serverstatus.pin}
-                            
+                            ${this.serverstatus.pin} 
 
                             </div>
                         </div>`,
@@ -1068,7 +1075,10 @@ export default {
             let result = fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/getserverstatus/${this.servername}/${this.servertoken}`, { method: 'POST', headers: {'Content-Type': 'application/json' },})
             .then( res => res.json())
             .then( async (response) => {
-                if (response.serverstatus === false) {return}
+                if (response.serverstatus === false) {
+                    this.setServerStatus()  // there is no serverstatus - we need to set it to default
+                    return
+                }
                 this.serverstatus = response.serverstatus // we slowly move things over to a centra serverstatus object
          
                 
@@ -1110,7 +1120,7 @@ export default {
          * this should be the goTo function from now on to update the backend in a single request
         */
         setServerStatus(){
-            //console.log(this.serverstatus)
+           
             fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setserverstatus/${this.servername}/${this.servertoken}`, { 
                 method: 'POST',
                 headers: {'Content-Type': 'application/json' },
@@ -1124,15 +1134,15 @@ export default {
 
         async setupGroups(){
             if (!this.serverstatus.examSections[this.serverstatus.activeSection].groupA){   //temp fix for old exams (resume) without groups 
-                this.serverstatus.examSections[this.serverstatus.activeSection].groupA = []
-                this.serverstatus.examSections[this.serverstatus.activeSection].groupB = []
+                this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users     = []
+                this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users = []
             }
             // prepopulate group A
-            if (this.serverstatus.examSections[this.serverstatus.activeSection].groupA.length == 0){
+            if (this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.length == 0){
                 for (let student of this.studentlist) {
                     student.status.group = "a"
-                    if (!this.serverstatus.examSections[this.serverstatus.activeSection].groupA.includes(student.clientname)) {
-                        this.serverstatus.examSections[this.serverstatus.activeSection].groupA.push(student.clientname)
+                    if (!this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.includes(student.clientname)) {
+                        this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.push(student.clientname)
                     } 
                 }
             }
@@ -1141,24 +1151,26 @@ export default {
         },
 
         quickSetGroup(student){
+
+        
             // Remove student from groups if present
-            const indexA = this.serverstatus.examSections[this.serverstatus.activeSection].groupA.indexOf(student.clientname);
-            const indexB = this.serverstatus.examSections[this.serverstatus.activeSection].groupB.indexOf(student.clientname);
-            if (indexA > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.splice(indexA, 1);  }
-            if (indexB > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupB.splice(indexB, 1);  }
+            const indexA = this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.indexOf(student.clientname);
+            const indexB = this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users.indexOf(student.clientname);
+            if (indexA > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.splice(indexA, 1);  }
+            if (indexB > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users.splice(indexB, 1);  }
             
             let studentWidget = this.studentwidgets.find(el => el.token === student.token);
 
             if (student.status.group == "a"){
                 //Add and Set         
-                this.serverstatus.examSections[this.serverstatus.activeSection].groupB.push(student.clientname)  //update group arrays
+                this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users.push(student.clientname)  //update group arrays
                 this.setStudentStatus({group:"b"}, student.token)  //set student object (and inform student about group)
                 this.setServerStatus()
                 if(studentWidget){ studentWidget.status.group = "b"}                          
             }
             else {
                 //Add and Set
-                this.serverstatus.examSections[this.serverstatus.activeSection].groupA.push(student.clientname)
+                this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.push(student.clientname)
                 this.setStudentStatus({group:"a"}, student.token) 
                 this.setServerStatus()
                 if(studentWidget){ studentWidget.status.group = "a"}
@@ -1185,14 +1197,14 @@ export default {
                             console.log('set to group A');
     
                             // Remove student from group A if present
-                            const indexA = this.serverstatus.examSections[this.serverstatus.activeSection].groupA.indexOf(student.clientname);
-                            if (indexA > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.splice(indexA, 1);  }
+                            const indexA = this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.indexOf(student.clientname);
+                            if (indexA > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.splice(indexA, 1);  }
                             // Remove student from group B if present
-                            const indexB = this.serverstatus.examSections[this.serverstatus.activeSection].groupB.indexOf(student.clientname);
+                            const indexB = this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users.indexOf(student.clientname);
                             if (indexB > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupB.splice(indexB, 1);  }
 
                             //Add and Set
-                            this.serverstatus.examSections[this.serverstatus.activeSection].groupA.push(student.clientname)
+                            this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.push(student.clientname)
                             this.setStudentStatus({group:"a"}, student.token) 
                             this.fetchInfo()
                             this.$swal.close();
@@ -1204,15 +1216,15 @@ export default {
                         btnB.addEventListener('click', () => {
                             console.log('set to group B');
                             // Remove student from group A if present
-                            const indexA = this.serverstatus.examSections[this.serverstatus.activeSection].groupA.indexOf(student.clientname);
-                            if (indexA > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.splice(indexA, 1);  }
+                            const indexA = this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.indexOf(student.clientname);
+                            if (indexA > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.splice(indexA, 1);  }
                             // Remove student from group B if present
-                            const indexB = this.serverstatus.examSections[this.serverstatus.activeSection].groupB.indexOf(student.clientname);
-                            if (indexB > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupB.splice(indexB, 1);  }
+                            const indexB = this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users.indexOf(student.clientname);
+                            if (indexB > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users.splice(indexB, 1);  }
 
                             //Add and Set
                           
-                            this.serverstatus.examSections[this.serverstatus.activeSection].groupB.push(student.clientname)
+                            this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users.push(student.clientname)
                             this.setStudentStatus({group:"b"}, student.token) 
                             this.fetchInfo()
                             this.$swal.close();
@@ -1272,12 +1284,70 @@ export default {
         },
 
 
+
+
+
+
+
+        showBipInfo(){
+            let message = "Bildungsportal"
+            let html = `
+            <div style="font-size:0.9em; text-align:left">
+                <div><b>Bip-Token: </b>${this.bipToken}</div>
+                <div><b>Bip-Username: </b>${this.bipUsername}</div>
+                <div><b>Bip-UserID: </b>${this.bipuserID}</div><br>
+                <div><b>Bip-Exam-Status: </b></div>
+                <button id="fbtnA" class="swal2-button btn ${this.bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'} mt-2" style="width: 100px; height: 42px;">
+                    ${this.bipStatus}
+                </button>
+            </div>
+            `
+            this.$swal.fire({
+                title: message,
+                html: html,
+                cancelButtonText: this.$t("dashboard.cancel"),
+                reverseButtons: true,
+                width: '600px',
+                didRender: () => {
+                    const btnA = document.getElementById('fbtnA');
+                
+                    if (btnA && !btnA.dataset.listenerAdded) {
+                        btnA.addEventListener('click', () => {
+                            const newStatus = this.bipStatus === 'closed' ? 'open' : 'closed';
+                            const oldClass = this.bipStatus === 'closed' ? 'btn-warning' : 'btn-teal';
+                            const newClass = this.bipStatus === 'closed' ? 'btn-teal' : 'btn-warning';
+                            
+                            btnA.classList.remove(oldClass);
+                            btnA.classList.add(newClass);
+                            btnA.textContent = newStatus;
+
+                            //call api and update bip data
+                            this.updateBiPServerInfo(newStatus);
+                            this.bipStatus = newStatus;
+                        });
+                        btnA.dataset.listenerAdded = 'true';
+                    }
+                }
+            });
+        },
+
+
+        toggleBipStatus() {
+            const newStatus = this.bipStatus === 'closed' ? 'open' : 'closed';
+            this.updateBiPServerInfo(newStatus);
+            this.bipStatus = newStatus;
+            this.updateBiPServerInfo(newStatus);
+        },
+
+
          /** 
          * if this is a bip exam configured online that needs students to login into bip too
          * update exam info on server via api
          */
-        async updateServerInfo(status){
-            console.log("bip exam started - updating server info")
+        async updateBiPServerInfo(status){
+            if (!this.bipToken || !this.serverstatus.bip) { return }
+
+            //console.log("bip exam - updating server info")
             let payload = {
                 teacherIP: this.serverip,
                 teacherID: this.bipuserID,   /// wird von student.vue nicht nach dashboard.vue übertragen.. ebenso token
@@ -1294,7 +1364,8 @@ export default {
                     body: JSON.stringify(payload) // Daten als JSON-String senden
                 })
                 .then(response => { return response.json(); } )                  
-                .then(data => { console.log(data.message, data.data);
+                .then(data => { 
+                   // console.log(data.message, data.data);
                 })
                 .catch(error => { console.error("Fehler beim API-Aufruf:", error.message);});
             }
@@ -1315,6 +1386,7 @@ export default {
             this.fetchInfo()
             this.initializeStudentwidgets()
 
+            this.updateBiPServerInfo(this.bipStatus);
 
             // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
             this.fetchinterval = new SchedulerService(4000);
@@ -1335,13 +1407,8 @@ export default {
             document.querySelector("#closefilebrowser").addEventListener("click", this.fileBrowserEventlistenerCallback);
             document.querySelector('#workfolder').addEventListener("click", function(e) { e.stopPropagation(); }); // Prevent event propagation for clicks on #workfolder
             document.getElementById('setupdiv').addEventListener('click', function(e) { e.stopPropagation();});
-            document.querySelector("#pdfpreview").addEventListener("click", this.pdfPreviewEventlisterenCallback); // Set the event listener for #pdfpreview click to hide pdfpreview
+            document.querySelector("#pdfpreview").addEventListener("click", this.pdfPreviewEventlisterenCallback); // Set the event listener for #pdfpreview
 
-          
-            if (this.serverstatus.bip){
-                
-                this.updateServerInfo("active")
-            }
 
         })
 

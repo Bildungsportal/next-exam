@@ -17,7 +17,7 @@
 
 <div id="wrapper" class="w-100 h-100 d-flex" >
 
-    <!-- SIDEBAR -->
+    <!-- SIDEBAR START -->
     <div class="p-3 text-white bg-dark h-100" style="width: 240px; min-width: 240px;">
         <div class="btn btn-light m-0 text-start infobutton">
             <img src='/src/assets/img/svg/server.svg' class="me-2"  width="16" height="16" > {{$t('student.exams')}} 
@@ -39,10 +39,21 @@
         </div>
 
         
-        <div  id="biploginbutton" v-if="biplogin" @click="loginBiP()" class="btn btn-info mb-1 me-0" style="padding:0;">
-            <img v-if="biplogin" style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
-             <span id="biploginbuttonlabel">Bildungsportal - Login</span>
-        </div> 
+      
+
+        <!-- BIP Section START -->
+        <div v-if="biplogin">
+            <div v-if="bipToken" id="biploginbutton" @click="loginBiP()" class="disabledbutton btn btn-success m-1 ms-0" style="padding:0;">
+                <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
+                <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
+            </div> 
+            <div v-else id="biploginbutton" @click="loginBiP()" class="btn btn-info m-1 ms-0" style="padding:0;">
+                <img id="biplogo" style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
+                <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
+            </div> 
+        </div>
+        <!-- BIP Section END -->
+
         
 
 
@@ -57,8 +68,11 @@
         </span>
 
     </div>
+    <!-- SIDEBAR END  -->
 
-    <!-- CONTENT -->
+
+
+    <!-- CONTENT START -->
     <div id="content" class="fadeinfast p-3">
 
 
@@ -92,13 +106,23 @@
    
         <h4 class="mt-4">{{ $t("student.exams") }}</h4>
         <div id="list" class="" style="overflow-y:auto; height: 369px; display:flex; flex-wrap: wrap; flex-direction: row;">
+            
             <div v-for="server in serverlist" class="row p-3 m-0 mb-2 border bg-light" style="border-radius: 4px; margin-right: 10px !important; min-height:100px; max-height:100px;  min-width:234px; max-width: 234px;">
-                <strong style="padding:0px;">{{server.servername}}
-                <img v-if="!server.reachable" src="/src/assets/img/svg/emblem-warning.svg" :title="$t('student.unreachable')"  style="width:20px;float:right;vertical-align:top;cursor: help;" ></strong>  
-                <input v-if="!token" :id="server.servername" type="button" name="register" class="btn btn-sm btn-info" :value="$t('student.register')" @click="registerClient(server.serverip,server.servername)"/>
-                <input v-if="token && clientinfo.servername !== server.servername" :id="server.servername" disabled type="button" name="register" class="btn btn-secondary" :value="$t('student.register')" />
-                <input v-if="token && clientinfo.servername === server.servername" :id="server.servername" disabled type="button" name="register" class="btn btn-success" :value="$t('student.registered')" />
+                <strong style="padding:0px;">
+                    {{server.servername}} 
+                    <span v-if="server.bip" class="badge btn-teal" style="vertical-align: text-bottom; margin-left: 4px;"> BiP Exam</span>
+                </strong>  
+                <img v-if="!server.reachable" src="/src/assets/img/svg/emblem-warning.svg" :title="$t('student.unreachable')"  style="width:20px;float:right;vertical-align:top;cursor: help;" >
+                
+                <input v-if="!token && !server.bip" :id="server.servername" type="button" name="register" class="btn btn-sm btn-info" :value="$t('student.register')" @click="registerClient(server.serverip,server.servername)"/>
+                <input v-if="!token && server.bip"  :id="server.servername" type="button" name="register" class="btn btn-sm" :value="server.examStatus ? server.examStatus : 'closed'" :class="{'btn-teal': server.examStatus == 'open', 'btn-warning': server.examStatus == 'closed' || !server.examStatus, 'btn-secondary': server.examStatus == 'offline' }"/>
+                
+                <!-- if token is set (client is registered) and if registration is for this specific server -->
+                <input v-if="token && clientinfo.servername !== server.servername" :id="server.servername" disabled type="button" name="register" class="btn btn-secondary" :value="server.examStatus ? server.examStatus : $t('student.register')" />
+                <input v-else-if="token && clientinfo.servername === server.servername" :id="server.servername" disabled type="button" name="register" class="btn btn-success" :value="$t('student.registered')" />
             </div>
+
+
             <div v-if="serverlist.length === 0"><h5>0</h5> </div>
         </div>
     </div>
@@ -134,6 +158,7 @@ export default {
             serverlist: [],
             serverlistAdvanced: [],
             fetchinterval: null,
+            autoUpdateInterval: null,
             serverApiPort: this.$route.params.serverApiPort,
             clientApiPort: this.$route.params.clientApiPort,
             electron: this.$route.params.electron,
@@ -148,11 +173,126 @@ export default {
             biplogin: false,
             biptest:false,
             bipToken:false,
+            bipUsername:false,
             bipuserID: false,
-            servertimeout: false
+            servertimeout: false,
+            bipData: null,
+            onlineExams: []
         };
     },
     methods: {
+
+        async loginBiP(){
+            if (this.config.bipDemo){   // skip bip logon and fake bip info
+                this.bipUsername = "Robert Schrenk"
+                this.bipuserID = 123456
+                this.bipToken = "4hedh443gc34lm34wb43moeinlz0082droeib45beio"
+                this.username = this.bipUsername
+
+                await this.fetchBipExams()
+                this.bipAutoconnect()
+                return  //skip real login
+            }
+
+            let IPCresponse = ipcRenderer.sendSync('loginBiP', this.biptest)
+            console.log(IPCresponse)
+        },
+
+        /**
+         * überprüft ob es online exams gibt und versucht diese zu verbinden
+         */ 
+        bipAutoconnect(){
+            // console.log("bipAutoconnect")
+            // console.log(this.onlineExams)
+            if (this.onlineExams.length > 0){
+                this.onlineExams.forEach( exam => {
+                    if (exam.examStatus == "open"){
+                        exam.examTeachers.forEach( teacher => {
+                           
+                            if (teacher.teacherIP){
+                                this.username = this.bipUsername
+                                this.pincode = parseInt(exam.examPin)     // set the pin to the exam pin for auto connect
+                                console.log(`connecting to exam: ${exam.examName} with teacher: ${teacher.teacherID} and pin: ${exam.examPin}`)
+                                this.registerClient(teacher.teacherIP, exam.examName)
+                            }
+                        })
+                    }
+                })
+            }
+        },
+
+
+        /**
+         * lädt vorkonfigurierte exams vom bildungsportal via bip/api
+         */
+         async fetchBipExams(){
+            if (!this.bipToken) return;  // cannot fetch from bip api without valid token
+
+            if (this.config.development){
+                let url= "http://localhost:3000/student"
+
+                await fetch(url, {
+                    method: "GET",
+                    headers: {"Content-Type": "application/json" }
+                })
+                .then(response => { return response.json(); } )                  
+                .then(data => {
+                   // console.log("Daten von der API:", data);
+                    this.bipData = data   // store all of the information in data
+                    this.onlineExams = data.exams
+                    return
+                })
+                .catch(error => { console.error("Fehler beim API-Aufruf:", error);});
+                return
+            }
+            else {
+                // Do actual BIP API Call
+                // let url= "https://www.bildung.gv.at/webservice/rest/next-exam/teacher"
+                // fetch(url, {
+                //     method: "GET",
+                //     headers: {"Content-Type": "application/json" }
+                // })
+                // .then(response => { return response.json(); } )                  
+                // .then(data => {
+                //     console.log("Daten von der API:", data);
+                //     this.bipData = data   // store all of the information in data
+                //     data.exams.forEach( exam => {
+                //   this.onlineExams = this.data.exams    
+                //     })
+                // })
+                // .catch(error => { console.error("Fehler beim API-Aufruf:", error);});
+            }
+        },
+
+
+        fetchBiPData(base64String){
+            const tokens = this.decodeBase64AndExtractTokens(base64String);
+            console.log(tokens); // Zeigt die extrahierten Tokens, falls vorhanden
+            let token = tokens[1]
+            
+            let url = `https://www.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json`
+            if (this.biptest){ url = `https://q.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json` }
+            
+            fetch(url, { method: 'POST'})
+            .then( res => res.json() )
+            .then( response => {
+                console.log(response)
+                this.$swal.fire({
+                        title: "BiP Response",
+                        text: "Verbindung hergestellt",
+                        icon: 'info',
+                        showCancelButton: false,
+                })
+                if (response.fullname){
+                    this.username = response.fullname
+                    this.bipuserID = response.userid
+              
+
+                }
+            })
+            .catch(err => { console.warn(err) })
+        },
+
 
         setupLocalLockdown(){
             this.$swal({
@@ -231,10 +371,13 @@ export default {
         },
 
 
-        loginBiP(){
-            let IPCresponse = ipcRenderer.sendSync('loginBiP', this.biptest)
-            console.log(IPCresponse)
-        },
+
+
+
+
+
+
+
         clearUser(){
             this.username = ""
         },  
@@ -275,35 +418,34 @@ export default {
 
             if ( (this.advanced || this.servertimeout > 2 ) && !this.token) {
                 if (validator.isIP(this.serverip) || validator.isFQDN(this.serverip)){
-                   
                     //give some userfeedback here
                     if (this.serverlistAdvanced.length == 0){ this.status("Suche Prüfungen...")  }
-                
                     fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/serverlist`)
                     .then(response => response.json()) // Parse JSON response
                     .then(data => {
                         if (data && data.status === "success") {
                             this.serverlistAdvanced = data.serverlist;
-                            //if (this.serverlistAdvanced.length > 0){ this.status("Prüfung gefunden...") }
                             this.networkerror = false;
                         }
                     })
-                    .catch(err => {
-                        log.error(`student.vue @ fetchInfo (advanced): ${err.message}`);
-                        this.networkerror = true;
-                    });
+                    .catch(err => { log.error(`student.vue @ fetchInfo (advanced): ${err.message}`); this.networkerror = true; });
                 }
             }
             else {
                 this.networkerror = false;
             }
 
+
+
+
+
+
+            //vereine serverlist und serverlistAdvanced (advanced sucht direkt über eine angegebne ip adresse)
             if (getinfo.serverlist.length  !== 0 ) {
                 this.serverlist = getinfo.serverlist; 
                 this.servertimeout = 0 // reset servertimeout (if more than 2 requests return without servers we display serveraddress field - probably multicast blocked)
                 if (this.serverlistAdvanced.length !== 0){  // add servers coming from direct ip polling
                     this.serverlist = [...this.serverlist, ...this.serverlistAdvanced];
-            
                     this.serverlist = this.serverlist.reduce((unique, server) => {
                         if (!unique.some(u => u.serverip === server.serverip && u.servername === server.servername)) {  // Prüfen, ob der Server bereits im Array basierend auf serverip und servername existiert
                             unique.push(server); // Fügt den Server hinzu, wenn er nicht existiert
@@ -312,18 +454,54 @@ export default {
                     }, []);
                 } 
             }
-            else {  // sometimes explicit is easier to read (no servers incoming via multicast)
+            else {  // (no servers incoming via multicast) es gibt keine serverliste - nutze die advanced liste wenn in dieser server vorhanden sind
                 if (this.serverlistAdvanced.length !== 0){ this.serverlist = this.serverlistAdvanced }  // one server coming via direct ip polling
                 else { this.serverlist = []; this.servertimeout++ }  // no servers found
             }
 
+
+
+            // add bip servers to serverlist
+            if (this.onlineExams.length > 0){
+                this.onlineExams.forEach(exam => {
+                    const existingServer = this.serverlist.find(server => server.servername === exam.examName );// Check if server already exists in serverlist
+                    if (existingServer) { 
+                        existingServer.examStatus = exam.examStatus
+                    } 
+                    else {
+                        // Create new server entry in serverlist format
+                        const newServer = {
+                            id: exam.id,
+                            
+                            servername: exam.examName,
+                            reachable: true,
+                            serverport: this.serverApiPort,
+                            timestamp: Date.now(),
+                            bip: true,
+                            examStatus: exam.examStatus
+                        };
+                        this.serverlist.push(newServer);
+                    }
+                })
+            }
+
+
+
+
+
+    
             // check im networkconnection is still alive - otherwise exit here
             this.hostip = ipcRenderer.sendSync('checkhostip')
             if (!this.hostip) return;  
             if (this.clientinfo.token) return;   // stop spamming the api if already connected
         
-            // CHECK if Server is still alive otherwise mark with attention sign
-            for (let server of this.serverlist){      
+
+
+
+            // CHECK if Servers are still alive otherwise mark with attention sign
+            for (let server of this.serverlist){  
+                if (!server.serverip) continue;
+
                 const signal = AbortSignal.timeout(2000); // 2000 Millisekunden = 2 Sekunden
                 fetch(`https://${server.serverip}:${this.serverApiPort}/server/control/pong`, { method: 'GET', signal })
                 .then(response => {
@@ -364,6 +542,7 @@ export default {
 
         /** register client on the server **/
         registerClient(serverip, servername){
+
            if (this.username === ""){
                this.$swal.fire({
                     title: "Error",
@@ -384,6 +563,8 @@ export default {
                 //check username - remove leading and trailing spaces
                 this.username = this.username.replace(/^\s+|\s+$/g, '');
 
+                //  console.log({clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode, bipuserID:this.bipuserID })
+               
                 let IPCresponse = ipcRenderer.sendSync('register', {clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode, bipuserID:this.bipuserID })
                 console.log(`student @ registerClient: ${IPCresponse.message}`)
                 if (IPCresponse && IPCresponse.token){
@@ -441,36 +622,7 @@ export default {
                 document.getElementById('cpleft').classList.toggle('inactive');
             }
         },
-        fetchBiPData(base64String){
-
-            const tokens = this.decodeBase64AndExtractTokens(base64String);
-            console.log(tokens); // Zeigt die extrahierten Tokens, falls vorhanden
-            let token = tokens[1]
-            
-            let url = `https://www.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json`
-            if (this.biptest){ url = `https://q.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json` }
-            
-
-            fetch(url, { method: 'POST'})
-            .then( res => res.json() )
-            .then( response => {
-                console.log(response)
-                this.$swal.fire({
-                        title: "BiP Response",
-                        text: "Verbindung hergestellt",
-                        icon: 'info',
-                        showCancelButton: false,
-                })
-                if (response.fullname){
-                    this.username = response.fullname
-                    this.bipuserID = response.userid
-                    document.querySelector("#biploginbuttonlabel").textContent = "verbunden";
-                    document.querySelector("#biploginbutton").disabled = true;
-
-                }
-            })
-            .catch(err => { console.warn(err) })
-        },
+        
         // Function to add fade-in effect
         fadeIn(element) {
             element.classList.add('fade-in');
@@ -482,6 +634,25 @@ export default {
             element.classList.add('fade-out');
             element.classList.remove('fade-in');
         },
+
+
+        async bipAutoUpdate(){
+
+            if (this.bipToken && this.biplogin){ 
+                this.username = this.bipUsername
+                await this.fetchBipExams()    
+                if (!this.token){
+                    this.bipAutoconnect()
+                }
+            }
+            else {
+                this.onlineExams = []
+            }
+
+           
+        }
+
+
     },
     mounted() {  
         document.querySelector("#statusdiv").style.visibility = "hidden";
@@ -491,6 +662,11 @@ export default {
         this.fetchinterval = new SchedulerService(4000);
         this.fetchinterval.addEventListener('action',  this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert
         this.fetchinterval.start();
+
+        this.autoUpdateInterval = new SchedulerService(10000);
+        this.autoUpdateInterval.addEventListener('action',  this.bipAutoUpdate);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert
+        this.autoUpdateInterval.start();    
+
 
 
         // add event listener to user input field to supress all special chars 
@@ -515,6 +691,9 @@ export default {
     beforeUnmount() {
         this.fetchinterval.removeEventListener('action', this.fetchInfo);
         this.fetchinterval.stop() 
+
+        this.autoUpdateInterval.removeEventListener('action', this.bipAutoUpdate);
+        this.autoUpdateInterval.stop() 
     }
 }
 </script>
@@ -540,6 +719,10 @@ export default {
 </style>
 
 <style scoped>
+
+.disabledbutton {
+    pointer-events: none; /* Deaktiviert Klicks */
+}
 
 .disabledexam {
     filter: contrast(100%) grayscale(100%) brightness(80%) blur(0.6px);

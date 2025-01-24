@@ -160,7 +160,7 @@ const agent = new https.Agent({ rejectUnauthorized: false });
                 } else if (data.status === "success") {
                     this.multicastClient.beaconsLost = 0; // Dies zählt ebenfalls als erfolgreicher Heartbeat - Verbindung halten
                     this.multicastClient.clientinfo.printrequest = false  //set this to false after the request left the client to prevent double triggering
-
+                   
                     // Verarbeitung der empfangenen Daten
                     const serverStatusDeepCopy = JSON.parse(JSON.stringify(data.serverstatus));
                     const studentStatusDeepCopy = JSON.parse(JSON.stringify(data.studentstatus));

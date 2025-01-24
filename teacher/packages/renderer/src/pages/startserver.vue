@@ -20,7 +20,7 @@
 
     <!-- sidebar -->
     <div class="p-3 text-white bg-dark h-100 " style="width: 240px; min-width: 240px;">
-        <div class="btn btn-light m-0 text-start infobutton">
+        <div class="btn btn-light m-1 text-start infobutton">
             <img src='/src/assets/img/svg/server.svg' class="me-2"  width="16" height="16" > 
             {{$t("general.startserver")}}
         </div><br>
@@ -32,73 +32,63 @@
        
         <div v-if="freeDiscspace < 0.1" class="warning">  {{ $t("startserver.freespacewarning") }}   </div>
         
-        <div id="previous" class="mt-4" v-if="previousExams && previousExams.length > 0">
+
+        <!-- previous exams start -->
+        <div id="previous" class="m-1 mt-4 " v-if="previousExams && previousExams.length > 0">
             <span class="small">{{$t("startserver.previousexams")}}</span>
             <div v-for="exam of previousExams">
                 <div class="input-group" style="display:inline;">
-                    <div class="btn btn-sm btn-warning mt-1" @click="delPreviousExam(exam.dirname)">x</div>
-                    
-                    <div v-if="servername === exam.dirname" class="btn btn-sm btn-info mt-1" :id="exam.dirname" @click="setPreviousExam(exam.dirname)">{{exam.dirname}}</div>  
-                    <div v-else class="btn btn-sm btn-secondary mt-1" :id="exam.dirname" @click="setPreviousExam(exam.dirname)">{{exam.dirname}}</div> 
-                    
-                    <div v-if="exam.serverstatus.bip" class="btn btn-sm btn-cyan mt-1" style="width:14px; height: 31px;">
+                    <div class="btn btn-sm btn-warning mt-1" @click="delPreviousExam(exam.examName)">x</div>
+                    <div v-if="servername === exam.examName" class="btn btn-sm btn-info mt-1" :id="exam.examName" @click="setPreviousExam(exam)">{{exam.examName}}</div>  
+                    <div v-else class="btn btn-sm btn-secondary mt-1" :id="exam.examName" @click="setPreviousExam(exam)">{{exam.examName}}</div> 
+                    <div v-if="exam.bip" class="btn btn-sm btn-cyan mt-1" style="width:14px; height: 31px;">
                         <div style="writing-mode:vertical-rl; font-size:0.8em; margin-left:-10px; margin-top:2px;color: whitesmoke;">BiP</div>
                     </div>
-
                 </div>
-
-                <img v-if="servername === exam.dirname" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
+                <img v-if="servername === exam.examName" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
             </div>
         </div>
-
+        <!-- previous exams end -->
        
-        <div v-if="config.bipIntegration">
+
+
+        <div v-if="config.bipIntegration" class="m-0">
             <br> <br>
-            <span class="small">{{$t("dashboard.bildungsportal")}}</span>
+            <span class="small m-1">{{$t("dashboard.bildungsportal")}}</span>
 
             
-            <div v-if="bipToken" id="biploginbutton" @click="loginBiP()" class="disabledbutton btn btn-success mb-1 me-0 mt-1" style="padding:0;">
+            <div v-if="bipToken" id="biploginbutton" @click="loginBiP()" class="disabledbutton btn btn-success m-1" style="padding:0;">
                 <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
                 <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
             </div> 
-            <div v-else id="biploginbutton" @click="loginBiP()" class="btn btn-info mb-1 me-0 mt-1" style="padding:0;">
+            <div v-else id="biploginbutton" @click="loginBiP()" class="btn btn-info m-1" style="padding:0;">
                 <img id="biplogo" style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
                 <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
             </div> 
            
-
-
-
-
-
-            <div id="onlineexams" class="mt-4" v-if="onlineExams && onlineExams.length > 0">
+            
+            <div id="onlineexams" class="m-1 mt-4" v-if="onlineExams && onlineExams.length > 0">
                 <span class="small">{{$t("startserver.onlineexams")}}</span>
                 <div v-for="exam of onlineExams">
                     <div class="input-group" style="display:inline;">
-                        <div v-if="servername !== exam" class="btn btn-sm btn-teal mt-1" :id="exam" @click="setOnlineExam(exam)">{{exam}}</div>
-                        <div v-if="servername === exam" class="btn btn-sm btn-info mt-1" :id="exam" @click="setOnlineExam(exam)">{{exam}}</div> 
+                        <div v-if="servername !== exam.examName" class="btn btn-sm btn-teal mt-1" :id="exam.examName" @click="setOnlineExam(exam)">{{exam.examName}}</div>
+                        <div v-if="servername === exam.examName" class="btn btn-sm btn-info mt-1" :id="exam.examName" @click="setOnlineExam(exam)">{{exam.examName}}</div> 
                         
                         <div class="btn btn-sm btn-cyan mt-1" style="width:14px; height: 31px;">
                             <div style="writing-mode:vertical-rl; font-size:0.8em; margin-left:-10px; margin-top:2px; color: whitesmoke;">BiP</div>
                         </div>
 
                     </div>
-                    <img v-if="servername === exam" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
+                    <img v-if="servername === exam.examName" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
                 </div>
             </div>
-
-
-
-
-
-
 
         </div>
         
 
 
         <br> <br>
-        <div id="statusdiv" class="btn btn-warning">{{$t("startserver.connected")}}</div>
+        <div id="statusdiv" class="m-1 btn btn-warning">{{$t("startserver.connected")}}</div>
         <br>
        
         <span @click="showCopyleft()" style="position: absolute; bottom:2px; left: 6px; font-size:0.8em;cursor: pointer;">
@@ -170,7 +160,7 @@ export default {
         return {
             version: this.$route.params.version,
             info: config.info,
-            config: config,
+            config: this.$route.params.config,  //achtung: config enthält rekursive elemente und wird daher in ipchandler.copyConfig() kopiert
             title: document.title,
             servername : this.$route.params.config.development ? "5A-Mathematik":"",
             password: this.$route.params.config.development ? "password": Math.floor(1000 + Math.random() * 9000),   //we could use this password to allow students to manually leave exam mode 
@@ -185,6 +175,7 @@ export default {
             previousExams: [],
             onlineExams: [],
             biptest:false,   //switches between production and q
+            selectedExam: null,
 
             bipToken:this.$route.params.bipToken === 'false' || !this.$route.params.bipToken ?  false : this.$route.params.bipToken,   // parameter werden immer als string "false" übergeben, convert to bool
             bipuserID: this.$route.params.bipuserID === 'false' || !this.$route.params.bipuserID ?  false : this.$route.params.bipuserID,
@@ -196,7 +187,8 @@ export default {
 
 
         loginBiP(){
-            if (this.config.development){   // skip bip logon and fake bip info
+            //console.log("loginBiP", this.config)
+            if (this.config.bipDemo){   // skip bip logon and fake bip info
                 // fake bip info
                 this.bipUsername = "Weissel Thomas"
                 this.bipuserID = 92136
@@ -277,11 +269,11 @@ export default {
                 })
                 .then(response => { return response.json(); } )                  
                 .then(data => {
-                    console.log("Daten von der API:", data);
+                    //console.log("Daten von der API:", data);
                     this.bipData = data   // store all of the information in data
 
                     data.exams.forEach( exam => {
-                        this.onlineExams.push(exam.examName)
+                        this.onlineExams.push(exam)
                     })
 
                 })
@@ -302,7 +294,7 @@ export default {
                 //     this.bipData = data   // store all of the information in data
 
                 //     data.exams.forEach( exam => {
-                //         this.onlineExams.push(exam.examName)
+                //         this.onlineExams.push(exam)
                 //     })
 
                 // })
@@ -312,14 +304,16 @@ export default {
         },
 
 
-        setOnlineExam(name){
-            document.getElementById('servername').value = name
-            this.servername = name
+        setOnlineExam(exam){
+            document.getElementById('servername').value = exam.examName
+            this.servername = exam.examName
+
+            this.selectedExam = exam  // exam reprensents the exam object "serverstatus"
 
             // save the selected exam information to local serverstatus.json / create local exam folder
-            this.bipData.exams.forEach(exam =>{
-                if (exam.examName === name){
-                    ipcRenderer.invoke('createBipExamdirectory', exam)
+            this.bipData.exams.forEach(bipexam =>{
+                if (bipexam.examName === exam.examName){
+                    ipcRenderer.invoke('createBipExamdirectory', bipexam)
                 }
             }) 
         },
@@ -389,18 +383,19 @@ export default {
 
 
         /**  setzt das feld prüfungsname auf den namen des angeklickten prüfungsverzeichnisses */
-        setPreviousExam(name){
-            document.getElementById('servername').value = name
-            this.servername = name
-            this.checkExistingExam()
+        setPreviousExam(exam){
+            document.getElementById('servername').value = exam.examName
+            this.servername = exam.examName
+            this.selectedExam = exam
+            this.checkExistingExam()  //ändert den text am startbutton
         },
 
 
-        /** sucht unter den gesicherten verzeichnissen und ändert den text am startbutton */
+        /** überprüft ob die ausgewählte prüfung bereits existiert und ändert den text am startbutton */
         checkExistingExam(){
             for (let i = 0; i < this.previousExams.length; i++) {
                 const previousExam = this.previousExams[i] // current exam object
-                if (previousExam.dirname === this.servername) {
+                if (previousExam.examName === this.servername) {
                     document.getElementById('examstart').innerHTML = this.$t("startserver.resume")
                     break
                 } else {
@@ -409,6 +404,7 @@ export default {
             }        
         },
 
+        /** löscht die ausgewählte prüfung */
         delPreviousExam(name){
             // ASK for confirmation!
             this.$swal.fire({
@@ -427,6 +423,8 @@ export default {
                 } 
             });  
         },
+
+
         async setWorkdir(){   // achtung: custom workdir spreizt sich mit der idee die teacher instanz als reine webversion laufen zulassen - wontfix?
             let response = await ipcRenderer.invoke('setworkdir')
             this.workdir = response.workdir
@@ -449,10 +447,26 @@ export default {
                 this.status(this.$t("startserver.emptypw")); 
             }
             else {
+
+               console.log("selectedExam", this.selectedExam, this.bipToken)
+            
+                if (this.selectedExam && this.selectedExam.bip && !this.bipToken){
+                    this.status(this.$t("startserver.bipnotloggedin")); 
+                    return;
+                }
+                
+                
+
+                let payload = {
+                    workdir: this.workdir,
+                    bip: this.selectedExam && this.selectedExam.bip ? true : false
+                }
+
+
                 fetch(`https://${this.hostname}:${this.serverApiPort}/server/control/start/${this.servername}/${this.password}`, { 
                     method: 'POST',
                     headers: {'Content-Type': 'application/json' },
-                    body: JSON.stringify({ workdir: this.workdir  })
+                    body: JSON.stringify(payload)
                 })
                 .then( res => res.json())
                 .then( async response => { 
@@ -567,7 +581,10 @@ export default {
         this.fetchinterval.start(); 
 
 
-        if (this.bipToken !== false){ this.fetchBipExams(); console.log(this.bipToken) }
+        if (this.bipToken !== false){ 
+            this.fetchBipExams();
+            //console.log(this.bipToken) 
+        }
 
 
         // add event listener to exam input field to supress all special chars 

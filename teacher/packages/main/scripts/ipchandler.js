@@ -130,7 +130,7 @@ class IpcHandler {
             config.accessToken = false
 
             log.info("ipchandler @ resetToken: Logged out of Office365")
-            return this.copyConfig(config);  // we cant just copy the config because it contains examServerList which contains confic (circular structure)
+            return this.copyConfig(config);  // we cant just copy the config because it contains examServerList which contains config (circular structure)
         })  
 
 
@@ -252,7 +252,7 @@ class IpcHandler {
                     
                     const serverstatus = JSON.parse(fs.readFileSync(serverstatusPath, 'utf-8')) // parse JSON to object
 
-                    examfolders.push({ dirname, serverstatus }) // add object to array
+                    examfolders.push(serverstatus) // add object to array
                     }
                 }
             }
@@ -530,12 +530,15 @@ class IpcHandler {
             development: conf.development, 
             showdevtools: conf.showdevtools,
             bipIntegration: conf.bipIntegration,
+            bipDemo: conf.bipDemo,
             workdirectory: conf.workdirectory,
             tempdirectory: conf.tempdirectory,
             serverdirectory: conf.serverdirectory,
+           
             serverApiPort: conf.serverApiPort,
             multicastClientPort: conf.multicastClientPort,
             multicastServerClientPort: conf.multicastServerClientPort,
+           
             multicastServerAdrr: conf.multicastServerAdrr,
             hostip: conf.hostip,
             gateway: conf.gateway,

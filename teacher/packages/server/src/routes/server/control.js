@@ -142,6 +142,9 @@ router.get('/msauth', async (req, res) => {
     // this route may be used by localhost only
     if (!requestSourceAllowed(req, res)) return   // for the webversion we need to check user permissions here (future stuff)
 
+    const bip = req.body.bip  // this info is also sent via multicastserver message
+    
+
     const servername = req.params.servername 
     const mcServer = config.examServerList[servername]
 
@@ -164,7 +167,8 @@ router.get('/msauth', async (req, res) => {
     
     log.info('control @ start: Initializing new Exam Server:', servername)
     let mcs = new multiCastserver();
-    mcs.init(servername, pin, req.params.passwd)
+    mcs.init(servername, pin, req.params.passwd, bip)
+
     config.examServerList[servername]=mcs
     // log.info(config.workdirectory)
     let serverinstancedir = path.join(config.workdirectory, servername)
@@ -319,7 +323,8 @@ for (let i = 0; i<16; i++ ){
         return res.send({sender: "server", message:t("control.biprequired"), status: "error"} ) 
     }
     
-    if (pin === mcServer.serverinfo.pin) {
+    console.log(pin, mcServer.serverinfo.pin)
+    if (pin == mcServer.serverinfo.pin) {
         let registeredClient = mcServer.studentList.find(element => element.clientname === clientname)
        
         
@@ -597,7 +602,7 @@ router.post('/getserverstatus/:servername/:csrfservertoken', function (req, res,
     const servername = req.params.servername
     const mcServer = config.examServerList[servername]
     if (!mcServer) {  return res.send({sender: "server", message:t("control.notfound"), status: "error"} )  }
-    if (csrfservertoken !== mcServer.serverinfo.servertoken) { res.send({sender: "server", message:t("control.tokennotvalid"), status: "error"} )}
+    if (csrfservertoken !== mcServer.serverinfo.servertoken) { return res.send({sender: "server", message:t("control.tokennotvalid"), status: "error"} )}
     // mcServer.serverstatus von der JSON-Datei wieder importieren
     const filePath = path.join(config.workdirectory, mcServer.serverinfo.servername, 'serverstatus.json');
     let serverstatus;
@@ -615,7 +620,7 @@ router.get('/getcurrentserverstatus/:servername/:csrfservertoken', function (req
     const servername = req.params.servername
     const mcServer = config.examServerList[servername]
     if (!mcServer) {  return res.send({sender: "server", message:t("control.notfound"), status: "error"} )  }
-    if (csrfservertoken !== mcServer.serverinfo.servertoken) { res.send({sender: "server", message:t("control.tokennotvalid"), status: "error"} )}
+    if (csrfservertoken !== mcServer.serverinfo.servertoken) { return res.send({sender: "server", message:t("control.tokennotvalid"), status: "error"} )}
    
     return res.json({sender: "server", status: "success", serverstatus: mcServer.serverstatus}) 
 })
@@ -635,7 +640,7 @@ router.post('/setserverstatus/:servername/:csrfservertoken', function (req, res,
     const servername = req.params.servername
     const mcServer = config.examServerList[servername]
     if (!mcServer) {  return res.send({sender: "server", message:t("control.notfound"), status: "error"} )  }
-    if (csrfservertoken !== mcServer.serverinfo.servertoken) { res.send({sender: "server", message:t("control.tokennotvalid"), status: "error"} )}
+    if (csrfservertoken !== mcServer.serverinfo.servertoken) { return res.send({sender: "server", message:t("control.tokennotvalid"), status: "error"} )}
     
     mcServer.serverstatus = req.body.serverstatus
     mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].msOfficeFile = false  // we cant store a file object as json
