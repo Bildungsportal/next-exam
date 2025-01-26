@@ -3,17 +3,13 @@
 
 <!-- Header START -->
 <div :key="0" class="w-100 p-3 text-white bg-dark shadow text-right">
-
     <span class="text-white m-1">
         <img src="/src/assets/img/svg/speedometer.svg" class="white me-2  " width="32" height="32" >
         <span class="fs-4 align-middle me-1 ">Next-Exam</span>
     </span>
-
     <span class="fs-4 align-middle ms-3" style="float: right">Dashboard</span>
     <div class="btn btn-sm btn-secondary m-0 me-1 mt-1" style="float: right; padding:3px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white" width="22" height="22" > </div>
-    <div class="btn btn-sm btn-danger m-0 me-1 mt-1" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style="float: right"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" > {{$t('dashboard.stopserver')}}&nbsp; </div>
-   
-
+    <div class="btn btn-sm btn-danger m-0 me-1 mt-1" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style="float: right"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" >&nbsp; {{$t('dashboard.stopserver')}}&nbsp; </div>
     <div v-if="!hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 me-1 " style="cursor: unset; float: right">{{ $t("general.offline") }}</div>
 </div>
  <!-- Header END -->
@@ -70,6 +66,9 @@
                     <!-- folders -->
                     <div v-if="(file.type == 'dir')" class="btn btn-success pe-3 ps-3 me-3 mb-2 btn-sm" @click="loadFilelist(file.path)"><img src="/src/assets/img/svg/folder-open.svg" class="" width="22" height="22" > {{file.name}} </div>
                     <div v-if="(file.type == 'dir')" class="btn btn-dark  me-1 mb-2 btn-sm " style="float: right;" @click="downloadFile(file)" :title="$t('dashboard.download')"><img src="/src/assets/img/svg/edit-download.svg" class="" width="22" height="22" ></div>
+                
+                    <div class="btn btn-sm m-1" :class="bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'" @click="toggleBipStatus" style=" float: right; width: 154px"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" > Exam Status: {{bipStatus}}</div>
+
                 </div>
            </div>
         </div>
@@ -131,7 +130,7 @@
             </div>
 
             <!-- microsoft365 -->
-            <div class="form-check m-1 mb-3" :class="(serverstatus.exammode && this.config.accessToken )? 'disabledexam':''">
+            <div class="form-check m-1 mb-3" :class="( (serverstatus.exammode && serverstatus.examSections[serverstatus.activeSection].examtype !== 'microsoft365') ||  (serverstatus.exammode && this.config.accessToken) )? 'disabledexam':''">
                 <input v-model="serverstatus.examSections[serverstatus.activeSection].examtype" value="microsoft365" class="form-check-input" type="radio" name="examtype" id="examtype4">
                 <label class="form-check-label" for="examtype4"> Microsoft365 <span v-if="(this.config.accessToken)">({{$t('dashboard.connected')}})</span> </label>
                 
@@ -162,14 +161,11 @@
 
         <!-- BIP Section START -->
         <div v-if="bipToken && this.serverstatus.bip" class="mb-4">
-            <span class="small m-1">{{$t("dashboard.bildungsportal")}}</span>
+            <span class="small m-1">{{$t("dashboard.bildungsportal")}}</span><span v-if="bipToken" class="small m-1 me-0 text-secondary">(verbunden)</span>
             <div id="biploginbutton" @click="showBipInfo()" class="disabledbutton btn btn-success m-1" style="padding:0;">
                 <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
                 <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
             </div> 
-        
-            <span class="small m-1">BiP Exam Status</span><br>
-            <button class="btn btn-sm m-1" :class="bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'" @click="toggleBipStatus" style="width: 100px;">{{bipStatus}}</button>
         </div>
         <!-- BIP Section END -->
         
@@ -268,8 +264,12 @@
    
     <div :key="7" id="content" class="fadeinslow p-3">
         <!-- control buttons start -->        
-        <div v-if="(serverstatus.exammode && numberOfConnections == 1)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:128px; height:62px;" @click="endExam();hideDescription();"  @mouseover="showDescription($t('dashboard.exitkiosk'))" @mouseout="hideDescription"  >                                                                                                                                         <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.stopexamsingle')}} </div></div>
-        <div v-if="(serverstatus.exammode && numberOfConnections != 1)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:128px; height:62px;" @click="endExam();hideDescription();"  @mouseover="showDescription($t('dashboard.exitkiosk'))" @mouseout="hideDescription"  >                                                                                                                                         <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.stopexam')}} </div></div>
+        <div v-if="(serverstatus.exammode && numberOfConnections == 1)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:128px; height:62px;" @click="endExam();hideDescription();"  @mouseover="showDescription($t('dashboard.exitkiosk'))" @mouseout="hideDescription"  >
+            <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.stopexamsingle')}} </div>
+        </div>
+        <div v-if="(serverstatus.exammode && numberOfConnections != 1)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:128px; height:62px;" @click="endExam();hideDescription();"  @mouseover="showDescription($t('dashboard.exitkiosk'))" @mouseout="hideDescription"  >
+            <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.stopexam')}} </div>
+        </div>
 
         <div v-if="(!serverstatus.exammode)" class="btn btn-teal m-1 mt-0 text-start ms-0"  @click="startExam();hideDescription();"  @mouseover="showDescription($t('dashboard.startexamdesc'))" @mouseout="hideDescription" :class="(serverstatus.examSections[serverstatus.activeSection].examtype === 'microsoft365' && (!this.config.accessToken || !serverstatus.examSections[serverstatus.activeSection].msOfficeFile))? 'disabledgreen':''" style="width:128px; height:62px;">  <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.startexam')}}</div></div>
         <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="sendFiles('all');hideDescription();"   @mouseover="showDescription($t('dashboard.sendfile'))" @mouseout="hideDescription"  style="width:62px; height:62px;"><img src="/src/assets/img/svg/document-send.svg" class="mt-2" width="32" height="32"></div>
@@ -278,6 +278,14 @@
         <div v-if="(serverstatus.screenslocked)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:62px; height:62px;" @click="lockscreens(false);hideDescription();"> <img src="/src/assets/img/svg/eye-fill.svg" class="white mt-2" width="32" height="32" >   </div>
         <div v-if="(!serverstatus.screenslocked)" class="btn btn-dark m-1 mt-0 text-start ms-0 " style="width:62px; height:62px;" @click="lockscreens(true);hideDescription();"  @mouseover="showDescription($t('dashboard.lock'))" @mouseout="hideDescription" > <img src="/src/assets/img/svg/eye-slash-fill.svg" class="white mt-2" width="32" height="32" >  </div>
         <div class="btn btn-dark m-1 mt-0 ms-0 text-start" @mouseover="showDescription($t('dashboard.del'))" @mouseout="hideDescription" style="width:62px; height:62px;" @click="delfolderquestion()"> <img src="/src/assets/img/svg/edit-delete.svg" class="mt-2" width="32" height="32" ></div>
+        
+
+        <div v-if="bipToken" @mouseover="showDescription($t('dashboard.bipinfo'))" @mouseout="hideDescription" class="btn m-1 mt-0 ms-0 text-start p-1 pt-2 ps-2" :class="bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'" @click="toggleBipStatus" style="width:128px; height:62px;">
+            <img src="/src/assets/img/svg/globe.svg" class=" mt-1" width="32" height="32" style="vertical-align: top;"> 
+            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;" class="">BiP-Status {{bipStatus}}</div>
+        </div>
+
+        
         <!-- control buttons end -->
 
 
@@ -1464,6 +1472,12 @@ export default {
 
 
 <style scoped>
+
+#statusdiv {
+    display: block !important;
+    width: 200px  ;
+}
+
 
 #setupdiv {
     position: absolute;        /* Fixiert den div über allem anderen */

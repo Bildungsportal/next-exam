@@ -158,7 +158,9 @@
         "extendedsettings": "Extended Settings",
         "save": "speichern",
         "disabled": "disabled",
-        "ocrinfo":"search for current exam pin in screenshots"
+        "ocrinfo":"search for current exam pin in screenshots",
+        "bipinfo": "BiP-Status defines if authenticated clients can connect",
+        "logoutBiP": "Are you sure you want to log out?"
     },
     "control": {
         "tokennotvalid": "token is not valid",

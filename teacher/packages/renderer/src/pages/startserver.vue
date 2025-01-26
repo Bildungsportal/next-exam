@@ -48,22 +48,20 @@
         <!-- previous exams end -->
        
 
-
+        <!-- BIP Section START -->
         <div v-if="config.bipIntegration" class="m-0">
             <br> 
-            <span class="small m-1">{{$t("dashboard.bildungsportal")}}</span>
+            <span class="small m-1">{{$t("dashboard.bildungsportal")}}</span><span v-if="bipToken" class="small m-1 me-0 text-secondary">(verbunden)</span>
 
-            
-            <div v-if="bipToken" id="biploginbutton" @click="loginBiP()" class="disabledbutton btn btn-success m-1" style="padding:0;">
+            <div v-if="bipToken" title="logout" id="biploginbutton" @click="logoutBiP()" class="btn btn-success m-1" style="padding:0;">
                 <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
                 <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
             </div> 
-            <div v-else id="biploginbutton" @click="loginBiP()" class="btn btn-info m-1" style="padding:0;">
+            <div v-else title="login" id="biploginbutton" @click="loginBiP()" class="btn btn-info m-1" style="padding:0;">
                 <img id="biplogo" style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
                 <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
             </div> 
            
-            
             <div id="onlineexams" class="m-1 mt-4" v-if="onlineExams && onlineExams.length > 0">
                 <span class="small">{{$t("startserver.onlineexams")}}</span>
                 <div v-for="exam of onlineExams">
@@ -81,7 +79,7 @@
             </div>
 
         </div>
-        
+        <!-- BIP Section END --> 
 
 
         <br> <br>
@@ -198,6 +196,26 @@ export default {
 
             let IPCresponse = ipcRenderer.sendSync('loginBiP', this.biptest)
             console.log(IPCresponse)
+        },
+
+        logoutBiP(){
+            this.$swal({
+                title: this.$t("dashboard.bildungsportal"),
+                text:  this.$t("dashboard.logoutBiP"),
+                showCancelButton: true,
+                confirmButtonText: 'Ok',
+                cancelButtonText: this.$t("dashboard.cancel"),
+                focusConfirm: false,
+                icon: 'question',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.bipToken = false
+                    this.bipUsername = false
+                    this.bipuserID = false
+                    this.bipData = null
+                    this.onlineExams = []
+                } 
+            });
         },
 
 

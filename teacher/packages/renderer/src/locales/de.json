@@ -158,7 +158,9 @@
         "extendedsettings": "Erweiterte Einstellungen",
         "save": "speichern",
         "disabled": "deaktiviert",
-        "ocrinfo":"Aktuelle Exam PIN im Screenshot erkennen"
+        "ocrinfo":"Aktuelle Exam PIN im Screenshot erkennen",
+        "bipinfo": "BiP-Status gibt an ob sich authentifizierte Clients verbinden können",
+        "logoutBiP": "Sind Sie sicher, dass Sie sich abmelden möchten?"
     },
     "control": {
         "tokennotvalid": "Das Token ist ungültig",

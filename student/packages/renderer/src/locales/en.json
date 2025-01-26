@@ -26,7 +26,8 @@
         "bildungsportal":"Bildungsportal",
         "localLockdown":"Local lockdown",
         "manualsearch":"Manual search",
-        "noexams":"No exams found"
+        "noexams":"No exams found",
+        "logoutBiP":"Are you sure you want to logout?"
     },
     "control": {
         "tokennotvalid": "token is not valid",

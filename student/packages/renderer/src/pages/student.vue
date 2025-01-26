@@ -26,8 +26,8 @@
     
 
         <div class="form-check form-switch m-1 mb-2 mt-2">
-            <input id="screenshotOcr" type="checkbox"  v-model="advanced" class="form-check-input" @change="toggleAdvanced">
-            <label for="screenshotOcr" class="form-check-label">{{$t('student.manualsearch')}}</label>
+            <input id="manualsearch" type="checkbox"  v-model="advanced" class="form-check-input" @change="toggleAdvanced">
+            <label for="manualsearch" class="form-check-label">{{$t('student.manualsearch')}}</label>
         </div>
 
 
@@ -36,7 +36,7 @@
 
         <!-- BIP Section START -->
         <div v-if="config.bipIntegration" class="mt-4">
-            <span class="small m-1">{{$t("student.bildungsportal")}}</span>
+            <span class="small m-1 me-0">{{$t("student.bildungsportal")}}</span> <span v-if="bipToken" class="small m-1 me-0 text-secondary">(verbunden)</span> 
             <div v-if="bipToken" title="logout" id="biploginbutton" @click="logoutBiP()" class="btn btn-success m-1 " :class="(token)? 'disabledexam':''" style="padding:0;">
                 <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
                 <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
@@ -74,15 +74,11 @@
                 <span class="input-group-text col-3" style="width:135px;" id="inputGroup-sizing-lg">{{ $t("student.name") }}</span>
                 <input v-model="username" type="text" required="required" maxlength="25" class="form-control" id="user" placeholder="" style="width:200px;max-width:200px;min-width:135px;">
             </div> 
-
             <div v-if="bipToken" class="input-group  mb-1">
                 <span class="input-group-text col-3" style="width:135px;" id="inputGroup-sizing-lg">{{ $t("student.name") }}</span>
-               
                 <span v-if="username" class="input-group-text col-3" style="width:200px;" id="inputGroup-sizing-lg"> {{ username  }} </span>
                 <span v-else class="input-group-text col-3 " style="width:200px;" id="inputGroup-sizing-lg">  </span>
-               
             </div> 
-      
             <div class="input-group  mb-1"> 
                 <span class="input-group-text col-3" style="width:135px;" id="inputGroup-sizing-lg">{{ $t("student.pin") }}</span>
                 <input  v-model="pincode" type="number" min="0" oninput="validity.valid||(value='')" class="form-control" id="pin" placeholder="" style="width:135px;max-width:135px;min-width:135px;">
@@ -191,13 +187,25 @@ export default {
         },
 
         logoutBiP(){
-            this.bipToken = false
-            this.bipUsername = false
-            this.bipuserID = false
-            this.username = ""
-            this.pincode = ""
-            this.bipData = null
-            this.onlineExams = []
+            this.$swal({
+                title: this.$t("student.bildungsportal"),
+                text:  this.$t("student.logoutBiP"),
+                showCancelButton: true,
+                confirmButtonText: 'Ok',
+                cancelButtonText: this.$t("editor.cancel"),
+                focusConfirm: false,
+                icon: 'question',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.bipToken = false
+                    this.bipUsername = false
+                    this.bipuserID = false
+                    this.username = ""
+                    this.pincode = ""
+                    this.bipData = null
+                    this.onlineExams = []
+                } 
+            });
         },
 
         /**
