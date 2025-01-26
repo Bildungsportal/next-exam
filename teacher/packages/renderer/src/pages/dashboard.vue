@@ -1,7 +1,7 @@
 <template>
 
 
-<!-- Header  -->
+<!-- Header START -->
 <div :key="0" class="w-100 p-3 text-white bg-dark shadow text-right">
 
     <span class="text-white m-1">
@@ -10,7 +10,7 @@
     </span>
 
     <span class="fs-4 align-middle ms-3" style="float: right">Dashboard</span>
- <div class="btn btn-sm btn-secondary m-0 me-1 mt-1" style="float: right; padding:3px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white" width="22" height="22" > </div>
+    <div class="btn btn-sm btn-secondary m-0 me-1 mt-1" style="float: right; padding:3px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white" width="22" height="22" > </div>
     <div class="btn btn-sm btn-danger m-0 me-1 mt-1" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style="float: right"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" > {{$t('dashboard.stopserver')}}&nbsp; </div>
    
 

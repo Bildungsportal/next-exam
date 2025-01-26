@@ -1,53 +1,47 @@
 <template>
 
+<!-- Header START -->
+<div class="w-100 p-3 text-white bg-dark shadow text-right" style="height: 66px;">
+    <span class="text-white m-1">
+        <img src='/src/assets/img/svg/speedometer.svg' class="white me-2  " width="32" height="32" >
+        <span class="fs-4 align-middle me-4 ">Next-Exam</span>
+    </span>
 
-<div  id="apphead" class="w-100 p-3 text-white bg-dark shadow text-right ">
-    <img src='/src/assets/img/svg/speedometer.svg' class="white me-2  " width="32" height="32" >
-    <span class="fs-4 align-middle me-4 ">Next-Exam</span>
     <span class="fs-4 align-middle  ms-3" style="float: right">Student</span>
-    
     <div v-if="token && !localLockdown" id="adv" class="btn btn-success btn-sm m-0  mt-1 " style="cursor: unset; float: right">{{ $t("student.connected") }}</div>
     <button v-if="clientinfo.groups && clientinfo.group == 'a' && token && !localLockdown" type="button" class="btn btn-info btn-sm  m-1 mt-1" style="cursor: unset; width: 32px; float: right"> A  </button>
-    <button v-if="clientinfo.groups && clientinfo.group == 'b' && token && !localLockdown" type="button" class="btn btn-warning btn-sm m-1 mt-1" style="cursor: unset; width: 32px; float: right"> B  </button>
-                     
+    <button v-if="clientinfo.groups && clientinfo.group == 'b' && token && !localLockdown" type="button" class="btn btn-warning btn-sm m-1 mt-1" style="cursor: unset; width: 32px; float: right"> B  </button>               
     <div v-if="!hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 " style="cursor: unset; float: right">{{ $t("student.offline") }}</div>
     <div v-if="networkerror" id="adv" class="btn btn-danger btn-sm m-0  mt-1 " style="cursor: unset; float: right">{{ $t("student.noapi") }}</div>
 </div>
- 
+<!-- Header END -->
 
 <div id="wrapper" class="w-100 h-100 d-flex" >
 
     <!-- SIDEBAR START -->
     <div class="p-3 text-white bg-dark h-100" style="width: 240px; min-width: 240px;">
-        <div class="btn btn-light m-0 text-start infobutton">
+        <div class="btn btn-light ms-1 text-start infobutton">
             <img src='/src/assets/img/svg/server.svg' class="me-2"  width="16" height="16" > {{$t('student.exams')}} 
         </div><br>
-        <div v-if="!advanced" id="adv"  class="btn btn-sm btn-outline-secondary mt-2" @click="toggleAdvanced();"> {{ $t("student.advanced") }}</div>
-        <div v-if="advanced" id="adv"  class="btn btn-sm btn-outline-secondary mt-2" @click="toggleAdvanced();"> {{ $t("student.simple") }}</div>
-        
+    
 
-        <div v-if="advanced" @click="setupLocalLockdown()" class="form-check form-switch  m-1 mt-4"  :class="(token)? 'disabledexam':''" style="font-size:0.9em">
-            <!-- Checkbox mit dem Label "BiP Login" -->
-            <input class="form-check-input" type="checkbox" id="localLockdown" v-model="localLockdown"> 
-            <label class="form-check-label" for="localLockdown"> Lokal absperren</label>
+        <div class="form-check form-switch m-1 mb-2 mt-2">
+            <input id="screenshotOcr" type="checkbox"  v-model="advanced" class="form-check-input" @change="toggleAdvanced">
+            <label for="screenshotOcr" class="form-check-label">{{$t('student.manualsearch')}}</label>
         </div>
 
-        <div v-if="config.bipIntegration && advanced" @click="clearUser()" class="form-check form-switch  m-1 mb-2 mt-2" :class="(token)? 'disabledexam':''"  style="font-size:0.9em">
-            <!-- Checkbox mit dem Label "BiP Login" -->
-            <input class="form-check-input" type="checkbox" id="bipLogin" v-model="biplogin"> 
-            <label class="form-check-label" for="bipLogin"> BiP Login</label>
-        </div>
 
-        
+    
       
 
         <!-- BIP Section START -->
-        <div v-if="biplogin">
-            <div v-if="bipToken" id="biploginbutton" @click="loginBiP()" class="disabledbutton btn btn-success m-1 ms-0" style="padding:0;">
+        <div v-if="config.bipIntegration" class="mt-4">
+            <span class="small m-1">{{$t("student.bildungsportal")}}</span>
+            <div v-if="bipToken" title="logout" id="biploginbutton" @click="logoutBiP()" class="btn btn-success m-1 " :class="(token)? 'disabledexam':''" style="padding:0;">
                 <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
                 <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
             </div> 
-            <div v-else id="biploginbutton" @click="loginBiP()" class="btn btn-info m-1 ms-0" style="padding:0;">
+            <div v-else id="biploginbutton" title="login" @click="loginBiP()" class="btn btn-info m-1 " style="padding:0;">
                 <img id="biplogo" style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
                 <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
             </div> 
@@ -55,18 +49,16 @@
         <!-- BIP Section END -->
 
         
+        <div @click="setupLocalLockdown()" class="btn btn-sm btn-outline-secondary ms-1 mt-3 mb-4"  :class="(token)? 'disabledexam':''" style="font-size:0.9em"> {{ $t("student.localLockdown") }} </div>
 
 
-        <div class="m-2">
-            <br><div id="statusdiv" class="btn btn-warning m-1"></div>
-        </div>
-        <br>
 
+
+        <div > <br><div id="statusdiv" class="btn btn-warning m-1"></div>  </div> <br>
         <span @click="showCopyleft()" style="position: absolute; bottom:2px; left: 6px; font-size:0.8em;cursor: pointer;">
             <span style=" display:inline-block; transform: scaleX(-1);font-size:1.2em; ">&copy; </span> 
             <span style="vertical-align: text-bottom;">&nbsp;{{version}} {{ info }}</span>
         </span>
-
     </div>
     <!-- SIDEBAR END  -->
 
@@ -78,12 +70,12 @@
 
 
         <div class="col-8 mb-2" :class="(token)? 'disabledtext':''">
-            <div v-if="!biplogin" class="input-group  mb-1">
+            <div v-if="!bipToken" class="input-group  mb-1">
                 <span class="input-group-text col-3" style="width:135px;" id="inputGroup-sizing-lg">{{ $t("student.name") }}</span>
                 <input v-model="username" type="text" required="required" maxlength="25" class="form-control" id="user" placeholder="" style="width:200px;max-width:200px;min-width:135px;">
             </div> 
 
-            <div v-if="biplogin" class="input-group  mb-1">
+            <div v-if="bipToken" class="input-group  mb-1">
                 <span class="input-group-text col-3" style="width:135px;" id="inputGroup-sizing-lg">{{ $t("student.name") }}</span>
                
                 <span v-if="username" class="input-group-text col-3" style="width:200px;" id="inputGroup-sizing-lg"> {{ username  }} </span>
@@ -95,36 +87,36 @@
                 <span class="input-group-text col-3" style="width:135px;" id="inputGroup-sizing-lg">{{ $t("student.pin") }}</span>
                 <input  v-model="pincode" type="number" min="0" oninput="validity.valid||(value='')" class="form-control" id="pin" placeholder="" style="width:135px;max-width:135px;min-width:135px;">
             </div>
-            <div v-if="advanced || servertimeout > 2 " class="input-group  mb-1"> 
+            <div v-if="advanced" class="input-group  mb-1"> 
                 <span class="input-group-text col-3" style="width:135px;" id="inputGroup-sizing-lg">{{ $t("student.ip") }}</span>
-                <input  v-model="serverip" class="form-control" id="serverip" placeholder="" style="width:135px;max-width:135px;min-width:135px;">
+                <input :class="{'form-control': validip, 'form-control is-invalid': !validip}" v-model="serverip" class="form-control" id="serverip" placeholder="" style="width:135px;max-width:135px;min-width:135px;">
             </div>
         </div>
   
   
        
-   
-        <h4 class="mt-4">{{ $t("student.exams") }}</h4>
-        <div id="list" class="" style="overflow-y:auto; height: 369px; display:flex; flex-wrap: wrap; flex-direction: row;">
-            
-            <div v-for="server in serverlist" class="row p-3 m-0 mb-2 border bg-light" style="border-radius: 4px; margin-right: 10px !important; min-height:100px; max-height:100px;  min-width:234px; max-width: 234px;">
-                <strong style="padding:0px;">
-                    {{server.servername}} 
-                    <span v-if="server.bip" class="badge btn-teal" style="vertical-align: text-bottom; margin-left: 4px;"> BiP Exam</span>
-                </strong>  
-                <img v-if="!server.reachable" src="/src/assets/img/svg/emblem-warning.svg" :title="$t('student.unreachable')"  style="width:20px;float:right;vertical-align:top;cursor: help;" >
+        <div style="position: absolute; top: 205px !important;">
+            <h4 class="mt-3">{{ $t("student.exams") }}</h4>
+            <div id="list" class="" style="overflow-y:auto; height: 369px; display:flex; flex-wrap: wrap; flex-direction: row;">
                 
-                <input v-if="!token && !server.bip" :id="server.servername" type="button" name="register" class="btn btn-sm btn-info" :value="$t('student.register')" @click="registerClient(server.serverip,server.servername)"/>
-                <input v-if="!token && server.bip"  :id="server.servername" type="button" name="register" class="btn btn-sm" :value="server.examStatus ? server.examStatus : 'closed'" :class="{'btn-teal': server.examStatus == 'open', 'btn-warning': server.examStatus == 'closed' || !server.examStatus, 'btn-secondary': server.examStatus == 'offline' }"/>
-                
-                <!-- if token is set (client is registered) and if registration is for this specific server -->
-                <input v-if="token && clientinfo.servername !== server.servername" :id="server.servername" disabled type="button" name="register" class="btn btn-secondary" :value="server.examStatus ? server.examStatus : $t('student.register')" />
-                <input v-else-if="token && clientinfo.servername === server.servername" :id="server.servername" disabled type="button" name="register" class="btn btn-success" :value="$t('student.registered')" />
+                <div v-for="server in serverlist" class="row p-3 m-0 mb-2 border bg-light" style="border-radius: 4px; margin-right: 10px !important; min-height:100px; max-height:100px;  min-width:234px; max-width: 234px;">
+                    <strong style="padding:0px;">
+                        {{server.servername}} 
+                        <span v-if="server.bip" class="badge btn-teal" style="vertical-align: text-bottom; margin-left: 4px;"> BiP Exam</span>
+                    </strong>  
+                    <img v-if="!server.reachable" src="/src/assets/img/svg/emblem-warning.svg" :title="$t('student.unreachable')"  style="width:20px;float:right;vertical-align:top;cursor: help;" >
+                    
+                    <input v-if="!token && !server.bip" :id="server.servername" type="button" name="register" class="btn btn-sm btn-info" :value="$t('student.register')" @click="registerClient(server.serverip,server.servername)"/>
+                    <input v-if="!token && server.bip"  :id="server.servername" type="button" name="register" class="btn btn-sm" :value="server.examStatus ? server.examStatus : 'restricted'" :class="{'btn-teal': server.examStatus == 'open', 'btn-warning': server.examStatus == 'closed' || !server.examStatus, 'btn-secondary': server.examStatus == 'offline' }"/>
+                    
+                    <!-- if token is set (client is registered) and if registration is for this specific server -->
+                    <input v-if="token && clientinfo.servername !== server.servername" :id="server.servername" disabled type="button" name="register" class="btn btn-secondary" :value="server.examStatus ? server.examStatus : $t('student.register')" />
+                    <input v-else-if="token && clientinfo.servername === server.servername" :id="server.servername" disabled type="button" name="register" class="btn btn-success" :value="$t('student.registered')" />
+                </div>
+                <div v-if="serverlist.length === 0"><h6 class="text-muted">{{$t('student.noexams')}}</h6> </div>
             </div>
-
-
-            <div v-if="serverlist.length === 0"><h5>0</h5> </div>
         </div>
+
     </div>
 </div>
 
@@ -170,7 +162,7 @@ export default {
             hostip: config.hostip,
             networkerror: false,
             localLockdown: false,
-            biplogin: false,
+          
             biptest:false,
             bipToken:false,
             bipUsername:false,
@@ -198,17 +190,24 @@ export default {
             console.log(IPCresponse)
         },
 
+        logoutBiP(){
+            this.bipToken = false
+            this.bipUsername = false
+            this.bipuserID = false
+            this.username = ""
+            this.pincode = ""
+            this.bipData = null
+            this.onlineExams = []
+        },
+
         /**
          * überprüft ob es online exams gibt und versucht diese zu verbinden
          */ 
         bipAutoconnect(){
-            // console.log("bipAutoconnect")
-            // console.log(this.onlineExams)
             if (this.onlineExams.length > 0){
                 this.onlineExams.forEach( exam => {
                     if (exam.examStatus == "open"){
                         exam.examTeachers.forEach( teacher => {
-                           
                             if (teacher.teacherIP){
                                 this.username = this.bipUsername
                                 this.pincode = parseInt(exam.examPin)     // set the pin to the exam pin for auto connect
@@ -267,9 +266,7 @@ export default {
 
         fetchBiPData(base64String){
             const tokens = this.decodeBase64AndExtractTokens(base64String);
-            console.log(tokens); // Zeigt die extrahierten Tokens, falls vorhanden
             let token = tokens[1]
-            
             let url = `https://www.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json`
             if (this.biptest){ url = `https://q.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json` }
             
@@ -286,8 +283,6 @@ export default {
                 if (response.fullname){
                     this.username = response.fullname
                     this.bipuserID = response.userid
-              
-
                 }
             })
             .catch(err => { console.warn(err) })
@@ -297,7 +292,6 @@ export default {
         setupLocalLockdown(){
             this.$swal({
                 title: 'Lokale Prüfung' ,
-               
                 html:`
                     Prüfungsmodus wählen <br> <br>
                     <div style="text-align: left; width: 150px; margin: auto auto;">
@@ -307,25 +301,19 @@ export default {
                             <input class="form-check-input"  name=etesttype type="radio" id="math" value="math">
                             <label class="form-check-label" for="math"> Mathematik </label>
                     </div>
-
                     <div class=" m-2 mt-4"> 
-
                         <div class="input-group  m-1 mb-1"> 
                             <span class="input-group-text col-3" style="width:140px;">Benutzername</span>
                             <input class="form-control" type=text id=localuser placehoder='Benutzername'>
                         </div>
-
                         <div class="input-group m-1 mb-1"> 
                             <span class="input-group-text col-3" style="width:140px;">Passwort</span>
                             <input class="form-control" type=password id=localpassword placehoder='Passwort'>
                         </div>
-                    </div>
-                                
-                `,
+                    </div>`,
                 showCancelButton: true,
                 confirmButtonText: 'Ok',
                 cancelButtonText: this.$t("editor.cancel"),
-            
                 focusConfirm: false,
                 icon: 'info',
                 didOpen:() => {
@@ -335,10 +323,7 @@ export default {
                         var key = e.key || String.fromCharCode(e.which);
                         if (!lettersOnly.test(key)) { e.preventDefault(); }
                     });
-
-
                 },
-
             }).then((result) => {
                 if (result.isConfirmed) { 
 
@@ -349,7 +334,6 @@ export default {
                             exammode = radio.value;
                         }
                     });
-
                     let username = document.getElementById('localuser').value; 
                     username = username.replace(/^\s+|\s+$/g, '');  //check username - remove leading and trailing spaces
                     let password = document.getElementById('localpassword').value; 
@@ -358,7 +342,6 @@ export default {
                         this.localLockdown = false
                         return; 
                     }
-
                     this.localLockdown = true
                     ipcRenderer.send('locallockdown', {password:result.value, exammode: exammode, clientname: username, password: password })
                 }
@@ -367,7 +350,6 @@ export default {
                     return; 
                 }
             });
-
         },
 
 
@@ -409,31 +391,34 @@ export default {
 
 
         async fetchInfo() {
-        
             let getinfo = await ipcRenderer.invoke('getinfoasync')  // gets serverlist and clientinfo from multicastclient
             this.clientinfo = getinfo.clientinfo;
-
             this.token = this.clientinfo.token;
             if (this.token && this.token != "0000" || !this.token) { this.localLockdown = false}  //other token than 0000 or no token.. no (local) exam mode
 
-            if ( (this.advanced || this.servertimeout > 2 ) && !this.token) {
-                if (validator.isIP(this.serverip) || validator.isFQDN(this.serverip)){
-                    //give some userfeedback here
-                    if (this.serverlistAdvanced.length == 0){ this.status("Suche Prüfungen...")  }
-                    fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/serverlist`)
-                    .then(response => response.json()) // Parse JSON response
-                    .then(data => {
-                        if (data && data.status === "success") {
-                            this.serverlistAdvanced = data.serverlist;
-                            this.networkerror = false;
-                        }
-                    })
-                    .catch(err => { log.error(`student.vue @ fetchInfo (advanced): ${err.message}`); this.networkerror = true; });
+            if (this.servertimeout > 2){ this.advanced = true }
+
+            // advanced search for exams in local network
+            if ( this.advanced && !this.token) {
+                if (this.serverip !== ""){
+                    if (validator.isIP(this.serverip) || validator.isFQDN(this.serverip)){
+                        this.validip = true
+                        //give some userfeedback here
+                        if (this.serverlistAdvanced.length == 0){ this.status("Suche Prüfungen...")  }
+                        fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/serverlist`)
+                        .then(response => response.json()) // Parse JSON response
+                        .then(data => {
+                            if (data && data.status === "success") {
+                                this.serverlistAdvanced = data.serverlist;
+                                this.networkerror = false;
+                            }
+                        }).catch(err => { log.error(`student.vue @ fetchInfo (advanced): ${err.message}`); this.networkerror = true; });
+                    } 
+                    else { this.validip = false}
                 }
+                else { this.networkerror = false; this.validip = true}
             }
-            else {
-                this.networkerror = false;
-            }
+            else { this.networkerror = false; this.validip = true}
 
 
 
@@ -464,6 +449,7 @@ export default {
             // add bip servers to serverlist
             if (this.onlineExams.length > 0){
                 this.onlineExams.forEach(exam => {
+                    // nur examen die auch für den schüler erstellt wurden werden über die api aktualisiert und deren exam status wird gesetzt - andere examen die zwar auch bip-exams sind haben daher keinen exam status
                     const existingServer = this.serverlist.find(server => server.servername === exam.examName );// Check if server already exists in serverlist
                     if (existingServer) { 
                         existingServer.examStatus = exam.examStatus
@@ -472,7 +458,6 @@ export default {
                         // Create new server entry in serverlist format
                         const newServer = {
                             id: exam.id,
-                            
                             servername: exam.examName,
                             reachable: true,
                             serverport: this.serverApiPort,
@@ -517,8 +502,10 @@ export default {
         },  
         
         toggleAdvanced(){
-            if (this.advanced) {this.advanced = false; this.biplogin = false;} else {this.advanced = true}
-            this.serverip = ""
+            if (!this.advanced){
+                this.servertimeout = 0
+                this.serverip = ""
+            }
         },
         
 
@@ -637,8 +624,7 @@ export default {
 
 
         async bipAutoUpdate(){
-
-            if (this.bipToken && this.biplogin){ 
+            if (this.bipToken){ 
                 this.username = this.bipUsername
                 await this.fetchBipExams()    
                 if (!this.token){
@@ -648,10 +634,7 @@ export default {
             else {
                 this.onlineExams = []
             }
-
-           
         }
-
 
     },
     mounted() {  
@@ -744,6 +727,13 @@ export default {
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
     background-color: whitesmoke;
+}
+
+
+
+#statusdiv {
+    display: block !important;
+    width: 200px  ;
 }
 
 /* CSS classes for fade-in and fade-out */

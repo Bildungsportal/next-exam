@@ -1,6 +1,6 @@
 { 
     "student" : {
-        "exams": "Active Exams",
+        "exams": "Exams",
         "username": "Username",
         "pin": "Pincode",
         "ip":"Server address",
@@ -22,7 +22,11 @@
         "nopin": "no pincode given",
         "unreachable":"Server API unreachable",
         "timeout":"Timeout! Exam-Teacher is behind Firewall.",
-        "noapi": "No Teacher API found on the given address"
+        "noapi": "No Teacher API found on the given address",
+        "bildungsportal":"Bildungsportal",
+        "localLockdown":"Local lockdown",
+        "manualsearch":"Manual search",
+        "noexams":"No exams found"
     },
     "control": {
         "tokennotvalid": "token is not valid",
@@ -112,7 +116,8 @@
         "audioremaining":"Remaining playbacks:",
         "audionotallowed":"You don't have the permission to play this file!",
         "insert":"Insert Image",
-        "insertmug":"Insert Mugshot"
+        "insertmug":"Insert Mugshot",
+        "bildungsportal":"Bildungsportal"
     },
     "math": {
         "exit":"Exit safe exam mode",

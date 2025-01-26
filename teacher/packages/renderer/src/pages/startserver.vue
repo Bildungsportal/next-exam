@@ -1,18 +1,15 @@
 <template>
 
-
-<div class="w-100 p-3 text-white bg-dark shadow text-right">
-    <router-link v-if="!electron" to="/" class="text-white m-1">
-        <img src="/src/assets/img/svg/shield-lock-fill.svg" class="white me-2  " width="32" height="32" >
-        <span class="fs-4 align-middle me-1 ">Next-Exam</span>
-    </router-link>
-    <span v-if="electron" class="text-white m-1">
+<!-- Header START -->
+<div class="w-100 p-3 text-white bg-dark shadow text-right" style="height: 66px;">
+    <span class="text-white m-1">
         <img src="/src/assets/img/svg/shield-lock-fill.svg" class="white me-2  " width="32" height="32" >
         <span class="fs-4 align-middle me-1 ">Next-Exam</span>
     </span>
     <span class="fs-4 align-middle ms-3" style="float: right">Teacher</span>
     <div v-if="!hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 " style="cursor: unset; float: right">{{ $t("general.offline") }}</div>
 </div>
+<!-- Header END -->
  
 
 
@@ -20,7 +17,7 @@
 
     <!-- sidebar -->
     <div class="p-3 text-white bg-dark h-100 " style="width: 240px; min-width: 240px;">
-        <div class="btn btn-light m-1 text-start infobutton">
+        <div class="btn btn-light ms-1 text-start infobutton">
             <img src='/src/assets/img/svg/server.svg' class="me-2"  width="16" height="16" > 
             {{$t("general.startserver")}}
         </div><br>
@@ -53,7 +50,7 @@
 
 
         <div v-if="config.bipIntegration" class="m-0">
-            <br> <br>
+            <br> 
             <span class="small m-1">{{$t("dashboard.bildungsportal")}}</span>
 
             
