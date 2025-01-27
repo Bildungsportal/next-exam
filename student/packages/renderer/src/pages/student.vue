@@ -96,18 +96,32 @@
             <div id="list" class="" style="overflow-y:auto; height: 369px; display:flex; flex-wrap: wrap; flex-direction: row;">
                 
                 <div v-for="server in serverlist" class="row p-3 m-0 mb-2 border bg-light" style="border-radius: 4px; margin-right: 10px !important; min-height:100px; max-height:100px;  min-width:234px; max-width: 234px;">
-                    <strong style="padding:0px;">
-                        {{server.servername}} 
-                        <span v-if="server.bip" class="badge btn-teal" style="vertical-align: text-bottom; margin-left: 4px;"> BiP Exam</span>
-                    </strong>  
-                    <img v-if="!server.reachable" src="/src/assets/img/svg/emblem-warning.svg" :title="$t('student.unreachable')"  style="width:20px;float:right;vertical-align:top;cursor: help;" >
                     
-                    <input v-if="!token && !server.bip" :id="server.servername" type="button" name="register" class="btn btn-sm btn-info" :value="$t('student.register')" @click="registerClient(server.serverip,server.servername)"/>
-                    <input v-if="!token && server.bip"  :id="server.servername" type="button" name="register" class="btn btn-sm" :value="server.examStatus ? server.examStatus : 'restricted'" :class="{'btn-teal': server.examStatus == 'open', 'btn-warning': server.examStatus == 'closed' || !server.examStatus, 'btn-secondary': server.examStatus == 'offline' }"/>
+                    <div style="display:flex; flex-direction: row; justify-content: space-between; padding:0px;">
+                        <div style="width:130px; display:inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> {{server.servername}}  </div>  
+                        
+                        <div v-if="server.bip" class="badge btn-teal" style="width:70px; height:20px; vertical-align: text-bottom; margin-top: 2px; display: inline;"> BiP Exam</div>
+                        <div v-else  style="width:70px; height:20px; vertical-align: text-bottom; margin-top: 2px; display: inline;"> </div>
+                    </div>
+                  
+  
+                    <div style="display:flex; flex-direction: row; justify-content: space-between; padding:0px; margin:0px;">
+                        <img v-if="!server.reachable" src="/src/assets/img/svg/emblem-warning.svg" :title="$t('student.unreachable')"   style="width:20px;height:20px;vertical-align:top;cursor: help;position: absolute; margin-top:8px; margin-left:8px; ">
+                       
+                   
+                         <div v-if="!token" style="margin-top:2px; padding:0px; ">
+                            <!-- nicht angemeldet, kein bip server -->   <input v-if="!server.bip" style="width:200px;" :id="server.servername" type="button" name="register" class="btn btn-sm btn-info" :value="$t('student.register')" @click="registerClient(server.serverip,server.servername)"> 
+                            <!-- nicht angemeldet, bip server      -->   <input v-if="server.bip"  style="width:200px;" :id="server.servername" type="button" name="register" class="btn btn-sm" :value="server.examStatus ? server.examStatus : 'restricted'" :class="{'btn-teal': server.examStatus == 'open', 'btn-warning': server.examStatus == 'closed' || !server.examStatus, 'btn-secondary': server.examStatus == 'offline' }"/>
+                         </div>
+                         <div v-if="token" style="margin-top:2px; padding:0px;">
+                            <!-- angemeldet, nicht auf diesem server --> <input v-if="clientinfo.servername !== server.servername && !server.bip" style="width:200px;" :id="server.servername" disabled type="button" name="register" class="btn btn-sm btn-secondary" :value="server.examStatus ? server.examStatus : $t('student.register')" />
+                            <!-- angemeldet, nicht auf diesem server, bip server, restricted --> <input v-if="clientinfo.servername !== server.servername && server.bip && !server.examStatus" style="width:200px;" :id="server.servername" disabled type="button" name="register" class="btn btn-sm btn-secondary" value="restricted" />
+                            <!-- angemeldet, nicht auf diesem server, bip server  --> <input v-if="clientinfo.servername !== server.servername && server.bip && server.examStatus" style="width:200px;" :id="server.servername" disabled type="button" name="register" class="btn btn-sm btn-secondary" :value="server.examStatus" />
+                            <!-- angemeldet, auf diesem server       --> <input v-if="clientinfo.servername === server.servername" style="width:200px;" :id="server.servername" disabled type="button" name="register" class="btn btn-sm btn-success" :value="$t('student.registered')" />
+                        </div>
                     
-                    <!-- if token is set (client is registered) and if registration is for this specific server -->
-                    <input v-if="token && clientinfo.servername !== server.servername" :id="server.servername" disabled type="button" name="register" class="btn btn-secondary" :value="server.examStatus ? server.examStatus : $t('student.register')" />
-                    <input v-else-if="token && clientinfo.servername === server.servername" :id="server.servername" disabled type="button" name="register" class="btn btn-success" :value="$t('student.registered')" />
+                    </div>
+                  
                 </div>
                 <div v-if="serverlist.length === 0"><h6 class="text-muted">{{$t('student.noexams')}}</h6> </div>
             </div>

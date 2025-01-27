@@ -260,7 +260,7 @@ let studentInfo = {
             lastUpdate: new Date().getTime(),
             bip: true,
             id: "uy5cdfc7-cu91-4845-818e-eaae8159uui", // eindeutige ID im BiP
-            examName: "5B-Deutsch-2", // Name der Prüfung wie sie am Client dargstellt werden soll
+            examName: "5B-Mathematik", // Name der Prüfung wie sie am Client dargstellt werden soll
             examDate: "2025-02-02T10:30:00", // geplanter Beginn der Prüfung
             examDurationMinutes: 100, // Dauer der Prüfung in Minuten
             pin: 3434, // exam pin
@@ -281,7 +281,7 @@ let studentInfo = {
             activeSection: 1,
             examSections: {
                 1: {  
-                    examtype: "editor",  // editor, math, eduvidual, gforms, website, microsoft365
+                    examtype: "math",  // editor, math, eduvidual, gforms, website, microsoft365
                     spellchecklang: "de-DE",  // en-GB, de-DE, fr-FR, es-ES, it-IT, none
                     suggestions: false,   // soll language tool vorschläge für verbesserungen zeigen
                     moodleTestId: null,   // aus der angegebenen moodle domain wird die test id automatisch herausgeschnitten

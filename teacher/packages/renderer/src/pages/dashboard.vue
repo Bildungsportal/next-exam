@@ -280,7 +280,7 @@
         <div class="btn btn-dark m-1 mt-0 ms-0 text-start" @mouseover="showDescription($t('dashboard.del'))" @mouseout="hideDescription" style="width:62px; height:62px;" @click="delfolderquestion()"> <img src="/src/assets/img/svg/edit-delete.svg" class="mt-2" width="32" height="32" ></div>
         
 
-        <div v-if="bipToken" @mouseover="showDescription($t('dashboard.bipinfo'))" @mouseout="hideDescription" class="btn m-1 mt-0 ms-0 text-start p-1 pt-2 ps-2" :class="bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'" @click="toggleBipStatus" style="width:128px; height:62px;">
+        <div v-if="bipToken && serverstatus.bip" @mouseover="showDescription($t('dashboard.bipinfo'))" @mouseout="hideDescription" class="btn m-1 mt-0 ms-0 text-start p-1 pt-2 ps-2" :class="bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'" @click="toggleBipStatus" style="width:128px; height:62px;">
             <img src="/src/assets/img/svg/globe.svg" class=" mt-1" width="32" height="32" style="vertical-align: top;"> 
             <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;" class="">BiP-Status {{bipStatus}}</div>
         </div>
