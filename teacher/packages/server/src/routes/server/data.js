@@ -739,8 +739,8 @@ router.post('/upload/:servername/:servertoken/:studenttoken', async (req, res, n
         }
         else if (studenttoken == "a" || studenttoken == "b"){
             let groupArray = []
-            if (studenttoken == "a"){groupArray = mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupA }
-            if (studenttoken == "b"){groupArray = mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupB }
+            if (studenttoken == "a"){groupArray = mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupA.users }
+            if (studenttoken == "b"){groupArray = mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupB.users }
 
             if (groupArray.length > 0) {
                 for (let name of groupArray){
