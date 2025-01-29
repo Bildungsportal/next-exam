@@ -23,6 +23,6 @@ const config = {
     electron: false,
     virtualized: false,
     version: pjson.version,
-    info: process.env.NODE_ENV === 'development' ? process.env.NODE_ENV : 'dev'
+    info: process.env.NODE_ENV === 'development' ? process.env.NODE_ENV : ''
 }
 export default config
