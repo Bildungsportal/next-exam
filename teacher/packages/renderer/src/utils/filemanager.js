@@ -118,7 +118,7 @@ function loadPDF(filepath, filename){
         let isvalid = isValidPdf(data)
         log.info("filemanager @ loadPDF: pdf is valid: ", isvalid)
 
-        this.currentpreviewBase64 = btoa(String.fromCharCode(...new Uint8Array(data)));
+        this.currentpreviewBase64 = Buffer.from(data).toString('base64');
         this.currentpreview = URL.createObjectURL(new Blob([data], {type: "application/pdf"})) 
         this.currentpreviewname = filename   //needed for preview buttons
         this.currentpreviewPath = filepath
