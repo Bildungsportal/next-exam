@@ -25,7 +25,7 @@
         </div><br>
     
 
-        <div class="form-check form-switch m-1 mb-2 mt-2">
+        <div :class="(token)? 'disabledexam':''" class="form-check form-switch m-1 mb-2 mt-2">
             <input id="manualsearch" type="checkbox"  v-model="advanced" class="form-check-input" @change="toggleAdvanced">
             <label for="manualsearch" class="form-check-label">{{$t('student.manualsearch')}}</label>
         </div>
@@ -231,6 +231,8 @@ export default {
                     if (exam.examStatus == "open"){
                         exam.examTeachers.forEach( teacher => {
                             if (teacher.teacherIP){
+                                //console.log(exam)
+                                this.serverip = teacher.teacherIP
                                 this.username = this.bipUsername
                                 this.pincode = parseInt(exam.examPin)     // set the pin to the exam pin for auto connect
                                 console.log(`connecting to exam: ${exam.examName} with teacher: ${teacher.teacherID} and pin: ${exam.examPin}`)
