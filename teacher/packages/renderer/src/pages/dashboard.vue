@@ -449,8 +449,8 @@ export default {
                         domainname: false,
 
                         groups: false, 
-                        groupA: [], 
-                        groupB: []
+                        groupA: { users: [], examInstructionFiles: [] }, 
+                        groupB: { users: [], examInstructionFiles: [] }
                     },
                     2: {}
                 },                
@@ -1142,7 +1142,7 @@ export default {
 
         async setupGroups(){
             if (!this.serverstatus.examSections[this.serverstatus.activeSection].groupA){   //temp fix for old exams (resume) without groups 
-                this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users     = []
+                this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users = []
                 this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users = []
             }
             // prepopulate group A
