@@ -275,7 +275,7 @@ export default {
         fetchBipExams(){
             if (!this.bipToken) return;  // cannot fetch from bip api without valid token
 
-            if (this.config.development){
+            // if (this.config.development){
                 let url= "http://localhost:3000/teacher"
 
                 fetch(url, {
@@ -293,8 +293,8 @@ export default {
 
                 })
                 .catch(error => { console.error("Fehler beim API-Aufruf:", error);});
-            }
-            else {
+            // }
+            // else {
                 // Do actual BIP API Call
 
                 // let url= "https://www.bildung.gv.at/webservice/rest/next-exam/teacher"
@@ -315,7 +315,7 @@ export default {
                 // })
                 // .catch(error => { console.error("Fehler beim API-Aufruf:", error);});
 
-            }
+            // }
         },
 
 

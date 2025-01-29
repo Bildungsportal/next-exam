@@ -30,7 +30,7 @@ const config = {
     accessToken: false,
     version: pjson.version,
     buildforWEB: false,
-    info: process.env.NODE_ENV === 'development' ? process.env.NODE_ENV : 'dev'
+    info: process.env.NODE_ENV === 'development' ? process.env.NODE_ENV : ''
   
 }
 export default config

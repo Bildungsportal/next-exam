@@ -67,8 +67,6 @@
                     <div v-if="(file.type == 'dir')" class="btn btn-success pe-3 ps-3 me-3 mb-2 btn-sm" @click="loadFilelist(file.path)"><img src="/src/assets/img/svg/folder-open.svg" class="" width="22" height="22" > {{file.name}} </div>
                     <div v-if="(file.type == 'dir')" class="btn btn-dark  me-1 mb-2 btn-sm " style="float: right;" @click="downloadFile(file)" :title="$t('dashboard.download')"><img src="/src/assets/img/svg/edit-download.svg" class="" width="22" height="22" ></div>
                 
-                    <div class="btn btn-sm m-1" :class="bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'" @click="toggleBipStatus" style=" float: right; width: 154px"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" > Exam Status: {{bipStatus}}</div>
-
                 </div>
            </div>
         </div>
@@ -1364,7 +1362,7 @@ export default {
                 examID: this.serverstatus.id
             }
 
-            if (this.config.development){  // call to demo api
+            // if (this.config.development){  // call to demo api
                 let url= "http://localhost:3000/teacher"
                 fetch(url, {
                     method: "POST",
@@ -1376,10 +1374,10 @@ export default {
                    // console.log(data.message, data.data);
                 })
                 .catch(error => { console.error("Fehler beim API-Aufruf:", error.message);});
-            }
-            else{
-                //call to real bip api
-            }
+            // }
+            // else{
+            //     //call to real bip api
+            // }
         }
     },
 

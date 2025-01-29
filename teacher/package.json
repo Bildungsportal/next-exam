@@ -13,8 +13,9 @@
     "type": "module",
     "scripts": {
         "dev": "concurrently --prefix-colors \"green,blue\" \"node bip-demo-api/api.js\" \"cross-env NODE_ENV=development node scripts/watch.mjs\"",
-        
-        "prod": "cross-env NODE_ENV=production node scripts/build.mjs",
+        "prod": "concurrently --prefix-colors \"green,blue\" \"node bip-demo-api/api.js\" \"cross-env NODE_ENV=production node scripts/watch.mjs\"",
+
+
         "build": "node scripts/build.mjs && electron-builder -l",
         "build:win": "node scripts/build.mjs && electron-builder -w",
         "build:mac": "node scripts/build.mjs && electron-builder -m",
