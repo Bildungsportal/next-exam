@@ -14,7 +14,7 @@
     "scripts": {
        
         "dev": "cross-env NODE_ENV=development node scripts/watch.mjs",
-        "prod": "cross-env NODE_ENV=production node scripts/build.mjs",
+        "prod": "cross-env NODE_ENV=production node scripts/watch.mjs",
 
         "clean": "rm -rf ./dist",
         "cleanwin": "rmdir /s /q dist",

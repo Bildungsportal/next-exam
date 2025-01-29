@@ -183,12 +183,17 @@ function enableRestrictions(winhandler){
         catch(err){ log.error(`platformrestrictions @ enableRestrictions (gsettings): ${err}`); }
 
 
-
+        try {
+            childProcess.execFile('wl-copy', ['-c'])   // wayland
+            childProcess.exec('xclip -i /dev/null')
+            childProcess.exec('xclip -selection clipboard')
+            childProcess.exec('xsel -bc')
+        }
+        catch(err){
+            log.error(`platformrestrictions @ enableRestrictions (gsettings): ${err}`)
+        }
         // clear clipboard  (this will fail unless xclip or xsell are installed)
-        childProcess.execFile('wl-copy', ['-c'])   // wayland
-        childProcess.exec('xclip -i /dev/null')
-        childProcess.exec('xclip -selection clipboard')
-        childProcess.exec('xsel -bc')
+      
     }
 
 
