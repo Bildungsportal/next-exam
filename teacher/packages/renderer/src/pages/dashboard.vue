@@ -10,11 +10,11 @@
     <span class="align-middle ms-3" style="float: right; font-size:23px;">Dashboard</span>
 
 
-<div v-if="serverstatus.useExamSections" style="position: absolute; left:257px; top:43px; min-width: 550px;">
-    <div id="section1" style="" @click="activateSection(1)" class="sectionbutton badge " :class=" (serverstatus.activeSection == 1) ? 'bg-teal':'bg-secondary'">{{ serverstatus.examSections[1].sectionname }}</div>
-    <div id="section2" style="" @click="activateSection(2)" class="sectionbutton badge " :class=" (serverstatus.activeSection == 2) ? 'bg-teal':'bg-secondary'">{{ serverstatus.examSections[2].sectionname }}</div>
-    <div id="section3" style="" @click="activateSection(3)" class="sectionbutton badge " :class=" (serverstatus.activeSection == 3) ? 'bg-teal':'bg-secondary'">{{ serverstatus.examSections[3].sectionname }}</div>
-    <div id="section4" style="" @click="activateSection(4)" class="sectionbutton badge " :class=" (serverstatus.activeSection == 4) ? 'bg-teal':'bg-secondary'">{{ serverstatus.examSections[4].sectionname }}</div>
+<div v-if="serverstatus.useExamSections" style="position: absolute; left:257px; top:42px; min-width: 550px;">
+    <div id="section1" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 1 && !serverstatus.examSections[1].locked, 'btn-danger': serverstatus.activeSection == 1 && serverstatus.examSections[1].locked, 'btn-secondary': serverstatus.activeSection != 1,'border-danger': serverstatus.examSections[1].locked}">{{ serverstatus.examSections[1].sectionname }}</div>
+    <div id="section2" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 2 && !serverstatus.examSections[2].locked, 'btn-danger': serverstatus.activeSection == 2 && serverstatus.examSections[2].locked, 'btn-secondary': serverstatus.activeSection != 2,'border-danger': serverstatus.examSections[2].locked}">{{ serverstatus.examSections[2].sectionname }}</div>
+    <div id="section3" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 3 && !serverstatus.examSections[3].locked, 'btn-danger': serverstatus.activeSection == 3 && serverstatus.examSections[3].locked, 'btn-secondary': serverstatus.activeSection != 3,'border-danger': serverstatus.examSections[3].locked}">{{ serverstatus.examSections[3].sectionname }}</div>
+    <div id="section4" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 4 && !serverstatus.examSections[4].locked, 'btn-danger': serverstatus.activeSection == 4 && serverstatus.examSections[4].locked, 'btn-secondary': serverstatus.activeSection != 4,'border-danger': serverstatus.examSections[4].locked}">{{ serverstatus.examSections[4].sectionname }}</div>
 </div>
 
 
@@ -109,63 +109,84 @@
         <div class="btn btn-light m-1 text-start infobutton" @click="showinfo()">{{$t('dashboard.server')}} <br><b>{{serverip}}</b> </div><br>
         <div class="btn btn-light m-1 mb-3 text-start infobutton" @click="showinfo()">{{$t('dashboard.pin')}}<br><b> {{ serverstatus.pin }} </b>  </div><br>
         
-        <div style="font-size:0.9em; width: 220px">
-            <!-- geogebra -->
-            <div class="form-check m-1 mb-1"  :class="lockInExammode ? 'disabledexam':''">
-                <input v-model="serverstatus.examSections[serverstatus.activeSection].examtype" value="math" class="form-check-input" type="radio" name="examtype" id="examtype2" checked>
-                <label class="form-check-label" for="examtype2"> {{$t('dashboard.math')}}  </label>
-            </div>
-            <!-- editor -->
-            <div class="form-check m-1" :class="lockInExammode ? 'disabledexam':''">
-                <input v-model="serverstatus.examSections[serverstatus.activeSection].examtype" @click="activateSpellcheck()" value="editor" class="form-check-input" type="radio" name="examtype" id="examtype1">
-                <label class="form-check-label" for="examtype1"> {{$t('dashboard.lang')}}<span class="text-white-50" v-if="(serverstatus.examSections[serverstatus.activeSection].languagetool)">|{{serverstatus.examSections[serverstatus.activeSection].spellchecklang}}</span></label>
-            </div>
-            <!-- eduvidual -->
-            <div class="form-check m-1 mb-1" :class="lockInExammode ? 'disabledexam':''">
-                <input v-model="serverstatus.examSections[serverstatus.activeSection].examtype" @click="getTestID()" value="eduvidual" class="form-check-input" type="radio" name="examtype" id="examtype3">
-                <label class="form-check-label" for="examtype3"> {{$t('dashboard.eduvidual')}}  </label>
-            </div>
-            <!-- google forms -->
-            <div class="form-check m-1 mb-1" :class="lockInExammode ? 'disabledexam':''">
-                <input v-model="serverstatus.examSections[serverstatus.activeSection].examtype" @click="getFormsID()" value="gforms" class="form-check-input" type="radio" name="examtype" id="examtype5">
-                <label class="form-check-label" for="examtype5"> {{$t('dashboard.gforms')}}  </label>
-            </div>
-            <!-- website -->
-            <div class="form-check m-1 mb-1" :class="lockInExammode ? 'disabledexam':''" style="max-height:24px">
-                <input v-model="serverstatus.examSections[serverstatus.activeSection].examtype" @click="getTestURL()" value="website" class="form-check-input" type="radio" name="examtype" id="examtype6">
-                <label class="form-check-label" for="examtype6"> 
-                    <div style="display:inline-block; overflow: hidden; text-overflow: ellipsis;">Website</div>  <!--overflow hidden with text-overflow ellipsis adds 3 pixel to the height of the sourrounding div element.. what the f..? -->
-                    <div style="width: 134px; height: 22px; display:inline-block; overflow: hidden; text-overflow: ellipsis;" class="text-white-50" v-if="(serverstatus.examSections[serverstatus.activeSection].domainname)">|{{serverstatus.examSections[serverstatus.activeSection].domainname}}</div>  
-                </label>
+      
+
+
+
+        <div class="dropdown-section m-1" style="width: 200px">
+        <!-- Dropdown Button -->
+    
+        <button class="btn btn-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center" type="button" :class="lockInExammode ? 'disabled' : ''" data-bs-toggle="dropdown" aria-expanded="false"> <span>{{ getSelectedExamTypeLabel() }}</span>    </button>
+
+        
+        <!-- Dropdown Menu -->
+        <ul class="dropdown-menu ">
+            <li><a class="dropdown-item" @click="selectExamType('math')" :class="{ active: isExamType('math') }">{{$t('dashboard.math')}}</a></li>
+            <li><a class="dropdown-item" @click="selectExamType('editor')" :class="{ active: isExamType('editor') }">{{$t('dashboard.lang')}}</a></li>
+            <li><a class="dropdown-item" @click="selectExamType('eduvidual')" :class="{ active: isExamType('eduvidual') }">{{$t('dashboard.eduvidual')}}</a></li>
+            <li><a class="dropdown-item" @click="selectExamType('gforms')" :class="{ active: isExamType('gforms') }">{{$t('dashboard.gforms')}}</a></li>
+            <li><a class="dropdown-item" @click="selectExamType('website')" :class="{ active: isExamType('website') }">Website</a></li>
+            <li><a class="dropdown-item" @click="selectExamType('microsoft365')" :class="{ active: isExamType('microsoft365') }">Microsoft365</a></li>
+        </ul>
+
+        <!-- Additional Info Section -->
+        <div class="mt-2">
+            <!-- Editor Spellcheck Info -->
+            <div v-if="isExamType('editor') && serverstatus.examSections[serverstatus.activeSection].languagetool" class="small text-white-50">
+            Spellcheck: {{serverstatus.examSections[serverstatus.activeSection].spellchecklang}}
             </div>
 
-            <!-- microsoft365 -->
-            <div class="form-check m-1 mb-3" :class="lockInExammode ? 'disabledexam':''">
-                <input v-model="serverstatus.examSections[serverstatus.activeSection].examtype" value="microsoft365" class="form-check-input" type="radio" name="examtype" id="examtype4">
-                <label class="form-check-label" for="examtype4"> Microsoft365 <span v-if="(this.config.accessToken)">({{$t('dashboard.connected')}})</span> </label>
-                
-                <button v-if="(serverstatus.examSections[serverstatus.activeSection].examtype === 'microsoft365' && !this.config.accessToken)"  @click="openAuthWindow()" class="btn btn-sm btn-primary mt-1  ">
-                    <img  src="/src/assets/img/svg/win.svg" xmlns="http://www.w3.org/2000/svg"  width="24" height="24">
-                    <span style="padding: 0 6px 0 4px; vertical-align:middle;"> Verbinden </span>
-                </button>
+            <!-- Website Domain Info -->
+            <div v-if="isExamType('website') && serverstatus.examSections[serverstatus.activeSection].domainname" class="small text-white-50 text-truncate">
+            Domain: {{serverstatus.examSections[serverstatus.activeSection].domainname}}
+            </div>
 
-                <button v-if="(serverstatus.examSections[serverstatus.activeSection].examtype === 'microsoft365' && this.config.accessToken && !serverstatus.examSections[serverstatus.activeSection].msOfficeFile)"  @click="onedriveUploadselect()" class="btn btn-sm btn-info mt-1" style=" white-space: nowrap;  width: 170px;overflow: hidden; text-overflow: ellipsis; ">
-                    <img  src="/src/assets/img/svg/win.svg" xmlns="http://www.w3.org/2000/svg"  width="24" height="24">
-                    <span style="padding: 0 6px 0 4px; vertical-align:middle;"> Datei wählen </span>
-                </button>
+            <!-- Microsoft365 Buttons -->
+            <div v-if="isExamType('microsoft365')" class="d-flex flex-column gap-2">
+            <!-- Connect Button -->
+            <button v-if="!config.accessToken" @click="openAuthWindow()" class="btn btn-sm btn-primary">
+                <img src="/src/assets/img/svg/win.svg" width="24" height="24">
+                <span class="ms-1">Verbinden</span>
+            </button>
 
-                <button v-if="(serverstatus.examSections[serverstatus.activeSection].examtype === 'microsoft365' && this.config.accessToken && serverstatus.examSections[serverstatus.activeSection].msOfficeFile)"  @click="onedriveUploadselect()" class="btn btn-sm btn-success mt-1" style=" white-space: nowrap;  width: 170px;overflow: hidden; text-overflow: ellipsis; ">
-                    <img  src="/src/assets/img/svg/win.svg" xmlns="http://www.w3.org/2000/svg"  width="24" height="24">
-                    <span style="padding: 0 6px 0 4px; vertical-align:middle;">{{serverstatus.examSections[serverstatus.activeSection].msOfficeFile.name}} </span>
-                </button>
+            <!-- File Select Button -->
+            <button v-if="config.accessToken && !serverstatus.examSections[serverstatus.activeSection].msOfficeFile" @click="onedriveUploadselect()" class="btn btn-sm btn-info text-truncate">
+                <img src="/src/assets/img/svg/win.svg" width="24" height="24">
+                <span class="ms-1">Datei wählen</span>
+            </button>
 
-                <button v-if="(serverstatus.examSections[serverstatus.activeSection].examtype === 'microsoft365' && this.config.accessToken )"  @click="logout365()" class="btn btn-sm btn-warning mt-1" style=" white-space: nowrap;  width: 170px;overflow: hidden; text-overflow: ellipsis; ">
-                    <img  src="/src/assets/img/svg/win.svg" xmlns="http://www.w3.org/2000/svg"  width="24" height="24">
-                    <span style="padding: 0 6px 0 4px; vertical-align:middle;"> Logout </span>
-                </button>
+            <!-- Selected File Button -->
+            <button v-if="config.accessToken && serverstatus.examSections[serverstatus.activeSection].msOfficeFile" @click="onedriveUploadselect()" class="btn btn-sm btn-success text-truncate">
+                <img src="/src/assets/img/svg/win.svg" width="24" height="24">
+                <span class="ms-1">{{serverstatus.examSections[serverstatus.activeSection].msOfficeFile.name}}</span>
+            </button>
 
+            <!-- Logout Button -->
+            <button v-if="config.accessToken" @click="logout365()" class="btn btn-sm btn-warning">
+                <img src="/src/assets/img/svg/win.svg" width="24" height="24">
+                <span class="ms-1">Logout</span>
+            </button>
             </div>
         </div>
+        </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         
 
 
@@ -294,7 +315,7 @@
         </div>
         
         <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="sendFiles('all');hideDescription();"   @mouseover="showDescription($t('dashboard.sendfile'))" @mouseout="hideDescription"  style="width:62px; height:62px;"><img src="/src/assets/img/svg/document-send.svg" class="mt-2" width="32" height="32"></div>
-        <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="getFiles('all', true);hideDescription();"  @mouseover="showDescription($t('dashboard.getfile'))" @mouseout="hideDescription"  :class="lockInExammode ? 'disabledexam':''"  style="width:62px; height:62px;" ><img src="/src/assets/img/svg/edit-download.svg" class="mt-2" width="32" height="32"></div>
+        <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="getFiles('all', true);hideDescription();"  @mouseover="showDescription($t('dashboard.getfile'))" @mouseout="hideDescription"  :class="lockDownload ? 'disabledexam':''"  style="width:62px; height:62px;" ><img src="/src/assets/img/svg/edit-download.svg" class="mt-2" width="32" height="32"></div>
         <div v-if="(serverstatus.screenslocked)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:62px; height:62px;" @click="lockscreens(false);hideDescription();"> <img src="/src/assets/img/svg/eye-fill.svg" class="white mt-2" width="32" height="32" >   </div>
         <div v-if="(!serverstatus.screenslocked)" class="btn btn-dark m-1 mt-0 text-start ms-0 " style="width:62px; height:62px;" @click="lockscreens(true);hideDescription();"  @mouseover="showDescription($t('dashboard.lock'))" @mouseout="hideDescription" > <img src="/src/assets/img/svg/eye-slash-fill.svg" class="white mt-2" width="32" height="32" >  </div>
         <div class="btn btn-dark m-1 mt-0 ms-0 text-start" @mouseover="showDescription($t('dashboard.del'))" @mouseout="hideDescription" style="width:62px; height:62px;" @click="delfolderquestion()"> <img src="/src/assets/img/svg/edit-delete.svg" class="mt-2" width="32" height="32" ></div>
@@ -302,8 +323,6 @@
             <img src="/src/assets/img/svg/globe.svg" class=" mt-1" width="32" height="32" style="vertical-align: top;"> 
             <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;" class="">BiP-Status {{bipStatus}}</div>
         </div>
-
-        
         <!-- control buttons end -->
 
 
@@ -315,11 +334,9 @@
                         <div class="studentimage rounded" style="position: relative; height:132px;">  
                             <button v-if="serverstatus.examSections[serverstatus.activeSection].examtype === 'editor' && !this.serverstatus.examSections[serverstatus.activeSection].languagetool && this.serverstatus.examSections[serverstatus.activeSection].spellchecklang !== 'none'" @mouseover="showDescription($t('dashboard.allowspellcheck'))" @mouseout="hideDescription" @click='activateSpellcheckForStudent(student.token,student.clientname)' type="button" class="btn btn-sm pt-1 mt-2 pe-1 float-end" style="z-index:1000; position:relative;"><img src="/src/assets/img/svg/autocorrection.svg" class="widgetbutton" width="22" height="22" ></button> 
                             <div v-cloak :id="student.token" style="position: relative;background-size: cover; height: 132px;" v-bind:style="(student.imageurl && now - 20000 < student.timestamp)? `background-image: url('${student.imageurl}')`:'background-image: url(user-red.svg)'"></div>
-                           
                             <div v-if="student.virtualized && now - 20000 < student.timestamp" class="virtualizedinfo" >{{$t("dashboard.virtualized")}}</div>
                             <div v-if="!student.focus && now - 20000 < student.timestamp" class="kioskwarning" >{{$t("dashboard.leftkiosk")}}</div>
                             <div v-if="student.status.sendexam && now - 20000 < student.timestamp" class="examrequest" >{{$t("dashboard.examrequest")}}</div>
-                            
                             <span>   
                                 <div v-if="now - 20000 < student.timestamp" style="display: inline-block; overflow: hidden; width: 140px; height: 22px" v-bind:title="(student.files) ? 'Documents: '+student.files : ''"> 
                                     <img v-for="file in student.files" style="width:22px; margin-left:-4px; position: relative; filter: sepia(10%) hue-rotate(306deg) brightness(0.3) saturate(75);" class="" src="/src/assets/img/svg/document.svg">
@@ -327,7 +344,6 @@
                                 <div v-if="now - 20000 < student.timestamp" style="display: inline-block; margin: 0px; position: absolute; right: 4px;" >
                                     <img src="/src/assets/img/svg/edit-delete.svg" width="22" height="22" class="delfolderstudent" @click="delfolderquestion(student.token)"  @mouseover="showDescription($t('dashboard.delsingle'))" @mouseout="hideDescription" >
                                 </div>
-
                                 <br>
                                 {{ truncatedClientName(student.clientname) }}  
                                 <button  @click='kick(student.token,student.clientip)'  @mouseover="showDescription($t('dashboard.kick'))" @mouseout="hideDescription" type="button" class=" btn-close  btn-close-white pt-1 pe-2 float-end"></button> 
@@ -346,6 +362,9 @@
             </draggable>  
         </div>
         <!-- studentlist end -->
+
+
+
     </div>
  
     <div style="position: fixed; bottom:20px; right: 20px; filter:opacity(50%)" class="col d-inlineblock btn " @click="sortStudentWidgets()">
@@ -452,7 +471,7 @@ export default {
                     1: {
                         examtype: 'math',   
                         timelimit: 60,
-                        locked: false,
+                        locked: false,  // if true, the current section is locked and no changes can be made - this means its currently active for students
                         sectionname: "Abschnitt 1",
                         spellchecklang: 'de-DE', 
                         suggestions: false, 
@@ -721,12 +740,45 @@ computed: {
         }, 
 
 
+
+
+        isExamType(type) {
+            return this.serverstatus.examSections[this.serverstatus.activeSection].examtype === type;
+        },
+
+        selectExamType(type) {
+            if (this.lockInExammode) return;
+            
+            this.serverstatus.examSections[this.serverstatus.activeSection].examtype = type;
+            
+            // Call existing methods based on type
+            if (type === 'editor') this.activateSpellcheck();
+            if (type === 'eduvidual') this.getTestID();
+            if (type === 'gforms') this.getFormsID();
+            if (type === 'website') this.getTestURL();
+        },
+
+        getSelectedExamTypeLabel() {
+            const type = this.serverstatus.examSections[this.serverstatus.activeSection].examtype;
+            switch(type) {
+            case 'math': return this.$t('dashboard.math');
+            case 'editor': return this.$t('dashboard.lang');
+            case 'eduvidual': return this.$t('dashboard.eduvidual');
+            case 'gforms': return this.$t('dashboard.gforms');
+            case 'website': return 'Website';
+            case 'microsoft365': return 'Microsoft365';
+            default: return 'Select Type';
+            }
+        },
+
+
+
+
         activateSection(section){
             this.serverstatus.activeSection = section
             this.setServerStatus()
 
-
-            if (this.serverstatus.exammode) {
+            if (this.serverstatus.exammode && !this.serverstatus.examSections[this.serverstatus.activeSection].locked) {
                 this.$swal.fire({
                     title: this.$t("dashboard.examsections"),
                     icon: 'question',
@@ -799,7 +851,7 @@ computed: {
                     if (!value) {return 'No ID given!'}
                 }
             }).then((input) => {
-                if (!input.value) {document.getElementById('examtype2').checked = true; this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math"}
+                if (!input.value) { this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math"}
                 else {
                     this.serverstatus.examSections[this.serverstatus.activeSection].gformsTestId = input.value
                     this.abgabeinterval.stop();
@@ -834,7 +886,6 @@ computed: {
                 }
             }).then((input) => {
                 if (!input.value ) {
-                    document.getElementById('examtype2').checked = true; 
                     this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math";
                     return;
                 }
@@ -873,7 +924,7 @@ computed: {
                 let domainname = input.value
                 this.serverstatus.examSections[this.serverstatus.activeSection].domainname = this.isValidFullDomainName(  domainname ) ? domainname : null
 
-                if (!this.serverstatus.examSections[this.serverstatus.activeSection].domainname) {document.getElementById('examtype2').checked = true; this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math"}
+                if (!this.serverstatus.examSections[this.serverstatus.activeSection].domainname) { this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math"}
                 else { this.abgabeinterval.stop(); this.autoabgabe = false;}  // no autoabgabe in this exam mode
                 //console.log( this.serverstatus.domainname )
                 this.setServerStatus()
@@ -1628,12 +1679,23 @@ computed: {
     font-weight: normal;
     margin-right:4px;
     cursor: pointer;
+    height: 22px;
+    font-size: 0.8em;
+    padding-top: 0px;
 }
+
+
+.dropdown-toggle::after {
+    margin-left: auto !important;
+    margin-right: 4px;
+}
+
 
 
 #statusdiv {
     display: block !important;
     width: 200px  ;
+    cursor: help;
 }
 
 

@@ -10,6 +10,8 @@ function startExam(){
         this.getFiles('all'); //  trigger this one immediately to figure out if there are write problems on student pcs 
     }, 4000); 
 
+    this.serverstatus.examSections[this.serverstatus.activeSection].locked = true;   // starting exammode locks the current active section
+
     this.lockscreens(false, false); // deactivate lockscreen
     this.serverstatus.exammode = true;
     log.info("exammanagment @ startExam: starting exammode")
@@ -39,6 +41,7 @@ function endExam(){
     })
     .then((result) => {
         if (result.isConfirmed) {
+            Object.values(this.serverstatus.examSections).forEach(section => {   section.locked = false    })
             this.serverstatus.exammode = false;
             this.lockscreens(false, false); // deactivate lockscreen
             this.setServerStatus()
