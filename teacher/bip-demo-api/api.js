@@ -182,6 +182,7 @@ let studentInfo = {
             examSections: {
                 1: {  
                     examtype: "editor",  // editor, math, eduvidual, gforms, website, microsoft365
+                    timelimit: 20, // in minutes
                     spellchecklang: "en-GB",  // en-GB, de-DE, fr-FR, es-ES, it-IT, none
                     suggestions: false,   // soll language tool vorschläge für verbesserungen zeigen
                     moodleTestId: null,   // aus der angegebenen moodle domain wird die test id automatisch herausgeschnitten
@@ -228,6 +229,7 @@ let studentInfo = {
                 },    
                 2: {  
                     examtype: "math",  // editor, math, eduvidual, gforms, website, microsoft365
+                    timelimit: 40, // in minutes
                     spellchecklang: "de-DE",  // en-GB, de-DE, fr-FR, es-ES, it-IT, none
                     suggestions: false,   // soll language tool vorschläge für verbesserungen zeigen
                     moodleTestId: null,   // aus der angegebenen moodle domain wird die test id automatisch herausgeschnitten
@@ -282,6 +284,7 @@ let studentInfo = {
             examSections: {
                 1: {  
                     examtype: "math",  // editor, math, eduvidual, gforms, website, microsoft365
+                    timelimit: 50, // in minutes
                     spellchecklang: "de-DE",  // en-GB, de-DE, fr-FR, es-ES, it-IT, none
                     suggestions: false,   // soll language tool vorschläge für verbesserungen zeigen
                     moodleTestId: null,   // aus der angegebenen moodle domain wird die test id automatisch herausgeschnitten

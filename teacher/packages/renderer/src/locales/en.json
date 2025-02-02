@@ -80,6 +80,7 @@
         "attention": "Attention!",
         "abgaberequest": "Requesting files from all students",
         "showworkfolder": "Show Workfolder",
+        "workfolder": "Workfolder",
         "shownewestfolder": "Show newest Workfolder",
         "filesfolder": "Workfolder files",
         "choosestudent": "Select Student",
@@ -160,7 +161,12 @@
         "disabled": "disabled",
         "ocrinfo":"search for current exam pin in screenshots",
         "bipinfo": "BiP-Status defines if authenticated clients can connect",
-        "logoutBiP": "Are you sure you want to log out?"
+        "logoutBiP": "Are you sure you want to log out?",
+        "activatesections": "activate exam sections",
+        "examsections": "exam sections",
+        "examsectionsinfo": "You are in secured mode. Do you want to activate this exam section for all connected clients?",
+        "no":"No",
+        "yes":"Yes"
     },
     "control": {
         "tokennotvalid": "token is not valid",

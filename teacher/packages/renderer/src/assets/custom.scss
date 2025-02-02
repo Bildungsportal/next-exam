@@ -29,6 +29,10 @@ $theme-colors: (
   "dark":       $dark
 );
 
+
+.bg-teal       { background-color: $teal-600;}
+.bg-teal:hover { background-color: $teal-700;}
+
 .btn-teal       { background-color: $teal-600;}
 .btn-teal:hover { background-color: $teal-700;}
 

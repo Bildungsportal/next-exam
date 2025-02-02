@@ -80,6 +80,7 @@
         "attention": "Achtung!",
         "abgaberequest": "Arbeiten werden geholt",
         "showworkfolder": "Lokalen Arbeitsordner anzeigen",
+        "workfolder": "Ordner öffnen",
         "shownewestfolder": "Neuesten Ordner anzeigen",
         "filesfolder": "Dateien im Arbeitsordner",
         "choosestudent": "Wählen Sie eine Person",
@@ -160,7 +161,12 @@
         "disabled": "deaktiviert",
         "ocrinfo":"Aktuelle Exam PIN im Screenshot erkennen",
         "bipinfo": "BiP-Status gibt an ob sich authentifizierte Clients verbinden können",
-        "logoutBiP": "Sind Sie sicher, dass Sie sich abmelden möchten?"
+        "logoutBiP": "Sind Sie sicher, dass Sie sich abmelden möchten?",
+        "activatesections": "Prüfungsabschnitte aktivieren",
+        "examsections": "Prüfungsabschnitte",
+        "examsectionsinfo": "Sie befinden sich im abgesicherten Modus. Soll dieser Prüfungsabschnitt für alle verbundenen Clients aktiviert werden?",
+        "no":"Nein",
+        "yes":"Ja"
     },
     "control": {
         "tokennotvalid": "Das Token ist ungültig",
