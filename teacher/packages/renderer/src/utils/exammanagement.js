@@ -1,6 +1,7 @@
 import axios from "axios"
 import FormData from 'form-data'
 import log from 'electron-log/renderer';
+import CryptoJS from 'crypto-js';
 
 
 // enable exam mode 
@@ -291,6 +292,161 @@ function sendFiles(who) {
 
 
 
+/**
+ * define materials for exam
+ * für jeden prüfungsabschnitt können materialien festgelegt werden die während der prüfung verfügbar sein sollen
+ * diese werden bei prüfungsbeginn auf die clients verteilt bzw. beim start des entsprechenden abschnitts auf die clients verteilt
+ * @param {*} who ist in diesem fall immer "all"
+ * @returns 
+ */
+function defineMaterials(who) {
+    let htmlcontent = `
+        ${this.$t("dashboard.filesendtext")} <br>
+        <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>`
+
+    if (this.serverstatus.examSections[this.serverstatus.activeSection].groups && who == "all") {
+        htmlcontent = `
+            ${this.$t("dashboard.filesendtext")} <br>
+            <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
+            <br>  <br> 
+            Gruppe<br>
+            <button id="fbtnA" class="swal2-button btn btn-info m-2" style="width: 42px; height: 42px;">A</button>
+            <button id="fbtnB" class="swal2-button btn btn-warning m-2" style="width: 42px; height: 42px;filter: grayscale(90%);">B</button>
+            <button id="fbtnC" class="swal2-button btn btn-warning m-2" style="padding:0px;width: 42px; height: 42px;filter: grayscale(90%); background: linear-gradient(-60deg, #0dcaf0 50%, #ffc107 50%);">AB</button>
+        `
+    }
+         
+    let activeGroup = "a"  // prinzipiell ist jeder user automatisch in der gruppe a
+
+    this.$swal.fire({
+        title: this.$t("dashboard.materials"),
+        html: htmlcontent,
+        icon: "info",
+        input: 'file',
+        showCancelButton: true,
+        cancelButtonText: this.$t("dashboard.cancel"),
+        reverseButtons: true,
+        inputAttributes: {
+            type: "file",
+            name: "files",
+            id: "swalFile",
+            class: "form-control",
+            multiple: "multiple",
+            accept: ".pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb"
+        },
+        didRender: () => {
+            const btnA = document.getElementById('fbtnA');
+            const btnB = document.getElementById('fbtnB');
+            const btnC = document.getElementById('fbtnC');
+            if (btnA && !btnA.dataset.listenerAdded) {
+                btnA.addEventListener('click', () => {
+                    btnA.style.filter = "grayscale(0%)"
+                    btnB.style.filter = "grayscale(90%)"
+                    btnC.style.filter = "grayscale(90%)"
+                    activeGroup = "a"
+                });
+                btnA.dataset.listenerAdded = 'true';
+            }
+            if (btnB && !btnB.dataset.listenerAdded) {
+                btnB.addEventListener('click', () => {
+                    btnA.style.filter = "grayscale(90%)"
+                    btnB.style.filter = "grayscale(0%)"
+                    btnC.style.filter = "grayscale(90%)"
+                    activeGroup = "b"
+                });
+                btnB.dataset.listenerAdded = 'true';
+            }
+            if (btnC && !btnC.dataset.listenerAdded) {
+                btnC.addEventListener('click', () => {
+                    btnA.style.filter = "grayscale(90%)"
+                    btnB.style.filter = "grayscale(90%)"
+                    btnC.style.filter = "grayscale(0%)"
+                    activeGroup = "all"
+                });
+                btnC.dataset.listenerAdded = 'true';
+            }
+        }
+    })
+    .then(async (input) => {
+        if (!input.value) { 
+            this.status(this.$t("dashboard.nofiles")); 
+            return; 
+        }
+
+        this.status(this.$t("dashboard.processingfiles"));
+        const files = input.value;
+
+        // Process each file
+        for (const file of files) {
+            try {
+                const base64Content = await readFileAsBase64(file); // Read file as Base64
+                const checksum = await calculateMD5(file); // Calculate MD5 checksum
+                const fileObject = {   // Create file object
+                    filename: file.name,
+                    filecontent: base64Content,
+                    checksum: checksum
+                };
+
+
+                if (activeGroup === "a" || activeGroup === "all") {
+                    this.serverstatus.examSections[this.serverstatus.activeSection].groupA.examInstructionFiles.push(fileObject);
+                }
+                if (activeGroup === "b" || activeGroup === "all") {
+                    this.serverstatus.examSections[this.serverstatus.activeSection].groupB.examInstructionFiles.push(fileObject);
+                }
+               
+            } catch (error) {
+                log.error(`exammanagement @ defineMaterials: Error processing file ${file.name}:`, error);
+            }
+        }
+
+    });    
+}
+
+// Helper function to read file as Base64
+function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            resolve(reader.result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+// Helper function to calculate MD5 checksum
+async function calculateMD5(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const arrayBuffer = e.target.result;
+            const wordArray = CryptoJS.lib.WordArray.create(arrayBuffer);
+            const hash = CryptoJS.MD5(wordArray).toString();
+            resolve(hash);
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         // show warning
 function delfolderquestion(token="all"){
@@ -413,4 +569,4 @@ async function activateSpellcheckForStudent(token, clientname){
 
 
 
-export {activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore  }
+export {activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore, defineMaterials  }

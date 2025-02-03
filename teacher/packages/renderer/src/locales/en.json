@@ -166,7 +166,11 @@
         "examsections": "exam sections",
         "examsectionsinfo": "You are in secured mode. Do you want to activate this exam section for all connected clients?",
         "no":"No",
-        "yes":"Yes"
+        "yes":"Yes",
+        "exammode":"Exam-Mode",
+        "materials":"Materials",
+        "definematerials":"Define Materials",
+        "processingfiles":"Processing Files"
     },
     "control": {
         "tokennotvalid": "token is not valid",

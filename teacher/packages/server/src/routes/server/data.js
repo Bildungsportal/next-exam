@@ -775,6 +775,89 @@ router.post('/upload/:servername/:servertoken/:studenttoken', async (req, res, n
 
 
 
+/**
+ * define materials for exam
+ * @param studenttoken the students token - this has to be valid (coming from a registered user) 
+ * @param servername the server-exam instance the students token belongs to
+ * in order to process the request - DO NOT STORE FILES COMING from anywhere.. always check if token belongs to a registered student (or server)
+ */
+
+router.post('/definematerials/:servername/:servertoken/:studenttoken', async (req, res, next) => {  
+    const servertoken = req.params.servertoken
+    const servername = req.params.servername
+    const mcServer = config.examServerList[servername] // get the multicastserver object
+    const studenttoken = req.params.studenttoken
+
+    if ( servertoken !== mcServer.serverinfo.servertoken ) { return res.json({ status: t("data.tokennotvalid") }) }
+
+    // create user abgabe directory
+    let uploaddirectory =  path.join(config.workdirectory, mcServer.serverinfo.servername, 'UPLOADS')
+    if (!fs.existsSync(uploaddirectory)){ fs.mkdirSync(uploaddirectory, { recursive: true });  }
+
+
+    if (req.files){
+        let filesArray = []  // depending on the number of files this comes as array of objects or object
+        if (!Array.isArray(req.files.files)){ filesArray.push(req.files.files)}
+        else {filesArray = req.files.files}
+
+        let files = []        
+    
+        for await (let file of  filesArray) {
+            let filename = decodeURIComponent(file.name)  //encode to prevent non-ascii chars weirdness
+            let filecontent = await file.toBuffer()
+            let base64filecontent = filecontent.toString('base64')
+            let checksum = crypto.createHash('sha256').update(base64filecontent).digest('hex')
+           
+    
+            files.push({ name:filename , path:absoluteFilepath });
+        }
+
+
+
+
+        // store files as base64 in the serverstatus.examSections[mcServer.serverstatus.activeSection].groupA.examInstructionFiles
+        if (studenttoken === "all"){
+            for (let student of mcServer.studentList){ 
+                
+
+            }
+        }
+        else if (studenttoken == "a" || studenttoken == "b"){
+            let groupArray = []
+            if (studenttoken == "a"){groupArray = mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupA.users }
+            if (studenttoken == "b"){groupArray = mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupB.users }
+
+         
+
+        }
+        else {
+         
+        }
+        res.json({ status:"success", sender: "server", message:t("data.filereceived")  })
+    }
+    else {
+        res.json({ status:"error",  sender: "server", message:t("data.nofilereceived") })
+    }
+    
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 export default router

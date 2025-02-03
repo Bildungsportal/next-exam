@@ -166,7 +166,11 @@
         "examsections": "Prüfungsabschnitte",
         "examsectionsinfo": "Sie befinden sich im abgesicherten Modus. Soll dieser Prüfungsabschnitt für alle verbundenen Clients aktiviert werden?",
         "no":"Nein",
-        "yes":"Ja"
+        "yes":"Ja",
+        "exammode":"Prüfungsmodus",
+        "materials":"Prüfungsmaterialien",
+        "definematerials":"Materialien festlegen die während der Prüfung verfügbar sein sollen",
+        "processingfiles":"Materialien werden verarbeitet"
     },
     "control": {
         "tokennotvalid": "Das Token ist ungültig",

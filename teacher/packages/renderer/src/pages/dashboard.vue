@@ -114,75 +114,74 @@
 
 
         <div class="dropdown-section m-1" style="width: 200px">
-        <!-- Dropdown Button -->
-    
-        <button class="btn btn-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center" type="button" :class="lockInExammode ? 'disabled' : ''" data-bs-toggle="dropdown" aria-expanded="false"> <span>{{ getSelectedExamTypeLabel() }}</span>    </button>
+            <!-- Dropdown Button -->
+            <div class="mb-1">{{$t("dashboard.exammode")}}</div>
+            <button class="btn btn-sm btn-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center" type="button" :class="lockInExammode ? 'disabled' : ''" data-bs-toggle="dropdown" aria-expanded="false"> <span>{{ getSelectedExamTypeLabel() }}</span>    </button>
 
+            <!-- Dropdown Menu -->
+            <ul class="dropdown-menu" style="cursor: pointer;">
+                <li><a class="dropdown-item" @click="selectExamType('math')" :class="{ active: isExamType('math') }">{{$t('dashboard.math')}}</a></li>
+                <li><a class="dropdown-item" @click="selectExamType('editor')" :class="{ active: isExamType('editor') }">{{$t('dashboard.lang')}}</a></li>
+                <li><a class="dropdown-item" @click="selectExamType('eduvidual')" :class="{ active: isExamType('eduvidual') }">{{$t('dashboard.eduvidual')}}</a></li>
+                <li><a class="dropdown-item" @click="selectExamType('gforms')" :class="{ active: isExamType('gforms') }">{{$t('dashboard.gforms')}}</a></li>
+                <li><a class="dropdown-item" @click="selectExamType('website')" :class="{ active: isExamType('website') }">Website</a></li>
+                <li><a class="dropdown-item" @click="selectExamType('microsoft365')" :class="{ active: isExamType('microsoft365') }">Microsoft365</a></li>
+            </ul>
+
+            <!-- Additional Info Section -->
+            <div class="mt-2">
+                <!-- Editor Spellcheck Info -->
+                <div v-if="isExamType('editor') && serverstatus.examSections[serverstatus.activeSection].languagetool" class="small text-white-50">
+                Spellcheck: {{serverstatus.examSections[serverstatus.activeSection].spellchecklang}}
+                </div>
+
+                <!-- Website Domain Info -->
+                <div v-if="isExamType('website') && serverstatus.examSections[serverstatus.activeSection].domainname" class="small text-white-50 text-truncate">
+                {{serverstatus.examSections[serverstatus.activeSection].domainname}}
+                </div>
+
+                <!-- Microsoft365 Buttons -->
+                <div v-if="isExamType('microsoft365')" class="d-flex flex-column gap-2">
+                <!-- Connect Button -->
+                <button v-if="!config.accessToken" @click="openAuthWindow()" class="btn btn-sm btn-primary">
+                    <img src="/src/assets/img/svg/win.svg" width="24" height="24">
+                    <span class="ms-1">Verbinden</span>
+                </button>
+
+                <!-- File Select Button -->
+                <button v-if="config.accessToken && !serverstatus.examSections[serverstatus.activeSection].msOfficeFile" @click="onedriveUploadselect()" class="btn btn-sm btn-info text-truncate">
+                    <img src="/src/assets/img/svg/win.svg" width="24" height="24">
+                    <span class="ms-1">Datei wählen</span>
+                </button>
+
+                <!-- Selected File Button -->
+                <button v-if="config.accessToken && serverstatus.examSections[serverstatus.activeSection].msOfficeFile" @click="onedriveUploadselect()" class="btn btn-sm btn-success text-truncate">
+                    <img src="/src/assets/img/svg/win.svg" width="24" height="24">
+                    <span class="ms-1">{{serverstatus.examSections[serverstatus.activeSection].msOfficeFile.name}}</span>
+                </button>
+
+                <!-- Logout Button -->
+                <button v-if="config.accessToken" @click="logout365()" class="btn btn-sm btn-warning">
+                    <img src="/src/assets/img/svg/win.svg" width="24" height="24">
+                    <span class="ms-1">Logout</span>
+                </button>
+                </div>
+            </div>
+        </div>
+
+
+
+
+
+        <!-- Files Section START -->
+        <div class="mb-4" style="display: inline-block; width: 100%; position: relative;">
+            <div class=" m-1 mt-3" style="display: inline-block;">{{$t("dashboard.materials")}}</div>
+            <div class="btn btn-sm m-1 btn-cyan plusbutton " @click="defineMaterials('all');hideDescription();" @mouseover="showDescription($t('dashboard.definematerials'))" @mouseout="hideDescription"  style="">+</div>
         
-        <!-- Dropdown Menu -->
-        <ul class="dropdown-menu ">
-            <li><a class="dropdown-item" @click="selectExamType('math')" :class="{ active: isExamType('math') }">{{$t('dashboard.math')}}</a></li>
-            <li><a class="dropdown-item" @click="selectExamType('editor')" :class="{ active: isExamType('editor') }">{{$t('dashboard.lang')}}</a></li>
-            <li><a class="dropdown-item" @click="selectExamType('eduvidual')" :class="{ active: isExamType('eduvidual') }">{{$t('dashboard.eduvidual')}}</a></li>
-            <li><a class="dropdown-item" @click="selectExamType('gforms')" :class="{ active: isExamType('gforms') }">{{$t('dashboard.gforms')}}</a></li>
-            <li><a class="dropdown-item" @click="selectExamType('website')" :class="{ active: isExamType('website') }">Website</a></li>
-            <li><a class="dropdown-item" @click="selectExamType('microsoft365')" :class="{ active: isExamType('microsoft365') }">Microsoft365</a></li>
-        </ul>
-
-        <!-- Additional Info Section -->
-        <div class="mt-2">
-            <!-- Editor Spellcheck Info -->
-            <div v-if="isExamType('editor') && serverstatus.examSections[serverstatus.activeSection].languagetool" class="small text-white-50">
-            Spellcheck: {{serverstatus.examSections[serverstatus.activeSection].spellchecklang}}
-            </div>
-
-            <!-- Website Domain Info -->
-            <div v-if="isExamType('website') && serverstatus.examSections[serverstatus.activeSection].domainname" class="small text-white-50 text-truncate">
-            Domain: {{serverstatus.examSections[serverstatus.activeSection].domainname}}
-            </div>
-
-            <!-- Microsoft365 Buttons -->
-            <div v-if="isExamType('microsoft365')" class="d-flex flex-column gap-2">
-            <!-- Connect Button -->
-            <button v-if="!config.accessToken" @click="openAuthWindow()" class="btn btn-sm btn-primary">
-                <img src="/src/assets/img/svg/win.svg" width="24" height="24">
-                <span class="ms-1">Verbinden</span>
-            </button>
-
-            <!-- File Select Button -->
-            <button v-if="config.accessToken && !serverstatus.examSections[serverstatus.activeSection].msOfficeFile" @click="onedriveUploadselect()" class="btn btn-sm btn-info text-truncate">
-                <img src="/src/assets/img/svg/win.svg" width="24" height="24">
-                <span class="ms-1">Datei wählen</span>
-            </button>
-
-            <!-- Selected File Button -->
-            <button v-if="config.accessToken && serverstatus.examSections[serverstatus.activeSection].msOfficeFile" @click="onedriveUploadselect()" class="btn btn-sm btn-success text-truncate">
-                <img src="/src/assets/img/svg/win.svg" width="24" height="24">
-                <span class="ms-1">{{serverstatus.examSections[serverstatus.activeSection].msOfficeFile.name}}</span>
-            </button>
-
-            <!-- Logout Button -->
-            <button v-if="config.accessToken" @click="logout365()" class="btn btn-sm btn-warning">
-                <img src="/src/assets/img/svg/win.svg" width="24" height="24">
-                <span class="ms-1">Logout</span>
-            </button>
-            </div>
+            <MaterialsList class="m-1" :examSection="serverstatus.examSections[serverstatus.activeSection]"  @remove-file="handleFileRemove"/>
+        
         </div>
-        </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        <!-- Files Section END -->
 
 
 
@@ -200,8 +199,6 @@
         </div>
         <!-- BIP Section END -->
         
-
-
         <div id="description" class="btn m-1"  v-if="showDesc">{{ currentDescription }}</div>
         <div id="statusdiv" class="btn btn-warning m-1"> {{$t('dashboard.connected')}}  </div>
 
@@ -248,47 +245,38 @@
                 <input id="screenshotOcr" type="checkbox" :title="$t('dashboard.ocrinfo')" v-model="serverstatus.screenshotocr" class="form-check-input" @change="updateScreenshotInterval">
                 <label for="screenshotOcr" class="form-check-label">{{$t('dashboard.ocr')}}</label>
             </div>
-
             <div class="form-check form-switch  m-1 mb-2">
                 <input v-model=serverstatus.useExamSections @click="" :title="$t('dashboard.activatesections')" checked=false class="form-check-input" type="checkbox" id="activatesections">
                 <label class="form-check-label">{{$t('dashboard.activatesections')}}   </label><br>
             </div>
-
             <div class="form-check form-switch  m-1 mb-2">
                 <input v-model=serverstatus.examSections[serverstatus.activeSection].groups @click="setupGroups()" :title="$t('dashboard.groupinfo')" checked=false class="form-check-input" type="checkbox" id="activategroups">
                 <label class="form-check-label">{{$t('dashboard.groups')}}   </label><br>
             </div>
-
             <div v-if="config.bipIntegration" class="form-check form-switch  m-1 mb-2" >
                 <input v-model=serverstatus.requireBiP :title="$t('control.biprequired')" checked=false class="form-check-input" type="checkbox" id="activatebip">
                 <label class="form-check-label">{{$t('dashboard.bildungsportal')}}   </label><br>
             </div>
-
             <div class="form-check form-switch  m-1 mb-2">
                 <input v-model=directPrintAllowed @click="checkforDefaultprinter()" :title="$t('dashboard.allowdirectprint')" checked=false class="form-check-input" type="checkbox" id="directprint">
                 <label class="form-check-label">{{$t('dashboard.directprint')}}   </label><br>
                 <div v-if="defaultPrinter" class="ellipsis text-black-50"> {{ defaultPrinter }}</div>
                 <div v-if="!defaultPrinter" class="ellipsis text-black-50"> kein Drucker gewählt</div>
             </div>
-
             <hr>
-
             <span><h6 style="display: inline">{{ $t('dashboard.defaultprinter') }}</h6></span>
             <div v-if="(availablePrinters.length < 1)">
                 <button class="btn btn-secondary mt-1 mb-0"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" >  no printer found </button>
             </div>
-            
             <div v-for="printer in availablePrinters" :key="printer" style="position: relative;">
                 <button @click="selectPrinter(printer)" :class="{'btn-cyan': defaultPrinter === printer}" class="printerbutton btn btn-secondary mt-1 mb-0" @mouseenter="visiblePrinter = printer" @mouseleave="visiblePrinter = null"><img src="/src/assets/img/svg/print.svg" alt="print" width="22" height="22" /> {{ printer }} </button>
                 <div v-if="visiblePrinter === printer" class="tooltip-content"> {{ printer }} </div>
                 <!-- Icon für den Standarddrucker -->
                 <img v-if="printer === defaultPrinter" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" />
             </div>
-
             <div v-if="currentpreviewPath && defaultPrinter">
                 <button id="printButton" class="btn btn-dark mt-1 mb-0" @click="printBase64();hideSetup()"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" > Print: {{ currentpreviewname }} </button>
             </div> 
-               
             <div>  <!-- ok button resets currentpreviewPath / print button only appears if currentpreviewPath is set and defaultprinter is set -->
                 <div id="okButton" class="btn mt-3 btn-success" @click="hideSetup(); this.currentpreviewPath=null;">OK</div>
             </div>
@@ -299,21 +287,22 @@
 
    
     <div :key="7" id="content" class="fadeinslow p-3">
-        <!-- control buttons start -->        
-
+       
+        <!-- CONTROL BUTTONS START -->        
         <div v-if="(serverstatus.exammode && numberOfConnections == 1)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:128px; height:62px;" @click="endExam();hideDescription();"  @mouseover="showDescription($t('dashboard.exitkiosk'))" @mouseout="hideDescription"  >
             <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.stopexamsingle')}} </div>
         </div>
         <div v-if="(serverstatus.exammode && numberOfConnections != 1)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:128px; height:62px;" @click="endExam();hideDescription();"  @mouseover="showDescription($t('dashboard.exitkiosk'))" @mouseout="hideDescription"  >
             <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.stopexam')}} </div>
         </div>
-        <div v-if="(!serverstatus.exammode)" class="btn btn-teal m-1 mt-0 text-start ms-0"  @click="startExam();hideDescription();"  @mouseover="showDescription($t('dashboard.startexamdesc'))" @mouseout="hideDescription" :class="(serverstatus.examSections[serverstatus.activeSection].examtype === 'microsoft365' && (!this.config.accessToken || !serverstatus.examSections[serverstatus.activeSection].msOfficeFile))? 'disabledgreen':''" style="width:128px; height:62px;">  <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.startexam')}}</div></div>
-        
+        <div v-if="(!serverstatus.exammode)" class="btn btn-teal m-1 mt-0 text-start ms-0"  @click="startExam();hideDescription();"  @mouseover="showDescription($t('dashboard.startexamdesc'))" @mouseout="hideDescription" :class="(serverstatus.examSections[serverstatus.activeSection].examtype === 'microsoft365' && (!this.config.accessToken || !serverstatus.examSections[serverstatus.activeSection].msOfficeFile))? 'disabledgreen':''" style="width:128px; height:62px;">  
+            <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> 
+            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.startexam')}}</div>
+        </div>
         <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="loadFilelist(workdirectory);hideDescription();"  @mouseover="showDescription($t('dashboard.showworkfolder'))" @mouseout="hideDescription"  style="width: 128px; height:62px;">
             <img src="/src/assets/img/svg/folder-open.svg" class="mt-2" width="32" height="32" style="vertical-align: top;" >
             <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;">{{$t('dashboard.workfolder')}}</div>
         </div>
-        
         <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="sendFiles('all');hideDescription();"   @mouseover="showDescription($t('dashboard.sendfile'))" @mouseout="hideDescription"  style="width:62px; height:62px;"><img src="/src/assets/img/svg/document-send.svg" class="mt-2" width="32" height="32"></div>
         <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="getFiles('all', true);hideDescription();"  @mouseover="showDescription($t('dashboard.getfile'))" @mouseout="hideDescription"  :class="lockDownload ? 'disabledexam':''"  style="width:62px; height:62px;" ><img src="/src/assets/img/svg/edit-download.svg" class="mt-2" width="32" height="32"></div>
         <div v-if="(serverstatus.screenslocked)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:62px; height:62px;" @click="lockscreens(false);hideDescription();"> <img src="/src/assets/img/svg/eye-fill.svg" class="white mt-2" width="32" height="32" >   </div>
@@ -323,7 +312,7 @@
             <img src="/src/assets/img/svg/globe.svg" class=" mt-1" width="32" height="32" style="vertical-align: top;"> 
             <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;" class="">BiP-Status {{bipStatus}}</div>
         </div>
-        <!-- control buttons end -->
+        <!-- CONTROL BUTTONS END -->
 
 
         <!-- studentlist start -->
@@ -381,9 +370,10 @@ import { VueDraggableNext } from 'vue-draggable-next'
 import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile, createSharingLink, fileExistsInAppFolder, downloadFilesFromOneDrive} from '../msalutils/onedrive'
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
 import { loadFilelist, print, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64 } from '../utils/filemanager'
-import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore } from '../utils/exammanagement.js'
+import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore, defineMaterials } from '../utils/exammanagement.js'
 import { v4 as uuidv4 } from 'uuid'
 import {SchedulerService} from '../utils/schedulerservice.js'
+import MaterialsList from '../components/materialsList.vue'
 
 class EmptyWidget {
     constructor() {
@@ -397,6 +387,7 @@ class EmptyWidget {
 export default {
     components: {
         draggable: VueDraggableNext,
+        MaterialsList: MaterialsList
     },
     data() {
         return {
@@ -649,6 +640,7 @@ computed: {
         stopserver:stopserver,                       //Stop and Exit Exam Server Instance
         delfolderquestion: delfolderquestion,         // delete contents of studentfolder on student pc
         activateSpellcheckForStudent: activateSpellcheckForStudent,  // activate spellcheck for specific student only
+        defineMaterials: defineMaterials,             // define materials for exam
    
 
 
@@ -659,7 +651,7 @@ computed: {
          * Checks Screenshots and MSO Share Links
          */
         async fetchInfo() {
-            if (!this.config.accessToken && this.serverstatus.examSections[this.serverstatus.activeSection].examtype === "microsoft365"){
+            if (!this.config.accessToken &&  this.isExamType("microsoft365")){
                 this.config = await ipcRenderer.invoke('getconfigasync')  // this is only needed in order to get the accesstoken from the backend for MSAuthentication
             }
             this.now = new Date().getTime()
@@ -685,11 +677,12 @@ computed: {
             if (this.studentlist && this.studentlist.length > 0){
                 this.studentlist.forEach( student => { 
                     
+                    // update active student (for student-details) and student image
                     if (this.activestudent && student.token === this.activestudent.token) { this.activestudent = student}  // on studentlist-receive update active student (for student-details)
-                    if (!student.imageurl){ student.imageurl = "user-black.svg"  }
-                    
+                    if (!student.imageurl){ student.imageurl = "user-black.svg"  }            
+
                     // if the chosen exam mode is OFFICE and everything is Setup already check if students already got their share link (re-connect, late-connect)
-                    if (this.serverstatus.examSections[this.serverstatus.activeSection].examtype === "microsoft365" && this.config.accessToken && this.serverstatus.examSections[this.serverstatus.activeSection].msOfficeFile){
+                    if ( this.isExamType("microsoft365") && this.config.accessToken && this.serverstatus.examSections[this.serverstatus.activeSection].msOfficeFile){
                         if (!student.status.msofficeshare) {  // this one is late to the party
                             console.log("dashboard @ fetchInfo: this student has no sharing link yet")
                             this.onedriveUploadSingle(student, this.serverstatus.examSections[this.serverstatus.activeSection].msOfficeFile)   // trigger upload of this.serverstatus.msOfficeFile, create sharelink and set student.status.msofficeshare to sharelink
@@ -701,7 +694,6 @@ computed: {
                             this.processPrintrequest(student) //do not trigger twice from same student
                         } 
                         this.setStudentStatus({removeprintrequest:true}, student.token)  //request received.. remove it from the servers student object
-
                     }   
                 });
 
@@ -740,17 +732,21 @@ computed: {
         }, 
 
 
+        // remove file from group a or b
+        handleFileRemove({ group, index }) {
+            if (group === 'A') { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.examInstructionFiles.splice(index, 1); } 
+            else {               this.serverstatus.examSections[this.serverstatus.activeSection].groupB.examInstructionFiles.splice(index, 1); }
+        },
 
-
+        // check if the current exam type is the same as the given type
         isExamType(type) {
             return this.serverstatus.examSections[this.serverstatus.activeSection].examtype === type;
         },
 
+        // select exam type and trigger methods based on type
         selectExamType(type) {
             if (this.lockInExammode) return;
-            
             this.serverstatus.examSections[this.serverstatus.activeSection].examtype = type;
-            
             // Call existing methods based on type
             if (type === 'editor') this.activateSpellcheck();
             if (type === 'eduvidual') this.getTestID();
@@ -758,6 +754,7 @@ computed: {
             if (type === 'website') this.getTestURL();
         },
 
+        // get label for the current exam type
         getSelectedExamTypeLabel() {
             const type = this.serverstatus.examSections[this.serverstatus.activeSection].examtype;
             switch(type) {
@@ -1335,27 +1332,24 @@ computed: {
         },
 
 
+        // setup groups
+        // every user is automatically in group a (see control /registerclient) - this function resets group arrangement and pushes every user into group a
         async setupGroups(){
-            if (!this.serverstatus.examSections[this.serverstatus.activeSection].groupA){   //temp fix for old exams (resume) without groups 
-                this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users = []
-                this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users = []
-            }
+            this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users = []
+            this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users = []
             // prepopulate group A
-            if (this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.length == 0){
-                for (let student of this.studentlist) {
-                    student.status.group = "a"
-                    if (!this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.includes(student.clientname)) {
-                        this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.push(student.clientname)
-                    } 
-                }
-            }
+            for (let student of this.studentlist) {
+                student.status.group = "a"
+                if (!this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.includes(student.clientname)) {
+                    this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.push(student.clientname)
+                } 
+            } 
             await this.sleep(1000)
             this.setServerStatus()
         },
 
+        // push user from one group to the other
         quickSetGroup(student){
-
-        
             // Remove student from groups if present
             const indexA = this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.indexOf(student.clientname);
             const indexB = this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users.indexOf(student.clientname);
@@ -1667,11 +1661,25 @@ computed: {
 
 
 <style scoped>
+.plusbutton {
+    box-sizing: border-box;
+    font-size:1.2em; 
+    font-weight:bold;
+    color:white;
+    height:28px; 
+    text-align: center;
+    padding-top: 0px !important;
+   
+    width: 30px;
+    height: 30px;
+    position: absolute;
+    right: 0;
+    top:10px;
+}
+
 
 .sectionbutton {
     display:inline-block;
-   
-
     width: 128px;
     border-bottom-right-radius: 0px;
     border-bottom-left-radius: 0px;
