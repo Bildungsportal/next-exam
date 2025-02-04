@@ -300,9 +300,6 @@ async function processPrintrequest(student){
             
             pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0`);
             document.querySelector("#pdfpreview").style.display = 'block';
-
-
-
           
         }
         else {
@@ -314,6 +311,24 @@ async function processPrintrequest(student){
 
 
 
+
+// show base64 encoded pdf in preview panel
+function showBase64FilePreview(base64, filename){
+
+    this.currentpreviewBase64 = base64
+    this.currentpreview = `${this.currentpreviewBase64}`;
+    this.currentpreviewType = "pdf";
+    this.currentpreviewname = filename
+
+
+    const pdfEmbed = document.querySelector("#pdfembed");
+    pdfEmbed.style.backgroundImage = '';
+    pdfEmbed.style.height = "95vh";
+    pdfEmbed.style.width = "67vh";
+    
+    pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0`);
+    document.querySelector("#pdfpreview").style.display = 'block';
+}
 
 
 
@@ -388,4 +403,4 @@ function loadFilelist(directory){
     }).catch(err => { log.error(err)});
 }
  
-export {loadFilelist, print, getLatest, processPrintrequest, loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64  }
+export {loadFilelist, print, getLatest, processPrintrequest, loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64FilePreview }
