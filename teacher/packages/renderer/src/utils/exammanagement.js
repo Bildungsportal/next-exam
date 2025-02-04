@@ -400,6 +400,7 @@ function defineMaterials(who) {
             }
         }
 
+        this.setServerStatus()
     });    
 }
 

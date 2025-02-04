@@ -9,16 +9,12 @@
     </span>
     <span class="align-middle ms-3" style="float: right; font-size:23px;">Dashboard</span>
 
-
-<div v-if="serverstatus.useExamSections" style="position: absolute; left:257px; top:42px; min-width: 550px;">
-    <div id="section1" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 1 && !serverstatus.examSections[1].locked, 'btn-danger': serverstatus.activeSection == 1 && serverstatus.examSections[1].locked, 'btn-secondary': serverstatus.activeSection != 1,'border-danger': serverstatus.examSections[1].locked}">{{ serverstatus.examSections[1].sectionname }}</div>
-    <div id="section2" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 2 && !serverstatus.examSections[2].locked, 'btn-danger': serverstatus.activeSection == 2 && serverstatus.examSections[2].locked, 'btn-secondary': serverstatus.activeSection != 2,'border-danger': serverstatus.examSections[2].locked}">{{ serverstatus.examSections[2].sectionname }}</div>
-    <div id="section3" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 3 && !serverstatus.examSections[3].locked, 'btn-danger': serverstatus.activeSection == 3 && serverstatus.examSections[3].locked, 'btn-secondary': serverstatus.activeSection != 3,'border-danger': serverstatus.examSections[3].locked}">{{ serverstatus.examSections[3].sectionname }}</div>
-    <div id="section4" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 4 && !serverstatus.examSections[4].locked, 'btn-danger': serverstatus.activeSection == 4 && serverstatus.examSections[4].locked, 'btn-secondary': serverstatus.activeSection != 4,'border-danger': serverstatus.examSections[4].locked}">{{ serverstatus.examSections[4].sectionname }}</div>
-</div>
-
-
-
+    <div v-if="serverstatus.useExamSections" style="position: absolute; left:257px; top:42px; min-width: 550px;">
+        <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 1 && !serverstatus.examSections[1].locked, 'btn-danger': serverstatus.activeSection == 1 && serverstatus.examSections[1].locked, 'btn-secondary': serverstatus.activeSection != 1,'border-danger': serverstatus.examSections[1].locked}">{{ serverstatus.examSections[1].sectionname }}</div>
+        <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 2 && !serverstatus.examSections[2].locked, 'btn-danger': serverstatus.activeSection == 2 && serverstatus.examSections[2].locked, 'btn-secondary': serverstatus.activeSection != 2,'border-danger': serverstatus.examSections[2].locked}">{{ serverstatus.examSections[2].sectionname }}</div>
+        <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 3 && !serverstatus.examSections[3].locked, 'btn-danger': serverstatus.activeSection == 3 && serverstatus.examSections[3].locked, 'btn-secondary': serverstatus.activeSection != 3,'border-danger': serverstatus.examSections[3].locked}">{{ serverstatus.examSections[3].sectionname }}</div>
+        <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 4 && !serverstatus.examSections[4].locked, 'btn-danger': serverstatus.activeSection == 4 && serverstatus.examSections[4].locked, 'btn-secondary': serverstatus.activeSection != 4,'border-danger': serverstatus.examSections[4].locked}">{{ serverstatus.examSections[4].sectionname }}</div>
+    </div>
 
     <div class="btn btn-sm btn-secondary m-0 me-1 mt-1" style="float: right; padding:3px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white" width="22" height="22" > </div>
     <div class="btn btn-sm btn-danger m-0 me-1 mt-1" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style="float: right"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" >&nbsp; {{$t('dashboard.stopserver')}}&nbsp; </div>
@@ -94,8 +90,8 @@
         <div id="previewbuttons">
             <div class="insert-button btn btn-danger me-2  shadow" style="float: right;" @click="hidepreview()" :title="$t('dashboard.close')"><img src="/src/assets/img/svg/dialog-cancel.svg" class="" width="22" height="32" > </div>
             <div class="insert-button btn btn-warning me-2 shadow" style="float: right;" id="printPDF" @click="printBase64()"  :title="$t('dashboard.print')"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="32" > </div>
-            <div class="insert-button btn btn-dark me-2 shadow" style="float: right;" @click="downloadFile('current')" :title="$t('dashboard.save')"><img src="/src/assets/img/svg/edit-download.svg" class="" width="22" height="32" > </div>
-            <div class="insert-button btn btn-dark me-2 shadow" style="float: right;" @click="openFileExternal(currentpreviewPath)" :title="$t('dashboard.open')"><img src="/src/assets/img/svg/stock_exit_up.svg" class="" width="22" height="32" > </div>
+            <div class="insert-button btn btn-dark me-2 shadow" style="float: right;" id="downloadPDF" @click="downloadFile('current')" :title="$t('dashboard.save')"><img src="/src/assets/img/svg/edit-download.svg" class="" width="22" height="32" > </div>
+            <div class="insert-button btn btn-dark me-2 shadow" style="float: right;" id="openPDF" @click="openFileExternal(currentpreviewPath)" :title="$t('dashboard.open')"><img src="/src/assets/img/svg/stock_exit_up.svg" class="" width="22" height="32" > </div>
         </div>
         </div>
     </div>
@@ -177,9 +173,7 @@
         <div class="mb-4" style="display: inline-block; width: 100%; position: relative;">
             <div class=" m-1 mt-3" style="display: inline-block;">{{$t("dashboard.materials")}}</div>
             <div class="btn btn-sm m-1 btn-cyan plusbutton " @click="defineMaterials('all');hideDescription();" @mouseover="showDescription($t('dashboard.definematerials'))" @mouseout="hideDescription"  style="">+</div>
-        
-            <MaterialsList class="m-1" :examSection="serverstatus.examSections[serverstatus.activeSection]"  @remove-file="handleFileRemove" @show-preview="showBase64FilePreview" />
-        
+            <MaterialsList class="m-1" :examSection="serverstatus.examSections[serverstatus.activeSection]"  @remove-file="handleFileRemove" @show-preview="showBase64FilePreview" @show-image-preview="showBase64ImagePreview"/>   
         </div>
         <!-- Files Section END -->
 
@@ -288,6 +282,9 @@
    
     <div :key="7" id="content" class="fadeinslow p-3">
        
+
+
+
         <!-- CONTROL BUTTONS START -->        
         <div v-if="(serverstatus.exammode && numberOfConnections == 1)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:128px; height:62px;" @click="endExam();hideDescription();"  @mouseover="showDescription($t('dashboard.exitkiosk'))" @mouseout="hideDescription"  >
             <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.stopexamsingle')}} </div>
@@ -299,20 +296,63 @@
             <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> 
             <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.startexam')}}</div>
         </div>
+        <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="getFiles('all', true);hideDescription();"  @mouseover="showDescription($t('dashboard.getfile'))" @mouseout="hideDescription"  :class="lockDownload ? 'disabledexam':''"  style="width:128px; height:62px;" >
+            <img src="/src/assets/img/svg/edit-download.svg" class="mt-2" width="32" height="32" style="vertical-align: top;">
+            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;">{{$t('dashboard.getfiles')}}</div>
+        </div>
         <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="loadFilelist(workdirectory);hideDescription();"  @mouseover="showDescription($t('dashboard.showworkfolder'))" @mouseout="hideDescription"  style="width: 128px; height:62px;">
             <img src="/src/assets/img/svg/folder-open.svg" class="mt-2" width="32" height="32" style="vertical-align: top;" >
             <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;">{{$t('dashboard.workfolder')}}</div>
         </div>
-        <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="sendFiles('all');hideDescription();"   @mouseover="showDescription($t('dashboard.sendfile'))" @mouseout="hideDescription"  style="width:62px; height:62px;"><img src="/src/assets/img/svg/document-send.svg" class="mt-2" width="32" height="32"></div>
-        <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="getFiles('all', true);hideDescription();"  @mouseover="showDescription($t('dashboard.getfile'))" @mouseout="hideDescription"  :class="lockDownload ? 'disabledexam':''"  style="width:62px; height:62px;" ><img src="/src/assets/img/svg/edit-download.svg" class="mt-2" width="32" height="32"></div>
-        <div v-if="(serverstatus.screenslocked)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:62px; height:62px;" @click="lockscreens(false);hideDescription();"> <img src="/src/assets/img/svg/eye-fill.svg" class="white mt-2" width="32" height="32" >   </div>
-        <div v-if="(!serverstatus.screenslocked)" class="btn btn-dark m-1 mt-0 text-start ms-0 " style="width:62px; height:62px;" @click="lockscreens(true);hideDescription();"  @mouseover="showDescription($t('dashboard.lock'))" @mouseout="hideDescription" > <img src="/src/assets/img/svg/eye-slash-fill.svg" class="white mt-2" width="32" height="32" >  </div>
-        <div class="btn btn-dark m-1 mt-0 ms-0 text-start" @mouseover="showDescription($t('dashboard.del'))" @mouseout="hideDescription" style="width:62px; height:62px;" @click="delfolderquestion()"> <img src="/src/assets/img/svg/edit-delete.svg" class="mt-2" width="32" height="32" ></div>
         <div v-if="bipToken && serverstatus.bip" @mouseover="showDescription($t('dashboard.bipinfo'))" @mouseout="hideDescription" class="btn m-1 mt-0 ms-0 text-start p-1 pt-2 ps-2" :class="bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'" @click="toggleBipStatus" style="width:128px; height:62px;">
             <img src="/src/assets/img/svg/globe.svg" class=" mt-1" width="32" height="32" style="vertical-align: top;"> 
             <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;" class="">BiP-Status {{bipStatus}}</div>
+        </div>       
+
+
+ 
+
+        <div class="tab-buttons-container">
+            <div class="btn btn-dark tab-button" 
+                @click="sendFiles('all');hideDescription();" 
+                @mouseover="showDescription($t('dashboard.sendfile'))" 
+                @mouseout="hideDescription">
+                <img src="/src/assets/img/svg/document-send.svg" width="32" height="32">
+            </div>
+
+            <div v-if="serverstatus.screenslocked" 
+                class="btn btn-danger tab-button" 
+                @click="lockscreens(false);hideDescription();">
+                <img src="/src/assets/img/svg/eye-fill.svg" class="white" width="32" height="32">
+            </div>
+
+            <div v-else 
+                class="btn btn-dark tab-button" 
+                @click="lockscreens(true);hideDescription();" 
+                @mouseover="showDescription($t('dashboard.lock'))" 
+                @mouseout="hideDescription">
+                <img src="/src/assets/img/svg/eye-slash-fill.svg" class="white" width="32" height="32">
+            </div>
+
+            <div class="btn btn-dark tab-button" 
+                @mouseover="showDescription($t('dashboard.del'))" 
+                @mouseout="hideDescription" 
+                @click="delfolderquestion">
+                <img src="/src/assets/img/svg/edit-delete.svg" width="32" height="32">
+            </div>
         </div>
+
+
+
         <!-- CONTROL BUTTONS END -->
+
+
+
+
+
+
+
+
 
 
         <!-- studentlist start -->
@@ -365,6 +405,12 @@
 
 
 
+
+
+
+
+
+
 <script >
 import { VueDraggableNext } from 'vue-draggable-next'
 import { v4 as uuidv4 } from 'uuid'
@@ -373,7 +419,7 @@ import MaterialsList from '../components/materialsList.vue'
 
 import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile, createSharingLink, fileExistsInAppFolder, downloadFilesFromOneDrive} from '../msalutils/onedrive'
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
-import { loadFilelist, print, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview } from '../utils/filemanager'
+import { loadFilelist, print, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview } from '../utils/filemanager'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore, defineMaterials } from '../utils/exammanagement.js'
 import { getTestURL, getTestID, getFormsID, activateSpellcheck } from '../utils/examsetup.js'
 
@@ -625,6 +671,7 @@ computed: {
         fdelete:fdelete,                                            // deletes a file
         openLatestFolder:openLatestFolder,                          // opens the newest folder that belongs to the current visible student
         showBase64FilePreview:showBase64FilePreview,                // displays a base64 encoded pdf in the preview panel
+        showBase64ImagePreview:showBase64ImagePreview,              // displays a base64 encoded image in the preview panel
 
         /**
          * Exam Managment functions
@@ -1294,6 +1341,44 @@ computed: {
 
 
 <style scoped>
+
+.tab-buttons-container {
+    position: fixed;
+    right: 0;
+    top: 22%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 1000;
+    width: 72px; /* Container ist so breit wie die hover-Breite */
+}
+
+.tab-button {
+    width: 62px;
+    height: 62px;
+    padding: 15px 15px;
+    border-radius: 8px 0 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    margin: 0;
+    box-shadow: -2px 2px 5px rgba(0,0,0,0.2);
+    margin-left: auto; /* Button wird rechts im Container ausgerichtet */
+}
+
+.tab-button:hover {
+    width: 72px;
+    box-shadow: -3px 3px 8px rgba(0,0,0,0.3);
+}
+
+.tab-button img {
+    margin: 0;
+}
+
+
+
 .plusbutton {
     box-sizing: border-box;
     font-size:1.2em; 

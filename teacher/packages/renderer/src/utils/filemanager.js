@@ -132,6 +132,9 @@ function loadPDF(filepath, filename){
 
         document.querySelector("#pdfembed").setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0`);
         document.querySelector("#pdfpreview").style.display = 'block';
+        document.querySelector("#openPDF").style.display = 'block';
+        document.querySelector("#downloadPDF").style.display = 'block';
+        document.querySelector("#printPDF").style.display = 'block';
 
     }).catch(err => { log.error(err) });     
 }
@@ -169,6 +172,10 @@ function loadImage(file){
             this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "image/jpeg"})) 
             // wanted to save code here but images need to be presented in a different way than pdf.. so...
             const pdfEmbed = document.querySelector("#pdfembed");
+            
+            // clear the pdf viewer
+            pdfEmbed.setAttribute("src", "about:blank");
+
             const img = new window.Image();
             img.onload = function() {
                 const width = img.width;
@@ -191,9 +198,12 @@ function loadImage(file){
             }.bind(this);
             img.src = this.currentpreview;
 
-            // clear the pdf viewer
-            pdfEmbed.setAttribute("src", "about:blank");
-            document.querySelector("#pdfpreview").style.display = 'block';  
+        
+            document.querySelector("#pdfpreview").style.display = 'block'; 
+            document.querySelector("#openPDF").style.display = 'block';
+            document.querySelector("#downloadPDF").style.display = 'block';
+            document.querySelector("#printPDF").style.display = 'block'; 
+            
         }).catch(err => { log.error(err)});     
 }
 
@@ -300,6 +310,9 @@ async function processPrintrequest(student){
             
             pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0`);
             document.querySelector("#pdfpreview").style.display = 'block';
+            document.querySelector("#openPDF").style.display = 'block';
+            document.querySelector("#downloadPDF").style.display = 'block';
+            document.querySelector("#printPDF").style.display = 'block';
           
         }
         else {
@@ -328,11 +341,51 @@ function showBase64FilePreview(base64, filename){
     
     pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0`);
     document.querySelector("#pdfpreview").style.display = 'block';
+    document.querySelector("#openPDF").style.display = 'none';
+    document.querySelector("#downloadPDF").style.display = 'none';
 }
 
 
 
+// show base64 encoded image in preview panel
+function showBase64ImagePreview(base64, filename){
 
+    const pdfEmbed = document.querySelector("#pdfembed");
+    pdfEmbed.setAttribute("src", "about:blank"); // clear the pdf viewer
+
+    this.currentpreviewBase64 = base64
+    this.currentpreview = `${this.currentpreviewBase64}`;
+    this.currentpreviewType = "image";
+    this.currentpreviewname = filename
+
+    // create demo image object to calculate width and height
+    const img = new window.Image();
+    img.onload = function() {
+        const width = img.width;
+        const height = img.height;
+        const aspectRatio = width / height;
+
+        const containerWidth = window.innerWidth * 0.8;
+        const containerHeight = window.innerHeight * 0.8;
+        const containerAspectRatio = containerWidth / containerHeight;
+
+        if (aspectRatio > containerAspectRatio) {
+            pdfEmbed.style.width = '80vw';
+            pdfEmbed.style.height = `calc(80vw / ${aspectRatio})`;
+        } else {
+            pdfEmbed.style.height = '80vh';
+            pdfEmbed.style.width = `calc(80vh * ${aspectRatio})`;
+        }
+        pdfEmbed.style.backgroundImage = `url(${this.currentpreview})`;
+
+    }.bind(this);
+    img.src = this.currentpreview;
+    
+    //hide show some buttons
+    document.querySelector("#pdfpreview").style.display = 'block';
+    document.querySelector("#openPDF").style.display = 'none';
+    document.querySelector("#downloadPDF").style.display = 'none';
+}
 
 
 
@@ -403,4 +456,4 @@ function loadFilelist(directory){
     }).catch(err => { log.error(err)});
 }
  
-export {loadFilelist, print, getLatest, processPrintrequest, loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64FilePreview }
+export {loadFilelist, print, getLatest, processPrintrequest, loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview}

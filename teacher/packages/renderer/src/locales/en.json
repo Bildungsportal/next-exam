@@ -56,6 +56,7 @@
         "sendfileSingle": "Send Files",
         "getfile": "Fetch Work of all students",
         "getfileSingle": "Fetch Work",
+        "getfiles": "Fetch Work",
         "stopexam": "Release devices",
         "stopexamsingle": "Release device",
         "sure": "Are you sure?",

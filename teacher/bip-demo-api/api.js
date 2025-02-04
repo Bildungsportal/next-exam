@@ -178,11 +178,14 @@ let studentInfo = {
                 }
             ],
             examSecurityKey: "oI9xGzHkUFe7Lg2iTXHkYp4pDab3Nvj4kFEOqA93cZE=",   // symmetrisch, für mathe matura falls dateien verschlüsselt übertragen werden - soll erst zu schülern übertragen werden wenn die prüfung startet
+            useExamSections: true, //if false exam section 1 is used and no tabs are displayed
             activeSection: 1,
             examSections: {
                 1: {  
                     examtype: "editor",  // editor, math, eduvidual, gforms, website, microsoft365
                     timelimit: 20, // in minutes
+                    locked: true,  // if true, the current section is locked and no changes can be made - this means its currently active for students
+                    sectionname: "Reading",
                     spellchecklang: "en-GB",  // en-GB, de-DE, fr-FR, es-ES, it-IT, none
                     suggestions: false,   // soll language tool vorschläge für verbesserungen zeigen
                     moodleTestId: null,   // aus der angegebenen moodle domain wird die test id automatisch herausgeschnitten
@@ -228,9 +231,11 @@ let studentInfo = {
                     },
                 },    
                 2: {  
-                    examtype: "math",  // editor, math, eduvidual, gforms, website, microsoft365
-                    timelimit: 40, // in minutes
-                    spellchecklang: "de-DE",  // en-GB, de-DE, fr-FR, es-ES, it-IT, none
+                    examtype: "editor",  // editor, math, eduvidual, gforms, website, microsoft365
+                    timelimit: 20, // in minutes
+                    locked: false,  // if true, the current section is locked and no changes can be made - this means its currently active for students
+                    sectionname: "Listening",
+                    spellchecklang: "en-GB",  // en-GB, de-DE, fr-FR, es-ES, it-IT, none
                     suggestions: false,   // soll language tool vorschläge für verbesserungen zeigen
                     moodleTestId: null,   // aus der angegebenen moodle domain wird die test id automatisch herausgeschnitten
                     moodleDomain: null,  // domain der moodle instanz
@@ -249,13 +254,53 @@ let studentInfo = {
                     groups: false,   // sollen die clients in 2 gruppen A / B aufgeteilt werden
                     groupA: {
                         users : [],
-                        examInstructionFiles: []
+                        examInstructionFiles: [{
+                            filename: "a story of a man.mp3",
+                            filecontent: "data:text/plain;base64,SGVsbG8=ooeiaeai",
+                            checksum: "6f1ed002oeii595859014ebf0951522d9"
+                        }]
                     },
                     groupB: { 
                         users: [],
                         examInstructionFiles: []
                     },
-                },  
+                },
+                3: {  
+                    examtype: "editor",  // editor, math, eduvidual, gforms, website, microsoft365
+                    timelimit: 40, // in minutes
+                    locked: false,  // if true, the current section is locked and no changes can be made - this means its currently active for students
+                    sectionname: "Writing",
+                    spellchecklang: "en-GB",  // en-GB, de-DE, fr-FR, es-ES, it-IT, none
+                    suggestions: false,   // soll language tool vorschläge für verbesserungen zeigen
+                    moodleTestId: null,   // aus der angegebenen moodle domain wird die test id automatisch herausgeschnitten
+                    moodleDomain: null,  // domain der moodle instanz
+                    moodleURL: null,  // vollständige moodle test url
+                    cmargin: {    // angaben für den korrekturrand bei der pdf erstellung im editor
+                        side: "right",
+                        size: 3    // cm 
+                    },
+                    gformsTestId: null,   // id des google forms formulares
+                    msOfficeFile: false,  // welche datei (am onedrive der lehrperson) soll den clients zum editieren zur verfügung gestellt werden                
+                    linespacing: 2,  // zeilenabstand im finalen pdf das aus dem editor generiert wird                    
+                    languagetool: true,    // rechtschreibüberprüfung mit languagetool ja /nein
+                    fontfamily: "sans-serif",  // serife schriftart im editor oder non-serif ?
+                    audioRepeat: 0, // wie oft dürfen die teilnehmenden eine audio datei abspielen 0 - unlimited
+                    domainname: false,
+                    groups: false,   // sollen die clients in 2 gruppen A / B aufgeteilt werden
+                    groupA: {
+                        users : [],
+                        examInstructionFiles: [{
+                            filename: "toystory.jpg",
+                            filecontent: "data:text/plain;base64,SGVsbG8=ooeaoeiaoeiiaeai",
+                            checksum: "6f1ed002oeii59585aoeiaoei0951522d9"
+                        }]
+                    },
+                    groupB: { 
+                        users: [],
+                        examInstructionFiles: []
+                    },
+                },
+   
             }
         },
         {
@@ -280,12 +325,15 @@ let studentInfo = {
                 }
             ],
             examSecurityKey: "oI9xGzHkUoe4eoiUEI34p4pDab3Nvj4kFEOqA93cZE=",   // symmetrisch, für mathe matura falls dateien verschlüsselt übertragen werden - soll erst zu schülern übertragen werden wenn die prüfung startet
+            useExamSections: false, //if false exam section 1 is used and no tabs are displayed
             activeSection: 1,
             examSections: {
                 1: {  
                     examtype: "math",  // editor, math, eduvidual, gforms, website, microsoft365
                     timelimit: 50, // in minutes
+                    locked: false,  // if true, the current section is locked and no changes can be made - this means its currently active for students
                     spellchecklang: "de-DE",  // en-GB, de-DE, fr-FR, es-ES, it-IT, none
+                    sectionname: "Abschnitt 1",
                     suggestions: false,   // soll language tool vorschläge für verbesserungen zeigen
                     moodleTestId: null,   // aus der angegebenen moodle domain wird die test id automatisch herausgeschnitten
                     moodleDomain: null,  // domain der moodle instanz
