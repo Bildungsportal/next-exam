@@ -463,18 +463,15 @@ export default {
             }
             else {
 
-               console.log("selectedExam", this.selectedExam, this.bipToken)
-            
                 if (this.selectedExam && this.selectedExam.bip && !this.bipToken){
                     this.status(this.$t("startserver.bipnotloggedin")); 
                     return;
                 }
                 
-                
 
                 let payload = {
                     workdir: this.workdir,
-                    bip: this.selectedExam && this.selectedExam.bip ? true : false
+                    bip: this.selectedExam && this.selectedExam.bip && this.servername === this.selectedExam.examName ? true : false
                 }
 
 

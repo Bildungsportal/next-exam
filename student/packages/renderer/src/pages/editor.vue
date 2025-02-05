@@ -100,6 +100,18 @@
                 <div v-if="(file.type == 'audio')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="playAudio(file.name)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
                 <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
             </div>
+            |
+
+            <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
+            <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
+                <div v-if="(file.filetype == 'bak')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+                <div v-if="(file.filetype == 'docx')" class="btn btn-success p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+                <div v-if="(file.filetype == 'pdf')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+                <div v-if="(file.filetype == 'audio')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+                <div v-if="(file.filetype == 'image')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+            </div>
+            <!-- exam materials end -->
+
         
         </div>
         <!-- toolbar end -->
@@ -392,6 +404,7 @@ export default {
             ignoreList: new Set(),
             wlanInfo: null,
             ltRunning: false,
+            examMaterials: [],
         }
     },
     computed: {
@@ -444,6 +457,20 @@ export default {
                 caretRange.startContainer.parentNode.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
             }
         },
+
+
+
+        loadBase64file(file){
+
+
+            if (file.filetype == 'pdf'){
+                this.loadPDF(file, true)
+                return
+            }
+
+        },
+
+
 
 
         async fetchInfo() {
@@ -851,26 +878,32 @@ export default {
         },
 
         // fetch file from disc - show preview
-        async loadPDF(file){
+        async loadPDF(file, base64 = false){
             URL.revokeObjectURL(this.currentpreview);
-            let data = await ipcRenderer.invoke('getpdfasync', file )
-        
-            let isvalid = this.isValidPdf(data)
-            if (!isvalid){
-                this.$swal.fire({
-                    title: this.$t("general.error"),
-                    text: this.$t("general.nopdf"),
-                    icon: "error",
-                    timer: 3000,
-                    showCancelButton: false,
-                    didOpen: () => { this.$swal.showLoading(); },
-                })
-                return
+            
+            if (!base64){
+                let data = await ipcRenderer.invoke('getpdfasync', file )
+            
+                let isvalid = this.isValidPdf(data)
+                if (!isvalid){
+                    this.$swal.fire({
+                        title: this.$t("general.error"),
+                        text: this.$t("general.nopdf"),
+                        icon: "error",
+                        timer: 3000,
+                        showCancelButton: false,
+                        didOpen: () => { this.$swal.showLoading(); },
+                    })
+                    return
+                }
+
+                this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "application/pdf"})) 
+                this.currentpreviewBase64 = Buffer.from(data).toString('base64');
             }
-
-            this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "application/pdf"})) 
-            this.currentpreviewBase64 = Buffer.from(data).toString('base64');
-
+            else {
+                this.currentpreviewBase64 = file.filecontent
+                this.currentpreview = file.filecontent
+            }
 
             const pdfEmbed = document.querySelector("#pdfembed");
             pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0`);
@@ -1348,6 +1381,13 @@ export default {
                 ],
                 content: ``,         
             });
+        },
+        async getExamMaterials(){
+            let examMaterials = await ipcRenderer.invoke('getExamMaterials')
+            console.log("editor @ getExamMaterials: received examMaterials")
+            this.examMaterials = examMaterials.materials
+            console.log(this.examMaterials.materials)
+
         }
     },
     
@@ -1381,7 +1421,9 @@ export default {
       
         this.createEditor(); // this initializes the editor
 
-       
+        this.getExamMaterials()
+
+
         ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
             console.log("editor @ save: Teacher saverequest received")
             this.saveContent(true, why) 

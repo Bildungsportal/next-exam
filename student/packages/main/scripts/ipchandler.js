@@ -54,6 +54,72 @@ class IpcHandler {
             iface: null // Standard: null, damit das Standardinterface des Systems verwendet wird
         });
 
+
+
+
+        ipcMain.handle('getExamMaterials', async (event) => { 
+      
+            let clientinfo = this.multicastClient.clientinfo
+            let servername = clientinfo.servername
+            let serverip = clientinfo.serverip
+            let token = clientinfo.token
+            
+
+            let payload = { 
+                group: clientinfo.group,
+            }
+
+            // Fetch-Request mit den entsprechenden Optionen
+            let examMaterials = await fetch(`https://${serverip}:${this.config.serverApiPort}/server/data/getexammaterials/${servername}/${token}`, {
+                method: "POST",
+                body: JSON.stringify(payload),
+                headers: { 'Content-Type': 'application/json' },
+            })
+            .then(response => response.json()) // Antwort als ArrayBuffer erhalten
+            .then(data => {
+                // log.info("ipchandler @ getExamMaterials: received data", data)
+                return data
+            })
+            .catch(err => log.error(`ipchandler @ getExamMaterials: ${err}`));
+
+
+            return examMaterials
+        }) 
+
+
+
+
+    
+        
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         /**
          * Start languageTool API Server (with Java JRE)
          * Runs at localhost 8088

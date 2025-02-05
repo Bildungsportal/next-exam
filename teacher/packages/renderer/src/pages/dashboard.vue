@@ -317,13 +317,13 @@
                 @click="sendFiles('all');hideDescription();" 
                 @mouseover="showDescription($t('dashboard.sendfile'))" 
                 @mouseout="hideDescription">
-                <img src="/src/assets/img/svg/document-send.svg" width="32" height="32">
+                <img src="/src/assets/img/svg/document-send.svg" width="24" height="24">
             </div>
 
             <div v-if="serverstatus.screenslocked" 
                 class="btn btn-danger tab-button" 
                 @click="lockscreens(false);hideDescription();">
-                <img src="/src/assets/img/svg/eye-fill.svg" class="white" width="32" height="32">
+                <img src="/src/assets/img/svg/eye-fill.svg" class="white" width="24" height="24">
             </div>
 
             <div v-else 
@@ -331,14 +331,14 @@
                 @click="lockscreens(true);hideDescription();" 
                 @mouseover="showDescription($t('dashboard.lock'))" 
                 @mouseout="hideDescription">
-                <img src="/src/assets/img/svg/eye-slash-fill.svg" class="white" width="32" height="32">
+                <img src="/src/assets/img/svg/eye-slash-fill.svg" class="white" width="24" height="24">
             </div>
 
             <div class="btn btn-dark tab-button" 
                 @mouseover="showDescription($t('dashboard.del'))" 
                 @mouseout="hideDescription" 
                 @click="delfolderquestion">
-                <img src="/src/assets/img/svg/edit-delete.svg" width="32" height="32">
+                <img src="/src/assets/img/svg/edit-delete.svg" width="24" height="24">
             </div>
         </div>
 
@@ -561,31 +561,6 @@ export default {
                         timelimit: 60,
                         locked: false,
                         sectionname: "Abschnitt 3",
-                        spellchecklang: 'de-DE', 
-                        suggestions: false, 
-
-                        moodleTestId: null, 
-                        moodleDomain: 'eduvidual.at',
-                        moodleURL:null, 
-                        cmargin: { side: 'right', size: 3 }, 
-
-                        gformsTestId: null,
-                        msOfficeFile: null, 
-                        linespacing: 2, 
-                        languagetool: false,
-                        fontfamily: "sans-serif", 
-                        audioRepeat: 0,
-                        domainname: false,
-
-                        groups: false, 
-                        groupA: { users: [], examInstructionFiles: [] }, 
-                        groupB: { users: [], examInstructionFiles: [] }
-                    },
-                    4: {
-                        examtype: 'math',   
-                        timelimit: 60,
-                        locked: false,
-                        sectionname: "Abschnitt 4",
                         spellchecklang: 'de-DE', 
                         suggestions: false, 
 
@@ -1355,8 +1330,8 @@ computed: {
 }
 
 .tab-button {
-    width: 62px;
-    height: 62px;
+    width: 42px;
+    height: 42px;
     padding: 15px 15px;
     border-radius: 8px 0 0 8px;
     display: flex;
@@ -1369,7 +1344,7 @@ computed: {
 }
 
 .tab-button:hover {
-    width: 72px;
+    width: 52px;
     box-shadow: -3px 3px 8px rgba(0,0,0,0.3);
 }
 

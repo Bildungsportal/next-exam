@@ -323,7 +323,6 @@ for (let i = 0; i<16; i++ ){
         return res.send({sender: "server", message:t("control.biprequired"), status: "error"} ) 
     }
     
-    console.log(pin, mcServer.serverinfo.pin)
     if (pin == mcServer.serverinfo.pin) {
         let registeredClient = mcServer.studentList.find(element => element.clientname === clientname)
        
