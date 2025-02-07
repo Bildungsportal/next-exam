@@ -330,6 +330,7 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 import { LTcheckAllWords, LTfindWordPositions, LThighlightWords, LTdisable, LThandleMisspelled, LTignoreWord, LTresetIgnorelist } from '../utils/languagetool.js'
 import DOMPurify from 'dompurify';
 import { Buffer } from 'buffer';
+import mammoth from 'mammoth';
 
 export default {
     components: {
@@ -412,8 +413,6 @@ export default {
             const rgbColor = this.editor?.getAttributes('textStyle')?.color || '';
             return rgbColor.startsWith('rgb') ? this.rgbToHex(rgbColor) : rgbColor;
         },
-
-
     },
 
 
@@ -461,13 +460,18 @@ export default {
 
 
         loadBase64file(file){
-
-
             if (file.filetype == 'pdf'){
                 this.loadPDF(file, true)
                 return
             }
-
+            else if (file.filetype == 'image'){
+                this.loadImage(file, true)
+                return
+            }
+            else if (file.filetype == 'docx'){
+                this.loadDOCX(file,true)
+                return
+            }
         },
 
 
@@ -801,11 +805,18 @@ export default {
 
 
         // get file from local examdirectory and replace editor content with it
-        async loadDOCX(file){
+        async loadDOCX(file, base64=false){
+            let base64content;
+            let filename = file
+            if (base64){
+                filename = file.filename
+                base64content = file.filecontent.split(',')[1];
+            }
+
             this.LTdisable()
             this.$swal.fire({
                 title: this.$t("editor.replace"),
-                html:  `${this.$t("editor.replacecontent1")} <b>${file}</b> ${this.$t("editor.replacecontent2")}`,
+                html:  `${this.$t("editor.replacecontent1")} <b>${filename}</b> ${this.$t("editor.replacecontent2")}`,
                 icon: "question",
                 showCancelButton: true,
                 cancelButtonText: this.$t("editor.cancel"),
@@ -813,19 +824,40 @@ export default {
             })
             .then(async (result) => {
                 if (result.isConfirmed) {
-                    let data = await ipcRenderer.invoke('getfilesasync', file, false, true )   //signal, filename, audiofile, docxfile
                     
-                    //replace editor content ??? or not ??
-                    this.editor.commands.clearContent(true)
-            
-                    const cleanHtml = DOMPurify.sanitize(data.value);
-                    const body = this.parseHTMLString(cleanHtml);
+                    if (base64){
+                        const response = await fetch(file.filecontent); // Data-URL abrufen
+                        const arrayBuffer = await response.arrayBuffer(); // ArrayBuffer erstellen
+
+                        mammoth.convertToHtml({ arrayBuffer }) // DOCX zu HTML konvertieren
+                        .then(result => {
+                            const html = result.value; // HTML-Ergebnis erhalten
+                            this.editor.commands.clearContent(true); // Editor-Inhalt leeren
+                            this.editor.commands.insertContent(html); // HTML einfügen
+                        })
+                        .catch(error => console.error(error)); // Fehler ausgeben
+
+                    }
+                    else{
+                        let data = await ipcRenderer.invoke('getfilesasync', file, false, true )   //signal, filename, audiofile, docxfile // converts the file to html in case of docx with mammoth
+                        this.editor.commands.clearContent(true)
                     
-                    this.editor.commands.insertContent(cleanHtml)
-                   // body.childNodes.forEach(node => {  this.processNode(node); });
+                        const cleanHtml = DOMPurify.sanitize(data.value);
+                        const body = this.parseHTMLString(cleanHtml);
+                        
+                        this.editor.commands.insertContent(cleanHtml)
+                     // body.childNodes.forEach(node => {  this.processNode(node); });
+                    }
+                
+             
                 } 
             }); 
         },
+
+
+
+
+
         processNode(node) {           
             let nodestring = node.innerHTML
             let outernodestring = node.outerHTML
@@ -877,13 +909,29 @@ export default {
             return true; // Alle Bytes stimmen mit dem PDF-Header überein
         },
 
+
+
+
+
+
+
+
         // fetch file from disc - show preview
-        async loadPDF(file, base64 = false){
+        async loadPDF(file, base64 = false, zoom=100){
+            this.currentPDFZoom = zoom
             URL.revokeObjectURL(this.currentpreview);
             
-            if (!base64){
-                let data = await ipcRenderer.invoke('getpdfasync', file )
+            const pdfEmbed = document.querySelector("#pdfembed");
+            pdfEmbed.style.backgroundImage = ``;  // clear a previous image preview
             
+            if (base64){
+                const response = await fetch(file.filecontent); // lade die Data-URL  //filecontent contains a url data:application/pdf;base64,b23d342dsn2....
+                const blob = await response.blob(); // konvertiere in Blob
+                this.currentpreview = URL.createObjectURL(blob); // erzeuge Object URL
+                this.currentpreviewBase64 = file.filecontent.split(',')[1];  // we only need the base64 data not the complete url
+            }
+            else {   //fetch file from filesystem
+                let data = await ipcRenderer.invoke('getpdfasync', file )
                 let isvalid = this.isValidPdf(data)
                 if (!isvalid){
                     this.$swal.fire({
@@ -896,60 +944,39 @@ export default {
                     })
                     return
                 }
-
                 this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "application/pdf"})) 
                 this.currentpreviewBase64 = Buffer.from(data).toString('base64');
             }
-            else {
-                this.currentpreviewBase64 = file.filecontent
-                this.currentpreview = file.filecontent
+ 
+            if(!this.splitview){
+                pdfEmbed.style.height = "95vh";
+                pdfEmbed.style.width = "67vh";  
+                pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=${this.currentPDFZoom}`);
             }
-
-            const pdfEmbed = document.querySelector("#pdfembed");
-            pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0`);
-
-            if (this.splitview) {
-                this.currentPDFData = data
-                this.currentPDFZoom = 80
+            else {   // SPLITVIEW
                 const zoomInButton = document.getElementById("zoomIn");
                 const zoomOutButton = document.getElementById("zoomOut");
-                const pdfZoom = document.getElementById("pdfZoom");
+                const pdfZoom = document.getElementById("pdfZoom");  //zoombutton container
                 pdfZoom.style.display = "block"
-
                 // Entferne bestehende Event-Listener, bevor neue hinzugefügt werden
                 zoomInButton.removeEventListener('click', this.zoomInHandler);
                 zoomOutButton.removeEventListener('click', this.zoomOutHandler);
-
                 // Definiere neue Event-Listener
                 this.zoomInHandler = () => {
-                    let pdfEmbed = document.querySelector("#pdfembed");
                     this.currentPDFZoom += 10; // Erhöht den Zoom um 10%
-                    URL.revokeObjectURL(this.currentpreview);
-                    this.currentpreview = URL.createObjectURL(new Blob([this.currentPDFData], { type: 'application/pdf' }));
-                    pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=${this.currentPDFZoom}`);
+                    this.loadPDF(file, base64, this.currentPDFZoom)
                 };
                 this.zoomOutHandler = () => {
-                    let pdfEmbed = document.querySelector("#pdfembed");
                     this.currentPDFZoom = Math.max(10, this.currentPDFZoom - 10); // Verhindert, dass der Zoom unter 10% geht
-                    URL.revokeObjectURL(this.currentpreview);
-                    this.currentpreview = URL.createObjectURL(new Blob([this.currentPDFData], { type: 'application/pdf' }));
-                    pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=${this.currentPDFZoom}`);
+                    this.loadPDF(file, base64, this.currentPDFZoom)
                 };
-
                 // Füge die Event-Listener erneut hinzu
                 zoomInButton.addEventListener('click', this.zoomInHandler);
                 zoomOutButton.addEventListener('click', this.zoomOutHandler);
-
                 // pdf anzeigen
                 pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=${this.currentPDFZoom}`);
             }
-            if(!this.splitview){
-                pdfEmbed.style.backgroundImage = '';
-                pdfEmbed.style.height = "95vh";
-                pdfEmbed.style.width = "67vh";  
-            }
-            pdfEmbed.style.backgroundImage = ``;
-
+            //hide/show some buttons
             document.querySelector("#preview").style.display = 'block';
             document.querySelector("#insert-button").style.display = 'none';
             document.querySelector("#print-button").style.display = 'flex';
@@ -957,12 +984,23 @@ export default {
 
 
         // fetch file from disc - show preview
-        async loadImage(file){
+        async loadImage(file, base64=false){
             URL.revokeObjectURL(this.currentpreview);
-            let data = await ipcRenderer.invoke('getpdfasync', file )
-            this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "image/jpeg"})) 
-            this.currentpreviewBase64 = Buffer.from(data).toString('base64');
 
+            
+            if (base64){
+                const response = await fetch(file.filecontent); // lade die Data-URL  //filecontent contains a url data:application/pdf;base64,b23d342dsn2....
+                const blob = await response.blob(); // konvertiere in Blob
+                this.currentpreview = URL.createObjectURL(blob); // erzeuge Object URL
+                this.currentpreviewBase64 = file.filecontent.split(',')[1];  // we only need the base64 data not the complete url
+            }
+            else {
+                let data = await ipcRenderer.invoke('getpdfasync', file )
+                this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "image/jpeg"})) 
+                this.currentpreviewBase64 = Buffer.from(data).toString('base64');
+            }
+
+    
             const pdfEmbed = document.querySelector("#pdfembed");
             
             // Create an image element to determine the dimensions of the image
@@ -1122,7 +1160,7 @@ export default {
                 }
             })
             .catch(error => {  
-                console.log(error)    
+                console.log("editor @ printbase64:",error.message)    
             });
 
         },
@@ -1386,7 +1424,7 @@ export default {
             let examMaterials = await ipcRenderer.invoke('getExamMaterials')
             console.log("editor @ getExamMaterials: received examMaterials")
             this.examMaterials = examMaterials.materials
-            console.log(this.examMaterials.materials)
+           // console.log(this.examMaterials)
 
         }
     },

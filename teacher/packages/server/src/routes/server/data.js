@@ -757,6 +757,7 @@ router.post('/upload/:servername/:servertoken/:studenttoken', async (req, res, n
 
 
     if (req.files){
+
         let filesArray = []  // depending on the number of files this comes as array of objects or object
         if (!Array.isArray(req.files.files)){ filesArray.push(req.files.files)}
         else {filesArray = req.files.files}
@@ -794,11 +795,9 @@ router.post('/upload/:servername/:servertoken/:studenttoken', async (req, res, n
                 }
             }
             else {
-                res.json({ status:"error",  sender: "server", message:t("data.nofilereceived") })
-                return
+                return res.json({ status:"error",  sender: "server", message:t("data.nofilereceived") })
             }
          
-
         }
         else {
             let student = mcServer.studentList.find(element => element.token === studenttoken)

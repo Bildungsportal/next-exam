@@ -322,91 +322,102 @@ for (let i = 0; i<16; i++ ){
     if (mcServer.serverstatus.requireBiP && bipuserID == 'false'){ // req.params come as string.. not nice but simple
         return res.send({sender: "server", message:t("control.biprequired"), status: "error"} ) 
     }
-    
-    if (pin == mcServer.serverinfo.pin) {
-        let registeredClient = mcServer.studentList.find(element => element.clientname === clientname)
-       
+    try {
+        if (pin == mcServer.serverinfo.pin) {
+            let registeredClient = mcServer.studentList.find(element => element.clientname === clientname)
         
+            
 
-        if (!registeredClient) {   // create client object
-            log.info(`control @ registerclient: adding new client '${clientname}'`)
-
-            let group = false;
-            if (mcServer.serverstatus.groupA?.includes(clientname)) { group = 'a'; } 
-            else if (mcServer.serverstatus.groupB?.includes(clientname)) { group = 'b';  }
+            if (!registeredClient) {   // create client object
+                log.info(`control @ registerclient: adding new client '${clientname}'`)
 
 
-            const client = {    // we have a different representation of the clientobject on the server than on the client - why exactly? we could just send the whole client object via POST (as we already do in /update route )
-                clientname: clientname,
-                hostname: hostname,
-                token: token,
-                clientip: clientip,
-                timestamp: new Date().getTime(),
-                focus: true,
-                exammode: false,
-                imageurl:false,
-                virtualized: false,
-                bipuserID: bipuserID,  // we can use this in the future to re-check if this user is in the pre-defined userlist for this specific BIP exam
-                status: { group: group || 'a'},    // we use this to store (per student) information about whats going on on the serverside (tasklist) and send it back on /update
-                // we allow two groups (this is just used for distribution of files by now)
-            }
-            //create folder for student
-            let studentfolder =path.join(config.workdirectory, mcServer.serverinfo.servername , clientname);
-           
-           
-            if (fs.existsSync(studentfolder)) { 
-                // das verzeichnis für diesen student existiert 
-                // auf unix ist der ordnername 100% ident - auf windows könnte es aber in der gross/kleinschreibung unterschiede geben
-                // prüfe ob es EXAKT gleich geschrieben wurde (case-sensitiv)
-                
-                const parentDir = path.dirname(studentfolder);
-                const targetDirName = path.basename(studentfolder);
-                const directories = fs.readdirSync(parentDir, { withFileTypes: true })
-                                      .filter(dirent => dirent.isDirectory())
-                                      .map(dirent => dirent.name);
+                //group handling - everybody is in groupA except there is already a group configuration
+                let group = false;
+                if (mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupA?.users?.includes(clientname)) { group = 'a'; } 
+                else if (mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupB?.users?.includes(clientname)) { group = 'b';  }
+                else {  // user is not in any group or no group is configured
+                    group = 'a'
+                   mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupA.users.push(clientname)
 
+                }
 
-                if (!directories.includes(targetDirName)) {  // wir haben windows ertappt.. der dateiname ist nicht 100% ident "Test" !== "test"
+                const client = {    // we have a different representation of the clientobject on the server than on the client - why exactly? we could just send the whole client object via POST (as we already do in /update route )
+                    clientname: clientname,
+                    hostname: hostname,
+                    token: token,
+                    clientip: clientip,
+                    timestamp: new Date().getTime(),
+                    focus: true,
+                    exammode: false,
+                    imageurl:false,
+                    virtualized: false,
+                    bipuserID: bipuserID,  // we can use this in the future to re-check if this user is in the pre-defined userlist for this specific BIP exam
+                    status: { group: group || 'a'},    // we use this to store (per student) information about whats going on on the serverside (tasklist) and send it back on /update
+                    // we allow two groups (this is just used for distribution of files by now)
+                }
+                //create folder for student
+                let studentfolder =path.join(config.workdirectory, mcServer.serverinfo.servername , clientname);
+            
+            
+                if (fs.existsSync(studentfolder)) { 
+                    // das verzeichnis für diesen student existiert 
+                    // auf unix ist der ordnername 100% ident - auf windows könnte es aber in der gross/kleinschreibung unterschiede geben
+                    // prüfe ob es EXAKT gleich geschrieben wurde (case-sensitiv)
                     
-                    const existingDir = directories.find(dir => dir.toLowerCase() === targetDirName.toLowerCase());
-                    if (existingDir) {
-                        const oldPath = path.join(parentDir, existingDir);
-                        const newPath = path.join(parentDir, `backup-${existingDir}`);
-                        fs.renameSync(oldPath, newPath);  // Umbenennen des alten Verzeichnisses
-                        log.warn(`control @ registerclient: Renaming ${oldPath} to ${newPath} - thx bill gates for the worst operating system otw`)
+                    const parentDir = path.dirname(studentfolder);
+                    const targetDirName = path.basename(studentfolder);
+                    const directories = fs.readdirSync(parentDir, { withFileTypes: true })
+                                        .filter(dirent => dirent.isDirectory())
+                                        .map(dirent => dirent.name);
+
+
+                    if (!directories.includes(targetDirName)) {  // wir haben windows ertappt.. der dateiname ist nicht 100% ident "Test" !== "test"
+                        
+                        const existingDir = directories.find(dir => dir.toLowerCase() === targetDirName.toLowerCase());
+                        if (existingDir) {
+                            const oldPath = path.join(parentDir, existingDir);
+                            const newPath = path.join(parentDir, `backup-${existingDir}`);
+                            fs.renameSync(oldPath, newPath);  // Umbenennen des alten Verzeichnisses
+                            log.warn(`control @ registerclient: Renaming ${oldPath} to ${newPath} - thx bill gates for the worst operating system otw`)
+                        }
                     }
+                    else {
+                        log.warn(`control @ registerclient: Using already existing directory: ${targetDirName}`)
+                    }
+                } else { // Das Verzeichnis existiert nicht, erstelle es
+                    fs.mkdirSync(studentfolder, { recursive: true });
+                    log.info(`control @ registerclient: Creating ${studentfolder}`);
                 }
-                else {
-                    log.warn(`control @ registerclient: Using already existing directory: ${targetDirName}`)
-                }
-            } else { // Das Verzeichnis existiert nicht, erstelle es
-                fs.mkdirSync(studentfolder, { recursive: true });
-                console.log(`control @ registerclient: Creating ${studentfolder}`);
-            }
 
-            if (!fs.existsSync(config.tempdirectory)){ fs.mkdirSync(config.tempdirectory, { recursive: true }); }
+                if (!fs.existsSync(config.tempdirectory)){ fs.mkdirSync(config.tempdirectory, { recursive: true }); }
 
-            mcServer.studentList.push(client)
-            return res.json({sender: "server", message:t("control.registered"), status: "success", token: token})  // on success return client token (auth needed for server api)
-        }
-        else {
-
-            let now = new Date().getTime()
-            if (now - 20000 > registeredClient.timestamp) { // student probably went offline (teacher connection loss) but is coming back now
-                registeredClient.timestamp = now
-                log.info("control @ registerclient: student reconnected")
-
-                //inform frontend about re-connection
-                WindowHandler.mainwindow.webContents.send("reconnected", registeredClient)
-                return res.json({sender: "server", message:t("control.registered"), status: "success", token: registeredClient.token})  //send back old token
+                mcServer.studentList.push(client)
+                return res.json({sender: "server", message:t("control.registered"), status: "success", token: token})  // on success return client token (auth needed for server api)
             }
             else {
-                return res.json({sender: "server", message:t("control.alreadyregistered"), status: "error"})
-            }  
+
+                let now = new Date().getTime()
+                if (now - 20000 > registeredClient.timestamp) { // student probably went offline (teacher connection loss) but is coming back now
+                    registeredClient.timestamp = now
+                    log.info("control @ registerclient: student reconnected")
+
+                    //inform frontend about re-connection
+                    WindowHandler.mainwindow.webContents.send("reconnected", registeredClient)
+                    return res.json({sender: "server", message:t("control.registered"), status: "success", token: registeredClient.token})  //send back old token
+                }
+                else {
+                    return res.json({sender: "server", message:t("control.alreadyregistered"), status: "error"})
+                }  
+            }
+        }
+        else {
+            return res.json({sender: "server", message:t("control.wrongpin"), status: "error"})
         }
     }
-    else {
-        res.json({sender: "server", message:t("control.wrongpin"), status: "error"})
+    catch (err){
+        log.error(`control @ registerclient: ${err}`);
+        return res.json({sender: "server", message:"an unknown error occured", status: "error"})
     }
 })
 
