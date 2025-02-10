@@ -173,7 +173,7 @@
         <div class="mb-4" style="display: inline-block; width: 100%; position: relative;">
             <div class=" m-1 mt-3" style="display: inline-block;">{{$t("dashboard.materials")}}</div>
             <div class="btn btn-sm m-1 btn-cyan plusbutton " @click="defineMaterials('all');hideDescription();" @mouseover="showDescription($t('dashboard.definematerials'))" @mouseout="hideDescription"  style="">+</div>
-            <MaterialsList class="m-1" :examSection="serverstatus.examSections[serverstatus.activeSection]"  @remove-file="handleFileRemove" @show-preview="showBase64FilePreview" @show-image-preview="showBase64ImagePreview"/>   
+            <MaterialsList class="m-1" :examSection="serverstatus.examSections[serverstatus.activeSection]"  @remove-file="handleFileRemove" @show-preview="showBase64FilePreview" @show-image-preview="showBase64ImagePreview" @play-audio-file="playAudioFile"/>   
         </div>
         <!-- Files Section END -->
 
@@ -203,6 +203,18 @@
        
     </div>
     <!-- SIDEBAR END -->
+
+
+     <!-- AUDIO Player start -->
+     <div id="aplayer" >
+            <audio id="audioPlayer" controls controlsList="nodownload">
+                <source :src="audioSource" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <button  id="audioclose" type="button" class="btn-close" style="" title="close" ></button> 
+        </div>
+    <!-- AUDIO Player end -->
+
 
 
 
@@ -481,6 +493,7 @@ export default {
             availablePrinters: [],
             directPrintAllowed: false,
             visiblePrinter: null,
+            audioSource:'',
 
             bipToken:this.$route.params.bipToken === 'false' ?  false : this.$route.params.bipToken,   // parameter werden immer als string "false" übergeben, convert to bool
             bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
@@ -1224,7 +1237,15 @@ computed: {
             // else{
             //     //call to real bip api
             // }
+        },
+
+        playAudioFile(filecontent, filename){
+            document.querySelector("#aplayer").style.display = 'block';
+            this.audioSource = filecontent;
+            audioPlayer.load(); // Lädt die neue Quelle
+
         }
+
     },
 
 
@@ -1261,6 +1282,10 @@ computed: {
             document.getElementById('setupdiv').addEventListener('click', function(e) { e.stopPropagation();});
             document.querySelector("#pdfpreview").addEventListener("click", this.pdfPreviewEventlisterenCallback); // Set the event listener for #pdfpreview
 
+            document.querySelector("#audioclose").addEventListener("click", function(e) {
+                audioPlayer.pause();
+                document.querySelector("#aplayer").style.display = 'none';
+            });
 
         })
 
@@ -1316,6 +1341,28 @@ computed: {
 
 
 <style scoped>
+
+#aplayer {
+    display: none;
+    position: absolute;
+    top: 40%;
+    left: -300px;
+    margin-left: 50%;
+    width: 600px;
+    /* background-color:rgba(0, 0, 0, 0.1); */
+    text-align:center;
+
+}
+#aplayer audio {
+    box-shadow: 0px 0px 10px rgba(0,0,0,0.6);
+    border-radius: 8px;
+    width: 500px;
+}
+
+#audioclose {
+    vertical-align: top;
+    margin-left: 6px;
+}
 
 .tab-buttons-container {
     position: fixed;
