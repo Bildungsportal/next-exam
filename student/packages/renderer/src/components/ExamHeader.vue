@@ -5,7 +5,7 @@
             <img src="/src/assets/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style="float: left;" />
             <button v-if="clientinfo && clientinfo.groups  && clientinfo.group == 'a'" type="button" class="header-item btn btn-info btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> A  </button>
             <button v-if="clientinfo && clientinfo.groups  && clientinfo.group == 'b'" type="button" class="header-item btn btn-warning btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> B  </button>
-            <span class="fs-5 align-middle me-1" style="float: left;">{{clientname}} @ {{servername}} |{{pincode}}</span>
+            <span class="fs-5 align-middle me-1" style="float: left;">{{clientname}} @ {{servername}} | {{pincode}}</span>
 
 
             <span class="fs-5 align-middle me-4 green" style="float: left;" >| {{$t('student.connected')}}</span> 

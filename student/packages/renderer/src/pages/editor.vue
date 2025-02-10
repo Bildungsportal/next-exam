@@ -90,25 +90,29 @@
             </div>
 
 
-            <br>
+            <br>   
             <button :title="$t('editor.splitview')"  @click="toggleSplitview()" style="vertical-align: top;" class="invisible-button btn btn-outline-warning p-0 ms-1 me-2 mb-0 btn-sm"><img src="/src/assets/img/svg/view-split-left-right.svg" class="white" width="22" height="22" ></button>
+       
+            <div id="getmaterialsbutton" class="btn btn-outline-success p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" title="Angaben holen"><img src="/src/assets/img/svg/games-solve.svg" class="white" width="22" height="22" style="vertical-align: top;">Materialien holen </div>
+
+           
             <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
                 <div v-if="(file.type == 'bak')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
-                <div v-if="(file.type == 'docx')" class="btn btn-success p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadDOCX(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
+                <div v-if="(file.type == 'docx')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadDOCX(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
                 
                 <div v-if="(file.type == 'pdf')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
                 <div v-if="(file.type == 'audio')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="playAudio(file.name)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
                 <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
             </div>
-            |
+            
 
             <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
             <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
-                <div v-if="(file.filetype == 'bak')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
-                <div v-if="(file.filetype == 'docx')" class="btn btn-success p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
-                <div v-if="(file.filetype == 'pdf')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
-                <div v-if="(file.filetype == 'audio')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
-                <div v-if="(file.filetype == 'image')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+                <div v-if="(file.filetype == 'bak')" class="btn btn-outline-info p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+                <div v-if="(file.filetype == 'docx')" class="btn btn-outline-info p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+                <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+                <div v-if="(file.filetype == 'audio')" class="btn btn-outline-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+                <div v-if="(file.filetype == 'image')" class="btn btn-outline-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
             </div>
             <!-- exam materials end -->
 
@@ -328,9 +332,9 @@ import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import { LTcheckAllWords, LTfindWordPositions, LThighlightWords, LTdisable, LThandleMisspelled, LTignoreWord, LTresetIgnorelist } from '../utils/languagetool.js'
-import DOMPurify from 'dompurify';
-import { Buffer } from 'buffer';
-import mammoth from 'mammoth';
+
+import {getExamMaterials, loadPDF, loadHTML, loadDOCX, loadImage, playAudio} from '../utils/filehandler.js'
+
 
 export default {
     components: {
@@ -418,6 +422,13 @@ export default {
 
     methods: {
 
+        getExamMaterials:getExamMaterials,
+        loadPDF:loadPDF,
+        loadHTML:loadHTML,
+        loadDOCX:loadDOCX,
+        loadImage:loadImage,
+        playAudio:playAudio,
+
         LTcheckAllWords:LTcheckAllWords,
         LTfindWordPositions:LTfindWordPositions,
         LThighlightWords:LThighlightWords,
@@ -472,6 +483,10 @@ export default {
                 this.loadDOCX(file,true)
                 return
             }
+            else if (file.filetype == 'audio'){
+                this.playAudio(file,true)
+                return
+            }
         },
 
 
@@ -507,90 +522,6 @@ export default {
         }, 
 
 
-        /**
-         * plays an audiofile
-         * either shows dialog with limited amount of replays or player controls if unlimited
-         * @param {*} filename the name of the audiofile to be played
-         */
-        async playAudio(filename) {
-            const audioFile = this.audiofiles.find(obj => obj.name === filename);  // search for file in this.audiofiles - get object
-            this.LTdisable()  // close langugagetool
-     
-       
-            if (this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat > 0){
-                this.$swal.fire({
-                    title: audioFile.name,
-                    text:  this.$t("editor.reallyplay"),
-                    icon: "question",
-                    showCancelButton: true,
-                    cancelButtonText: this.$t("editor.cancel"),
-                    reverseButtons: true,
-
-                    html: audioFile.playbacks > 0 ? `
-                       
-                        <span class="col-3" style="">${this.$t("editor.audioremaining")} ${audioFile.playbacks} </span> <br>
-                        <div id="soundtest" class="btn btn-info btn-sm m-2">Soundtest</div><br>
-                        <h6>${this.$t("editor.reallyplay")}</h6>
-                    ` : `
-                         <div id="soundtest" class="btn btn-info btn-sm m-2">Soundtest</div><br>
-                        <span class="col-3" style="">${this.$t("editor.audionotallowed")}</span> 
-                    `,
-                    didRender: () => {
-                        document.getElementById('soundtest').onclick = () => this.soundtest();
-                    }
-                }).then(async (result) => {
-                    if (result.isConfirmed) {
-                        if (audioFile.playbacks > 0){
-                            try {
-                                const base64Data = await ipcRenderer.invoke('getfilesasync', filename, true);
-                                if (base64Data) {
-                                    this.audioSource = `data:audio/mp3;base64,${base64Data}`;
-                                    audioPlayer.load(); // Lädt die neue Quelle
-                                    audioPlayer.play().then(() => { 
-                                        console.log('Playback started');
-                                        audioFile.playbacks -= 1
-                                    }).catch(e => { console.error('Playback failed:', e); });
-                                } else { console.error('Keine Daten empfangen'); }
-                            } catch (error) { console.error('Fehler beim Empfangen der MP3-Datei:', error); }   
-                        }
-                    } 
-                }); 
-            }
-            if (this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat == 0){
-                document.querySelector("#aplayer").style.display = 'block';
-                try {
-                    const base64Data = await ipcRenderer.invoke('getfilesasync', filename, true);
-                    if (base64Data) {
-                        this.audioSource = `data:audio/mpeg;base64,${base64Data}`;
-                        audioPlayer.load(); // Lädt die neue Quelle
-                    } else { console.error('Keine Daten empfangen'); }
-                } catch (error) { console.error('Fehler beim Empfangen der MP3-Datei:', error); } 
-            }
-        },
-
-        async soundtest(){
-            try {
-                const base64Data = await ipcRenderer.invoke('getAudioFile', 'attention.wav', true);
-                if (base64Data) {
-                    let soundtest = document.getElementById('soundtest')
-
-                    if (soundtest){
-                        soundtest.classList.add('btn-success')
-                        soundtest.classList.remove('btn-info')
-                    }
-                   
-                    this.audioSource = `data:audio/mp3;base64,${base64Data}`;
-                    audioPlayer.load(); // Lädt die neue Quelle
-                    audioPlayer.play().then(async () => { 
-                        await this.sleep(2000)
-                        if (soundtest){
-                            soundtest.classList.remove('btn-success')
-                            soundtest.classList.add('btn-info')
-                        }
-                    }).catch(e => { console.error('Playback failed:', e); });
-                } else { console.error('Keine Daten empfangen'); }
-            } catch (error) { console.error('Fehler beim Empfangen der MP3-Datei:', error); }   
-        },
 
         showInsertSpecial(){
             let specialCharsDiv = document.querySelector("#specialcharsdiv");
@@ -783,258 +714,7 @@ export default {
             })
         },
 
-        // get file from local examdirectory and replace editor content with it
-        async loadHTML(file){
-            this.LTdisable()
-            this.$swal.fire({
-                title: this.$t("editor.replace"),
-                html:  `${this.$t("editor.replacecontent1")} <b>${file}</b> ${this.$t("editor.replacecontent2")}`,
-                icon: "question",
-                showCancelButton: true,
-                cancelButtonText: this.$t("editor.cancel"),
-                reverseButtons: true
-            })
-            .then(async (result) => {
-                if (result.isConfirmed) {
-                    let data = await ipcRenderer.invoke('getfilesasync', file )
-                    this.editor.commands.clearContent(true)
-                    this.editor.commands.insertContent(data)  
-                } 
-            }); 
-        },
-
-
-        // get file from local examdirectory and replace editor content with it
-        async loadDOCX(file, base64=false){
-            let base64content;
-            let filename = file
-            if (base64){
-                filename = file.filename
-                base64content = file.filecontent.split(',')[1];
-            }
-
-            this.LTdisable()
-            this.$swal.fire({
-                title: this.$t("editor.replace"),
-                html:  `${this.$t("editor.replacecontent1")} <b>${filename}</b> ${this.$t("editor.replacecontent2")}`,
-                icon: "question",
-                showCancelButton: true,
-                cancelButtonText: this.$t("editor.cancel"),
-                reverseButtons: true
-            })
-            .then(async (result) => {
-                if (result.isConfirmed) {
-                    
-                    if (base64){
-                        const response = await fetch(file.filecontent); // Data-URL abrufen
-                        const arrayBuffer = await response.arrayBuffer(); // ArrayBuffer erstellen
-
-                        mammoth.convertToHtml({ arrayBuffer }) // DOCX zu HTML konvertieren
-                        .then(result => {
-                            const html = result.value; // HTML-Ergebnis erhalten
-                            this.editor.commands.clearContent(true); // Editor-Inhalt leeren
-                            this.editor.commands.insertContent(html); // HTML einfügen
-                        })
-                        .catch(error => console.error(error)); // Fehler ausgeben
-
-                    }
-                    else{
-                        let data = await ipcRenderer.invoke('getfilesasync', file, false, true )   //signal, filename, audiofile, docxfile // converts the file to html in case of docx with mammoth
-                        this.editor.commands.clearContent(true)
-                    
-                        const cleanHtml = DOMPurify.sanitize(data.value);
-                        const body = this.parseHTMLString(cleanHtml);
-                        
-                        this.editor.commands.insertContent(cleanHtml)
-                     // body.childNodes.forEach(node => {  this.processNode(node); });
-                    }
-                
-             
-                } 
-            }); 
-        },
-
-
-
-
-
-        processNode(node) {           
-            let nodestring = node.innerHTML
-            let outernodestring = node.outerHTML
-           
-            if (nodestring.includes("data:image")){
-                for (let childnode of node.childNodes){
-                    let childnodestring = childnode.outerHTML
-                    if (childnodestring.includes("data:image")){
-                        let childnodesource = childnode.src 
-                       
-                        this.editor.commands.insertContent(nodestring)
-                        this.editor.chain().focus().setImage({ src:  childnodesource }).run();
-                    }
-                }
-            }
-            else if (nodestring.includes("tr")){
-                console.log("found table")
-                this.editor.commands.insertContent(outernodestring)
-            }
-
-            else {
-               
-                this.editor.commands.insertContent(outernodestring)
-            }
-        },
-
-        parseHTMLString(htmlString) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(htmlString, 'text/html');
-
-            doc.querySelectorAll('td').forEach(td => {
-                if (!td.innerHTML.trim()) {
-                td.innerHTML = '<p></p>'; // Ensure empty cells have a paragraph with a line break
-                }
-            });
-            return doc.body;
-        },
-
-        //checks if arraybuffer contains a valid pdf file
-        isValidPdf(data) {
-            const header = new Uint8Array(data, 0, 5); // Lese die ersten 5 Bytes für "%PDF-"
-            // Umwandlung der Bytes in Hexadezimalwerte für den Vergleich
-            const pdfHeader = [0x25, 0x50, 0x44, 0x46, 0x2D]; // "%PDF-" in Hex
-            for (let i = 0; i < pdfHeader.length; i++) {
-                if (header[i] !== pdfHeader[i]) {
-                    return false; // Früher Abbruch, wenn ein Byte nicht übereinstimmt
-                }
-            }
-            return true; // Alle Bytes stimmen mit dem PDF-Header überein
-        },
-
-
-
-
-
-
-
-
-        // fetch file from disc - show preview
-        async loadPDF(file, base64 = false, zoom=100){
-            this.currentPDFZoom = zoom
-            URL.revokeObjectURL(this.currentpreview);
-            
-            const pdfEmbed = document.querySelector("#pdfembed");
-            pdfEmbed.style.backgroundImage = ``;  // clear a previous image preview
-            
-            if (base64){
-                const response = await fetch(file.filecontent); // lade die Data-URL  //filecontent contains a url data:application/pdf;base64,b23d342dsn2....
-                const blob = await response.blob(); // konvertiere in Blob
-                this.currentpreview = URL.createObjectURL(blob); // erzeuge Object URL
-                this.currentpreviewBase64 = file.filecontent.split(',')[1];  // we only need the base64 data not the complete url
-            }
-            else {   //fetch file from filesystem
-                let data = await ipcRenderer.invoke('getpdfasync', file )
-                let isvalid = this.isValidPdf(data)
-                if (!isvalid){
-                    this.$swal.fire({
-                        title: this.$t("general.error"),
-                        text: this.$t("general.nopdf"),
-                        icon: "error",
-                        timer: 3000,
-                        showCancelButton: false,
-                        didOpen: () => { this.$swal.showLoading(); },
-                    })
-                    return
-                }
-                this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "application/pdf"})) 
-                this.currentpreviewBase64 = Buffer.from(data).toString('base64');
-            }
- 
-            if(!this.splitview){
-                pdfEmbed.style.height = "95vh";
-                pdfEmbed.style.width = "67vh";  
-                pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=${this.currentPDFZoom}`);
-            }
-            else {   // SPLITVIEW
-                const zoomInButton = document.getElementById("zoomIn");
-                const zoomOutButton = document.getElementById("zoomOut");
-                const pdfZoom = document.getElementById("pdfZoom");  //zoombutton container
-                pdfZoom.style.display = "block"
-                // Entferne bestehende Event-Listener, bevor neue hinzugefügt werden
-                zoomInButton.removeEventListener('click', this.zoomInHandler);
-                zoomOutButton.removeEventListener('click', this.zoomOutHandler);
-                // Definiere neue Event-Listener
-                this.zoomInHandler = () => {
-                    this.currentPDFZoom += 10; // Erhöht den Zoom um 10%
-                    this.loadPDF(file, base64, this.currentPDFZoom)
-                };
-                this.zoomOutHandler = () => {
-                    this.currentPDFZoom = Math.max(10, this.currentPDFZoom - 10); // Verhindert, dass der Zoom unter 10% geht
-                    this.loadPDF(file, base64, this.currentPDFZoom)
-                };
-                // Füge die Event-Listener erneut hinzu
-                zoomInButton.addEventListener('click', this.zoomInHandler);
-                zoomOutButton.addEventListener('click', this.zoomOutHandler);
-                // pdf anzeigen
-                pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=${this.currentPDFZoom}`);
-            }
-            //hide/show some buttons
-            document.querySelector("#preview").style.display = 'block';
-            document.querySelector("#insert-button").style.display = 'none';
-            document.querySelector("#print-button").style.display = 'flex';
-        },
-
-
-        // fetch file from disc - show preview
-        async loadImage(file, base64=false){
-            URL.revokeObjectURL(this.currentpreview);
-
-            
-            if (base64){
-                const response = await fetch(file.filecontent); // lade die Data-URL  //filecontent contains a url data:application/pdf;base64,b23d342dsn2....
-                const blob = await response.blob(); // konvertiere in Blob
-                this.currentpreview = URL.createObjectURL(blob); // erzeuge Object URL
-                this.currentpreviewBase64 = file.filecontent.split(',')[1];  // we only need the base64 data not the complete url
-            }
-            else {
-                let data = await ipcRenderer.invoke('getpdfasync', file )
-                this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "image/jpeg"})) 
-                this.currentpreviewBase64 = Buffer.from(data).toString('base64');
-            }
-
-    
-            const pdfEmbed = document.querySelector("#pdfembed");
-            
-            // Create an image element to determine the dimensions of the image
-            // always resize the pdfembed div to the same aspect ratio of the given image
-            const img = new window.Image();
-            img.onload = function() {
-                const width = img.width;
-                const height = img.height;
-                const aspectRatio = width / height;
-
-                const containerWidth = window.innerWidth * 0.8;
-                const containerHeight = window.innerHeight * 0.8;
-                const containerAspectRatio = containerWidth / containerHeight;
-
-                if(!this.splitview){
-                    if (aspectRatio > containerAspectRatio) {
-                        pdfEmbed.style.width = '80vw';
-                        pdfEmbed.style.height = `calc(80vw / ${aspectRatio})`;
-                    } else {
-                        pdfEmbed.style.height = '80vh';
-                        pdfEmbed.style.width = `calc(80vh * ${aspectRatio})`;
-                    }
-                }
-                pdfEmbed.style.backgroundImage = `url(${this.currentpreview})`;
-            }.bind(this);
-            img.src = this.currentpreview;
-
-            // clear the pdf viewer
-            pdfEmbed.setAttribute("src", "about:blank");
-            document.querySelector("#insert-button").style.display = 'flex';
-            document.querySelector("#print-button").style.display = 'none';
-            document.querySelector("#preview").style.display = 'block';  
-            document.querySelector("#pdfZoom").style.display = 'none';
-        },
+   
 
         // show mugshot preview panel
         showInsertMugshot(){
@@ -1420,15 +1100,13 @@ export default {
                 content: ``,         
             });
         },
-        async getExamMaterials(){
-            let examMaterials = await ipcRenderer.invoke('getExamMaterials')
-            console.log("editor @ getExamMaterials: received examMaterials")
-            this.examMaterials = examMaterials.materials
-           // console.log(this.examMaterials)
-
-        }
     },
     
+
+
+
+
+
     mounted() {
         switch (this.cmargin.size) {
             case 5:       this.proseMirrorMargin = '50mm'; this.editorWidth = '160mm'; break;

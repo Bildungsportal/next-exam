@@ -383,14 +383,17 @@ function defineMaterials(who) {
                 const base64Content = await readFileAsBase64(file); // Read file as Base64
                 const checksum = await calculateMD5(file); // Calculate MD5 checksum
 
-                console.log(file.type)
+               // console.log(file)
+
                 let filetype = ""
                 if  (file.type.includes("pdf")){  filetype="pdf" }         //pdf
                 else if  (file.type.includes("bak")){  filetype="bak" }   // editor| backup file to replace editor content
                 else if  (file.type.includes("openxml")){  filetype="docx" }   // editor| content file (from teacher) to replace content and continue writing
                 else if  (file.type.includes("ggb")){  filetype="ggb" }  // geogebra
-                else if  (file.type.includes("mp3") || file.type.includes("ogg") || file.type.includes("wav") ){ filetype="audio" }  // audio
+                else if  (file.type.includes("audio") || file.type.includes("ogg") || file.type.includes("wav") ){ filetype="audio" }  // audio
                 else if  (file.type.includes("jpg") || file.type.includes("png") || file.type.includes("gif") ){ filetype="image" }  // images
+
+                if (file.type=="" && file.name.includes("ggb")){ filetype = "ggb"}
 
                 const fileObject = {   // Create file object
                     filename: file.name,
@@ -399,11 +402,14 @@ function defineMaterials(who) {
                     checksum: checksum
                 };
 
+               
 
                 if (activeGroup === "a" || activeGroup === "all") {
+                    //TODO:  check if file already exists and ask to overwrite
                     this.serverstatus.examSections[this.serverstatus.activeSection].groupA.examInstructionFiles.push(fileObject);
                 }
                 if (activeGroup === "b" || activeGroup === "all") {
+                    //TODO:  check if file already exists and ask to overwrite
                     this.serverstatus.examSections[this.serverstatus.activeSection].groupB.examInstructionFiles.push(fileObject);
                 }
                
