@@ -207,6 +207,7 @@
 
      <!-- AUDIO Player start -->
      <div id="aplayer" >
+            <div style="text-align: left; margin-left: 40px;">{{ audioFilename }} </div>
             <audio id="audioPlayer" controls controlsList="nodownload">
                 <source :src="audioSource" type="audio/mpeg">
                 Your browser does not support the audio element.
@@ -494,6 +495,7 @@ export default {
             directPrintAllowed: false,
             visiblePrinter: null,
             audioSource:'',
+            audioFilename: '',
 
             bipToken:this.$route.params.bipToken === 'false' ?  false : this.$route.params.bipToken,   // parameter werden immer als string "false" übergeben, convert to bool
             bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
@@ -1242,6 +1244,7 @@ computed: {
         playAudioFile(filecontent, filename){
             document.querySelector("#aplayer").style.display = 'block';
             this.audioSource = filecontent;
+            this.audioFilename = filename
             audioPlayer.load(); // Lädt die neue Quelle
 
         }
