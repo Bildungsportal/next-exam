@@ -171,7 +171,9 @@
         "exammode":"Exam-Mode",
         "materials":"Materials",
         "definematerials":"Define Materials",
-        "processingfiles":"Processing Files"
+        "processingfiles":"Processing Files",
+        "fontsizetitle": "Fontsize",
+        "fontsize": "Fontsize"
     },
     "control": {
         "tokennotvalid": "token is not valid",

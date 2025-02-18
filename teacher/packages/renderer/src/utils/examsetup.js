@@ -100,8 +100,8 @@ async function getFormsID(){
 
 
 /**
-         * Text Editor
-         */
+* Text Editor
+*/
 async function activateSpellcheck(){
     const inputOptions = new Promise((resolve) => {
         setTimeout(() => {
@@ -160,6 +160,22 @@ async function activateSpellcheck(){
                 <label><input type="radio" name="fontfamily" value="serif"/> serif</label> &nbsp;
                 <label><input type="radio" name="fontfamily" value="sans-serif" checked/> sans-serif</label> &nbsp;
             </div>
+
+            <div>
+                <h6>${this.$t("dashboard.fontsize")}</h6>
+                <select id="fontsize" class="my-select">
+                    <option value="12">12 px</option>
+                    <option value="13">13 px</option>
+                    <option value="14">14 px</option>
+                    <option value="15">15 px</option>
+                    <option value="16">16 px</option>
+                    <option value="17">17 px</option>
+                    <option value="18">18 px</option>
+                    <option value="19">19 px</option>
+                    <option value="20">20 px</option>
+                </select>
+            </div>
+
             <hr>
             <div>
                 <h6>${this.$t("dashboard.audiorepeattitle")}</h6>
@@ -172,6 +188,7 @@ async function activateSpellcheck(){
                 </select>
             </div>
            
+
             <hr>
             <div>
                 <h6>${this.$t("dashboard.spellcheck")}</h6>
@@ -180,8 +197,9 @@ async function activateSpellcheck(){
                 <label class="form-check-label" for="checkboxLT"> LanguageTool ${this.$t("dashboard.activate")} </label> <br>
                 <input class="form-check-input" type="checkbox" id="checkboxsuggestions">
                 <label class="form-check-label" for="checkboxsuggestions"> ${this.$t("dashboard.suggest")} </label><br><br>
-                <h6>${this.$t("dashboard.spellcheckchoose")}</h6>
+               <h6 style="margin-bottom:0px">${this.$t("dashboard.spellcheckchoose")}</h6>
             </div>
+             
         </div>`,
         input: 'select',
         inputOptions: inputOptions,
@@ -191,6 +209,41 @@ async function activateSpellcheck(){
             marginValueInput.addEventListener('input', updateMarginValueDisplay);
             document.getElementById('checkboxLT').checked = this.serverstatus.examSections[this.serverstatus.activeSection].languagetool
             document.getElementById('checkboxsuggestions').checked = this.serverstatus.examSections[this.serverstatus.activeSection].suggestions
+            document.getElementById('audiorepeat').value = this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat
+            
+            // Setze den Radio-Button für linespacing
+            const linespacing = this.serverstatus.examSections[this.serverstatus.activeSection].linespacing;
+            const radioButton = document.querySelector(`input[name="linespacing"][value="${linespacing}"]`);
+            if (radioButton) {
+                radioButton.checked = true;
+            }
+
+            // Setze den Radio-Button für fontfamily
+            const fontfamily = this.serverstatus.examSections[this.serverstatus.activeSection].fontfamily;
+            const fontfamilyRadioButton = document.querySelector(`input[name="fontfamily"][value="${fontfamily}"]`);
+            if (fontfamilyRadioButton) {
+                fontfamilyRadioButton.checked = true;
+            }
+
+            // Setze den Radio-Button für correction_margin
+            const correctionMargin = this.serverstatus.examSections[this.serverstatus.activeSection].cmargin.side;
+            const correctionMarginRadioButton = document.querySelector(`input[name="correction_margin"][value="${correctionMargin}"]`);
+            if (correctionMarginRadioButton) {
+                correctionMarginRadioButton.checked = true;
+            }
+
+            // Setze den Wert für die Sprache
+            const language = this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang;
+            const selectElement = document.querySelector('.swal2-select');
+            if (selectElement) {
+                // Verzögerung beim Setzen des Werts
+                setTimeout(() => {
+                    selectElement.value = language;
+                    const event = new Event('change', { bubbles: true });
+                    selectElement.dispatchEvent(event);
+                }, 100);
+            }
+            
         },
         willClose: () => {
             const marginValueInput = document.getElementById('marginValue');

@@ -595,6 +595,31 @@ export default {
                         groups: false, 
                         groupA: { users: [], examInstructionFiles: [] }, 
                         groupB: { users: [], examInstructionFiles: [] }
+                    },
+                    4: {
+                        examtype: 'math',   
+                        timelimit: 60,
+                        locked: false,
+                        sectionname: "Abschnitt 4",
+                        spellchecklang: 'de-DE', 
+                        suggestions: false, 
+
+                        moodleTestId: null, 
+                        moodleDomain: 'eduvidual.at',
+                        moodleURL:null, 
+                        cmargin: { side: 'right', size: 3 }, 
+
+                        gformsTestId: null,
+                        msOfficeFile: null, 
+                        linespacing: 2, 
+                        languagetool: false,
+                        fontfamily: "sans-serif", 
+                        audioRepeat: 0,
+                        domainname: false,
+
+                        groups: false, 
+                        groupA: { users: [], examInstructionFiles: [] }, 
+                        groupB: { users: [], examInstructionFiles: [] }
                     }
                 },                
             }
@@ -1918,6 +1943,7 @@ hr {
 
 .my-content {
     margin-bottom: 0px;
+    overflow:hidden;
 }
 
 .my-content h5 {
@@ -1933,7 +1959,7 @@ hr {
 
 
 .my-custom-input {
-    margin-top: 0px;
+    margin-top: 0px !important;
 }  
 
 .my-swal2-actions {

@@ -171,7 +171,9 @@
         "exammode":"Prüfungsmodus",
         "materials":"Prüfungsmaterialien",
         "definematerials":"Materialien festlegen die während der Prüfung verfügbar sein sollen",
-        "processingfiles":"Materialien werden verarbeitet"
+        "processingfiles":"Materialien werden verarbeitet",
+        "fontsizetitle": "Schriftgröße im PDF",
+        "fontsize": "Schriftgröße"
     },
     "control": {
         "tokennotvalid": "Das Token ist ungültig",

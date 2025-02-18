@@ -374,7 +374,7 @@ export default {
             wordcount : 0,
             now : 0,
             pincode : this.$route.params.pincode,
-            zoom:1,
+            zoom:1.2,
             battery: null,
             proseMirrorMargin: '30mm',
             editorWidth: '210mm',
@@ -387,6 +387,7 @@ export default {
             serverstatus: this.$route.params.serverstatus,
             linespacing: this.$route.params.serverstatus.linespacing ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].linespacing : '2',
             fontfamily:  this.$route.params.serverstatus.fontfamily  ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontfamily : "sans-serif", 
+            fontsize: this.$route.params.serverstatus.fontsize ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontsize : '16px',
             privateSpellcheck: {activate: false, activated: false, suggestions: false}, // this is a per student override (for students with legasthenie)
             individualSpellcheckActivated: false,
             audioSource: null,
@@ -1132,11 +1133,11 @@ export default {
         this.setCSSVariable('--js-editorWidth', `${this.editorWidth}`);     
         this.setCSSVariable('--js-linespacing', `${this.linespacing}`); 
         this.setCSSVariable('--js-fontfamily', `${this.fontfamily}`); 
-
+        this.setCSSVariable('--js-fontsize', `${this.fontsize}`); 
 
       
         this.createEditor(); // this initializes the editor
-
+        this.zoomin()
         this.getExamMaterials()
 
 
@@ -1432,7 +1433,10 @@ Other Styles
     margin-bottom:50px;
     zoom:1;
     font-family: var(--js-fontfamily);
+   
 }
+
+
 
 #editorcontent {
     border-radius: 0px;
@@ -1446,6 +1450,14 @@ Other Styles
     width: var(--js-editorWidth);
     border-radius: 0px;
 }
+
+
+#editorcontent div.tiptap p {
+    font-size: var(--js-fontsize);
+    //font-size: 10px;
+}
+
+
 
 #statusbar {
     position: relative;
@@ -1607,18 +1619,7 @@ Other Styles
 .ProseMirror {
     > * + * {
         margin-top: 0.75em;
-        // quotes: "„" "“" "‚" "‘" !important;
     }
-
-    // blockquote p{
-    //     // quotes: "„" "“" "‚" "‘" !important;
-    // }
-    // blockquote p::before {
-    //     content: open-quote;
-    // }
-    // blockquote p::after {
-    //     content: close-quote;
-    // }
 
     ul,
     ol {
@@ -1660,10 +1661,10 @@ Other Styles
         border-radius: 0.5rem;
 
         code {
-        color: inherit;
-        padding: 0;
-        background: none;
-        font-size: 0.8rem;
+            color: inherit;
+            padding: 0;
+            background: none;
+            font-size: 0.8rem;
         }
     }
 
