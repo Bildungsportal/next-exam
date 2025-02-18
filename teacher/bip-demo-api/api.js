@@ -200,12 +200,13 @@ let studentInfo = {
                     linespacing: 2,  // zeilenabstand im finalen pdf das aus dem editor generiert wird
                     languagetool: false,    // rechtschreibüberprüfung mit languagetool ja /nein
                     fontfamily: "sans-serif",  // serife schriftart im editor oder non-serif ?
+                    fontsize: "12pt",
                     audioRepeat: 0, // wie oft dürfen die teilnehmenden eine audio datei abspielen 0 - unlimited
                     domainname: false,  //zieldomain für den exam mode "webseite"
                     groups: true,   // sollen die clients in 2 gruppen A / B aufgeteilt werden
                     groupA: {
                         users : [   // gruppeneinteilung A - Für die Clientnamen werden die Benutzernamen des BiP herangezogen.
-                            "Weissel Thomas",    // clientname
+                            "Weissel Thomas",    // clientname - FIXME: was wenn name zweimal vorkommt? ID vielleicht besser?
                             "Robert Schrenk"
                         ],
                         examInstructionFiles: [
@@ -251,6 +252,7 @@ let studentInfo = {
                     linespacing: 2,  // zeilenabstand im finalen pdf das aus dem editor generiert wird                    
                     languagetool: false,    // rechtschreibüberprüfung mit languagetool ja /nein
                     fontfamily: "sans-serif",  // serife schriftart im editor oder non-serif ?
+                    fontsize: "12pt",
                     audioRepeat: 0, // wie oft dürfen die teilnehmenden eine audio datei abspielen 0 - unlimited
                     domainname: false,
                     groups: false,   // sollen die clients in 2 gruppen A / B aufgeteilt werden
@@ -287,6 +289,7 @@ let studentInfo = {
                     linespacing: 2,  // zeilenabstand im finalen pdf das aus dem editor generiert wird                    
                     languagetool: true,    // rechtschreibüberprüfung mit languagetool ja /nein
                     fontfamily: "sans-serif",  // serife schriftart im editor oder non-serif ?
+                    fontsize: "12pt",
                     audioRepeat: 0, // wie oft dürfen die teilnehmenden eine audio datei abspielen 0 - unlimited
                     domainname: false,
                     groups: false,   // sollen die clients in 2 gruppen A / B aufgeteilt werden
@@ -323,6 +326,7 @@ let studentInfo = {
                     linespacing: 2,  // zeilenabstand im finalen pdf das aus dem editor generiert wird                    
                     languagetool: true,    // rechtschreibüberprüfung mit languagetool ja /nein
                     fontfamily: "sans-serif",  // serife schriftart im editor oder non-serif ?
+                    fontsize: "12pt",
                     audioRepeat: 0, // wie oft dürfen die teilnehmenden eine audio datei abspielen 0 - unlimited
                     domainname: false,
                     groups: false,   // sollen die clients in 2 gruppen A / B aufgeteilt werden
@@ -381,6 +385,7 @@ let studentInfo = {
                     linespacing: 2,  // zeilenabstand im finalen pdf das aus dem editor generiert wird
                     languagetool: false,    // rechtschreibüberprüfung mit languagetool ja /nein
                     fontfamily: "sans-serif",  // serife schriftart im editor oder non-serif ?
+                    fontsize: "12pt",
                     audioRepeat: 0, // wie oft dürfen die teilnehmenden eine audio datei abspielen 0 - unlimited
                     domainname: null,
                     groups: false,   // sollen die clients in 2 gruppen A / B aufgeteilt werden

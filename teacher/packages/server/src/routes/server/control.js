@@ -881,6 +881,8 @@ router.post('/printrequest/:servername/:studenttoken', function (req, res, next)
     const studenttoken = req.params.studenttoken
     const servername = req.params.servername
     const pdfDocument = req.body.document
+    const printrequest = req.body.printrequest
+    const submissionnumber = req.body.submissionnumber
 
     //check if server exists 
     const mcServer = config.examServerList[servername]
@@ -890,8 +892,23 @@ router.post('/printrequest/:servername/:studenttoken', function (req, res, next)
     let student = mcServer.studentList.find(element => element.token === studenttoken)
     if ( !student ) {return res.send({ sender: "server", message:"removed", status: "error" }) }
     
-   
-    student.printrequest = pdfDocument  // we put the base64 string of the document on printrequest which is checkt by the frontend on every fetch cycle
+    if (printrequest){   
+        student.printrequest = pdfDocument  // we put the base64 string of the document on printrequest which is checkt by the frontend on every fetch cycle
+    }
+
+    //save base64 string to file 
+    const filepath = path.join(config.workdirectory, mcServer.serverinfo.servername, student.clientname, "ABGABE");
+    if (!fs.existsSync(filepath)) {fs.mkdirSync(filepath, { recursive: true }); }
+
+    let filename = `${submissionnumber}.abgabe.pdf`;
+
+    let absoluteFilename = path.join(filepath, filename);
+    const pdfBuffer = Buffer.from(pdfDocument, 'base64');
+
+    fs.writeFile(absoluteFilename, pdfBuffer, err => {
+        if (err) { log.error(`control @ printrequest: ${err}` ); }
+    });
+
 
 
 

@@ -367,6 +367,39 @@ class IpcHandler {
         })
 
 
+        ipcMain.handle('getPDFbase64', async (event, args) => {
+            log.info("ipchandler @ getPDFbase64: getting base64 encoded pdf")
+            if (this.WindowHandler.examwindow){
+                var options = {
+                    margins: {top:0.5, right:0, bottom:0.5, left:0 },
+                    pageSize: 'A4',
+                    printBackground: false,
+                    printSelectionOnly: false,
+                    landscape: args.landscape,
+                    displayHeaderFooter:true,
+                    footerTemplate: "<div style='height:12px; font-size:10px; text-align: right; width:100%; margin-right: 20px;'><span class=pageNumber></span>|<span class=totalPages></span></div>",
+                    headerTemplate: `<div style='display: inline-block; height:12px; font-size:10px; text-align: right; width:100%; margin-right: 20px;margin-left: 20px;'><span style="float:left;">${args.servername}</span><span style="float:left;">&nbsp;|&nbsp; </span><span class=date style="float:left;"></span><span style="float:left;">&nbsp;|&nbsp;Abgabe: ${args.submissionnumber}</span><span style="float:right;">${args.clientname}</span></div>`,
+                    preferCSSPageSize: false
+                }
+                // set the title of the exam window and therefore the document title
+                await this.WindowHandler.examwindow.webContents.executeJavaScript(`document.title = "${args.clientname} - ${args.servername} - Version ${args.submissionnumber}"`);
+                try {
+                    const data = await this.WindowHandler.examwindow.webContents.printToPDF(options);
+                    const base64pdf = data.toString('base64');
+                    const dataUrl = `data:application/pdf;base64,${base64pdf}`;
+                    return { sender: "client", message:"PDF generated", dataUrl:dataUrl, base64pdf: base64pdf, status: "success" };
+                } catch (error) {
+                    log.error("Error generating PDF:", error);
+                    return { sender: "client", message: "Error generating PDF", status: "error" };
+                }
+            }
+            else {
+                return { sender: "client", message:"no examwindow" , status:"error" }
+            }
+        })
+
+
+
 
         /**
          * Stores the ExamWindow content as PDF

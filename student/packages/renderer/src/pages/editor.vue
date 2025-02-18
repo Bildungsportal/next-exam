@@ -28,7 +28,7 @@
         <!-- toolbar start -->
         <div v-if="editor" class="m-2" id="editortoolbar" style="text-align:left;"> 
             <button :title="$t('editor.backup')" @click="saveContent(true, 'manual');" class="invisible-button btn btn-outline-success p-1 me-1 mb-1 btn-sm"><img src="/src/assets/img/svg/document-save.svg" class="white" width="22" height="22" ></button>
-            <button :title="$t('editor.print')" @click="print();" class="invisible-button btn btn-outline-success p-1 me-1 mb-1 btn-sm"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="22" ></button>
+            <!-- <button :title="$t('editor.print')" @click="sendExamToTeacher();" class="invisible-button btn btn-outline-success p-1 me-1 mb-1 btn-sm"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="22" ></button> -->
             <button :title="$t('editor.undo')" @click="editor.chain().focus().undo().run()" class="invisible-button btn btn-outline-warning p-1 me-0 mb-1 btn-sm"><img src="/src/assets/img/svg/edit-undo.svg" class="white" width="22" height="22" ></button>
             <button :title="$t('editor.redo')" @click="editor.chain().focus().redo().run()" class="invisible-button btn btn-outline-warning p-1 me-2 mb-1 btn-sm"><img src="/src/assets/img/svg/edit-redo.svg" class="white" width="22" height="22" > </button>
             <button :title="$t('editor.clear')" @click="editor.chain().focus().clearNodes().run();editor.chain().focus().unsetColor().run()" class="invisible-button btn btn-outline-warning p-1 me-2 mb-1 btn-sm"><img src="/src/assets/img/svg/draw-eraser.svg" class="white" width="22" height="22" ></button>
@@ -93,18 +93,9 @@
             <br>   
             <button :title="$t('editor.splitview')"  @click="toggleSplitview()" style="vertical-align: top;" class="invisible-button btn btn-outline-warning p-0 ms-1 me-2 mb-0 btn-sm"><img src="/src/assets/img/svg/view-split-left-right.svg" class="white" width="22" height="22" ></button>
        
-            <div id="getmaterialsbutton" class="btn btn-outline-success p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" title="Angaben holen"><img src="/src/assets/img/svg/games-solve.svg" class="white" width="22" height="22" style="vertical-align: top;">Materialien holen </div>
+            <div id="sendfinalexam" class="btn btn-outline-danger p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="sendExamToTeacher()" title="Abgabe senden"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="22" style="vertical-align: top;"> Arbeit abgeben</div>
 
-           
-            <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
-                <div v-if="(file.type == 'bak')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
-                <div v-if="(file.type == 'docx')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadDOCX(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
-                
-                <div v-if="(file.type == 'pdf')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
-                <div v-if="(file.type == 'audio')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="playAudio(file.name)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
-                <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
-            </div>
-            
+            <div id="getmaterialsbutton" class="btn btn-outline-success p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" title="Angaben holen"><img src="/src/assets/img/svg/games-solve.svg" class="white" width="22" height="22" style="vertical-align: top;"> Materialien holen </div>
 
             <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
             <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
@@ -115,6 +106,21 @@
                 <div v-if="(file.filetype == 'image')" class="btn btn-outline-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
             </div>
             <!-- exam materials end -->
+
+
+            <div class="text-muted me-2 ms-2 small d-inline-block" style="vertical-align: middle;">Lokale Dateien: </div>
+            
+            <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
+                <div v-if="(file.type == 'bak')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
+                <div v-if="(file.type == 'docx')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadDOCX(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
+                
+                <div v-if="(file.type == 'pdf')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
+                <div v-if="(file.type == 'audio')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="playAudio(file.name)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
+                <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
+            </div>
+            
+
+
 
         
         </div>
@@ -151,6 +157,7 @@
             <div class="mb-3 row">
                 <div class="mb-3 "> {{$t('editor.leftkiosk')}} <br> {{$t('editor.tellsomeone')}} </div>
                 <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32" >
+                <div class="mt-3"> {{ formatTime(entrytime) }}</div>
             </div>
         </div>
     </div>
@@ -177,9 +184,15 @@
                     <img src="/src/assets/img/svg/edit-download.svg" class="white" width="22" height="32">
                 </div>
                 <br>
-                <div class="btn btn-warning shadow " id="print-button" @click="printBase64()" :title="$t('editor.print')">
+                <div class="btn btn-warning shadow " id="print-button" @click="printBase64(true)" :title="$t('editor.print')">
                     <img src="/src/assets/img/svg/print.svg" class="white" width="22" height="32">
                 </div>
+                
+                <div class="btn btn-warning shadow " id="send-button" @click="printBase64()" :title="$t('editor.send')">
+                    <img src="/src/assets/img/svg/games-solve.svg" class="white" width="22" height="32">
+                </div>
+
+
             </div>
            
 
@@ -209,7 +222,8 @@
                 <embed src="" id="pdfembed" style="border-radius:0 !important; background-size:contain; width:100% !important; height: 100% !important; background-color:transparent !important;"></embed>
                 <div class="btn btn-secondary white splitinsert" id="insert-button" @click="insertImage(selectedFile)" :title="$t('editor.insert')" style="position: absolute; top: 60px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
                 
-                <div class="btn  btn-secondary splitprint" id="print-button" @click="printBase64()" :title="$t('editor.print')" style="position: absolute; top: 108px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
+                <div class="btn  btn-secondary splitprint" id="print-button" @click="printBase64(true)" :title="$t('editor.print')" style="position: absolute; top: 110px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
+                <div class="btn  btn-secondary splitsend" id="send-button" @click="printBase64()" :title="$t('editor.send')" style="position: absolute; top: 144px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
                 
                 <div id="pdfZoom" style="display:none; position: absolute; top:40px; right:20px; z-index:100000; height: 64px;">
                     <button class="btn btn-secondary  white  splitzoomin" style="width:70px; height: 32px; margin-bottom:2px;  background-repeat: no-repeat; background-position: center; " id="zoomIn"></button><br>
@@ -387,7 +401,7 @@ export default {
             serverstatus: this.$route.params.serverstatus,
             linespacing: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].linespacing ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].linespacing : '2',
             fontfamily:  this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontfamily  ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontfamily : "sans-serif", 
-            fontsize: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontsize ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontsize : '16px',
+            fontsize: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontsize ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontsize : '12pt',
             privateSpellcheck: {activate: false, activated: false, suggestions: false}, // this is a per student override (for students with legasthenie)
             individualSpellcheckActivated: false,
             audioSource: null,
@@ -411,6 +425,7 @@ export default {
             wlanInfo: null,
             ltRunning: false,
             examMaterials: [],
+            submissionnumber: 0,
         }
     },
     computed: {
@@ -754,6 +769,8 @@ export default {
                 moreOptions.style.display = "none";
             }
         },
+
+
         /** Converts the Editor View into a multipage PDF */
         async saveContent(backup, why) {     
             let filename = false  // this is set manually... otherwise use clientname
@@ -816,11 +833,13 @@ export default {
         },
 
         // send direct print request to teacher and append current document as base64
-        printBase64(){        
+        printBase64(printrequest=false){        
             // this currentpreviewBase64 contains the current visible pdf as base64 string
             const url = `https://${this.serverip}:${this.serverApiPort}/server/control/printrequest/${this.servername}/${this.token}`;
             const payload = {
-                document: this.currentpreviewBase64
+                document: this.currentpreviewBase64,
+                printrequest: printrequest,
+                submissionnumber: this.submissionnumber
             }
             fetch(url, {
                 method: "POST",
@@ -831,8 +850,12 @@ export default {
             .then(response => { return response.json();  })
             .then(data => {
                 if (data.message == "success"){
+                    this.submissionnumber++   // successful submission -> increment number
+                    let message = this.$t("editor.saved")
+                    if (printrequest){ message = this.$t("editor.requestsent") }
+                
                     this.$swal.fire({
-                        title: this.$t("editor.requestsent"),
+                        title: message,
                         icon: "info",
                         timer: 1500,
                         timerProgressBar: true,
@@ -849,19 +872,45 @@ export default {
 
 
         //save file and open print preview
-        async print(){
-            this.saveContent(true, "auto")
-            await this.sleep(1000)
-            this.loadPDF(`${this.clientname}.pdf`)
-        },
+        // async print(){
+        //     this.saveContent(true, "auto" )   // this creates a pdf file in the user directory with header and footer
+        //     await this.sleep(1000)
+        //     this.loadPDF(`${this.clientname}.pdf`)  //this opens the pdf file in the print preview and populates base64 preview
+        // },
 
+
+
+        async sendExamToTeacher(){
+            //this.submissionnumber++
+
+            let response = await ipcRenderer.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber })
+
+         
+            if (response?.status == "success"){
+                let base64pdf = response.base64pdf
+                let dataUrl = response.dataUrl
+
+                let file = {
+                    filename: `${this.clientname}.pdf`,
+                    filetype: "pdf",
+                    filecontent: dataUrl
+                }
+                this.loadPDF(file, true, 100, true)  //this opens the pdf file in the print preview and populates base64 preview
+            }
+            else {
+       
+            }
+        },
 
 
         // display print denied message and reason
         printdenied(why){
             console.log("editor @ printdenied: Print request denied")
+            let message = this.$t("editor.requestdenied")
+            if (why == "duplicate"){ message = this.$t("editor.requestdeniedduplicate") }
+           
             this.$swal.fire({
-                title: `${this.$t("editor.requestdenied")}`,
+                title: message,
                 icon: "info",
                 timer: 2000,
                 timerProgressBar: true,
@@ -1007,6 +1056,11 @@ export default {
                 this.sendFocuslost();
             }
         },
+        formatTime(unixTime) {
+            const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
+            return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed
+        },
+        
         async startLanguageTool(){
             if (this.serverstatus.examSections[this.serverstatus.activeSection].languagetool && !this.ltRunning){
                 
@@ -1294,7 +1348,7 @@ export default {
 <style lang="scss">
 
 @media print {  //this controls how the editor view is printed (to pdf)
-    #editortoolbar, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer,  span.NXTEhighlight::after, #highlight-layer, #languagetool  {
+    #editortoolbar, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer,  span.NXTEhighlight::after, #highlight-layer, #languagetool, .split-view-container, #preview, #pdfembed  {
         display: none !important;
     }
     body {position: relative  !important;}  //body ist "fixed" um beim autoscrollen nicht zu verscheben - mehrseitiger print wird dadurch aber auf 1seite beschränkt
@@ -1323,6 +1377,7 @@ export default {
         background-color: white !important;
         overflow: hidden !important;
         zoom: 1 !important;
+        box-shadow: 0px 0px 0px transparent !important;
     }
 
     #editormaincontainer {
@@ -1604,7 +1659,25 @@ Other Styles
   height: 52px;
 }
 
+#send-button {
+  border: none;
+  border-radius: 0px;
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  margin-top: 10px;
+}
 
+#send-button img {
+  width: 22px;
+  height: 52px;
+}
 /* Basic editor styles */
 
 .ProseMirror {
@@ -1900,6 +1973,9 @@ Other Styles
 }
 .splitprint {
     background-image: url('/src/assets/img/svg/print.svg');
+}
+.splitsend {
+    background-image: url('/src/assets/img/svg/games-solve.svg');
 }
 
 #languagetool .ltscrollarea {

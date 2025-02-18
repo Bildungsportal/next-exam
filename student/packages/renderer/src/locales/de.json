@@ -118,7 +118,8 @@
         "audionotallowed":"Sie haben keine Berechtigung die Audiodatei erneut abzuspielen!",
         "insert":"Bild einfügen",
         "insertmug":"Mugshot einfügen",
-        "bildungsportal":"Bildungsportal"
+        "bildungsportal":"Bildungsportal",
+        "send":"senden"
     },
     "math": {
         "exit":"Abgesicherten Modus beenden?",

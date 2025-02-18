@@ -118,7 +118,8 @@
         "audionotallowed":"You don't have the permission to play this file!",
         "insert":"Insert Image",
         "insertmug":"Insert Mugshot",
-        "bildungsportal":"Bildungsportal"
+        "bildungsportal":"Bildungsportal",
+        "send":"send"
     },
     "math": {
         "exit":"Exit safe exam mode",

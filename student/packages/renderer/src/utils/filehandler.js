@@ -4,7 +4,7 @@ import mammoth from 'mammoth';
 
 
 // fetch file from disc - show preview
-export async function loadPDF(file, base64 = false, zoom=100){
+export async function loadPDF(file, base64 = false, zoom=100, submission=false){
     this.currentPDFZoom = zoom
     URL.revokeObjectURL(this.currentpreview);
     
@@ -68,6 +68,9 @@ export async function loadPDF(file, base64 = false, zoom=100){
     try {
          document.querySelector("#insert-button").style.display = 'none';
         document.querySelector("#print-button").style.display = 'flex';
+
+        if (submission){ document.querySelector("#send-button").style.display = 'flex'; }
+        else{ document.querySelector("#send-button").style.display = 'none'; }
     }
     catch(e){}
    
@@ -250,6 +253,7 @@ export async function loadImage(file, base64=false){
         document.querySelector("#insert-button").style.display = 'flex';
         document.querySelector("#print-button").style.display = 'none';
         document.querySelector("#pdfZoom").style.display = 'none';
+        document.querySelector("#send-button").style.display = 'none';
     }
     catch(e){}
     
@@ -402,3 +406,5 @@ export async function getExamMaterials(){
     console.log("editor @ getExamMaterials: received examMaterials")
     this.examMaterials = examMaterials.materials
 }
+
+

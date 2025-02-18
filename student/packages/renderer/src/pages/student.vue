@@ -41,7 +41,7 @@
                 <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
                 <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
             </div> 
-            <div v-else id="biploginbutton" title="login" @click="loginBiP()" class="btn btn-info m-1 " style="padding:0;">
+            <div v-else id="biploginbutton" title="login" @click="loginBiP()" class="btn btn-info m-1 " style="padding:0;" :class="(token)? 'disabledexam':''">
                 <img id="biplogo" style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
                 <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
             </div> 

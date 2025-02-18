@@ -163,13 +163,14 @@ async function activateSpellcheck(){
 
             <div>
                 <h6>${this.$t("dashboard.fontsize")}</h6>
-                <select id="fontsize" class="my-select" value="16px">
-                    <option value="12px">12 px</option>
-                    <option value="14px">14 px</option>
-                    <option value="16px">16 px</option>
-                    <option value="18px">18 px</option>
-                    <option value="20px">20 px</option>
-                    <option value="22px">22 px</option>
+                <select id="fontsize" class="my-select" value="12pt">
+                    <option value="8pt">8 pt</option>
+                    <option value="10pt">10 pt</option>
+                    <option value="12pt">12 pt</option>
+                    <option value="14pt">14 pt</option>
+                    <option value="16pt">16 pt</option>
+                    <option value="18pt">18 pt</option>
+                    <option value="20pt">20 pt</option>
                 </select>
             </div>
 
@@ -239,7 +240,7 @@ async function activateSpellcheck(){
                 }, 100);
             }
 
-            const defaultFontSize = this.serverstatus.examSections[this.serverstatus.activeSection].fontsize || '16px';
+            const defaultFontSize = this.serverstatus.examSections[this.serverstatus.activeSection].fontsize || '12pt';
             const selectElement2 = document.getElementById('fontsize');
             if (selectElement2) {
                 setTimeout(() => {

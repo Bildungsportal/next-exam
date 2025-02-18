@@ -347,7 +347,7 @@ const agent = new https.Agent({ rejectUnauthorized: false });
 
         if ( studentstatus && Object.keys(studentstatus).length !== 0) {  // we have status updates (tasks) - do it!
             if (studentstatus.printdenied) {
-                WindowHandler.examwindow.webContents.send('denied','toomany')   //trigger, why
+                WindowHandler.examwindow.webContents.send('denied')   //trigger, why
             }
 
             if (studentstatus.delfolder === true){
