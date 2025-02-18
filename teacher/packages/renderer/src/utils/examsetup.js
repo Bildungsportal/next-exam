@@ -163,16 +163,13 @@ async function activateSpellcheck(){
 
             <div>
                 <h6>${this.$t("dashboard.fontsize")}</h6>
-                <select id="fontsize" class="my-select">
-                    <option value="12">12 px</option>
-                    <option value="13">13 px</option>
-                    <option value="14">14 px</option>
-                    <option value="15">15 px</option>
-                    <option value="16">16 px</option>
-                    <option value="17">17 px</option>
-                    <option value="18">18 px</option>
-                    <option value="19">19 px</option>
-                    <option value="20">20 px</option>
+                <select id="fontsize" class="my-select" value="16px">
+                    <option value="12px">12 px</option>
+                    <option value="14px">14 px</option>
+                    <option value="16px">16 px</option>
+                    <option value="18px">18 px</option>
+                    <option value="20px">20 px</option>
+                    <option value="22px">22 px</option>
                 </select>
             </div>
 
@@ -239,10 +236,17 @@ async function activateSpellcheck(){
                 // Verzögerung beim Setzen des Werts
                 setTimeout(() => {
                     selectElement.value = language;
-                    const event = new Event('change', { bubbles: true });
-                    selectElement.dispatchEvent(event);
                 }, 100);
             }
+
+            const defaultFontSize = this.serverstatus.examSections[this.serverstatus.activeSection].fontsize || '16px';
+            const selectElement2 = document.getElementById('fontsize');
+            if (selectElement2) {
+                setTimeout(() => {
+                    selectElement2.value = defaultFontSize;
+                }, 100);
+            }
+
             
         },
         willClose: () => {
@@ -263,6 +267,7 @@ async function activateSpellcheck(){
             const linespacingradioButtons = document.querySelectorAll('input[name="linespacing"]');
             const fontfamilyradioButtons = document.querySelectorAll('input[name="fontfamily"]');
             const audioRepeat = document.getElementById('audiorepeat').value;
+            const fontSize = document.getElementById('fontsize').value;
 
             let selectedMargin = '';
             radioButtons.forEach((radio) => {
@@ -295,6 +300,7 @@ async function activateSpellcheck(){
 
             this.serverstatus.examSections[this.serverstatus.activeSection].linespacing = selectedSpacing
             this.serverstatus.examSections[this.serverstatus.activeSection].fontfamily = selectedFont
+            this.serverstatus.examSections[this.serverstatus.activeSection].fontsize = fontSize
             this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat = audioRepeat
         }
     })

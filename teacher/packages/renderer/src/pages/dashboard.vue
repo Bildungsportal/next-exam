@@ -539,6 +539,7 @@ export default {
                         linespacing: 2, 
                         languagetool: false,
                         fontfamily: "sans-serif", 
+                        fontsize: '16px',
                         audioRepeat: 0,
                         domainname: false,
 
@@ -564,6 +565,7 @@ export default {
                         linespacing: 2, 
                         languagetool: false,
                         fontfamily: "sans-serif", 
+                        fontsize: '16px',
                         audioRepeat: 0,
                         domainname: false,
 
@@ -589,6 +591,7 @@ export default {
                         linespacing: 2, 
                         languagetool: false,
                         fontfamily: "sans-serif", 
+                        fontsize: '16px',
                         audioRepeat: 0,
                         domainname: false,
 
@@ -614,6 +617,7 @@ export default {
                         linespacing: 2, 
                         languagetool: false,
                         fontfamily: "sans-serif", 
+                        fontsize: '16px',
                         audioRepeat: 0,
                         domainname: false,
 

@@ -385,9 +385,9 @@ export default {
             word:"",
             editorcontentcontainer:null,
             serverstatus: this.$route.params.serverstatus,
-            linespacing: this.$route.params.serverstatus.linespacing ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].linespacing : '2',
-            fontfamily:  this.$route.params.serverstatus.fontfamily  ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontfamily : "sans-serif", 
-            fontsize: this.$route.params.serverstatus.fontsize ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontsize : '16px',
+            linespacing: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].linespacing ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].linespacing : '2',
+            fontfamily:  this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontfamily  ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontfamily : "sans-serif", 
+            fontsize: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontsize ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontsize : '16px',
             privateSpellcheck: {activate: false, activated: false, suggestions: false}, // this is a per student override (for students with legasthenie)
             individualSpellcheckActivated: false,
             audioSource: null,
@@ -1140,6 +1140,8 @@ export default {
         this.zoomin()
         this.getExamMaterials()
 
+
+        console.log(this.serverstatus)
 
         ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
             console.log("editor @ save: Teacher saverequest received")
