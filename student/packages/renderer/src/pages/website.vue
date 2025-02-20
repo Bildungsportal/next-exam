@@ -44,6 +44,7 @@
                 <div class="mb-3 row">
                     <div class="mb-3 "> {{$t('editor.leftkiosk')}} <br> {{$t('editor.tellsomeone')}} </div>
                     <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32" >
+                    <div class="mt-3"> {{ formatTime(entrytime) }}</div>
                 </div>
             </div>
         </div>
@@ -320,6 +321,10 @@ export default {
         async loadFilelist(){
             let filelist = await ipcRenderer.invoke('getfilesasync', null)
             this.localfiles = filelist;
+        },
+        formatTime(unixTime) {
+            const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
+            return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed
         },
         clock(){
             this.now = new Date().getTime()

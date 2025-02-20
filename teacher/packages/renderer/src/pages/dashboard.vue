@@ -1,20 +1,23 @@
 <template>
 
 
-<!-- Header  -->
-<div :key="0" class="w-100 p-3 text-white bg-dark shadow text-right">
-    <router-link v-if="!electron" to="/" class="text-white m-1">
+<!-- Header START -->
+<div :key="0" class="w-100 p-3 text-white bg-dark shadow text-right" style="min-width: 1180px;">
+    <span class="text-white m-1">
         <img src="/src/assets/img/svg/speedometer.svg" class="white me-2  " width="32" height="32" >
-        <span class="fs-4 align-middle me-1 ">Next-Exam</span>
-    </router-link>
-    <span v-if="electron" class="text-white m-1">
-        <img src="/src/assets/img/svg/speedometer.svg" class="white me-2  " width="32" height="32" >
-        <span class="fs-4 align-middle me-1 ">Next-Exam</span>
+        <span style="font-size:23px;" class="align-middle me-1 ">Next-Exam</span>
     </span>
+    <span class="align-middle ms-3" style="float: right; font-size:23px;">Dashboard</span>
 
-    <span class="fs-4 align-middle ms-3" style="float: right">Dashboard</span>
-    <div class="btn btn-sm btn-danger m-0 mt-1" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style="float: right">{{$t('dashboard.stopserver')}}&nbsp; <img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" ></div>
-    <div class="btn btn-sm btn-secondary me-1 mt-1" style="float: right; padding:3px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white" width="22" height="22" > </div>
+    <div v-if="serverstatus.useExamSections" style="position: absolute; left:257px; top:42px; min-width: 550px;">
+        <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 1 && !serverstatus.examSections[1].locked, 'btn-danger': serverstatus.activeSection == 1 && serverstatus.examSections[1].locked, 'btn-secondary': serverstatus.activeSection != 1,'border-danger': serverstatus.examSections[1].locked}">{{ serverstatus.examSections[1].sectionname }}</div>
+        <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 2 && !serverstatus.examSections[2].locked, 'btn-danger': serverstatus.activeSection == 2 && serverstatus.examSections[2].locked, 'btn-secondary': serverstatus.activeSection != 2,'border-danger': serverstatus.examSections[2].locked}">{{ serverstatus.examSections[2].sectionname }}</div>
+        <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 3 && !serverstatus.examSections[3].locked, 'btn-danger': serverstatus.activeSection == 3 && serverstatus.examSections[3].locked, 'btn-secondary': serverstatus.activeSection != 3,'border-danger': serverstatus.examSections[3].locked}">{{ serverstatus.examSections[3].sectionname }}</div>
+        <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 4 && !serverstatus.examSections[4].locked, 'btn-danger': serverstatus.activeSection == 4 && serverstatus.examSections[4].locked, 'btn-secondary': serverstatus.activeSection != 4,'border-danger': serverstatus.examSections[4].locked}">{{ serverstatus.examSections[4].sectionname }}</div>
+    </div>
+
+    <div class="btn btn-sm btn-secondary m-0 me-1 mt-1" style="float: right; padding:3px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white" width="22" height="22" > </div>
+    <div class="btn btn-sm btn-danger m-0 me-1 mt-1" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style="float: right"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" >&nbsp; {{$t('dashboard.stopserver')}}&nbsp; </div>
     <div v-if="!hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 me-1 " style="cursor: unset; float: right">{{ $t("general.offline") }}</div>
 </div>
  <!-- Header END -->
@@ -34,7 +37,7 @@
                     <div style="font-size: 0.6em; margin-bottom: 0px;">{{activestudent.clientip}}</div>
                     <div style="font-size: 0.6em; margin-top: 0px;">{{activestudent.hostname}}</div>
                     <div class="col d-inlineblock btn btn-info m-1 btn-sm"      @click="sendFiles(activestudent.token)" style="width: 110px">{{$t('dashboard.sendfileSingle')}}</div>
-                    <div class="col d-inlineblock btn btn-info m-1 btn-sm"      @click="getFiles(activestudent.token, true)" :class="(serverstatus.examtype === 'eduvidual' || serverstatus.examtype === 'gforms')? 'disabledblue':''" style="width: 110px">{{$t('dashboard.getfileSingle')}}</div>
+                    <div class="col d-inlineblock btn btn-info m-1 btn-sm"      @click="getFiles(activestudent.token, true)" :class="lockInExammode ? 'disabledexam':''" style="width: 110px">{{$t('dashboard.getfileSingle')}}</div>
                     <div class="col d-inlineblock btn btn-dark m-1 btn-sm "     @click="openLatestFolder(activestudent)"  style="width: 110px;">{{$t('dashboard.shownewestfolder')}} </div>
                     <div class="col d-inlineblock btn btn-warning m-1 btn-sm"   @click='kick(activestudent.token,activestudent.clientip);hideStudentview()'  style="width: 110px">{{$t('dashboard.kick')}}</div>
                 </div>
@@ -50,7 +53,7 @@
             <button id="closefilebrowser" type="button" class=" btn-close pt-2 pe-2 float-end" title="close"></button>
             <h4>{{$t('dashboard.filesfolder')}}: <br> <span class="ms-3 mb-3"><strong> {{currentdirectory}}</strong>  </span></h4>
             <div class="btn btn-dark pe-3 ps-3 me-1 mb-3 btn-sm" @click="loadFilelist(workdirectory) "><img src="/src/assets/img/svg/go-home.svg" class="" width="22" height="22" > </div>
-            <div :class="( serverstatus.examtype === 'eduvidual' || serverstatus.examtype === 'website'|| serverstatus.examtype === 'math' )? 'disabledblue':''" class="btn btn-primary pe-3 ps-3 me-1 mb-3 btn-sm" style="float: right;" :title="$t('dashboard.summarizepdf')" @click="getLatest() "><img src="/src/assets/img/svg/edit-copy.svg" class="" width="22" height="22" >{{$t('dashboard.summarizepdfshort')}}</div>
+            <div :class="lockPdfSummary ? 'disabledexam':''" class="btn btn-primary pe-3 ps-3 me-1 mb-3 btn-sm" style="float: right;" :title="$t('dashboard.summarizepdf')" @click="getLatest() "><img src="/src/assets/img/svg/edit-copy.svg" class="" width="22" height="22" >{{$t('dashboard.summarizepdfshort')}}</div>
             <div  v-if="(currentdirectory !== workdirectory)" class="btn btn-dark pe-3 ps-3 me-1 mb-3 btn-sm" @click="loadFilelist(currentdirectoryparent) "><img src="/src/assets/img/svg/edit-undo.svg" class="" width="22" height="22" >up </div>
             <div :key="3" style="height: 76vh; overflow-y:auto;">
                 <div v-for="file in localfiles" :key="file.path" class="d-inline">
@@ -64,13 +67,14 @@
                     <!-- other files -->
                     <div v-if="(file.type == 'file' && !(file.ext === '.pdf' || file.ext === '.png'|| file.ext === '.jpg'|| file.ext === '.webp'|| file.ext === '.jpeg' )  )" class="btn btn-info pe-3 ps-3 me-3 mb-2 btn-sm"  style=" max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default;"><img src="/src/assets/img/svg/document.svg" class="" width="22" height="22" > {{file.name}} </div>
 
-                    <div v-if="(file.type == 'file')" :class="(studentlist.length == 0 || serverstatus.examtype === 'eduvidual'|| serverstatus.examtype === 'microsoft365')? 'disabledexam':''"    class="btn btn-dark  me-1 mb-2 btn-sm " style="float: right;" @click="dashboardExplorerSendFile(file)" :title="$t('dashboard.send')"><img src="/src/assets/img/svg/document-send.svg" class="" width="22" height="22" ></div>
+                    <div v-if="(file.type == 'file')" :class="lockSendFile ? 'disabledexam':''"    class="btn btn-dark  me-1 mb-2 btn-sm " style="float: right;" @click="dashboardExplorerSendFile(file)" :title="$t('dashboard.send')"><img src="/src/assets/img/svg/document-send.svg" class="" width="22" height="22" ></div>
                     <div v-if="(file.type == 'file')" class="btn btn-dark  me-1 mb-2 btn-sm " style="float: right;" @click="downloadFile(file)" :title="$t('dashboard.download')"><img src="/src/assets/img/svg/edit-download.svg" class="" width="22" height="22" ></div>
                     <div v-if="(file.type == 'file' && file.ext === '.pdf')" class="btn btn-dark me-1 mb-2 btn-sm" style="float: right;" @click="loadPDF(file.path, file.name)" :title="$t('dashboard.preview')"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" ></div>
                     <div v-if="(file.type == 'file' && (file.ext === '.png'|| file.ext === '.jpg'|| file.ext === '.webp'|| file.ext === '.jpeg' ))" class="btn btn-dark me-1 mb-2 btn-sm" style="float: right;" @click="loadImage(file.path)" :title="$t('dashboard.preview')"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" ></div>
                     <!-- folders -->
                     <div v-if="(file.type == 'dir')" class="btn btn-success pe-3 ps-3 me-3 mb-2 btn-sm" @click="loadFilelist(file.path)"><img src="/src/assets/img/svg/folder-open.svg" class="" width="22" height="22" > {{file.name}} </div>
                     <div v-if="(file.type == 'dir')" class="btn btn-dark  me-1 mb-2 btn-sm " style="float: right;" @click="downloadFile(file)" :title="$t('dashboard.download')"><img src="/src/assets/img/svg/edit-download.svg" class="" width="22" height="22" ></div>
+                
                 </div>
            </div>
         </div>
@@ -86,8 +90,8 @@
         <div id="previewbuttons">
             <div class="insert-button btn btn-danger me-2  shadow" style="float: right;" @click="hidepreview()" :title="$t('dashboard.close')"><img src="/src/assets/img/svg/dialog-cancel.svg" class="" width="22" height="32" > </div>
             <div class="insert-button btn btn-warning me-2 shadow" style="float: right;" id="printPDF" @click="printBase64()"  :title="$t('dashboard.print')"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="32" > </div>
-            <div class="insert-button btn btn-dark me-2 shadow" style="float: right;" @click="downloadFile('current')" :title="$t('dashboard.save')"><img src="/src/assets/img/svg/edit-download.svg" class="" width="22" height="32" > </div>
-            <div class="insert-button btn btn-dark me-2 shadow" style="float: right;" @click="openFileExternal(currentpreviewPath)" :title="$t('dashboard.open')"><img src="/src/assets/img/svg/stock_exit_up.svg" class="" width="22" height="32" > </div>
+            <div class="insert-button btn btn-dark me-2 shadow" style="float: right;" id="downloadPDF" @click="downloadFile('current')" :title="$t('dashboard.save')"><img src="/src/assets/img/svg/edit-download.svg" class="" width="22" height="32" > </div>
+            <div class="insert-button btn btn-dark me-2 shadow" style="float: right;" id="openPDF" @click="openFileExternal(currentpreviewPath)" :title="$t('dashboard.open')"><img src="/src/assets/img/svg/stock_exit_up.svg" class="" width="22" height="32" > </div>
         </div>
         </div>
     </div>
@@ -101,65 +105,94 @@
         <div class="btn btn-light m-1 text-start infobutton" @click="showinfo()">{{$t('dashboard.server')}} <br><b>{{serverip}}</b> </div><br>
         <div class="btn btn-light m-1 mb-3 text-start infobutton" @click="showinfo()">{{$t('dashboard.pin')}}<br><b> {{ serverstatus.pin }} </b>  </div><br>
         
-        <div style="font-size:0.9em; width: 220px">
-            <!-- geogebra -->
-            <div class="form-check m-1 mb-1"  :class="(serverstatus.exammode)? 'disabledexam':''">
-                <input v-model="serverstatus.examtype" value="math" class="form-check-input" type="radio" name="examtype" id="examtype2" checked>
-                <label class="form-check-label" for="examtype2"> {{$t('dashboard.math')}}  </label>
-            </div>
-            <!-- editor -->
-            <div class="form-check m-1" :class="(serverstatus.exammode)? 'disabledexam':''">
-                <input v-model="serverstatus.examtype" @click="activateSpellcheck()" value="editor" class="form-check-input" type="radio" name="examtype" id="examtype1">
-                <label class="form-check-label" for="examtype1"> {{$t('dashboard.lang')}}<span class="text-white-50" v-if="(serverstatus.languagetool)">|{{serverstatus.spellchecklang}}</span></label>
-            </div>
-            <!-- eduvidual -->
-            <div class="form-check m-1 mb-1" :class="(serverstatus.exammode)? 'disabledexam':''">
-                <input v-model="serverstatus.examtype" @click="getTestID()" value="eduvidual" class="form-check-input" type="radio" name="examtype" id="examtype3">
-                <label class="form-check-label" for="examtype3"> {{$t('dashboard.eduvidual')}}  </label>
-            </div>
-            <!-- google forms -->
-            <div class="form-check m-1 mb-1" :class="(serverstatus.exammode)? 'disabledexam':''">
-                <input v-model="serverstatus.examtype" @click="getFormsID()" value="gforms" class="form-check-input" type="radio" name="examtype" id="examtype5">
-                <label class="form-check-label" for="examtype5"> {{$t('dashboard.gforms')}}  </label>
-            </div>
-            <!-- website -->
-            <div class="form-check m-1 mb-1" :class="(serverstatus.exammode)? 'disabledexam':''" style="max-height:24px">
-                <input v-model="serverstatus.examtype" @click="getTestURL()" value="website" class="form-check-input" type="radio" name="examtype" id="examtype6">
-                <label class="form-check-label" for="examtype6"> 
-                    <div style="display:inline-block; overflow: hidden; text-overflow: ellipsis;">Website</div>  <!--overflow hidden with text-overflow ellipsis adds 3 pixel to the height of the sourrounding div element.. what the f..? -->
-                    <div style="width: 134px; height: 22px; display:inline-block; overflow: hidden; text-overflow: ellipsis;" class="text-white-50" v-if="(serverstatus.domainname)">|{{serverstatus.domainname}}</div>  
-                </label>
-            </div>
+      
 
-            <!-- microsoft365 -->
-            <div class="form-check m-1 mb-3" :class="(serverstatus.exammode && this.config.accessToken )? 'disabledexam':''">
-                <input v-model="serverstatus.examtype" value="microsoft365" class="form-check-input" type="radio" name="examtype" id="examtype4">
-                <label class="form-check-label" for="examtype4"> Microsoft365 <span v-if="(this.config.accessToken)">({{$t('dashboard.connected')}})</span> </label>
-                
-                <button v-if="(serverstatus.examtype === 'microsoft365' && !this.config.accessToken)"  @click="openAuthWindow()" class="btn btn-sm btn-primary mt-1  ">
-                    <img  src="/src/assets/img/svg/win.svg" xmlns="http://www.w3.org/2000/svg"  width="24" height="24">
-                    <span style="padding: 0 6px 0 4px; vertical-align:middle;"> Verbinden </span>
+
+
+        <div class="dropdown-section m-1" style="width: 200px">
+            <!-- Dropdown Button -->
+            <div class="mb-1">{{$t("dashboard.exammode")}}</div>
+            <button class="btn btn-sm btn-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center" type="button" :class="lockInExammode ? 'disabled' : ''" data-bs-toggle="dropdown" aria-expanded="false"> <span>{{ getSelectedExamTypeLabel() }}</span>    </button>
+
+            <!-- Dropdown Menu -->
+            <ul class="dropdown-menu" style="cursor: pointer;">
+                <li><a class="dropdown-item" @click="selectExamType('math')" :class="{ active: isExamType('math') }">{{$t('dashboard.math')}}</a></li>
+                <li><a class="dropdown-item" @click="selectExamType('editor')" :class="{ active: isExamType('editor') }">{{$t('dashboard.lang')}}</a></li>
+                <li><a class="dropdown-item" @click="selectExamType('eduvidual')" :class="{ active: isExamType('eduvidual') }">{{$t('dashboard.eduvidual')}}</a></li>
+                <li><a class="dropdown-item" @click="selectExamType('gforms')" :class="{ active: isExamType('gforms') }">{{$t('dashboard.gforms')}}</a></li>
+                <li><a class="dropdown-item" @click="selectExamType('website')" :class="{ active: isExamType('website') }">Website</a></li>
+                <li><a class="dropdown-item" @click="selectExamType('microsoft365')" :class="{ active: isExamType('microsoft365') }">Microsoft365</a></li>
+            </ul>
+
+            <!-- Additional Info Section -->
+            <div class="mt-2">
+                <!-- Editor Spellcheck Info -->
+                <div v-if="isExamType('editor') && serverstatus.examSections[serverstatus.activeSection].languagetool" class="small text-white-50">
+                Spellcheck: {{serverstatus.examSections[serverstatus.activeSection].spellchecklang}}
+                </div>
+
+                <!-- Website Domain Info -->
+                <div v-if="isExamType('website') && serverstatus.examSections[serverstatus.activeSection].domainname" class="small text-white-50 text-truncate">
+                {{serverstatus.examSections[serverstatus.activeSection].domainname}}
+                </div>
+
+                <!-- Microsoft365 Buttons -->
+                <div v-if="isExamType('microsoft365')" class="d-flex flex-column gap-2">
+                <!-- Connect Button -->
+                <button v-if="!config.accessToken" @click="openAuthWindow()" class="btn btn-sm btn-primary">
+                    <img src="/src/assets/img/svg/win.svg" width="24" height="24">
+                    <span class="ms-1">Verbinden</span>
                 </button>
 
-                <button v-if="(serverstatus.examtype === 'microsoft365' && this.config.accessToken && !serverstatus.msOfficeFile)"  @click="onedriveUploadselect()" class="btn btn-sm btn-info mt-1" style=" white-space: nowrap;  width: 170px;overflow: hidden; text-overflow: ellipsis; ">
-                    <img  src="/src/assets/img/svg/win.svg" xmlns="http://www.w3.org/2000/svg"  width="24" height="24">
-                    <span style="padding: 0 6px 0 4px; vertical-align:middle;"> Datei wählen </span>
+                <!-- File Select Button -->
+                <button v-if="config.accessToken && !serverstatus.examSections[serverstatus.activeSection].msOfficeFile" @click="onedriveUploadselect()" class="btn btn-sm btn-info text-truncate">
+                    <img src="/src/assets/img/svg/win.svg" width="24" height="24">
+                    <span class="ms-1">Datei wählen</span>
                 </button>
 
-                <button v-if="(serverstatus.examtype === 'microsoft365' && this.config.accessToken && serverstatus.msOfficeFile)"  @click="onedriveUploadselect()" class="btn btn-sm btn-success mt-1" style=" white-space: nowrap;  width: 170px;overflow: hidden; text-overflow: ellipsis; ">
-                    <img  src="/src/assets/img/svg/win.svg" xmlns="http://www.w3.org/2000/svg"  width="24" height="24">
-                    <span style="padding: 0 6px 0 4px; vertical-align:middle;">{{serverstatus.msOfficeFile.name}} </span>
+                <!-- Selected File Button -->
+                <button v-if="config.accessToken && serverstatus.examSections[serverstatus.activeSection].msOfficeFile" @click="onedriveUploadselect()" class="btn btn-sm btn-success text-truncate">
+                    <img src="/src/assets/img/svg/win.svg" width="24" height="24">
+                    <span class="ms-1">{{serverstatus.examSections[serverstatus.activeSection].msOfficeFile.name}}</span>
                 </button>
 
-                <button v-if="(serverstatus.examtype === 'microsoft365' && this.config.accessToken )"  @click="logout365()" class="btn btn-sm btn-warning mt-1" style=" white-space: nowrap;  width: 170px;overflow: hidden; text-overflow: ellipsis; ">
-                    <img  src="/src/assets/img/svg/win.svg" xmlns="http://www.w3.org/2000/svg"  width="24" height="24">
-                    <span style="padding: 0 6px 0 4px; vertical-align:middle;"> Logout </span>
+                <!-- Logout Button -->
+                <button v-if="config.accessToken" @click="logout365()" class="btn btn-sm btn-warning">
+                    <img src="/src/assets/img/svg/win.svg" width="24" height="24">
+                    <span class="ms-1">Logout</span>
                 </button>
-
+                </div>
             </div>
         </div>
-        <br>
 
+
+
+
+
+        <!-- Files Section START -->
+        <div class="mb-4" style="display: inline-block; width: 100%; position: relative;">
+            <div class=" m-1 mt-3" style="display: inline-block;">{{$t("dashboard.materials")}}</div>
+            <div class="btn btn-sm m-1 btn-cyan plusbutton " @click="defineMaterials('all');hideDescription();" @mouseover="showDescription($t('dashboard.definematerials'))" @mouseout="hideDescription"  style="">+</div>
+            <MaterialsList class="m-1" :examSection="serverstatus.examSections[serverstatus.activeSection]"  @remove-file="handleFileRemove" @show-preview="showBase64FilePreview" @show-image-preview="showBase64ImagePreview" @play-audio-file="playAudioFile"/>   
+        </div>
+        <!-- Files Section END -->
+
+
+
+
+        
+
+
+        <!-- BIP Section START -->
+        <div v-if="bipToken && this.serverstatus.bip" class="mb-4">
+            <span class="small m-1">{{$t("dashboard.bildungsportal")}}</span><span v-if="bipToken" class="small m-1 me-0 text-secondary">(verbunden)</span>
+            <div id="biploginbutton" @click="showBipInfo()" class="disabledbutton btn btn-success m-1" style="padding:0;">
+                <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
+                <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
+            </div> 
+        </div>
+        <!-- BIP Section END -->
+        
         <div id="description" class="btn m-1"  v-if="showDesc">{{ currentDescription }}</div>
         <div id="statusdiv" class="btn btn-warning m-1"> {{$t('dashboard.connected')}}  </div>
 
@@ -169,7 +202,20 @@
         </span>
        
     </div>
-    <!-- SIDEBAR end -->
+    <!-- SIDEBAR END -->
+
+
+     <!-- AUDIO Player start -->
+     <div id="aplayer" >
+            <div style="text-align: left; margin-left: 40px;">{{ audioFilename }} </div>
+            <audio id="audioPlayer" controls controlsList="nodownload">
+                <source :src="audioSource" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <button  id="audioclose" type="button" class="btn-close" style="" title="close" ></button> 
+        </div>
+    <!-- AUDIO Player end -->
+
 
 
 
@@ -178,7 +224,7 @@
         <div id="setupdiv">
             <!-- <div class="swal2-icon swal2-question swal2-icon-show" style="display: flex;"><div class="swal2-icon-content">?</div></div> -->
             <div class="mb-3"><h5 style="display: inline">{{ $t('dashboard.extendedsettings') }}</h5></div>
-            <div class="m-1 mb-2" :class="(serverstatus.examtype === 'eduvidual' || serverstatus.examtype === 'gforms') ? 'disabledexam' : ''">
+            <div class="m-1 mb-2" :class="lockInExammode ? 'disabledexam':''">
                 <label for="abgabeintervalSlider" class="form-check-label"> {{$t('dashboard.autoget')}} </label>
                 <span v-if="serverstatus.abgabeintervalPause > 0" class="ms-2 text-black-50">| {{serverstatus.abgabeintervalPause}}min </span>
                 <span v-else class="ms-2 text-black-50">| {{$t('dashboard.disabled')}}</span>
@@ -206,52 +252,38 @@
                 <input id="screenshotOcr" type="checkbox" :title="$t('dashboard.ocrinfo')" v-model="serverstatus.screenshotocr" class="form-check-input" @change="updateScreenshotInterval">
                 <label for="screenshotOcr" class="form-check-label">{{$t('dashboard.ocr')}}</label>
             </div>
-
             <div class="form-check form-switch  m-1 mb-2">
-                <input v-model=serverstatus.groups @click="setupGroups()" :title="$t('dashboard.groupinfo')" checked=false class="form-check-input" type="checkbox" id="activategroups">
+                <input v-model=serverstatus.useExamSections @click="" :title="$t('dashboard.activatesections')" checked=false class="form-check-input" type="checkbox" id="activatesections">
+                <label class="form-check-label">{{$t('dashboard.activatesections')}}   </label><br>
+            </div>
+            <div class="form-check form-switch  m-1 mb-2">
+                <input v-model=serverstatus.examSections[serverstatus.activeSection].groups @click="setupGroups()" :title="$t('dashboard.groupinfo')" checked=false class="form-check-input" type="checkbox" id="activategroups">
                 <label class="form-check-label">{{$t('dashboard.groups')}}   </label><br>
             </div>
-
             <div v-if="config.bipIntegration" class="form-check form-switch  m-1 mb-2" >
                 <input v-model=serverstatus.requireBiP :title="$t('control.biprequired')" checked=false class="form-check-input" type="checkbox" id="activatebip">
                 <label class="form-check-label">{{$t('dashboard.bildungsportal')}}   </label><br>
             </div>
-
             <div class="form-check form-switch  m-1 mb-2">
                 <input v-model=directPrintAllowed @click="checkforDefaultprinter()" :title="$t('dashboard.allowdirectprint')" checked=false class="form-check-input" type="checkbox" id="directprint">
                 <label class="form-check-label">{{$t('dashboard.directprint')}}   </label><br>
                 <div v-if="defaultPrinter" class="ellipsis text-black-50"> {{ defaultPrinter }}</div>
                 <div v-if="!defaultPrinter" class="ellipsis text-black-50"> kein Drucker gewählt</div>
             </div>
-
             <hr>
-
             <span><h6 style="display: inline">{{ $t('dashboard.defaultprinter') }}</h6></span>
             <div v-if="(availablePrinters.length < 1)">
                 <button class="btn btn-secondary mt-1 mb-0"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" >  no printer found </button>
             </div>
-            
-
-
-
             <div v-for="printer in availablePrinters" :key="printer" style="position: relative;">
-               
                 <button @click="selectPrinter(printer)" :class="{'btn-cyan': defaultPrinter === printer}" class="printerbutton btn btn-secondary mt-1 mb-0" @mouseenter="visiblePrinter = printer" @mouseleave="visiblePrinter = null"><img src="/src/assets/img/svg/print.svg" alt="print" width="22" height="22" /> {{ printer }} </button>
                 <div v-if="visiblePrinter === printer" class="tooltip-content"> {{ printer }} </div>
-
                 <!-- Icon für den Standarddrucker -->
                 <img v-if="printer === defaultPrinter" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" />
             </div>
-
-
-
-
-
-            
             <div v-if="currentpreviewPath && defaultPrinter">
                 <button id="printButton" class="btn btn-dark mt-1 mb-0" @click="printBase64();hideSetup()"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" > Print: {{ currentpreviewname }} </button>
             </div> 
-               
             <div>  <!-- ok button resets currentpreviewPath / print button only appears if currentpreviewPath is set and defaultprinter is set -->
                 <div id="okButton" class="btn mt-3 btn-success" @click="hideSetup(); this.currentpreviewPath=null;">OK</div>
             </div>
@@ -262,18 +294,78 @@
 
    
     <div :key="7" id="content" class="fadeinslow p-3">
-        <!-- control buttons start -->        
-        <div v-if="(serverstatus.exammode && numberOfConnections == 1)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:128px; height:62px;" @click="endExam();hideDescription();"  @mouseover="showDescription($t('dashboard.exitkiosk'))" @mouseout="hideDescription"  >                                                                                                                                         <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.stopexamsingle')}} </div></div>
-        <div v-if="(serverstatus.exammode && numberOfConnections != 1)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:128px; height:62px;" @click="endExam();hideDescription();"  @mouseover="showDescription($t('dashboard.exitkiosk'))" @mouseout="hideDescription"  >                                                                                                                                         <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.stopexam')}} </div></div>
+       
 
-        <div v-if="(!serverstatus.exammode)" class="btn btn-teal m-1 mt-0 text-start ms-0"  @click="startExam();hideDescription();"  @mouseover="showDescription($t('dashboard.startexamdesc'))" @mouseout="hideDescription" :class="(serverstatus.examtype === 'microsoft365' && (!this.config.accessToken || !serverstatus.msOfficeFile))? 'disabledgreen':''" style="width:128px; height:62px;">  <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.startexam')}}</div></div>
-        <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="sendFiles('all');hideDescription();"   @mouseover="showDescription($t('dashboard.sendfile'))" @mouseout="hideDescription"  style="width:62px; height:62px;"><img src="/src/assets/img/svg/document-send.svg" class="mt-2" width="32" height="32"></div>
-        <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="getFiles('all', true);hideDescription();"  @mouseover="showDescription($t('dashboard.getfile'))" @mouseout="hideDescription"  :class="(serverstatus.examtype === 'eduvidual' || serverstatus.examtype === 'gforms'|| serverstatus.examtype === 'website')? 'disabledblue':''"  style="width:62px; height:62px;" ><img src="/src/assets/img/svg/edit-download.svg" class="mt-2" width="32" height="32"></div>
-        <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="loadFilelist(workdirectory);hideDescription();"  @mouseover="showDescription($t('dashboard.showworkfolder'))" @mouseout="hideDescription"  style="width: 62px; height:62px;"><img src="/src/assets/img/svg/folder-open.svg" class="mt-2" width="32" height="32" ></div>
-        <div v-if="(serverstatus.screenslocked)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:62px; height:62px;" @click="lockscreens(false);hideDescription();"> <img src="/src/assets/img/svg/eye-fill.svg" class="white mt-2" width="32" height="32" >   </div>
-        <div v-if="(!serverstatus.screenslocked)" class="btn btn-dark m-1 mt-0 text-start ms-0 " style="width:62px; height:62px;" @click="lockscreens(true);hideDescription();"  @mouseover="showDescription($t('dashboard.lock'))" @mouseout="hideDescription" > <img src="/src/assets/img/svg/eye-slash-fill.svg" class="white mt-2" width="32" height="32" >  </div>
-        <div class="btn btn-dark m-1 mt-0 ms-0 text-start" @mouseover="showDescription($t('dashboard.del'))" @mouseout="hideDescription" style="width:62px; height:62px;" @click="delfolderquestion()"> <img src="/src/assets/img/svg/edit-delete.svg" class="mt-2" width="32" height="32" ></div>
-        <!-- control buttons end -->
+
+
+        <!-- CONTROL BUTTONS START -->        
+        <div v-if="(serverstatus.exammode && numberOfConnections == 1)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:128px; height:62px;" @click="endExam();hideDescription();"  @mouseover="showDescription($t('dashboard.exitkiosk'))" @mouseout="hideDescription"  >
+            <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.stopexamsingle')}} </div>
+        </div>
+        <div v-if="(serverstatus.exammode && numberOfConnections != 1)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:128px; height:62px;" @click="endExam();hideDescription();"  @mouseover="showDescription($t('dashboard.exitkiosk'))" @mouseout="hideDescription"  >
+            <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.stopexam')}} </div>
+        </div>
+        <div v-if="(!serverstatus.exammode)" class="btn btn-teal m-1 mt-0 text-start ms-0"  @click="startExam();hideDescription();"  @mouseover="showDescription($t('dashboard.startexamdesc'))" @mouseout="hideDescription" :class="(serverstatus.examSections[serverstatus.activeSection].examtype === 'microsoft365' && (!this.config.accessToken || !serverstatus.examSections[serverstatus.activeSection].msOfficeFile))? 'disabledgreen':''" style="width:128px; height:62px;">  
+            <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> 
+            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.startexam')}}</div>
+        </div>
+        <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="getFiles('all', true);hideDescription();"  @mouseover="showDescription($t('dashboard.getfile'))" @mouseout="hideDescription"  :class="lockDownload ? 'disabledexam':''"  style="width:128px; height:62px;" >
+            <img src="/src/assets/img/svg/edit-download.svg" class="mt-2" width="32" height="32" style="vertical-align: top;">
+            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;">{{$t('dashboard.getfiles')}}</div>
+        </div>
+        <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="loadFilelist(workdirectory);hideDescription();"  @mouseover="showDescription($t('dashboard.showworkfolder'))" @mouseout="hideDescription"  style="width: 128px; height:62px;">
+            <img src="/src/assets/img/svg/folder-open.svg" class="mt-2" width="32" height="32" style="vertical-align: top;" >
+            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:60px; font-size:0.8em;">{{$t('dashboard.workfolder')}}</div>
+        </div>
+        <div v-if="bipToken && serverstatus.bip" @mouseover="showDescription($t('dashboard.bipinfo'))" @mouseout="hideDescription" class="btn m-1 mt-0 ms-0 text-start p-1 pt-2 ps-2" :class="bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'" @click="toggleBipStatus" style="width:128px; height:62px;">
+            <img src="/src/assets/img/svg/globe.svg" class=" mt-1" width="32" height="32" style="vertical-align: top;"> 
+            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;" class="">BiP-Status {{bipStatus}}</div>
+        </div>       
+
+
+ 
+
+        <div class="tab-buttons-container">
+            <div class="btn btn-dark tab-button" 
+                @click="sendFiles('all');hideDescription();" 
+                @mouseover="showDescription($t('dashboard.sendfile'))" 
+                @mouseout="hideDescription">
+                <img src="/src/assets/img/svg/document-send.svg" width="24" height="24">
+            </div>
+
+            <div v-if="serverstatus.screenslocked" 
+                class="btn btn-danger tab-button" 
+                @click="lockscreens(false);hideDescription();">
+                <img src="/src/assets/img/svg/eye-fill.svg" class="white" width="24" height="24">
+            </div>
+
+            <div v-else 
+                class="btn btn-dark tab-button" 
+                @click="lockscreens(true);hideDescription();" 
+                @mouseover="showDescription($t('dashboard.lock'))" 
+                @mouseout="hideDescription">
+                <img src="/src/assets/img/svg/eye-slash-fill.svg" class="white" width="24" height="24">
+            </div>
+
+            <div class="btn btn-dark tab-button" 
+                @mouseover="showDescription($t('dashboard.del'))" 
+                @mouseout="hideDescription" 
+                @click="delfolderquestion">
+                <img src="/src/assets/img/svg/edit-delete.svg" width="24" height="24">
+            </div>
+        </div>
+
+
+
+        <!-- CONTROL BUTTONS END -->
+
+
+
+
+
+
+
+
 
 
         <!-- studentlist start -->
@@ -282,13 +374,11 @@
                 <div v-for="student in studentwidgets" :key="student.token" style="cursor:auto" v-bind:class="(!student.focus)?'focuswarn':''" class="studentwidget btn rounded-3 btn-block">
                     <div v-if="student.clientname">
                         <div class="studentimage rounded" style="position: relative; height:132px;">  
-                            <button v-if="serverstatus.examtype === 'editor' && !this.serverstatus.languagetool && this.serverstatus.spellchecklang !== 'none'" @mouseover="showDescription($t('dashboard.allowspellcheck'))" @mouseout="hideDescription" @click='activateSpellcheckForStudent(student.token,student.clientname)' type="button" class="btn btn-sm pt-1 mt-2 pe-1 float-end" style="z-index:1000; position:relative;"><img src="/src/assets/img/svg/autocorrection.svg" class="widgetbutton" width="22" height="22" ></button> 
+                            <button v-if="serverstatus.examSections[serverstatus.activeSection].examtype === 'editor' && !this.serverstatus.examSections[serverstatus.activeSection].languagetool && this.serverstatus.examSections[serverstatus.activeSection].spellchecklang !== 'none'" @mouseover="showDescription($t('dashboard.allowspellcheck'))" @mouseout="hideDescription" @click='activateSpellcheckForStudent(student.token,student.clientname)' type="button" class="btn btn-sm pt-1 mt-2 pe-1 float-end" style="z-index:1000; position:relative;"><img src="/src/assets/img/svg/autocorrection.svg" class="widgetbutton" width="22" height="22" ></button> 
                             <div v-cloak :id="student.token" style="position: relative;background-size: cover; height: 132px;" v-bind:style="(student.imageurl && now - 20000 < student.timestamp)? `background-image: url('${student.imageurl}')`:'background-image: url(user-red.svg)'"></div>
-                           
                             <div v-if="student.virtualized && now - 20000 < student.timestamp" class="virtualizedinfo" >{{$t("dashboard.virtualized")}}</div>
                             <div v-if="!student.focus && now - 20000 < student.timestamp" class="kioskwarning" >{{$t("dashboard.leftkiosk")}}</div>
                             <div v-if="student.status.sendexam && now - 20000 < student.timestamp" class="examrequest" >{{$t("dashboard.examrequest")}}</div>
-                            
                             <span>   
                                 <div v-if="now - 20000 < student.timestamp" style="display: inline-block; overflow: hidden; width: 140px; height: 22px" v-bind:title="(student.files) ? 'Documents: '+student.files : ''"> 
                                     <img v-for="file in student.files" style="width:22px; margin-left:-4px; position: relative; filter: sepia(10%) hue-rotate(306deg) brightness(0.3) saturate(75);" class="" src="/src/assets/img/svg/document.svg">
@@ -296,7 +386,6 @@
                                 <div v-if="now - 20000 < student.timestamp" style="display: inline-block; margin: 0px; position: absolute; right: 4px;" >
                                     <img src="/src/assets/img/svg/edit-delete.svg" width="22" height="22" class="delfolderstudent" @click="delfolderquestion(student.token)"  @mouseover="showDescription($t('dashboard.delsingle'))" @mouseout="hideDescription" >
                                 </div>
-
                                 <br>
                                 {{ truncatedClientName(student.clientname) }}  
                                 <button  @click='kick(student.token,student.clientip)'  @mouseover="showDescription($t('dashboard.kick'))" @mouseout="hideDescription" type="button" class=" btn-close  btn-close-white pt-1 pe-2 float-end"></button> 
@@ -307,14 +396,17 @@
                             <button v-if="(now - 20000 > student.timestamp)" type="button" class="btn btn-outline-danger btn-sm " style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">{{$t('dashboard.offline')}} </button>
                             <button v-if="(now - 20000 < student.timestamp) && student.exammode && student.focus"  @click='showStudentview(student)' type="button" class="btn btn-outline-warning btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;">{{$t('dashboard.secure')}}</button>
                             <button v-if="(now - 20000 < student.timestamp) && !student.focus "   @click='restore(student.token)' type="button" class="btn btn-danger btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> {{$t('dashboard.restore')}} </button>
-                            <button v-if="(now - 20000 < student.timestamp) && serverstatus.groups && student.status.group == 'a' "   @click='quickSetGroup(student)' type="button" class="btn-click-feedback2 btn btn-info btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> A  </button>
-                            <button v-if="(now - 20000 < student.timestamp) && serverstatus.groups && student.status.group == 'b' "  @click='quickSetGroup(student)' type="button" class="btn-click-feedback1 btn btn-warning btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> B  </button>
+                            <button v-if="(now - 20000 < student.timestamp) && serverstatus.examSections[serverstatus.activeSection].groups && student.status.group == 'a' "   @click='quickSetGroup(student)' type="button" class="btn-click-feedback2 btn btn-info btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> A  </button>
+                            <button v-if="(now - 20000 < student.timestamp) && serverstatus.examSections[serverstatus.activeSection].groups && student.status.group == 'b' "  @click='quickSetGroup(student)' type="button" class="btn-click-feedback1 btn btn-warning btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> B  </button>
                         </div>
                     </div>
                 </div> 
             </draggable>  
         </div>
         <!-- studentlist end -->
+
+
+
     </div>
  
     <div style="position: fixed; bottom:20px; right: 20px; filter:opacity(50%)" class="col d-inlineblock btn " @click="sortStudentWidgets()">
@@ -326,14 +418,23 @@
 
 
 
+
+
+
+
+
+
 <script >
 import { VueDraggableNext } from 'vue-draggable-next'
-import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile, createSharingLink, fileExistsInAppFolder, downloadFilesFromOneDrive} from '../msalutils/onedrive'
-import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
-import { loadFilelist, print, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64 } from '../utils/filemanager'
-import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore } from '../utils/exammanagement.js'
 import { v4 as uuidv4 } from 'uuid'
 import {SchedulerService} from '../utils/schedulerservice.js'
+import MaterialsList from '../components/materialsList.vue'
+
+import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile, createSharingLink, fileExistsInAppFolder, downloadFilesFromOneDrive} from '../msalutils/onedrive'
+import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
+import { loadFilelist, print, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview } from '../utils/filemanager'
+import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore, defineMaterials } from '../utils/exammanagement.js'
+import { getTestURL, getTestID, getFormsID, activateSpellcheck } from '../utils/examsetup.js'
 
 class EmptyWidget {
     constructor() {
@@ -343,10 +444,10 @@ class EmptyWidget {
     }
 }
 
-
 export default {
     components: {
         draggable: VueDraggableNext,
+        MaterialsList: MaterialsList
     },
     data() {
         return {
@@ -393,33 +494,165 @@ export default {
             availablePrinters: [],
             directPrintAllowed: false,
             visiblePrinter: null,
+            audioSource:'',
+            audioFilename: '',
+
+            bipToken:this.$route.params.bipToken === 'false' ?  false : this.$route.params.bipToken,   // parameter werden immer als string "false" übergeben, convert to bool
+            bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
+            bipUsername:this.$route.params.bipUsername === 'false' ?  false : this.$route.params.bipUsername,
+            bipStatus: "closed", // "open" or "closed" or "offline"
+
             serverstatus:{   // this object contains all neccessary information for students about the current exam settings
+                bip: false,
+                id: "1234",
+                examName: this.$route.params.servername,
+                examDate: new Date().toISOString().slice(0, 19),
+                examDurationMinutes: 100, 
+                pin: this.$route.params.pin,
+                requireBiP: false,
                 exammode: false,
-                examtype: 'math',
                 delfolderonexit: true,
-                spellchecklang: 'de-DE',
-                suggestions: false,
-                moodleTestId: null,
-                moodleDomain: 'eduvidual.at',
-                moodleURL:null,
-                cmargin: { side: 'right', size: 3 },
-                gformsTestId: null,
                 screenshotinterval: 4,
                 abgabeintervalPause:6,
-                msOfficeFile: null,
                 screenslocked: false,
-                pin: this.$route.params.pin,
-                linespacing: 1,
-                unlockonexit: false,
-                requireBiP: false,
-                groups: false,
-                groupA: [],
-                groupB: []
+                screenshotocr: false,
+                examTeachers: [],
+                examSecurityKey: "oI9xGzHkUFe7Lg2iTXHkYp4pDab3Nvj4kFEOqA93cZE=",
+                useExamSections: false, //if false exam section 1 is used and no tabs are displayed
+                activeSection: 1,
+                examSections: {
+                    1: {
+                        examtype: 'math',   
+                        timelimit: 60,
+                        locked: false,  // if true, the current section is locked and no changes can be made - this means its currently active for students
+                        sectionname: "Abschnitt 1",
+                        spellchecklang: 'de-DE', 
+                        suggestions: false, 
+
+                        moodleTestId: null, 
+                        moodleDomain: 'eduvidual.at',
+                        moodleURL:null, 
+                        cmargin: { side: 'right', size: 3 }, 
+
+                        gformsTestId: null,
+                        msOfficeFile: null, 
+                        linespacing: 2, 
+                        languagetool: false,
+                        fontfamily: "sans-serif", 
+                        fontsize: '16px',
+                        audioRepeat: 0,
+                        domainname: false,
+
+                        groups: false, 
+                        groupA: { users: [], examInstructionFiles: [] }, 
+                        groupB: { users: [], examInstructionFiles: [] }
+                    },
+                    2: {
+                        examtype: 'math',   
+                        timelimit: 60,
+                        locked: false,
+                        sectionname: "Abschnitt 2",
+                        spellchecklang: 'de-DE', 
+                        suggestions: false, 
+
+                        moodleTestId: null, 
+                        moodleDomain: 'eduvidual.at',
+                        moodleURL:null, 
+                        cmargin: { side: 'right', size: 3 }, 
+
+                        gformsTestId: null,
+                        msOfficeFile: null, 
+                        linespacing: 2, 
+                        languagetool: false,
+                        fontfamily: "sans-serif", 
+                        fontsize: '16px',
+                        audioRepeat: 0,
+                        domainname: false,
+
+                        groups: false, 
+                        groupA: { users: [], examInstructionFiles: [] }, 
+                        groupB: { users: [], examInstructionFiles: [] }
+                    },
+                    3: {
+                        examtype: 'math',   
+                        timelimit: 60,
+                        locked: false,
+                        sectionname: "Abschnitt 3",
+                        spellchecklang: 'de-DE', 
+                        suggestions: false, 
+
+                        moodleTestId: null, 
+                        moodleDomain: 'eduvidual.at',
+                        moodleURL:null, 
+                        cmargin: { side: 'right', size: 3 }, 
+
+                        gformsTestId: null,
+                        msOfficeFile: null, 
+                        linespacing: 2, 
+                        languagetool: false,
+                        fontfamily: "sans-serif", 
+                        fontsize: '16px',
+                        audioRepeat: 0,
+                        domainname: false,
+
+                        groups: false, 
+                        groupA: { users: [], examInstructionFiles: [] }, 
+                        groupB: { users: [], examInstructionFiles: [] }
+                    },
+                    4: {
+                        examtype: 'math',   
+                        timelimit: 60,
+                        locked: false,
+                        sectionname: "Abschnitt 4",
+                        spellchecklang: 'de-DE', 
+                        suggestions: false, 
+
+                        moodleTestId: null, 
+                        moodleDomain: 'eduvidual.at',
+                        moodleURL:null, 
+                        cmargin: { side: 'right', size: 3 }, 
+
+                        gformsTestId: null,
+                        msOfficeFile: null, 
+                        linespacing: 2, 
+                        languagetool: false,
+                        fontfamily: "sans-serif", 
+                        fontsize: '16px',
+                        audioRepeat: 0,
+                        domainname: false,
+
+                        groups: false, 
+                        groupA: { users: [], examInstructionFiles: [] }, 
+                        groupB: { users: [], examInstructionFiles: [] }
+                    }
+                },                
             }
         };
     },
 
-
+computed: {
+    lockInExammode() {
+        if (!this.serverstatus.useExamSections) {
+            return this.serverstatus.exammode;
+        }
+        return this.serverstatus.exammode && this.serverstatus.examSections[this.serverstatus.activeSection].locked;
+    },
+    
+    lockDownload() {
+        const examType = this.serverstatus.examSections[this.serverstatus.activeSection].examtype;
+        return examType === 'eduvidual' || examType === 'gforms' || examType === 'website';
+    },
+    
+    lockPdfSummary() {
+        const examType = this.serverstatus.examSections[this.serverstatus.activeSection].examtype;
+        return examType === 'eduvidual' || examType === 'website' || examType === 'math' || examType === 'microsoft365';
+    },
+    
+    lockSendFile() {
+        const examType = this.serverstatus.examSections[this.serverstatus.activeSection].examtype;
+        return this.studentlist.length === 0 || examType === 'eduvidual' || examType === 'microsoft365';
+    }
+},
     methods: {
         /**
          * Microsoft OneDrive API Authentication and File Handling
@@ -433,7 +666,6 @@ export default {
         fileExistsInAppFolder: fileExistsInAppFolder,
         downloadFilesFromOneDrive: downloadFilesFromOneDrive,
 
-
         /**
          * Drag & Drop Methods
          */
@@ -441,7 +673,6 @@ export default {
         handleMoveItem:handleMoveItem,
         sortStudentWidgets:sortStudentWidgets,
         initializeStudentwidgets:initializeStudentwidgets,
-
 
         /**
          * Dashboard Explorer (Filemanager)
@@ -458,7 +689,8 @@ export default {
         showWorkfolder:showWorkfolder,                              // makes the dashboard explorer visible
         fdelete:fdelete,                                            // deletes a file
         openLatestFolder:openLatestFolder,                          // opens the newest folder that belongs to the current visible student
-
+        showBase64FilePreview:showBase64FilePreview,                // displays a base64 encoded pdf in the preview panel
+        showBase64ImagePreview:showBase64ImagePreview,              // displays a base64 encoded image in the preview panel
 
         /**
          * Exam Managment functions
@@ -473,7 +705,16 @@ export default {
         stopserver:stopserver,                       //Stop and Exit Exam Server Instance
         delfolderquestion: delfolderquestion,         // delete contents of studentfolder on student pc
         activateSpellcheckForStudent: activateSpellcheckForStudent,  // activate spellcheck for specific student only
+        defineMaterials: defineMaterials,             // define materials for exam
    
+        /**
+         * Exam Setup Functions
+         */
+        getTestURL: getTestURL,
+        getTestID: getTestID,
+        getFormsID: getFormsID,
+        activateSpellcheck: activateSpellcheck,
+
 
 
 
@@ -483,13 +724,15 @@ export default {
          * Checks Screenshots and MSO Share Links
          */
         async fetchInfo() {
-            if (!this.config.accessToken && this.serverstatus.examtype === "microsoft365"){
+            if (!this.config.accessToken &&  this.isExamType("microsoft365")){
                 this.config = await ipcRenderer.invoke('getconfigasync')  // this is only needed in order to get the accesstoken from the backend for MSAuthentication
             }
             this.now = new Date().getTime()
 
             this.hostip = ipcRenderer.sendSync('checkhostip')
             if (!this.hostip) return; 
+
+            this.updateBiPServerInfo(this.bipStatus);
 
 
             let result = await ipcRenderer.invoke('studentlist', this.servername)
@@ -507,14 +750,15 @@ export default {
             if (this.studentlist && this.studentlist.length > 0){
                 this.studentlist.forEach( student => { 
                     
+                    // update active student (for student-details) and student image
                     if (this.activestudent && student.token === this.activestudent.token) { this.activestudent = student}  // on studentlist-receive update active student (for student-details)
-                    if (!student.imageurl){ student.imageurl = "user-black.svg"  }
-                    
+                    if (!student.imageurl){ student.imageurl = "user-black.svg"  }            
+
                     // if the chosen exam mode is OFFICE and everything is Setup already check if students already got their share link (re-connect, late-connect)
-                    if (this.serverstatus.examtype === "microsoft365" && this.config.accessToken && this.serverstatus.msOfficeFile){
+                    if ( this.isExamType("microsoft365") && this.config.accessToken && this.serverstatus.examSections[this.serverstatus.activeSection].msOfficeFile){
                         if (!student.status.msofficeshare) {  // this one is late to the party
                             console.log("dashboard @ fetchInfo: this student has no sharing link yet")
-                            this.onedriveUploadSingle(student, this.serverstatus.msOfficeFile)   // trigger upload of this.serverstatus.msOfficeFile, create sharelink and set student.status.msofficeshare to sharelink
+                            this.onedriveUploadSingle(student, this.serverstatus.examSections[this.serverstatus.activeSection].msOfficeFile)   // trigger upload of this.serverstatus.msOfficeFile, create sharelink and set student.status.msofficeshare to sharelink
                         }
                     }
                     if (student.printrequest){  // student sent a printrequest to the teacher
@@ -523,7 +767,6 @@ export default {
                             this.processPrintrequest(student) //do not trigger twice from same student
                         } 
                         this.setStudentStatus({removeprintrequest:true}, student.token)  //request received.. remove it from the servers student object
-
                     }   
                 });
 
@@ -562,6 +805,69 @@ export default {
         }, 
 
 
+        // remove file from group a or b
+        handleFileRemove({ group, index }) {
+            if (group === 'A') { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.examInstructionFiles.splice(index, 1); } 
+            else {               this.serverstatus.examSections[this.serverstatus.activeSection].groupB.examInstructionFiles.splice(index, 1); }
+        },
+
+        // check if the current exam type is the same as the given type
+        isExamType(type) {
+            return this.serverstatus.examSections[this.serverstatus.activeSection].examtype === type;
+        },
+
+        // select exam type and trigger methods based on type
+        selectExamType(type) {
+            if (this.lockInExammode) return;
+            this.serverstatus.examSections[this.serverstatus.activeSection].examtype = type;
+            // Call existing methods based on type
+            if (type === 'editor') this.activateSpellcheck();
+            if (type === 'eduvidual') this.getTestID();
+            if (type === 'gforms') this.getFormsID();
+            if (type === 'website') this.getTestURL();
+        },
+
+        // get label for the current exam type
+        getSelectedExamTypeLabel() {
+            const type = this.serverstatus.examSections[this.serverstatus.activeSection].examtype;
+            switch(type) {
+            case 'math': return this.$t('dashboard.math');
+            case 'editor': return this.$t('dashboard.lang');
+            case 'eduvidual': return this.$t('dashboard.eduvidual');
+            case 'gforms': return this.$t('dashboard.gforms');
+            case 'website': return 'Website';
+            case 'microsoft365': return 'Microsoft365';
+            default: return 'Select Type';
+            }
+        },
+
+        // activate section and check if we need to lock the section (start exam section for all students)
+        activateSection(section){
+            this.serverstatus.activeSection = section
+            this.setServerStatus()
+
+            if (this.serverstatus.exammode && !this.serverstatus.examSections[this.serverstatus.activeSection].locked) {
+                this.$swal.fire({
+                    title: this.$t("dashboard.examsections"),
+                    icon: 'question',
+                    text: this.$t("dashboard.examsectionsinfo"),
+                    showCancelButton: true,
+                    cancelButtonText: this.$t("dashboard.no"),
+                    confirmButtonText: this.$t("dashboard.yes"),
+                    reverseButtons: true,
+                }).then(async (result) => {
+                    if (result.isConfirmed) {
+                        //inform all students to save current work
+                        //inform all students to archive/send current work
+                        //wait for all students to finish
+                        //activate new section for all student
+                        Object.values(this.serverstatus.examSections).forEach(section => {   section.locked = false    })
+                        this.serverstatus.examSections[this.serverstatus.activeSection].locked = true
+                    }
+                })    
+            }
+        },
+
         /**
          * triggered when abgabe slider is used in settings dialog
          * starts or stops the autofetch feature
@@ -595,310 +901,7 @@ export default {
             }
             this.setServerStatus(); // Änderungen speichern
         },
-
-        /**
-         * Google Forms
-         */
-         async getFormsID(){
-            this.$swal.fire({
-                title: this.$t("dashboard.gforms"),
-                icon: 'question',
-                input: 'text',
-                html: `
-                ${this.$t("dashboard.eduvidualidhint")} <br>
-                <span style="font-size:0.8em">
-                    (https://docs.google.com/forms/d/e/<span style="background-color: lightblue; padding:0 3px 0 3px;">1FAIpQLScuTG7yldD0VRhFgOC_2fhbVdgXn95Kf_w2rUbJm79S1kJBnA</span>/viewform)
-                </span>`,
-                inputValidator: (value) => {
-                    if (!value) {return 'No ID given!'}
-                }
-            }).then((input) => {
-                if (!input.value) {document.getElementById('examtype2').checked = true; this.serverstatus.examtype = "math"}
-                else {
-                    this.serverstatus.gformsTestId = input.value
-                    this.abgabeinterval.stop();
-                    this.autoabgabe = false;
-                }
-                this.setServerStatus()
-            })  
-        },
-
-        /**
-         * Eduvidual
-         */
-        async getTestID(){
-            this.$swal.fire({
-                title: this.$t("dashboard.eduvidualid"),
-                icon: 'question',
-                input: 'number',
-                input: 'url',
-                inputLabel: this.$t("dashboard.eduvidualidhint"),
-                inputPlaceholder: 'https://www.eduvidual.at/mod/quiz/view.php?id=6153159',
-                html: `                    
-                    <div  style="text-align: center; width: 150px; margin: auto auto;">
-                        <img  width="24" height="24" src="data:image/png;base64,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"/>
-                        <img  width="24" height="24" src="data:image/png;base64,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"/>
-                    </div>
-                    <br>
-                `,
-                inputValidator: (value) => {
-                    if (!value || !this.isValidMoodleDomainName(value) ) {return 'No valid domain given!'}
-                    let { moodledomain, testid } = this.extractDomainAndId(value);
-                    if ( !testid) { return 'No valid ID given!'}
-                }
-            }).then((input) => {
-                if (!input.value ) {
-                    document.getElementById('examtype2').checked = true; 
-                    this.serverstatus.examtype = "math";
-                    return;
-                }
-
-                let { moodledomain, testid } = this.extractDomainAndId(input.value);
-
-                this.serverstatus.moodleTestId = testid
-                this.serverstatus.moodleDomain = moodledomain
-                this.serverstatus.moodleURL = input.value
-
-                this.abgabeinterval.stop(); 
-                this.autoabgabe = false;  // no autoabgabe in this exam mode
-                this.setServerStatus()
-            })  
-        },
-
-
-        /**
-         * Website
-         */
-         async getTestURL(){
-            this.$swal.fire({
-                title: this.$t("dashboard.website"),
-                icon: 'question',
-                input: 'text',
-                html: `
-                    <div class="row m-4 mt-1">                   
-                       zB.: https://classtime.com
-                    </div>
-                    `,  
-                inputValidator: (value) => {
-                    if (!this.isValidFullDomainName(value)) {return 'Ungültige Domain!'}
-                }  
-            })
-            .then((input) => {
-                let domainname = input.value
-                this.serverstatus.domainname = this.isValidFullDomainName(  domainname ) ? domainname : null
-
-                if (!this.serverstatus.domainname) {document.getElementById('examtype2').checked = true; this.serverstatus.examtype = "math"}
-                else { this.abgabeinterval.stop(); this.autoabgabe = false;}  // no autoabgabe in this exam mode
-                //console.log( this.serverstatus.domainname )
-                this.setServerStatus()
-            })  
-        },
-
-
-        /**
-         * Text Editor
-         */
-        async activateSpellcheck(){
-            const inputOptions = new Promise((resolve) => {
-                setTimeout(() => {
-                    resolve({
-                        'de-DE': this.$t("dashboard.de"),
-                        'en-GB': this.$t("dashboard.en"),
-                        'fr-FR': this.$t("dashboard.fr"),
-                        'es-ES': this.$t("dashboard.es"),
-                        'it-IT': this.$t("dashboard.it"),
-                        'none':this.$t("dashboard.none"),
-                    })
-                }, 100)
-            })
-
-            const updateMarginValueDisplay = () => {
-                const marginValueInput = document.getElementById('marginValue');
-                const marginValueDisplay = document.getElementById('marginValueDisplay');
-                marginValueDisplay.textContent = marginValueInput.value;
-            };
-
-            const { value: language } = await this.$swal.fire({
-                customClass: {
-                    popup: 'my-popup',
-                    title: 'my-title',
-                    content: 'my-content',
-                    input: 'my-custom-input',
-                    actions: 'my-swal2-actions'
-                },
-                title: this.$t("dashboard.texteditor"),
-                html: `
-                <div class="my-content" style="font-size: 0.8em !important; text-align:left; margin-left:10px;">
-                    <div>
-                        <label >
-                            <h6>${this.$t("dashboard.cmargin-value")}</h6>
-                            <input style="width:100px" type="range" id="marginValue" name="margin_value" min="2" max="5" step="0.5" value="${this.serverstatus.cmargin.size}" />
-                            <div style="width:32px; display: inline-block"  id="marginValueDisplay">${this.serverstatus.cmargin.size}</div>(cm)
-                        </label>
-                        <br>
-                        <label>
-                            <input type="radio" name="correction_margin" value="left"  />
-                            ${this.$t("dashboard.cmargin-left")}
-                        </label>
-                        <label>
-                            <input type="radio" name="correction_margin" value="right" checked/>
-                            ${this.$t("dashboard.cmargin-right")}
-                        </label>
-                    </div>
-                    <div> 
-                        <h6> ${this.$t("dashboard.linespacing")}</h6>
-                        <label><input type="radio" name="linespacing" value="1"/> 1</label> &nbsp;
-                        <label><input type="radio" name="linespacing" value="2" checked/> 2</label> &nbsp;
-                        <label><input type="radio" name="linespacing" value="3"/> 3</label> &nbsp;
-                    </div>
-                    <div> 
-                        <h6>${this.$t("dashboard.fontfamily")}</h6>
-                        <label><input type="radio" name="fontfamily" value="serif"/> serif</label> &nbsp;
-                        <label><input type="radio" name="fontfamily" value="sans-serif" checked/> sans-serif</label> &nbsp;
-                    </div>
-                    <hr>
-                    <div>
-                        <h6>${this.$t("dashboard.audiorepeattitle")}</h6>
-                        <select id="audiorepeat" class="my-select">
-                            <option value="0">${this.$t("dashboard.audioallow")}</option>
-                            <option value="1">1 ${this.$t("dashboard.audiorepeat1")}</option>
-                            <option value="2">2 ${this.$t("dashboard.audiorepeat2")}</option>
-                            <option value="3">3 ${this.$t("dashboard.audiorepeat2")}</option>
-                            <option value="4">4 ${this.$t("dashboard.audiorepeat2")}</option>
-                        </select>
-                    </div>
-                   
-                    <hr>
-                    <div>
-                        <h6>${this.$t("dashboard.spellcheck")}</h6>
-                       
-                        <input class="form-check-input" type="checkbox" id="checkboxLT">
-                        <label class="form-check-label" for="checkboxLT"> LanguageTool ${this.$t("dashboard.activate")} </label> <br>
-                        <input class="form-check-input" type="checkbox" id="checkboxsuggestions">
-                        <label class="form-check-label" for="checkboxsuggestions"> ${this.$t("dashboard.suggest")} </label><br><br>
-                        <h6>${this.$t("dashboard.spellcheckchoose")}</h6>
-                    </div>
-                </div>`,
-                input: 'select',
-                inputOptions: inputOptions,
-                focusConfirm: false,
-                didOpen: () => {
-                    const marginValueInput = document.getElementById('marginValue');
-                    marginValueInput.addEventListener('input', updateMarginValueDisplay);
-                    document.getElementById('checkboxLT').checked = this.serverstatus.languagetool
-                    document.getElementById('checkboxsuggestions').checked = this.serverstatus.suggestions
-                },
-                willClose: () => {
-                    const marginValueInput = document.getElementById('marginValue');
-                    marginValueInput.removeEventListener('input', updateMarginValueDisplay);
-                },
-                inputValidator: (value) => {
-                    if (!value) {
-                    return 'You need to choose something!'
-                    }
-                },
-                preConfirm: () => {
-                    this.serverstatus.suggestions = document.getElementById('checkboxsuggestions').checked; 
-                    this.serverstatus.languagetool = document.getElementById('checkboxLT').checked; 
-
-                    const radioButtons = document.querySelectorAll('input[name="correction_margin"]');
-                    const marginValue = document.getElementById('marginValue').value;
-                    const linespacingradioButtons = document.querySelectorAll('input[name="linespacing"]');
-                    const fontfamilyradioButtons = document.querySelectorAll('input[name="fontfamily"]');
-                    const audioRepeat = document.getElementById('audiorepeat').value;
-     
-                    let selectedMargin = '';
-                    radioButtons.forEach((radio) => {
-                        if (radio.checked) {
-                            selectedMargin = radio.value;
-                        }
-                    });
-
-                    let selectedSpacing = '';
-                    linespacingradioButtons.forEach((radio) => {
-                        if (radio.checked) {
-                            selectedSpacing = radio.value;
-                        }
-                    });
-
-                    let selectedFont = '';
-                    fontfamilyradioButtons.forEach((radio) => {
-                        if (radio.checked) {
-                            selectedFont = radio.value;
-                        }
-                    });
-
-                    if (marginValue && selectedMargin) {
-                        this.serverstatus.cmargin = {
-                            side: selectedMargin,
-                            size: parseFloat(marginValue)
-                        }
-                       // console.log( this.serverstatus.cmargin)
-                    }
-
-                    this.serverstatus.linespacing = selectedSpacing
-                    this.serverstatus.fontfamily = selectedFont
-                    this.serverstatus.audioRepeat = audioRepeat
-                }
-            })
-            if (language) {
-                this.serverstatus.spellchecklang = language
-                if (language === 'none'){this.serverstatus.languagetool = false}
-            }  
-            else {
-                this.serverstatus.spellchecklang = 'de-DE'
-            }
-
-            this.setServerStatus()
-        },
-
-        extractDomainAndId(url) {
-            // Extract the full domain including subdomains
-            var domainRegex = /^(https?:\/\/)?([^\/]+)/i;
-            var match = url.match(domainRegex);
-            var fullDomain = match ? match[2] : null;
-
-            // Extract only the domain and TLD
-            var domainParts = fullDomain.split('.').slice(-2).join('.');
-            var moodledomain = domainParts;
-
-            var idRegex = /id=(\d+)/;
-            var idMatch = url.match(idRegex);
-            var testid = idMatch ? idMatch[1] : null;
-            return { moodledomain, testid };
-        },
-
-        isValidMoodleDomainName(url) {
-            // Improved regex for matching a domain name structure with optional protocol
-            var regex = /^(https?:\/\/)?(([a-z0-9-]+\.)+[a-z]{2,})(\/.*)?$/i;
-            return regex.test(url);
-        },
-
-        isValidDomainName(str) {
-            // Regex for matching a simple domain name structure
-           // var regex = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i;
-            var regex = /^([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
-            return regex.test(str);
-        },
-
-        isValidFullDomainName_old(str) {
-            // Regex for matching a simple domain name structure
-            var regex = /^(https?:\/\/)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i;
-            return regex.test(str);
-        },
-
-
-
-        isValidFullDomainName(str) {
-            try {
-                const url = new URL(str); // Versucht, die Eingabe als URL zu parsen
-                return url.protocol === "http:" || url.protocol === "https:"; // Nur HTTP/S erlauben
-            } catch (e) {
-                return false; // Wenn Parsing fehlschlägt, ist die URL ungültig
-            }
-        },
-
-
+      
         async showDescription(description) {
             this.currentDescription = description;
             this.showDesc = true;
@@ -906,6 +909,7 @@ export default {
         hideDescription() {
             this.showDesc = false;
         },
+
         visualfeedback(message, timeout=1000){
              this.$swal.fire({
                 text: message,
@@ -914,10 +918,11 @@ export default {
                 didOpen: () => { this.$swal.showLoading() }
             });
         },
-        // show visual feedback 
+
+        // show visual feedback for microsoft office files uploading
         visualfeedbackClosemanually(message){
             const closeWhenFinished = async () => {
-                while (!this.serverstatus.msOfficeFile) {
+                while (!this.serverstatus.examSections[this.serverstatus.activeSection].msOfficeFile) {
                     await new Promise((resolve) => setTimeout(resolve, 100));
                 }
                 this.$swal.close();
@@ -959,8 +964,7 @@ export default {
                             </div>
                             <div style="text-align: left;font-size: 0.8em;">${this.servername}
                             ${this.serverip}
-                            ${this.serverstatus.pin}
-                            
+                            ${this.serverstatus.pin} 
 
                             </div>
                         </div>`,
@@ -1033,15 +1037,20 @@ export default {
 
         // we save serverstatus everytime we start an exam - therefore exams can be resumed easily by the teacher if something wicked happens
         getPreviousServerStatus(){
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/getserverstatus/${this.servername}/${this.servertoken}`, { method: 'POST', headers: {'Content-Type': 'application/json' },})
+            let result = fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/getserverstatus/${this.servername}/${this.servertoken}`, { method: 'POST', headers: {'Content-Type': 'application/json' },})
             .then( res => res.json())
             .then( async (response) => {
-                if (response.serverstatus === false) {return}
+                if (response.serverstatus === false) {
+                    this.setServerStatus()  // there is no serverstatus - we need to set it to default
+                    return
+                }
                 this.serverstatus = response.serverstatus // we slowly move things over to a centra serverstatus object
          
-                if (this.serverstatus.examtype === "microsoft365"){  // unfortunately we can't automagically reconnect the teacher without violating privacy
+                
+
+                if (this.serverstatus.examSections[this.serverstatus.activeSection].examtype === "microsoft365"){  // unfortunately we can't automagically reconnect the teacher without violating privacy
                     this.serverstatus.exammode = false
-                    this.serverstatus.msOfficeFile = false
+                    this.serverstatus.examSections[this.serverstatus.activeSection].msOfficeFile = false
                     this.$swal.fire({
                         title: this.$t("dashboard.attention"),
                         text: this.$t("dashboard.msoWarn"),
@@ -1049,29 +1058,14 @@ export default {
                     })
                 }
 
-                if (this.serverstatus.languagetool){
-                    let response = await ipcRenderer.invoke("startLanguageTool")
-                    if (response){
-                        this.$swal.fire({
-                            text: "LanguageTool started!",
-                            timer: 1000,
-                            timerProgressBar: true,
-                            didOpen: () => { this.$swal.showLoading() }
-                        });
-                    }
-                    else {
-                        this.$swal.fire({
-                            text: "LanguageTool Error!",
-                            timer: 1000,
-                            timerProgressBar: true,
-                            didOpen: () => { this.$swal.showLoading() }
-                        });
-                    }
-                }
                 this.setServerStatus()  //  we fetched a backup of serverstatus and now we make sure the backend has the updated settings for the students to fetch
+                return true
             })
             .catch(err => { console.warn(err) })
+            return result
         },
+
+
         showCopyleft(){
             this.$swal.fire({
                 title: "<span id='cpleft' class='active' style='display:inline-block; transform: scaleX(-1); vertical-align: middle;'>&copy;</span> <span style='font-size:0.8em'>Thomas Michael Weissel </span>",
@@ -1086,12 +1080,12 @@ export default {
                 `,
             })
         },
+
         /**
          * store the current serverstatus object in the backend
          * this should be the goTo function from now on to update the backend in a single request
         */
         setServerStatus(){
-            //console.log(this.serverstatus)
             fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setserverstatus/${this.servername}/${this.servertoken}`, { 
                 method: 'POST',
                 headers: {'Content-Type': 'application/json' },
@@ -1103,108 +1097,47 @@ export default {
         },
 
 
+        // setup groups
+        // every user is automatically in group a (see control /registerclient) - this function resets group arrangement and pushes every user into group a
         async setupGroups(){
-            if (!this.serverstatus.groupA){   //temp fix for old exams (resume) without groups 
-                this.serverstatus.groupA = []
-                this.serverstatus.groupB = []
-            }
+            this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users = []
+            this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users = []
             // prepopulate group A
-            if (this.serverstatus.groupA.length == 0){
-                for (let student of this.studentlist) {
-                    student.status.group = "a"
-                    if (!this.serverstatus.groupA.includes(student.clientname)) {
-                        this.serverstatus.groupA.push(student.clientname)
-                    } 
-                }
-            }
+            for (let student of this.studentlist) {
+                student.status.group = "a"
+                if (!this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.includes(student.clientname)) {
+                    this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.push(student.clientname)
+                } 
+            } 
             await this.sleep(1000)
             this.setServerStatus()
         },
 
+        // push user from one group to the other
         quickSetGroup(student){
             // Remove student from groups if present
-            const indexA = this.serverstatus.groupA.indexOf(student.clientname);
-            const indexB = this.serverstatus.groupB.indexOf(student.clientname);
-            if (indexA > -1) { this.serverstatus.groupA.splice(indexA, 1);  }
-            if (indexB > -1) { this.serverstatus.groupB.splice(indexB, 1);  }
+            const indexA = this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.indexOf(student.clientname);
+            const indexB = this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users.indexOf(student.clientname);
+            if (indexA > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.splice(indexA, 1);  }
+            if (indexB > -1) { this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users.splice(indexB, 1);  }
             
             let studentWidget = this.studentwidgets.find(el => el.token === student.token);
 
             if (student.status.group == "a"){
                 //Add and Set         
-                this.serverstatus.groupB.push(student.clientname)  //update group arrays
+                this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users.push(student.clientname)  //update group arrays
                 this.setStudentStatus({group:"b"}, student.token)  //set student object (and inform student about group)
                 this.setServerStatus()
                 if(studentWidget){ studentWidget.status.group = "b"}                          
             }
             else {
                 //Add and Set
-                this.serverstatus.groupA.push(student.clientname)
+                this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.push(student.clientname)
                 this.setStudentStatus({group:"a"}, student.token) 
                 this.setServerStatus()
                 if(studentWidget){ studentWidget.status.group = "a"}
             }
         },
-
-
-
-        setGroup(student) {
-            this.$swal.fire({
-                title: 'Gruppe wählen',
-                html: `
-                    <h3>${student.status.group.toUpperCase()}</h3>
-                    <button id="btnA" class="swal2-button btn btn-info m-2" style="width: 64px; height: 64px;">A</button>
-                    <button id="btnB" class="swal2-button btn btn-warning m-2" style="width: 64px; height: 64px;">B</button>
-                `,
-                showConfirmButton: false,
-                didRender: () => {
-                    const btnA = document.getElementById('btnA');
-                    const btnB = document.getElementById('btnB');
-
-                    if (btnA && !btnA.dataset.listenerAdded) {
-                        btnA.addEventListener('click', () => {
-                            console.log('set to group A');
-    
-                            // Remove student from group A if present
-                            const indexA = this.serverstatus.groupA.indexOf(student.clientname);
-                            if (indexA > -1) { this.serverstatus.groupA.splice(indexA, 1);  }
-                            // Remove student from group B if present
-                            const indexB = this.serverstatus.groupB.indexOf(student.clientname);
-                            if (indexB > -1) { this.serverstatus.groupB.splice(indexB, 1);  }
-
-                            //Add and Set
-                            this.serverstatus.groupA.push(student.clientname)
-                            this.setStudentStatus({group:"a"}, student.token) 
-                            this.fetchInfo()
-                            this.$swal.close();
-                        });
-                        btnA.dataset.listenerAdded = 'true';
-                    }
-
-                    if (btnB && !btnB.dataset.listenerAdded) {
-                        btnB.addEventListener('click', () => {
-                            console.log('set to group B');
-                            // Remove student from group A if present
-                            const indexA = this.serverstatus.groupA.indexOf(student.clientname);
-                            if (indexA > -1) { this.serverstatus.groupA.splice(indexA, 1);  }
-                            // Remove student from group B if present
-                            const indexB = this.serverstatus.groupB.indexOf(student.clientname);
-                            if (indexB > -1) { this.serverstatus.groupB.splice(indexB, 1);  }
-
-                            //Add and Set
-                          
-                            this.serverstatus.groupB.push(student.clientname)
-                            this.setStudentStatus({group:"b"}, student.token) 
-                            this.fetchInfo()
-                            this.$swal.close();
-                        });
-                        btnB.dataset.listenerAdded = 'true';
-                    }
-                }
-            });
-        },
-
-
 
         /**
          * set student.studentstatus or student attributes serverside
@@ -1222,50 +1155,143 @@ export default {
             .catch(err => { console.error(err)});
         },
 
-
-
         selectPrinter(printer){
             this.defaultPrinter = printer
             console.log(`dashboard: selected default printer: ${this.defaultPrinter}`)
             console.log(`dashboard: allow direct print: ${this.directPrintAllowed}`)
         },
+
         checkforDefaultprinter(){
             if (!this.defaultPrinter){ document.getElementById('directprint').checked = false }
         },
+
         async hideSetup(){
             if (!this.defaultPrinter){ document.getElementById('directprint').checked = false  }
-            
             document.getElementById("setupoverlay").style.opacity = 0;
             document.getElementById('setupdiv').classList.remove('scaleIn');
             document.getElementById('setupdiv').classList.add('scaleOut');
-           
             await this.sleep(200)  //the transition setting is set to .3s
             document.getElementById("setupoverlay").style.display = "none";
             this.setServerStatus()
         },
+
         async showSetup(){
             this.availablePrinters = await ipcRenderer.invoke("getprinters")
-
             document.getElementById("setupoverlay").style.display = "flex";
             document.getElementById("setupoverlay").style.opacity = 1;
             document.getElementById('setupdiv').classList.remove('scaleOut');
             document.getElementById('setupdiv').classList.add('scaleIn'); 
         },
 
-  
+
+
+        showBipInfo(){
+            let message = "Bildungsportal"
+            let html = `
+            <div style="font-size:0.9em; text-align:left">
+                <div><b>Bip-Token: </b>${this.bipToken}</div>
+                <div><b>Bip-Username: </b>${this.bipUsername}</div>
+                <div><b>Bip-UserID: </b>${this.bipuserID}</div><br>
+                <div><b>Bip-Exam-Status: </b></div>
+                <button id="fbtnA" class="swal2-button btn ${this.bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'} mt-2" style="width: 100px; height: 42px;">
+                    ${this.bipStatus}
+                </button>
+            </div>
+            `
+            this.$swal.fire({
+                title: message,
+                html: html,
+                cancelButtonText: this.$t("dashboard.cancel"),
+                reverseButtons: true,
+                width: '600px',
+                didRender: () => {
+                    const btnA = document.getElementById('fbtnA');
+                
+                    if (btnA && !btnA.dataset.listenerAdded) {
+                        btnA.addEventListener('click', () => {
+                            const newStatus = this.bipStatus === 'closed' ? 'open' : 'closed';
+                            const oldClass = this.bipStatus === 'closed' ? 'btn-warning' : 'btn-teal';
+                            const newClass = this.bipStatus === 'closed' ? 'btn-teal' : 'btn-warning';
+                            
+                            btnA.classList.remove(oldClass);
+                            btnA.classList.add(newClass);
+                            btnA.textContent = newStatus;
+
+                            //call api and update bip data
+                            this.updateBiPServerInfo(newStatus);
+                            this.bipStatus = newStatus;
+                        });
+                        btnA.dataset.listenerAdded = 'true';
+                    }
+                }
+            });
+        },
+
+
+        toggleBipStatus() {
+            const newStatus = this.bipStatus === 'closed' ? 'open' : 'closed';
+            this.updateBiPServerInfo(newStatus);
+            this.bipStatus = newStatus;
+            this.updateBiPServerInfo(newStatus);
+        },
+
+
+         /** 
+         * if this is a bip exam configured online that needs students to login into bip too
+         * update exam info on server via api
+         */
+        async updateBiPServerInfo(status){
+            if (!this.bipToken || !this.serverstatus.bip) { return }
+
+            //console.log("bip exam - updating server info")
+            let payload = {
+                teacherIP: this.serverip,
+                teacherID: this.bipuserID,   /// wird von student.vue nicht nach dashboard.vue übertragen.. ebenso token
+                pin: this.serverstatus.pin,
+                status: status,
+                examID: this.serverstatus.id
+            }
+
+            // if (this.config.development){  // call to demo api
+                let url= "http://localhost:3000/teacher"
+                fetch(url, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json" },
+                    body: JSON.stringify(payload) // Daten als JSON-String senden
+                })
+                .then(response => { return response.json(); } )                  
+                .then(data => { 
+                   // console.log(data.message, data.data);
+                })
+                .catch(error => { console.error("Fehler beim API-Aufruf:", error.message);});
+            // }
+            // else{
+            //     //call to real bip api
+            // }
+        },
+
+        playAudioFile(filecontent, filename){
+            document.querySelector("#aplayer").style.display = 'block';
+            this.audioSource = filecontent;
+            this.audioFilename = filename
+            audioPlayer.load(); // Lädt die neue Quelle
+
+        }
+
     },
 
 
 
     mounted() {  // when ready
-        this.$nextTick(function () { // Code that will run only after the entire view has been rendered
+        this.$nextTick( async function () { // Code that will run only after the entire view has been rendered
        
             document.querySelector("#statusdiv").style.visibility = "hidden";
            
-            this.getPreviousServerStatus()
+            await this.getPreviousServerStatus()
             this.fetchInfo()
             this.initializeStudentwidgets()
 
+            this.updateBiPServerInfo(this.bipStatus);
 
             // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
             this.fetchinterval = new SchedulerService(4000);
@@ -1277,7 +1303,7 @@ export default {
             this.abgabeinterval.addEventListener('action',  this.abgabeCallback);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
             this.abgabeinterval.start();
 
-
+            if (this.abgabeintervalPause == 0 ) { this.abgabeinterval.stop() }
 
             this.pdfPreviewEventlisterenCallback = () => { document.querySelector("#pdfpreview").style.display = 'none';  document.querySelector("#pdfembed").setAttribute("src", "about:blank"); URL.revokeObjectURL(this.currentpreview);  } //unload pdf
             this.fileBrowserEventlistenerCallback = () => { document.querySelector("#preview").style.display = "none"; }
@@ -1286,25 +1312,30 @@ export default {
             document.querySelector("#closefilebrowser").addEventListener("click", this.fileBrowserEventlistenerCallback);
             document.querySelector('#workfolder').addEventListener("click", function(e) { e.stopPropagation(); }); // Prevent event propagation for clicks on #workfolder
             document.getElementById('setupdiv').addEventListener('click', function(e) { e.stopPropagation();});
-            document.querySelector("#pdfpreview").addEventListener("click", this.pdfPreviewEventlisterenCallback); // Set the event listener for #pdfpreview click to hide pdfpreview
+            document.querySelector("#pdfpreview").addEventListener("click", this.pdfPreviewEventlisterenCallback); // Set the event listener for #pdfpreview
+
+            document.querySelector("#audioclose").addEventListener("click", function(e) {
+                audioPlayer.pause();
+                document.querySelector("#aplayer").style.display = 'none';
+            });
 
         })
-        if (this.electron){
-            this.hostname = "localhost"
-            this.currentdirectory = ipcRenderer.sendSync('getCurrentWorkdir')  //in case user changed it to different location
-            this.workdirectory= `${this.currentdirectory}/${this.servername}`
 
-           
-            ipcRenderer.on('reconnected', (event, student) => {  
-               
-                this.$swal.fire({
-                        title: this.$t("dashboard.attention"),
-                        text: `${student.clientname} hat sich neu verbunden!`,
-                        icon: "info"
-                    })  
-            }); 
+      
+        this.hostname = "localhost"
+        this.currentdirectory = ipcRenderer.sendSync('getCurrentWorkdir')  //in case user changed it to different location
+        this.workdirectory= `${this.currentdirectory}/${this.servername}`
 
-        }
+        
+        ipcRenderer.on('reconnected', (event, student) => {  
+            this.$swal.fire({
+                    title: this.$t("dashboard.attention"),
+                    text: `${student.clientname} hat sich neu verbunden!`,
+                    icon: "info"
+                })  
+        }); 
+
+
 
 
 
@@ -1342,6 +1373,111 @@ export default {
 
 
 <style scoped>
+
+#aplayer {
+    display: none;
+    position: absolute;
+    top: 40%;
+    left: -300px;
+    margin-left: 50%;
+    width: 600px;
+    /* background-color:rgba(0, 0, 0, 0.1); */
+    text-align:center;
+
+}
+#aplayer audio {
+    box-shadow: 0px 0px 10px rgba(0,0,0,0.6);
+    border-radius: 8px;
+    width: 500px;
+}
+
+#audioclose {
+    vertical-align: top;
+    margin-left: 6px;
+}
+
+.tab-buttons-container {
+    position: fixed;
+    right: 0;
+    top: 22%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 1000;
+    width: 72px; /* Container ist so breit wie die hover-Breite */
+}
+
+.tab-button {
+    width: 42px;
+    height: 42px;
+    padding: 15px 15px;
+    border-radius: 8px 0 0 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    margin: 0;
+    box-shadow: -2px 2px 5px rgba(0,0,0,0.2);
+    margin-left: auto; /* Button wird rechts im Container ausgerichtet */
+}
+
+.tab-button:hover {
+    width: 52px;
+    box-shadow: -3px 3px 8px rgba(0,0,0,0.3);
+}
+
+.tab-button img {
+    margin: 0;
+}
+
+
+
+.plusbutton {
+    box-sizing: border-box;
+    font-size:1.2em; 
+    font-weight:bold;
+    color:white;
+    height:28px; 
+    text-align: center;
+    padding-top: 0px !important;
+   
+    width: 30px;
+    height: 30px;
+    position: absolute;
+    right: 0;
+    top:10px;
+}
+
+
+.sectionbutton {
+    display:inline-block;
+    width: 128px;
+    border-bottom-right-radius: 0px;
+    border-bottom-left-radius: 0px;
+    color: white;
+    font-weight: normal;
+    margin-right:4px;
+    cursor: pointer;
+    height: 22px;
+    font-size: 0.8em;
+    padding-top: 0px;
+}
+
+
+.dropdown-toggle::after {
+    margin-left: auto !important;
+    margin-right: 4px;
+}
+
+
+
+#statusdiv {
+    display: block !important;
+    width: 200px  ;
+    cursor: help;
+}
+
 
 #setupdiv {
     position: absolute;        /* Fixiert den div über allem anderen */
@@ -1565,6 +1701,7 @@ export default {
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
     background-color: whitesmoke;
+    cursor: help;
 }
 
 #studentslist{
@@ -1810,6 +1947,7 @@ hr {
 
 .my-content {
     margin-bottom: 0px;
+    overflow:hidden;
 }
 
 .my-content h5 {
@@ -1825,7 +1963,7 @@ hr {
 
 
 .my-custom-input {
-    margin-top: 0px;
+    margin-top: 0px !important;
 }  
 
 .my-swal2-actions {

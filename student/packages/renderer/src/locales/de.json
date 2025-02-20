@@ -1,6 +1,6 @@
 { 
     "student" : {
-        "exams": "Aktive Prüfungen",
+        "exams": "Prüfungen",
         "username": "Benutzername",
         "pin": "Pincode",
         "ip":"Server-Adresse",
@@ -20,9 +20,14 @@
         "noip": "Serveradresse oder Prüfungsname fehlt",
         "offline": "Keine Netzwerkverbindung",
         "nopin": "Pincode fehlt",
-        "unreachable": "Server API auf Grund von Firewall nicht erreichbar.",
+        "unreachable": "Server API nicht erreichbar.",
         "timeout":"Timeout! Exam-Teacher befindet sich möglicherweise hinter einer Firewall.",
-        "noapi": "Keine Prüfungsserver an angegebener Adresse"
+        "noapi": "Keine Prüfungsserver an angegebener Adresse",
+        "bildungsportal":"Bildungsportal",
+        "localLockdown":"Lokal absperren",
+        "manualsearch":"Manuell suchen",
+        "noexams":"Keine Prüfungen gefunden",
+        "logoutBiP":"Sind Sie sicher, dass Sie sich abmelden möchten?"
     },
     "control": {
         "tokennotvalid": "das token ist ungültig",
@@ -67,6 +72,7 @@
         "bold":"fett",
         "italic":"kursiv",
         "underline":"unterstrichen",
+        "heading1":"Überschrift 1",
         "heading2":"Überschrift 2",
         "heading3":"Überschrift 3",
         "heading4":"Überschrift 4",
@@ -112,7 +118,9 @@
         "audioremaining":"Verbleibende Durchläufe:",
         "audionotallowed":"Sie haben keine Berechtigung die Audiodatei erneut abzuspielen!",
         "insert":"Bild einfügen",
-        "insertmug":"Mugshot einfügen"
+        "insertmug":"Mugshot einfügen",
+        "bildungsportal":"Bildungsportal",
+        "send":"senden"
     },
     "math": {
         "exit":"Abgesicherten Modus beenden?",

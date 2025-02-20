@@ -44,7 +44,7 @@ class MulticastServer {
      * @param servername the given name of the server (for example "math")
      * @param pin the pin needed to register as student
      */
-    init (servername, pin, password) {
+    init (servername, pin, password, bip=false) {
         this.server = createSocket('udp4')
         this.serverinfo = {
             servername: servername,   //should be unique if several servers are allowed
@@ -53,7 +53,8 @@ class MulticastServer {
             timestamp: 0,
             id:crypto.randomUUID(),
             ip: config.hostip,
-            servertoken: `server-${crypto.randomUUID()}`
+            servertoken: `server-${crypto.randomUUID()}`,
+            bip: bip
         }
         
         this.server.bind(this.SRC_PORT,'0.0.0.0',  () => { // Add the HOST_IP_ADDRESS for reliability
@@ -82,7 +83,8 @@ class MulticastServer {
             servername: this.serverinfo.servername,
             timestamp: this.serverinfo.timestamp,
             id: this.serverinfo.id,
-            ip: this.serverinfo.ip
+            ip: this.serverinfo.ip,
+            bip: this.serverinfo.bip
         }
         const preparedMessage = new Buffer.from(JSON.stringify(message))
         this.server.send(preparedMessage, 0, preparedMessage.length, this.ClientPORT, this.MULTICAST_ADDR)  //broadcast to clients

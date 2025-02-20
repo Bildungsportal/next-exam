@@ -86,7 +86,7 @@ async function LTcheckAllWords(closeLT = true){
         const response = await fetch('http://127.0.0.1:8088/v2/check', {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
-            body: new URLSearchParams({ text: this.text, language: this.serverstatus.spellchecklang}).toString() 
+            body: new URLSearchParams({ text: this.text, language: this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang}).toString() 
         });
         if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`);   }
         const data = await response.json();      
@@ -272,7 +272,7 @@ function isUnique(position, currentWord, allWords) {
 // }
     
 function LThighlightWords() {
-    if (!this.textContainer || (!this.serverstatus.languagetool && !this.privateSpellcheck.activated)) {
+    if (!this.textContainer || (!this.serverstatus.examSections[this.serverstatus.activeSection].languagetool && !this.privateSpellcheck.activated)) {
         console.log(this.privateSpellcheck);
         this.LTdisable(); 
         return;

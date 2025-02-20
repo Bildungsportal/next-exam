@@ -51,6 +51,19 @@ class IpcHandler {
 
 
 
+        /**
+         *  Start BIP Login Sequence
+         */
+        ipcMain.on('loginBiP', (event, biptest) => {
+            log.info("ipchandler @ loginBiP: opening bip window. testenvironment:", biptest)
+            this.WindowHandler.createBiPLoginWin(biptest)
+            event.returnValue = "hello from bip logon"
+        })
+
+
+
+
+
         // returns the current serverstatus object of the given server(name)
         ipcMain.handle('getserverstatus', (event, servername) => { 
             const mcServer = this.config.examServerList[servername]
@@ -117,7 +130,7 @@ class IpcHandler {
             config.accessToken = false
 
             log.info("ipchandler @ resetToken: Logged out of Office365")
-            return this.copyConfig(config);  // we cant just copy the config because it contains examServerList which contains confic (circular structure)
+            return this.copyConfig(config);  // we cant just copy the config because it contains examServerList which contains config (circular structure)
         })  
 
 
@@ -199,18 +212,53 @@ class IpcHandler {
         })
 
 
+        ipcMain.handle('createBipExamdirectory', async (event, exam) => {
+            let message = ""
+            const workdir = join(config.workdirectory, exam.examName)
+            const filePath = join(workdir, 'serverstatus.json');
+            
+
+            try {
+                if (!fs.existsSync(workdir)){fs.mkdirSync(workdir)}
+                message = "success"
+            }
+            catch (e){
+                message = e.message
+                log.error(e)
+            }
+
+            try {  fs.writeFileSync(filePath, JSON.stringify(exam, null, 2));  }   // mcServer.serverstatus als JSON-Datei speichern
+            catch (error) {  log.error(error) }
+                  
+            event.returnValue = {message : message}
+
+        })
+
+
+
         /**
          * returns old exam folders in workdirectory
          */
+
         ipcMain.handle('scanWorkdir', async (event, arg) => {
-            let examfolders = []
-            if (fs.existsSync(config.workdirectory)){
-                    examfolders = fs.readdirSync(config.workdirectory, { withFileTypes: true })
-                .filter(dirent => dirent.isDirectory())
-                .map(dirent => dirent.name);
+            let examfolders = [] // array for results
+            if (fs.existsSync(config.workdirectory)) { // check if base dir exists
+                const folders = fs.readdirSync(config.workdirectory, { withFileTypes: true })
+                    .filter(dirent => dirent.isDirectory())
+                    .map(dirent => dirent.name)
+                for (const dirname of folders) { // iterate over directory names
+                    const serverstatusPath = join(config.workdirectory, dirname, 'serverstatus.json')
+                    if (fs.existsSync(serverstatusPath)) { // check if file exists
+                    
+                    const serverstatus = JSON.parse(fs.readFileSync(serverstatusPath, 'utf-8')) // parse JSON to object
+
+                    examfolders.push(serverstatus) // add object to array
+                    }
+                }
             }
-            return examfolders
-        })
+            return examfolders // return results
+          })
+
 
 
         /**
@@ -482,12 +530,15 @@ class IpcHandler {
             development: conf.development, 
             showdevtools: conf.showdevtools,
             bipIntegration: conf.bipIntegration,
+            bipDemo: conf.bipDemo,
             workdirectory: conf.workdirectory,
             tempdirectory: conf.tempdirectory,
             serverdirectory: conf.serverdirectory,
+           
             serverApiPort: conf.serverApiPort,
             multicastClientPort: conf.multicastClientPort,
             multicastServerClientPort: conf.multicastServerClientPort,
+           
             multicastServerAdrr: conf.multicastServerAdrr,
             hostip: conf.hostip,
             gateway: conf.gateway,

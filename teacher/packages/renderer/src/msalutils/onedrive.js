@@ -48,8 +48,8 @@ async function uploadselect() {
         this.visualfeedbackClosemanually(this.$t("dashboard.uploadfiles"))
         await this.onedriveUpload(input.value)  //this can take a while if 30 students are connected - set this.serverstatus.msOfficeFile only after it finished because it activates the "startexam" button
         //save valid file info for other students that connect later or reconnect (they all should get a file in onedrive and a sharing link if not 'none')
-        this.serverstatus.msOfficeFile = input.value   
-        log.info(this.serverstatus.msOfficeFile)
+        this.serverstatus.examSections[this.serverstatus.activeSection].msOfficeFile = input.value   
+        log.info(this.serverstatus.examSections[this.serverstatus.activeSection].msOfficeFile)
         log.info("upload to onedrive and sharelink setup finished")
     });    
 }
@@ -105,7 +105,7 @@ async function onedriveUploadSingle(student,file){
                 text: this.$t("dashboard.accessDeniedtext"),
                 icon: 'error',
                 });
-            document.getElementById('examtype2').checked = true; this.examtype = "math"
+            document.getElementById('examtype2').checked = true; this.examtype = "math"; this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math"
             return   // it makes no sense to try other things. access was denied and needs to be granted in https://entra.microsoft.com/
         }
 

@@ -45,6 +45,7 @@
                 <div class="mb-3 row">
                     <div class="mb-3 "> {{$t('editor.leftkiosk')}} <br> {{$t('editor.tellsomeone')}} </div>
                     <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32" >
+                    <div class="mt-3"> {{ formatTime(entrytime) }}</div>
                 </div>
             </div>
         </div>
@@ -298,6 +299,12 @@ export default {
             this.timesinceentry =  new Date(this.now - this.entrytime).toISOString().substr(11, 8)
             this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
         },  
+
+        formatTime(unixTime) {
+            const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
+            return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed
+        },
+
         async fetchInfo() {
             let getinfo = await ipcRenderer.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
             

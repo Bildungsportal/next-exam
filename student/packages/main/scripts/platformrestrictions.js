@@ -82,7 +82,7 @@ let configStore = {
 }
 
 // list of apps we do not want to run in background
-const appsToClose = ['Teams','ms-teams', 'zoom.us', 'Google Chrome', 'Microsoft Edge', 'Microsoft Teams','firefox', 'discord', 'zoom', 'chrome', 'msedge', 'teams', 'teamviewer', 'google-chrome','skypeforlinux','skype','brave','opera','anydesk','safari'];
+const appsToClose = ['NortonSecurity','NAV','Teams','ms-teams', 'zoom.us', 'Google Chrome', 'Microsoft Edge', 'Microsoft Teams','firefox', 'discord', 'zoom', 'chrome', 'msedge', 'teams', 'teamviewer', 'google-chrome','skypeforlinux','skype','brave','opera','anydesk','safari'];
 
 let isKDE = false
 
@@ -183,12 +183,17 @@ function enableRestrictions(winhandler){
         catch(err){ log.error(`platformrestrictions @ enableRestrictions (gsettings): ${err}`); }
 
 
-
+        try {
+            childProcess.execFile('wl-copy', ['-c'])   // wayland
+            childProcess.exec('xclip -i /dev/null')
+            childProcess.exec('xclip -selection clipboard')
+            childProcess.exec('xsel -bc')
+        }
+        catch(err){
+            log.error(`platformrestrictions @ enableRestrictions (gsettings): ${err}`)
+        }
         // clear clipboard  (this will fail unless xclip or xsell are installed)
-        childProcess.execFile('wl-copy', ['-c'])   // wayland
-        childProcess.exec('xclip -i /dev/null')
-        childProcess.exec('xclip -selection clipboard')
-        childProcess.exec('xsel -bc')
+      
     }
 
 
@@ -229,6 +234,30 @@ function enableRestrictions(winhandler){
             });
         } catch (err){log.error(`platformrestrictions @ enableRestrictions (win taskkill): ${err}`);}
           
+
+
+        //must be tested because its dangerous - i potentially kills unwanted processes because it searches for substrings in process names
+        // try {
+        //     appsToClose.forEach(app => {
+        //         const command = `powershell -Command "Get-Process | Where-Object { $_.Name -like '*${app}*' } | ForEach-Object { $_.Kill() }"`;
+        //         childProcess.exec(command, (error, stdout, stderr) => {
+        //             if (error) {
+        //                 log.error(`Error closing app: ${app}`, error);
+        //             }
+        //             if (stderr) {
+        //                 log.error(`stderr: ${stderr}`);
+        //             }
+        //             if (stdout) {
+        //                 log.info(`stdout: ${stdout}`);
+        //             }
+        //         });
+        //     });
+        // } catch (err) {
+        //     log.error(`platformrestrictions @ enableRestrictions (PowerShell): ${err}`);
+        // }
+
+
+
 
         // kill EXPLORER windowsbutton and swipe gestures - kill everything else
         try {

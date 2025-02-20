@@ -1,6 +1,6 @@
 { 
     "student" : {
-        "exams": "Active Exams",
+        "exams": "Exams",
         "username": "Username",
         "pin": "Pincode",
         "ip":"Server address",
@@ -22,7 +22,12 @@
         "nopin": "no pincode given",
         "unreachable":"Server API unreachable",
         "timeout":"Timeout! Exam-Teacher is behind Firewall.",
-        "noapi": "No Teacher API found on the given address"
+        "noapi": "No Teacher API found on the given address",
+        "bildungsportal":"Bildungsportal",
+        "localLockdown":"Local lockdown",
+        "manualsearch":"Manual search",
+        "noexams":"No exams found",
+        "logoutBiP":"Are you sure you want to logout?"
     },
     "control": {
         "tokennotvalid": "token is not valid",
@@ -67,6 +72,7 @@
         "bold":"bold",
         "italic":"italic",
         "underline":"underline",
+        "heading1":"heading1",
         "heading2":"heading2",
         "heading3":"heading3",
         "heading4":"heading4",
@@ -112,7 +118,9 @@
         "audioremaining":"Remaining playbacks:",
         "audionotallowed":"You don't have the permission to play this file!",
         "insert":"Insert Image",
-        "insertmug":"Insert Mugshot"
+        "insertmug":"Insert Mugshot",
+        "bildungsportal":"Bildungsportal",
+        "send":"send"
     },
     "math": {
         "exit":"Exit safe exam mode",

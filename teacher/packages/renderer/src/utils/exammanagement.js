@@ -1,6 +1,7 @@
 import axios from "axios"
 import FormData from 'form-data'
 import log from 'electron-log/renderer';
+import CryptoJS from 'crypto-js';
 
 
 // enable exam mode 
@@ -9,6 +10,8 @@ function startExam(){
     setTimeout(() => {
         this.getFiles('all'); //  trigger this one immediately to figure out if there are write problems on student pcs 
     }, 4000); 
+
+    this.serverstatus.examSections[this.serverstatus.activeSection].locked = true;   // starting exammode locks the current active section
 
     this.lockscreens(false, false); // deactivate lockscreen
     this.serverstatus.exammode = true;
@@ -39,6 +42,7 @@ function endExam(){
     })
     .then((result) => {
         if (result.isConfirmed) {
+            Object.values(this.serverstatus.examSections).forEach(section => {   section.locked = false    })
             this.serverstatus.exammode = false;
             this.lockscreens(false, false); // deactivate lockscreen
             this.setServerStatus()
@@ -66,6 +70,12 @@ function stopserver(){
     })
     .then( async (result) => {
         if (result.isConfirmed) {
+
+            if (this.serverstatus.bip) {
+                console.log("exam ended - updating server info")
+                await this.updateBiPServerInfo("offline");
+            }
+
             if (!this.hostip){   // somehow the teacher disconnected - stop everything without network address
                 await ipcRenderer.invoke("stopserver", this.servername)  // need to stop server first otherwise router.js won't route back
                 this.$router.push({ path: '/startserver' });  // route back to startserver view
@@ -77,6 +87,17 @@ function stopserver(){
                 //log.info(response.data);
                 await this.sleep(2000);
                 this.$router.push({ path: '/startserver' });  // route back to startserver view
+
+                this.$router.push({  // for some reason this doesn't work on mobile
+                    name: 'startserver', 
+                    params:{
+                        bipToken: this.bipToken,
+                        bipUsername: this.bipUsername,
+                        bipuserID:this.bipuserID
+                    }
+                })
+
+
             }).catch( err => {log.error(err)});
         } 
     });    
@@ -125,7 +146,7 @@ function getFiles(who='all', feedback=false, quiet=false){
     this.checkDiscspace()
     if ( this.studentlist.length <= 0 ) { this.status(this.$t("dashboard.noclients")); return; }
 
-    if (this.serverstatus.examtype === "microsoft365"){ //fetch files from onedrive
+    if (this.serverstatus.examSections[this.serverstatus.activeSection].examtype === "microsoft365"){ //fetch files from onedrive
         this.downloadFilesFromOneDrive()
         if (feedback){ this.visualfeedback(this.$t("dashboard.examrequest"), 2000) }
         else { 
@@ -176,7 +197,7 @@ function sendFiles(who) {
         ${this.$t("dashboard.filesendtext")} <br>
         <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>`
 
-    if (this.serverstatus.groups && who == "all"){ //wenn who != "all" sondern ein studenttoken ist dann soll die datei an eine einzelne person gesandt werden
+    if (this.serverstatus.examSections[this.serverstatus.activeSection].groups && who == "all"){ //wenn who != "all" sondern ein studenttoken ist dann soll die datei an eine einzelne person gesandt werden
         htmlcontent =  `
             ${this.$t("dashboard.filesendtext")} <br>
             <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
@@ -255,8 +276,9 @@ function sendFiles(who) {
         }
         
         // group managment - send files to specific group
-        if (this.serverstatus.groups && who == "all"){ who = activeGroup}  //nur wenn who == all wurde der allgemeine filesend dialog aufgeruden. who kann auch ein student token sein
+        if (this.serverstatus.examSections[this.serverstatus.activeSection].groups && who == "all"){ who = activeGroup}  //nur wenn who == all wurde der allgemeine filesend dialog aufgeruden. who kann auch ein student token sein
 
+        console.log(formData)
         axios({
             method: "post", 
             url: `https://${this.serverip}:${this.serverApiPort}/server/data/upload/${this.servername}/${this.servertoken}/${who}`, 
@@ -266,6 +288,179 @@ function sendFiles(who) {
         .catch( err =>{ log.error(`${err}`) })
     });    
 }
+
+
+
+
+
+/**
+ * define materials for exam
+ * für jeden prüfungsabschnitt können materialien festgelegt werden die während der prüfung verfügbar sein sollen
+ * diese werden bei prüfungsbeginn auf die clients verteilt bzw. beim start des entsprechenden abschnitts auf die clients verteilt
+ * @param {*} who ist in diesem fall immer "all"
+ * @returns 
+ */
+function defineMaterials(who) {
+    let htmlcontent = `
+        ${this.$t("dashboard.filesendtext")} <br>
+        <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>`
+
+    if (this.serverstatus.examSections[this.serverstatus.activeSection].groups && who == "all") {
+        htmlcontent = `
+            ${this.$t("dashboard.filesendtext")} <br>
+            <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
+            <br>  <br> 
+            Gruppe<br>
+            <button id="fbtnA" class="swal2-button btn btn-info m-2" style="width: 42px; height: 42px;">A</button>
+            <button id="fbtnB" class="swal2-button btn btn-warning m-2" style="width: 42px; height: 42px;filter: grayscale(90%);">B</button>
+            <button id="fbtnC" class="swal2-button btn btn-warning m-2" style="padding:0px;width: 42px; height: 42px;filter: grayscale(90%); background: linear-gradient(-60deg, #0dcaf0 50%, #ffc107 50%);">AB</button>
+        `
+    }
+         
+    let activeGroup = "a"  // prinzipiell ist jeder user automatisch in der gruppe a
+
+    this.$swal.fire({
+        title: this.$t("dashboard.materials"),
+        html: htmlcontent,
+        icon: "info",
+        input: 'file',
+        showCancelButton: true,
+        cancelButtonText: this.$t("dashboard.cancel"),
+        reverseButtons: true,
+        inputAttributes: {
+            type: "file",
+            name: "files",
+            id: "swalFile",
+            class: "form-control",
+            multiple: "multiple",
+            accept: ".pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb"
+        },
+        didRender: () => {
+            const btnA = document.getElementById('fbtnA');
+            const btnB = document.getElementById('fbtnB');
+            const btnC = document.getElementById('fbtnC');
+            if (btnA && !btnA.dataset.listenerAdded) {
+                btnA.addEventListener('click', () => {
+                    btnA.style.filter = "grayscale(0%)"
+                    btnB.style.filter = "grayscale(90%)"
+                    btnC.style.filter = "grayscale(90%)"
+                    activeGroup = "a"
+                });
+                btnA.dataset.listenerAdded = 'true';
+            }
+            if (btnB && !btnB.dataset.listenerAdded) {
+                btnB.addEventListener('click', () => {
+                    btnA.style.filter = "grayscale(90%)"
+                    btnB.style.filter = "grayscale(0%)"
+                    btnC.style.filter = "grayscale(90%)"
+                    activeGroup = "b"
+                });
+                btnB.dataset.listenerAdded = 'true';
+            }
+            if (btnC && !btnC.dataset.listenerAdded) {
+                btnC.addEventListener('click', () => {
+                    btnA.style.filter = "grayscale(90%)"
+                    btnB.style.filter = "grayscale(90%)"
+                    btnC.style.filter = "grayscale(0%)"
+                    activeGroup = "all"
+                });
+                btnC.dataset.listenerAdded = 'true';
+            }
+        }
+    })
+    .then(async (input) => {
+        if (!input.value) { 
+            this.status(this.$t("dashboard.nofiles")); 
+            return; 
+        }
+
+        this.status(this.$t("dashboard.processingfiles"));
+        const files = input.value;
+
+        // Process each file
+        for (const file of files) {
+            try {
+                const base64Content = await readFileAsBase64(file); // Read file as Base64
+                const checksum = await calculateMD5(file); // Calculate MD5 checksum
+
+               // console.log(file)
+
+                let filetype = ""
+                if  (file.type.includes("pdf")){  filetype="pdf" }         //pdf
+                else if  (file.type.includes("bak")){  filetype="bak" }   // editor| backup file to replace editor content
+                else if  (file.type.includes("openxml")){  filetype="docx" }   // editor| content file (from teacher) to replace content and continue writing
+                else if  (file.type.includes("ggb")){  filetype="ggb" }  // geogebra
+                else if  (file.type.includes("audio") || file.type.includes("ogg") || file.type.includes("wav") ){ filetype="audio" }  // audio
+                else if  (file.type.includes("jpg") || file.type.includes("png") || file.type.includes("gif") ){ filetype="image" }  // images
+
+                if (file.type=="" && file.name.includes("ggb")){ filetype = "ggb"}
+
+                const fileObject = {   // Create file object
+                    filename: file.name,
+                    filetype: filetype,
+                    filecontent: base64Content,
+                    checksum: checksum
+                };
+
+               
+
+                if (activeGroup === "a" || activeGroup === "all") {
+                    //TODO:  check if file already exists and ask to overwrite
+                    this.serverstatus.examSections[this.serverstatus.activeSection].groupA.examInstructionFiles.push(fileObject);
+                }
+                if (activeGroup === "b" || activeGroup === "all") {
+                    //TODO:  check if file already exists and ask to overwrite
+                    this.serverstatus.examSections[this.serverstatus.activeSection].groupB.examInstructionFiles.push(fileObject);
+                }
+               
+            } catch (error) {
+                log.error(`exammanagement @ defineMaterials: Error processing file ${file.name}:`, error);
+            }
+        }
+
+        this.setServerStatus()
+    });    
+}
+
+// Helper function to read file as Base64
+function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            resolve(reader.result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+// Helper function to calculate MD5 checksum
+async function calculateMD5(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const arrayBuffer = e.target.result;
+            const wordArray = CryptoJS.lib.WordArray.create(arrayBuffer);
+            const hash = CryptoJS.MD5(wordArray).toString();
+            resolve(hash);
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -296,7 +491,7 @@ function delfolderquestion(token="all"){
                 body: JSON.stringify({ delfolder : true } )
             })
             .then( res => res.json() )
-            .then( result => { log.info(result)});
+            .then( result => { log.info("exmmmanagment @ delfolderquestion:", result.message)});
         } 
     });  
 }
@@ -313,7 +508,7 @@ function delfolderquestion(token="all"){
  */
 async function activateSpellcheckForStudent(token, clientname){
     const student = this.studentlist.find(obj => obj.token === token);  //get specific student (status)
-    console.log(student.status)
+    //console.log(student.status)
     await this.$swal.fire({
         customClass: {
             popup: 'my-popup',
@@ -358,28 +553,10 @@ async function activateSpellcheckForStudent(token, clientname){
                 body: JSON.stringify({ activatePrivateSpellcheck : false } )
             })
             .then( res => res.json() )
-            .then( result => { log.info(result); this.fetchInfo();});
+            .then( result => { log.info("exammanagement @ activatespellcheckforstudent: " ,result.message); this.fetchInfo();});
         }
         else {
-            console.log(`activating spellcheck for user: ${clientname} `)
-    
-            let response = await ipcRenderer.invoke("startLanguageTool")        //start languagetool server api
-            if (response){
-                // this.$swal.fire({
-                //     text: "LanguageTool started!",
-                //     timer: 1000,
-                //     timerProgressBar: true,
-                //     didOpen: () => { this.$swal.showLoading() }
-                // });
-            }
-            else {
-                this.$swal.fire({
-                    text: "LanguageTool Error!",
-                    timer: 1000,
-                    timerProgressBar: true,
-                    didOpen: () => { this.$swal.showLoading() }
-                });
-            }
+
             // inform student that spellcheck can be activated
             fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${token}`, { 
                 method: 'POST',
@@ -387,7 +564,7 @@ async function activateSpellcheckForStudent(token, clientname){
                 body: JSON.stringify({ activatePrivateSpellcheck : true, activatePrivateSuggestions: suggestions} )
             })
             .then( res => res.json() )
-            .then( result => { log.info(result); this.fetchInfo();});
+            .then( result => { log.info("exammanagement @ activatespellcheckforstudent: " ,result.message); this.fetchInfo();});
         }
     })  
 }
@@ -411,4 +588,4 @@ async function activateSpellcheckForStudent(token, clientname){
 
 
 
-export {activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore  }
+export {activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore, defineMaterials  }

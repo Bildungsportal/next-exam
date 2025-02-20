@@ -28,7 +28,7 @@
         <!-- toolbar start -->
         <div v-if="editor" class="m-2" id="editortoolbar" style="text-align:left;"> 
             <button :title="$t('editor.backup')" @click="saveContent(true, 'manual');" class="invisible-button btn btn-outline-success p-1 me-1 mb-1 btn-sm"><img src="/src/assets/img/svg/document-save.svg" class="white" width="22" height="22" ></button>
-            <button :title="$t('editor.print')" @click="print();" class="invisible-button btn btn-outline-success p-1 me-1 mb-1 btn-sm"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="22" ></button>
+            <!-- <button :title="$t('editor.print')" @click="sendExamToTeacher();" class="invisible-button btn btn-outline-success p-1 me-1 mb-1 btn-sm"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="22" ></button> -->
             <button :title="$t('editor.undo')" @click="editor.chain().focus().undo().run()" class="invisible-button btn btn-outline-warning p-1 me-0 mb-1 btn-sm"><img src="/src/assets/img/svg/edit-undo.svg" class="white" width="22" height="22" ></button>
             <button :title="$t('editor.redo')" @click="editor.chain().focus().redo().run()" class="invisible-button btn btn-outline-warning p-1 me-2 mb-1 btn-sm"><img src="/src/assets/img/svg/edit-redo.svg" class="white" width="22" height="22" > </button>
             <button :title="$t('editor.clear')" @click="editor.chain().focus().clearNodes().run();editor.chain().focus().unsetColor().run()" class="invisible-button btn btn-outline-warning p-1 me-2 mb-1 btn-sm"><img src="/src/assets/img/svg/draw-eraser.svg" class="white" width="22" height="22" ></button>
@@ -37,6 +37,7 @@
             <button :title="$t('editor.italic')" @click="editor.chain().focus().toggleItalic().run()" :class="{ 'is-active': editor.isActive('italic') }" class="invisible-button btn btn-outline-success p-1 me-0 mb-1 btn-sm"><img src="/src/assets/img/svg/format-text-italic.svg" class="white" width="22" height="22" ></button>
             <button :title="$t('editor.underline')" @click="editor.chain().focus().toggleUnderline().run()" :class="{ 'is-active': editor.isActive('underline') }" class="invisible-button btn btn-outline-success p-1 me-2 mb-1 btn-sm "> <img src="/src/assets/img/svg/format-text-underline.svg" class="white" width="22" height="22" ></button>
             
+            <button :title="$t('editor.heading1')" @click="editor.chain().focus().toggleHeading({ level: 1 }).run()" :class="{ 'is-active': editor.isActive('heading', { level: 1 }) }" class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img src="/src/assets/img/svg/h1.svg" width="22" height="22"></button>
             <button :title="$t('editor.heading2')" @click="editor.chain().focus().toggleHeading({ level: 2 }).run()" :class="{ 'is-active': editor.isActive('heading', { level: 2 }) }" class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img src="/src/assets/img/svg/h2.svg" width="22" height="22"></button>
             <button :title="$t('editor.heading3')" @click="editor.chain().focus().toggleHeading({ level: 3 }).run()" :class="{ 'is-active': editor.isActive('heading', { level: 3 }) }" class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img src="/src/assets/img/svg/h3.svg" width="22" height="22"></button>
             <button :title="$t('editor.heading4')" @click="editor.chain().focus().toggleHeading({ level: 4 }).run()" :class="{ 'is-active': editor.isActive('heading', { level: 4 }) }" class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img src="/src/assets/img/svg/h4.svg" width="22" height="22"></button>
@@ -90,16 +91,38 @@
             </div>
 
 
-            <br>
+            <br>   
             <button :title="$t('editor.splitview')"  @click="toggleSplitview()" style="vertical-align: top;" class="invisible-button btn btn-outline-warning p-0 ms-1 me-2 mb-0 btn-sm"><img src="/src/assets/img/svg/view-split-left-right.svg" class="white" width="22" height="22" ></button>
+       
+            <div id="sendfinalexam" class="btn btn-outline-danger p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="sendExamToTeacher()" title="Abgabe senden"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="22" style="vertical-align: top;"> Arbeit abgeben</div>
+
+            <div id="getmaterialsbutton" class="btn btn-outline-success p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" title="Angaben holen"><img src="/src/assets/img/svg/games-solve.svg" class="white" width="22" height="22" style="vertical-align: top;"> Materialien holen </div>
+
+            <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
+            <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
+                <div v-if="(file.filetype == 'bak')" class="btn btn-outline-info p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+                <div v-if="(file.filetype == 'docx')" class="btn btn-outline-info p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+                <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+                <div v-if="(file.filetype == 'audio')" class="btn btn-outline-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+                <div v-if="(file.filetype == 'image')" class="btn btn-outline-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+            </div>
+            <!-- exam materials end -->
+
+
+            <div class="text-muted me-2 ms-2 small d-inline-block" style="vertical-align: middle;">Lokale Dateien: </div>
+            
             <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
                 <div v-if="(file.type == 'bak')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
-                <div v-if="(file.type == 'docx')" class="btn btn-success p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadDOCX(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
+                <div v-if="(file.type == 'docx')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadDOCX(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
                 
                 <div v-if="(file.type == 'pdf')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
                 <div v-if="(file.type == 'audio')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="playAudio(file.name)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
                 <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
             </div>
+            
+
+
+
         
         </div>
         <!-- toolbar end -->
@@ -135,6 +158,7 @@
             <div class="mb-3 row">
                 <div class="mb-3 "> {{$t('editor.leftkiosk')}} <br> {{$t('editor.tellsomeone')}} </div>
                 <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32" >
+                <div class="mt-3"> {{ formatTime(entrytime) }}</div>
             </div>
         </div>
     </div>
@@ -161,9 +185,15 @@
                     <img src="/src/assets/img/svg/edit-download.svg" class="white" width="22" height="32">
                 </div>
                 <br>
-                <div class="btn btn-warning shadow " id="print-button" @click="printBase64()" :title="$t('editor.print')">
+                <div class="btn btn-warning shadow " id="print-button" @click="printBase64(true)" :title="$t('editor.print')">
                     <img src="/src/assets/img/svg/print.svg" class="white" width="22" height="32">
                 </div>
+                
+                <div class="btn btn-warning shadow " id="send-button" @click="printBase64()" :title="$t('editor.send')">
+                    <img src="/src/assets/img/svg/games-solve.svg" class="white" width="22" height="32">
+                </div>
+
+
             </div>
            
 
@@ -193,7 +223,8 @@
                 <embed src="" id="pdfembed" style="border-radius:0 !important; background-size:contain; width:100% !important; height: 100% !important; background-color:transparent !important;"></embed>
                 <div class="btn btn-secondary white splitinsert" id="insert-button" @click="insertImage(selectedFile)" :title="$t('editor.insert')" style="position: absolute; top: 60px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
                 
-                <div class="btn  btn-secondary splitprint" id="print-button" @click="printBase64()" :title="$t('editor.print')" style="position: absolute; top: 108px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
+                <div class="btn  btn-secondary splitprint" id="print-button" @click="printBase64(true)" :title="$t('editor.print')" style="position: absolute; top: 110px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
+                <div class="btn  btn-secondary splitsend" id="send-button" @click="printBase64()" :title="$t('editor.send')" style="position: absolute; top: 144px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
                 
                 <div id="pdfZoom" style="display:none; position: absolute; top:40px; right:20px; z-index:100000; height: 64px;">
                     <button class="btn btn-secondary  white  splitzoomin" style="width:70px; height: 32px; margin-bottom:2px;  background-repeat: no-repeat; background-position: center; " id="zoomIn"></button><br>
@@ -220,7 +251,7 @@
 
     
     <!-- LANGUAGE TOOL START -->
-    <div id="languagetool" v-if="serverstatus.languagetool || privateSpellcheck.activated">
+    <div id="languagetool" v-if="serverstatus.examSections[serverstatus.activeSection].languagetool || privateSpellcheck.activated">
         <div id="ltcheck" @click="LTcheckAllWords();"> <div id="eye" class="darkgreen eyeopen"></div> &nbsp;LanguageTool</div>
         <div class="ltscrollarea"> 
             
@@ -245,7 +276,7 @@
                 </div>   
                 
                 <div v-if="entry.message" class="fw-bold">{{ entry.rule.category.name}}</div>
-                <div v-if="serverstatus.suggestions || privateSpellcheck.suggestions">
+                <div v-if="serverstatus.examSections[serverstatus.activeSection].suggestions || privateSpellcheck.suggestions">
                   <div v-if="entry.message">{{ entry.message}}</div>
                      <div v-if="entry.replacements" class="replacement">
                         <span v-if="entry.replacements[0]">  {{ entry.replacements[0].value }}</span>
@@ -316,8 +347,9 @@ import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import { LTcheckAllWords, LTfindWordPositions, LThighlightWords, LTdisable, LThandleMisspelled, LTignoreWord, LTresetIgnorelist } from '../utils/languagetool.js'
-import DOMPurify from 'dompurify';
-import { Buffer } from 'buffer';
+
+import {getExamMaterials, loadPDF, loadHTML, loadDOCX, loadImage, playAudio} from '../utils/filehandler.js'
+
 
 export default {
     components: {
@@ -357,7 +389,7 @@ export default {
             wordcount : 0,
             now : 0,
             pincode : this.$route.params.pincode,
-            zoom:1,
+            zoom:1.5,
             battery: null,
             proseMirrorMargin: '30mm',
             editorWidth: '210mm',
@@ -368,8 +400,9 @@ export default {
             word:"",
             editorcontentcontainer:null,
             serverstatus: this.$route.params.serverstatus,
-            linespacing: this.$route.params.serverstatus.linespacing ? this.$route.params.serverstatus.linespacing : '2',
-            fontfamily:  this.$route.params.serverstatus.fontfamily  ? this.$route.params.serverstatus.fontfamily : "sans-serif", 
+            linespacing: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].linespacing ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].linespacing : '2',
+            fontfamily:  this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontfamily  ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontfamily : "sans-serif", 
+            fontsize: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontsize ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontsize : '12pt',
             privateSpellcheck: {activate: false, activated: false, suggestions: false}, // this is a per student override (for students with legasthenie)
             individualSpellcheckActivated: false,
             audioSource: null,
@@ -392,6 +425,8 @@ export default {
             ignoreList: new Set(),
             wlanInfo: null,
             ltRunning: false,
+            examMaterials: [],
+            submissionnumber: 0,
         }
     },
     computed: {
@@ -399,12 +434,17 @@ export default {
             const rgbColor = this.editor?.getAttributes('textStyle')?.color || '';
             return rgbColor.startsWith('rgb') ? this.rgbToHex(rgbColor) : rgbColor;
         },
-
-
     },
 
 
     methods: {
+
+        getExamMaterials:getExamMaterials,
+        loadPDF:loadPDF,
+        loadHTML:loadHTML,
+        loadDOCX:loadDOCX,
+        loadImage:loadImage,
+        playAudio:playAudio,
 
         LTcheckAllWords:LTcheckAllWords,
         LTfindWordPositions:LTfindWordPositions,
@@ -446,6 +486,29 @@ export default {
         },
 
 
+
+        loadBase64file(file){
+            if (file.filetype == 'pdf'){
+                this.loadPDF(file, true)
+                return
+            }
+            else if (file.filetype == 'image'){
+                this.loadImage(file, true)
+                return
+            }
+            else if (file.filetype == 'docx'){
+                this.loadDOCX(file,true)
+                return
+            }
+            else if (file.filetype == 'audio'){
+                this.playAudio(file,true)
+                return
+            }
+        },
+
+
+
+
         async fetchInfo() {
             let getinfo = await ipcRenderer.invoke('getinfoasync')  // we need to fetch the updated version of the systemconfig from express api (server.js)
             this.clientinfo = getinfo.clientinfo;
@@ -465,7 +528,7 @@ export default {
             this.battery = await navigator.getBattery().then(battery => { return battery }).catch(error => { console.error("Error accessing the Battery API:", error);  });
 
             //handle individual spellcheck (only if not globally activated anyways)
-            if (this.serverstatus.languagetool === false) {   
+            if (this.serverstatus.examSections[this.serverstatus.activeSection].languagetool === false) {   
                 if (this.privateSpellcheck.activate == false && this.LTactive) {
                     this.LTdisable()
                     this.privateSpellcheck.activated = false   // das wird eigentlich eh im communication handler für clientinfo bereits auf false gesetzt und bei fetchinfo() übernommen
@@ -476,90 +539,6 @@ export default {
         }, 
 
 
-        /**
-         * plays an audiofile
-         * either shows dialog with limited amount of replays or player controls if unlimited
-         * @param {*} filename the name of the audiofile to be played
-         */
-        async playAudio(filename) {
-            const audioFile = this.audiofiles.find(obj => obj.name === filename);  // search for file in this.audiofiles - get object
-            this.LTdisable()  // close langugagetool
-     
-       
-            if (this.serverstatus.audioRepeat > 0){
-                this.$swal.fire({
-                    title: audioFile.name,
-                    text:  this.$t("editor.reallyplay"),
-                    icon: "question",
-                    showCancelButton: true,
-                    cancelButtonText: this.$t("editor.cancel"),
-                    reverseButtons: true,
-
-                    html: audioFile.playbacks > 0 ? `
-                       
-                        <span class="col-3" style="">${this.$t("editor.audioremaining")} ${audioFile.playbacks} </span> <br>
-                        <div id="soundtest" class="btn btn-info btn-sm m-2">Soundtest</div><br>
-                        <h6>${this.$t("editor.reallyplay")}</h6>
-                    ` : `
-                         <div id="soundtest" class="btn btn-info btn-sm m-2">Soundtest</div><br>
-                        <span class="col-3" style="">${this.$t("editor.audionotallowed")}</span> 
-                    `,
-                    didRender: () => {
-                        document.getElementById('soundtest').onclick = () => this.soundtest();
-                    }
-                }).then(async (result) => {
-                    if (result.isConfirmed) {
-                        if (audioFile.playbacks > 0){
-                            try {
-                                const base64Data = await ipcRenderer.invoke('getfilesasync', filename, true);
-                                if (base64Data) {
-                                    this.audioSource = `data:audio/mp3;base64,${base64Data}`;
-                                    audioPlayer.load(); // Lädt die neue Quelle
-                                    audioPlayer.play().then(() => { 
-                                        console.log('Playback started');
-                                        audioFile.playbacks -= 1
-                                    }).catch(e => { console.error('Playback failed:', e); });
-                                } else { console.error('Keine Daten empfangen'); }
-                            } catch (error) { console.error('Fehler beim Empfangen der MP3-Datei:', error); }   
-                        }
-                    } 
-                }); 
-            }
-            if (this.serverstatus.audioRepeat == 0){
-                document.querySelector("#aplayer").style.display = 'block';
-                try {
-                    const base64Data = await ipcRenderer.invoke('getfilesasync', filename, true);
-                    if (base64Data) {
-                        this.audioSource = `data:audio/mpeg;base64,${base64Data}`;
-                        audioPlayer.load(); // Lädt die neue Quelle
-                    } else { console.error('Keine Daten empfangen'); }
-                } catch (error) { console.error('Fehler beim Empfangen der MP3-Datei:', error); } 
-            }
-        },
-
-        async soundtest(){
-            try {
-                const base64Data = await ipcRenderer.invoke('getAudioFile', 'attention.wav', true);
-                if (base64Data) {
-                    let soundtest = document.getElementById('soundtest')
-
-                    if (soundtest){
-                        soundtest.classList.add('btn-success')
-                        soundtest.classList.remove('btn-info')
-                    }
-                   
-                    this.audioSource = `data:audio/mp3;base64,${base64Data}`;
-                    audioPlayer.load(); // Lädt die neue Quelle
-                    audioPlayer.play().then(async () => { 
-                        await this.sleep(2000)
-                        if (soundtest){
-                            soundtest.classList.remove('btn-success')
-                            soundtest.classList.add('btn-info')
-                        }
-                    }).catch(e => { console.error('Playback failed:', e); });
-                } else { console.error('Keine Daten empfangen'); }
-            } catch (error) { console.error('Fehler beim Empfangen der MP3-Datei:', error); }   
-        },
 
         showInsertSpecial(){
             let specialCharsDiv = document.querySelector("#specialcharsdiv");
@@ -603,7 +582,7 @@ export default {
                 sel.addRange(range);
             }
 
-            if(this.serverstatus.languagetool || this.privateSpellcheck){
+            if(this.serverstatus.examSections[this.serverstatus.activeSection].languagetool || this.privateSpellcheck){
                 this.LTupdateHighlights()
             }
 
@@ -612,7 +591,7 @@ export default {
             // bekommt ohne ersichtlichen grund ein deutsches oberes hochkomma wenn es das erste " in einer neuen zeile ist
             // Prüfen, ob wir vl gerade erst einen Code-Block erstellen (erstes zeichen auch erkennen)
             
-            if (this.serverstatus.spellchecklang === 'de-DE') {
+            if (this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang === 'de-DE') {
                 if (e.key === '"') {
                     const selection = window.getSelection();
                     const range = selection.getRangeAt(0);
@@ -746,224 +725,13 @@ export default {
                 if (file.type == "audio"){
                     const existingaudiofile = this.audiofiles.find(obj => obj.name === file.name);
                     if (!existingaudiofile){
-                        this.audiofiles.push({name: file.name, playbacks: this.serverstatus.audioRepeat})
+                        this.audiofiles.push({name: file.name, playbacks: this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat})
                     } 
                 }
             })
         },
 
-        // get file from local examdirectory and replace editor content with it
-        async loadHTML(file){
-            this.LTdisable()
-            this.$swal.fire({
-                title: this.$t("editor.replace"),
-                html:  `${this.$t("editor.replacecontent1")} <b>${file}</b> ${this.$t("editor.replacecontent2")}`,
-                icon: "question",
-                showCancelButton: true,
-                cancelButtonText: this.$t("editor.cancel"),
-                reverseButtons: true
-            })
-            .then(async (result) => {
-                if (result.isConfirmed) {
-                    let data = await ipcRenderer.invoke('getfilesasync', file )
-                    this.editor.commands.clearContent(true)
-                    this.editor.commands.insertContent(data)  
-                } 
-            }); 
-        },
-
-
-        // get file from local examdirectory and replace editor content with it
-        async loadDOCX(file){
-            this.LTdisable()
-            this.$swal.fire({
-                title: this.$t("editor.replace"),
-                html:  `${this.$t("editor.replacecontent1")} <b>${file}</b> ${this.$t("editor.replacecontent2")}`,
-                icon: "question",
-                showCancelButton: true,
-                cancelButtonText: this.$t("editor.cancel"),
-                reverseButtons: true
-            })
-            .then(async (result) => {
-                if (result.isConfirmed) {
-                    let data = await ipcRenderer.invoke('getfilesasync', file, false, true )   //signal, filename, audiofile, docxfile
-                    
-                    //replace editor content ??? or not ??
-                    this.editor.commands.clearContent(true)
-            
-                    const cleanHtml = DOMPurify.sanitize(data.value);
-                    const body = this.parseHTMLString(cleanHtml);
-                    
-                    this.editor.commands.insertContent(cleanHtml)
-                   // body.childNodes.forEach(node => {  this.processNode(node); });
-                } 
-            }); 
-        },
-        processNode(node) {           
-            let nodestring = node.innerHTML
-            let outernodestring = node.outerHTML
-           
-            if (nodestring.includes("data:image")){
-                for (let childnode of node.childNodes){
-                    let childnodestring = childnode.outerHTML
-                    if (childnodestring.includes("data:image")){
-                        let childnodesource = childnode.src 
-                       
-                        this.editor.commands.insertContent(nodestring)
-                        this.editor.chain().focus().setImage({ src:  childnodesource }).run();
-                    }
-                }
-            }
-            else if (nodestring.includes("tr")){
-                console.log("found table")
-                this.editor.commands.insertContent(outernodestring)
-            }
-
-            else {
-               
-                this.editor.commands.insertContent(outernodestring)
-            }
-        },
-
-        parseHTMLString(htmlString) {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(htmlString, 'text/html');
-
-            doc.querySelectorAll('td').forEach(td => {
-                if (!td.innerHTML.trim()) {
-                td.innerHTML = '<p></p>'; // Ensure empty cells have a paragraph with a line break
-                }
-            });
-            return doc.body;
-        },
-
-        //checks if arraybuffer contains a valid pdf file
-        isValidPdf(data) {
-            const header = new Uint8Array(data, 0, 5); // Lese die ersten 5 Bytes für "%PDF-"
-            // Umwandlung der Bytes in Hexadezimalwerte für den Vergleich
-            const pdfHeader = [0x25, 0x50, 0x44, 0x46, 0x2D]; // "%PDF-" in Hex
-            for (let i = 0; i < pdfHeader.length; i++) {
-                if (header[i] !== pdfHeader[i]) {
-                    return false; // Früher Abbruch, wenn ein Byte nicht übereinstimmt
-                }
-            }
-            return true; // Alle Bytes stimmen mit dem PDF-Header überein
-        },
-
-        // fetch file from disc - show preview
-        async loadPDF(file){
-            URL.revokeObjectURL(this.currentpreview);
-            let data = await ipcRenderer.invoke('getpdfasync', file )
-        
-            let isvalid = this.isValidPdf(data)
-            if (!isvalid){
-                this.$swal.fire({
-                    title: this.$t("general.error"),
-                    text: this.$t("general.nopdf"),
-                    icon: "error",
-                    timer: 3000,
-                    showCancelButton: false,
-                    didOpen: () => { this.$swal.showLoading(); },
-                })
-                return
-            }
-
-            this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "application/pdf"})) 
-            this.currentpreviewBase64 = Buffer.from(data).toString('base64');
-
-
-            const pdfEmbed = document.querySelector("#pdfembed");
-            pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0`);
-
-            if (this.splitview) {
-                this.currentPDFData = data
-                this.currentPDFZoom = 80
-                const zoomInButton = document.getElementById("zoomIn");
-                const zoomOutButton = document.getElementById("zoomOut");
-                const pdfZoom = document.getElementById("pdfZoom");
-                pdfZoom.style.display = "block"
-
-                // Entferne bestehende Event-Listener, bevor neue hinzugefügt werden
-                zoomInButton.removeEventListener('click', this.zoomInHandler);
-                zoomOutButton.removeEventListener('click', this.zoomOutHandler);
-
-                // Definiere neue Event-Listener
-                this.zoomInHandler = () => {
-                    let pdfEmbed = document.querySelector("#pdfembed");
-                    this.currentPDFZoom += 10; // Erhöht den Zoom um 10%
-                    URL.revokeObjectURL(this.currentpreview);
-                    this.currentpreview = URL.createObjectURL(new Blob([this.currentPDFData], { type: 'application/pdf' }));
-                    pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=${this.currentPDFZoom}`);
-                };
-                this.zoomOutHandler = () => {
-                    let pdfEmbed = document.querySelector("#pdfembed");
-                    this.currentPDFZoom = Math.max(10, this.currentPDFZoom - 10); // Verhindert, dass der Zoom unter 10% geht
-                    URL.revokeObjectURL(this.currentpreview);
-                    this.currentpreview = URL.createObjectURL(new Blob([this.currentPDFData], { type: 'application/pdf' }));
-                    pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=${this.currentPDFZoom}`);
-                };
-
-                // Füge die Event-Listener erneut hinzu
-                zoomInButton.addEventListener('click', this.zoomInHandler);
-                zoomOutButton.addEventListener('click', this.zoomOutHandler);
-
-                // pdf anzeigen
-                pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=${this.currentPDFZoom}`);
-            }
-            if(!this.splitview){
-                pdfEmbed.style.backgroundImage = '';
-                pdfEmbed.style.height = "95vh";
-                pdfEmbed.style.width = "67vh";  
-            }
-            pdfEmbed.style.backgroundImage = ``;
-
-            document.querySelector("#preview").style.display = 'block';
-            document.querySelector("#insert-button").style.display = 'none';
-            document.querySelector("#print-button").style.display = 'flex';
-        },
-
-
-        // fetch file from disc - show preview
-        async loadImage(file){
-            URL.revokeObjectURL(this.currentpreview);
-            let data = await ipcRenderer.invoke('getpdfasync', file )
-            this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "image/jpeg"})) 
-            this.currentpreviewBase64 = Buffer.from(data).toString('base64');
-
-            const pdfEmbed = document.querySelector("#pdfembed");
-            
-            // Create an image element to determine the dimensions of the image
-            // always resize the pdfembed div to the same aspect ratio of the given image
-            const img = new window.Image();
-            img.onload = function() {
-                const width = img.width;
-                const height = img.height;
-                const aspectRatio = width / height;
-
-                const containerWidth = window.innerWidth * 0.8;
-                const containerHeight = window.innerHeight * 0.8;
-                const containerAspectRatio = containerWidth / containerHeight;
-
-                if(!this.splitview){
-                    if (aspectRatio > containerAspectRatio) {
-                        pdfEmbed.style.width = '80vw';
-                        pdfEmbed.style.height = `calc(80vw / ${aspectRatio})`;
-                    } else {
-                        pdfEmbed.style.height = '80vh';
-                        pdfEmbed.style.width = `calc(80vh * ${aspectRatio})`;
-                    }
-                }
-                pdfEmbed.style.backgroundImage = `url(${this.currentpreview})`;
-            }.bind(this);
-            img.src = this.currentpreview;
-
-            // clear the pdf viewer
-            pdfEmbed.setAttribute("src", "about:blank");
-            document.querySelector("#insert-button").style.display = 'flex';
-            document.querySelector("#print-button").style.display = 'none';
-            document.querySelector("#preview").style.display = 'block';  
-            document.querySelector("#pdfZoom").style.display = 'none';
-        },
+   
 
         // show mugshot preview panel
         showInsertMugshot(){
@@ -1002,6 +770,8 @@ export default {
                 moreOptions.style.display = "none";
             }
         },
+
+
         /** Converts the Editor View into a multipage PDF */
         async saveContent(backup, why) {     
             let filename = false  // this is set manually... otherwise use clientname
@@ -1047,7 +817,7 @@ export default {
                 navigator.clipboard.writeText(text).then(function() {
                     console.log('editor @ savecontent: Text erfolgreich kopiert');
                 }).catch(function(err) {
-                    console.log('editor @ savecontent: Fehler beim Kopieren des Textes: ', err);
+                    console.log('editor @ savecontent: Fehler beim Kopieren des Textes: ', err.message);
                 });
             }
            
@@ -1064,11 +834,13 @@ export default {
         },
 
         // send direct print request to teacher and append current document as base64
-        printBase64(){        
+        printBase64(printrequest=false){        
             // this currentpreviewBase64 contains the current visible pdf as base64 string
             const url = `https://${this.serverip}:${this.serverApiPort}/server/control/printrequest/${this.servername}/${this.token}`;
             const payload = {
-                document: this.currentpreviewBase64
+                document: this.currentpreviewBase64,
+                printrequest: printrequest,
+                submissionnumber: this.submissionnumber
             }
             fetch(url, {
                 method: "POST",
@@ -1079,8 +851,12 @@ export default {
             .then(response => { return response.json();  })
             .then(data => {
                 if (data.message == "success"){
+                    this.submissionnumber++   // successful submission -> increment number
+                    let message = this.$t("editor.saved")
+                    if (printrequest){ message = this.$t("editor.requestsent") }
+                
                     this.$swal.fire({
-                        title: this.$t("editor.requestsent"),
+                        title: message,
                         icon: "info",
                         timer: 1500,
                         timerProgressBar: true,
@@ -1089,7 +865,7 @@ export default {
                 }
             })
             .catch(error => {  
-                console.log(error)    
+                console.log("editor @ printbase64:",error.message)    
             });
 
         },
@@ -1097,19 +873,45 @@ export default {
 
 
         //save file and open print preview
-        async print(){
-            this.saveContent(true, "auto")
-            await this.sleep(1000)
-            this.loadPDF(`${this.clientname}.pdf`)
-        },
+        // async print(){
+        //     this.saveContent(true, "auto" )   // this creates a pdf file in the user directory with header and footer
+        //     await this.sleep(1000)
+        //     this.loadPDF(`${this.clientname}.pdf`)  //this opens the pdf file in the print preview and populates base64 preview
+        // },
 
+
+
+        async sendExamToTeacher(){
+            //this.submissionnumber++
+
+            let response = await ipcRenderer.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber })
+
+         
+            if (response?.status == "success"){
+                let base64pdf = response.base64pdf
+                let dataUrl = response.dataUrl
+
+                let file = {
+                    filename: `${this.clientname}.pdf`,
+                    filetype: "pdf",
+                    filecontent: dataUrl
+                }
+                this.loadPDF(file, true, 100, true)  //this opens the pdf file in the print preview and populates base64 preview
+            }
+            else {
+       
+            }
+        },
 
 
         // display print denied message and reason
         printdenied(why){
             console.log("editor @ printdenied: Print request denied")
+            let message = this.$t("editor.requestdenied")
+            if (why == "duplicate"){ message = this.$t("editor.requestdeniedduplicate") }
+           
             this.$swal.fire({
-                title: `${this.$t("editor.requestdenied")}`,
+                title: message,
                 icon: "info",
                 timer: 2000,
                 timerProgressBar: true,
@@ -1255,8 +1057,13 @@ export default {
                 this.sendFocuslost();
             }
         },
+        formatTime(unixTime) {
+            const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
+            return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed
+        },
+        
         async startLanguageTool(){
-            if (this.serverstatus.languagetool && !this.ltRunning){
+            if (this.serverstatus.examSections[this.serverstatus.activeSection].languagetool && !this.ltRunning){
                 
 
 
@@ -1348,9 +1155,14 @@ export default {
                 ],
                 content: ``,         
             });
-        }
+        },
     },
     
+
+
+
+
+
     mounted() {
         switch (this.cmargin.size) {
             case 5:       this.proseMirrorMargin = '50mm'; this.editorWidth = '160mm'; break;
@@ -1376,13 +1188,16 @@ export default {
         this.setCSSVariable('--js-editorWidth', `${this.editorWidth}`);     
         this.setCSSVariable('--js-linespacing', `${this.linespacing}`); 
         this.setCSSVariable('--js-fontfamily', `${this.fontfamily}`); 
+        this.setCSSVariable('--js-fontsize', `${this.fontsize}`); 
 
-
-        //this.charReplacerExtension = CharReplacer({ language: this.serverstatus.spellchecklang });
-
+      
         this.createEditor(); // this initializes the editor
+        this.zoomin()
+        this.getExamMaterials()
 
-       
+
+        console.log(this.serverstatus)
+
         ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
             console.log("editor @ save: Teacher saverequest received")
             this.saveContent(true, why) 
@@ -1534,7 +1349,7 @@ export default {
 <style lang="scss">
 
 @media print {  //this controls how the editor view is printed (to pdf)
-    #editortoolbar, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer,  span.NXTEhighlight::after, #highlight-layer, #languagetool  {
+    #editortoolbar, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer,  span.NXTEhighlight::after, #highlight-layer, #languagetool, .split-view-container, #preview, #pdfembed  {
         display: none !important;
     }
     body {position: relative  !important;}  //body ist "fixed" um beim autoscrollen nicht zu verscheben - mehrseitiger print wird dadurch aber auf 1seite beschränkt
@@ -1563,6 +1378,7 @@ export default {
         background-color: white !important;
         overflow: hidden !important;
         zoom: 1 !important;
+        box-shadow: 0px 0px 0px transparent !important;
     }
 
     #editormaincontainer {
@@ -1675,7 +1491,10 @@ Other Styles
     margin-bottom:50px;
     zoom:1;
     font-family: var(--js-fontfamily);
+   
 }
+
+
 
 #editorcontent {
     border-radius: 0px;
@@ -1689,6 +1508,14 @@ Other Styles
     width: var(--js-editorWidth);
     border-radius: 0px;
 }
+
+
+#editorcontent div.tiptap p {
+    font-size: var(--js-fontsize);
+    //font-size: 10px;
+}
+
+
 
 #statusbar {
     position: relative;
@@ -1833,7 +1660,25 @@ Other Styles
   height: 52px;
 }
 
+#send-button {
+  border: none;
+  border-radius: 0px;
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  padding: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  margin-top: 10px;
+}
 
+#send-button img {
+  width: 22px;
+  height: 52px;
+}
 /* Basic editor styles */
 
 .ProseMirror {
@@ -1850,18 +1695,7 @@ Other Styles
 .ProseMirror {
     > * + * {
         margin-top: 0.75em;
-        // quotes: "„" "“" "‚" "‘" !important;
     }
-
-    // blockquote p{
-    //     // quotes: "„" "“" "‚" "‘" !important;
-    // }
-    // blockquote p::before {
-    //     content: open-quote;
-    // }
-    // blockquote p::after {
-    //     content: close-quote;
-    // }
 
     ul,
     ol {
@@ -1903,10 +1737,10 @@ Other Styles
         border-radius: 0.5rem;
 
         code {
-        color: inherit;
-        padding: 0;
-        background: none;
-        font-size: 0.8rem;
+            color: inherit;
+            padding: 0;
+            background: none;
+            font-size: 0.8rem;
         }
     }
 
@@ -2140,6 +1974,9 @@ Other Styles
 }
 .splitprint {
     background-image: url('/src/assets/img/svg/print.svg');
+}
+.splitsend {
+    background-image: url('/src/assets/img/svg/games-solve.svg');
 }
 
 #languagetool .ltscrollarea {

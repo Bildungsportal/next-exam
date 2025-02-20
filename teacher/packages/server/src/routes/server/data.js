@@ -110,66 +110,21 @@ import pdf from '@bingsjs/pdf-parse';
         });
     }
 
-    // get latest directory of every student 
-    for (let studentDir of studentFolders) {
-        const items = fs.readdirSync(studentDir.path, { withFileTypes: true });
-        let latestModTime = 0;
-        let latestFolder = null;
-        items.forEach(item => {
-            if (item.isDirectory() && item.name.toUpperCase() !== 'FOCUSLOST') {  // Überprüfe, ob das Element ein Verzeichnis ist und nicht 'focuslost' heißt
-                const itemPath = path.join(studentDir.path, item.name);
-                const stats = fs.statSync(itemPath);
-                
-               // if (stats.mtimeMs > latestModTime) {   // Überprüfe, ob das aktuelle Verzeichnis das neueste ist //falls modtime ident (copy) check name
-                if (stats.mtimeMs > latestModTime || (stats.mtimeMs === latestModTime && item.name > (latestFolder ? latestFolder.name : ''))) {
-                    latestModTime = stats.mtimeMs;
-                    latestFolder = {
-                        path: itemPath,
-                        name: item.name,
-                        time: latestModTime
-                    };
-                }
-            }
-        });
-        if (latestFolder) { 
-            studentDir.latestFolder = latestFolder;  
-            //check if the newest directory is older than 5 minutes.. set warning = true this will show a warning to the teacher!
-            const now = Date.now(); // Current time in milliseconds since the UNIX epoch
-            const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
-            if (now - latestFolder.time > fiveMinutes) {
-                warning = true
-                log.info(`data @ getlatest: The file is older than 5 minutes: ${latestFolder.path}`);
-            } 
-        } 
-        else { console.error('Keinen gültigen Unterordner gefunden für:', studentDir.studentName); }
-    }
 
 
-    // get PDFs from latest directories 
+    // get PDFs from submission directory
     for (let studentDir of studentFolders) {
         let latestPDFpath = null
         let selectedFile = '';
-        if (studentDir.latestFolder && studentDir.latestFolder.path ){
-            try {
-                const files = fs.readdirSync(studentDir.latestFolder.path);
-               
-            
-                const csrfFiles = files.filter(file => file.includes('aux') && file.endsWith('.pdf')); // aux is in the name of the file if the original name is locked for some reason 
-                const docxFiles = files.filter(file => file.includes('docx') && file.endsWith('.pdf'));
-                const xlsxFiles = files.filter(file => file.includes('xlsx') && file.endsWith('.pdf'));
-                const exactMatchFile = files.find(file => file === `${studentDir.studentName}.pdf`);  //filename same as folder name.. this would be the "main" pdf
-            
-                if (csrfFiles.length > 0)      { selectedFile = csrfFiles[0];   } 
-                else if (docxFiles.length > 0) { selectedFile = docxFiles[0];   } 
-                else if (xlsxFiles.length > 0) { selectedFile = xlsxFiles[0];   } 
-                else if (exactMatchFile)       { selectedFile = exactMatchFile; }
-            
-                latestPDFpath = selectedFile ? path.join(studentDir.latestFolder.path, selectedFile) : null;
-                //log.info('data @ getlatest: Neueste Datei gefunden: ', latestPDFpath);
-            } 
-            catch (error) {
-                log.error('data @ getlatest: Fehler beim Lesen des Verzeichnisses:', error);
-                latestPDFpath = null; 
+
+        let submissionDir = path.join(studentDir.path, "ABGABE")
+        if (fs.existsSync(submissionDir)) {
+            let submissionFiles = fs.readdirSync(submissionDir)
+            if (submissionFiles.length > 0) {
+                // submission files are in the format "0.abgabe.pdf" "1.abgabe.pdf" etc.      // we need to get the latest file
+                let latestSubmissionFile = submissionFiles.sort((a, b) => b.split('.')[0] - a.split('.')[0])[0]
+                latestPDFpath = path.join(submissionDir, latestSubmissionFile)
+                selectedFile = latestSubmissionFile
             }
         }
       
@@ -190,8 +145,6 @@ import pdf from '@bingsjs/pdf-parse';
             latestFiles.push(studentDir.latestFilePath)
         }
     }
-
-
 
 
     // now create one merged pdf out of all files
@@ -222,6 +175,10 @@ import pdf from '@bingsjs/pdf-parse';
         return res.json({warning: warning, pdfBuffer:pdfBuffer, pdfPath:pdfPath });
     }
 })
+
+
+
+
 
 
 
@@ -305,9 +262,7 @@ async function createIndexPDF(dataArray, servername){
         let time = "-"
         let chars = "0"
         let filename = "-"
-        if (item.latestFolder && item.latestFolder.time ) {
-            time = moment(item.latestFolder.time).format('DD.MM.YYYY HH:mm')
-        }
+    
         if (item.latestFilePath ) {  // if pdf filepath exists get time from filetime and count chars of pdf
             const stats = fs.statSync(item.latestFilePath);
             time = moment(stats.mtimeMs).format('DD.MM.YYYY HH:mm')
@@ -317,7 +272,7 @@ async function createIndexPDF(dataArray, servername){
             chars = "no pdf"
         }
 
-        if (item.latestFolder && item.latestFolder.path && item.latestFileName) {
+        if (item.latestFileName) {
             filename =  item.latestFileName.length > 25 ? item.latestFileName .slice(0, 25) + "..." : item.latestFileName ;
         }
 
@@ -611,6 +566,48 @@ router.post('/getpdf/:servername/:token', function (req, res, next) {
 
 
 
+router.post('/getexammaterials/:servername/:token', async (req, res, next) => {
+    const token = req.params.token
+    const servername = req.params.servername
+    const mcServer = config.examServerList[servername] // get the multicastserver object
+    const group = req.body.group
+
+    if ( token !== mcServer.serverinfo.servertoken && !checkToken(token, mcServer )) { return res.json({ status: t("data.tokennotvalid") }) }
+   
+
+    let student = mcServer.studentList.find(element => element.token === token) // get student from token
+    if (student) {  
+
+        let serverstatus = mcServer.serverstatus
+        let examSection = serverstatus.examSections[serverstatus.activeSection]
+        let groupA = examSection.groupA
+        let groupB = examSection.groupB
+    
+        let materials = []
+        if (group === "a") {
+            materials = groupA.examInstructionFiles
+        }
+        else if (group === "b") {
+            materials = groupB.examInstructionFiles
+        }
+
+
+        res.json({ status:"success", sender: "server", materials: materials  })
+    } 
+    else {
+        res.json({ status:"error", sender: "server", message:t("data.tokennotvalid")  })
+    }
+    
+
+ 
+})
+
+
+
+
+
+
+
 
 
 
@@ -715,6 +712,7 @@ router.post('/upload/:servername/:servertoken/:studenttoken', async (req, res, n
 
 
     if (req.files){
+
         let filesArray = []  // depending on the number of files this comes as array of objects or object
         if (!Array.isArray(req.files.files)){ filesArray.push(req.files.files)}
         else {filesArray = req.files.files}
@@ -739,15 +737,22 @@ router.post('/upload/:servername/:servertoken/:studenttoken', async (req, res, n
         }
         else if (studenttoken == "a" || studenttoken == "b"){
             let groupArray = []
-            if (studenttoken == "a"){groupArray = mcServer.serverstatus.groupA }
-            if (studenttoken == "b"){groupArray = mcServer.serverstatus.groupB }
-            for (let name of groupArray){
-                let student = mcServer.studentList.find(element => element.clientname === name)
-                if (student) {  
-                    student.status['fetchfiles']= true 
-                    student.status['files'] = files
-                }   
+            if (studenttoken == "a"){groupArray = mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupA.users }
+            if (studenttoken == "b"){groupArray = mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupB.users }
+
+            if (groupArray.length > 0) {
+                for (let name of groupArray){
+                    let student = mcServer.studentList.find(element => element.clientname === name)
+                    if (student) {  
+                        student.status['fetchfiles']= true 
+                        student.status['files'] = files
+                    }   
+                }
             }
+            else {
+                return res.json({ status:"error",  sender: "server", message:t("data.nofilereceived") })
+            }
+         
         }
         else {
             let student = mcServer.studentList.find(element => element.token === studenttoken)
@@ -763,6 +768,20 @@ router.post('/upload/:servername/:servertoken/:studenttoken', async (req, res, n
     }
     
 })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

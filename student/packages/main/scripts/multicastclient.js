@@ -36,9 +36,9 @@ class MulticastClient {
         this.clientinfo = {
             name: "DemoUser",
             token: false,
-            ip: false,
+            ip: false,  // ip address wird vom multicastserver teacher mit geschickt
             hostname: false,
-            serverip: false,
+            serverip: false,   // wird lokal gesetzt (ist aber logischerweise gleich der ip des multicastservers)
             servername: false,
             focus: true,
             exammode: false,
@@ -94,6 +94,7 @@ class MulticastClient {
      */
      messageReceived (message, rinfo) {
         const serverInfo = JSON.parse(String(message))
+
         serverInfo.serverip = rinfo.address
         serverInfo.serverport = rinfo.port
         serverInfo.reachable = true

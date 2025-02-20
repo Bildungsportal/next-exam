@@ -1,6 +1,7 @@
 {
     "name": "next-exam-teacher",
-    "version": "1.1.0-250118",
+    "version": "1.1.0-250220",
+
     "main": "dist/main/main.mjs",
     "author": {
         "name": "Thomas Michael Weissel",
@@ -12,8 +13,8 @@
     "description": "An exam managment tool for digital exams",
     "type": "module",
     "scripts": {
-        "dev": "cross-env NODE_ENV=development node scripts/watch.mjs",
-        "prod": "cross-env NODE_ENV=production node scripts/build.mjs",
+        "dev": "concurrently --prefix-colors \"green,blue\" \"node bip-demo-api/api.js\" \"cross-env NODE_ENV=development node scripts/watch.mjs\"",
+        "prod": "concurrently --prefix-colors \"green,blue\" \"node bip-demo-api/api.js\" \"cross-env NODE_ENV=production node scripts/watch.mjs\"",
         "build": "node scripts/build.mjs && electron-builder -l",
         "build:win": "node scripts/build.mjs && electron-builder -w",
         "build:mac": "node scripts/build.mjs && electron-builder -m",
@@ -22,6 +23,8 @@
         "vite": "vite ./packages/renderer --host"
     },
     "build": {
+        "buildNumber": "1",
+
         "productName": "Next-Exam-Teacher",
         "appId": "com.nextexam-teacher.app",
         "asar": true,
@@ -114,6 +117,7 @@
         "@types/jquery": "^3.5.30",
         "@types/screenshot-desktop": "^1.12.3",
         "@vitejs/plugin-vue": "^5.1.4",
+        "concurrently": "^9.1.2",
         "electron": "^32.1.0",
         "electron-builder": "^25.0.5",
         "nodemon": "^3.1.5",
@@ -170,6 +174,7 @@
         "cookie-parser": "^1.4.6",
         "cors": "^2.8.5",
         "cross-env": "^7.0.3",
+        "crypto-js": "^4.2.0",
         "default-gateway": "^7.2.2",
         "electron-log": "^5.2.0",
         "electron-vite": "^2.3.0",

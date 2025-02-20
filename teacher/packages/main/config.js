@@ -1,12 +1,20 @@
 import pjson from "../../package.json"
 
+/**
+ * achtung:
+ *  config enthält rekursive elemente 
+ *  und wird daher in ipchandler.copyConfig() für das frontend kopiert
+ */
+
 const config = {
 
     development: process.env.NODE_ENV === 'development',
     showdevtools: process.env.NODE_ENV === 'development',
 
     bipIntegration: true,
-   
+    bipDemo: true,
+
+
     workdirectory : "",   // set by server.js (desktop path + examdir)
     tempdirectory : "",   // set by server.js (desktop path + 'tmp')
     serverdirectory: "EXAM-TEACHER",
@@ -22,7 +30,7 @@ const config = {
     accessToken: false,
     version: pjson.version,
     buildforWEB: false,
-    info: process.env.NODE_ENV === 'development' ? process.env.NODE_ENV : 'dev'
+    info: process.env.NODE_ENV === 'development' ? process.env.NODE_ENV : ''
   
 }
 export default config

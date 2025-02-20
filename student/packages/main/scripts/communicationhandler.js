@@ -160,7 +160,7 @@ const agent = new https.Agent({ rejectUnauthorized: false });
                 } else if (data.status === "success") {
                     this.multicastClient.beaconsLost = 0; // Dies zählt ebenfalls als erfolgreicher Heartbeat - Verbindung halten
                     this.multicastClient.clientinfo.printrequest = false  //set this to false after the request left the client to prevent double triggering
-
+                   
                     // Verarbeitung der empfangenen Daten
                     const serverStatusDeepCopy = JSON.parse(JSON.stringify(data.serverstatus));
                     const studentStatusDeepCopy = JSON.parse(JSON.stringify(data.studentstatus));
@@ -272,8 +272,15 @@ const agent = new https.Agent({ rejectUnauthorized: false });
                     log.info("communicationhandler @ sendScreenshot: Student Screenshot does not fit requirements (allblack)");
                 }   
             }
-    
-            let screenshothash = crypto.createHash('md5').update(Buffer.from(screenshotBase64, 'base64')).digest("hex");  // Berechnen des MD5-Hashs des Base64-Strings
+            let screenshothash = null
+            try {
+                screenshothash = crypto.createHash('md5').update(Buffer.from(screenshotBase64, 'base64')).digest("hex");  // Berechnen des MD5-Hashs des Base64-Strings
+            }
+            catch(err){
+                log.error(`communicationhandler @ sendScreenshot: creating hash failed: ${err.message}`)
+            }
+          
+            
             const payload = {
                 clientinfo: {...this.multicastClient.clientinfo},
                 screenshot: screenshotBase64,
@@ -347,7 +354,7 @@ const agent = new https.Agent({ rejectUnauthorized: false });
 
         if ( studentstatus && Object.keys(studentstatus).length !== 0) {  // we have status updates (tasks) - do it!
             if (studentstatus.printdenied) {
-                WindowHandler.examwindow.webContents.send('denied','toomany')   //trigger, why
+                WindowHandler.examwindow.webContents.send('denied')   //trigger, why
             }
 
             if (studentstatus.delfolder === true){
@@ -401,7 +408,6 @@ const agent = new https.Agent({ rejectUnauthorized: false });
                 log.info("communicationhandler @ processUpdatedServerstatus: activating spellcheck for student")
                 this.multicastClient.clientinfo.privateSpellcheck.activate = true  //clientinfo.privateSpellcheck will be put on this.privateSpellcheck in editor updated via fetchInfo()
                 this.multicastClient.clientinfo.privateSpellcheck.activated = true
-               // ipcMain.emit('activatespellcheck', serverstatus.spellchecklang ) //deprecated : nodehun
                 ipcMain.emit("startLanguageTool")
             }
             if (studentstatus.activatePrivateSpellcheck == false && this.multicastClient.clientinfo.privateSpellcheck.activated == true ) {
@@ -443,7 +449,7 @@ const agent = new https.Agent({ rejectUnauthorized: false });
         else { this.multicastClient.clientinfo.screenshotocr = false   }
 
         // Groups handling
-        if (serverstatus.groups){ this.multicastClient.clientinfo.groups = true}
+        if (serverstatus.examSections[serverstatus.activeSection].groups){ this.multicastClient.clientinfo.groups = true}
         else { this.multicastClient.clientinfo.groups = false}
 
         //update screenshotinterval
@@ -536,14 +542,14 @@ const agent = new https.Agent({ rejectUnauthorized: false });
         if (!primary || primary === "" || !primary.id){ primary = displays[0] }       
 
         this.multicastClient.clientinfo.exammode = true
-        this.multicastClient.clientinfo.cmargin = serverstatus.cmargin  // this is used to configure margin settings for the editor
-        this.multicastClient.clientinfo.linespacing = serverstatus.linespacing // we try to double linespacing on demand in pdf creation
-        this.multicastClient.clientinfo.audioRepeat = serverstatus.audioRepeat // restrict repetition of audio files (for listening comprehension)
+        this.multicastClient.clientinfo.cmargin = serverstatus.examSections[serverstatus.activeSection].cmargin  // this is used to configure margin settings for the editor
+        this.multicastClient.clientinfo.linespacing = serverstatus.examSections[serverstatus.activeSection].linespacing // we try to double linespacing on demand in pdf creation
+        this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[serverstatus.activeSection].audioRepeat // restrict repetition of audio files (for listening comprehension)
 
         if (!WindowHandler.examwindow){  // why do we check? because exammode is left if the server connection gets lost but students could reconnect while the exam window is still open and we don't want to create a second one
             log.info("communicationhandler @ startExam: creating exam window")
-            this.multicastClient.clientinfo.examtype = serverstatus.examtype
-            WindowHandler.createExamWindow(serverstatus.examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+            this.multicastClient.clientinfo.examtype = serverstatus.examSections[serverstatus.activeSection].examtype
+            WindowHandler.createExamWindow(serverstatus.examSections[serverstatus.activeSection].examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
         }
         else if (WindowHandler.examwindow){  //reconnect into active exam session with exam window already open
             log.error("communicationhandler @ startExam: found existing Examwindow..")
@@ -646,12 +652,16 @@ const agent = new https.Agent({ rejectUnauthorized: false });
 
     // this is manually  triggered if connection is lost during exam - we allow the student to get out of the kiosk mode but keep his work in the editor
     // for some reason i changed this function to also kill the exam window and therefore exit the exam completely so this is basically redundant
-    gracefullyEndExam(){
+    async gracefullyEndExam(){
         disableRestrictions()
 
         if (WindowHandler.examwindow){ 
+            WindowHandler.examwindow.webContents.send('save','auto')
+            await this.sleep(1000)
+           
             this.multicastClient.clientinfo.exammode = false
             log.warn("communicationhandler @ gracefullyEndExam: Manually Unlocking Workstation")
+            
             try {
                 // remove listener
                 WindowHandler.removeBlurListener();

@@ -25,9 +25,9 @@ if (userAgent.indexOf(' electron/') > -1) {
 
 const routes = [
     { path: '/',                  component: startserver, beforeEnter: [addParams] },
-    { path: '/startserver',       component: startserver, beforeEnter: [addParams] },
+    { path: '/startserver/:bipToken/:bipUsername/:bipuserID:',  name:"startserver",     component: startserver, beforeEnter: [addParams] },
     { path: '/serverlist',        component: serverlist,   beforeEnter: [addParams]},
-    { path: '/dashboard/:servername/:passwd', name:"dashboard", component: dashboard, beforeEnter: [addParams, checkPasswd] },
+    { path: '/dashboard/:servername/:passwd/:bipToken/:bipUsername/:bipuserID:', name:"dashboard", component: dashboard, beforeEnter: [addParams, checkPasswd] },
     { path: '/:pathMatch(.*)*',   component: notfound },
 ]
 
