@@ -571,8 +571,22 @@ export default {
                 })
             }
             else {
+
+                const charMap = {
+                    'ć': 'c',
+                    'č': 'c',
+                    'š': 's',
+                    'ž': 'z',
+                    'đ': 'd',
+                    // Add more mappings as needed
+                };
+
+
                 //check username - remove leading and trailing spaces
-                this.username = this.username.replace(/^\s+|\s+$/g, '');
+                this.username = this.username
+                    .replace(/^\s+|\s+$/g, '')
+                    .replace(/[^\x00-\x7F]/g, char => charMap[char] || char); // Replace using the map
+
 
                 //  console.log({clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode, bipuserID:this.bipuserID })
                

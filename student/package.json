@@ -12,18 +12,16 @@
     "description": "An exam managment tool for digital exams",
     "type": "module",
     "scripts": {
-       
         "dev": "cross-env NODE_ENV=development node scripts/watch.mjs",
         "prod": "cross-env NODE_ENV=production node scripts/watch.mjs",
-
         "clean": "rm -rf ./dist",
         "cleanwin": "rmdir /s /q dist",
-
         "build": "npm run clean && node scripts/build.mjs && electron-builder -l",
         "build:mac": "npm run clean && node scripts/build.mjs && electron-builder -m",
         "build:win": "npm run cleanwin && node scripts/build.mjs && electron-builder -w"
     },
     "build": {
+        "buildNumber": "1",
         "productName": "Next-Exam-Student",
         "appId": "com.nextexam-student.app",
         "asar": {
@@ -88,8 +86,6 @@
             "splashImage": "public/splash.bmp"
         },
         "msi": {
-            "createDesktopShortcut": true,
-            "createStartMenuShortcut": true,
             "perMachine": true,
             "upgradeCode": "95a8e931-7946-44c5-9a9c-ec31d1553b03"
         },
@@ -198,6 +194,7 @@
         "express": "^4.21.0",
         "express-fileupload": "^1.5.1",
         "extract-zip": "^2.0.1",
+        "find-process": "^1.4.10",
         "fs": "^0.0.1-security",
         "get-windows": "^9.2.0",
         "html2pdf-jspdf2": "^0.1.2",
@@ -212,7 +209,6 @@
         "node-notifier": "^10.0.1",
         "node-wifi": "^2.0.16",
         "play-sound": "^1.1.6",
-        "ps-node": "^0.1.6",
         "ps-tree": "^1.2.0",
         "sass": "1.50.0",
         "screenshot-desktop-wayland": "^1.15.2",

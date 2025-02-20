@@ -21,7 +21,6 @@
  */
 
 import { app, BrowserWindow, powerSaveBlocker, nativeTheme, globalShortcut, Tray, Menu} from 'electron'
-import { checkParent } from './scripts/checkparent.js';
 import { release } from 'os'
 import WindowHandler from './scripts/windowhandler.js'
 import CommHandler from './scripts/communicationhandler.js'
@@ -35,6 +34,8 @@ import os from 'os'
 import ip from 'ip'
 import log from 'electron-log';
 import { gateway4sync } from 'default-gateway';
+
+import { Worker } from 'worker_threads';
 
 
 // Verhindert, dass Electron das Standardmenü erstellt
@@ -248,9 +249,45 @@ app.whenReady()
 
 
     // this checks if the app was started from within a browser (directly after download)
-    checkParent()
-    .then(() => {})
-    .catch(err => log.error('main @ checkParent: Fehler bei Parent Check:', err)    );
+    const runCheckParentInWorker = () => {
+        const workerPath = path.join(__dirname, '../../public', 'checkparent.worker.js');
+        
+        const worker = new Worker(workerPath, { type: 'module' });
+    
+        worker.on('message', (result) => {
+            if (!result.success) {
+                log.error('main @ checkParent:', result.error);
+                return;
+            }
+    
+            if (result.foundBrowser) {
+                log.warn('main: Die App wurde direkt aus einem Browser gestartet');
+                dialog.showMessageBoxSync(WindowHandler.mainwindow, {
+                    type: 'question',
+                    buttons: ['OK'],
+                    title: 'Programm beenden',
+                    message: 'Unerlaubter Programmstart aus einem Webbrowser erkannt.\nNext-Exam wird beendet!',
+                });
+                WindowHandler.mainwindow.allowexit = true;
+                app.quit();
+            } else {
+                log.info('main: Parent Process Check OK');
+            }
+        });
+    
+        worker.on('error', (error) => {
+            log.error('main @ checkParent worker error:', error);
+        });
+    };
+    
+    runCheckParentInWorker();
+
+
+
+
+
+
+
 
 
 

@@ -67,10 +67,17 @@ export async function loadPDF(file, base64 = false, zoom=100, submission=false){
     document.querySelector("#preview").style.display = 'block';
     try {
          document.querySelector("#insert-button").style.display = 'none';
-        document.querySelector("#print-button").style.display = 'flex';
+        
 
-        if (submission){ document.querySelector("#send-button").style.display = 'flex'; }
-        else{ document.querySelector("#send-button").style.display = 'none'; }
+        if (submission){ 
+            document.querySelector("#send-button").style.display = 'flex';
+            document.querySelector("#print-button").style.display = 'flex';
+         }
+        else{ 
+            document.querySelector("#send-button").style.display = 'none'; 
+            document.querySelector("#print-button").style.display = 'none';
+        
+        }
     }
     catch(e){}
    

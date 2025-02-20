@@ -389,7 +389,7 @@ export default {
             wordcount : 0,
             now : 0,
             pincode : this.$route.params.pincode,
-            zoom:1.2,
+            zoom:1.5,
             battery: null,
             proseMirrorMargin: '30mm',
             editorWidth: '210mm',
