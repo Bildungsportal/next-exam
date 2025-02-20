@@ -272,8 +272,15 @@ const agent = new https.Agent({ rejectUnauthorized: false });
                     log.info("communicationhandler @ sendScreenshot: Student Screenshot does not fit requirements (allblack)");
                 }   
             }
-    
-            let screenshothash = crypto.createHash('md5').update(Buffer.from(screenshotBase64, 'base64')).digest("hex");  // Berechnen des MD5-Hashs des Base64-Strings
+            let screenshothash = null
+            try {
+                screenshothash = crypto.createHash('md5').update(Buffer.from(screenshotBase64, 'base64')).digest("hex");  // Berechnen des MD5-Hashs des Base64-Strings
+            }
+            catch(err){
+                log.error(`communicationhandler @ sendScreenshot: creating hash failed: ${err.message}`)
+            }
+          
+            
             const payload = {
                 clientinfo: {...this.multicastClient.clientinfo},
                 screenshot: screenshotBase64,

@@ -1,6 +1,7 @@
 {
     "name": "next-exam-teacher",
-    "version": "1.1.0-250218",
+    "version": "1.1.0-250220",
+    "buildVersion": "1.1.0.250220",
     "main": "dist/main/main.mjs",
     "author": {
         "name": "Thomas Michael Weissel",
@@ -73,6 +74,8 @@
             "splashImage": "public/splash.bmp"
         },
         "msi": {
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true,
             "perMachine": true,
             "upgradeCode": "77234b48-9292-4b75-acfe-e5645ad97c46"
         },
