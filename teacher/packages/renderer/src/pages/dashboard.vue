@@ -520,6 +520,7 @@ export default {
                 examSecurityKey: "oI9xGzHkUFe7Lg2iTXHkYp4pDab3Nvj4kFEOqA93cZE=",
                 useExamSections: false, //if false exam section 1 is used and no tabs are displayed
                 activeSection: 1,
+                lockedSection: 1,
                 examSections: {
                     1: {
                         examtype: 'math',   
@@ -863,6 +864,8 @@ computed: {
                         //activate new section for all student
                         Object.values(this.serverstatus.examSections).forEach(section => {   section.locked = false    })
                         this.serverstatus.examSections[this.serverstatus.activeSection].locked = true
+                        this.serverstatus.lockedSection = section
+                        this.setServerStatus()
                     }
                 })    
             }

@@ -12,7 +12,8 @@ function startExam(){
     }, 4000); 
 
     this.serverstatus.examSections[this.serverstatus.activeSection].locked = true;   // starting exammode locks the current active section
-
+    this.serverstatus.lockedSection = this.serverstatus.activeSection;
+    
     this.lockscreens(false, false); // deactivate lockscreen
     this.serverstatus.exammode = true;
     log.info("exammanagment @ startExam: starting exammode")

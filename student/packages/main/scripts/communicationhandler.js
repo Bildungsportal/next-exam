@@ -347,7 +347,7 @@ const agent = new https.Agent({ rejectUnauthorized: false });
      * this currently only handle startexam & endexam
      * could also handle kick, focusrestore, and even trigger file requests
      */
-    processUpdatedServerstatus(serverstatus, studentstatus){
+    async processUpdatedServerstatus(serverstatus, studentstatus){
        
         ///////////////////////////////
         // individual status updates
@@ -443,22 +443,71 @@ const agent = new https.Agent({ rejectUnauthorized: false });
         // global status updates
         ////////////////////////////////
 
-        //check which section of the exam is currently active, update clientinfo and change to new exam section if needed
-        if (serverstatus.activeSection !== this.multicastClient.clientinfo.activeSection){
-            this.multicastClient.clientinfo.activeSection = serverstatus.activeSection
+        
+       
+        // if student is in locked state in exam mode
+        if (serverstatus.exammode && this.multicastClient.clientinfo.exammode){
+           
+
+            //check if the current active section is the same as the one in the serverstatus - if not change to the new section
+            if (serverstatus.lockedSection !== this.multicastClient.clientinfo.lockedSection){
+                log.warn("communicationhandler @ processUpdatedServerstatus: changing section to", serverstatus.lockedSection)
+
+                this.multicastClient.clientinfo.lockedSection = serverstatus.lockedSection
+                //save all files from the old section (if exam mode is "editor") and send to teacher - trigger sendToTeacher()
+                if (this.multicastClient.clientinfo.exammode === "editor"){
+                    this.WindowHandler.examwindow.webContents.send('submitexam')  // send current work as base64 to teacher (stores pdf in ABGABE folder with submission number)
+                }
+                this.sendToTeacher() //backup local files and send to teacher (archive with timestamp)
+
+                //wait 1 second and cleanup NEXT-EXAM-STUDENT-WORKDIR
+                await this.sleep(1000)
+                try {
+                    log.warn("communicationhandler @ processUpdatedServerstatus: cleaning exam workfolder")
+                    if (fs.existsSync(this.config.examdirectory)){   // set by server.js (desktop path + examdir)
+                        fs.rmSync(this.config.examdirectory, { recursive: true });
+                        fs.mkdirSync(this.config.examdirectory);
+                    }
+                } catch (error) {
+                    log.error(`communicationhandler @ processUpdatedServerstatus: Can not delete directory - ${error} `)
+                }
+                
+                //close exam window or relead the new exam section in the same window
+                if (WindowHandler.examwindow){
+                    if ( serverstatus.examSections[serverstatus.lockedSection].examtype === "microsoft365"){
+                        //close exam window and reopen it with the new exam section
+                        WindowHandler.examwindow.close();
+                        WindowHandler.examwindow.destroy();
+                        WindowHandler.examwindow = null;
+                        this.startExam(serverstatus)
+                    }
+                    else {
+                       
+                        let url = serverstatus.examSections[serverstatus.lockedSection].examtype   // editor || math || tbd.
+                        let token = this.multicastClient.clientinfo.token
+                         
+                        if (app.isPackaged) {
+                            let path = join(__dirname, `../renderer/index.html`)
+                            WindowHandler.examwindow.loadFile(path, {hash: `#/${url}/${token}`})
+                        } 
+                        else {
+                            url = `http://${process.env['VITE_DEV_SERVER_HOST']}:${process.env['VITE_DEV_SERVER_PORT']}/#/${url}/${token}/`
+                            WindowHandler.examwindow.loadURL(url)
+                        }
 
 
-            //save all files from the old section (if exam mode is "editor") and send to teacher - trigger sendToTeacher()
-            if (this.multicastClient.clientinfo.exammode === "editor"){
-                this.WindowHandler.examwindow.webContents.send('submitexam')  // send current work as base64 to teacher (stores pdf in ABGABE folder with submission number)
+                    }
+                }
+          
+            
+
             }
 
-            this.sendToTeacher() //backup local files and send to teacher (archive with timestamp)
-
-            //close exam window or relead the new exam section in the same window
 
 
         }
+       
+      
 
 
         if (serverstatus.screenslocked && !this.multicastClient.clientinfo.screenlock) {  this.activateScreenlock() }
@@ -469,7 +518,7 @@ const agent = new https.Agent({ rejectUnauthorized: false });
         else { this.multicastClient.clientinfo.screenshotocr = false   }
 
         // Groups handling
-        if (serverstatus.examSections[serverstatus.activeSection].groups){ this.multicastClient.clientinfo.groups = true}
+        if (serverstatus.examSections[serverstatus.lockedSection].groups){ this.multicastClient.clientinfo.groups = true}
         else { this.multicastClient.clientinfo.groups = false}
 
         //update screenshotinterval
@@ -562,14 +611,14 @@ const agent = new https.Agent({ rejectUnauthorized: false });
         if (!primary || primary === "" || !primary.id){ primary = displays[0] }       
 
         this.multicastClient.clientinfo.exammode = true
-        this.multicastClient.clientinfo.cmargin = serverstatus.examSections[serverstatus.activeSection].cmargin  // this is used to configure margin settings for the editor
-        this.multicastClient.clientinfo.linespacing = serverstatus.examSections[serverstatus.activeSection].linespacing // we try to double linespacing on demand in pdf creation
-        this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[serverstatus.activeSection].audioRepeat // restrict repetition of audio files (for listening comprehension)
+        this.multicastClient.clientinfo.cmargin = serverstatus.examSections[serverstatus.lockedSection].cmargin  // this is used to configure margin settings for the editor
+        this.multicastClient.clientinfo.linespacing = serverstatus.examSections[serverstatus.lockedSection].linespacing // we try to double linespacing on demand in pdf creation
+        this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[serverstatus.lockedSection].audioRepeat // restrict repetition of audio files (for listening comprehension)
 
         if (!WindowHandler.examwindow){  // why do we check? because exammode is left if the server connection gets lost but students could reconnect while the exam window is still open and we don't want to create a second one
             log.info("communicationhandler @ startExam: creating exam window")
-            this.multicastClient.clientinfo.examtype = serverstatus.examSections[serverstatus.activeSection].examtype
-            WindowHandler.createExamWindow(serverstatus.examSections[serverstatus.activeSection].examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+            this.multicastClient.clientinfo.examtype = serverstatus.examSections[serverstatus.lockedSection].examtype
+            WindowHandler.createExamWindow(serverstatus.examSections[serverstatus.lockedSection].examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
         }
         else if (WindowHandler.examwindow){  //reconnect into active exam session with exam window already open
             log.error("communicationhandler @ startExam: found existing Examwindow..")

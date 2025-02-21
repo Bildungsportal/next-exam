@@ -4,8 +4,8 @@
  */
 
 const config = {
-    development: false,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
-    showdevtools: false,
+    development: true,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
+    showdevtools: undefined,
     bipIntegration: true,
     bipDemo: true,
 
@@ -23,6 +23,7 @@ const config = {
     gateway: true,
     electron: false,
     virtualized: false,
+    
     version: '1.1.0-1',
     info: 'Development Version'
 }
