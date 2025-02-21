@@ -441,6 +441,26 @@ const agent = new https.Agent({ rejectUnauthorized: false });
 
         ////////////////////////////////
         // global status updates
+        ////////////////////////////////
+
+        //check which section of the exam is currently active, update clientinfo and change to new exam section if needed
+        if (serverstatus.activeSection !== this.multicastClient.clientinfo.activeSection){
+            this.multicastClient.clientinfo.activeSection = serverstatus.activeSection
+
+
+            //save all files from the old section (if exam mode is "editor") and send to teacher - trigger sendToTeacher()
+            if (this.multicastClient.clientinfo.exammode === "editor"){
+                this.WindowHandler.examwindow.webContents.send('submitexam')  // send current work as base64 to teacher (stores pdf in ABGABE folder with submission number)
+            }
+
+            this.sendToTeacher() //backup local files and send to teacher (archive with timestamp)
+
+            //close exam window or relead the new exam section in the same window
+
+
+        }
+
+
         if (serverstatus.screenslocked && !this.multicastClient.clientinfo.screenlock) {  this.activateScreenlock() }
         else if (!serverstatus.screenslocked ) { this.killScreenlock() }
 

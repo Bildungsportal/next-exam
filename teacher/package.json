@@ -1,211 +1,125 @@
 {
-    "name": "next-exam-teacher",
-    "version": "1.1.0-250220",
-
-    "main": "dist/main/main.mjs",
-    "author": {
-        "name": "Thomas Michael Weissel",
-        "email": "valueerror@gmail.com",
-        "url": "https://next-exam.at"
-    },
-    "homepage": "https://next-exam.at",
-    "license": "GPL-3.0",
-    "description": "An exam managment tool for digital exams",
-    "type": "module",
-    "scripts": {
-        "dev": "concurrently --prefix-colors \"green,blue\" \"node bip-demo-api/api.js\" \"cross-env NODE_ENV=development node scripts/watch.mjs\"",
-        "prod": "concurrently --prefix-colors \"green,blue\" \"node bip-demo-api/api.js\" \"cross-env NODE_ENV=production node scripts/watch.mjs\"",
-        "build": "node scripts/build.mjs && electron-builder -l",
-        "build:win": "node scripts/build.mjs && electron-builder -w",
-        "build:mac": "node scripts/build.mjs && electron-builder -m",
-        "dev:web": "vite ./packages/renderer --host | npm run serve  ",
-        "serve": "nodemon --experimental-json-modules --trace-warnings packages/server/src/server",
-        "vite": "vite ./packages/renderer --host"
-    },
-    "build": {
-        "buildNumber": "1",
-
-        "productName": "Next-Exam-Teacher",
-        "appId": "com.nextexam-teacher.app",
-        "asar": true,
-        "asarUnpack": [
-            "public"
-        ],
-        "afterPack": "scripts/afterpack.js",
-        "afterSign": "scripts/notarize.cjs",
-        "directories": {
-            "output": "../release/${version}"
-        },
-        "compression": "normal",
-        "linux": {
-            "target": "AppImage",
-            "category": "Utility",
-            "icon": "public/icons/256x256.png",
-            "artifactName": "${productName}_${version}.${ext}",
-            "files": [
-                "dist",
-                "public"
-            ]
-        },
-        "mac": {
-            "icon": "public/icons/icon.png",
-            "artifactName": "${productName}_${version}_${arch}.${ext}",
-            "hardenedRuntime": true,
-            "gatekeeperAssess": false,
-            "entitlements": "scripts/entitlements.mac.plist",
-            "entitlementsInherit": "scripts/entitlements.mac.plist",
-            "category": "public.app-category.utilities",
-            "target": {
-                "target": "dmg",
-                "arch": [
-                    "x64",
-                    "arm64"
-                ]
-            },
-            "files": [
-                "dist",
-                "public"
-            ]
-        },
-        "dmg": {
-            "sign": "true"
-        },
-        "portable": {
-            "useZip": true,
-            "unpackDirName": "next-exam-teacher",
-            "splashImage": "public/splash.bmp"
-        },
-        "msi": {
-            "perMachine": true,
-            "upgradeCode": "77234b48-9292-4b75-acfe-e5645ad97c46"
-        },
-        "win": {
-            "icon": "public/icons/icon.ico",
-            "target": [
-                {
-                    "target": "portable",
-                    "arch": [
-                        "x64"
-                    ]
-                },
-                {
-                    "target": "msi",
-                    "arch": [
-                        "x64"
-                    ]
-                }
-            ],
-            "artifactName": "${productName}_${version}.${ext}",
-            "signtoolOptions": {
-                "certificateSubjectName": "OSOS Austria",
-                "signingHashAlgorithms": [
-                    "sha256"
-                ]
-            },
-            "files": [
-                "dist",
-                "public"
-            ]
-        }
-    },
-    "engines": {
-        "node": ">=22.0.0"
-    },
-    "devDependencies": {
-        "@intlify/unplugin-vue-i18n": "^5.0.0",
-        "@rollup/plugin-commonjs": "^28.0.0",
-        "@types/jquery": "^3.5.30",
-        "@types/screenshot-desktop": "^1.12.3",
-        "@vitejs/plugin-vue": "^5.1.4",
-        "concurrently": "^9.1.2",
-        "electron": "^32.1.0",
-        "electron-builder": "^25.0.5",
-        "nodemon": "^3.1.5",
-        "typescript": "^5.6.2",
-        "vite": "^5.4.6",
-        "vite-plugin-electron": "^0.28.7",
-        "vite-plugin-electron-renderer": "^0.14.5",
-        "vite-plugin-resolve": "^2.5.2",
-        "vue": "^3.5.6"
-    },
-    "env": {
-        "//": "Used in build scripts",
-        "PORT": 3002
-    },
-    "keywords": [
-        "vite",
-        "electron",
-        "vue3",
-        "rollup"
-    ],
-    "dependencies": {
-        "@azure/msal-browser": "^3.23.0",
-        "@azure/msal-node": "^2.13.1",
-        "@bingsjs/pdf-parse": "^1.1.1",
-        "@electron/notarize": "^2.5.0",
-        "@tiptap/extension-bold": "^2.7.1",
-        "@tiptap/extension-bullet-list": "^2.7.1",
-        "@tiptap/extension-code": "^2.7.1",
-        "@tiptap/extension-code-block-lowlight": "^2.7.1",
-        "@tiptap/extension-document": "^2.7.1",
-        "@tiptap/extension-dropcursor": "^2.7.1",
-        "@tiptap/extension-gapcursor": "^2.7.1",
-        "@tiptap/extension-hard-break": "^2.7.1",
-        "@tiptap/extension-heading": "^2.7.1",
-        "@tiptap/extension-history": "^2.7.1",
-        "@tiptap/extension-horizontal-rule": "^2.7.1",
-        "@tiptap/extension-italic": "^2.7.1",
-        "@tiptap/extension-list-item": "^2.7.1",
-        "@tiptap/extension-ordered-list": "^2.7.1",
-        "@tiptap/extension-paragraph": "^2.7.1",
-        "@tiptap/extension-strike": "^2.7.1",
-        "@tiptap/extension-subscript": "^2.7.1",
-        "@tiptap/extension-superscript": "^2.7.1",
-        "@tiptap/extension-text": "^2.7.1",
-        "@tiptap/extension-text-align": "^2.7.1",
-        "@tiptap/extension-underline": "^2.7.1",
-        "@tiptap/starter-kit": "^2.7.1",
-        "@tiptap/vue-3": "^2.7.1",
-        "als-diskinfo": "^0.1.1",
-        "archiver": "^5.3.2",
-        "axios": "^1.7.7",
-        "bootstrap": "^5.3.3",
-        "check-disk-space": "^3.4.0",
-        "cookie-parser": "^1.4.6",
-        "cors": "^2.8.5",
-        "cross-env": "^7.0.3",
-        "crypto-js": "^4.2.0",
-        "default-gateway": "^7.2.2",
-        "electron-log": "^5.2.0",
-        "electron-vite": "^2.3.0",
-        "express": "^4.21.0",
-        "express-easy-zip": "^1.1.5",
-        "express-fileupload": "^1.5.1",
-        "express-rate-limit": "^7.4.0",
-        "extract-zip": "^2.0.1",
-        "ip": "^2.0.1",
-        "lowlight": "^3.1.0",
-        "moment": "^2.30.1",
-        "node-forge": "^1.3.1",
-        "node-notifier": "^10.0.1",
-        "os": "^0.1.2",
-        "pdf-lib": "^1.17.1",
-        "pdf-to-printer": "^5.6.0",
-        "pino-pretty": "^11.2.2",
-        "qs": "^6.13.0",
-        "sass": "1.50.0",
-        "screenshot-desktop": "^1.15.0",
-        "sortablejs": "^1.15.3",
-        "terser": "^5.33.0",
-        "tesseract.js": "^6.0.0",
-        "unix-print": "^1.3.2",
-        "vue": "^3.5.6",
-        "vue-draggable-next": "^2.2.1",
-        "vue-i18n": "^10.0.1",
-        "vue-router": "^4.4.5",
-        "vue-sweetalert2": "^5.0.11"
-    },
-    "overrides": {
-        "signal-exit": "3.0.7"
-    }
+  "name": "next-exam-teacher",
+  "version": "1.1.0",
+  "main": "dist/main/main.mjs",
+  "author": {
+    "name": "Thomas Michael Weissel",
+    "email": "valueerror@gmail.com",
+    "url": "https://next-exam.at"
+  },
+  "homepage": "https://next-exam.at",
+  "license": "GPL-3.0",
+  "description": "An exam managment tool for digital exams",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently --prefix-colors \"green,blue\" \"node bip-demo-api/api.js\" \"npm run prebuild && node scripts/watch.mjs\"",
+    "clean": "rm -rf ./dist",
+    "cleanwin": "rmdir /s /q dist",
+    "prebuild": "node scripts/prebuild.js",
+    "build": "npm run prebuild && npm run clean && node scripts/build.mjs && electron-builder -l",
+    "build:mac": "npm run prebuild && npm run clean && node scripts/build.mjs && electron-builder -m",
+    "build:win": "npm run prebuild && npm run cleanwin && node scripts/build.mjs && electron-builder -w"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "devDependencies": {
+    "@intlify/unplugin-vue-i18n": "^5.0.0",
+    "@rollup/plugin-commonjs": "^28.0.0",
+    "@types/jquery": "^3.5.30",
+    "@types/screenshot-desktop": "^1.12.3",
+    "@vitejs/plugin-vue": "^5.1.4",
+    "concurrently": "^9.1.2",
+    "electron": "^32.1.0",
+    "electron-builder": "^25.0.5",
+    "nodemon": "^3.1.5",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.6",
+    "vite-plugin-electron": "^0.28.7",
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "vite-plugin-resolve": "^2.5.2",
+    "vue": "^3.5.6"
+  },
+  "env": {
+    "//": "Used in build scripts",
+    "PORT": 3002
+  },
+  "keywords": [
+    "vite",
+    "electron",
+    "vue3",
+    "rollup"
+  ],
+  "dependencies": {
+    "@azure/msal-browser": "^3.23.0",
+    "@azure/msal-node": "^2.13.1",
+    "@bingsjs/pdf-parse": "^1.1.1",
+    "@electron/notarize": "^2.5.0",
+    "@tiptap/extension-bold": "^2.7.1",
+    "@tiptap/extension-bullet-list": "^2.7.1",
+    "@tiptap/extension-code": "^2.7.1",
+    "@tiptap/extension-code-block-lowlight": "^2.7.1",
+    "@tiptap/extension-document": "^2.7.1",
+    "@tiptap/extension-dropcursor": "^2.7.1",
+    "@tiptap/extension-gapcursor": "^2.7.1",
+    "@tiptap/extension-hard-break": "^2.7.1",
+    "@tiptap/extension-heading": "^2.7.1",
+    "@tiptap/extension-history": "^2.7.1",
+    "@tiptap/extension-horizontal-rule": "^2.7.1",
+    "@tiptap/extension-italic": "^2.7.1",
+    "@tiptap/extension-list-item": "^2.7.1",
+    "@tiptap/extension-ordered-list": "^2.7.1",
+    "@tiptap/extension-paragraph": "^2.7.1",
+    "@tiptap/extension-strike": "^2.7.1",
+    "@tiptap/extension-subscript": "^2.7.1",
+    "@tiptap/extension-superscript": "^2.7.1",
+    "@tiptap/extension-text": "^2.7.1",
+    "@tiptap/extension-text-align": "^2.7.1",
+    "@tiptap/extension-underline": "^2.7.1",
+    "@tiptap/starter-kit": "^2.7.1",
+    "@tiptap/vue-3": "^2.7.1",
+    "als-diskinfo": "^0.1.1",
+    "archiver": "^5.3.2",
+    "axios": "^1.7.7",
+    "bootstrap": "^5.3.3",
+    "check-disk-space": "^3.4.0",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "cross-env": "^7.0.3",
+    "crypto-js": "^4.2.0",
+    "default-gateway": "^7.2.2",
+    "electron-log": "^5.2.0",
+    "electron-vite": "^2.3.0",
+    "express": "^4.21.0",
+    "express-easy-zip": "^1.1.5",
+    "express-fileupload": "^1.5.1",
+    "express-rate-limit": "^7.4.0",
+    "extract-zip": "^2.0.1",
+    "ip": "^2.0.1",
+    "lowlight": "^3.1.0",
+    "moment": "^2.30.1",
+    "node-forge": "^1.3.1",
+    "node-notifier": "^10.0.1",
+    "os": "^0.1.2",
+    "pdf-lib": "^1.17.1",
+    "pdf-to-printer": "^5.6.0",
+    "pino-pretty": "^11.2.2",
+    "qs": "^6.13.0",
+    "sass": "1.50.0",
+    "screenshot-desktop": "^1.15.0",
+    "sortablejs": "^1.15.3",
+    "terser": "^5.33.0",
+    "tesseract.js": "^6.0.0",
+    "unix-print": "^1.3.2",
+    "vue": "^3.5.6",
+    "vue-draggable-next": "^2.2.1",
+    "vue-i18n": "^10.0.1",
+    "vue-router": "^4.4.5",
+    "vue-sweetalert2": "^5.0.11"
+  },
+  "overrides": {
+    "signal-exit": "3.0.7"
+  },
+  "buildNumber": "1",
+  "buildVersion": "1.1.0.1"
 }

@@ -1198,6 +1198,13 @@ export default {
 
         console.log(this.serverstatus)
 
+        ipcRenderer.on('submitexam', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            console.log("editor @ submitexam: submit exam request received")
+            this.printBase64() 
+        }); 
+
+
+
         ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
             console.log("editor @ save: Teacher saverequest received")
             this.saveContent(true, why) 

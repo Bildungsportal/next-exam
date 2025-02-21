@@ -1,36 +1,30 @@
-import pjson from "../../package.json"
 
 /**
- * achtung:
- *  config enthält rekursive elemente 
- *  und wird daher in ipchandler.copyConfig() für das frontend kopiert
+ * DO NOT EDIT - this file is written by prebuild.js via electron-builder.env - edit vars in electron-builder.env file!
  */
 
 const config = {
-
-    development: process.env.NODE_ENV === 'development',
-    showdevtools: process.env.NODE_ENV === 'development',
-
+    development: true,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
+    showdevtools: true,
     bipIntegration: true,
     bipDemo: true,
 
+    workdirectory : "",   // (desktop path + examdir)
+    tempdirectory : "",   // (desktop path + 'tmp')
+    serverdirectory: 'EXAM-TEACHER',
 
-    workdirectory : "",   // set by server.js (desktop path + examdir)
-    tempdirectory : "",   // set by server.js (desktop path + 'tmp')
-    serverdirectory: "EXAM-TEACHER",
-
-    serverApiPort:22422,  //this must be reachable at the teachers machine otherwise nothing is going to work
-    multicastClientPort: 6024,  //needed for exam autodiscovery by the student
+    serverApiPort: 22422,  // this is needed to be reachable on the teachers pc for basic functionality
+    multicastClientPort: 6024,  // only needed for exam autodiscovery
     multicastServerClientPort: 6025,   // needed to find other exams in the network with the same name and prevent using the same exam name twice (confusion alert)
 
     multicastServerAdrr: '239.255.255.250',
-    hostip: "0.0.0.0",
+    hostip: "0.0.0.0",       // server.js
     gateway: true,
     examServerList: {},
     accessToken: false,
-    version: pjson.version,
     buildforWEB: false,
-    info: process.env.NODE_ENV === 'development' ? process.env.NODE_ENV : ''
-  
+
+    version: '1.1.0-1',
+    info: 'Development Version'
 }
-export default config
+export default config;
