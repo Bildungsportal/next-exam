@@ -384,17 +384,18 @@ function defineMaterials(who) {
                 const base64Content = await readFileAsBase64(file); // Read file as Base64
                 const checksum = await calculateMD5(file); // Calculate MD5 checksum
 
-               // console.log(file)
+                console.log(file)
 
+                
                 let filetype = ""
                 if  (file.type.includes("pdf")){  filetype="pdf" }         //pdf
                 else if  (file.type.includes("bak")){  filetype="bak" }   // editor| backup file to replace editor content
                 else if  (file.type.includes("openxml")){  filetype="docx" }   // editor| content file (from teacher) to replace content and continue writing
                 else if  (file.type.includes("ggb")){  filetype="ggb" }  // geogebra
                 else if  (file.type.includes("audio") || file.type.includes("ogg") || file.type.includes("wav") ){ filetype="audio" }  // audio
-                else if  (file.type.includes("jpg") || file.type.includes("png") || file.type.includes("gif") ){ filetype="image" }  // images
+                else if  (file.type.includes("jpg") ||file.type.includes("jpeg") || file.type.includes("png") || file.type.includes("gif") ){ filetype="image" }  // images
 
-                if (file.type=="" && file.name.includes("ggb")){ filetype = "ggb"}
+                if (file.type=="" && file.name.includes("ggb")){ filetype = "ggb"}  // geogebra does not have a mime type
 
                 const fileObject = {   // Create file object
                     filename: file.name,

@@ -881,15 +881,24 @@ export default {
 
 
 
-        async sendExamToTeacher(){
-            //this.submissionnumber++
+        async sendExamToTeacher(directsend=false){
+
+         
 
             let response = await ipcRenderer.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber })
 
-         
+   
             if (response?.status == "success"){
                 let base64pdf = response.base64pdf
                 let dataUrl = response.dataUrl
+                
+                if (directsend){
+                    this.currentpreviewBase64 = base64pdf
+                    this.printBase64()
+                    return
+                }
+
+             
 
                 let file = {
                     filename: `${this.clientname}.pdf`,
@@ -1161,8 +1170,6 @@ export default {
 
 
 
-
-
     mounted() {
         switch (this.cmargin.size) {
             case 5:       this.proseMirrorMargin = '50mm'; this.editorWidth = '160mm'; break;
@@ -1196,14 +1203,19 @@ export default {
         this.getExamMaterials()
 
 
-        console.log(this.serverstatus)
+
+  
+   
+        ipcRenderer.on('finalsubmit', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            console.log("editor @ finalsubmit: submit exam request received")
+            this.sendExamToTeacher(true) 
+        }); 
+
 
         ipcRenderer.on('submitexam', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
             console.log("editor @ submitexam: submit exam request received")
             this.printBase64() 
         }); 
-
-
 
         ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
             console.log("editor @ save: Teacher saverequest received")
@@ -1288,6 +1300,9 @@ export default {
         document.body.addEventListener('mouseleave', this.sendFocuslost);
         // document.body.addEventListener('keydown', this.handleCtrlAlt);
         window.addEventListener('visibilitychange', this.handleVisibilityChange);
+        
+
+
 
 
         // start language tool locally (if allowed)
@@ -1297,6 +1312,10 @@ export default {
 
     },
     beforeMount(){ },
+
+    beforeDestroy() {
+     
+    },
     beforeUnmount() {
         /**
         *   REMOVE EVENT LISTENERS

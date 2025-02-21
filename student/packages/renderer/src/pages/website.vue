@@ -100,9 +100,9 @@ export default {
     components: { ExamHeader },  
     mounted() {
 
-        this.url = this.serverstatus.domainname
-        
-        console.log(this.url)
+        this.url = this.serverstatus.examSections[this.serverstatus.lockedSection].domainname
+ 
+        console.log(`website @ mounted: ${this.url}`)
 
         this.currentFile = this.clientname
         this.entrytime = new Date().getTime()  
@@ -166,10 +166,10 @@ export default {
             
             // Event abfangen, wenn eine Navigation beginnt
             webview.addEventListener('will-navigate', (event) => {
-                if (!event.url.includes(this.serverstatus.domainname)){  //we block everything except pages that contain the following keyword-combinations
+                if (!event.url.includes(this.url)){  //we block everything except pages that contain the following keyword-combinations
                     console.log(event.url)
 
-                    const domain = this.serverstatus.domainname.replace(/https?:\/\//, '').split('/')[0]; // Remove protocol and any path
+                    const domain = this.url.replace(/https?:\/\//, '').split('/')[0]; // Remove protocol and any path
                  
                     const isValidUrl = (testUrl) => {
                         console.log(testUrl)

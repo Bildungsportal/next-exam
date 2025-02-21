@@ -454,14 +454,21 @@ const agent = new https.Agent({ rejectUnauthorized: false });
                 log.warn("communicationhandler @ processUpdatedServerstatus: changing section to", serverstatus.lockedSection)
 
                 this.multicastClient.clientinfo.lockedSection = serverstatus.lockedSection
+          
                 //save all files from the old section (if exam mode is "editor") and send to teacher - trigger sendToTeacher()
-                if (this.multicastClient.clientinfo.exammode === "editor"){
-                    this.WindowHandler.examwindow.webContents.send('submitexam')  // send current work as base64 to teacher (stores pdf in ABGABE folder with submission number)
+                if (this.multicastClient.clientinfo.examtype === "editor"){
+                    log.info("communicationhandler @ processUpdatedServerstatus: sending exam to teacher (final submit)")
+                    WindowHandler.examwindow.webContents.send('finalsubmit')  // send current work as base64 to teacher (stores pdf in ABGABE folder with submission number)
                 }
                 this.sendToTeacher() //backup local files and send to teacher (archive with timestamp)
 
+
+                // update examtype in clientinfo
+                this.multicastClient.clientinfo.examtype = serverstatus.examSections[serverstatus.lockedSection].examtype
+           
+
                 //wait 1 second and cleanup NEXT-EXAM-STUDENT-WORKDIR
-                await this.sleep(1000)
+                await this.sleep(2000)
                 try {
                     log.warn("communicationhandler @ processUpdatedServerstatus: cleaning exam workfolder")
                     if (fs.existsSync(this.config.examdirectory)){   // set by server.js (desktop path + examdir)
@@ -481,8 +488,7 @@ const agent = new https.Agent({ rejectUnauthorized: false });
                         WindowHandler.examwindow = null;
                         this.startExam(serverstatus)
                     }
-                    else {
-                       
+                    else {   // just switch exam mode in active window
                         let url = serverstatus.examSections[serverstatus.lockedSection].examtype   // editor || math || tbd.
                         let token = this.multicastClient.clientinfo.token
                          
@@ -494,17 +500,31 @@ const agent = new https.Agent({ rejectUnauthorized: false });
                             url = `http://${process.env['VITE_DEV_SERVER_HOST']}:${process.env['VITE_DEV_SERVER_PORT']}/#/${url}/${token}/`
                             WindowHandler.examwindow.loadURL(url)
                         }
-
-
                     }
                 }
-          
-            
 
+
+                if (WindowHandler.examwindow){ 
+
+                    WindowHandler.examwindow.serverstatus = serverstatus   // overwrite serverstatus in examwindow
+
+                    const webContents = WindowHandler.examwindow.webContents;
+                    // Remove any existing 'will-navigate' listeners
+                    webContents.removeAllListeners('will-navigate');
+                    // Set new listener for "editor" examtype
+                    if (serverstatus.examSections[serverstatus.lockedSection].examtype === "editor" ){  // do not under any circumstances allow navigation away from the editor
+                        webContents.on('will-navigate', (event, url) => {    // a pdf could contain a link - ATTENTION: also set in windowhandler.js (or direct to a common function)
+                            if ( url.includes( serverstatus.examSections[serverstatus.lockedSection].allowedUrl)){
+                                console.log("url allowed")
+                            }
+                            else {
+                                console.log("blocked leaving exam mode")
+                                event.preventDefault()
+                            }
+                        })
+                    }
+                }
             }
-
-
-
         }
        
       
@@ -611,6 +631,7 @@ const agent = new https.Agent({ rejectUnauthorized: false });
         if (!primary || primary === "" || !primary.id){ primary = displays[0] }       
 
         this.multicastClient.clientinfo.exammode = true
+        this.multicastClient.clientinfo.lockedSection = serverstatus.lockedSection
         this.multicastClient.clientinfo.cmargin = serverstatus.examSections[serverstatus.lockedSection].cmargin  // this is used to configure margin settings for the editor
         this.multicastClient.clientinfo.linespacing = serverstatus.examSections[serverstatus.lockedSection].linespacing // we try to double linespacing on demand in pdf creation
         this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[serverstatus.lockedSection].audioRepeat // restrict repetition of audio files (for listening comprehension)

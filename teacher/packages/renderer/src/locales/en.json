@@ -173,7 +173,9 @@
         "definematerials":"Define Materials",
         "processingfiles":"Processing Files",
         "fontsizetitle": "Fontsize",
-        "fontsize": "Fontsize"
+        "fontsize": "Fontsize",
+        "removefile": "Delete File",
+        "removefileconfirm": "Are you sure you want to delete this file?"
     },
     "control": {
         "tokennotvalid": "token is not valid",

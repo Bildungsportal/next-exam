@@ -504,9 +504,17 @@ class WindowHandler {
          *  Texteditor
          ***************************/
         if (serverstatus.examSections[serverstatus.lockedSection].examtype === "editor" ){  // do not under any circumstances allow navigation away from the editor
-            this.examwindow.webContents.on('will-navigate', (event, url) => {    // a pdf could contain a link ^^
-                event.preventDefault()
+           
+            this.examwindow.webContents.on('will-navigate', (event, url) => {    // a pdf could contain a link - ATTENTION: also set in communicationhandler.js (or direct to a common function)
+                if ( url.includes( serverstatus.examSections[serverstatus.lockedSection].allowedUrl)){
+                    console.log("url allowed")
+                }
+                else {
+                    console.log("blocked leaving exam mode")
+                    event.preventDefault()
+                }
             })
+
         }
 
         /***************************

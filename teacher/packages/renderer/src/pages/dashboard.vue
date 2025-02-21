@@ -10,10 +10,10 @@
     <span class="align-middle ms-3" style="float: right; font-size:23px;">Dashboard</span>
 
     <div v-if="serverstatus.useExamSections" style="position: absolute; left:257px; top:42px; min-width: 550px;">
-        <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 1 && !serverstatus.examSections[1].locked, 'btn-danger': serverstatus.activeSection == 1 && serverstatus.examSections[1].locked, 'btn-secondary': serverstatus.activeSection != 1,'border-danger': serverstatus.examSections[1].locked}">{{ serverstatus.examSections[1].sectionname }}</div>
-        <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 2 && !serverstatus.examSections[2].locked, 'btn-danger': serverstatus.activeSection == 2 && serverstatus.examSections[2].locked, 'btn-secondary': serverstatus.activeSection != 2,'border-danger': serverstatus.examSections[2].locked}">{{ serverstatus.examSections[2].sectionname }}</div>
-        <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 3 && !serverstatus.examSections[3].locked, 'btn-danger': serverstatus.activeSection == 3 && serverstatus.examSections[3].locked, 'btn-secondary': serverstatus.activeSection != 3,'border-danger': serverstatus.examSections[3].locked}">{{ serverstatus.examSections[3].sectionname }}</div>
-        <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="{'btn-teal': serverstatus.activeSection == 4 && !serverstatus.examSections[4].locked, 'btn-danger': serverstatus.activeSection == 4 && serverstatus.examSections[4].locked, 'btn-secondary': serverstatus.activeSection != 4,'border-danger': serverstatus.examSections[4].locked}">{{ serverstatus.examSections[4].sectionname }}</div>
+        <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 1 && !serverstatus.examSections[1].locked, 'sectionbuttonactivered': serverstatus.activeSection == 1 && serverstatus.examSections[1].locked, 'btn-secondary': serverstatus.activeSection != 1,'btn-danger': serverstatus.examSections[1].locked}">{{ serverstatus.examSections[1].sectionname }}</div>
+        <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 2 && !serverstatus.examSections[2].locked, 'sectionbuttonactivered': serverstatus.activeSection == 2 && serverstatus.examSections[2].locked, 'btn-secondary': serverstatus.activeSection != 2,'btn-danger': serverstatus.examSections[2].locked}">{{ serverstatus.examSections[2].sectionname }}</div>
+        <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 3 && !serverstatus.examSections[3].locked, 'sectionbuttonactivered': serverstatus.activeSection == 3 && serverstatus.examSections[3].locked, 'btn-secondary': serverstatus.activeSection != 3,'btn-danger': serverstatus.examSections[3].locked}">{{ serverstatus.examSections[3].sectionname }}</div>
+        <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 4 && !serverstatus.examSections[4].locked, 'sectionbuttonactivered': serverstatus.activeSection == 4 && serverstatus.examSections[4].locked, 'btn-secondary': serverstatus.activeSection != 4,'btn-danger': serverstatus.examSections[4].locked}">{{ serverstatus.examSections[4].sectionname }}</div>
     </div>
 
     <div class="btn btn-sm btn-secondary m-0 me-1 mt-1" style="float: right; padding:3px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white" width="22" height="22" > </div>
@@ -112,7 +112,7 @@
         <div class="dropdown-section m-1" style="width: 200px">
             <!-- Dropdown Button -->
             <div class="mb-1">{{$t("dashboard.exammode")}}</div>
-            <button class="btn btn-sm btn-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center" type="button" :class="lockInExammode ? 'disabled' : ''" data-bs-toggle="dropdown" aria-expanded="false"> <span>{{ getSelectedExamTypeLabel() }}</span>    </button>
+            <button class="btn btn-sm btn-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center" type="button" :class="lockInExammode ? 'disabledexam' : ''" data-bs-toggle="dropdown" aria-expanded="false"> <span>{{ getSelectedExamTypeLabel() }}</span>    </button>
 
             <!-- Dropdown Menu -->
             <ul class="dropdown-menu" style="cursor: pointer;">
@@ -543,6 +543,7 @@ export default {
                         fontsize: '16px',
                         audioRepeat: 0,
                         domainname: false,
+                        allowedUrl: null,
 
                         groups: false, 
                         groupA: { users: [], examInstructionFiles: [] }, 
@@ -569,7 +570,7 @@ export default {
                         fontsize: '16px',
                         audioRepeat: 0,
                         domainname: false,
-
+                        allowedUrl: null,
                         groups: false, 
                         groupA: { users: [], examInstructionFiles: [] }, 
                         groupB: { users: [], examInstructionFiles: [] }
@@ -595,6 +596,7 @@ export default {
                         fontsize: '16px',
                         audioRepeat: 0,
                         domainname: false,
+                        allowedUrl: null,
 
                         groups: false, 
                         groupA: { users: [], examInstructionFiles: [] }, 
@@ -620,8 +622,9 @@ export default {
                         fontfamily: "sans-serif", 
                         fontsize: '16px',
                         audioRepeat: 0,
-                        domainname: false,
-
+                        domainname: false,  
+                        allowedUrl: null,   
+                        
                         groups: false, 
                         groupA: { users: [], examInstructionFiles: [] }, 
                         groupB: { users: [], examInstructionFiles: [] }
@@ -808,8 +811,19 @@ computed: {
 
         // remove file from group a or b
         handleFileRemove({ group, index }) {
-            if (group === 'A') { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.examInstructionFiles.splice(index, 1); } 
-            else {               this.serverstatus.examSections[this.serverstatus.activeSection].groupB.examInstructionFiles.splice(index, 1); }
+            this.$swal.fire({
+                title: this.$t("dashboard.removefile"),
+                text: this.$t("dashboard.removefileconfirm"),
+                icon: 'warning',
+                showCancelButton: true,
+                reverseButtons: true,
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    if (group === 'A') { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.examInstructionFiles.splice(index, 1); } 
+                    else {               this.serverstatus.examSections[this.serverstatus.activeSection].groupB.examInstructionFiles.splice(index, 1); }
+                }
+            })
+
         },
 
         // check if the current exam type is the same as the given type
@@ -1467,6 +1481,26 @@ computed: {
     padding-top: 0px;
 }
 
+.sectionbuttonactive {
+    background-color: rgb(245, 245, 245);
+    color: black;
+    border-color: rgb(245, 245, 245);
+}
+.sectionbuttonactive:hover {
+    background-color: rgb(245, 245, 245);
+    color: black;
+    border-color: rgb(245, 245, 245);
+}
+
+
+
+.sectionbuttonactivered {
+    background-color: rgb(245, 245, 245);
+    color: rgb(176,42,55);
+    border-color: rgb(176,42,55);
+    border-bottom: 0px;
+
+}
 
 .dropdown-toggle::after {
     margin-left: auto !important;
