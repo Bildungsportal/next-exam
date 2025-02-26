@@ -56,7 +56,7 @@
             <button :title="$t('editor.left')" @click="editor.chain().focus().setTextAlign('left').run()" :class="{ 'is-active': editor.isActive({ textAlign: 'left' }) }" class="invisible-button btn btn-outline-info  p-1 me-0 mb-1 btn-sm"><img src="/src/assets/img/svg/format-justify-left.svg" class="white" width="22" height="22" ></button> 
             <button :title="$t('editor.center')" @click="editor.chain().focus().setTextAlign('center').run()" :class="{ 'is-active': editor.isActive({ textAlign: 'center' }) }" class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm "><img src="/src/assets/img/svg/format-justify-center.svg" class="white" width="22" height="22" ></button>
             <button :title="$t('editor.right')" @click="editor.chain().focus().setTextAlign('right').run()" :class="{ 'is-active': editor.isActive({ textAlign: 'right' }) }" class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img src="/src/assets/img/svg/format-justify-right.svg" class="white" width="22" height="22" ></button>
-            <input :title="$t('editor.textcolor')" type="color" @input="editor.chain().focus().setColor($event.target.value).run()" :value="getHexColor || '#000000'" class="invisible-button btn btn-outline-info p-2 me-2 mb-1 btn-sm" style="height: 33.25px; width:32px">
+            <input :title="$t('editor.textcolor')" type="color" @input="handleColorInput" :value="getHexColor || '#000000'" class="invisible-button btn btn-outline-info p-2 me-2 mb-1 btn-sm" style="height: 33.25px; width:32px">
             <button :title="$t('editor.copy')"  @click="copySelection()" class="invisible-button btn btn-outline-success p-1 mb-1 btn-sm"><img src="/src/assets/img/svg/edit-copy.svg" class="" width="22" height="22" ></button>
             <button :title="$t('editor.paste')"  @click="pasteSelection()" class="invisible-button btn btn-outline-success p-1 me-2 mb-1 btn-sm"><img src="/src/assets/img/svg/edit-paste-style.svg" class="" width="22" height="22" ></button>
            
@@ -521,6 +521,35 @@ export default {
                 return
             }
         },
+
+
+        handleColorInput(event) {
+          
+            const color = event.target.value;
+            const clampedColor = this.clampColor(color);
+            this.editor.chain().focus().setColor(clampedColor).run();
+        },
+        clampColor(hexColor) {
+            const rgb = this.hexToRgb(hexColor);
+            const clampedRgb = rgb.map(value => Math.min(value, 230));
+            return this.rgbToHex(`rgb(${clampedRgb.join(', ')})`);
+        },
+        hexToRgb(hex) {
+            // Convert hex to RGB
+            const bigint = parseInt(hex.slice(1), 16);
+            const r = (bigint >> 16) & 255;
+            const g = (bigint >> 8) & 255;
+            const b = bigint & 255;
+            return [r, g, b];
+        },
+        rgbToHex(rgb) {
+            // Convert RGB to hex
+            const rgbValues = rgb.match(/\d+/g).map(Number);
+            return `#${rgbValues.map(x => x.toString(16).padStart(2, '0')).join('')}`;
+        },
+
+
+
 
 
         showUrl(url){
