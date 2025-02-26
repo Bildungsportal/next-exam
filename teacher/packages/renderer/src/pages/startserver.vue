@@ -86,6 +86,8 @@
         <div id="statusdiv" class="m-1 btn btn-warning">{{$t("startserver.connected")}}</div>
         <br>
        
+        <button class="btn btn-outline-secondary btn-sm ms-1 mt-3 mb-2" style="position: absolute; bottom:32px;" @click="toggleLocale">{{ inactivelocale }}</button>
+
         <span @click="showCopyleft()" style="position: absolute; bottom:2px; left: 6px; font-size:0.8em;cursor: pointer;">
             <span style=" display:inline-block; transform: scaleX(-1);font-size:1.2em; ">&copy; </span> 
             <span style="vertical-align: text-bottom;">&nbsp;{{version}} {{ info }}</span>
@@ -178,8 +180,17 @@ export default {
         };
     },
     components: {},
-    methods: {
+    computed: {
+        inactivelocale() { // Zeigt aktuellen Sprachcode
+             return this.$i18n.locale === 'de' ? 'en' : 'de';
+        }
+    },
 
+    methods: {
+        toggleLocale() {
+            // Umschalte zwischen 'de' und 'en'
+            this.$i18n.locale = this.$i18n.locale === 'de' ? 'en' : 'de';
+        },
 
         loginBiP(){
             //console.log("loginBiP", this.config)
@@ -598,6 +609,11 @@ export default {
             //console.log(this.bipToken) 
         }
 
+
+        // set the locale to the system locale
+        const systemLocale = navigator.language.split('-')[0] // z.B. "de" aus "de-DE"
+        const locale = ['de', 'en'].includes(systemLocale) ? systemLocale : 'en' // Fallback zu 'en'
+        this.$i18n.locale = locale
 
         // add event listener to exam input field to supress all special chars 
         document.getElementById("servername").addEventListener("keypress", this.validateInput);

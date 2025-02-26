@@ -47,7 +47,13 @@
         "nofiles": "Es wurden keine Dateien hochgeladen"
     },
     "editor": {
+        "getmaterials": "Materialien holen",
+        "sendfinalexam": "Finale Abgabe an Lehrperson senden",
+        "finalsubmit": "Abgabe",
+        "materials": "Materialien:",
         "update": "Aktualisieren",
+        "localfiles": "Lokale Dateien:",
+
         "splitview": "Spaltenansicht",
         "leftkiosk": "Sie haben den abgesicherten Modus verlassen!",
         "tellsomeone": "Melden Sie sich umgehend bei der Aufsichtsperson!",

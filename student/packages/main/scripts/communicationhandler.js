@@ -431,9 +431,11 @@ const agent = new https.Agent({ rejectUnauthorized: false });
             }
             if (studentstatus.group){
                 //set or update group 
-                this.multicastClient.clientinfo.group = studentstatus.group  
-                if (WindowHandler.examwindow){  
-                    WindowHandler.examwindow.webContents.send('getmaterials')  // if we change group we need to get the materials again
+                if (this.multicastClient.clientinfo.group !== studentstatus.group){
+                    this.multicastClient.clientinfo.group = studentstatus.group  
+                    if (WindowHandler.examwindow){  
+                        WindowHandler.examwindow.webContents.send('getmaterials')  // if we change group we need to get the materials again
+                    }
                 }
             }
 

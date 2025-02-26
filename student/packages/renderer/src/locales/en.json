@@ -47,6 +47,11 @@
         "nofiles": "no files were uploaded"
     },
     "editor": {
+        "getmaterials": "Get materials",
+        "sendfinalexam": "Send final exam",
+        "finalsubmit": "Final submit",
+        "materials": "Materials:",
+        "localfiles": "Local files:",
         "update": "Update",
         "splitview": "Splitview",
         "leftkiosk": "You have left the safe exam mode!",

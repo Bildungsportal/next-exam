@@ -55,6 +55,9 @@
 
 
         <div > <br><div id="statusdiv" class="btn btn-warning m-1"></div>  </div> <br>
+
+        <button class="btn btn-outline-secondary btn-sm ms-1 mt-3 mb-2" style="position: absolute; bottom:32px;"  @click="toggleLocale">{{ inactivelocale }}</button>
+
         <span @click="showCopyleft()" style="position: absolute; bottom:2px; left: 6px; font-size:0.8em;cursor: pointer;">
             <span style=" display:inline-block; transform: scaleX(-1);font-size:1.2em; ">&copy; </span> 
             <span style="vertical-align: text-bottom;">&nbsp;{{version}} {{ info }}</span>
@@ -182,8 +185,18 @@ export default {
             onlineExams: []
         };
     },
-    methods: {
+    computed: {
+        inactivelocale() { // Zeigt aktuellen Sprachcode
+             return this.$i18n.locale === 'de' ? 'en' : 'de';
+        }
+    },
 
+
+    methods: {
+        toggleLocale() {
+        // Umschalte zwischen 'de' und 'en'
+         this.$i18n.locale = this.$i18n.locale === 'de' ? 'en' : 'de';
+        },
         async loginBiP(){
             if (this.config.bipDemo){   // skip bip logon and fake bip info
                 this.bipUsername = "Robert Schrenk"
@@ -677,7 +690,7 @@ export default {
     },
     mounted() {  
         document.querySelector("#statusdiv").style.visibility = "hidden";
-     
+
         this.fetchInfo();
 
         this.fetchinterval = new SchedulerService(4000);
@@ -688,8 +701,6 @@ export default {
         this.autoUpdateInterval.addEventListener('action',  this.bipAutoUpdate);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert
         this.autoUpdateInterval.start();    
 
-
-
         // add event listener to user input field to supress all special chars 
         document.getElementById("user").addEventListener("keypress", function(e) {
            // var lettersOnly = /^[a-zA-Z ]+$/;
@@ -698,15 +709,17 @@ export default {
             if (!lettersOnly.test(key)) { e.preventDefault(); }
         });
 
- 
-
-
         ipcRenderer.on('bipToken', (event, token) => {  
             console.log("token received: ",token)
             this.bipToken = token
             this.fetchBiPData(token)
         });
 
+
+        // set locale to system locale or fallback to 'en'
+        const systemLocale = navigator.language.split('-')[0] // z.B. "de" aus "de-DE"
+        const locale = ['de', 'en'].includes(systemLocale) ? systemLocale : 'en' // Fallback zu 'en'
+        this.$i18n.locale = locale
 
     },
     beforeUnmount() {
