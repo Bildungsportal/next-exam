@@ -16,7 +16,7 @@
         <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 4 && !serverstatus.examSections[4].locked, 'sectionbuttonactivered': serverstatus.activeSection == 4 && serverstatus.examSections[4].locked, 'btn-secondary': serverstatus.activeSection != 4,'btn-danger': serverstatus.examSections[4].locked}">{{ serverstatus.examSections[4].sectionname }}</div>
     </div>
 
-    <div class="btn btn-sm btn-secondary m-0 me-1 mt-1" style="float: right; padding:3px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white" width="22" height="22" > </div>
+    <div class="btn btn-sm btn-cyan m-0 me-1 mt-1" style="float: right; padding:3px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22" > </div>
     <div class="btn btn-sm btn-danger m-0 me-1 mt-1" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style="float: right"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" >&nbsp; {{$t('dashboard.stopserver')}}&nbsp; </div>
     <div v-if="!hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 me-1 " style="cursor: unset; float: right">{{ $t("general.offline") }}</div>
 </div>
@@ -109,10 +109,16 @@
 
 
 
-        <div class="dropdown-section m-1" style="width: 200px">
+        <div class="dropdown-section m-1" style="width: 200px"   :class="lockInExammode ? 'disabledexam' : ''">
             <!-- Dropdown Button -->
             <div class="mb-1">{{$t("dashboard.exammode")}}</div>
-            <button class="btn btn-sm btn-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center" type="button" :class="lockInExammode ? 'disabledexam' : ''" data-bs-toggle="dropdown" aria-expanded="false"> <span>{{ getSelectedExamTypeLabel() }}</span>    </button>
+
+            <button class="btn btn-sm btn-secondary dropdown-toggle d-inline-flex justify-content-between align-items-center" style="width: 166px; vertical-align: middle; text-align: left;"  type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                 <span>{{ getSelectedExamTypeLabel() }}</span>
+            </button>
+            <button class="btn btn-sm btn-secondary p-0" style="width: 31px; height: 31px; margin-left: 3px; display: inline-flex; vertical-align: middle; justify-content: center; align-items: center;" :class="isExamType('math') ? 'disabledexam' : ''" @click="selectExamType(serverstatus.examSections[serverstatus.activeSection].examtype)"  @mouseover="showDescription($t('dashboard.extendedsettings_mode'))"  @mouseout="hideDescription"> 
+                <img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22">
+            </button>
 
             <!-- Dropdown Menu -->
             <ul class="dropdown-menu" style="cursor: pointer;">
@@ -170,7 +176,7 @@
 
 
         <!-- Files Section START -->
-        <div class="mb-4" style="display: inline-block; width: 100%; position: relative;">
+        <div class="mb-2" style="display: inline-block; width: 100%; position: relative;">
             <div class=" m-1 mt-3" style="display: inline-block;">{{$t("dashboard.materials")}}</div>
             <div class="btn btn-sm m-1 btn-cyan plusbutton " @click="defineMaterials('all');hideDescription();" @mouseover="showDescription($t('dashboard.definematerials'))" @mouseout="hideDescription"  style="">+</div>
             <MaterialsList class="m-1" :examSection="serverstatus.examSections[serverstatus.activeSection]"  @remove-file="handleFileRemove" @show-preview="showBase64FilePreview" @show-image-preview="showBase64ImagePreview" @play-audio-file="playAudioFile"/>   
@@ -438,7 +444,7 @@ import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile,
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
 import { loadFilelist, print, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview } from '../utils/filemanager'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore, defineMaterials } from '../utils/exammanagement.js'
-import { getTestURL, getTestID, getFormsID, activateSpellcheck } from '../utils/examsetup.js'
+import { getTestURL, getTestID, getFormsID, configureEditor } from '../utils/examsetup.js'
 
 class EmptyWidget {
     constructor() {
@@ -721,7 +727,7 @@ computed: {
         getTestURL: getTestURL,
         getTestID: getTestID,
         getFormsID: getFormsID,
-        activateSpellcheck: activateSpellcheck,
+        configureEditor: configureEditor,
 
 
 
@@ -841,7 +847,7 @@ computed: {
             if (this.lockInExammode) return;
             this.serverstatus.examSections[this.serverstatus.activeSection].examtype = type;
             // Call existing methods based on type
-            if (type === 'editor') this.activateSpellcheck();
+            if (type === 'editor') this.configureEditor();
             if (type === 'eduvidual') this.getTestID();
             if (type === 'gforms') this.getFormsID();
             if (type === 'website') this.getTestURL();
@@ -1977,7 +1983,7 @@ hr {
     min-height: 1.2em;
     padding: 0.5em;
     color: #545454;
-    width: 99%;
+    width: 99% !important;
 }
 
 
@@ -2034,7 +2040,9 @@ hr {
 
 }
 
-
+.white-100 {    
+    filter: brightness(0) saturate(100%) invert(100%);
+}
 
 
 

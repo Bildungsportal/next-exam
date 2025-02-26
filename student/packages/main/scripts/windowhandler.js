@@ -513,7 +513,22 @@ class WindowHandler {
                     console.log("blocked leaving exam mode")
                     event.preventDefault()
                 }
-            })
+            })  //Prevent navigation away from the editor
+
+
+            // if a new window should open triggered by window.open()
+            this.examwindow.webContents.on('new-window', (event, url) => { 
+                console.log("new-window", url)
+                event.preventDefault();   
+            }); // Prevent the new window from opening
+     
+            // if a new window should open triggered by target="_blank"
+            this.examwindow.webContents.setWindowOpenHandler(({ url }) => { 
+                console.log("setWindowOpenHandler", url)
+                return { action: 'deny' };   
+            }); // Prevent the new window from opening
+    
+
 
         }
 

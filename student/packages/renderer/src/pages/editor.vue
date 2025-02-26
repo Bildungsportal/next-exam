@@ -98,11 +98,17 @@
             <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
                 <div v-if="(file.filetype == 'bak')" class="btn btn-outline-info p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
                 <div v-if="(file.filetype == 'docx')" class="btn btn-outline-info p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
-                <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+                <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
                 <div v-if="(file.filetype == 'audio')" class="btn btn-outline-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
-                <div v-if="(file.filetype == 'image')" class="btn btn-outline-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+                <div v-if="(file.filetype == 'image')" class="btn btn-outline-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
             </div>
             <!-- exam materials end -->
+
+
+            <div v-if="allowedUrlObject" class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="showUrl(allowedUrlObject.full)">
+                <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{allowedUrlObject.domain}} 
+            </div>
+
 
             <div class="text-muted me-2 ms-2 small d-inline-block" style="vertical-align: middle;">{{ $t('editor.localfiles') }} </div>
             <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
@@ -167,6 +173,9 @@
 
     <!-- angabe/pdf preview start -->
     <div v-if="!splitview" id="preview" class="fadeinfast p-4">
+        
+        <webview id="webview" v-show="webviewVisible" :src="allowedUrlObject.full"></webview>
+        
         <div class="embed-container">
             <embed src="" id="pdfembed"></embed>
             <div style="display:block">
@@ -208,6 +217,9 @@
     <div v-if="splitview" class="split-view-container" style="overflow: hidden; display: flex !important; flex-direction: row !important; height: 100% !important;">
         <!-- PDF Preview Container -->
         <div id="preview" class="fadeinfast splitback" style="background-repeat: no-repeat; background-position: center; flex-grow: 1 !important; display: block !important; position: static !important; top: 0 !important; left: auto !important; width: auto !important; height: auto !important; background-color: transparent !important; z-index: auto !important; backdrop-filter: none !important;">
+            
+            <webview id="webview" v-show="webviewVisible" :src="allowedUrlObject.full"></webview>
+
             <div class="embed-container" style="position: relative !important; top: 0 !important; left: 0 !important; transform: none !important; display: block !important; height:100% !important; margin-top:0;">
                 <embed src="" id="pdfembed" style="border-radius:0 !important; background-size:contain; width:100% !important; height: 100% !important; background-color:transparent !important;"></embed>
                 <div class="btn btn-secondary white splitinsert" id="insert-button" @click="insertImage(selectedFile)" :title="$t('editor.insert')" style="position: absolute; top: 60px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
@@ -416,6 +428,7 @@ export default {
             ltRunning: false,
             examMaterials: [],
             submissionnumber: 0,
+            webviewVisible: false,
         }
     },
     computed: {
@@ -423,6 +436,18 @@ export default {
             const rgbColor = this.editor?.getAttributes('textStyle')?.color || '';
             return rgbColor.startsWith('rgb') ? this.rgbToHex(rgbColor) : rgbColor;
         },
+
+        allowedUrlObject() {
+            const fullUrl = this.serverstatus.examSections[this.serverstatus.activeSection].allowedUrl;
+            let domain = '';
+            try {
+                domain = new URL(fullUrl).hostname; // extrahiert den Domainnamen
+            } catch (e) {
+                console.error('Ungültige URL', e);
+            }
+            return { full: fullUrl, domain }; // gibt ein Objekt mit voller URL und Domain zurück
+        }
+
     },
 
 
@@ -477,6 +502,7 @@ export default {
 
 
         loadBase64file(file){
+            this.webviewVisible = false
             if (file.filetype == 'pdf'){
                 this.loadPDF(file, true)
                 return
@@ -496,6 +522,29 @@ export default {
         },
 
 
+        showUrl(url){
+            this.webviewVisible = true
+
+            const webview = document.querySelector("#webview");
+            if (!this.splitview){
+                webview.style.height = "80vh";
+                webview.style.width = "80vw";
+                webview.style.position = "relative";
+                webview.style.top = "10%";
+            }
+            else {
+                webview.style.height = "100%";
+                webview.style.width = "100%";
+                webview.style.position = "relative";
+                webview.style.top = "0%";
+            }
+
+
+
+            const embedcontainer = document.querySelector(".embed-container");
+            embedcontainer.style.display = 'none';
+            document.querySelector("#preview").style.display = 'block'; 
+        },
 
 
         async fetchInfo() {
@@ -1368,7 +1417,7 @@ export default {
 <style lang="scss">
 
 @media print {  //this controls how the editor view is printed (to pdf)
-    #editortoolbar, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer,  span.NXTEhighlight::after, #highlight-layer, #languagetool, .split-view-container, #preview, #pdfembed  {
+    #editortoolbar,#webview, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer,  span.NXTEhighlight::after, #highlight-layer, #languagetool, .split-view-container, #preview, #pdfembed  {
         display: none !important;
     }
     body {position: relative  !important;}  //body ist "fixed" um beim autoscrollen nicht zu verscheben - mehrseitiger print wird dadurch aber auf 1seite beschränkt
@@ -1461,6 +1510,11 @@ export default {
     }
 
 
+}
+
+#webview{
+
+margin:auto auto
 }
 
 #aplayer{
@@ -2058,7 +2112,9 @@ Other Styles
 
 
 
-
+.grey {
+    filter: invert(80%) ;
+}
 
 
 

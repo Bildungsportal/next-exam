@@ -120,7 +120,7 @@
         "abgabeautoquestion":"Please set the interval for automatic retreival?",
         "abgabeautohint":"(Timeframe in minutes)",
         "eduvidualid": "Eduvidual / Moodle",
-        "eduvidualidhint": "Please enter a valid id!",
+        "eduvidualidhint": "Please enter a valid test URL!",
         "eduvidualdomain": "Please provide your moodle domain if it's not eduvidual.at",
         "lock":"lock displays",
         "unlock":"unlock displays",
@@ -179,7 +179,10 @@
         "sectionname": "Section Name",
         "sectionnameinfo": "Please enter a name for this section",
         "groupA": "Group A",
-        "groupB": "Group B"
+        "groupB": "Group B",
+        "allowedURL": "Allowed URL",
+        "allowedURLinfo": "Please enter a URL that is allowed during the exam",
+        "extendedsettings_mode": "Extended Settings for Exam-Mode"
     },
     "control": {
         "tokennotvalid": "token is not valid",

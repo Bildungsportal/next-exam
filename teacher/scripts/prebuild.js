@@ -20,7 +20,7 @@ let configJsContent = `
 
 const config = {
     development: ${process.env.DEVELOPMENT},  // disable kiosk mode on exam mode and other stuff (autofill input fields)
-    showdevtools: ${process.env.DEVELOPMENT},
+    showdevtools: ${process.env.SHOWDEVTOOLS},
     bipIntegration: ${process.env.BIP_INTEGRATION},
     bipDemo: ${process.env.BIP_DEMO},
 

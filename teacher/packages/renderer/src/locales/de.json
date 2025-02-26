@@ -179,7 +179,10 @@
         "sectionname": "Abschnittsname",
         "sectionnameinfo": "Bitte geben Sie einen Namen für diesen Abschnitt ein",
         "groupA": "Gruppe A",
-        "groupB": "Gruppe B"
+        "groupB": "Gruppe B",
+        "allowedURL": "Erlaubte URL",
+        "allowedURLinfo": "Bitte geben Sie eine URL ein, die während der Prüfung erlaubt ist",
+        "extendedsettings_mode": "Erweiterte Einstellungen zum Prüfungsmodus"
     },
     "control": {
         "tokennotvalid": "Das Token ist ungültig",

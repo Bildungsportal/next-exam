@@ -519,12 +519,15 @@ const agent = new https.Agent({ rejectUnauthorized: false });
 
 
                 if (WindowHandler.examwindow){ 
-
+                    await this.sleep(1000) // wait for the examwindow to be loaded
                     WindowHandler.examwindow.serverstatus = serverstatus   // overwrite serverstatus in examwindow
 
                     const webContents = WindowHandler.examwindow.webContents;
                     // Remove any existing 'will-navigate' listeners
                     webContents.removeAllListeners('will-navigate');
+                    webContents.removeAllListeners('new-window');
+                    webContents.removeAllListeners('setWindowOpenHandler');
+
                     // Set new listener for "editor" examtype
                     if (serverstatus.examSections[serverstatus.lockedSection].examtype === "editor" ){  // do not under any circumstances allow navigation away from the editor
                         webContents.on('will-navigate', (event, url) => {    // a pdf could contain a link - ATTENTION: also set in windowhandler.js (or direct to a common function)
@@ -537,6 +540,12 @@ const agent = new https.Agent({ rejectUnauthorized: false });
                             }
                         })
                     }
+
+                    // if a new window should open triggered by window.open()
+                    webContents.on('new-window', (event, url) => { event.preventDefault();   }); // Prevent the new window from opening
+                    // if a new window should open triggered by target="_blank"
+                    webContents.setWindowOpenHandler(({ url }) => { return { action: 'deny' };   }); // Prevent the new window from opening
+            
                 }
             }
         }
