@@ -432,6 +432,9 @@ const agent = new https.Agent({ rejectUnauthorized: false });
             if (studentstatus.group){
                 //set or update group 
                 this.multicastClient.clientinfo.group = studentstatus.group  
+                if (WindowHandler.examwindow){  
+                    WindowHandler.examwindow.webContents.send('getmaterials')  // if we change group we need to get the materials again
+                }
             }
 
         
@@ -444,7 +447,10 @@ const agent = new https.Agent({ rejectUnauthorized: false });
         ////////////////////////////////
 
         
-       
+        /***********************************
+         * SWITCH EXAM SECTION  START
+         */
+
         // if student is in locked state in exam mode
         if (serverstatus.exammode && this.multicastClient.clientinfo.exammode){
            
@@ -455,10 +461,16 @@ const agent = new https.Agent({ rejectUnauthorized: false });
 
                 this.multicastClient.clientinfo.lockedSection = serverstatus.lockedSection
           
+
                 //save all files from the old section (if exam mode is "editor") and send to teacher - trigger sendToTeacher()
                 if (this.multicastClient.clientinfo.examtype === "editor"){
                     log.info("communicationhandler @ processUpdatedServerstatus: sending exam to teacher (final submit)")
-                    WindowHandler.examwindow.webContents.send('finalsubmit')  // send current work as base64 to teacher (stores pdf in ABGABE folder with submission number)
+
+                    // send current work as base64 to teacher (stores pdf in ABGABE folder with submission number)
+                    let pdf = await this.getBase64PDF(this.multicastClient.clientinfo.submissionnumber)  // local function to get base64 pdf from editor
+                    if (pdf.status === "success"){
+                        this.sendBase64PDFtoTeacher(pdf.base64pdf)
+                    }
                 }
                 this.sendToTeacher() //backup local files and send to teacher (archive with timestamp)
 
@@ -526,7 +538,9 @@ const agent = new https.Agent({ rejectUnauthorized: false });
                 }
             }
         }
-       
+        /**
+         * SWITCH EXAM SECTION  END
+         ************************************/
       
 
 
@@ -572,6 +586,59 @@ const agent = new https.Agent({ rejectUnauthorized: false });
 
     }
 
+    // send base64 pdf to teacher
+    sendBase64PDFtoTeacher(base64pdf){
+        const url = `https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/printrequest/${this.multicastClient.clientinfo.servername}/${this.multicastClient.clientinfo.token}`;
+        const payload = {
+            document: base64pdf,
+            printrequest: false,    
+            submissionnumber: this.multicastClient.clientinfo.submissionnumber
+        }
+        fetch(url, {
+            method: "POST",
+            body: JSON.stringify(payload),
+            headers: { 'Content-Type': 'application/json' },
+        })
+        .then(response => { return response.json();  })
+        .then(data => {
+            if (data.message == "success"){
+                this.multicastClient.clientinfo.submissionnumber++   // successful submission -> increment number
+            }
+        })
+        .catch(error => {  
+            console.log("editor @ printbase64:",error.message)    
+        }); 
+    }
+    
+
+
+
+    //get base64 pdf from editor
+    async getBase64PDF(submissionnumber){
+        log.info("communicationhandler @ getBase64PDF: getting base64 encoded pdf")
+        var options = {
+            margins: {top:0.5, right:0, bottom:0.5, left:0 },
+            pageSize: 'A4',
+            printBackground: false,
+            printSelectionOnly: false,
+            landscape: false,
+            displayHeaderFooter:true,
+            footerTemplate: "<div style='height:12px; font-size:10px; text-align: right; width:100%; margin-right: 20px;'><span class=pageNumber></span>|<span class=totalPages></span></div>",
+            headerTemplate: `<div style='display: inline-block; height:12px; font-size:10px; text-align: right; width:100%; margin-right: 20px;margin-left: 20px;'><span style="float:left;">${this.multicastClient.clientinfo.servername}</span><span style="float:left;">&nbsp;|&nbsp; </span><span class=date style="float:left;"></span><span style="float:left;">&nbsp;|&nbsp;Abgabe: ${submissionnumber}</span><span style="float:right;">${this.multicastClient.clientinfo.clientname}</span></div>`,
+            preferCSSPageSize: false
+        }
+        // set the title of the exam window and therefore the document title
+        await WindowHandler.examwindow.webContents.executeJavaScript(`document.title = "${this.multicastClient.clientinfo.clientname} - ${this.multicastClient.clientinfo.servername} - Version ${submissionnumber}"`);
+        try {
+            const data = await WindowHandler.examwindow.webContents.printToPDF(options);
+            const base64pdf = data.toString('base64');
+            const dataUrl = `data:application/pdf;base64,${base64pdf}`;
+            return { sender: "client", message:"PDF generated", dataUrl:dataUrl, base64pdf: base64pdf, status: "success" };
+        } catch (error) {
+            log.error("Error generating PDF:", error);
+            return { sender: "client", message: "Error generating PDF", status: "error" };
+        }
+    }
 
     // show temporary screenlock window
     activateScreenlock(){

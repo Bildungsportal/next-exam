@@ -52,7 +52,8 @@ class MulticastClient {
             printrequest : false,
             privateSpellcheck: {activated: false},
             localLockdown: false,
-            group: 'a'
+            group: 'a',
+            submissionnumber: 0
         }
     }
 

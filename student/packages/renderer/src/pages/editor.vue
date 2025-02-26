@@ -883,22 +883,17 @@ export default {
 
         async sendExamToTeacher(directsend=false){
 
-         
-
             let response = await ipcRenderer.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber })
 
-   
             if (response?.status == "success"){
                 let base64pdf = response.base64pdf
                 let dataUrl = response.dataUrl
                 
-                if (directsend){
+                if (directsend){   //direct send to teacher without displaying the print preview
                     this.currentpreviewBase64 = base64pdf
                     this.printBase64()
                     return
                 }
-
-             
 
                 let file = {
                     filename: `${this.clientname}.pdf`,
@@ -1203,7 +1198,10 @@ export default {
         this.getExamMaterials()
 
 
-
+        ipcRenderer.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            console.log("editor @ getmaterials: get materials request received")
+            this.getExamMaterials() 
+        });
   
    
         ipcRenderer.on('finalsubmit', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
@@ -1313,9 +1311,6 @@ export default {
     },
     beforeMount(){ },
 
-    beforeDestroy() {
-     
-    },
     beforeUnmount() {
         /**
         *   REMOVE EVENT LISTENERS
@@ -1347,6 +1342,15 @@ export default {
 
         this.clockinterval.removeEventListener('action', this.clock);
         this.clockinterval.stop() 
+
+        ipcRenderer.removeAllListeners('getmaterials')
+        ipcRenderer.removeAllListeners('finalsubmit')
+        ipcRenderer.removeAllListeners('submitexam')
+        ipcRenderer.removeAllListeners('fileerror')
+        ipcRenderer.removeAllListeners('save')
+        ipcRenderer.removeAllListeners('denied')
+        ipcRenderer.removeAllListeners('backup')
+        ipcRenderer.removeAllListeners('loadfilelist')
     },
 }
 </script>

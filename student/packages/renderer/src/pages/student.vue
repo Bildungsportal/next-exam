@@ -92,7 +92,7 @@
   
        
         <div style="position: absolute; top: 205px !important;">
-            <h4 class="mt-3">{{ $t("student.exams") }}</h4>
+            <h4 class="mt-3 ms-1">{{ $t("student.exams") }}</h4>
             <div id="list" class="" style="overflow-y:auto; height: 369px; display:flex; flex-wrap: wrap; flex-direction: row;">
                 
                 <div v-for="server in serverlist" class="row p-3 m-0 mb-2 border bg-light" style="border-radius: 4px; margin-right: 10px !important; min-height:100px; max-height:100px;  min-width:234px; max-width: 234px;">
@@ -123,7 +123,7 @@
                     </div>
                   
                 </div>
-                <div v-if="serverlist.length === 0"><h6 class="text-muted">{{$t('student.noexams')}}</h6> </div>
+                <div v-if="serverlist.length === 0"><h6 class="text-muted ms-1">{{$t('student.noexams')}}</h6> </div>
             </div>
         </div>
 

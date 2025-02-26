@@ -156,26 +156,30 @@ export default {
         this.currentFile = this.clientname
         this.entrytime = new Date().getTime()  
          
-        if (this.electron){
+    
+        ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            console.log("editor @ save: Teacher saverequest received")
+            this.saveContent(true, why) 
+        }); 
+
+
+        ipcRenderer.on('fileerror', (event, msg) => {
+            console.log('geogebra @ fileerror: writing/deleting file error received');
+            this.$swal.fire({
+                    title: "Error",
+                    text: msg.message,
+                    icon: "error",
+                    //timer: 30000,
+                    showCancelButton: false,
+                    didOpen: () => { this.$swal.showLoading(); },
+            })
+        });
+
+        ipcRenderer.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            console.log("geogebra @ getmaterials: get materials request received")
+            this.getExamMaterials() 
+        });
         
-            this.saveEvent = ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
-                console.log("editor @ save: Teacher saverequest received")
-                this.saveContent(true, why) 
-            }); 
-
-
-            ipcRenderer.on('fileerror', (event, msg) => {
-                console.log('geogebra @ fileerror: writing/deleting file error received');
-                this.$swal.fire({
-                        title: "Error",
-                        text: msg.message,
-                        icon: "error",
-                        //timer: 30000,
-                        showCancelButton: false,
-                        didOpen: () => { this.$swal.showLoading(); },
-                })
-            });
-        }
         this.$nextTick(function () { // Code that will run only after the entire view has been rendered
            
             // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
@@ -590,7 +594,10 @@ export default {
         
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
-        this.saveEvent = null
+        ipcRenderer.removeAllListeners('getmaterials')
+        ipcRenderer.removeAllListeners('fileerror')
+        ipcRenderer.removeAllListeners('save')
+
     },
 }
 
