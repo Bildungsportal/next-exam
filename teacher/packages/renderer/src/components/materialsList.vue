@@ -4,7 +4,7 @@
         <template v-if="examSection.groups">
             <!-- Gruppe A -->
             <div class="group-section">
-            <div class="group-label">Gruppe A</div>
+            <div class="group-label">{{$t('dashboard.groupA')}}</div>
             <div v-for="(file, index) in examSection.groupA.examInstructionFiles" :key="'A' + index" class="input-group"  style="">
                 <div class="btn btn-sm btn-secondary mt-1" @click="removeFile('A', index)" style="padding:4px 8px;">x</div>
                 
@@ -23,7 +23,7 @@
     
             <!-- Gruppe B -->
             <div class="group-section">
-            <div class="group-label">Gruppe B</div>
+            <div class="group-label">{{$t('dashboard.groupB')}}</div>
             <div v-for="(file, index) in examSection.groupB.examInstructionFiles" :key="'B' + index" class="input-group" style="">
                 <div class="btn btn-sm btn-secondary mt-1" @click="removeFile('B', index)" style="padding:4px 8px;">x</div>
 

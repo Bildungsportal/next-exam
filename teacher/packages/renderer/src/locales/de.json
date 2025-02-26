@@ -177,7 +177,9 @@
         "removefile": "Datei löschen",
         "removefileconfirm": "Wollen Sie die Datei wirklich löschen?",
         "sectionname": "Abschnittsname",
-        "sectionnameinfo": "Bitte geben Sie einen Namen für diesen Abschnitt ein"
+        "sectionnameinfo": "Bitte geben Sie einen Namen für diesen Abschnitt ein",
+        "groupA": "Gruppe A",
+        "groupB": "Gruppe B"
     },
     "control": {
         "tokennotvalid": "Das Token ist ungültig",

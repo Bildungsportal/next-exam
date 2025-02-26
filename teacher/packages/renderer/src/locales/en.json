@@ -35,7 +35,7 @@
         "name": "Name",
         "pin": "Pin",
         "connected": "connected",
-        "stopserver": "stop exam",
+        "stopserver": "Stop Exam",
         "filesend": "Send Files",
         "filesendtext": "Please choose one or several Files",
         "officefilesend": "Upload File",
@@ -177,7 +177,9 @@
         "removefile": "Delete File",
         "removefileconfirm": "Are you sure you want to delete this file?",
         "sectionname": "Section Name",
-        "sectionnameinfo": "Please enter a name for this section"
+        "sectionnameinfo": "Please enter a name for this section",
+        "groupA": "Group A",
+        "groupB": "Group B"
     },
     "control": {
         "tokennotvalid": "token is not valid",

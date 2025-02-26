@@ -264,7 +264,7 @@
                 <input v-model=serverstatus.examSections[serverstatus.activeSection].groups @click="setupGroups()" :title="$t('dashboard.groupinfo')" checked=false class="form-check-input" type="checkbox" id="activategroups">
                 <label class="form-check-label">{{$t('dashboard.groups')}}   </label><br>
             </div>
-            <div v-if="config.bipIntegration" class="form-check form-switch  m-1 mb-2" >
+            <div v-if="config.bipIntegration && bipToken" class="form-check form-switch  m-1 mb-2" >
                 <input v-model=serverstatus.requireBiP :title="$t('control.biprequired')" checked=false class="form-check-input" type="checkbox" id="activatebip">
                 <label class="form-check-label">{{$t('dashboard.bildungsportal')}}   </label><br>
             </div>
