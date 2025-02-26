@@ -91,20 +91,21 @@
             </div>
             <br>   
             <button :title="$t('editor.splitview')"  @click="toggleSplitview()" style="vertical-align: top;" class="invisible-button btn btn-outline-warning p-0 ms-1 me-2 mb-0 btn-sm"><img src="/src/assets/img/svg/view-split-left-right.svg" class="white" width="22" height="22" ></button>
-            <div id="sendfinalexam" class="invisible-button btn btn-outline-danger p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="sendExamToTeacher()" :title="$t('editor.sendfinalexam')"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.finalsubmit') }}</div>
-            <div id="getmaterialsbutton" class="invisible-button btn btn-outline-success p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/src/assets/img/svg/games-solve.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
+            <div id="sendfinalexam" class="invisible-button btn btn-outline-success p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="sendExamToTeacher()" :title="$t('editor.sendfinalexam')"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.finalsubmit') }}</div>
+            <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/src/assets/img/svg/games-solve.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
 
             <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
             <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
-                <div v-if="(file.filetype == 'bak')" class="btn btn-outline-info p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
-                <div v-if="(file.filetype == 'docx')" class="btn btn-outline-info p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
-                <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
-                <div v-if="(file.filetype == 'audio')" class="btn btn-outline-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
-                <div v-if="(file.filetype == 'image')" class="btn btn-outline-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+                <div v-if="(file.filetype == 'bak')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+                <div v-if="(file.filetype == 'docx')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+                <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+                <div v-if="(file.filetype == 'audio')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+                <div v-if="(file.filetype == 'image')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
             </div>
             <!-- exam materials end -->
 
 
+            
             <div v-if="allowedUrlObject" class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="showUrl(allowedUrlObject.full)">
                 <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{allowedUrlObject.domain}} 
             </div>
@@ -1023,10 +1024,12 @@ export default {
         //switch from ovewlay pdf/jpg preview zu splitview mode
         async toggleSplitview(){
             this.splitview = !this.splitview;
+            this.webviewVisible = false
             this.zoom = 1
             this.LTdisable();  //close lt
             await this.sleep(1000) //wait for re-rendering of #preview div 
-         
+            
+           
             
             if (this.splitview === false){ document.querySelector("#preview").addEventListener("click", this.hidepreview );      }
             if (this.splitview === true){  document.querySelector("#preview").removeEventListener("click", this.hidepreview );   }
@@ -2113,7 +2116,7 @@ Other Styles
 
 
 .grey {
-    filter: invert(80%) ;
+    filter: invert(92%) ;
 }
 
 

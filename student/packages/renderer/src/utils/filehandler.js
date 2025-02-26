@@ -10,7 +10,7 @@ export async function loadPDF(file, base64 = false, zoom=100, submission=false){
     this.webviewVisible = false
 
     const embedcontainer = document.querySelector(".embed-container");
-    embedcontainer.style.display = 'block';
+    embedcontainer.style.display = 'flex';
 
     const pdfEmbed = document.querySelector("#pdfembed");
     pdfEmbed.style.backgroundImage = ``;  // clear a previous image preview
@@ -219,8 +219,8 @@ export async function loadImage(file, base64=false){
 
     this.webviewVisible = false
     const embedcontainer = document.querySelector(".embed-container");
-    embedcontainer.style.display = 'block';
-    
+    embedcontainer.style.display = 'flex';
+
     if (base64){
         const response = await fetch(file.filecontent); // lade die Data-URL  //filecontent contains a url data:application/pdf;base64,b23d342dsn2....
         const blob = await response.blob(); // konvertiere in Blob

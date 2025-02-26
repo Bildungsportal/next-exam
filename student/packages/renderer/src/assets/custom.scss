@@ -32,11 +32,18 @@ $theme-colors: (
 .btn-teal       { background-color: $teal-600;}
 .btn-teal:hover { background-color: $teal-700;}
 
+.btn-outline-teal {  border-color: $teal-600; color: $teal-600;}
+.btn-outline-teal:hover { background-color: $teal-500; border-color: $teal-500; color: $gray-900;}
+
 .btn-danger       { background-color: $red-600; border-color:$red-600;}
 .btn-danger:hover { background-color: $red-500; border-color:$red-500;}
 
 .btn-cyan       { background-color: $cyan-600;}
 .btn-cyan:hover { background-color: $cyan-500;}
+
+.btn-outline-cyan {  border-color: $cyan-600; color: $cyan-600;}
+.btn-outline-cyan:hover { background-color: $cyan-500; border-color: $cyan-500; color: $gray-900;}
+
 
 .btn-warning        { background-color: $yellow-400 }
 .btn-warning:hover  { background-color: $yellow-300 }
