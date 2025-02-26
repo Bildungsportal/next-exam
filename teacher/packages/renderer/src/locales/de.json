@@ -175,7 +175,9 @@
         "fontsizetitle": "Schriftgröße im PDF",
         "fontsize": "Schriftgröße",
         "removefile": "Datei löschen",
-        "removefileconfirm": "Wollen Sie die Datei wirklich löschen?"
+        "removefileconfirm": "Wollen Sie die Datei wirklich löschen?",
+        "sectionname": "Abschnittsname",
+        "sectionnameinfo": "Bitte geben Sie einen Namen für diesen Abschnitt ein"
     },
     "control": {
         "tokennotvalid": "Das Token ist ungültig",

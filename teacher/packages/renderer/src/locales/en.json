@@ -175,7 +175,9 @@
         "fontsizetitle": "Fontsize",
         "fontsize": "Fontsize",
         "removefile": "Delete File",
-        "removefileconfirm": "Are you sure you want to delete this file?"
+        "removefileconfirm": "Are you sure you want to delete this file?",
+        "sectionname": "Section Name",
+        "sectionnameinfo": "Please enter a name for this section"
     },
     "control": {
         "tokennotvalid": "token is not valid",

@@ -105,7 +105,7 @@ try { //bind to the correct interface
    config.gateway = false
  }
 
-app.commandLine.appendSwitch('lang', 'de')
+
 fsExtra.emptyDirSync(config.tempdirectory)  // clean temp directory
 
 /**

@@ -614,6 +614,7 @@ export default {
         const systemLocale = navigator.language.split('-')[0] // z.B. "de" aus "de-DE"
         const locale = ['de', 'en'].includes(systemLocale) ? systemLocale : 'en' // Fallback zu 'en'
         this.$i18n.locale = locale
+        console.log("locale:", systemLocale, locale)
 
         // add event listener to exam input field to supress all special chars 
         document.getElementById("servername").addEventListener("keypress", this.validateInput);

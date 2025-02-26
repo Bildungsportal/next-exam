@@ -178,8 +178,12 @@
         <!-- Files Section END -->
 
 
-
-
+        <!-- Section name -->
+         <div class="m-1 mb-4" style="display: inline-block; width: 200px; position: relative;">
+            <div class="mb-1">{{$t("dashboard.sectionname")}}</div>
+            <input type="text" class="form-control form-control-sm" v-model="serverstatus.examSections[serverstatus.activeSection].sectionname" @change="setServerStatus"/>
+         </div>
+        <!-- Section name END -->
         
 
 
@@ -807,6 +811,7 @@ computed: {
             }
            
         }, 
+
 
 
         // remove file from group a or b
