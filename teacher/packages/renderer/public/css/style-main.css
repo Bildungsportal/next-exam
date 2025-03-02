@@ -1,3 +1,21 @@
+@font-face {
+    font-family: 'Inter'; /* normal style */
+    src: url('./Inter-VariableFont_opsz,wght.ttf') format('truetype');
+    font-weight: 100 900; /* variable weight range */
+    font-style: normal;
+}
+  
+@font-face {
+    font-family: 'Inter'; /* italic style */
+    src: url('./Inter-Italic-VariableFont_opsz,wght.ttf') format('truetype');
+    font-weight: 100 900; /* variable weight range */
+    font-style: italic;
+}
+
+
+
+
+
 *{
     box-sizing: border-box;
     margin: 0;
@@ -8,6 +26,7 @@ body {
     overflow-x: hidden;
     overflow-y: hidden;
     background-color: rgb(33, 37, 41) !important;
+    font-family: 'Inter', sans-serif !important;
 }
 
 #app {
