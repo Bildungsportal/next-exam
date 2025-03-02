@@ -1463,7 +1463,7 @@ computed: {
 
 .plusbutton {
     box-sizing: border-box;
-    font-size:1.2em; 
+    font-size:1.1em; 
     font-weight:bold;
     color:white;
     height:28px; 
