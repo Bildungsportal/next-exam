@@ -185,7 +185,7 @@
 
 
         <!-- Section name -->
-         <div class="m-1 mb-4" style="display: inline-block; width: 200px; position: relative;">
+         <div v-if="serverstatus.useExamSections" class="m-1 mb-4" style="display: inline-block; width: 200px; position: relative;">
             <div class="mb-1">{{$t("dashboard.sectionname")}}</div>
             <input type="text" class="form-control form-control-sm" v-model="serverstatus.examSections[serverstatus.activeSection].sectionname" @change="setServerStatus"/>
          </div>
