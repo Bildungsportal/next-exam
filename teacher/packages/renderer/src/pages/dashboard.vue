@@ -9,7 +9,7 @@
     </span>
     <span class="align-middle ms-3" style="float: right; font-size:23px;">Dashboard</span>
 
-    <div v-if="serverstatus.useExamSections" style="position: absolute; left:257px; top:42px; min-width: 550px;">
+    <div v-if="serverstatus.useExamSections" style="position: absolute; left:257px; top:43px; min-width: 550px;">
         <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 1 && !serverstatus.examSections[1].locked, 'sectionbuttonactivered': serverstatus.activeSection == 1 && serverstatus.examSections[1].locked, 'btn-secondary': serverstatus.activeSection != 1,'btn-danger': serverstatus.examSections[1].locked}">{{ serverstatus.examSections[1].sectionname }}</div>
         <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 2 && !serverstatus.examSections[2].locked, 'sectionbuttonactivered': serverstatus.activeSection == 2 && serverstatus.examSections[2].locked, 'btn-secondary': serverstatus.activeSection != 2,'btn-danger': serverstatus.examSections[2].locked}">{{ serverstatus.examSections[2].sectionname }}</div>
         <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 3 && !serverstatus.examSections[3].locked, 'sectionbuttonactivered': serverstatus.activeSection == 3 && serverstatus.examSections[3].locked, 'btn-secondary': serverstatus.activeSection != 3,'btn-danger': serverstatus.examSections[3].locked}">{{ serverstatus.examSections[3].sectionname }}</div>
@@ -51,7 +51,8 @@
     <div :key="2" id=preview class="fadeinfast ">
         <div id=workfolder style="overflow-y:hidden">
             <button id="closefilebrowser" type="button" class=" btn-close pt-2 pe-2 float-end" title="close"></button>
-            <h4>{{$t('dashboard.filesfolder')}}: <br> <span class="ms-3 mb-3"><strong> {{currentdirectory}}</strong>  </span></h4>
+            <h4>{{$t('dashboard.filesfolder')}}: </h4> 
+            <div class="ms-0 mb-3"><strong>{{currentdirectory}}</strong>  </div> 
             <div class="btn btn-dark pe-3 ps-3 me-1 mb-3 btn-sm" @click="loadFilelist(workdirectory) "><img src="/src/assets/img/svg/go-home.svg" class="" width="22" height="22" > </div>
             <div :class="lockPdfSummary ? 'disabledexam':''" class="btn btn-primary pe-3 ps-3 me-1 mb-3 btn-sm" style="float: right;" :title="$t('dashboard.summarizepdf')" @click="getLatest() "><img src="/src/assets/img/svg/edit-copy.svg" class="" width="22" height="22" >{{$t('dashboard.summarizepdfshort')}}</div>
             <div  v-if="(currentdirectory !== workdirectory)" class="btn btn-dark pe-3 ps-3 me-1 mb-3 btn-sm" @click="loadFilelist(currentdirectoryparent) "><img src="/src/assets/img/svg/edit-undo.svg" class="" width="22" height="22" >up </div>
