@@ -30,7 +30,7 @@ import lock from '/src/pages/lock.vue'
 import eduvidual from '/src/pages/eduvidual.vue'
 import microsoft365 from '/src/pages/microsoft365.vue'
 import website from '/src/pages/website.vue'
-
+import rdpview from '/src/pages/rdpview.vue'
 
 import config from '../../main/config.js';
 
@@ -55,6 +55,7 @@ const routes = [
     { path: '/website/:token',      name:"website",      component: website,      beforeEnter: [addParams, fetchInfo] },
     { path: '/microsoft365/:token', name:"microsoft365", component: microsoft365, beforeEnter: [addParams, fetchInfo] },
     { path: '/lock',                name:"lock",         component: lock },
+    { path: '/rdp/:token',          name:"rdp",          component: rdpview,      beforeEnter: [addParams, fetchInfo] },
     { path: '/:pathMatch(.*)*',     name:"404",          component: notfound },   // to load a specific view just replace the error view and load an unknown component at path: /
 ]
 

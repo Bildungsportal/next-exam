@@ -30,6 +30,11 @@ import mammoth from 'mammoth';
 import wifi from 'node-wifi';
 import languageToolServer from './lt-server';
 
+import rdp from 'node-rdpjs-2'; // RDP-Client-Bibliothek
+
+
+
+
 const __dirname = import.meta.dirname;
 
   ////////////////////////////////
@@ -47,11 +52,51 @@ class IpcHandler {
         this.config = config
         this.WindowHandler = wh  
         this.CommunicationHandler = ch
+        this.rdpClient = null
         
         // Initialisiere das WLAN-Modul um informationen über das aktuell verbundene wlan zu erhalten
         // node-wifi erlaubt es darüber hinaus nach ssids zu scannen und auch verbindungen aufzubauen (future feature)
         wifi.init({
             iface: null // Standard: null, damit das Standardinterface des Systems verwendet wird
+        });
+
+
+        // Startet den RDP-Client und sendet Bitmap-Frames ans Frontend
+        ipcMain.handle('start-rdp', async (event, rdpConfig) => {
+            this.rdpClient = rdp.createClient({
+                domain: rdpConfig.domain,
+                userName: rdpConfig.userName,
+                password: rdpConfig.password,
+                enablePerf: true,
+                autoLogin: true,
+                compress: true,
+                logLevel: 'INFO'
+            })
+            .on('connect', () => console.log('RDP verbunden'))
+            .on('bitmap', (bitmap) => {
+                // Sende Bitmap-Frame (x,y,width,height,data) ans Renderer
+                if (this.WindowHandler.examwindow) this.WindowHandler.examwindow.webContents.send('rdp-bitmap', bitmap);
+            })
+            .on('close', () => console.log('RDP Verbindung geschlossen'))
+            .on('error', (err) => {
+                console.error('RDP Fehler:', err);
+                if (this.WindowHandler.examwindow) this.WindowHandler.examwindow.webContents.send('rdp-error', err.message);
+            });
+            
+            this.rdpClient.connect(rdpConfig.ip, rdpConfig.port, rdpConfig.width, rdpConfig.height);
+        });
+
+
+        // Leitet Input-Events vom Frontend an den RDP-Client weiter
+        ipcMain.on('rdp-input', (_, input) => {
+            if (this.rdpClient) {
+                if (input.type === 'mouse') {
+                    this.rdpClient.sendPointerEvent(input.x, input.y, input.button); // button: 0 = move, 1 = Klick, etc.
+                }
+                if (input.type === 'keyboard') {
+                    this.rdpClient.sendKeyEvent(input.keyCode, input.event); // event: true = KeyDown, false = KeyUp
+                }
+            }
         });
 
 

@@ -314,7 +314,7 @@ class WindowHandler {
      */
     async createExamWindow(examtype, token, serverstatus, primarydisplay) {
         // just to be sure we check some important vars here
-        if ( examtype !== "website" &&  examtype !== "gforms" && examtype !== "eduvidual" && examtype !== "editor" && examtype !== "math" && examtype !== "microsoft365" || !token){  // for now.. we probably should stop everything here
+        if (examtype !== "rdp" && examtype !== "website" &&  examtype !== "gforms" && examtype !== "eduvidual" && examtype !== "editor" && examtype !== "math" && examtype !== "microsoft365" || !token){  // for now.. we probably should stop everything here
             log.warn("missing parameters for exam-mode or mode not in allowed list!")
             examtype = "editor" 
         } 

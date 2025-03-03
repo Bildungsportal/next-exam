@@ -44,5 +44,3 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel), // Entfernt alle Listener für einen Channel
   });
 
-
-
