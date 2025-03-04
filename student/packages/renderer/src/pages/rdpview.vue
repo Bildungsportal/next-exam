@@ -48,12 +48,16 @@
     
 
 
+
     <!-- angabe/pdf preview start -->
-    <div id=preview class="fadeinfast p-4">
-        <embed src="" id="pdfembed"/>
+    <div id="preview" class="fadeinfast p-4">
+        <div class="embed-container">
+        <embed src="" id="pdfembed"></embed>
+        </div>
     </div>
     <!-- angabe/pdf preview end -->
-   
+
+
 
     <div id="content">
         <!-- focus warning start -->
@@ -162,8 +166,7 @@ export default {
         getExamMaterials:getExamMaterials,
         loadPDF:loadPDF,
         loadImage:loadImage,
-        loadGGB:loadGGB,
-
+   
 
         loadBase64file(file){
             if (file.filetype == 'pdf'){
@@ -251,56 +254,6 @@ export default {
             }
             return true; // Alle Bytes stimmen mit dem PDF-Header überein
         },
-
-
-        // fetch file from disc - show preview
-        async loadPDF(file){
-            let data = await ipcRenderer.invoke('getpdfasync', file )
-           
-            let isvalid = this.isValidPdf(data)
-            if (!isvalid){
-                this.$swal.fire({
-                    title: this.$t("general.error"),
-                    text: this.$t("general.nopdf"),
-                    icon: "error",
-                    timer: 3000,
-                    showCancelButton: false,
-                    didOpen: () => { this.$swal.showLoading(); },
-                })
-                return
-            }
-
-            this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "application/pdf"})) 
-
-            const pdfEmbed = document.querySelector("#pdfembed");
-            pdfEmbed.style.backgroundImage = '';
-            pdfEmbed.style.height = "96vh";
-            pdfEmbed.style.marginTop = "-48vh";
-
-            document.querySelector("#pdfembed").setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0`);
-            document.querySelector("#preview").style.display = 'block';
-        },
-
-
-        // fetch file from disc - show preview
-        async loadImage(file){
-            let data = await ipcRenderer.invoke('getpdfasync', file )
-            this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "image/jpeg"})) 
-            const pdfEmbed = document.querySelector("#pdfembed");
-            pdfEmbed.style.backgroundImage = `url(${this.currentpreview})`;
-            pdfEmbed.style.backgroundSize = 'contain'
-            pdfEmbed.style.backgroundRepeat = 'no-repeat'
-            pdfEmbed.style.backgroundPosition =  'center'
-            pdfEmbed.style.height = "80vh";
-            pdfEmbed.style.marginTop = "-40vh";
-            pdfEmbed.setAttribute("src", "about:blank");
-            document.querySelector("#preview").style.display = 'block';     
-        },
-
-
-
-
-
         async loadFilelist(){
             let filelist = await ipcRenderer.invoke('getfilesasync', null)
             this.localfiles = filelist;
@@ -352,9 +305,6 @@ export default {
 </script>
 
 <style scoped>
-
-
-
 #webview{
     height: 100% !important;
     width: 100% !important;
@@ -362,11 +312,6 @@ export default {
     position: relative;
     top:0;
     left:0;
-}
-
-iframe{
-    height: 100% !important;
-    width: 100% !important;
 }
 
 
@@ -378,10 +323,6 @@ iframe{
         height: 100vh !important;
         width: 100vw !important;
         border-radius:0px !important;
-    }
-    #geogebraframe{
-        height: 100% !important;
-        width: 100% !important;
     }
     #app {
         display:block !important;
@@ -395,8 +336,6 @@ iframe{
 
 #localfiles {
     position: relative;
-   
-
 }
 #preview {
     display: none;

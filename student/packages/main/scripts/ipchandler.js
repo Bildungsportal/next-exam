@@ -63,6 +63,7 @@ class IpcHandler {
 
         // Startet den RDP-Client und sendet Bitmap-Frames ans Frontend
         ipcMain.handle('start-rdp', async (event, rdpConfig) => {
+            log.info("ipchandler @ start-rdp: starting RDP client with config:", rdpConfig)
             this.rdpClient = rdp.createClient({
                 domain: rdpConfig.domain,
                 userName: rdpConfig.userName,
@@ -72,7 +73,7 @@ class IpcHandler {
                 compress: true,
                 logLevel: 'INFO'
             })
-            .on('connect', () => console.log('RDP verbunden'))
+            .on('connect', () => log.info('ipchandler @ start-rdp: RDP verbunden'))
             .on('bitmap', (bitmap) => {
                 // Sende Bitmap-Frame (x,y,width,height,data) ans Renderer
                 if (this.WindowHandler.examwindow) this.WindowHandler.examwindow.webContents.send('rdp-bitmap', bitmap);
