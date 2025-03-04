@@ -76,8 +76,6 @@ class IpcHandler {
                 this.rdpClient = null;
             }
 
-
-
             this.rdpClient = rdp.createClient({
                 domain: rdpConfig.domain,
                 userName: rdpConfig.userName,

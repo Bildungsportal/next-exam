@@ -1,5 +1,6 @@
 <!-- RdpViewer.vue -->
 <template>
+      <button class="btn btn-danger" @click="reconnect">Reconnect</button>
     <div ref="container" tabindex="0" @mousemove="handleMouseMove" @click="handleClick" @keydown="handleKeyDown">
         <canvas ref="canvas" :width="rdpWidth" :height="rdpHeight"></canvas>
         <div v-if="error" style="position: absolute; top: 100px; left: 50%; transform: translateX(-50%); color: #b02a37; z-index: 100000; text-align: center;">
@@ -19,10 +20,10 @@ export default {
             canvas: null,
             ctx: null,
             rdpConfig: {
-                domain: 'Europagymnasium',         
-                userName: 'gast02',   
-                password: 'gast02',    
-                ip: '10.1.1.72',  
+                domain: '',         
+                userName: 'vboxuser',   
+                password: 'MembranE',    
+                ip: '10.0.0.100',  
                 port: 3389,          
                 width: 1280,
                 height: 720

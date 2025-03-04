@@ -244,7 +244,8 @@ import screenshot from 'screenshot-desktop-wayland';
 
             try {
                 if (this.screenshotAbility){  
-                    imgBuffer = await screenshot()
+                    imgBuffer = await screenshot({ format: 'png' });
+                  
                     ({ success, screenshotBase64, headerBase64, isblack, imgBuffer } = await this.processInWorker(imgBuffer));  // kein imageBuffer mitgegeben bedeutet nutze screenshot-desktop im worker
                     if (success) { this.screenshotFails = 0;}
                     else { 
