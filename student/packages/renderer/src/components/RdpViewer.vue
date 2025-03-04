@@ -20,8 +20,8 @@ export default {
             ctx: null,
             rdpConfig: {
                 domain: 'Europagymnasium',         
-                userName: 'gast01',   
-                password: 'gast01',    
+                userName: 'gast02',   
+                password: 'gast02',    
                 ip: '10.1.1.72',  
                 port: 3389,          
                 width: 1280,

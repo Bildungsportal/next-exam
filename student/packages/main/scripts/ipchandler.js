@@ -64,6 +64,20 @@ class IpcHandler {
         // Startet den RDP-Client und sendet Bitmap-Frames ans Frontend
         ipcMain.handle('start-rdp', async (event, rdpConfig) => {
             log.info("ipchandler @ start-rdp: starting RDP client with config:", rdpConfig)
+
+
+            // Cleanup existing connection if any
+            if (this.rdpClient) {
+                try {
+                    this.rdpClient.close();
+                } catch (e) {
+                    log.warn('ipchandler @ start-rdp: Error closing existing connection:', e);
+                }
+                this.rdpClient = null;
+            }
+
+
+
             this.rdpClient = rdp.createClient({
                 domain: rdpConfig.domain,
                 userName: rdpConfig.userName,
@@ -71,7 +85,24 @@ class IpcHandler {
                 enablePerf: true,
                 autoLogin: true,
                 compress: true,
-                logLevel: 'INFO'
+                logLevel: 'INFO',
+                screen: {
+                    width: rdpConfig.width,
+                    height: rdpConfig.height
+                },
+                locale: 'de',
+                colorDepth: 24,
+                authentication: true,
+                fastPath: true,
+                performanceFlags: {
+                    disableWallpaper: true,
+                    disableFullWindowDrag: true,
+                    disableMenuAnimations: true,
+                    disableTheming: true,
+                    disableCursorShadow: true,
+                    disableCursorBlinking: true,
+                    disableAnimation: true
+                }
             })
             .on('connect', () => log.info('ipchandler @ start-rdp: RDP verbunden'))
             .on('bitmap', (bitmap) => {
@@ -84,7 +115,21 @@ class IpcHandler {
                 if (this.WindowHandler.examwindow) this.WindowHandler.examwindow.webContents.send('rdp-error', err.message);
             });
             
-            this.rdpClient.connect(rdpConfig.ip, rdpConfig.port, rdpConfig.width, rdpConfig.height);
+    
+            try {
+                await new Promise((resolve, reject) => {
+                    this.rdpClient.once('connect', resolve);
+                    this.rdpClient.once('error', reject);
+                    this.rdpClient.connect(rdpConfig.ip, rdpConfig.port, rdpConfig.width, rdpConfig.height);
+                });
+                log.info('ipchandler @ start-rdp: Connection established successfully');
+            } catch (error) {
+                log.error('ipchandler @ start-rdp connect error:', error);
+                throw error;
+            }
+            
+
+
         });
 
 
