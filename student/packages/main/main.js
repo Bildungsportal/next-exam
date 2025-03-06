@@ -165,19 +165,13 @@ if (process.platform === 'win32') {  app.setAppUserModelId(app.getName())}
 
 // hide certificate warnings in console.. we know we use a self signed cert and do not validate it
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const originalEmitWarning = process.emitWarning
 process.emitWarning = (warning, options) => {
     if (warning && warning.includes && warning.includes('NODE_TLS_REJECT_UNAUTHORIZED')) {  return }
     return originalEmitWarning.call(process, warning, options)
 }
  
-
-
-
-
-
-
-
 
 
 

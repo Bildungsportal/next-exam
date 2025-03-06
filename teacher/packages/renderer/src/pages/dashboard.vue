@@ -117,7 +117,7 @@
             <button class="btn btn-sm btn-secondary dropdown-toggle d-inline-flex justify-content-between align-items-center" style="width: 166px; vertical-align: middle; text-align: left;"  type="button" data-bs-toggle="dropdown" aria-expanded="false">
                  <span>{{ getSelectedExamTypeLabel() }}</span>
             </button>
-            <button class="btn btn-sm btn-secondary p-0" style="width: 31px; height: 31px; margin-left: 3px; display: inline-flex; vertical-align: middle; justify-content: center; align-items: center;" :class="isExamType('math') ? 'disabledexam' : ''" @click="selectExamType(serverstatus.examSections[serverstatus.activeSection].examtype)"  @mouseover="showDescription($t('dashboard.extendedsettings_mode'))"  @mouseout="hideDescription"> 
+            <button class="btn btn-sm btn-secondary p-0" style="width: 31px; height: 31px; margin-left: 3px; display: inline-flex; vertical-align: middle; justify-content: center; align-items: center;" @click="selectExamType(serverstatus.examSections[serverstatus.activeSection].examtype)"  @mouseover="showDescription($t('dashboard.extendedsettings_mode'))"  @mouseout="hideDescription"> 
                 <img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22">
             </button>
 
@@ -446,7 +446,7 @@ import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile,
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
 import { loadFilelist, print, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview } from '../utils/filemanager'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore, defineMaterials } from '../utils/exammanagement.js'
-import { getTestURL, getTestID, getFormsID, configureEditor } from '../utils/examsetup.js'
+import { getTestURL, getTestID, getFormsID, configureEditor, configureMath, configureRDP } from '../utils/examsetup.js'
 
 class EmptyWidget {
     constructor() {
@@ -556,6 +556,7 @@ export default {
                         audioRepeat: 0,
                         domainname: false,
                         allowedUrl: null,
+                        rdpConfig: null,
 
                         groups: false, 
                         groupA: { users: [], examInstructionFiles: [] }, 
@@ -583,6 +584,8 @@ export default {
                         audioRepeat: 0,
                         domainname: false,
                         allowedUrl: null,
+                        rdpConfig: null,
+
                         groups: false, 
                         groupA: { users: [], examInstructionFiles: [] }, 
                         groupB: { users: [], examInstructionFiles: [] }
@@ -609,6 +612,7 @@ export default {
                         audioRepeat: 0,
                         domainname: false,
                         allowedUrl: null,
+                        rdpConfig: null,
 
                         groups: false, 
                         groupA: { users: [], examInstructionFiles: [] }, 
@@ -636,7 +640,7 @@ export default {
                         audioRepeat: 0,
                         domainname: false,  
                         allowedUrl: null,   
-                        
+                        rdpConfig: null,
                         groups: false, 
                         groupA: { users: [], examInstructionFiles: [] }, 
                         groupB: { users: [], examInstructionFiles: [] }
@@ -730,8 +734,8 @@ computed: {
         getTestID: getTestID,
         getFormsID: getFormsID,
         configureEditor: configureEditor,
-
-
+        configureMath: configureMath,
+        configureRDP: configureRDP,
 
 
         /**
@@ -853,6 +857,8 @@ computed: {
             if (type === 'eduvidual') this.getTestID();
             if (type === 'gforms') this.getFormsID();
             if (type === 'website') this.getTestURL();
+            if (type === 'math') this.configureMath();
+            if (type === 'rdp') this.configureRDP();
         },
 
         // get label for the current exam type

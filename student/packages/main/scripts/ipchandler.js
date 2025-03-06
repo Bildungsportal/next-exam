@@ -30,7 +30,7 @@ import mammoth from 'mammoth';
 import wifi from 'node-wifi';
 import languageToolServer from './lt-server';
 
-import rdp from 'node-rdpjs-2'; // RDP-Client-Bibliothek
+import rdp from 'node-rdpjs'; // RDP-Client-Bibliothek
 
 
 
@@ -80,18 +80,24 @@ class IpcHandler {
                 domain: rdpConfig.domain,
                 userName: rdpConfig.userName,
                 password: rdpConfig.password,
+
                 enablePerf: true,
                 autoLogin: true,
                 compress: true,
+
+
                 logLevel: 'INFO',
                 screen: {
-                    width: rdpConfig.width,
-                    height: rdpConfig.height
+                    width: 1280,
+                    height: 720
                 },
-                locale: 'de',
-                colorDepth: 24,
-                authentication: true,
-                fastPath: true,
+                locale: 'de',   // needed to patch node-rdpjs for this issue
+                colorDepth: 16,
+
+   
+                
+                connectionTimeout: 10000, // Längeres Timeout für die Verbindung
+      
                 performanceFlags: {
                     disableWallpaper: true,
                     disableFullWindowDrag: true,
@@ -105,6 +111,7 @@ class IpcHandler {
             .on('connect', () => log.info('ipchandler @ start-rdp: RDP verbunden'))
             .on('bitmap', (bitmap) => {
                 // Sende Bitmap-Frame (x,y,width,height,data) ans Renderer
+                console.log("#############################################")
                 if (this.WindowHandler.examwindow) this.WindowHandler.examwindow.webContents.send('rdp-bitmap', bitmap);
             })
             .on('close', () => console.log('RDP Verbindung geschlossen'))
@@ -113,19 +120,8 @@ class IpcHandler {
                 if (this.WindowHandler.examwindow) this.WindowHandler.examwindow.webContents.send('rdp-error', err.message);
             });
             
-    
-            try {
-                await new Promise((resolve, reject) => {
-                    this.rdpClient.once('connect', resolve);
-                    this.rdpClient.once('error', reject);
-                    this.rdpClient.connect(rdpConfig.ip, rdpConfig.port, rdpConfig.width, rdpConfig.height);
-                });
-                log.info('ipchandler @ start-rdp: Connection established successfully');
-            } catch (error) {
-                log.error('ipchandler @ start-rdp connect error:', error);
-                throw error;
-            }
-            
+            this.rdpClient.connect(rdpConfig.ip, rdpConfig.port);
+ 
 
 
         });

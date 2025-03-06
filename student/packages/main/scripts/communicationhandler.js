@@ -95,7 +95,7 @@ import screenshot from 'screenshot-desktop-wayland';
             '--es-module-specifier-resolution=node',
             workerPath
         ], {
-            stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+            stdio: ['ignore', 'ignore', 'pipe', 'ipc'], // 'ignore' für stdin und stdout, 'pipe' für stderr, 'ipc' für Inter-Prozess-Kommunikation
             detached: true
         });
 
@@ -244,8 +244,8 @@ import screenshot from 'screenshot-desktop-wayland';
 
             try {
                 if (this.screenshotAbility){  
+                    //grab screenshot from desktop via screenshot-desktop-wayland (flameshot, imagemagic, etc)
                     imgBuffer = await screenshot({ format: 'png' });
-                  
                     ({ success, screenshotBase64, headerBase64, isblack, imgBuffer } = await this.processInWorker(imgBuffer));  // kein imageBuffer mitgegeben bedeutet nutze screenshot-desktop im worker
                     if (success) { this.screenshotFails = 0;}
                     else { 
@@ -260,8 +260,7 @@ import screenshot from 'screenshot-desktop-wayland';
                         let result = await currentFocusedMindow.webContents.capturePage()  // this should always work because it's onboard electron
                         imgBuffer = result.toPNG()
                     }
-                    /// attention processImage  converts buffer to uint8array
-                    ({ success, screenshotBase64, headerBase64, isblack } = await this.processInWorker(imgBuffer));
+                    ({ success, screenshotBase64, headerBase64, isblack } = await this.processInWorker(imgBuffer)); // attention processImage  converts buffer to uint8array
                 }
             }
             catch(err){
@@ -275,24 +274,16 @@ import screenshot from 'screenshot-desktop-wayland';
              */
             if (process.platform === "darwin" && this.firstCheckScreenshot && imgBuffer !== null){  //this is for macOS because it delivers a blank background screenshot without permissions. we catch that case with a workaround
                 this.firstCheckScreenshot = false   //never do this again
-
-                const publicPath = app.isPackaged
-                ? path.join(process.resourcesPath,'app.asar.unpacked', 'public')
-                : path.resolve(__dirname, '../../public');
-
+                const publicPath = app.isPackaged ? path.join(process.resourcesPath,'app.asar.unpacked', 'public') : path.resolve(__dirname, '../../public');
                 try{
-                 
                     const { data: { text } }   = await Tesseract.recognize(imgBuffer , 'eng',{ langPath: publicPath } );
                     let appWindowVisible = text.includes("Exam")   //check if the word "Exam" can be found in screenshot - otherwise it is most likely a blank desktop - macos quirk
-                   
                     if (!appWindowVisible){
                         this.screenshotAbility=false;
                         log.error(`communicationhandler @ sendScreenshot: switching to PageCapture`)
                         log.info("communicationhandler @ sendScreenshot (ocr): Student Screenshot does not fit requirements");
                     }
-                    else {
-                        log.info("communicationhandler @ sendScreenshot (ocr): MacOS screenshotpermissions check OK");
-                    }
+                    else { log.info("communicationhandler @ sendScreenshot (ocr): MacOS screenshotpermissions check OK");}
                 }
                 catch(err){  log.info(`communicationhandler @ sendScreenshot (ocr): ${err}`); }
             }
@@ -349,20 +340,20 @@ import screenshot from 'screenshot-desktop-wayland';
         })
         .then(response => {
             if (!response.ok) {
-                throw new Error('communicationhandler @ sendScreenshot: Network response was not ok');
+                throw new Error('communicationhandler @ doScreenshotUpdate: Network response was not ok');
             }
             return response.json();
         })
         .then(data => {
             if (data && data.status === "error") {
-                log.error("communicationhandler @ sendScreenshot: status error", data.message);
+                log.error("communicationhandler @ doScreenshotUpdate: status error", data.message);
             }
         })
         .catch(error => {
             if (attempt < maxRetries - 1) {
                 this.doScreenshotUpdate(url, payload, agent, attempt + 1, maxRetries); // Retry
             } else if (attempt === maxRetries - 1 && this.multicastClient.beaconsLost === 0) {
-                log.error(`communicationhandler @ sendScreenshot (fetch): ${error.message}`);
+                log.error(`communicationhandler @ doScreenshotUpdate (fetch): ${error.message}`);
             }
         });
     }

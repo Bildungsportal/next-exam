@@ -38,29 +38,43 @@
 
     <!-- filelist start - show local files from workfolder (pdf and gbb only)-->
     <div id="toolbar" class="d-inline p-1">  
-        <button title="backup" @click="saveContent(null, 'manual'); " class="btn d-inline btn-success p-0 pe-2 ps-1 ms-1 mb-1 btn-sm"><img src="/src/assets/img/svg/document-save.svg" class="white" width="20" height="20" ></button>
-        <button title="delete" @click="clearAll(); " class=" btn  d-inline btn-danger p-0 pe-2 ps-1 ms-2 mb-1 btn-sm"><img src="/src/assets/img/svg/edit-delete.svg" class="white" width="20" height="20" ></button>
-        <button title="paste" @click="showClipboard(); " class="btn  d-inline btn-secondary p-0 pe-2 ps-1 ms-2 mb-1 btn-sm"><img src="/src/assets/img/svg/edit-paste-style.svg" class="white" width="20" height="20" ></button>
-        <div class="btn-group  ms-2 me-1 mb-1 " role="group">
+        <button title="backup" @click="saveContent(null, 'manual'); " class="btn d-inline btn-success p-0 pe-2 ps-1 ms-1 mb-0 btn-sm"><img src="/src/assets/img/svg/document-save.svg" class="white" width="20" height="20" ></button>
+        <button title="delete" @click="clearAll(); " class=" btn  d-inline btn-danger p-0 pe-2 ps-1 ms-2 mb-0 btn-sm"><img src="/src/assets/img/svg/edit-delete.svg" class="white" width="20" height="20" ></button>
+        <button title="paste" @click="showClipboard(); " class="btn  d-inline btn-secondary p-0 pe-2 ps-1 ms-2 mb-0 btn-sm"><img src="/src/assets/img/svg/edit-paste-style.svg" class="white" width="20" height="20" ></button>
+        <div class="btn-group  ms-2 me-1 mb-0 " role="group">
             <div class="btn btn-outline-info btn-sm p-0 pe-2 ps-1  mb-0" @click="setsource('suite')"> <img src="/src/assets/img/svg/formula.svg" class="" width="20" height="20" >suite</div>
             <div class="btn btn-outline-info btn-sm p-0 pe-2 ps-1  mb-0" @click="setsource('classic')"> <img src="/src/assets/img/svg/formula.svg" class="" width="20" height="20" >classic</div>
         </div>
-        <div id="getmaterialsbutton" class="btn btn-outline-success p-0 pe-2 ps-1 ms-1 mb-1 me-1 btn-sm" @click="getExamMaterials()" title="Angaben holen"><img src="/src/assets/img/svg/games-solve.svg" class="white" width="22" height="22" style="vertical-align: top;">Materialien holen </div>
+        
 
-        <div v-for="file in localfiles" class="d-inline">
-            <div v-if="(file.type == 'pdf')"   class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-1 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
-            <div v-if="(file.type == 'ggb')"   class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-1 btn-sm" @click="selectedFile=file.name; loadGGB(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
-            <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-1 btn-sm" @click="loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
+        <div v-if="allowedUrlObject" class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="showUrl(allowedUrlObject.full)">
+            <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{allowedUrlObject.domain}} 
         </div>
 
 
-         <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
-         <div v-for="file in examMaterials" :key="file.filename" class="d-inline " style="text-align:left">
-            <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-info p-0 pe-2 ps-1 ms-1 mb-1 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
-            <div v-if="(file.filetype == 'image')" class="btn btn-outline-info p-0 pe-2 ps-1 ms-1 mb-1 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
-            <div v-if="(file.filetype == 'ggb')" class="btn btn-outline-info p-0 pe-2 ps-1 ms-1 mb-1 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+
+        <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
+        <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
+
+        <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
+            <div v-if="(file.filetype == 'bak')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+            <div v-if="(file.filetype == 'docx')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+            <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+            <div v-if="(file.filetype == 'audio')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+            <div v-if="(file.filetype == 'image')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
         </div>
         <!-- exam materials end -->
+
+        <!-- local files start -->
+        <div class="white text-muted me-2 ms-2 small d-inline-block mb-0" style="vertical-align: middle;">{{ $t('editor.localfiles') }} </div>
+        <div v-for="file in localfiles" class="d-inline mb-0">
+            <div v-if="(file.type == 'pdf')"   class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
+            <div v-if="(file.type == 'ggb')"   class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadGGB(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
+            <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
+        </div>
+        <!-- local files end -->
+
+
 
 
 
@@ -71,6 +85,9 @@
 
     <!-- angabe/pdf preview start -->
     <div id="preview" class="fadeinfast p-4">
+
+        <webview id="webview" v-show="webviewVisible" :src="allowedUrlObject.full"></webview>
+
         <div class="embed-container">
         <embed src="" id="pdfembed"></embed>
         </div>
@@ -146,9 +163,26 @@ export default {
             currentpreview: null,
             wlanInfo: null,
             examMaterials: [],
+            webviewVisible: false,
         }
     }, 
     components: { ExamHeader  },  
+    computed: {
+
+        allowedUrlObject() {
+            if (!this.serverstatus.examSections[this.serverstatus.activeSection].allowedUrl) { return null; }
+
+            const fullUrl = this.serverstatus.examSections[this.serverstatus.activeSection].allowedUrl;
+            let domain = '';
+            try {
+                domain = new URL(fullUrl).hostname; // extrahiert den Domainnamen
+            } catch (e) {
+                console.error('Ungültige URL', e);
+            }
+            return { full: fullUrl, domain }; // gibt ein Objekt mit voller URL und Domain zurück
+        }
+
+    },
     mounted() {
 
         this.redefineConsole()  // overwrite console log to grep specific outputs and store as clipboard entry
@@ -217,6 +251,7 @@ export default {
 
 
         loadBase64file(file){
+            this.webviewVisible = false
             if (file.filetype == 'pdf'){
                 this.loadPDF(file, true)
                 return
@@ -232,7 +267,29 @@ export default {
 
         },
 
+        showUrl(url){
+            this.webviewVisible = true
 
+            const webview = document.querySelector("#webview");
+            if (!this.splitview){
+                webview.style.height = "80vh";
+                webview.style.width = "80vw";
+                webview.style.position = "relative";
+                webview.style.top = "10%";
+            }
+            else {
+                webview.style.height = "100%";
+                webview.style.width = "100%";
+                webview.style.position = "relative";
+                webview.style.top = "0%";
+            }
+
+
+
+            const embedcontainer = document.querySelector(".embed-container");
+            embedcontainer.style.display = 'none';
+            document.querySelector("#preview").style.display = 'block'; 
+        },
 
         redefineConsole(){
             const ggbIframe = document.getElementById('geogebraframe');

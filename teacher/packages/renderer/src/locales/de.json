@@ -182,7 +182,10 @@
         "groupB": "Gruppe B",
         "allowedURL": "Erlaubte URL",
         "allowedURLinfo": "Bitte geben Sie eine URL ein, die während der Prüfung erlaubt ist",
-        "extendedsettings_mode": "Erweiterte Einstellungen zum Prüfungsmodus"
+        "extendedsettings_mode": "Erweiterte Einstellungen zum Prüfungsmodus",
+        "rdp": "RDP",
+        "rdpconfig": "RDP Konfiguration",
+        "rdpconfiginfo": "Bitte geben Sie die RDP Konfiguration ein"
     },
     "control": {
         "tokennotvalid": "Das Token ist ungültig",
