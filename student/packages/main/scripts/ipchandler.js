@@ -30,7 +30,7 @@ import mammoth from 'mammoth';
 import wifi from 'node-wifi';
 import languageToolServer from './lt-server';
 
-import rdp from 'node-rdpjs'; // RDP-Client-Bibliothek
+import rdp from 'node-rdpjs-2'; // RDP-Client-Bibliothek
 
 
 
