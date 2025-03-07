@@ -61,6 +61,80 @@ class IpcHandler {
         });
 
 
+
+
+        ipcMain.on('open-rdp-connection', (event, infos) => {
+          
+			if (this.rdpClient) {
+				// clean older connection
+				this.rdpClient.close();
+			};
+			
+            console.log("ipchandler @ open-rdp-connection: infos", infos)
+            
+			this.rdpClient = rdp.createClient({ 
+				domain : infos.domain, 
+				userName : infos.username,
+				password : infos.password,
+				enablePerf : true,
+				autoLogin : true,
+				screen : infos.screen,
+				locale : infos.locale,
+				logLevel : process.argv[2] || 'INFO'
+            }).on('connect', () => {
+                if (this.WindowHandler.examwindow) {this.WindowHandler.examwindow.webContents.send('rdp-connect');}
+                else {this.WindowHandler.mainwindow.webContents.send('rdp-connect');}
+            }).on('bitmap', (bitmap) => {
+                if (this.WindowHandler.examwindow) {this.WindowHandler.examwindow.webContents.send('rdp-bitmap', bitmap);}
+                else {this.WindowHandler.mainwindow.webContents.send('rdp-bitmap', bitmap);}
+            }).on('close', () => {
+                if (this.WindowHandler.examwindow) {this.WindowHandler.examwindow.webContents.send('rdp-close');}
+                else {this.WindowHandler.mainwindow.webContents.send('rdp-close');}
+            }).on('error', (err) => {
+                if (this.WindowHandler.examwindow) {this.WindowHandler.examwindow.webContents.send('rdp-error', err);}  
+                else {this.WindowHandler.mainwindow.webContents.send('rdp-error', err);}
+            }).connect(infos.ip, infos.port);
+
+        })
+        
+        // RDP Input handling
+        ipcMain.on('rdp-mouse', (event, data) => {
+            if (!this.rdpClient) return;
+            this.rdpClient.sendPointerEvent(data.x, data.y, data.button, data.pressed);
+        });
+        
+        ipcMain.on('rdp-wheel', (event, data) => {
+            if (!this.rdpClient) return;
+            console.log("[ipchandler] Received rdp-wheel:", data);
+            this.rdpClient.sendWheelEvent(data.x, data.y, data.step, data.isNegative, data.isHorizontal);
+        });
+        
+        ipcMain.on('rdp-scancode', (event, data) => {
+            if (!this.rdpClient) return;
+            //console.log("[ipchandler] Received rdp-scancode:", data);
+            this.rdpClient.sendKeyEventScancode(data.scancode, data.pressed);
+        });
+        
+        ipcMain.on('rdp-unicode', (event, data) => {
+            if (!this.rdpClient) return;
+            //console.log("[ipchandler] Received rdp-unicode:", data);
+            this.rdpClient.sendKeyEventUnicode(data.code, data.pressed);
+        });
+        
+        ipcMain.on('rdp-disconnect', (event) => {
+            if (!this.rdpClient) return;
+            console.log("[ipchandler] Received rdp-disconnect");
+            this.rdpClient.close();
+        });
+        
+
+
+
+
+
+
+
+
         // Startet den RDP-Client und sendet Bitmap-Frames ans Frontend
         ipcMain.handle('start-rdp', async (event, rdpConfig) => {
             log.info("ipchandler @ start-rdp: starting RDP client with config:", rdpConfig)

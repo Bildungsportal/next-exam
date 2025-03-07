@@ -394,92 +394,6 @@ export default {
         },
 
 
-
-        //checks if arraybuffer contains a valid pdf file
-        // isValidPdf(data) {
-        //     const header = new Uint8Array(data, 0, 5); // Lese die ersten 5 Bytes für "%PDF-"
-        //     // Umwandlung der Bytes in Hexadezimalwerte für den Vergleich
-        //     const pdfHeader = [0x25, 0x50, 0x44, 0x46, 0x2D]; // "%PDF-" in Hex
-        //     for (let i = 0; i < pdfHeader.length; i++) {
-        //         if (header[i] !== pdfHeader[i]) {
-        //             return false; // Früher Abbruch, wenn ein Byte nicht übereinstimmt
-        //         }
-        //     }
-        //     return true; // Alle Bytes stimmen mit dem PDF-Header überein
-        // },
-
-
-        // // fetch file from disc - show preview
-        // async loadPDF(file){
-        //     URL.revokeObjectURL(this.currentpreview);
-        //     let data = await ipcRenderer.invoke('getpdfasync', file )
-        
-        //     let isvalid = this.isValidPdf(data)
-        //     if (!isvalid){
-        //         this.$swal.fire({
-        //             title: this.$t("general.error"),
-        //             text: this.$t("general.nopdf"),
-        //             icon: "error",
-        //             timer: 3000,
-        //             showCancelButton: false,
-        //             didOpen: () => { this.$swal.showLoading(); },
-        //         })
-        //         return
-        //     }
-
-        //     this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "application/pdf"})) 
-
-        //     const pdfEmbed = document.querySelector("#pdfembed");
-        //     pdfEmbed.style.backgroundImage = '';
-        //     pdfEmbed.style.height = "95vh";
-        //     pdfEmbed.style.width = "67vh";
-        //     pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0`);
-
-        //     document.querySelector("#preview").style.display = 'block';
-        // },
-
-
-        // // fetch file from disc - show preview
-        // async loadImage(file){
-        //     URL.revokeObjectURL(this.currentpreview);
-        //     let data = await ipcRenderer.invoke('getpdfasync', file )
-        //     this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "image/jpeg"})) 
-        //     const pdfEmbed = document.querySelector("#pdfembed");
-            
-        //     // Create an image element to determine the dimensions of the image
-        //     // always resize the pdfembed div to the same aspect ratio of the given image
-        //     const img = new window.Image();
-        //     img.onload = function() {
-        //         const width = img.width;
-        //         const height = img.height;
-        //         const aspectRatio = width / height;
-
-        //         const containerWidth = window.innerWidth * 0.8;
-        //         const containerHeight = window.innerHeight * 0.8;
-        //         const containerAspectRatio = containerWidth / containerHeight;
-
-        //         if (aspectRatio > containerAspectRatio) {
-        //             pdfEmbed.style.width = '80vw';
-        //             pdfEmbed.style.height = `calc(80vw / ${aspectRatio})`;
-        //         } else {
-        //             pdfEmbed.style.height = '80vh';
-        //             pdfEmbed.style.width = `calc(80vh * ${aspectRatio})`;
-        //         }
-        //         pdfEmbed.style.backgroundImage = `url(${this.currentpreview})`;
-
-        //     }.bind(this);
-        //     img.src = this.currentpreview;
-
-        //     // clear the pdf viewer
-        //     pdfEmbed.setAttribute("src", "about:blank");
-        //     document.querySelector("#preview").style.display = 'block';   
-        // },
-
-
-
-
-
-
         async loadFilelist(){
             let filelist = await ipcRenderer.invoke('getfilesasync', null)
             this.localfiles = filelist;
@@ -613,31 +527,6 @@ export default {
 
 
 
-        // // get file from local examdirectory and replace editor content with it
-        // async loadGGB(file){
-        //     this.$swal.fire({
-        //         title: this.$t("editor.replace"),
-        //         html:  `${this.$t("editor.replacecontent1")} <b>${file}</b> ${this.$t("editor.replacecontent2")}`,
-        //         icon: "question",
-        //         showCancelButton: true,
-        //         cancelButtonText: this.$t("editor.cancel"),
-        //         reverseButtons: true
-        //     })
-        //     .then(async (result) => {
-        //         if (result.isConfirmed) {
-
-        //             const result = await ipcRenderer.invoke('loadGGB', file);
-        //             if (result.status === "success") {
-        //                 const base64GgbFile = result.content;
-        //                 const ggbIframe = document.getElementById('geogebraframe');
-        //                 const ggbApplet = ggbIframe.contentWindow.ggbApplet;
-        //                 ggbApplet.setBase64(base64GgbFile);
-        //             } else {
-        //                 console.error('Error loading file');
-        //             }
-        //         } 
-        //     }); 
-        // },
     },
     beforeUnmount() {
         this.saveinterval.removeEventListener('action', this.saveContent);

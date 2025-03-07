@@ -35,7 +35,7 @@
         <!-- exam materials end -->
 
 
-        <div class="text-muted me-2 ms-2 small d-inline-block" style="vertical-align: middle;">{{ $t('editor.localfiles') }} </div>
+        <div class="text-muted white me-2 ms-2 small d-inline-block" style="vertical-align: middle;">{{ $t('editor.localfiles') }} </div>
         <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
             <div v-if="(file.type == 'pdf')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
             <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
@@ -73,15 +73,13 @@
 
 
         <!-- RDP Viewer start -->
-        <div style="height: calc(100vh - 50px);">
-            <button class="btn btn-danger" @click="reconnectRDP">Connect</button>
-            <div ref="container" tabindex="0" @mousemove="handleMouseMove" @click="handleClick" @keydown="handleKeyDown">
-                <canvas ref="canvas" :width="rdpWidth" :height="rdpHeight"></canvas>
-                <div v-if="error" style="position: absolute; top: 100px; left: 50%; transform: translateX(-50%); color: #b02a37; z-index: 100000; text-align: center;">
-                    {{ error }} <br>
-                    <button class="btn btn-danger" @click="reconnectRDP">Reconnect</button>
-                </div>
+        <div style="height:100%" width="100%" ref="container">
+            <canvas id="myCanvas" ref="canvas" :width="rdpWidth" :height="rdpHeight"></canvas>
+            <div v-if="error" style="position: absolute; top: 200px; left: 50%; transform: translateX(-50%); color: #b02a37; z-index: 100000; text-align: center;">
+                {{ error }} <br>
+                <button class="btn btn-danger" @click="connectRDP()">ReConnect</button>
             </div>
+           
         </div>
         <!-- RDP Viewer end -->
 
@@ -92,8 +90,14 @@
 import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
-
 import { getExamMaterials, loadPDF, loadImage, loadGGB} from '../utils/filehandler.js'
+
+import Mstsc from '../rdp/mstsc.js';  // Adjust the import based on your module structure
+import '../rdp/keyboard.js'
+import '../rdp/rle.js'
+import  '../rdp/canvas.js'
+import throttle from 'lodash/throttle';
+
 
 export default {
     data() {
@@ -129,78 +133,87 @@ export default {
             currentpreview: null,
             wlanInfo: null,
             examMaterials: [],
+
             rdpWidth: 1280,
             rdpHeight: 720,
+
             error: null,
             canvas: null,
             ctx: null,
-            rdpConfig: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].rdpConfig
-
+            rdpConfig: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].rdpConfig,
+            rdpClient: null,
+            error: null,
+            canvas: null,
+            activeSession: false
         }
     }, 
     components: { ExamHeader },  
-    mounted() {
-       
-        this.$nextTick(() => { // Code that will run only after the entire view has been rendered
-            console.log("RdpViewer.vue @ mounted: rdpConfig", this.rdpConfig)
+    async mounted() {
+        console.log("RdpViewer.vue @ mounted: rdpConfig", this.rdpConfig)
+        
+        this.getExamMaterials()
+
+        await this.sleep(1000)
+
+        this.updateCanvasSize()
+
+
+        this.canvas = Mstsc.$("myCanvas");
+        this.render = Mstsc.Canvas.create(this.canvas);
+        this.activeSession = false;
 
 
 
-            this.entrytime = new Date().getTime()  
-            // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
-            this.fetchinfointerval = new SchedulerService(5000);
-            this.fetchinfointerval.addEventListener('action',  this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
-            this.fetchinfointerval.start();
-                
-            this.loadfilelistinterval = new SchedulerService(20000);
-            this.loadfilelistinterval.addEventListener('action',  this.loadFilelist);
-            this.loadfilelistinterval.start();
+		// Bind mouse events.
+		this.canvas.addEventListener('mousemove', this.mouseMoveHandler);
+		this.canvas.addEventListener('mousedown', this.mouseDownHandler);
+		this.canvas.addEventListener('mouseup', this.mouseUpHandler);
+		// Bind keyboard events.
+		window.addEventListener('keydown', this.keyDownHandler);
+		window.addEventListener('keyup', this.keyUpHandler);
+
+
+		// Set up IPC listeners for RDP events.
+		ipcRenderer.on('rdp-connect', this.rdpConnectHandler);
+		ipcRenderer.on('rdp-bitmap', this.rdpBitmapHandler);
+		ipcRenderer.on('rdp-close', this.rdpCloseHandler);
+		ipcRenderer.on('rdp-error', this.rdpErrorHandler);
+
+
+        this.connectRDP()
+
+
+
+        this.entrytime = new Date().getTime()  
+        // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
+        this.fetchinfointerval = new SchedulerService(5000);
+        this.fetchinfointerval.addEventListener('action',  this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+        this.fetchinfointerval.start();
             
-            this.clockinterval = new SchedulerService(1000);
-            this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
-            this.clockinterval.start();
-                
-            document.body.addEventListener('mouseleave', this.sendFocuslost);
+        this.loadfilelistinterval = new SchedulerService(20000);
+        this.loadfilelistinterval.addEventListener('action',  this.loadFilelist);
+        this.loadfilelistinterval.start();
+        
+        this.clockinterval = new SchedulerService(1000);
+        this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+        this.clockinterval.start();
+            
+        document.body.addEventListener('mouseleave', this.sendFocuslost);
+
+        this.loadFilelist()
     
-            this.loadFilelist()
-     
-            // add some eventlisteners once
-            document.querySelector("#preview").addEventListener("click", function() {  
-                this.style.display = 'none';
-                this.setAttribute("src", "about:blank");
-                URL.revokeObjectURL(this.currentpreview);
-            });
-
-
-            // Empfang von Bitmap-Frames
-            ipcRenderer.on('rdp-bitmap', (event, bitmap) => {
-                console.log(bitmap)
-                try {
-                    const imageData = this.ctx.createImageData(bitmap.width, bitmap.height);
-                    imageData.data.set(bitmap.data);
-                    const x = Math.floor(bitmap.x) || 0;  // Fallback to 0 if undefined
-                    const y = Math.floor(bitmap.y) || 0;  // Fallback to 0 if undefined
-                    
-                    this.ctx.putImageData(imageData, x, y);
-                } catch (error) {
-                    console.error('Error in rdp-bitmap handler:', error);
-                    console.error('Bitmap data:', bitmap);
-                }
-            });
-
-            // Empfang von Fehlern
-            ipcRenderer.on('rdp-error', (event, error) => {
-                this.error = error;
-            });
-
-
+        // add some eventlisteners once
+        document.querySelector("#preview").addEventListener("click", function() {  
+            this.style.display = 'none';
+            this.setAttribute("src", "about:blank");
+            URL.revokeObjectURL(this.currentpreview);
         });
+  
     },
     methods: { 
         getExamMaterials:getExamMaterials,
         loadPDF:loadPDF,
         loadImage:loadImage,
-
         loadBase64file(file){
             if (file.filetype == 'pdf'){
                 this.loadPDF(file, true)
@@ -214,67 +227,128 @@ export default {
                 this.loadGGB(file,true)
                 return
             }
-
         },
+         throttledMouseMove(){
+             throttle((e, offset) => {
+                ipcRenderer.send('rdp-mouse', {
+                    x: Math.max(e.clientX - offset.left, 0),
+                    y: Math.max(e.clientY - offset.top, 0),
+                    button: 0,
+                    pressed: false
+                });
+            }, 64)
+         },
+
+        mouseButtonMap(button) {
+            switch (button) {
+            case 0:
+                return 1;
+            case 2:
+                return 2;
+            default:
+                return 0;
+            }
+        },  
 
 
-        async reconnectRDP(){
-            console.log("RdpViewer.vue @ reconnect: reconnecting RDP connection")
-            this.error = null;
-            this.canvas = this.$refs.canvas;
-            this.ctx = this.canvas.getContext('2d');
-            this.$refs.container.focus();
 
-            const cleanConfig = {
-                domain: this.rdpConfig.domain,
-                userName: this.rdpConfig.userName,
-                password: this.rdpConfig.password,
-                ip: this.rdpConfig.ip,
-                port: this.rdpConfig.port,
-            }   
-
-            try {
-                await ipcRenderer.invoke("start-rdp", cleanConfig);
-            } catch (e) {
-                this.error = e;
+        updateCanvasSize() {
+             if (this.$refs.container) {
+                this.rdpWidth = this.$refs.container.clientWidth;
+                this.rdpHeight = this.$refs.container.clientHeight;
             }
         },
-
-        // handle mouse move
-        handleMouseMove(event) {
-            return
-
-            const rect = this.canvas.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
-            ipcRenderer.send('rdp-input', { type: 'mouse', x, y, button: 0 });
+        connectRDP () {
+            this.error = null
+            ipcRenderer.send('open-rdp-connection', {
+                ip: this.rdpConfig.ip,
+                port: this.rdpConfig.port,
+                screen: { width: this.rdpWidth, height: this.rdpHeight },
+                domain: this.rdpConfig.domain,
+                username: this.rdpConfig.userName,
+                password: this.rdpConfig.password,
+                locale: Mstsc.locale()
+            });
         },
 
-        // handle click
-        handleClick(event) {
-            return
+        mouseMoveHandler(e){
+            if (!this.activeSession) return;
+			const offset = Mstsc.elementOffset(this.canvas);
+			this.throttledMouseMove(e, offset);
+			e.preventDefault();
+			return false;
 
-            const rect = this.canvas.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
-            const button = event.button === 2 ? 2 : 1;
-            ipcRenderer.send('rdp-input', { type: 'mouse', x, y, button });
-            },
-
-        // handle key down
-        handleKeyDown(event) {
-            return
-            
-            ipcRenderer.send('rdp-input', { type: 'keyboard', keyCode: event.keyCode, event: true });
-            setTimeout(() => {
-                ipcRenderer.send('rdp-input', { type: 'keyboard', keyCode: event.keyCode, event: false });
-            }, 50);
         },
+        mouseDownHandler(e){
+            if (!this.activeSession) return;
+			const offset = Mstsc.elementOffset(this.canvas);
+			const mouseX = Math.max(e.clientX - offset.left, 0);
+			const mouseY = Math.max(e.clientY - offset.top, 0);
+			ipcRenderer.send('rdp-mouse', {
+				x: mouseX,
+				y: mouseY,
+				button: this.mouseButtonMap(e.button),
+				pressed: true
+			});
+			e.preventDefault();
+			return false;
 
-
-
-
-
+        },
+        mouseUpHandler(e){
+            if (!this.activeSession) return;
+			const offset = Mstsc.elementOffset(this.canvas);
+			const mouseX = Math.max(e.clientX - offset.left, 0);
+			const mouseY = Math.max(e.clientY - offset.top, 0);
+			ipcRenderer.send('rdp-mouse', {
+				x: mouseX,
+				y: mouseY,
+				button: this.mouseButtonMap(e.button),
+				pressed: false
+			});
+			e.preventDefault();
+			return false;
+        },
+        keyDownHandler(e){
+            if (!this.activeSession) return;
+			let sc = Mstsc.scancode(e);
+			if (sc < 0) {
+				console.warn("Invalid scancode received for key", e.key, "; skipping event.");
+				return; // oder sc = 0, falls sinnvoll
+			}
+			ipcRenderer.send('rdp-scancode', {
+				scancode: Mstsc.scancode(e),
+				pressed: true
+			});
+			e.preventDefault();
+			return false;
+        },
+        keyUpHandler(e){
+            if (!this.activeSession) return;
+			ipcRenderer.send('rdp-scancode', {
+				scancode: Mstsc.scancode(e),
+				pressed: false
+			});
+			e.preventDefault();
+			return false;
+        },
+        rdpConnectHandler(event, data){
+            this.error = null
+			console.log('rdpviewer.vue @ rdp-connect: connected');
+			this.activeSession = true;
+        },
+        rdpBitmapHandler(event, bitmap){
+            this.render.update(bitmap);
+        },
+        rdpCloseHandler(event){
+            this.error = "Connection closed"
+            console.log('rdpviewer.vue @ rdp-close: connection closed');
+			this.activeSession = false;
+        },
+        rdpErrorHandler(event, err){
+            this.error = err.message
+            console.log('rdpviewer.vue @ rdp-error: ' + err.code + '(' + err.message + ')');
+            this.activeSession = false;
+        },
 
 
 
@@ -341,7 +415,10 @@ export default {
                 } 
             }); 
         },
-
+        // implementing a sleep (wait) function
+        sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        },
         sendFocuslost(){
             let response = ipcRenderer.send('focuslost')  // refocus, go back to kiosk, inform teacher
             if (!this.config.development && !response.focus){  //immediately block frontend
@@ -407,6 +484,26 @@ export default {
         this.loadfilelistinterval.stop() 
 
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
+
+        //remove all event listeners and ipc listeners
+        if (this.canvas){   
+            console.log("RdpViewer.vue @ beforeUnmount: removing Canvas event listeners")
+            this.canvas.removeEventListener('mousemove', this.mouseMoveHandler);
+            this.canvas.removeEventListener('mousedown', this.mouseDownHandler);
+            this.canvas.removeEventListener('mouseup', this.mouseUpHandler);
+        }
+
+        //remove all window event listeners
+        window.removeEventListener('keydown', this.keyDownHandler);
+        window.removeEventListener('keyup', this.keyUpHandler);
+
+        //remove all ipc listeners
+        ipcRenderer.removeAllListeners('rdp-connect', this.rdpConnectHandler);
+        ipcRenderer.removeAllListeners('rdp-bitmap', this.rdpBitmapHandler);
+        ipcRenderer.removeAllListeners('rdp-close', this.rdpCloseHandler);
+        ipcRenderer.removeAllListeners('rdp-error', this.rdpErrorHandler);
+
+
     },
 }
 </script>

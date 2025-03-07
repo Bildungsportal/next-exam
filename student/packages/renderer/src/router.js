@@ -32,6 +32,7 @@ import microsoft365 from '/src/pages/microsoft365.vue'
 import website from '/src/pages/website.vue'
 import rdpview from '/src/pages/rdpview.vue'
 
+
 import config from '../../main/config.js';
 
 
@@ -45,8 +46,8 @@ if (userAgent.indexOf(' electron/') > -1) {
     electron = true
 }
 
-const routes = [
-    { path: '/',                    name:"index",        component: student,      beforeEnter: [addParams]            },
+const routes = [ // to load a specific view just replace the component at path: /
+    { path: '/',                    name:"index",        component: student,      beforeEnter: [addParams]            },    // default component "student"
     { path: '/student',             name:"student",      component: student,      beforeEnter: [addParams]            },
     { path: '/editor/:token',       name:"editor",       component: editor,       beforeEnter: [addParams, fetchInfo] },  
     { path: '/math/:token',         name:"math",         component: geogebra,     beforeEnter: [addParams, fetchInfo] },
@@ -56,7 +57,7 @@ const routes = [
     { path: '/microsoft365/:token', name:"microsoft365", component: microsoft365, beforeEnter: [addParams, fetchInfo] },
     { path: '/lock',                name:"lock",         component: lock },
     { path: '/rdp/:token',          name:"rdp",          component: rdpview,      beforeEnter: [addParams, fetchInfo] },
-    { path: '/:pathMatch(.*)*',     name:"404",          component: notfound },   // to load a specific view just replace the error view and load an unknown component at path: /
+    { path: '/:pathMatch(.*)*',     name:"404",          component: notfound },  
 ]
 
 
