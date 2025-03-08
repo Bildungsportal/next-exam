@@ -165,19 +165,13 @@ if (process.platform === 'win32') {  app.setAppUserModelId(app.getName())}
 
 // hide certificate warnings in console.. we know we use a self signed cert and do not validate it
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 const originalEmitWarning = process.emitWarning
 process.emitWarning = (warning, options) => {
     if (warning && warning.includes && warning.includes('NODE_TLS_REJECT_UNAUTHORIZED')) {  return }
     return originalEmitWarning.call(process, warning, options)
 }
  
-
-
-
-
-
-
-
 
 
 
@@ -214,7 +208,7 @@ app.whenReady()
     if (config.hostip == "127.0.0.1") { config.hostip = false }
     if (config.hostip) {
         log.info(`main: HOSTIP: ${config.hostip}`)
-        multicastClient.init(config.gateway) 
+        multicastClient.init(config.gateway)   // gateway is used in multicastclient.js to determine if the multicast client should join a group
     }
 
     powerSaveBlocker.start('prevent-display-sleep')   // verhindere dass das gerät einschläft

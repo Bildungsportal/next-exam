@@ -15,6 +15,7 @@
     :componentName="componentName"
     :localLockdown="localLockdown"
     :wlanInfo="wlanInfo"
+    :hostip="hostip"
     @reconnect="reconnect"
     @gracefullyexit="gracefullyexit"
     ></exam-header>
@@ -92,7 +93,8 @@ export default {
             localfiles: null,
             battery: null,
             currentpreview: null,
-            wlanInfo: null
+            wlanInfo: null,
+            hostip: null
         }
     }, 
     components: { ExamHeader },  
@@ -323,7 +325,7 @@ export default {
             .catch(error => { console.error("Error accessing the Battery API:", error);  });
 
             this.wlanInfo = await ipcRenderer.invoke('get-wlan-info')
-
+            this.hostip = await ipcRenderer.invoke('checkhostip')
         }, 
        
     },

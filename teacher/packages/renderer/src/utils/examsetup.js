@@ -100,6 +100,89 @@ async function getFormsID(){
 
 
 
+async function configureMath(){
+    this.$swal.fire({
+        title: this.$t("dashboard.math"),
+        icon: 'question',
+        input: 'text',
+        inputLabel: this.$t("dashboard.allowedURL"),
+        inputPlaceholder: 'https://www.example.com',
+        inputValue: this.serverstatus.examSections[this.serverstatus.activeSection].allowedUrl || '',
+        showCancelButton: true,
+        inputValidator: (value) => {
+            if (value && !isValidFullDomainName(value)) {
+                return 'Invalid Domain!';
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const allowedURL = result.value;
+            const urlString = allowedURL.includes('://') ? allowedURL : 'https://' + allowedURL;  // add https if not provided
+            this.serverstatus.examSections[this.serverstatus.activeSection].allowedUrl = allowedURL ? urlString : null;
+            this.setServerStatus();
+        }
+    });
+}
+
+async function configureRDP(){
+    this.$swal.fire({
+        title: this.$t("dashboard.rdp"),
+        icon: 'question',
+        html: `
+        <div class="m-1">
+            <h6>${this.$t("dashboard.rdpconfiginfo")}</h6>
+
+            <label>
+                <input type="text" id="domain" class="form-control my-select" placeholder="domain">
+            </label>
+
+            <label>
+                <input type="text" id="username" class="form-control my-select" placeholder="username">
+            </label>
+
+            <label>
+                <input type="text" id="password" class="form-control my-select" placeholder="password">
+            </label>
+            
+            <label>
+                <input type="text" id="ip" class="form-control my-select" placeholder="ip">
+            </label>
+
+            <label>
+                <input type="text" id="port" value="3389" class="form-control my-select" placeholder="port">
+            </label>
+            
+        </div>
+        `,
+        showCancelButton: true,
+        didOpen: () => {
+            if (this.serverstatus.examSections[this.serverstatus.activeSection].rdpConfig) {
+                document.getElementById('domain').value = this.serverstatus.examSections[this.serverstatus.activeSection].rdpConfig.domain
+                document.getElementById('username').value = this.serverstatus.examSections[this.serverstatus.activeSection].rdpConfig.userName
+                document.getElementById('password').value = this.serverstatus.examSections[this.serverstatus.activeSection].rdpConfig.password
+                document.getElementById('ip').value = this.serverstatus.examSections[this.serverstatus.activeSection].rdpConfig.ip
+                document.getElementById('port').value = this.serverstatus.examSections[this.serverstatus.activeSection].rdpConfig.port
+            }
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+
+            const rdpConfig = {
+                domain: document.getElementById('domain').value,         
+                userName: document.getElementById('username').value,   
+                password: document.getElementById('password').value,    
+                ip: document.getElementById('ip').value,  
+                port: document.getElementById('port').value,          
+            }
+
+
+
+            this.serverstatus.examSections[this.serverstatus.activeSection].rdpConfig = rdpConfig;
+            this.setServerStatus();
+        }
+    });
+}
+
 
 /**
 * Text Editor
@@ -188,7 +271,7 @@ async function configureEditor(){
                 </select>
             </div>
             <hr>
-            <div>
+            <div class="m-1">
                 <h6>${this.$t("dashboard.allowedURL")}</h6>
                 <input type="text" id="allowedURL" class="form-control my-select" placeholder="https://www.example.com">
             </div>
@@ -311,8 +394,13 @@ async function configureEditor(){
             }
 
             const allowedURL = document.getElementById('allowedURL').value;
-            const urlString = allowedURL.includes('://') ? allowedURL : 'https://' + allowedURL;
-            this.serverstatus.examSections[this.serverstatus.activeSection].allowedUrl = urlString
+            
+            if  (allowedURL !== ""){
+                const urlString = allowedURL.includes('://') ? allowedURL : 'https://' + allowedURL;  // add https if not provided
+                this.serverstatus.examSections[this.serverstatus.activeSection].allowedUrl = urlString
+            }else{
+                this.serverstatus.examSections[this.serverstatus.activeSection].allowedUrl = null
+            }
 
             this.serverstatus.examSections[this.serverstatus.activeSection].linespacing = selectedSpacing
             this.serverstatus.examSections[this.serverstatus.activeSection].fontfamily = selectedFont
@@ -397,4 +485,4 @@ function isValidFullDomainName(str) {
 }
 
 
-export { getTestURL, getTestID, getFormsID, configureEditor, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName }
+export { getTestURL, getTestID, getFormsID, configureEditor, configureMath, configureRDP, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName,  }

@@ -866,7 +866,7 @@ router.post('/updatescreenshot', async function (req, res, next) {
             }
       
     } else {
-        log.warn('control @ updatescreenshot: Screenshot or hash not provided');
+        //log.warn('control @ updatescreenshot: Screenshot or hash not provided');
         student.imageurl = "person-lines-fill.svg"
     }
     res.send({sender: "server", message:t("control.studentupdate"), status:"success" })

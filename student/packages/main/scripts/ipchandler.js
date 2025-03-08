@@ -30,6 +30,11 @@ import mammoth from 'mammoth';
 import wifi from 'node-wifi';
 import languageToolServer from './lt-server';
 
+import rdp from 'node-rdpjs-2'; // RDP-Client-Bibliothek
+
+
+
+
 const __dirname = import.meta.dirname;
 
   ////////////////////////////////
@@ -47,11 +52,165 @@ class IpcHandler {
         this.config = config
         this.WindowHandler = wh  
         this.CommunicationHandler = ch
+        this.rdpClient = null
         
         // Initialisiere das WLAN-Modul um informationen über das aktuell verbundene wlan zu erhalten
         // node-wifi erlaubt es darüber hinaus nach ssids zu scannen und auch verbindungen aufzubauen (future feature)
         wifi.init({
             iface: null // Standard: null, damit das Standardinterface des Systems verwendet wird
+        });
+
+
+
+
+        ipcMain.on('open-rdp-connection', (event, infos) => {
+          
+			if (this.rdpClient) {
+				// clean older connection
+				this.rdpClient.close();
+			};
+			
+            console.log("ipchandler @ open-rdp-connection: infos", infos)
+            
+			this.rdpClient = rdp.createClient({ 
+				domain : infos.domain, 
+				userName : infos.username,
+				password : infos.password,
+				enablePerf : true,
+				autoLogin : true,
+				screen : infos.screen,
+				locale : infos.locale,
+				logLevel : process.argv[2] || 'INFO'
+            }).on('connect', () => {
+                if (this.WindowHandler.examwindow) {this.WindowHandler.examwindow.webContents.send('rdp-connect');}
+                else {this.WindowHandler.mainwindow.webContents.send('rdp-connect');}
+            }).on('bitmap', (bitmap) => {
+                if (this.WindowHandler.examwindow) {this.WindowHandler.examwindow.webContents.send('rdp-bitmap', bitmap);}
+                else {this.WindowHandler.mainwindow.webContents.send('rdp-bitmap', bitmap);}
+            }).on('close', () => {
+                if (this.WindowHandler.examwindow) {this.WindowHandler.examwindow.webContents.send('rdp-close');}
+                else {this.WindowHandler.mainwindow.webContents.send('rdp-close');}
+            }).on('error', (err) => {
+                if (this.WindowHandler.examwindow) {this.WindowHandler.examwindow.webContents.send('rdp-error', err);}  
+                else {this.WindowHandler.mainwindow.webContents.send('rdp-error', err);}
+            }).connect(infos.ip, infos.port);
+
+        })
+        
+        // RDP Input handling
+        ipcMain.on('rdp-mouse', (event, data) => {
+            if (!this.rdpClient) return;
+            this.rdpClient.sendPointerEvent(data.x, data.y, data.button, data.pressed);
+        });
+        
+        ipcMain.on('rdp-wheel', (event, data) => {
+            if (!this.rdpClient) return;
+            console.log("[ipchandler] Received rdp-wheel:", data);
+            this.rdpClient.sendWheelEvent(data.x, data.y, data.step, data.isNegative, data.isHorizontal);
+        });
+        
+        ipcMain.on('rdp-scancode', (event, data) => {
+            if (!this.rdpClient) return;
+            //console.log("[ipchandler] Received rdp-scancode:", data);
+            this.rdpClient.sendKeyEventScancode(data.scancode, data.pressed);
+        });
+        
+        ipcMain.on('rdp-unicode', (event, data) => {
+            if (!this.rdpClient) return;
+            //console.log("[ipchandler] Received rdp-unicode:", data);
+            this.rdpClient.sendKeyEventUnicode(data.code, data.pressed);
+        });
+        
+        ipcMain.on('rdp-disconnect', (event) => {
+            if (!this.rdpClient) return;
+            console.log("[ipchandler] Received rdp-disconnect");
+            this.rdpClient.close();
+        });
+        
+
+
+
+
+
+
+
+
+        // Startet den RDP-Client und sendet Bitmap-Frames ans Frontend
+        ipcMain.handle('start-rdp', async (event, rdpConfig) => {
+            log.info("ipchandler @ start-rdp: starting RDP client with config:", rdpConfig)
+
+
+            // Cleanup existing connection if any
+            if (this.rdpClient) {
+                try {
+                    this.rdpClient.close();
+                } catch (e) {
+                    log.warn('ipchandler @ start-rdp: Error closing existing connection:', e);
+                }
+                this.rdpClient = null;
+            }
+
+            this.rdpClient = rdp.createClient({
+                domain: rdpConfig.domain,
+                userName: rdpConfig.userName,
+                password: rdpConfig.password,
+
+                enablePerf: true,
+                autoLogin: true,
+                compress: true,
+
+
+                logLevel: 'INFO',
+                screen: {
+                    width: 1280,
+                    height: 720
+                },
+                locale: 'de',   // needed to patch node-rdpjs for this issue
+                colorDepth: 16,
+
+   
+                
+                connectionTimeout: 10000, // Längeres Timeout für die Verbindung
+      
+                performanceFlags: {
+                    disableWallpaper: true,
+                    disableFullWindowDrag: true,
+                    disableMenuAnimations: true,
+                    disableTheming: true,
+                    disableCursorShadow: true,
+                    disableCursorBlinking: true,
+                    disableAnimation: true
+                }
+            })
+            .on('connect', () => log.info('ipchandler @ start-rdp: RDP verbunden'))
+            .on('bitmap', (bitmap) => {
+                // Sende Bitmap-Frame (x,y,width,height,data) ans Renderer
+                console.log("#############################################")
+                if (this.WindowHandler.examwindow) this.WindowHandler.examwindow.webContents.send('rdp-bitmap', bitmap);
+            })
+            .on('close', () => console.log('RDP Verbindung geschlossen'))
+            .on('error', (err) => {
+                console.error('RDP Fehler:', err);
+                if (this.WindowHandler.examwindow) this.WindowHandler.examwindow.webContents.send('rdp-error', err.message);
+            });
+            
+            this.rdpClient.connect(rdpConfig.ip, rdpConfig.port);
+ 
+
+
+        });
+
+
+        // Leitet Input-Events vom Frontend an den RDP-Client weiter
+        ipcMain.on('rdp-input', (_, input) => {
+            if (this.rdpClient) {
+                if (input.type === 'mouse') {
+                    this.rdpClient.sendPointerEvent(input.x, input.y, input.button); // button: 0 = move, 1 = Klick, etc.
+                }
+                if (input.type === 'keyboard') {
+                    this.rdpClient.sendKeyEvent(input.keyCode, input.event); // event: true = KeyDown, false = KeyUp
+                }
+            }
         });
 
 
@@ -283,11 +442,11 @@ class IpcHandler {
         /**
          * re-check hostip and enable multicast client
          */ 
-        ipcMain.on('checkhostip', (event) => { 
+        ipcMain.handle('checkhostip', (event) => { 
             let address = false
-            try { address = this.multicastClient.client.address() }
+            try { address = this.multicastClient.client.address() }   // this just checks if the multicastclient is running
             catch (e) { log.error("ipcHandler @ checkhostip: multicastclient not running") }
-            if (address) { event.returnValue = this.config.hostip }
+            if (address) { return this.config.hostip }  // everything is ok - return the hostip and stop here
 
 
             try { //bind to the correct interface
@@ -311,8 +470,9 @@ class IpcHandler {
 
             // check if multicast client is running - otherwise start it
             if (this.config.hostip == "127.0.0.1") { this.config.hostip = false }
-            if (this.config.hostip && !address ) { this.multicastClient.init(this.config.gateway) }
-            event.returnValue = this.config.hostip 
+            if (this.config.hostip && !address ) { this.multicastClient.init(this.config.gateway) }   // multicastclient.init() will only start the client if it is not already running
+            console.log("ipchandler @ checkhostip: hostip", this.config.hostip)
+            return this.config.hostip 
         })
 
 

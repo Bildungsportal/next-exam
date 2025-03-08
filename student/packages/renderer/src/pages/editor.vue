@@ -16,6 +16,7 @@
       :componentName="componentName"
       :localLockdown="localLockdown"
       :wlanInfo="wlanInfo"
+      :hostip="hostip"
       @reconnect="reconnect"
       @gracefullyexit="gracefullyexit"
     ></exam-header>
@@ -92,9 +93,10 @@
             <br>   
             <button :title="$t('editor.splitview')"  @click="toggleSplitview()" style="vertical-align: top;" class="invisible-button btn btn-outline-warning p-0 ms-1 me-2 mb-0 btn-sm"><img src="/src/assets/img/svg/view-split-left-right.svg" class="white" width="22" height="22" ></button>
             <div id="sendfinalexam" class="invisible-button btn btn-outline-success p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="sendExamToTeacher()" :title="$t('editor.sendfinalexam')"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.finalsubmit') }}</div>
+           
+            <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
             <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/src/assets/img/svg/games-solve.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
 
-            <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
             <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
                 <div v-if="(file.filetype == 'bak')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
                 <div v-if="(file.filetype == 'docx')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
@@ -175,7 +177,7 @@
     <!-- angabe/pdf preview start -->
     <div v-if="!splitview" id="preview" class="fadeinfast p-4">
         
-        <webview id="webview" v-show="webviewVisible" :src="allowedUrlObject.full"></webview>
+        <webview id="webview" v-show="webviewVisible" :src="(allowedUrlObject && allowedUrlObject.full)?allowedUrlObject.full:''"></webview>
         
         <div class="embed-container">
             <embed src="" id="pdfembed"></embed>
@@ -426,6 +428,7 @@ export default {
             currentPDFData: null,
             ignoreList: new Set(),
             wlanInfo: null,
+            hostip: null,
             ltRunning: false,
             examMaterials: [],
             submissionnumber: 0,
@@ -439,6 +442,8 @@ export default {
         },
 
         allowedUrlObject() {
+            if (!this.serverstatus.examSections[this.serverstatus.activeSection].allowedUrl) { return null; }
+
             const fullUrl = this.serverstatus.examSections[this.serverstatus.activeSection].allowedUrl;
             let domain = '';
             try {
@@ -604,6 +609,8 @@ export default {
             }
 
             this.wlanInfo = await ipcRenderer.invoke('get-wlan-info')
+            this.hostip = await ipcRenderer.invoke('checkhostip')
+            
         }, 
 
 

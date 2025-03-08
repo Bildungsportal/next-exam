@@ -182,7 +182,10 @@
         "groupB": "Group B",
         "allowedURL": "Allowed URL",
         "allowedURLinfo": "Please enter a URL that is allowed during the exam",
-        "extendedsettings_mode": "Extended Settings for Exam-Mode"
+        "extendedsettings_mode": "Extended Settings for Exam-Mode",
+        "rdp": "RDP",
+        "rdpconfig": "RDP Configuration",
+        "rdpconfiginfo": "Please enter the RDP configuration"
     },
     "control": {
         "tokennotvalid": "token is not valid",

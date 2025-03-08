@@ -204,6 +204,7 @@ let studentInfo = {
                     audioRepeat: 0, // wie oft dürfen die teilnehmenden eine audio datei abspielen 0 - unlimited
                     domainname: false,  //zieldomain für den exam mode "webseite"
                     allowedUrl: null,    // url die der client besuchen darf während der prüfung
+                    rdpConfig: null,   // config für den rdp server { "username": "user", "password": "pass", "domain": "domain", "port": 3389 , "ip": "192.168.1.1"}
                     groups: true,   // sollen die clients in 2 gruppen A / B aufgeteilt werden
                     groupA: {
                         users : [   // gruppeneinteilung A - Für die Clientnamen werden die Benutzernamen des BiP herangezogen.

@@ -32,9 +32,9 @@
       
         <div class="header-item">
 
-            <div v-if="wlanInfo && wlanInfo.ssid" style="font-size: 0.8rem;"> {{ wlanInfo.ssid }}  </div>
+            <div v-if="wlanInfo && wlanInfo?.ssid" style="font-size: 0.8rem;"> {{ wlanInfo.ssid }}  </div>
 
-            <div v-if="wlanInfo && wlanInfo.quality" class="me-2">
+            <div v-if="wlanInfo && wlanInfo?.quality" class="me-2">
                 <img v-if="wlanInfo && wlanInfo.quality > 80" src="/src/assets/img/svg/network-wireless-connected-100.svg"  :title="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;" />
                 <img v-if="wlanInfo && wlanInfo.quality > 50 && wlanInfo.quality <= 80" src="/src/assets/img/svg/network-wireless-connected-80.svg" :title="wlanInfo.quality+'%'" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
                 <img v-if="wlanInfo && wlanInfo.quality > 30 && wlanInfo.quality <= 50" src="/src/assets/img/svg/network-wireless-connected-60.svg" :title="wlanInfo.quality+'%'" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
@@ -43,7 +43,15 @@
                 <img v-if="wlanInfo && wlanInfo.quality <= 5" :title="wlanInfo.quality+'%'" :alt="wlanInfo.quality+'%'" src="/src/assets/img/svg/network-wireless-connected-00.svg" width="24" height="24" style="vertical-align: bottom;" />
             </div>
             <div v-if="!wlanInfo" class="me-2">
-                <img title="disconnected" alt="disconnected" src="/src/assets/img/svg/network-wireless-disconnected.svg" width="24" height="24" >
+                <img title="WLAN disconnected" alt="WLAN disconnected" src="/src/assets/img/svg/network-wireless-disconnected.svg" width="24" height="24" >
+            </div>
+
+            <div v-if="hostip && !wlanInfo && !wlanInfo?.ssid" class="me-2">
+                <img title="LAN connected" alt="LAN connected" src="/src/assets/img/svg/network-wired-available.svg" width="24" height="24" >
+            </div>
+
+            <div v-if="!hostip && !wlanInfo && !wlanInfo?.ssid" class="me-2">
+                <img title="LAN disconnected" alt="LAN disconnected" src="/src/assets/img/svg/network-limited.svg" width="24" height="24" >
             </div>
 
             <div v-if="battery && battery.level" style="font-size: 0.8rem;"> {{ Math.round(battery.level*100)}}%  </div>
@@ -69,7 +77,7 @@
 <script>
   export default {
     name: 'ExamHeader',
-    props: ['serverstatus','clientinfo','online', 'clientname', 'exammode', 'servername', 'pincode', 'battery', 'currenttime','timesinceentry','componentName','localLockdown','wlanInfo'],
+    props: ['serverstatus','clientinfo','online', 'clientname', 'exammode', 'servername', 'pincode', 'battery', 'currenttime','timesinceentry','componentName','localLockdown','wlanInfo','hostip'],
     methods: {
       reconnect() {
         // Methode zur Wiederherstellung der Verbindung

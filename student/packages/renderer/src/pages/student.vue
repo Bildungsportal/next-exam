@@ -513,7 +513,7 @@ export default {
 
     
             // check im networkconnection is still alive - otherwise exit here
-            this.hostip = ipcRenderer.sendSync('checkhostip')
+            this.hostip = await ipcRenderer.invoke('checkhostip')
             if (!this.hostip) return;  
             if (this.clientinfo.token) return;   // stop spamming the api if already connected
         

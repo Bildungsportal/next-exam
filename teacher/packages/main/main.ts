@@ -20,6 +20,7 @@
  */
 
 
+
 import { app, BrowserWindow, powerSaveBlocker, nativeTheme, globalShortcut, Menu  } from 'electron'
 import { release } from 'os'
 import config from './config.js';
@@ -41,6 +42,8 @@ app.commandLine.appendSwitch('force-device-scale-factor', '1');
 
 WindowHandler.init(multicastClient, config)  // mainwindow, examwindow, blockwindow
 IpcHandler.init(multicastClient, config, WindowHandler)  //controll all Inter Process Communication
+
+
 
 /**
  * This function specifically checks for EPIPE errors and disables the console transport for the ElectronLogger if such an error occurs.
