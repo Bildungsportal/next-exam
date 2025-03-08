@@ -16,8 +16,8 @@
         <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 4 && !serverstatus.examSections[4].locked, 'sectionbuttonactivered': serverstatus.activeSection == 4 && serverstatus.examSections[4].locked, 'btn-secondary': serverstatus.activeSection != 4,'btn-danger': serverstatus.examSections[4].locked}">{{ serverstatus.examSections[4].sectionname }}</div>
     </div>
 
-    <div class="btn btn-sm btn-cyan m-0 me-1 mt-1" style="float: right; padding:3px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22" > </div>
-    <div class="btn btn-sm btn-danger m-0 me-1 mt-1" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style="float: right"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" >&nbsp; {{$t('dashboard.stopserver')}}&nbsp; </div>
+    <div class="btn btn-sm btn-cyan m-0 me-1 mt-0" style="float: right; padding:3px; height:32px; width:32px; margin-top:0.08em!important;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22" > </div>
+    <div class="btn btn-sm btn-danger m-0 me-1 mt-0" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style="float: right; height:32px; margin-top:0.08em!important;"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" >&nbsp; {{$t('dashboard.stopserver')}}&nbsp; </div>
     <div v-if="!hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 me-1 " style="cursor: unset; float: right">{{ $t("general.offline") }}</div>
 </div>
  <!-- Header END -->
@@ -795,7 +795,19 @@ computed: {
                     let studentWidget = this.studentwidgets.filter( el => el.token ===  student.token)  // get widget with the same token
                     if ( studentWidget.length > 0){  //studentwidget exists -> update it
                         for (let i = 0; i < this.studentwidgets.length; i++){  // we cant use (for .. of) or forEach because it creates a workingcopy of the original object
-                            if (student.token == this.studentwidgets[i].token){ this.studentwidgets[i] = student; }  //now update the entry in the original widgets object
+                            if (student.token == this.studentwidgets[i].token){ 
+                                //now update the entry in the original widgets object and check if the student is online
+                                if (this.now - 20000 > student.timestamp){
+                                    if (this.studentwidgets[i].online){ //play short soundfile on the first time the student timestamp is older than 20 seconds
+                                        console.log(`dashboard @ fetchInfo: student ${student.clientname} just went offline`)
+                                        const audio = new Audio('attention.wav');
+                                        audio.play();
+                                    }
+                                    else { student.online = false }  // set online status on student object
+                                }
+                                else {student.online = true }  // set online status on student object
+                                this.studentwidgets[i] = student; // überschreibt das derzeitige studentwidget mit dem neuen student object
+                            }  
                         }
                     }
                     else {
