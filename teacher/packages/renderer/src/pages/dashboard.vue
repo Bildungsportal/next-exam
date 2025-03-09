@@ -2,14 +2,14 @@
 
 
 <!-- Header START -->
-<div :key="0" class="w-100 p-3 text-white bg-dark shadow text-right" style="min-width: 1180px;">
+<div :key="0" class="w-100 p-3 text-white bg-dark shadow text-right mt-1" style="min-width: 1180px;">
     <span class="text-white m-1">
         <img src="/src/assets/img/svg/speedometer.svg" class="white me-2  " width="32" height="32" >
         <span style="font-size:23px;" class="align-middle me-1 ">Next-Exam</span>
     </span>
     <span class="align-middle ms-3" style="float: right; font-size:23px;">Dashboard</span>
 
-    <div v-if="serverstatus.useExamSections" style="position: absolute; left:257px; top:43px; min-width: 550px;">
+    <div v-if="serverstatus.useExamSections" style="position: absolute; left:257px; top:47px; min-width: 550px; z-index: 0;">
         <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 1 && !serverstatus.examSections[1].locked, 'sectionbuttonactivered': serverstatus.activeSection == 1 && serverstatus.examSections[1].locked, 'btn-secondary': serverstatus.activeSection != 1,'btn-danger': serverstatus.examSections[1].locked}">{{ serverstatus.examSections[1].sectionname }}</div>
         <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 2 && !serverstatus.examSections[2].locked, 'sectionbuttonactivered': serverstatus.activeSection == 2 && serverstatus.examSections[2].locked, 'btn-secondary': serverstatus.activeSection != 2,'btn-danger': serverstatus.examSections[2].locked}">{{ serverstatus.examSections[2].sectionname }}</div>
         <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 3 && !serverstatus.examSections[3].locked, 'sectionbuttonactivered': serverstatus.activeSection == 3 && serverstatus.examSections[3].locked, 'btn-secondary': serverstatus.activeSection != 3,'btn-danger': serverstatus.examSections[3].locked}">{{ serverstatus.examSections[3].sectionname }}</div>
@@ -23,7 +23,7 @@
  <!-- Header END -->
 
 
-<div id="wrapper" class="w-100 h-100 d-flex" >
+<div id="wrapper" class="w-100 h-100 d-flex"  style="z-index: 100;">
     
     <!-- single student view  -->
     <div :key="1" id="studentinfocontainer" class="fadeinslow p-4">
@@ -272,6 +272,13 @@
                 <input v-model=serverstatus.examSections[serverstatus.activeSection].groups @click="setupGroups()" :title="$t('dashboard.groupinfo')" checked=false class="form-check-input" type="checkbox" id="activategroups">
                 <label class="form-check-label">{{$t('dashboard.groups')}}   </label><br>
             </div>
+
+            <div class="form-check form-switch  m-1 mb-2">
+                <input v-model=muteAudio @click="" :title="$t('dashboard.muteaudiointro')" checked=false class="form-check-input" type="checkbox" id="muteaudio">
+                <label class="form-check-label">{{$t('dashboard.muteaudio')}}   </label><br>
+            </div>
+
+
             <div v-if="config.bipIntegration && bipToken" class="form-check form-switch  m-1 mb-2" >
                 <input v-model=serverstatus.requireBiP :title="$t('control.biprequired')" checked=false class="form-check-input" type="checkbox" id="activatebip">
                 <label class="form-check-label">{{$t('dashboard.bildungsportal')}}   </label><br>
@@ -508,6 +515,7 @@ export default {
             visiblePrinter: null,
             audioSource:'',
             audioFilename: '',
+            muteAudio: false,
 
             bipToken:this.$route.params.bipToken === 'false' ?  false : this.$route.params.bipToken,   // parameter werden immer als string "false" übergeben, convert to bool
             bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
@@ -798,7 +806,7 @@ computed: {
                             if (student.token == this.studentwidgets[i].token){ 
                                 //now update the entry in the original widgets object and check if the student is online
                                 if (this.now - 20000 > student.timestamp){
-                                    if (this.studentwidgets[i].online){ //play short soundfile on the first time the student timestamp is older than 20 seconds
+                                    if (this.studentwidgets[i].online && !this.muteAudio){ //play short soundfile on the first time the student timestamp is older than 20 seconds
                                         console.log(`dashboard @ fetchInfo: student ${student.clientname} just went offline`)
                                         const audio = new Audio('attention.wav');
                                         audio.play();

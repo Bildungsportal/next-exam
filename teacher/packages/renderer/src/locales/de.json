@@ -185,7 +185,9 @@
         "extendedsettings_mode": "Erweiterte Einstellungen zum Prüfungsmodus",
         "rdp": "RDP",
         "rdpconfig": "RDP Konfiguration",
-        "rdpconfiginfo": "Bitte geben Sie die RDP Konfiguration ein"
+        "rdpconfiginfo": "Bitte geben Sie die RDP Konfiguration ein",
+        "muteaudio": "Audio stummschalten",
+        "muteaudiointro": "Wenn diese Option aktiviert ist, werden akustische Signale während der Prüfung nicht abgespielt"
     },
     "control": {
         "tokennotvalid": "Das Token ist ungültig",
