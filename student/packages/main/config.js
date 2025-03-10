@@ -5,7 +5,7 @@
 
 const config = {
     development: false,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
-    showdevtools: true,
+    showdevtools: false,
     bipIntegration: true,
     bipDemo: true,
 

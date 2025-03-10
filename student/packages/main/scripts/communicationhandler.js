@@ -88,7 +88,12 @@ import screenshot from 'screenshot-desktop-wayland';
  
 
     setupImageWorker() {
-        const workerPath = path.join(__dirname, '../../public/imageWorkerSharp.js');
+        let workerPath;
+        if (app.isPackaged) {
+            workerPath = join(process.resourcesPath, 'app.asar.unpacked', 'public/imageWorkerSharp.js');
+        } else {
+            workerPath = path.join(__dirname, '../../public/imageWorkerSharp.js');
+        }
         
         this.worker = spawn('node', [
             '--experimental-modules',
