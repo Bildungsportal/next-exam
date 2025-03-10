@@ -418,7 +418,12 @@ export async function loadGGB(file, base64=false){
 export async function getExamMaterials(){
     let examMaterials = await ipcRenderer.invoke('getExamMaterials')
     console.log("filehandler @ getExamMaterials: received examMaterials")
-    this.examMaterials = examMaterials.materials
+    if (examMaterials){
+        this.examMaterials = examMaterials.materials
+    }
+    else{
+        this.examMaterials = []
+    }
 }
 
 
