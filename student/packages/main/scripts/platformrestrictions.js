@@ -85,6 +85,7 @@ let configStore = {
 const appsToClose = ['NortonSecurity','NAV','Teams','ms-teams', 'zoom.us', 'Google Chrome', 'Microsoft Edge', 'Microsoft Teams','firefox', 'discord', 'zoom', 'chrome', 'msedge', 'teams', 'teamviewer', 'google-chrome','skypeforlinux','skype','brave','opera','anydesk','safari'];
 
 let isKDE = false
+let isGNOME = false
 
 childProcess.exec('echo $XDG_CURRENT_DESKTOP', (error, stdout, stderr) => {
     if (error) {
@@ -92,7 +93,9 @@ childProcess.exec('echo $XDG_CURRENT_DESKTOP', (error, stdout, stderr) => {
       return;
     }
     if (stdout.trim() === 'KDE') { isKDE = true } 
+    if (stdout.trim() === 'GNOME') { isGNOME = true }
 });
+
 
 
 
@@ -156,44 +159,43 @@ function enableRestrictions(winhandler){
         // GNOME
         ///////////
 
-        //we probably should do it the "windows - way" and just kill gnomeshell for as long as the exam-mode is active
-        //but it seems there is no convenient way to kill gnome-shell without all applications started on top of it 
-         // for gnome3 we need to set every key individually => reset will obviously set defaults (so we may mess up customized shortcuts here)
-        // possible fix: instead of set > reset we could use get - set - set.. first get the current bindings and store them - then set to nothing - then set to previous setting
-        try {
-            for (let binding of gnomeKeybindings){
-                childProcess.execFile('gsettings', ['set' ,'org.gnome.desktop.wm.keybindings', `${binding}`, `['']`])
+        if (isGNOME) {  
+            // we probably should do it the "windows - way" and just kill gnomeshell for as long as the exam-mode is active
+            // but it seems there is no convenient way to kill gnome-shell without all applications started on top of it 
+            // for gnome3 we need to set every key individually => reset will obviously set defaults (so we may mess up customized shortcuts here)
+            // possible fix: instead of set > reset we could use get - set - set.. first get the current bindings and store them - then set to nothing - then set to previous setting
+            try {
+                for (let binding of gnomeKeybindings){
+                    childProcess.execFile('gsettings', ['set' ,'org.gnome.desktop.wm.keybindings', `${binding}`, `['']`])
+                }
+                for (let binding of gnomeWaylandKeybindings){
+                    childProcess.execFile('gsettings', ['set' ,'org.gnome.mutter.wayland.keybindings', `${binding}`, `['']`])
+                }
+                for (let binding of gnomeShellKeybindings){
+                    childProcess.execFile('gsettings', ['set' ,'org.gnome.shell.keybindings', `${binding}`, `['']`])
+                }
+                for (let binding of gnomeMutterKeybindings){
+                    childProcess.execFile('gsettings', ['set' ,'org.gnome.mutter.keybindings', `${binding}`, `['']`])
+                }
+                for (let binding of gnomeDashToDockKeybindings){  // we could use gsettings reset-recursively org.gnome.shell to reset everything
+                    childProcess.execFile('gsettings', ['set' ,'org.gnome.shell.extensions.dash-to-dock', `${binding}`, `['']`])
+                }
+                childProcess.execFile('gsettings', ['set' ,'org.gnome.mutter', `overlay-key`, `''`])  // kind of the menu key
+                childProcess.exec('gsettings set org.gnome.mutter dynamic-workspaces false')  // deactivate multiple desktops
+                childProcess.exec('gsettings set org.gnome.desktop.wm.preferences num-workspaces 1')  
             }
-            for (let binding of gnomeWaylandKeybindings){
-                childProcess.execFile('gsettings', ['set' ,'org.gnome.mutter.wayland.keybindings', `${binding}`, `['']`])
-            }
-            for (let binding of gnomeShellKeybindings){
-                childProcess.execFile('gsettings', ['set' ,'org.gnome.shell.keybindings', `${binding}`, `['']`])
-            }
-            for (let binding of gnomeMutterKeybindings){
-                childProcess.execFile('gsettings', ['set' ,'org.gnome.mutter.keybindings', `${binding}`, `['']`])
-            }
-            for (let binding of gnomeDashToDockKeybindings){  // we could use gsettings reset-recursively org.gnome.shell to reset everything
-                childProcess.execFile('gsettings', ['set' ,'org.gnome.shell.extensions.dash-to-dock', `${binding}`, `['']`])
-            }
-            childProcess.execFile('gsettings', ['set' ,'org.gnome.mutter', `overlay-key`, `''`])  // kind of the menu key
-            childProcess.exec('gsettings set org.gnome.mutter dynamic-workspaces false')  // deactivate multiple desktops
-            childProcess.exec('gsettings set org.gnome.desktop.wm.preferences num-workspaces 1')  
-        }
-        catch(err){ log.error(`platformrestrictions @ enableRestrictions (gsettings): ${err}`); }
+            catch(err){ log.error(`platformrestrictions @ enableRestrictions (gsettings): ${err}`); }
 
 
-        try {
-            childProcess.execFile('wl-copy', ['-c'])   // wayland
-            childProcess.exec('xclip -i /dev/null')
-            childProcess.exec('xclip -selection clipboard')
-            childProcess.exec('xsel -bc')
+            try { // clear clipboard  (this will fail unless xclip or xsell are installed)
+                childProcess.execFile('wl-copy', ['-c'])   // wayland
+                childProcess.exec('xclip -i /dev/null')
+                childProcess.exec('xclip -selection clipboard')
+                childProcess.exec('xsel -bc')
+            }
+            catch(err){ log.error(`platformrestrictions @ enableRestrictions (gsettings): ${err}`) }
+           
         }
-        catch(err){
-            log.error(`platformrestrictions @ enableRestrictions (gsettings): ${err}`)
-        }
-        // clear clipboard  (this will fail unless xclip or xsell are installed)
-      
     }
 
 

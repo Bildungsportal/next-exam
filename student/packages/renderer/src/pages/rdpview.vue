@@ -75,8 +75,8 @@
         <!-- RDP Viewer start -->
         <div style="height: calc(100vh - 50px);">
             <button class="btn btn-danger" @click="reconnectRDP">Connect</button>
-            <div ref="container" tabindex="0" @mousemove="handleMouseMove" @click="handleClick" @keydown="handleKeyDown">
-                <canvas ref="canvas" :width="rdpWidth" :height="rdpHeight"></canvas>
+            <div ref="container" tabindex="0" @mousemove="handleMouseMove" @click="handleClick" @keydown="handleKeyDown" style="width: 100%; height: calc(100% - 40px); overflow: hidden;">
+                <canvas ref="canvas" :width="rdpWidth" :height="rdpHeight" style="width: 100%; height: 100%; object-fit: contain;"></canvas>
                 <div v-if="error" style="position: absolute; top: 100px; left: 50%; transform: translateX(-50%); color: #b02a37; z-index: 100000; text-align: center;">
                     {{ error }} <br>
                     <button class="btn btn-danger" @click="reconnectRDP">Reconnect</button>
@@ -144,7 +144,12 @@ export default {
         this.$nextTick(() => { // Code that will run only after the entire view has been rendered
             console.log("RdpViewer.vue @ mounted: rdpConfig", this.rdpConfig)
 
-
+            // Initialize canvas and context right after mounting
+            this.canvas = this.$refs.canvas;
+            this.ctx = this.canvas.getContext('2d', {
+                alpha: false,
+                desynchronized: true
+            });
 
             this.entrytime = new Date().getTime()  
             // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
@@ -174,17 +179,53 @@ export default {
 
             // Empfang von Bitmap-Frames
             ipcRenderer.on('rdp-bitmap', (event, bitmap) => {
-                console.log(bitmap)
                 try {
-                    const imageData = this.ctx.createImageData(bitmap.width, bitmap.height);
-                    imageData.data.set(bitmap.data);
-                    const x = Math.floor(bitmap.x) || 0;  // Fallback to 0 if undefined
-                    const y = Math.floor(bitmap.y) || 0;  // Fallback to 0 if undefined
+                    // Log incoming bitmap data for debugging
+                    console.log('Received bitmap:', {
+                        width: bitmap.width,
+                        height: bitmap.height,
+                        x: bitmap.x,
+                        y: bitmap.y,
+                        dataLength: bitmap.data.length
+                    });
+
+                    // Validate bitmap dimensions
+                    if (!bitmap.width || !bitmap.height || bitmap.width <= 0 || bitmap.height <= 0) {
+                        console.error('Invalid bitmap dimensions:', bitmap.width, bitmap.height);
+                        return;
+                    }
+
+                    // Create a properly sized RGBA array
+                    const pixels = new Uint8ClampedArray(bitmap.width * bitmap.height * 4);
                     
-                    this.ctx.putImageData(imageData, x, y);
+                    // Convert the incoming data to RGBA format
+                    // Assuming the input is RGB (3 bytes per pixel)
+                    for (let i = 0; i < bitmap.data.length; i += 3) {
+                        const outputIndex = (i / 3) * 4;
+                        pixels[outputIndex] = bitmap.data[i];       // R
+                        pixels[outputIndex + 1] = bitmap.data[i + 1]; // G
+                        pixels[outputIndex + 2] = bitmap.data[i + 2]; // B
+                        pixels[outputIndex + 3] = 255;                // A (fully opaque)
+                    }
+
+                    // Create image data with proper dimensions
+                    const imageData = new ImageData(pixels, bitmap.width, bitmap.height);
+
+                    // Clear the area before drawing new bitmap
+                    this.ctx.clearRect(bitmap.x, bitmap.y, bitmap.width, bitmap.height);
+                    
+                    // Draw the image data at the specified position
+                    this.ctx.putImageData(imageData, bitmap.x || 0, bitmap.y || 0);
+
                 } catch (error) {
                     console.error('Error in rdp-bitmap handler:', error);
-                    console.error('Bitmap data:', bitmap);
+                    console.error('Bitmap data:', {
+                        width: bitmap.width,
+                        height: bitmap.height,
+                        x: bitmap.x,
+                        y: bitmap.y,
+                        dataLength: bitmap?.data?.length
+                    });
                 }
             });
 
@@ -222,8 +263,15 @@ export default {
             console.log("RdpViewer.vue @ reconnect: reconnecting RDP connection")
             this.error = null;
             this.canvas = this.$refs.canvas;
-            this.ctx = this.canvas.getContext('2d');
+            this.ctx = this.canvas.getContext('2d', {
+                alpha: false,
+                desynchronized: true
+            });
             this.$refs.container.focus();
+
+            // Set RDP resolution to a standard desktop resolution
+            this.rdpWidth = 1920;
+            this.rdpHeight = 1080;
 
             const cleanConfig = {
                 domain: this.rdpConfig.domain,
@@ -231,6 +279,8 @@ export default {
                 password: this.rdpConfig.password,
                 ip: this.rdpConfig.ip,
                 port: this.rdpConfig.port,
+                width: this.rdpWidth,
+                height: this.rdpHeight
             }   
 
             try {
@@ -242,11 +292,20 @@ export default {
 
         // handle mouse move
         handleMouseMove(event) {
-            return
-
             const rect = this.canvas.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
+            
+            // Calculate relative coordinates
+            let x = event.clientX - rect.left;
+            let y = event.clientY - rect.top;
+            
+            // Scale coordinates to 0-65535 range
+            x = Math.floor((x / rect.width) * 65535);
+            y = Math.floor((y / rect.height) * 65535);
+            
+            // Clamp values to ensure they're within valid range
+            x = Math.max(0, Math.min(65535, x));
+            y = Math.max(0, Math.min(65535, y));
+            
             ipcRenderer.send('rdp-input', { type: 'mouse', x, y, button: 0 });
         },
 

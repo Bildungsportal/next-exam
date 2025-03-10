@@ -41,11 +41,11 @@ import { Worker } from 'worker_threads';
 // Verhindert, dass Electron das Standardmenü erstellt
 Menu.setApplicationMenu(null);
 //app.disableHardwareAcceleration(); 
-app.commandLine.appendSwitch('disable-frame-rate-limit');
-app.commandLine.appendSwitch('disable-gpu-vsync', 'false');
-app.commandLine.appendSwitch('enable-gpu-rasterization');
-app.commandLine.appendSwitch('enable-threaded-compositing');
-app.commandLine.appendSwitch('enable-features', 'Metal,CanvasOopRasterization');
+// app.commandLine.appendSwitch('disable-frame-rate-limit');
+// app.commandLine.appendSwitch('disable-gpu-vsync', 'false');
+// app.commandLine.appendSwitch('enable-gpu-rasterization');
+// app.commandLine.appendSwitch('enable-threaded-compositing');
+// app.commandLine.appendSwitch('enable-features', 'Metal,CanvasOopRasterization');
 
 if (!app.requestSingleInstanceLock()) {  // allow only one instance of the app per client
     log.warn("main: next-exam already running.")

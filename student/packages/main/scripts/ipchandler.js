@@ -85,7 +85,6 @@ class IpcHandler {
                 autoLogin: true,
                 compress: true,
 
-
                 logLevel: 'INFO',
                 screen: {
                     width: 1280,
@@ -94,10 +93,8 @@ class IpcHandler {
                 locale: 'de',   // needed to patch node-rdpjs for this issue
                 colorDepth: 16,
 
-   
-                
                 connectionTimeout: 10000, // Längeres Timeout für die Verbindung
-      
+
                 performanceFlags: {
                     disableWallpaper: true,
                     disableFullWindowDrag: true,
@@ -111,7 +108,6 @@ class IpcHandler {
             .on('connect', () => log.info('ipchandler @ start-rdp: RDP verbunden'))
             .on('bitmap', (bitmap) => {
                 // Sende Bitmap-Frame (x,y,width,height,data) ans Renderer
-                console.log("#############################################")
                 if (this.WindowHandler.examwindow) this.WindowHandler.examwindow.webContents.send('rdp-bitmap', bitmap);
             })
             .on('close', () => console.log('RDP Verbindung geschlossen'))
