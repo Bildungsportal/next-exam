@@ -12,13 +12,13 @@ asarUnpack:
   - node_modules/get-windows/**/*
   - node_modules/@img/**/*
 directories:
-  output: ../release/1.1.0.1_20250308
+  output: ../release/1.1.0.1_20250310
 compression: normal
 linux:
   target: AppImage
   category: Utility
   icon: public/icons/256x256.png
-  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20250308_${arch}.${ext}
+  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20250310_${arch}.${ext}
   files:
     - dist
     - public
@@ -27,7 +27,7 @@ linux:
     - "!public/minimal-jre-11-mac-arm64/**/*"
 mac:
   icon: public/icons/icon.png
-  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20250308_${arch}.${ext}
+  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20250310_${arch}.${ext}
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: scripts/entitlements.mac.plist
@@ -62,7 +62,7 @@ win:
     - target: msi
       arch:
         - x64
-  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20250308_${arch}.${ext}
+  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20250310_${arch}.${ext}
   signtoolOptions:
     certificateSubjectName: OSOS Austria
     signingHashAlgorithms:

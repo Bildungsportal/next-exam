@@ -808,7 +808,7 @@ computed: {
                                 if (this.now - 20000 > student.timestamp){
                                     if (this.studentwidgets[i].online && !this.muteAudio){ //play short soundfile on the first time the student timestamp is older than 20 seconds
                                         console.log(`dashboard @ fetchInfo: student ${student.clientname} just went offline`)
-                                        const audio = new Audio('attention.wav');
+                                        const audio = new Audio('dialog-warning.oga');
                                         audio.play();
                                     }
                                     else { student.online = false }  // set online status on student object

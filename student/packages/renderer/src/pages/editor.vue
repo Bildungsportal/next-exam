@@ -445,6 +445,12 @@ export default {
             if (!this.serverstatus.examSections[this.serverstatus.activeSection].allowedUrl) { return null; }
 
             const fullUrl = this.serverstatus.examSections[this.serverstatus.activeSection].allowedUrl;
+
+
+            if (!this.isValidFullDomainName(fullUrl)) { 
+                this.serverstatus.examSections[this.serverstatus.activeSection].allowedUrl = null
+                return
+            }
             let domain = '';
             try {
                 domain = new URL(fullUrl).hostname; // extrahiert den Domainnamen
@@ -504,7 +510,41 @@ export default {
                 caretRange.startContainer.parentNode.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
             }
         },
+        
+        isValidFullDomainName(str) {
+            try {
+                // Füge https:// hinzu, wenn kein Protokoll angegeben ist
+                const urlString = str.includes('://') ? str : 'https://' + str;
+                const url = new URL(urlString);
+                
+                // Prüfe ob Protokoll korrekt ist
+                if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                    return false;
+                }
 
+                // Prüfe ob Host vorhanden und gültig ist
+                if (!url.hostname || url.hostname.length < 1) {
+                    return false;
+                }
+
+                // Prüfe ob Host mindestens einen gültigen Domain-Teil enthält
+                const parts = url.hostname.split('.');
+                if (parts.length < 2) {
+                    return false;
+                }
+
+                // Prüfe ob jeder Domain-Teil gültig ist
+                const validPart = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/;
+                return parts.every(part => 
+                    part.length > 0 && 
+                    part.length <= 63 && 
+                    validPart.test(part)
+                );
+
+            } catch (e) {
+                return false;
+            }
+        },
 
 
         loadBase64file(file){
