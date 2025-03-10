@@ -94,8 +94,12 @@ else if (ENVIRONMENT_IS_SHELL) {
   }
 
   this['Module'] = Module;
+  
 
-  eval("if (typeof gc === 'function' && gc.toString().indexOf('[native code]') > 0) var gc = undefined"); // wipe out the SpiderMonkey shell 'gc' function, which can confuse closure (uses it as a minified name, and it is then initted to a non-falsey value unexpectedly)
+  // without eval - but unsure if this is correct
+  (new Function('if (typeof gc === "function" && gc.toString().indexOf("[native code]") > 0) var gc = undefined;'))();
+
+  //eval("if (typeof gc === 'function' && gc.toString().indexOf('[native code]') > 0) var gc = undefined"); // wipe out the SpiderMonkey shell 'gc' function, which can confuse closure (uses it as a minified name, and it is then initted to a non-falsey value unexpectedly)
 }
 else if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
   Module['read'] = function read(url) {
@@ -424,7 +428,16 @@ var Runtime = {
         abort('invalid EM_ASM input |' + code + '|. Please use EM_ASM(..code..) (no quotes) or EM_ASM({ ..code($0).. }, input) (to input values)');
       }
     }
-    return Runtime.asmConstCache[code] = eval('(function(' + args.join(',') + '){ ' + code + ' })'); // new Function does not allow upvars in node
+    
+    // We need to use indirect eval to maintain access to upvars (variables from outer scope)
+    // This is critical for the asm.js functionality to work correctly
+    var createFunction = Function('args', 'code', 'return (0, eval)("(function(" + args.join(",") + "){ " + code + " })")');
+    return Runtime.asmConstCache[code] = createFunction(args, code);
+    
+    //return Runtime.asmConstCache[code] = eval('(function(' + args.join(',') + '){ ' + code + ' })'); // new Function does not allow upvars in node
+  
+  
+  
   },
   warnOnce: function (text) {
     if (!Runtime.warnOnce.shown) Runtime.warnOnce.shown = {};
@@ -569,15 +582,33 @@ function ccall(ident, returnType, argTypes, args) {
 Module["ccall"] = ccall;
 
 // Returns the C function with a specified identifier (for C++, you need to do manual name mangling)
+// function getCFunc(ident) {
+//   try {
+//     var func = Module['_' + ident]; // closure exported function
+//     if (!func) func = eval('_' + ident); // explicit lookup
+//   } catch(e) {
+//   }
+//   assert(func, 'Cannot call unknown function ' + ident + ' (perhaps LLVM optimizations or closure removed it?)');
+//   return func;
+// }
+
+// without eval - but unsure if this is correct
 function getCFunc(ident) {
   try {
     var func = Module['_' + ident]; // closure exported function
-    if (!func) func = eval('_' + ident); // explicit lookup
+    if (!func) {
+      // Instead of using eval, access the global object directly
+      func = (typeof window !== 'undefined' ? window : 
+             typeof global !== 'undefined' ? global : 
+             typeof self !== 'undefined' ? self : this)['_' + ident];
+    }
   } catch(e) {
   }
   assert(func, 'Cannot call unknown function ' + ident + ' (perhaps LLVM optimizations or closure removed it?)');
   return func;
 }
+
+
 
 // Internal function that does a C call using a function, not an identifier
 function ccallFunc(func, returnType, argTypes, args) {
