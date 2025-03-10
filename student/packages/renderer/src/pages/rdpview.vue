@@ -164,7 +164,12 @@ export default {
         this.render = Mstsc.Canvas.create(this.canvas);
         this.activeSession = false;
 
-
+            // Initialize canvas and context right after mounting
+            this.canvas = this.$refs.canvas;
+            this.ctx = this.canvas.getContext('2d', {
+                alpha: false,
+                desynchronized: true
+            });
 
 		// Bind mouse events.
 		this.canvas.addEventListener('mousemove', this.mouseMoveHandler);
