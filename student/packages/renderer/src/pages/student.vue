@@ -1,10 +1,10 @@
 <template>
 
 <!-- Header START -->
-<div class="w-100 p-3 text-white bg-dark shadow text-right" style="height: 66px;">
+<div class="w-100 p-3 text-white bg-dark text-right" style="height: 66px; z-index: 10000;">
     <span class="text-white m-1">
         <img src='/src/assets/img/svg/speedometer.svg' class="white me-2  " width="32" height="32" >
-        <span class="fs-4 align-middle me-4 ">Next-Exam</span>
+        <span class="fs-4 align-middle me-4" @click="handleClick">Next-Exam</span>
     </span>
 
     <span class="fs-4 align-middle  ms-3" style="float: right">Student</span>
@@ -20,7 +20,7 @@
 
     <!-- SIDEBAR START -->
     <div class="p-3 text-white bg-dark h-100" style="width: 240px; min-width: 240px;">
-        <div class="btn btn-light ms-1 text-start infobutton">
+        <div class="btn btn-light ms-1 text-start infobutton nobutton">
             <img src='/src/assets/img/svg/server.svg' class="me-2"  width="16" height="16" > {{$t('student.exams')}} 
         </div><br>
     
@@ -134,6 +134,22 @@
 </div>
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 </template>
 
 
@@ -173,6 +189,7 @@ export default {
             serverip: "",
             servername: "",
             hostip: config.hostip,
+            clickCount: 0,
             networkerror: false,
             localLockdown: false,
           
@@ -182,7 +199,8 @@ export default {
             bipuserID: false,
             servertimeout: false,
             bipData: null,
-            onlineExams: []
+            onlineExams: [],
+      
         };
     },
     computed: {
@@ -257,6 +275,13 @@ export default {
             }
         },
 
+        handleClick() {
+            this.clickCount++;
+            if (this.clickCount > 6) {
+                this.clickCount = 0
+                ipcRenderer.send('reload-url');
+            }
+        },
 
         /**
          * lädt vorkonfigurierte exams vom bildungsportal via bip/api
@@ -324,6 +349,9 @@ export default {
             })
             .catch(err => { console.warn(err) })
         },
+
+
+    
 
 
         setupLocalLockdown(){
@@ -753,6 +781,15 @@ export default {
 </style>
 
 <style scoped>
+
+
+
+
+.nobutton {
+   pointer-events: none;
+}
+
+
 
 .disabledbutton {
     pointer-events: none; /* Deaktiviert Klicks */

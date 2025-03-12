@@ -2,14 +2,14 @@
 
 
 <!-- Header START -->
-<div :key="0" class="w-100 p-3 text-white bg-dark shadow text-right mt-1" style="min-width: 1180px;">
+<div :key="0" class="w-100 p-3 text-white bg-dark text-right mt-1" style="min-width: 1180px; z-index: 10000;">
     <span class="text-white m-1">
         <img src="/src/assets/img/svg/speedometer.svg" class="white me-2  " width="32" height="32" >
         <span style="font-size:23px;" class="align-middle me-1 ">Next-Exam</span>
     </span>
     <span class="align-middle ms-3" style="float: right; font-size:23px;">Dashboard</span>
 
-    <div v-if="serverstatus.useExamSections" style="position: absolute; left:257px; top:47px; min-width: 550px; z-index: 0;">
+    <div v-if="serverstatus.useExamSections" style="position: absolute; left:257px; top:46px; min-width: 550px; z-index: 0;">
         <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 1 && !serverstatus.examSections[1].locked, 'sectionbuttonactivered': serverstatus.activeSection == 1 && serverstatus.examSections[1].locked, 'btn-secondary': serverstatus.activeSection != 1,'btn-danger': serverstatus.examSections[1].locked}">{{ serverstatus.examSections[1].sectionname }}</div>
         <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 2 && !serverstatus.examSections[2].locked, 'sectionbuttonactivered': serverstatus.activeSection == 2 && serverstatus.examSections[2].locked, 'btn-secondary': serverstatus.activeSection != 2,'btn-danger': serverstatus.examSections[2].locked}">{{ serverstatus.examSections[2].sectionname }}</div>
         <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 3 && !serverstatus.examSections[3].locked, 'sectionbuttonactivered': serverstatus.activeSection == 3 && serverstatus.examSections[3].locked, 'btn-secondary': serverstatus.activeSection != 3,'btn-danger': serverstatus.examSections[3].locked}">{{ serverstatus.examSections[3].sectionname }}</div>
@@ -379,7 +379,26 @@
         <!-- CONTROL BUTTONS END -->
 
 
-
+        <!-- LOG START -->
+        <div id="loginfo">
+            <div id="logcheck" @click="fetchLOG();"> <div id="eye" class="darkgreen eyeopen"></div> &nbsp;Server Log</div>
+            <div class="logscrollarea" id="logscrollarea">     
+                
+                <div v-if="serverlog.length == 0"  style="text-align: left; font-size: 0.8em; margin-left:10px;"> ... </div> 
+                <div v-for="entry in serverlog" class="logentry">
+                    
+                    <div style="display:flex;align-items: center; width:100%; ">
+                        <div :style="'background-color:' + entry.color "  class="color-circle" style="width: 10px; height: 10px;"></div>&nbsp;
+                        <div class="error-word" style="flex:1" :style="'color:' + entry.color "> {{ entry.source }} </div>
+                    </div>   
+                    
+                    <div v-if="entry.text">{{ entry.text}}</div>
+                    <div class="date"> <span>  {{ entry.date }}</span> </div>
+                    
+                </div> 
+            </div>
+        </div>
+        <!-- LOG END -->
 
 
 
@@ -516,6 +535,11 @@ export default {
             audioSource:'',
             audioFilename: '',
             muteAudio: false,
+
+
+            serverlog: [],
+            serverlogActive: false,
+
 
             bipToken:this.$route.params.bipToken === 'false' ?  false : this.$route.params.bipToken,   // parameter werden immer als string "false" übergeben, convert to bool
             bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
@@ -761,7 +785,17 @@ computed: {
             if (!this.hostip) return; 
 
             this.updateBiPServerInfo(this.bipStatus);
+            
+            if (this.serverlogActive){
+                this.serverlog = await ipcRenderer.invoke('getlog')
+                this.$nextTick(() => {
+                let logscroll = document.getElementById('logscrollarea');
+                if (logscroll) {
+                    logscroll.scrollTop = logscroll.scrollHeight;
+                }
+                });
 
+            }
 
             let result = await ipcRenderer.invoke('studentlist', this.servername)
 
@@ -1333,7 +1367,48 @@ computed: {
             this.audioFilename = filename
             audioPlayer.load(); // Lädt die neue Quelle
 
-        }
+        },
+
+
+        async fetchLOG(){
+     
+            let logdiv = document.getElementById(`loginfo`)    // the div is not existant if lt is disabled
+            let eye = document.getElementById('eye')               // the div is not existant if lt is disabled
+
+            if (this.serverlogActive){
+                if (logdiv && logdiv.style.right == "0px"){
+                    logdiv.style.right = "-582px";
+                    logdiv.style.boxShadow = "-2px 1px 2px rgba(0,0,0,0)";
+                }
+                eye.classList.add('eyeopen');
+                eye.classList.add('darkgreen');
+                eye.classList.remove('eyeclose');
+                eye.classList.remove('darkred');
+                this.serverlogActive = false; 
+            }
+            else {
+                logdiv.style.right = "0px"
+                logdiv.style.boxShadow = "-2px 1px 2px rgba(0,0,0,0.2)"; 
+                eye.classList.remove('eyeopen');
+                eye.classList.remove('darkgreen');
+                eye.classList.add('eyeclose');
+                eye.classList.add('darkred');
+                this.serverlogActive = true;
+
+                let log = await ipcRenderer.invoke('getlog');
+                if (log.length == 0){ this.serverlog = [] }
+                else { this.serverlog = log }
+
+         
+                this.$nextTick(() => {
+                let logscroll = document.getElementById('logscrollarea');
+                if (logscroll) {
+                    logscroll.scrollTop = logscroll.scrollHeight;
+                }
+                });
+
+            }
+        },
 
     },
 
@@ -1773,8 +1848,8 @@ computed: {
 }
 
 .infobutton{
-    width: 220px;
-    min-width: 220px;
+    width: 221px;
+    min-width: 221px;
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
     background-color: whitesmoke;
@@ -1989,6 +2064,142 @@ hr {
     margin-right: 10px; /* Abstand zu anderen Elementen */
 }
 
+
+
+
+#loginfo {
+    position: fixed;
+    z-index: 1000; 
+    width: 580px;
+    height: 100%;
+    right: -582px;
+    top: 65px;
+    background-color: var(--bs-gray-100);
+    box-shadow: -2px 1px 2px rgba(0, 0, 0, 0);
+    transition: 0.3s;
+    padding: 6px;
+    padding-bottom: 100px;
+  
+}
+
+#logcheck {
+    position: absolute;
+    margin-left: -6px;
+    margin-top: 311px;
+    padding: 10px;
+    background-color: var(--bs-gray-900);
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    width: 146px;
+    height: 44px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    cursor: pointer;
+    color:var(--bs-gray-100);
+
+    text-align: left;
+
+    transform: rotate(90deg); 
+    transform-origin: top left; 
+    transition: all 0.3s ease;
+}
+#logcheck:hover{  
+    height: 52px;
+    background-color: var(--bs-gray-800);
+    box-shadow: -3px 3px 8px rgba(0,0,0,0.3);
+    padding-top: 16px;
+}
+
+
+
+
+#logcheck img{
+    vertical-align: bottom;
+
+}
+#logcheck #eye {
+    width: 20px;
+    height: 20px;
+    background-size: cover;
+    display:inline-block;
+    vertical-align: text-bottom;
+}
+
+#logcheck .eyeopen {
+    background-image: url('/src/assets/img/svg/eye-fill.svg');
+}
+#logcheck .eyeclose {
+    background-image: url('/src/assets/img/svg/eye-slash-fill.svg');
+}
+
+#loginfo .logscrollarea {
+    height: calc(100vh - 52px);
+    width: 568px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: absolute;
+    top: 0px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+#loginfo .color-circle {
+  height: 10px;
+  width: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  background-color: #0dcaf0;
+}
+
+
+#loginfo .logentry {
+    margin: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    color: var(--bs-gray-700);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    font-size: 0.8em;
+    cursor: pointer;
+}
+#loginfo .logentry:hover {
+  background-color:   rgba(238, 238, 250, 0.508);
+}
+.darkgreen {
+    filter: invert(36%) sepia(100%) saturate(2200%) hue-rotate(95deg) brightness(75%);
+}
+.darkred {
+    filter: invert(28%) sepia(99%) saturate(7476%) hue-rotate(345deg) brightness(65%);
+}
+#loginfo .error-word {
+  padding: 5px;
+  border: none;
+  background-color: transparent;
+  font-size: 1.1em;
+  display: inline-block;
+ 
+}
+#loginfo .date {
+    padding: 2px;
+    padding-left: 0px;
+    margin-top: 4px;
+    border-top: 1px solid var(--bs-cyan);
+    color: var(--bs-gray-500);
+    border-radius: 0px;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 </style>
 
 
@@ -2072,7 +2283,5 @@ hr {
 .white-100 {    
     filter: brightness(0) saturate(100%) invert(100%);
 }
-
-
 
 </style>

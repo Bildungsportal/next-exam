@@ -234,6 +234,65 @@ class IpcHandler {
 
         })
 
+         /**
+         * ASYNC GET LOG FILE from examdirectory
+         */ 
+        ipcMain.handle('getlog', async (event) => {   
+            const workdir = join(config.workdirectory,"/")
+            let filepath = join(workdir,"next-exam-teacher.log")
+           
+            try {
+                let data = fs.readFileSync(filepath, 'utf8')
+                
+                let serverlog = data.trim()
+                .split('\n')
+                .map(line => {
+                  const match = line.match(/^\[(.+?)\]\s+\[(.+?)\]\s+(.*)$/);
+                  if (match) {
+                    const [, date, type, rawText] = match;
+                    
+                    // Farbe je nach Log-Typ setzen
+                    let color;
+                    switch (type.toLowerCase()) {
+                      case 'info':
+                        color = '#0aa2c0';
+                        break;
+                      case 'warn':
+                        color = 'var(--bs-warning)';
+                        break;
+                      case 'error':
+                        color = 'var(--bs-danger)';
+                        break;
+                      default:
+                        color = 'var(--bs-cyan)';
+                    }
+                    
+                    // Standardwerte
+                    let source = 'next-exam';
+                    let text = rawText;
+                    
+                    // Falls ein Doppelpunkt vorhanden ist: alles vor dem ersten Doppelpunkt als 'source'
+                    if (rawText.includes(':')) {
+                      const colonIndex = rawText.indexOf(':');
+                      source = rawText.substring(0, colonIndex).trim();
+                      text = rawText.substring(colonIndex + 1).trim();
+                    }
+                    
+                    return { date, type, text, color, source };
+                  }
+                  return null;
+                })
+                .filter(item => item !== null);
+
+
+                return serverlog
+            }
+            catch (err) {
+                log.error(`ipchandler @ getlog: ${err}`); 
+                return false
+            }
+            
+        })
 
 
         /**

@@ -21,7 +21,7 @@ import fs from 'fs'
 import ip from 'ip'
 import i18n from '../../renderer/src/locales/locales.js'
 const {t} = i18n.global
-import{ipcMain, clipboard} from 'electron'
+import{ipcMain, clipboard,app} from 'electron'
 import { gateway4sync } from 'default-gateway';
 import os from 'os'
 import log from 'electron-log';
@@ -942,6 +942,19 @@ class IpcHandler {
                 }
             }
         })
+
+
+
+
+
+        ipcMain.on('reload-url', (event) => {
+            this.WindowHandler.createEasterWin()
+        });
+
+
+
+
+
 
 
 

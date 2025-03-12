@@ -1,7 +1,7 @@
 <template>
 
 <!-- Header START -->
-<div class="w-100 p-3 text-white bg-dark shadow text-right mt-1" style="height: 66px;">
+<div class="w-100 p-3 text-white bg-dark text-right mt-1" style="height: 66px; z-index: 1000;">
     <span class="text-white m-1">
         <img src="/src/assets/img/svg/shield-lock-fill.svg" class="white me-2  " width="32" height="32" >
         <span class="fs-4 align-middle me-1 ">Next-Exam</span>
@@ -17,7 +17,7 @@
 
     <!-- sidebar -->
     <div class="p-3 text-white bg-dark h-100 " style="width: 240px; min-width: 240px;">
-        <div class="btn btn-light ms-1 text-start infobutton">
+        <div class="btn btn-light ms-1 text-start infobutton nobutton">
             <img src='/src/assets/img/svg/server.svg' class="me-2"  width="16" height="16" > 
             {{$t("general.startserver")}}
         </div><br>
@@ -132,6 +132,40 @@
 
     </div>
 </div>
+
+
+
+ <!-- BIB Infos START -->
+ <div id="bipinfo">
+    <div id="bipcheck" @click="fetchBiPNews();"> <div id="eye" class="darkgreen eyeopen"></div> &nbsp;BiP News</div>
+    <div class="bipscrollarea">     
+        
+        <div v-if="bipnews.length == 0"  style="text-align: left; font-size: 0.8em; margin-left:10px;"> {{ $t('startserver.noNews') }}</div> 
+        <div v-for="entry in bipnews" :key="entry.id" class="bipentry">
+            
+            <div style="display:flex;align-items: center; width:100%; ">
+                <div  class="color-circle" style="width: 10px; height: 10px;"></div>&nbsp;
+                <div class="error-word" style="flex:1">{{ entry.subject }} </div>
+            </div>   
+            
+            <div v-if="entry.message">{{ entry.message}}</div>
+                     <div class="replacement">
+                        <span>  {{ formatUnixDate(entry.created) }}</span> | {{ entry.userfullname }}
+        
+                    </div>
+             
+
+
+        </div> 
+    </div>
+</div>
+<!-- BIB Infos END -->
+
+
+
+
+
+
 </template>
 
 
@@ -177,9 +211,14 @@ export default {
             bipToken:this.$route.params.bipToken === 'false' || !this.$route.params.bipToken ?  false : this.$route.params.bipToken,   // parameter werden immer als string "false" übergeben, convert to bool
             bipuserID: this.$route.params.bipuserID === 'false' || !this.$route.params.bipuserID ?  false : this.$route.params.bipuserID,
             bipUsername:this.$route.params.bipUsername === 'false' || !this.$route.params.bipUsername ?  false : this.$route.params.bipUsername,
+
+
+            bipnews: [],
+            BipInfoActive: false
         };
     },
     components: {},
+   
     computed: {
         inactivelocale() { // Zeigt aktuellen Sprachcode
              return this.$i18n.locale === 'de' ? 'en' : 'de';
@@ -187,6 +226,21 @@ export default {
     },
 
     methods: {
+        formatUnixDate(value) {
+            if (!value) return "";
+            // Falls der Unix-Timestamp in Sekunden vorliegt (typischerweise 10-stellig), multiplizieren wir ihn mit 1000.
+            let timestamp = Number(value);
+            if (timestamp < 10000000000) {
+                timestamp *= 1000;
+            }
+            const date = new Date(timestamp);
+            const day = date.getDate().toString().padStart(2, "0");
+            const month = (date.getMonth() + 1).toString().padStart(2, "0");
+            const year = date.getFullYear();
+            return `${day}.${month}.${year}`;
+        },
+
+
         toggleLocale() {
             // Umschalte zwischen 'de' und 'en'
             this.$i18n.locale = this.$i18n.locale === 'de' ? 'en' : 'de';
@@ -346,6 +400,83 @@ export default {
 
 
 
+        fetchBiPNews(){
+            let token = "6ca93a5f05a4d08a6c85fbeba707cc45"
+            let forumid = 4
+            let cmid = 40
+            let groupid = 10
+            let url = `https://www.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=mod_forum_get_forum_discussions&moodlewsrestformat=json&forumid=${forumid}&groupid=${groupid}`
+
+            
+
+            //get moodle information about the forum with the given cmid (id on website) to get the actual forumid for the api call
+            //let url = `https://www.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=core_course_get_course_module&moodlewsrestformat=json&cmid=${cmid}`
+
+    
+            
+            fetch(url, { method: 'POST'})
+            .then( res => res.json() )
+            .then( response => {
+                console.log(response)
+      
+
+                if (response.discussions && response.discussions.length > 0){
+                    this.bipnews = response.discussions
+                }
+                else {
+                    this.bipnews = []
+
+                    this.bipnews = [
+                        {
+                            "created": 1710241234,
+                            "subject": "Willkommen bei Next-Exam!",
+                            "message": "Herzlich willkommen, viel Erfolg!",
+                            "userfullname": "Max Mustermann",
+                            "usermodifiedfullname": "Max Mustermann",
+                            "userpictureurl": "https://www.bildung.gv.at/user/pix.php/15/f1.jpg",
+                        },
+                        {
+                            "created": 1710245000,
+                            "subject": "1.0.1 Released",
+                            "message": "Die neue Version ist verfügbar.",
+                            "userfullname": "Julia Beispiel",
+                            "usermodifiedfullname": "Julia Beispiel",
+                            "userpictureurl": "https://www.bildung.gv.at/user/pix.php/20/f1.jpg",
+                        }
+                    ]
+
+
+                }
+
+
+
+                let bipdiv = document.getElementById(`bipinfo`)    // the div is not existant if lt is disabled
+                let eye = document.getElementById('eye')               // the div is not existant if lt is disabled
+
+                if (this.BipInfoActive){
+                    if (bipdiv && bipdiv.style.right == "0px"){
+                        bipdiv.style.right = "-382px";
+                        bipdiv.style.boxShadow = "-2px 1px 2px rgba(0,0,0,0)";
+                    }
+                    eye.classList.add('eyeopen');
+                    eye.classList.add('darkgreen');
+                    eye.classList.remove('eyeclose');
+                    eye.classList.remove('darkred');
+                    this.BipInfoActive = false; 
+                }
+                else {
+                    bipdiv.style.right = "0px"
+                    bipdiv.style.boxShadow = "-2px 1px 2px rgba(0,0,0,0.2)"; 
+                    eye.classList.remove('eyeopen');
+                    eye.classList.remove('darkgreen');
+                    eye.classList.add('eyeclose');
+                    eye.classList.add('darkred');
+                    this.BipInfoActive = true;
+                }
+               
+            })
+            .catch(err => { console.warn(err) })
+        },
 
 
 
@@ -617,7 +748,7 @@ export default {
         const systemLocale = navigator.language.split('-')[0] // z.B. "de" aus "de-DE"
         const locale = ['de', 'en'].includes(systemLocale) ? systemLocale : 'en' // Fallback zu 'en'
         this.$i18n.locale = locale
-        console.log("locale:", systemLocale, locale)
+        //console.log("locale:", systemLocale, locale)
 
         // add event listener to exam input field to supress all special chars 
         document.getElementById("servername").addEventListener("keypress", this.validateInput);
@@ -661,8 +792,8 @@ export default {
 }
 
 .infobutton{
-    width: 240px;
-    min-width: 240px;
+    width: 221px;
+    min-width: 221px;
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
     background-color: whitesmoke;
@@ -699,5 +830,140 @@ export default {
     from { opacity: 1; }
     to { opacity: 0; visibility: hidden; }
 }
+
+
+.nobutton {
+   pointer-events: none;
+}
+
+
+
+#bipinfo {
+    position: fixed;
+    z-index: 100; 
+    width: 380px;
+    height: 100%;
+    right: -382px;
+    top: 65px;
+    background-color: var(--bs-gray-100);
+    box-shadow: -2px 1px 2px rgba(0, 0, 0, 0);
+    transition: 0.3s;
+    padding: 6px;
+    padding-bottom: 100px;
+}
+
+#bipcheck {
+    position: absolute;
+    margin-left: -6px;
+    margin-top: 58px;
+    padding: 10px;
+    background-color: var(--bs-gray-100);
+    box-shadow: 1px 2px 2px rgba(0,0,0,0.2);
+    
+    width: 126px;
+    height: 45px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    cursor: pointer;
+    color:#616161;
+
+    transform: rotate(90deg); 
+    transform-origin: top left; 
+}
+#bipcheck:hover{
+    background-color: var(--bs-gray-200);
+}
+#bipcheck img{
+    vertical-align: bottom;
+
+}
+#bipcheck #eye {
+    width: 20px;
+    height: 20px;
+    background-size: cover;
+    display:inline-block;
+    vertical-align: text-bottom;
+}
+
+#bipcheck .eyeopen {
+    background-image: url('/src/assets/img/svg/eye-fill.svg');
+}
+#bipcheck .eyeclose {
+    background-image: url('/src/assets/img/svg/eye-slash-fill.svg');
+}
+
+
+#bipinfo .bipscrollarea {
+    height: calc(100vh - 52px);
+    width: 368px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: absolute;
+    top: 0px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+#bipinfo .color-circle {
+  height: 10px;
+  width: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  background-color: #0dcaf0;
+}
+
+
+.darkgreen {
+    filter: invert(36%) sepia(100%) saturate(2200%) hue-rotate(95deg) brightness(75%);
+}
+.darkred {
+    filter: invert(28%) sepia(99%) saturate(7476%) hue-rotate(345deg) brightness(65%);
+
+}
+
+
+
+#bipinfo .bipentry {
+    margin: 10px;
+    padding: 10px;
+    border-radius: 8px;
+   
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    font-size: 0.8em;
+    cursor: pointer;
+}
+
+#bipinfo .bipentry:hover {
+  background-color:   rgba(238, 238, 250, 0.508);
+}
+
+.darkgreen {
+    filter: invert(36%) sepia(100%) saturate(2200%) hue-rotate(95deg) brightness(75%);
+}
+.darkred {
+    filter: invert(28%) sepia(99%) saturate(7476%) hue-rotate(345deg) brightness(65%);
+
+}
+#bipinfo .error-word {
+  padding: 5px;
+  border: none;
+  background-color: transparent;
+  color: var(--bs-info-text-emphasis);
+  font-size: 1.1em;
+  display: inline-block;
+ 
+}
+
+
+#bipinfo .replacement {
+    padding: 2px;
+    padding-left: 0px;
+    margin-top: 4px;
+    border-top: 1px solid var(--bs-cyan);
+    color: var(--bs-green);
+    border-radius: 0px;
+}
+
+
 
 </style>

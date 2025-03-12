@@ -28,6 +28,7 @@
         "manualsearch":"Manuell suchen",
         "noexams":"Keine Prüfungen gefunden",
         "logoutBiP":"Sind Sie sicher, dass Sie sich abmelden möchten?"
+
     },
     "control": {
         "tokennotvalid": "das token ist ungültig",

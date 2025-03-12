@@ -33,12 +33,13 @@ import log from 'electron-log';
 // Verhindert, dass Electron das Standardmenü erstellt
 Menu.setApplicationMenu(null);
 //app.disableHardwareAcceleration(); 
-app.commandLine.appendSwitch('disable-frame-rate-limit');
-app.commandLine.appendSwitch('disable-gpu-vsync', 'false');
-app.commandLine.appendSwitch('enable-gpu-rasterization');
-app.commandLine.appendSwitch('enable-threaded-compositing');
+// app.commandLine.appendSwitch('disable-frame-rate-limit');
+// app.commandLine.appendSwitch('disable-gpu-vsync', 'false');
+// app.commandLine.appendSwitch('enable-gpu-rasterization');
+// app.commandLine.appendSwitch('enable-threaded-compositing');
 app.commandLine.appendSwitch('enable-features', 'Metal,CanvasOopRasterization');
 app.commandLine.appendSwitch('force-device-scale-factor', '1');
+app.commandLine.appendSwitch('lang', 'de');
 
 WindowHandler.init(multicastClient, config)  // mainwindow, examwindow, blockwindow
 IpcHandler.init(multicastClient, config, WindowHandler)  //controll all Inter Process Communication
@@ -68,10 +69,10 @@ log.eventLogger.startLogging();
 log.errorHandler.startCatching();
 
 log.warn(`-------------------`)
-log.warn(`main: starting Next-Exam Teacher "${config.version} ${config.info}" (${process.platform})`)
+log.warn(`main @ init: starting Next-Exam Teacher "${config.version} ${config.info}" (${process.platform})`)
 log.warn(`-------------------`)
-log.info(`main: Logfilelocation at ${logfile}`)
-log.info('main: Next-Exam Logger initialized...');
+log.info(`main @ init: Logfilelocation at ${logfile}`)
+log.info('main @ init: Next-Exam Logger initialized...');
 
 
 
@@ -126,7 +127,7 @@ app.on('activate', () => {
 app.whenReady().then(()=>{
     nativeTheme.themeSource = 'light'  // make sure it does't apply dark system themes (we have dark icons in editor)
     server.listen(config.serverApiPort, () => {  // start express API
-        log.info(`main: Express listening on https://${config.hostip}:${config.serverApiPort}`)
+        log.info(`main @ ready: Express listening on https://${config.hostip}:${config.serverApiPort}`)
     }) 
 })
 .then(async ()=>{

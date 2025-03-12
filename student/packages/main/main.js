@@ -46,6 +46,8 @@ Menu.setApplicationMenu(null);
 // app.commandLine.appendSwitch('enable-gpu-rasterization');
 // app.commandLine.appendSwitch('enable-threaded-compositing');
 app.commandLine.appendSwitch('enable-features', 'Metal,CanvasOopRasterization');  // macos only
+app.commandLine.appendSwitch('lang', 'de');
+
 
 if (!app.requestSingleInstanceLock()) {  // allow only one instance of the app per client
     log.warn("main: next-exam already running.")

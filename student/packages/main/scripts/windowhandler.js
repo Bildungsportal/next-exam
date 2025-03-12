@@ -146,7 +146,33 @@ class WindowHandler {
 
 
 
+    /**
+     * this is the windows splashscreen
+     */
+    createEasterWin() {
+        this.easterwin = new BrowserWindow({
+            title: 'Next-Exam',
+            icon: join(__dirname, '../../public/icons/icon.png'),
+            center:true,
+            width: 768,
+            height:480,
+            alwaysOnTop: true,
+            skipTaskbar:true,
+            autoHideMenuBar: true,
+            resizable: false,
+            minimizable: false,
+            movable: false,
+            frame: true,
+            show: false,
+            transparent: false
+        })
+     
+        this.easterwin.loadFile(join(__dirname, `../../public/cowsonice/index.html`))
 
+        this.easterwin.once('ready-to-show', () => {
+            this.easterwin.show()
+        });
+    }
 
 
     /**

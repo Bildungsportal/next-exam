@@ -28,7 +28,8 @@
         "previousexams": "Lokal gesicherte Prüfungen",
         "folderdelete": "Wollen Sie die den lokalen Prüfungsordner löschen?",
         "onlineexams": "BiP Prüfungen",
-        "bipnotloggedin": "Bitte melden Sie sich am BiP an, bevor Sie die Prüfung starten"
+        "bipnotloggedin": "Bitte melden Sie sich am BiP an, bevor Sie die Prüfung starten",
+        "noNews":"Keine Neuigkeiten verfügbar"
     },
     "dashboard":{
         "server": "Server-Adresse",

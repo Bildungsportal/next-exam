@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height" />
+    <title>cool cows</title> 
+    <style>* {margin:0;}</style>
+<!--     <script src="cordova.js"></script>  -->
+    <script type="text/javascript">
+        //------------------------------------------------------//
+        //      copyright | 2015 | thomas michael weissel       //
+        //      valueerror@gmail.com                            //
+        //------------------------------------------------------//
+        //       LOW RESOLUTION SETUP  !!   24px                //
+        //------------------------------------------------------//
+        // adjust these vars to setup the game environment
+
+        var ADMENU = false;
+        var ADS = false;
+        var ADSloaded = false;  // this will be set automatically if ads are loaded
+        var loader = true;  // display a preload bar or not (crosswalk is so fast on loading that the preloadbar is just a distraction)
+        var fps = false;
+        var initialWorldScale = 1;  //sets the default game play scale factor..  
+        var physicsFPS = 50;  //physics should be calculated independend from actual fps - set here desiredFps for all states
+        var worldwidth=768;   // keep it 16:10 !!
+        var worldheight=480;
+        //var levels;  //  see levels.js
+        //var lock;    //  see levels.js
+        //var level;   //  see levels.js
+        //------------------------------------------------------//
+
+
+        
+        document.addEventListener("backbutton", function(){ return;}, false); // in case the device has a back button do nothing
+        document.addEventListener("deviceready",onDeviceReady);    
+        
+
+      
+    </script>
+
+    <script src="phaser.min.js"></script>
+    <script src="assets/levels/levels.js"></script>
+    <script src="game.min.js"></script> 
+</head>
+<body>
+
+</body>
+</html>

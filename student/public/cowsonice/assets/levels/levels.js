@@ -1,0 +1,3 @@
+var levels =48;  // also count level 0
+var locked = true;
+var level = 'menu'; // startlevel 'menu',0,1,2,3,4,....

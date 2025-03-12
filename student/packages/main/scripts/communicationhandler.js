@@ -32,7 +32,6 @@ import Tesseract from 'tesseract.js';
 
 const __dirname = import.meta.dirname;
 import crypto from 'crypto';
-import { Worker } from 'worker_threads';
 import path from 'path';
 
 import https from 'https';
