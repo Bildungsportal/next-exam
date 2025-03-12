@@ -426,12 +426,19 @@ export default {
 
 
 
-        sendFocuslost(){
-            let response = ipcRenderer.send('focuslost')  // refocus, go back to kiosk, inform teacher
+        async sendFocuslost(){
+            
+            let response = await ipcRenderer.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
             if (!this.config.development && !response.focus){  //immediately block frontend
                 this.focus = false 
             }  
         },
+
+
+
+
+
+
         formatTime(unixTime) {
             const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
             return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed

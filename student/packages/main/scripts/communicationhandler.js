@@ -778,7 +778,9 @@ import screenshot from 'screenshot-desktop-wayland';
             }
         }
 
-        WindowHandler.initBlockWindows()
+        if (WindowHandler.examwindow){
+            WindowHandler.initBlockWindows()
+        }
     }
 
 
