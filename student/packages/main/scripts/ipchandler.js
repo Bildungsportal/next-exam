@@ -620,15 +620,7 @@ class IpcHandler {
         })
 
 
-        /**
-         * activate spellcheck on demand for specific student NODEHUN
-         */ 
-        ipcMain.on('activatespellcheck', (event, spellchecklang) => {  
-  
-                return true
-      
-        })
-    
+
 
         /**
          * Returns all found Servers and the information about this client
@@ -918,12 +910,24 @@ class IpcHandler {
 
 
 
-
-
-
-
-
-
+        /**
+         * ASYNC GET BACKUP FILE from examdirectory
+         * @param filename filename without
+         */ 
+        ipcMain.handle('getbackupfile', async (event, filename) => {   
+            const workdir = path.join(config.examdirectory,"/")
+            if (filename) { //return content of specific file as string (html) to replace in editor)
+                let filepath = path.join(workdir,filename)
+                try {
+                    let data = fs.readFileSync(filepath, 'utf8')
+                    return data
+                }
+                catch (err) {
+                    log.error(`ipchandler @ getbackupfile: ${err}`); 
+                    return false
+                }
+            }
+        })
 
 
 
@@ -935,15 +939,6 @@ class IpcHandler {
             this.multicastClient.clientinfo.printrequest = true  //set this to false after the request left the client to prevent double triggering
             event.returnValue = true
         })
-
-
-        /**
-         * this is our manually implemented NODEHUN spellchecker for the editor (fallback for languagetool)
-         */
-        ipcMain.on('checktext', async (event, selectedText) => {
-            const misspelledWords = [];
-            event.returnValue = { misspelledWords };
-        });
 
 
         

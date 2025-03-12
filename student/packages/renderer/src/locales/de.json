@@ -47,6 +47,7 @@
         "nofiles": "Es wurden keine Dateien hochgeladen"
     },
     "editor": {
+        "backupfound": "Backup gefunden",
         "getmaterials": "Materialien holen",
         "sendfinalexam": "Finale Abgabe an Lehrperson senden",
         "finalsubmit": "Abgabe",

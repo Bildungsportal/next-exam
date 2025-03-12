@@ -1277,6 +1277,27 @@ export default {
                 content: ``,         
             });
         },
+        async loadBackupFile(filename=false){
+            // check if there is a bak file in the exam directory and load it
+            let backupfileName = filename ? filename : this.clientname + ".bak"
+            let backupfileContent = await ipcRenderer.invoke('getbackupfile', backupfileName )
+            if (backupfileContent){
+                this.$swal.fire({
+                    title: this.$t("editor.backupfound"),
+                    html:  `${this.$t("editor.replacecontent1")} <b>${backupfileName}</b> ${this.$t("editor.replacecontent2")}`,
+                    icon: "question",
+                    showCancelButton: true,
+                    cancelButtonText: this.$t("editor.cancel"),
+                    reverseButtons: true
+                })
+                .then(async (result) => {
+                    if (result.isConfirmed) {
+                        this.editor.commands.clearContent(true)
+                        this.editor.commands.insertContent(backupfileContent)  
+                    } 
+                }); 
+            }
+        },
     },
     
 
@@ -1313,6 +1334,10 @@ export default {
         this.createEditor(); // this initializes the editor
         this.zoomin()
         this.getExamMaterials()
+        this.loadBackupFile()
+
+
+
 
 
         ipcRenderer.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler

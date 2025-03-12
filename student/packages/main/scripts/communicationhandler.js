@@ -914,7 +914,7 @@ import screenshot from 'screenshot-desktop-wayland';
         let token = this.multicastClient.clientinfo.token
         let backupfile = false
         for (const file of files) {
-            if (file.name && file.name.includes('bak')){
+            if (file.name && file.name.includes('bak')){   // this will always set the last bak file as backup file if there is more than one bak file
                 backupfile = file.name
             }
         }

@@ -47,6 +47,7 @@
         "nofiles": "no files were uploaded"
     },
     "editor": {
+        "backupfound": "Backup found",
         "getmaterials": "Get materials",
         "sendfinalexam": "Send final exam",
         "finalsubmit": "Final submit",
