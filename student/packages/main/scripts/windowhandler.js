@@ -252,6 +252,34 @@ class WindowHandler {
     }
 
 
+    // block additional screens with a blockwindow - try not to block primary display
+    async initBlockWindows(){
+        let displays = screen.getAllDisplays()
+        let primary = screen.getPrimaryDisplay()
+        if (!primary || primary === "" || !primary.id){ primary = displays[0] }       
+
+        if (!this.config.development) {  // lock additional screens
+            for (let display of displays){
+                if ( display.id !== primary.id ) {
+                    if ( !this.isApproximatelyEqual(display.bounds.x, primary.bounds.x)) {  //on kde displays may be manually positioned at 1920px or 1921px so we allow a range to identify overlapping (cloned) displays
+                        log.info("create blockwin on:",display.id)
+                        this.newBlockWin(display)  // add blockwindows for additional displays
+                    } 
+                }
+            }
+            await this.sleep(1000)
+            this.blockwindows.forEach( (blockwin) => {
+                blockwin.moveTop();
+            })
+        }
+    }
+
+
+    //returns true if a number is within tolerance 
+    isApproximatelyEqual(x1, x2, tolerance = 4) {
+        return Math.abs(x1 - x2) <= tolerance;
+    }
+
     /**
      * Screenlock Window (to cover the mainscreen) - block students from working
      * @param display 

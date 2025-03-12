@@ -236,7 +236,7 @@
         <div id="setupdiv">
             <!-- <div class="swal2-icon swal2-question swal2-icon-show" style="display: flex;"><div class="swal2-icon-content">?</div></div> -->
             <div class="mb-3"><h5 style="display: inline">{{ $t('dashboard.extendedsettings') }}</h5></div>
-            <div class="m-1 mb-2" :class="lockInExammode ? 'disabledexam':''">
+            <div class="m-1 mb-2">
                 <label for="abgabeintervalSlider" class="form-check-label"> {{$t('dashboard.autoget')}} </label>
                 <span v-if="serverstatus.abgabeintervalPause > 0" class="ms-2 text-black-50">| {{serverstatus.abgabeintervalPause}}min </span>
                 <span v-else class="ms-2 text-black-50">| {{$t('dashboard.disabled')}}</span>
@@ -1531,8 +1531,8 @@ computed: {
 .tab-buttons-container {
     position: fixed;
     right: 0;
-    top: 22%;
-    transform: translateY(-50%);
+    top: 244px;
+   
     display: flex;
     flex-direction: column;
     gap: 4px;

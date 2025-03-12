@@ -221,7 +221,7 @@
         <!-- PDF Preview Container -->
         <div id="preview" class="fadeinfast splitback" style="background-repeat: no-repeat; background-position: center; flex-grow: 1 !important; display: block !important; position: static !important; top: 0 !important; left: auto !important; width: auto !important; height: auto !important; background-color: transparent !important; z-index: auto !important; backdrop-filter: none !important;">
             
-            <webview id="webview" v-show="webviewVisible" :src="allowedUrlObject.full"></webview>
+            <webview id="webview" v-show="webviewVisible" :src="(allowedUrlObject && allowedUrlObject.full)?allowedUrlObject.full:''"></webview>
 
             <div class="embed-container" style="position: relative !important; top: 0 !important; left: 0 !important; transform: none !important; display: block !important; height:100% !important; margin-top:0;">
                 <embed src="" id="pdfembed" style="border-radius:0 !important; background-size:contain; width:100% !important; height: 100% !important; background-color:transparent !important;"></embed>

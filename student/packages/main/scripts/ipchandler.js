@@ -937,27 +937,15 @@ class IpcHandler {
                     return data
                 }
                 catch (err) {
-                    log.error(`ipchandler @ getbackupfile: ${err}`); 
+                    log.info(`ipchandler @ getbackupfile: no backup file found`); 
                     return false
                 }
             }
         })
 
-
-
-
-
         ipcMain.on('reload-url', (event) => {
             this.WindowHandler.createEasterWin()
         });
-
-
-
-
-
-
-
-
 
          /**
          * Append PrintRequest to clientinfo  
@@ -966,9 +954,6 @@ class IpcHandler {
             this.multicastClient.clientinfo.printrequest = true  //set this to false after the request left the client to prevent double triggering
             event.returnValue = true
         })
-
-
-        
      
         ipcMain.on('get-cpu-info', (event) => {
             const cpus = os.cpus().map(cpu => cpu.model.toLowerCase());

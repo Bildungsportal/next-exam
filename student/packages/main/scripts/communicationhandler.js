@@ -772,20 +772,7 @@ import screenshot from 'screenshot-desktop-wayland';
             }
         }
 
-        if (!this.config.development) {  // lock additional screens
-            for (let display of displays){
-                if ( display.id !== primary.id ) {
-                    if ( !this.isApproximatelyEqual(display.bounds.x, primary.bounds.x)) {  //on kde displays may be manually positioned at 1920px or 1921px so we allow a range to identify overlapping (cloned) displays
-                        log.info("create blockwin on:",display.id)
-                        WindowHandler.newBlockWin(display)  // add blockwindows for additional displays
-                    } 
-                }
-            }
-            await this.sleep(1000)
-            WindowHandler.blockwindows.forEach( (blockwin) => {
-                blockwin.moveTop();
-            })
-        }
+        WindowHandler.initBlockWindows()
     }
 
 
@@ -802,7 +789,7 @@ import screenshot from 'screenshot-desktop-wayland';
      * disables restrictions and blur 
      */
     async endExam(serverstatus){
-        log.info(serverstatus)
+      
         // delete students work on students pc (makes sense if exam is written on school property)
         if (serverstatus.delfolderonexit === true){
             log.info("communicationhandler @ endExam: cleaning exam workfolder on exit")
