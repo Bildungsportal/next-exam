@@ -169,7 +169,7 @@ import screenshot from 'screenshot-desktop-wayland';
 
         this.timer++   // we use timer to time loops with different intervals without introducing new unneccesary schedulers
         if (this.timer % 20 === 0){  // block additional screens every 20*5 (updateloop) seconds
-            this.WindowHandler.initBlockWindows()
+            WindowHandler.initBlockWindows()
         }
 
         if (this.multicastClient.clientinfo.localLockdown){return}
