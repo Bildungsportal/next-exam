@@ -87,7 +87,7 @@
     <!-- angabe/pdf preview start -->
     <div id="preview" class="fadeinfast p-4">
 
-        <webview id="webview" v-show="webviewVisible" :src="allowedUrlObject.full"></webview>
+        <webview id="webview" v-show="webviewVisible" :src="(allowedUrlObject && allowedUrlObject.full)?allowedUrlObject.full:''"></webview>
 
         <div class="embed-container">
         <embed src="" id="pdfembed"></embed>

@@ -68,9 +68,9 @@ log.transports.file.resolvePathFn = () => { return logfile  }
 log.eventLogger.startLogging();
 log.errorHandler.startCatching();
 
-log.warn(`-------------------`)
+log.warn(`main @ init: -------------------`)
 log.warn(`main @ init: starting Next-Exam Teacher "${config.version} ${config.info}" (${process.platform})`)
-log.warn(`-------------------`)
+log.warn(`main @ init: -------------------`)
 log.info(`main @ init: Logfilelocation at ${logfile}`)
 log.info('main @ init: Next-Exam Logger initialized...');
 

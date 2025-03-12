@@ -50,13 +50,13 @@ app.commandLine.appendSwitch('lang', 'de');
 
 
 if (!app.requestSingleInstanceLock()) {  // allow only one instance of the app per client
-    log.warn("main: next-exam already running.")
+    log.warn("main @ singleinstance: next-exam already running.")
     app.quit()
     process.exit(0)
 }
 
 app.on('second-instance', () => {
-    log.warn("main: prevented second start of next-exam. Restoring existing Next-Exam window.")
+    log.warn("main @ singleinstance: prevented second start of next-exam. Restoring existing Next-Exam window.")
     if (WindowHandler.mainwindow) {
         if (WindowHandler.mainwindow.isMinimized() || !WindowHandler.mainwindow.isVisible()) {
             WindowHandler.mainwindow.show()
@@ -92,7 +92,7 @@ if (!fs.existsSync(desktopPath)) {  fs.mkdirSync(desktopPath, { recursive: true 
 const linkPath = path.join(desktopPath, config.clientdirectory);  // Define the path for the symbolic link
 try {fs.unlinkSync(linkPath) }catch(e){}
 try {   if (!fs.existsSync(linkPath)) { fs.symlinkSync(config.workdirectory, linkPath, 'junction'); }}
-catch(e){log.error("main: can't create symlink")}
+catch(e){log.error("main @ create-symlink: can't create symlink")}
 
 
 try { //bind to the correct interface
@@ -101,7 +101,7 @@ try { //bind to the correct interface
     config.gateway = true
 }
  catch (e) {
-   log.error("main: unable to determine default gateway")
+   log.error("main @ gateway4sync: unable to determine default gateway")
    config.hostip = ip.address() 
    log.info(`main: IP ${config.hostip}`)
    config.gateway = false
@@ -119,9 +119,9 @@ process.stdout.on('error', (err) => { if (err.code === 'EPIPE') { log.transports
 process.on('uncaughtException', (err) => {
     if (err.code === 'EPIPE') {
         log.transports.console.level = false;
-        log.warn('main: EPIPE Error: Der stdout-Stream des ElectronLoggers wird deaktiviert.');
+        log.warn('main @ uncaughtException: EPIPE Error: Der stdout-Stream des ElectronLoggers wird deaktiviert.');
     } 
-    else {  log.error('main:', err.message); }  // Andere Fehler protokollieren oder anzeigen
+    else {  log.error('main @ uncaughtException:', err.message); }  // Andere Fehler protokollieren oder anzeigen
 });
 
 
@@ -133,11 +133,11 @@ log.transports.file.resolvePathFn = () => { return logfile  }
 log.eventLogger.startLogging();
 log.errorHandler.startCatching();
 
-log.warn(`-------------------`)
-log.warn(`main: starting Next-Exam Student "${config.version} ${config.info}" (${process.platform})`)
-log.warn(`-------------------`)
-log.info(`main: Logfilelocation at ${logfile}`)
-log.info('main: Next-Exam Logger initialized...');
+log.warn(`main @ init: -------------------`)
+log.warn(`main @ init: starting Next-Exam Student "${config.version} ${config.info}" (${process.platform})`)
+log.warn(`main @ init: -------------------`)
+log.info(`main @ init: Logfilelocation at ${logfile}`)
+log.info('main @ init: Next-Exam Logger initialized...');
 
 
 
@@ -209,7 +209,7 @@ app.whenReady()
 
     if (config.hostip == "127.0.0.1") { config.hostip = false }
     if (config.hostip) {
-        log.info(`main: HOSTIP: ${config.hostip}`)
+        log.info(`main @ ready: HOSTIP: ${config.hostip}`)
         multicastClient.init(config.gateway)   // gateway is used in multicastclient.js to determine if the multicast client should join a group
     }
 
@@ -224,12 +224,12 @@ app.whenReady()
     const contextMenu = Menu.buildFromTemplate([ 
         { label: 'Wiederherstellen', click: function () { WindowHandler.mainwindow.show(); }   },
         { label: 'Verbindung trennen', click: function () {
-            log.info("main.ts @ systemtray: removing registration ")
+            log.info("main @ systemtray: removing registration ")
             CommHandler.resetConnection();
         }   },
         { label: 'Beenden', click: function () {
-            log.warn("main.ts @ systemtray: Closing Next-Exam" )
-            log.warn(`----------------------------------------`)
+            log.warn("main @ systemtray: Closing Next-Exam" )
+            log.warn(`main @ systemtray: ----------------------------------------`)
             WindowHandler.mainwindow.allowexit = true; app.quit(); 
         }   }
     ]);
@@ -257,7 +257,7 @@ app.whenReady()
             }
     
             if (result.foundBrowser) {
-                log.warn('main: Die App wurde direkt aus einem Browser gestartet');
+                log.warn('main @ checkParent: Die App wurde direkt aus einem Browser gestartet');
                 dialog.showMessageBoxSync(WindowHandler.mainwindow, {
                     type: 'question',
                     buttons: ['OK'],
@@ -267,7 +267,7 @@ app.whenReady()
                 WindowHandler.mainwindow.allowexit = true;
                 app.quit();
             } else {
-                log.info('main: Parent Process Check OK');
+                log.info('main @ checkparent: Parent Process Check OK');
             }
         });
     
