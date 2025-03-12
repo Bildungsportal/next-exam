@@ -180,6 +180,7 @@ let studentInfo = {
             examSecurityKey: "oI9xGzHkUFe7Lg2iTXHkYp4pDab3Nvj4kFEOqA93cZE=",   // symmetrisch, für mathe matura falls dateien verschlüsselt übertragen werden - soll erst zu schülern übertragen werden wenn die prüfung startet
             useExamSections: true, //if false exam section 1 is used and no tabs are displayed
             activeSection: 1,
+            lockedSection: 1,
             examSections: {
                 1: {  
                     examtype: "editor",  // editor, math, eduvidual, gforms, website, microsoft365
@@ -370,6 +371,7 @@ let studentInfo = {
             examSecurityKey: "oI9xGzHkUoe4eoiUEI34p4pDab3Nvj4kFEOqA93cZE=",   // symmetrisch, für mathe matura falls dateien verschlüsselt übertragen werden - soll erst zu schülern übertragen werden wenn die prüfung startet
             useExamSections: false, //if false exam section 1 is used and no tabs are displayed
             activeSection: 1,
+            lockedSection: 1,
             examSections: {
                 1: {  
                     examtype: "math",  // editor, math, eduvidual, gforms, website, microsoft365

@@ -159,7 +159,6 @@ class IpcHandler {
                 autoLogin: true,
                 compress: true,
 
-
                 logLevel: 'INFO',
                 screen: {
                     width: 1280,
@@ -168,10 +167,8 @@ class IpcHandler {
                 locale: 'de',   // needed to patch node-rdpjs for this issue
                 colorDepth: 16,
 
-   
-                
                 connectionTimeout: 10000, // Längeres Timeout für die Verbindung
-      
+
                 performanceFlags: {
                     disableWallpaper: true,
                     disableFullWindowDrag: true,
@@ -185,7 +182,6 @@ class IpcHandler {
             .on('connect', () => log.info('ipchandler @ start-rdp: RDP verbunden'))
             .on('bitmap', (bitmap) => {
                 // Sende Bitmap-Frame (x,y,width,height,data) ans Renderer
-                console.log("#############################################")
                 if (this.WindowHandler.examwindow) this.WindowHandler.examwindow.webContents.send('rdp-bitmap', bitmap);
             })
             .on('close', () => console.log('RDP Verbindung geschlossen'))
@@ -228,21 +224,28 @@ class IpcHandler {
                 group: clientinfo.group,
             }
 
-            // Fetch-Request mit den entsprechenden Optionen
-            let examMaterials = await fetch(`https://${serverip}:${this.config.serverApiPort}/server/data/getexammaterials/${servername}/${token}`, {
-                method: "POST",
-                body: JSON.stringify(payload),
-                headers: { 'Content-Type': 'application/json' },
-            })
-            .then(response => response.json()) // Antwort als ArrayBuffer erhalten
-            .then(data => {
-                // log.info("ipchandler @ getExamMaterials: received data", data)
-                return data
-            })
-            .catch(err => log.error(`ipchandler @ getExamMaterials: ${err}`));
+            let examMaterials = false
+            if (this.multicastClient.clientinfo.localLockdown){
+                return false
+            }
+            else{
+                // Fetch-Request mit den entsprechenden Optionen
+                examMaterials = await fetch(`https://${serverip}:${this.config.serverApiPort}/server/data/getexammaterials/${servername}/${token}`, {
+                    method: "POST",
+                    body: JSON.stringify(payload),
+                    headers: { 'Content-Type': 'application/json' },
+                })
+                .then(response => response.json()) // Antwort als ArrayBuffer erhalten
+                .then(data => {
+                    // log.info("ipchandler @ getExamMaterials: received data", data)
+                    return data
+                })
+                .catch(err => log.error(`ipchandler @ getExamMaterials: ${err}`));
+                return examMaterials
+            }
 
 
-            return examMaterials
+           
         }) 
 
 
@@ -318,25 +321,36 @@ class IpcHandler {
             
             let serverstatus = {
                 exammode: true,
-                examtype: args.exammode,
+               
                 delfolderonexit: false,
                 spellcheck: true,
                 spellchecklang: 'de-DE',
                 suggestions: false,
                 moodleTestType: '',
                 moodleDomain: '',
-                cmargin: { side: 'right', size: 3 },
+ 
                 screenshotinterval: 0,
                 msOfficeFile: false,
                 screenslocked: false,
                 pin: '0000',
-                linespacing: '2',
+               
                 unlockonexit: false,
                 fontfamily: 'sans-serif',
                 moodleTestId: '',
                 languagetool: false,
                 password: args.password,
-                audioRepeat: 3
+         
+                useExamSections: false, //if false exam section 1 is used and no tabs are displayed
+                activeSection: 1,
+                lockedSection: 1,
+                examSections: {
+                    1: {
+                        examtype: args.exammode,
+                        cmargin: { side: 'right', size: 3 },
+                        linespacing: '2',
+                        audioRepeat: 3
+                    }
+                }
             }
             
             this.multicastClient.clientinfo.name = args.clientname;

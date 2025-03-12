@@ -91,10 +91,11 @@ childProcess.exec('echo $XDG_CURRENT_DESKTOP', (error, stdout, stderr) => {
     if (error) {
       console.error(`exec error: ${error}`);
       return;
-    }
-    if (stdout.trim() === 'GNOME') { isGNOME = true }   
+    } 
     if (stdout.trim() === 'KDE') { isKDE = true } 
+    if (stdout.trim() === 'GNOME') { isGNOME = true }
 });
+
 
 
 
@@ -191,17 +192,15 @@ function enableRestrictions(winhandler){
             catch(err){ log.error(`platformrestrictions @ enableRestrictions (gsettings): ${err}`); }
         }
 
-        try {
-            childProcess.execFile('wl-copy', ['-c'])   // wayland
-            childProcess.exec('xclip -i /dev/null')
-            childProcess.exec('xclip -selection clipboard')
-            childProcess.exec('xsel -bc')
+            try { // clear clipboard  (this will fail unless xclip or xsell are installed)
+                childProcess.execFile('wl-copy', ['-c'])   // wayland
+                childProcess.exec('xclip -i /dev/null')
+                childProcess.exec('xclip -selection clipboard')
+                childProcess.exec('xsel -bc')
+            }
+            catch(err){ log.error(`platformrestrictions @ enableRestrictions (gsettings): ${err}`) }
+           
         }
-        catch(err){
-            log.error(`platformrestrictions @ enableRestrictions (gsettings): ${err}`)
-        }
-        // clear clipboard  (this will fail unless xclip or xsell are installed)
-      
     }
 
 
