@@ -256,7 +256,7 @@ class WindowHandler {
     async initBlockWindows(){
         let displays = screen.getAllDisplays()
         let primary = screen.getPrimaryDisplay()
-        log.info(`windowhandler @ initBlockWindows:found ${displays.length} displays`)
+        log.info(`windowhandler @ initBlockWindows: found ${displays.length} displays`)
         if (!primary || primary === "" || !primary.id){ primary = displays[0] }       
 
         if (!this.config.development) {  // lock additional screens
