@@ -867,7 +867,7 @@ class WindowHandler {
             cancelId: 1
         });
         if(choice == 1){
-            log.info("do not close Next-Exam after finished Exam")
+            log.info("Windowhandler @ showExitQuestion: do not close Next-Exam after finished Exam")
         }
         else {
             this.mainwindow.allowexit = true
