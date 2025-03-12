@@ -58,7 +58,7 @@ import screenshot from 'screenshot-desktop-wayland';
         this.firstCheckScreenshot = true
         this.lastScreenshotBase64 = false
         this.lastScreenshot = false
-        
+        this.timer = 0
         this.setupImageWorker()
  
     }
@@ -166,6 +166,12 @@ import screenshot from 'screenshot-desktop-wayland';
      * Update current Serverstatus + Studenttstatus (every 5 seconds)
      */
     async requestUpdate(){
+
+        this.timer++   // we use timer to time loops with different intervals without introducing new unneccesary schedulers
+        if (this.timer % 20 === 0){  // block additional screens every 20*5 (updateloop) seconds
+            this.WindowHandler.initBlockWindows()
+        }
+
         if (this.multicastClient.clientinfo.localLockdown){return}
 
         // connection lost reset triggered  no serversignal for 20 seconds
