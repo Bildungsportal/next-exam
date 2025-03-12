@@ -382,21 +382,23 @@
         <!-- LOG START -->
         <div id="loginfo">
             <div id="logcheck" @click="fetchLOG();"> <div id="eye" class="darkgreen eyeopen"></div> &nbsp;Server Log</div>
+            
             <div class="logscrollarea" id="logscrollarea">     
                 
                 <div v-if="serverlog.length == 0"  style="text-align: left; font-size: 0.8em; margin-left:10px;"> ... </div> 
                 <div v-for="entry in serverlog" class="logentry">
-                    
                     <div style="display:flex;align-items: center; width:100%; ">
                         <div :style="'background-color:' + entry.color "  class="color-circle" style="width: 10px; height: 10px;"></div>&nbsp;
                         <div class="error-word" style="flex:1" :style="'color:' + entry.color "> {{ entry.source }} </div>
                     </div>   
-                    
                     <div v-if="entry.text">{{ entry.text}}</div>
                     <div class="date"> <span>  {{ entry.date }}</span> </div>
-                    
                 </div> 
             </div>
+
+            <div id="logrefresh" class="form-check form-switch" style="position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); width: 60px; margin:auto auto"> 
+                <input type="checkbox" id="logrefreshcheckbox" v-model="serverlogReload" class="form-check-input" title="Refresh Log" style="width: 50px; height: 15px;"> 
+             </div>
         </div>
         <!-- LOG END -->
 
@@ -539,7 +541,7 @@ export default {
 
             serverlog: [],
             serverlogActive: false,
-
+            serverlogReload: true,
 
             bipToken:this.$route.params.bipToken === 'false' ?  false : this.$route.params.bipToken,   // parameter werden immer als string "false" übergeben, convert to bool
             bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
@@ -786,7 +788,7 @@ computed: {
 
             this.updateBiPServerInfo(this.bipStatus);
             
-            if (this.serverlogActive){
+            if (this.serverlogActive && this.serverlogReload){
                 this.serverlog = await ipcRenderer.invoke('getlog')
                 this.$nextTick(() => {
                 let logscroll = document.getElementById('logscrollarea');
