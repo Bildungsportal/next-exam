@@ -861,17 +861,23 @@ export default {
     box-shadow: 1px 2px 2px rgba(0,0,0,0.2);
     
     width: 126px;
-    height: 45px;
+    height: 44px;
     border-bottom-left-radius: 8px;
     border-bottom-right-radius: 8px;
     cursor: pointer;
     color:#616161;
-
+    transition: all 0.3s ease;
     transform: rotate(90deg); 
     transform-origin: top left; 
 }
 #bipcheck:hover{
     background-color: var(--bs-gray-200);
+
+    height: 52px;
+   
+    box-shadow: 1px 2px 4px rgba(0,0,0,0.3);
+    padding-top: 16px;
+
 }
 #bipcheck img{
     vertical-align: bottom;
