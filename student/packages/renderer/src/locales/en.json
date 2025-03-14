@@ -44,7 +44,11 @@
         "tokennotvalid": "token is valid",
         "filereceived": "files received",
         "filestored": "files stored",
-        "nofiles": "no files were uploaded"
+        "nofiles": "no files were uploaded",
+        "fileerror": "file error",
+        "fileerrorinfo": "please check if the 'EXAM-STUDENT' directory is writeable and has enough space",
+        "fileerrorinfo2": "A local backup could not be created. Please use the manual submission option.",
+        "dontshow": "don't show again"
     },
     "editor": {
         "backupfound": "Backup found",

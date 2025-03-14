@@ -45,7 +45,11 @@
         "tokennotvalid": "das token ist ungültig",
         "filereceived": "Dateien erhalten",
         "filestored": "Dateien gespeichert",
-        "nofiles": "Es wurden keine Dateien hochgeladen"
+        "nofiles": "Es wurden keine Dateien hochgeladen",
+        "fileerror": "Fehler beim Schreiben der Datei",
+        "fileerrorinfo": "Bitte stellen Sie sicher, dass das 'EXAM-STUDENT' Verzeichnis für Next-Exam schreibbar ist und genügend Speicherplatz vorhanden ist.",
+        "fileerrorinfo2": "Eine lokale Sicherung konnte nicht erstellt werden. Nutzen Sie die manuelle Abgabe um Ihre Arbeit direkt an die Lehrperson zu senden.",
+        "dontshow": "Nicht mehr anzeigen"
     },
     "editor": {
         "backupfound": "Backup gefunden",

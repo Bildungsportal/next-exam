@@ -560,7 +560,7 @@ class IpcHandler {
          */ 
         ipcMain.on('printpdf', (event, args) => { 
             if (this.WindowHandler.examwindow){
-                var options = {
+                var options = { // define print options
                     margins: {top:0.5, right:0, bottom:0.5, left:0 },
                     pageSize: 'A4',
                     printBackground: false,
@@ -572,48 +572,47 @@ class IpcHandler {
                     preferCSSPageSize: false
                 }
 
-                let pdffilename = `${this.multicastClient.clientinfo.name}.pdf`
-                if (args.filename){
+                let pdffilename = `${this.multicastClient.clientinfo.name}.pdf`  // default filename = clientname.pdf
+                if (args.filename){  // in case of manual backup the user can set a custom filename
                     pdffilename = `${args.filename}.pdf`
                     log.info(`ipchandler @ printpdf: creating manual backup as ${pdffilename}`)
                 }
-                const pdffilepath = path.join(this.config.examdirectory, pdffilename);  //the original file "thomas.pdf"
+                const pdffilepath = path.join(this.config.examdirectory, pdffilename);  // path points to the current exam directory
                 const alternatefilename = `${pdffilename}-aux.pdf`    //thomas.pdf-aux.pdf 
                 const alternatebackupfilename = `${pdffilename}-old.pdf`;   //thomas.pdf-old.pdf
+                const alternatepath = path.join(this.config.examdirectory, alternatefilename);  // if something goes wrong we try to write a different file
 
-                const alternatepath = path.join(this.config.examdirectory, alternatefilename);
 
-                // aux files are files created if the main pdffilepath is not writeable (opened on windows) and preferred by printrequest and when combining all pdfs. 
-                fs.readdir(this.config.examdirectory, (err, files) => { // rename it if it exists - we don't want old backupfiles to mess up printrequest and combine (if everything is ok and the mainfile is writeable)
-                    if (err) {  return; }
+                // aux files are files created if the main pdffilepath is not writeable (opened on windows) 
+                try {  // always check for old aux files and rename them
+                    const files = fs.readdirSync(this.config.examdirectory);
                     files.forEach(file => {
                         if (file === alternatefilename) {
                             const newPath = path.join(this.config.examdirectory, alternatebackupfilename);
-                            fs.rename(alternatepath, newPath, err => {
-                                if (err) { 
-                                    log.error('ipchandler @ printpdf: Error renaming file:', err);
-                                    event.reply("fileerror", { sender: "client", message:err , status:"error" } )
-                                 }
-    
-                            });
+                            fs.renameSync(alternatepath, newPath);
                         }
                     });
-                });
+                } 
+                catch(err) { log.error(`ipchandler @ printpdf: ${err.message}`);  }
 
+                // print the exam window to pdf
                 this.WindowHandler.examwindow.webContents.printToPDF(options).then(data => {
-                    if (fs.existsSync(pdffilepath)) { fs.unlinkSync(pdffilepath); }
-
-
+                    // delete the old pdf file if it exists
+                    try { if (fs.existsSync(pdffilepath)) { fs.unlinkSync(pdffilepath); }}
+                    catch(err) { log.error(`ipchandler @ printpdf: ${err.message}`);  }
+                    // write the pdf to the exam directory
                     fs.writeFile(pdffilepath, data, (err) => { 
                         if (err) {
-                            log.error(`ipchandler @ printpdf: ${err.message} - writing file as: ${alternatepath} `); 
-               
-                            if (fs.existsSync(alternatepath)) { fs.unlinkSync(alternatepath); }
+                            log.warn(`ipchandler @ printpdf: ${err.message} - writing file as: ${alternatepath} `); 
+                            // delete the old aux file if it exists
+                            try { if (fs.existsSync(alternatepath)) { fs.unlinkSync(alternatepath); } }
+                            catch (err) { log.error(`ipchandler @ printpdf (alternativer Pfad): ${err.message}`); }
+                            // write the pdf to the alternate path
                             fs.writeFile(alternatepath, data, (err) => { 
                                 if (err) {
                                     log.error(err.message);
                                     log.error("ipchandler @ printpdf: giving up"); 
-                                    event.reply("fileerror", { sender: "client", message:err , status:"error" } )
+                                    event.reply("fileerror", { sender: "client", message:err.message , status:"error" } )
                                 }
                                 else { // log.info("ipchandler @ printpdf: success!");
                                     if (args.reason === "teacherrequest") { this.CommunicationHandler.sendToTeacher() }
@@ -627,8 +626,8 @@ class IpcHandler {
                         }
                     } ); 
                 }).catch(error => { 
-                    log.error(`ipchandler @ printpdf: ${error}`)
-                    event.reply("fileerror", { sender: "client", message:error , status:"error" } )
+                    log.error(`ipchandler @ printpdf: ${error.message}`)
+                    event.reply("fileerror", { sender: "client", message:error.message , status:"error" } )
                 });
             }
         })

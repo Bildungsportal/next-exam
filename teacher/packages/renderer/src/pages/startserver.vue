@@ -139,23 +139,14 @@
  <div id="bipinfo">
     <div id="bipcheck" @click="fetchBiPNews();"> <div id="eye" class="darkgreen eyeopen"></div> &nbsp;BiP News</div>
     <div class="bipscrollarea">     
-        
         <div v-if="bipnews.length == 0"  style="text-align: left; font-size: 0.8em; margin-left:10px;"> {{ $t('startserver.noNews') }}</div> 
         <div v-for="entry in bipnews" :key="entry.id" class="bipentry">
-            
-            <div style="display:flex;align-items: center; width:100%; ">
-                <div  class="color-circle" style="width: 10px; height: 10px;"></div>&nbsp;
-                <div class="error-word" style="flex:1">{{ entry.subject }} </div>
-            </div>   
-            
-            <div v-if="entry.message">{{ entry.message}}</div>
-                     <div class="replacement">
-                        <span>  {{ formatUnixDate(entry.created) }}</span> | {{ entry.userfullname }}
-        
-                    </div>
-             
-
-
+            <div class="color-circle" style="width: 10px; height: 10px;"></div>
+            <div class="subject">{{ entry.subject }} </div>
+            <div class="message" v-if="entry.message" v-external-links v-html="entry.message"></div>
+            <div class="created">
+                <div style=" padding-top:1px; display:inline-block;">{{ formatUnixDate(entry.created) }} | {{ entry.userfullname }}</div> <img :src="entry.userpictureurl" style="float:right; width: 20px; height: 20px; border-radius: 50%;">
+            </div> 
         </div> 
     </div>
 </div>
@@ -218,7 +209,28 @@ export default {
         };
     },
     components: {},
-   
+    directives: {
+        // Diese Direktive sucht alle <a>-Tags in dem Element und fügt target="_blank" hinzu.
+        externalLinks: {
+            mounted(el) {
+                // Wird beim ersten Rendern ausgeführt (in Vue 3 ist "mounted" anstelle von "inserted")
+                const links = el.querySelectorAll("a");
+                links.forEach(link => {
+                    link.setAttribute("target", "_blank");
+                    link.setAttribute("rel", "noopener noreferrer");
+                });
+
+            },
+            updated(el) {
+                // Wird auch bei Aktualisierungen des Inhalts ausgeführt
+                const links = el.querySelectorAll("a");
+                links.forEach(link => {
+                    link.setAttribute("target", "_blank");
+                    link.setAttribute("rel", "noopener noreferrer");
+                });
+            }
+        }
+    },
     computed: {
         inactivelocale() { // Zeigt aktuellen Sprachcode
              return this.$i18n.locale === 'de' ? 'en' : 'de';
@@ -425,27 +437,6 @@ export default {
                 }
                 else {
                     this.bipnews = []
-
-                    this.bipnews = [
-                        {
-                            "created": 1710241234,
-                            "subject": "Willkommen bei Next-Exam!",
-                            "message": "Herzlich willkommen, viel Erfolg!",
-                            "userfullname": "Max Mustermann",
-                            "usermodifiedfullname": "Max Mustermann",
-                            "userpictureurl": "https://www.bildung.gv.at/user/pix.php/15/f1.jpg",
-                        },
-                        {
-                            "created": 1710245000,
-                            "subject": "1.0.1 Released",
-                            "message": "Die neue Version ist verfügbar.",
-                            "userfullname": "Julia Beispiel",
-                            "usermodifiedfullname": "Julia Beispiel",
-                            "userpictureurl": "https://www.bildung.gv.at/user/pix.php/20/f1.jpg",
-                        }
-                    ]
-
-
                 }
 
 
@@ -455,7 +446,7 @@ export default {
 
                 if (this.BipInfoActive){
                     if (bipdiv && bipdiv.style.right == "0px"){
-                        bipdiv.style.right = "-382px";
+                        bipdiv.style.right = "-482px";
                         bipdiv.style.boxShadow = "-2px 1px 2px rgba(0,0,0,0)";
                     }
                     eye.classList.add('eyeopen');
@@ -841,9 +832,9 @@ export default {
 #bipinfo {
     position: fixed;
     z-index: 100; 
-    width: 380px;
+    width: 480px;
     height: 100%;
-    right: -382px;
+    right: -482px;
     top: 65px;
     background-color: var(--bs-gray-100);
     box-shadow: -2px 1px 2px rgba(0, 0, 0, 0);
@@ -901,7 +892,7 @@ export default {
 
 #bipinfo .bipscrollarea {
     height: calc(100vh - 52px);
-    width: 368px;
+    width: 468px;
     overflow-x: hidden;
     overflow-y: auto;
     position: absolute;
@@ -916,8 +907,8 @@ export default {
   border-radius: 50%;
   display: inline-block;
   background-color: #0dcaf0;
+  margin-left:-5px;
 }
-
 
 .darkgreen {
     filter: invert(36%) sepia(100%) saturate(2200%) hue-rotate(95deg) brightness(75%);
@@ -926,14 +917,11 @@ export default {
     filter: invert(28%) sepia(99%) saturate(7476%) hue-rotate(345deg) brightness(65%);
 
 }
-
-
-
 #bipinfo .bipentry {
-    margin: 10px;
+    margin: 14px;
     padding: 10px;
     border-radius: 8px;
-   
+    background-color:   rgba(238, 238, 250, 0.37);
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     font-size: 0.8em;
     cursor: pointer;
@@ -950,7 +938,7 @@ export default {
     filter: invert(28%) sepia(99%) saturate(7476%) hue-rotate(345deg) brightness(65%);
 
 }
-#bipinfo .error-word {
+#bipinfo .subject {
   padding: 5px;
   border: none;
   background-color: transparent;
@@ -960,10 +948,14 @@ export default {
  
 }
 
-
-#bipinfo .replacement {
+#bipinfo .message {
+    padding:  0px 10px 0px 10px;
+    border-radius: 0px;
+}
+#bipinfo .created {
     padding: 2px;
     padding-left: 0px;
+    margin:10px;
     margin-top: 4px;
     border-top: 1px solid var(--bs-cyan);
     color: var(--bs-green);

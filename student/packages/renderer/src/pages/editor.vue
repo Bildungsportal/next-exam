@@ -433,6 +433,7 @@ export default {
             examMaterials: [],
             submissionnumber: 0,
             webviewVisible: false,
+            showfileerror: true,
         }
     },
     computed: {
@@ -1374,15 +1375,30 @@ export default {
         });
         ipcRenderer.on('fileerror', (event, msg) => {
             console.log('editor @ fileerror: writing/deleting file error received');
-            this.$swal.fire({
-                    title: "Error",
-                    html:  `<b> ${msg.message}</b> <br> Bitte löschen sie das 'EXAM-STUDENT Verzeichnis und stellen sie sicher, dass es für Next-Exam schreibbar ist.'`,
-                    icon: "error",
-                    //timer: 30000,
-                    showCancelButton: false,
-                    didOpen: () => { this.$swal.showLoading(); },
-            })
+ 
+            if (this.showfileerror) {
+                this.$swal.fire({
+                title: this.$t("data.fileerror"),
+                html: `${this.$t("data.fileerrorinfo2")}
+                        <br><br>
+                        <span class="small" style="color:darkred; font-style:italic;">${this.$t("data.fileerrorinfo")}</span>
+                        <br><br>
+                        <label>
+                        <input type="checkbox" id="dontShowCheckbox"> ${this.$t("data.dontshow")}
+                        </label>`,
+                icon: "error",
+                showCancelButton: false,
+                preConfirm: () => {
+                    // Falls der Benutzer die Checkbox aktiviert hat, aktualisieren wir die Variable:
+                        const dontShow = document.getElementById('dontShowCheckbox').checked;
+                        if (dontShow) { this.showfileerror = false;  }
+                    }
+                });
+            }
+
         });
+
+
 
         // add some eventlisteners once
         document.querySelector("#preview").addEventListener("click", function() {  
