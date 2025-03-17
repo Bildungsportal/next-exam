@@ -36,7 +36,7 @@ process.on('message', async (message) => {
             ]);
      
             const headerRaw = await sharp(headerBuffer).raw().toBuffer();
-            let isAllBlack = true;
+            let isAllBlack = true;  //just check the first 10x10 pixels
             for (let y = 0; y < 10; y++) {
                 for (let x = 0; x < 10; x++) {
                     const offset = (y * cropWidth + x) * 4;
