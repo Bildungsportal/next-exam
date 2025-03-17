@@ -2,22 +2,22 @@
 
 
 <!-- Header START -->
-<div :key="0" class="w-100 p-3 text-white bg-dark text-right mt-1" style="min-width: 1180px; z-index: 10000;">
+<div :key="0" class="w-100 p-3 text-white bg-dark text-right " style="min-width: 1180px; height: 66px; z-index: 100;">
     <span class="text-white m-1">
         <img src="/src/assets/img/svg/speedometer.svg" class="white me-2  " width="32" height="32" >
         <span style="font-size:23px;" class="align-middle me-1 ">Next-Exam</span>
     </span>
     <span class="align-middle ms-3" style="float: right; font-size:23px;">Dashboard</span>
 
-    <div v-if="serverstatus.useExamSections" style="position: absolute; left:257px; top:46px; min-width: 550px; z-index: 0;">
+    <div v-if="serverstatus.useExamSections" style="position: absolute; left:257px; top:41px; min-width: 550px; z-index: 0;">
         <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 1 && !serverstatus.examSections[1].locked, 'sectionbuttonactivered': serverstatus.activeSection == 1 && serverstatus.examSections[1].locked, 'btn-secondary': serverstatus.activeSection != 1,'btn-danger': serverstatus.examSections[1].locked}">{{ serverstatus.examSections[1].sectionname }}</div>
         <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 2 && !serverstatus.examSections[2].locked, 'sectionbuttonactivered': serverstatus.activeSection == 2 && serverstatus.examSections[2].locked, 'btn-secondary': serverstatus.activeSection != 2,'btn-danger': serverstatus.examSections[2].locked}">{{ serverstatus.examSections[2].sectionname }}</div>
         <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 3 && !serverstatus.examSections[3].locked, 'sectionbuttonactivered': serverstatus.activeSection == 3 && serverstatus.examSections[3].locked, 'btn-secondary': serverstatus.activeSection != 3,'btn-danger': serverstatus.examSections[3].locked}">{{ serverstatus.examSections[3].sectionname }}</div>
         <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 4 && !serverstatus.examSections[4].locked, 'sectionbuttonactivered': serverstatus.activeSection == 4 && serverstatus.examSections[4].locked, 'btn-secondary': serverstatus.activeSection != 4,'btn-danger': serverstatus.examSections[4].locked}">{{ serverstatus.examSections[4].sectionname }}</div>
     </div>
 
-    <div class="btn btn-sm btn-cyan m-0 me-1 mt-0" style="float: right; padding:3px; height:32px; width:32px; margin-top:0.08em!important;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22" > </div>
-    <div class="btn btn-sm btn-danger m-0 me-1 mt-0" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style="float: right; height:32px; margin-top:0.08em!important;"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" >&nbsp; {{$t('dashboard.stopserver')}}&nbsp; </div>
+    <div class="btn btn-sm btn-cyan m-0 me-1 mt-0" style="float: right; padding:3px; height:32px; width:32px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22" > </div>
+    <div class="btn btn-sm btn-danger m-0 me-1 mt-0" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style="float: right; height:32px;"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" >&nbsp; {{$t('dashboard.stopserver')}}&nbsp; </div>
     <div v-if="!hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 me-1 " style="cursor: unset; float: right">{{ $t("general.offline") }}</div>
 </div>
  <!-- Header END -->
@@ -2067,15 +2067,13 @@ hr {
 }
 
 
-
-
 #loginfo {
     position: fixed;
     z-index: 1000; 
     width: 580px;
     height: 100%;
     right: -582px;
-    top: 65px;
+    top: 66px;
     background-color: var(--bs-gray-100);
     box-shadow: -2px 1px 2px rgba(0, 0, 0, 0);
     transition: 0.3s;
@@ -2091,7 +2089,7 @@ hr {
     padding: 10px;
     background-color: var(--bs-gray-900);
     box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-    width: 146px;
+    width: 135px;
     height: 44px;
     border-bottom-left-radius: 8px;
     border-bottom-right-radius: 8px;

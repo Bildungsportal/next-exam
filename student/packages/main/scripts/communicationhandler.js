@@ -88,25 +88,18 @@ import screenshot from 'screenshot-desktop-wayland';
 
     setupImageWorker() {
         let workerPath;
-        if (app.isPackaged) {
-            workerPath = join(process.resourcesPath, 'app.asar.unpacked', 'public/imageWorkerSharp.js');
-        } else {
-            workerPath = path.join(__dirname, '../../public/imageWorkerSharp.js');
-        }
+        if (app.isPackaged) { workerPath = join(process.resourcesPath, 'app.asar.unpacked', 'public/imageWorkerSharp.js');} 
+        else {                workerPath = path.join(__dirname, '../../public/imageWorkerSharp.js');}
         
-        this.worker = spawn('node', [
-            '--experimental-modules',
-            '--es-module-specifier-resolution=node',
-            workerPath
-        ], {
+        this.worker = spawn('node', [workerPath], {
             stdio: ['ignore', 'ignore', 'pipe', 'ipc'], // 'ignore' für stdin und stdout, 'pipe' für stderr, 'ipc' für Inter-Prozess-Kommunikation
             detached: true
         });
 
-        this.worker.stderr.on('data', data => console.error('Worker stderr:', data.toString()));
-        this.worker.on('error', error => console.error('Worker error:', error));
+        this.worker.stderr.on('data', data => log.error('Worker stderr:', data.toString()));
+        this.worker.on('error', error => log.error('Worker error:', error));
         this.worker.on('exit', code => {
-            console.log(`Worker stopped with exit code ${code}`);
+            log.error(`Worker stopped with exit code ${code} - restarting`);
             if (code !== 0) this.setupImageWorker();
         });
     }
@@ -120,7 +113,6 @@ import screenshot from 'screenshot-desktop-wayland';
         return process.env.XDG_SESSION_TYPE === 'wayland'; 
     }
 
-
     isKDE(){
         try{ 
             let output = shell('echo $XDG_CURRENT_DESKTOP')
@@ -129,16 +121,12 @@ import screenshot from 'screenshot-desktop-wayland';
         catch(error){ log.warn("communicationhandler @ isKDE: no data "); return false }
     }
     
-
     isGNOME() {
         try { 
             let desktop = shell('echo $XDG_CURRENT_DESKTOP').trim();
             return desktop === 'GNOME';
         }
-        catch(error) { 
-            log.warn("communicationhandler @ isGNOME: no data "); 
-            return false;
-        }
+        catch(error) { log.warn("communicationhandler @ isGNOME: no data ");  return false; }
     }
 
 
@@ -259,8 +247,7 @@ import screenshot from 'screenshot-desktop-wayland';
                     ({ success, screenshotBase64, headerBase64, isblack, imgBuffer } = await this.processInWorker(imgBuffer));  // kein imageBuffer mitgegeben bedeutet nutze screenshot-desktop im worker
                     if (success) { this.screenshotFails = 0;}
                     else { 
-                        this.screenshotFails +=1;
-                        if(this.screenshotFails > 4){ this.screenshotAbility=false; log.error(`communicationhandler @ sendScreenshot: switching to PageCapture`) } 
+                        throw new Error("Image processing failed");
                     }
                 }
                 else {
@@ -274,6 +261,7 @@ import screenshot from 'screenshot-desktop-wayland';
                 }
             }
             catch(err){
+                this.screenshotFails +=1;
                 log.error(`communicationhandler @ sendScreenshot: processImage failed: ${err}`)
             }
 
@@ -299,7 +287,11 @@ import screenshot from 'screenshot-desktop-wayland';
             }
 
 
-
+            // if something went wrong we do not have a screenshot - so do not update the server
+            if (!screenshotBase64){
+                if(this.screenshotFails > 4){ this.screenshotAbility=false; log.error(`communicationhandler @ sendScreenshot: Fallback -> Switching to PageCapture`) } 
+                return
+            }
 
             //do not run colorcheck if already locked
             if ( this.multicastClient.clientinfo.exammode && !this.config.development && this.multicastClient.clientinfo.focus){
@@ -308,14 +300,11 @@ import screenshot from 'screenshot-desktop-wayland';
                     log.info("communicationhandler @ sendScreenshot: Student Screenshot does not fit requirements (allblack)");
                 }   
             }
+
+            // Berechnen des MD5-Hashs des Base64-Strings
             let screenshothash = null
-            try {
-                screenshothash = crypto.createHash('md5').update(Buffer.from(screenshotBase64, 'base64')).digest("hex");  // Berechnen des MD5-Hashs des Base64-Strings
-            }
-            catch(err){
-                log.error(`communicationhandler @ sendScreenshot: creating hash failed: ${err.message}`)
-            }
-          
+            try { screenshothash = crypto.createHash('md5').update(Buffer.from(screenshotBase64, 'base64')).digest("hex");  }  // Berechnen des MD5-Hashs des Base64-Strings
+            catch(err){ log.error(`communicationhandler @ sendScreenshot: creating hash failed: ${err.message}`)  }
             
             const payload = {
                 clientinfo: {...this.multicastClient.clientinfo},
@@ -325,7 +314,6 @@ import screenshot from 'screenshot-desktop-wayland';
                 screenshotfilename: this.multicastClient.clientinfo.token + ".jpg",
             };
                 
-
             // send screenshot to server via email fetch request
             let attempt = 0;
             const maxRetries = 2;

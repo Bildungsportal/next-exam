@@ -24,23 +24,32 @@ process.on('message', async (message) => {
             image = sharp(buffer);
             const metadata = await image.metadata();
             
+            const cropWidth = metadata.width < 1024 ? metadata.width : 1024;
+
             const [resizedBuffer, headerBuffer] = await Promise.all([
                 image.clone()
                     .resize({ width: 1024 })
                     .toBuffer(),
-                
                 image.clone()
-                    .resize({
-                        width: metadata.width < 1024 ? metadata.width : 1024,
-                        height: 100,
-                        fit: 'cover'
-                    })
+                    .extract({ left: 0, top: 0, width: cropWidth, height: 100 })
                     .toBuffer()
             ]);
-
+     
             const headerRaw = await sharp(headerBuffer).raw().toBuffer();
-            const isAllBlack = !headerRaw.some((value, index) => index % 4 !== 3 && value !== 0);
-            
+            let isAllBlack = true;
+            for (let y = 0; y < 10; y++) {
+                for (let x = 0; x < 10; x++) {
+                    const offset = (y * cropWidth + x) * 4;
+                    if (headerRaw[offset] !== 0 || headerRaw[offset + 1] !== 0 || headerRaw[offset + 2] !== 0) {
+                        isAllBlack = false;
+                        break;
+                    }
+                }
+                if (!isAllBlack) break;
+            }
+
+
+
             const screenshotBase64 = resizedBuffer.toString('base64');
             const headerBase64 = headerBuffer.toString('base64');
             
@@ -57,7 +66,7 @@ process.on('message', async (message) => {
             }
         }
     } catch (error) {
-        console.error('Processing error:', error);
+       // console.error('Processing error:', error);
         process.send({ success: false, error: error.message });
     }
 });
