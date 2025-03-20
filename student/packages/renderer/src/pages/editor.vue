@@ -1299,6 +1299,10 @@ export default {
                 }); 
             }
         },
+        handlePaste(event){
+            event.preventDefault()
+            console.log("pasted")
+        }
     },
     
 
@@ -1444,11 +1448,31 @@ export default {
         /**
         *   INSERT EVENT LISTENERS
         */
-        // show spellchecking context menu
         this.editorcontentcontainer = document.getElementById('editorcontent');        
         this.editorcontentcontainer.addEventListener('mouseup',  this.getSelectedTextInfo );   // show amount of words and characters
         this.editorcontentcontainer.addEventListener('keydown', this.insertSpaceInsteadOfTab)   //this changes the tab behaviour and allows tabstops   
-        
+       
+       
+        this.$nextTick(() => {  
+            this.sleep(1000).then(() => {
+                // Suche im Container nach dem Element mit der Klasse "ProseMirror"
+                const container = document.getElementById('editorcontent');
+                if (container) {
+                const editorContent = container.querySelector('.ProseMirror');
+                if (editorContent) {
+                    // Füge den Paste-Event-Listener im Capturing-Modus hinzu
+                    editorContent.addEventListener('paste', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    console.log('Paste-Event wurde verhindert.');
+                    }, true);
+                } else {
+                    console.warn('Kein Element mit der Klasse .ProseMirror gefunden.');
+                }
+                }
+            })
+        })
+
         // update LThighlights positions on scroll
         document.getElementById('editormaincontainer').addEventListener('scroll', this.LTupdateHighlights, { passive: true });
 
@@ -1474,8 +1498,8 @@ export default {
         *   REMOVE EVENT LISTENERS
         */
         this.editorcontentcontainer.removeEventListener('keydown', this.insertSpaceInsteadOfTab)
-        this.editorcontentcontainer.removeEventListener('contextmenu', this.getWord );
-
+        this.editorcontentcontainer.removeEventListener('contextmenu', this.getWord );  
+        this.editorElement.removeEventListener('paste', this.handlePaste)
 
         //document.removeEventListener('input', this.checkAllWordsOnSpacebar)
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
