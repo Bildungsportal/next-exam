@@ -71,6 +71,7 @@ import screenshot from 'screenshot-desktop-wayland';
         this.screenshotScheduler = new SchedulerService(this.sendScreenshot.bind(this), this.multicastClient.clientinfo.screenshotinterval)
         this.screenshotScheduler.start()
         
+  
         // linux gnome does not allow to take screenshots without sound and visual flash.. completely insane
         if (process.platform !== 'linux' || (  !this.isWayland() && this.imagemagickAvailable() || (this.isKDE() && this.isWayland() && this.flameshotAvailable() )  )){ 
             this.screenshotAbility = true; 
@@ -78,11 +79,13 @@ import screenshot from 'screenshot-desktop-wayland';
         } 
         else if (this.isGNOME()){
             this.screenshotAbility = false;  //for now - GNOME does not allow to take screenshots without sound and visual flash.. completely insane
-            log.info("communicationhandler @ init: screenshotAbility set to false") 
+            log.info("communicationhandler @ init: Gnome Wayland detected - screenshotAbility set to false") 
         }
         else {
-            log.info("communicationhandler @ init: screenshotAbility set to false")
+            log.info("communicationhandler @ init: screenshotAbility set to false - needs imagemagick or flameshot")
         }
+
+
     }
  
 

@@ -1299,10 +1299,12 @@ export default {
                 }); 
             }
         },
+
         handlePaste(event){
             event.preventDefault()
-            console.log("pasted")
+            event.stopPropagation();
         }
+
     },
     
 
@@ -1452,26 +1454,7 @@ export default {
         this.editorcontentcontainer.addEventListener('mouseup',  this.getSelectedTextInfo );   // show amount of words and characters
         this.editorcontentcontainer.addEventListener('keydown', this.insertSpaceInsteadOfTab)   //this changes the tab behaviour and allows tabstops   
        
-       
-        this.$nextTick(() => {  
-            this.sleep(1000).then(() => {
-                // Suche im Container nach dem Element mit der Klasse "ProseMirror"
-                const container = document.getElementById('editorcontent');
-                if (container) {
-                const editorContent = container.querySelector('.ProseMirror');
-                if (editorContent) {
-                    // Füge den Paste-Event-Listener im Capturing-Modus hinzu
-                    editorContent.addEventListener('paste', (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    console.log('Paste-Event wurde verhindert.');
-                    }, true);
-                } else {
-                    console.warn('Kein Element mit der Klasse .ProseMirror gefunden.');
-                }
-                }
-            })
-        })
+    
 
         // update LThighlights positions on scroll
         document.getElementById('editormaincontainer').addEventListener('scroll', this.LTupdateHighlights, { passive: true });
@@ -1483,11 +1466,17 @@ export default {
         
 
 
-
-
         // start language tool locally (if allowed)
         this.startLanguageTool()
 
+
+        // prevent paste in editor - need to wait for editor to be initialized
+        this.sleep(1000).then(() => {
+            this.editorContent = this.editorcontentcontainer.querySelector('.ProseMirror');
+            if (this.editorContent) {
+                this.editorContent.addEventListener('paste', this.handlePaste, true);
+            } 
+        })
     
 
     },
@@ -1499,7 +1488,11 @@ export default {
         */
         this.editorcontentcontainer.removeEventListener('keydown', this.insertSpaceInsteadOfTab)
         this.editorcontentcontainer.removeEventListener('contextmenu', this.getWord );  
-        this.editorElement.removeEventListener('paste', this.handlePaste)
+
+        if (this.editorContent) {
+            this.editorContent.removeEventListener('paste', this.handlePaste, true);
+        }   
+
 
         //document.removeEventListener('input', this.checkAllWordsOnSpacebar)
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
