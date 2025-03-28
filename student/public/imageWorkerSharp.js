@@ -1,6 +1,14 @@
-import sharp from 'sharp';
+/**
+ * dieser Worker wird nur auf Windows und MacOS verwendet
+ * er nutzt die sharp Bibliothek um die Bilder zu verarbeiten
+ */
 
-sharp.cache(false);
+process.env.VIPS_CONCURRENCY = '1';
+import sharp from 'sharp';
+sharp.cache({ memory: 50, files: 0, items: 0 });
+
+
+
 
 // Globale Error Handler
 process.on('uncaughtException', (error) => {
