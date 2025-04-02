@@ -187,7 +187,17 @@ class WindowHandler {
         this.mainwindow.on('close', async  (e) => {   //ask before closing
             if (!this.config.development) {
                 if (this.mainwindow.closetriggered) { app.quit(); return;}
-                if (this.mainwindow?.webContents.getURL().includes("dashboard")){log.info("do not close running exam this way"); e.preventDefault(); return}
+                if (this.mainwindow?.webContents.getURL().includes("dashboard")){
+                    log.info("windowhandler @ close: do not close running exam this way"); e.preventDefault(); 
+                    dialog.showMessageBoxSync(this.mainwindow, {
+                        type: 'info', 
+                        buttons: ['OK'], // Nur ein Button
+                        defaultId: 0,
+                        title: 'Prüfung läuft',
+                        message: 'Beenden Sie zuerst die laufende Prüfung!'
+                    });
+                    return
+                }
                 let choice = dialog.showMessageBoxSync(this.mainwindow, {
                     type: 'question',
                     buttons: ['Ja', 'Nein'],
