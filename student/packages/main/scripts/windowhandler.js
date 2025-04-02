@@ -777,38 +777,38 @@ class WindowHandler {
                 //childProcess.exec('tccutil reset AppleEvents com.vscodium') // apple events können resetted werde da macos immerwieder danach fragt
                 //childProcess.exec('tccutil reset Accessibility com.vscodium')  //accessibility wird nur einmal gefragt, danach muss der user es manuell aktivieren
                             
-                let settingsScriptfile = join(__dirname, '../../public/opensettings.applescript')
-                if (app.isPackaged) {
-                    settingsScriptfile = join(process.resourcesPath, 'app.asar.unpacked', 'public/opensettings.applescript')
-                }
+                // let settingsScriptfile = join(__dirname, '../../public/opensettings.applescript')
+                // if (app.isPackaged) {
+                //     settingsScriptfile = join(process.resourcesPath, 'app.asar.unpacked', 'public/opensettings.applescript')
+                // }
          
-                let accessScriptfile = join(__dirname, '../../public/access.applescript')
-                if (app.isPackaged) {
-                    accessScriptfile = join(process.resourcesPath, 'app.asar.unpacked', 'public/access.applescript')
-                }
+                // let accessScriptfile = join(__dirname, '../../public/access.applescript')
+                // if (app.isPackaged) {
+                //     accessScriptfile = join(process.resourcesPath, 'app.asar.unpacked', 'public/access.applescript')
+                // }
 
-                let spacesScriptfile = join(__dirname, '../../public/spaces.applescript')
-                if (app.isPackaged) {
-                    spacesScriptfile = join(process.resourcesPath, 'app.asar.unpacked', 'public/spaces.applescript')
-                }
+                // let spacesScriptfile = join(__dirname, '../../public/spaces.applescript')
+                // if (app.isPackaged) {
+                //     spacesScriptfile = join(process.resourcesPath, 'app.asar.unpacked', 'public/spaces.applescript')
+                // }
 
-                childProcess.execFile('osascript', [accessScriptfile], (error, stdout, stderr) => {
-                    if (stderr) { 
-                        log.info(stderr) 
-                        if (stderr.includes("Berechtigung") || stderr.includes("authorized")|| stderr.includes("berechtigt")){
-                            log.error("no accessibility permissions granted")
+                // childProcess.execFile('osascript', [accessScriptfile], (error, stdout, stderr) => {
+                //     if (stderr) { 
+                //         log.info(stderr) 
+                //         if (stderr.includes("Berechtigung") || stderr.includes("authorized")|| stderr.includes("berechtigt")){
+                //             log.error("no accessibility permissions granted")
                          
-                            let message = "Sie müssen die Berechtigungen für den Hilfszugriff (Bedienungshilfen) erteilen!"
+                //             let message = "Sie müssen die Berechtigungen für den Hilfszugriff (Bedienungshilfen) erteilen!"
                             
-                                childProcess.execFile('osascript', [settingsScriptfile], (error, stdout, stderr) => {
-                                    if (stderr) { 
-                                        log.info(stderr) 
-                                    }
-                                })
+                //                 childProcess.execFile('osascript', [settingsScriptfile], (error, stdout, stderr) => {
+                //                     if (stderr) { 
+                //                         log.info(stderr) 
+                //                     }
+                //                 })
 
-                           //this.showExitWarning(message)  //show warning and quit app
-                        }
-                    }
+                //            //this.showExitWarning(message)  //show warning and quit app
+                //         }
+                //     }
                     // else {  // accessibility rights should be set
                     //     childProcess.execFile('osascript', [spacesScriptfile], (error, stdout, stderr) => {
                     //         if (stderr) { 
@@ -824,7 +824,7 @@ class WindowHandler {
                     //         }
                     //     })
                     // }
-                })
+                // })
 
             
                 

@@ -457,13 +457,18 @@ export default {
 
         async fetchInfo() {
             let getinfo = await ipcRenderer.invoke('getinfoasync')  // gets serverlist and clientinfo from multicastclient
-            this.clientinfo = getinfo.clientinfo;
-            this.token = this.clientinfo.token;
-            if (this.token && this.token != "0000" || !this.token) { this.localLockdown = false}  //other token than 0000 or no token.. no (local) exam mode
-
+            
+            
+            if (getinfo.clientinfo.exammode){ return; }  // do not stress ui updates if exammode is active
+            if (JSON.stringify(this.clientinfo) !== JSON.stringify(getinfo.clientinfo)){  this.clientinfo = getinfo.clientinfo;   }  // only update clientinfo if it has changed  // we try to trigger as few ui updates as possible
+            if (this.token !== this.clientinfo.token){ this.token = this.clientinfo.token;  }   // only update token if it has changed
+            if (this.token && this.token != "0000" || !this.token) { if (this.localLockdown) { this.localLockdown = false}     }  //other token than 0000 or no token.. no (local) exam mode
             if (this.servertimeout > 2){ this.advanced = true }
 
-            // advanced search for exams in local network
+            /**
+             * Fetch serverlist from server via direct ip polling
+             * advanced search for exams in local network
+             */
             if ( this.advanced && !this.token) {
                 if (this.serverip !== ""){
                     if (validator.isIP(this.serverip) || validator.isFQDN(this.serverip)){
@@ -488,52 +493,77 @@ export default {
 
 
 
-
-
-            //vereine serverlist und serverlistAdvanced (advanced sucht direkt über eine angegebne ip adresse)
-            if (getinfo.serverlist.length  !== 0 ) {
-                this.serverlist = getinfo.serverlist; 
+            /**
+             * Fetch serverlist from server via multicast
+             * if no serverlist is found via multicast we use the serverlist coming from direct ip polling
+             * otherwise we add all found servers to the serverlist and combine multicasted servers with direct ip polled servers
+             */
+             if (getinfo.serverlist.length  !== 0 ) {
+                let newServerlist = getinfo.serverlist; 
                 this.servertimeout = 0 // reset servertimeout (if more than 2 requests return without servers we display serveraddress field - probably multicast blocked)
                 if (this.serverlistAdvanced.length !== 0){  // add servers coming from direct ip polling
-                    this.serverlist = [...this.serverlist, ...this.serverlistAdvanced];
-                    this.serverlist = this.serverlist.reduce((unique, server) => {
-                        if (!unique.some(u => u.serverip === server.serverip && u.servername === server.servername)) {  // Prüfen, ob der Server bereits im Array basierend auf serverip und servername existiert
-                            unique.push(server); // Fügt den Server hinzu, wenn er nicht existiert
-                        }
-                        return unique;
-                    }, []);
+                    newServerlist = [...newServerlist, ...this.serverlistAdvanced];
+           
                 } 
+                // add bip servers to newServerlist
+                if (this.onlineExams.length > 0){
+                    this.onlineExams.forEach(exam => {
+                            // Create new server entry in serverlist format
+                            const newServer = {
+                                id: exam.id,
+                                servername: exam.examName,
+                                reachable: true,
+                                serverport: this.serverApiPort,
+                                timestamp: Date.now(),
+                                bip: true,
+                                examStatus: exam.examStatus
+                            };
+                            newServerlist.push(newServer);  
+                    })
+                }
+
+                // remove duplicate servers from newServerlist
+                newServerlist = newServerlist.reduce((unique, server) => {
+                    if (!unique.some(u => u.id === server.id)) {  // Prüfen, ob der Server bereits im Array basierend auf serverip und servername existiert
+                        unique.push(server); // Fügt den Server hinzu, wenn er nicht existiert
+                    }
+                    return unique;
+                }, []);
+
+
+                // update serverlist if there are new servers
+                if (JSON.stringify(this.extractServerNames(this.serverlist)) !== JSON.stringify(this.extractServerNames(newServerlist))){   // only compare servernames not the whole server objects (because of ever changing timestamp)
+                    console.log("student.vue @ fetchInfo: updating serverlist with new servers")
+                    this.serverlist = newServerlist // update serverlist - but only if there are new servers - we need to compare the actual values here not just the length
+                }
+
+               // update exam status for existing bip servers that are already in the serverlist
+               if (this.onlineExams.length > 0){
+                    this.onlineExams.forEach(exam => {
+                        // nur examen die auch für den schüler erstellt wurden werden über die api aktualisiert und deren exam status wird gesetzt - andere examen die zwar auch bip-exams sind haben daher keinen exam status                   
+                        const existingServer = this.serverlist.find(server => server.id === exam.id );// Check if server already exists in currentserverlist
+                        if (existingServer) { 
+                            if (existingServer.examStatus !== exam.examStatus) {
+                                console.log("student.vue @ fetchInfo: updating exam status for existing server")
+                                existingServer.examStatus = exam.examStatus;  
+                                }  
+                        } 
+                    })
+                }
+
+
+
             }
-            else {  // (no servers incoming via multicast) es gibt keine serverliste - nutze die advanced liste wenn in dieser server vorhanden sind
-                if (this.serverlistAdvanced.length !== 0){ this.serverlist = this.serverlistAdvanced }  // one server coming via direct ip polling
+            else {  // sometimes explicit is easier to read (no servers incoming via multicast)
+                if (this.serverlistAdvanced.length !== 0){  // one server coming via direct ip polling
+                    if (JSON.stringify(this.extractServerNames(this.serverlist)) !== JSON.stringify(this.extractServerNames(this.serverlistAdvanced))){   // only compare servernames not the whole server objects (because of ever changing timestamp)
+                        this.serverlist = this.serverlistAdvanced 
+                    }
+                } 
                 else { this.serverlist = []; this.servertimeout++ }  // no servers found
             }
 
-
-
-            // add bip servers to serverlist
-            if (this.onlineExams.length > 0){
-                this.onlineExams.forEach(exam => {
-                    // nur examen die auch für den schüler erstellt wurden werden über die api aktualisiert und deren exam status wird gesetzt - andere examen die zwar auch bip-exams sind haben daher keinen exam status
-                    const existingServer = this.serverlist.find(server => server.servername === exam.examName );// Check if server already exists in serverlist
-                    if (existingServer) { 
-                        existingServer.examStatus = exam.examStatus
-                    } 
-                    else {
-                        // Create new server entry in serverlist format
-                        const newServer = {
-                            id: exam.id,
-                            servername: exam.examName,
-                            reachable: true,
-                            serverport: this.serverApiPort,
-                            timestamp: Date.now(),
-                            bip: true,
-                            examStatus: exam.examStatus
-                        };
-                        this.serverlist.push(newServer);
-                    }
-                })
-            }
+           
 
 
 
@@ -546,12 +576,9 @@ export default {
             if (this.clientinfo.token) return;   // stop spamming the api if already connected
         
 
-
-
             // CHECK if Servers are still alive otherwise mark with attention sign
             for (let server of this.serverlist){  
                 if (!server.serverip) continue;
-
                 const signal = AbortSignal.timeout(2000); // 2000 Millisekunden = 2 Sekunden
                 fetch(`https://${server.serverip}:${this.serverApiPort}/server/control/pong`, { method: 'GET', signal })
                 .then(response => {
@@ -565,7 +592,14 @@ export default {
                 });
             }
         },  
-        
+
+
+
+
+        extractServerNames(list) {
+            return list.map(item => item.servername).sort();
+        },
+
         toggleAdvanced(){
             if (!this.advanced){
                 this.servertimeout = 0

@@ -25,23 +25,19 @@ import { screen, ipcMain, app } from 'electron'
 import WindowHandler from './windowhandler.js'
 import { execSync } from 'child_process';
 const shell = (cmd) => execSync(cmd, { encoding: 'utf8' });
-
 import log from 'electron-log';
 import {SchedulerService} from './schedulerservice.ts'
 import Tesseract from 'tesseract.js';
-
-const __dirname = import.meta.dirname;
 import crypto from 'crypto';
 import path from 'path';
-
 import https from 'https';
-const agent = new https.Agent({ rejectUnauthorized: false });
-
 import screenshot from 'screenshot-desktop-wayland';
-import { fork } from 'child_process';
 
+import { Worker } from 'worker_threads';
+import { pathToFileURL } from 'url';
 
-    
+const agent = new https.Agent({ rejectUnauthorized: false });
+const __dirname = import.meta.dirname; 
 
  /**
   * Handles information fetching from the server and acts on status updates
@@ -60,7 +56,7 @@ import { fork } from 'child_process';
         this.timer = 0
         this.worker = null
         this.useWorker = true
-    
+        this.workerFails = 0
     }
  
     init (mc, config) {
@@ -79,21 +75,21 @@ import { fork } from 'child_process';
             else { this.useWorker = false }
 
             // test if screenshot is possible
-            if (this.isGNOME() && this.isWayland()){
+            if ((this.isGNOME() || this.isUNITY()) && this.isWayland()){
                 this.screenshotAbility = false;  //for now - GNOME does not allow to take screenshots without sound and visual flash.. - use pagecapture as default on gnome
-                log.info("communicationhandler @ init: Gnome-Wayland detected - screenshotAbility set to false") 
+                log.info("communicationhandler @ init: Gnome/Unity and Wayland detected - ScreenshotAbility set to false") 
             }
             else if (this.isKDE() && this.isWayland() && this.flameshotAvailable()){   // TODO: extend screenshot-desktop-wayland to support "spectacle" because its pre-installed on KDE
                 this.screenshotAbility = true;
-                log.info("communicationhandler @ init: KDE-Wayland with flameshot detected - screenshotAbility set to true") 
+                log.info("communicationhandler @ init: KDE-Wayland with flameshot detected - ScreenshotAbility set to true") 
             }
             else if (!this.isWayland() && this.imagemagickAvailable()){
                 this.screenshotAbility = true;
-                log.info("communicationhandler @ init: X11 with imagemagick detected - screenshotAbility set to true") 
+                log.info("communicationhandler @ init: X11 with imagemagick detected - ScreenshotAbility set to true") 
             }
             else {
                 this.screenshotAbility = false;
-                log.info("communicationhandler @ init: screenshotAbility set to false - needs imagemagick or flameshot")
+                log.info("communicationhandler @ init: ScreenshotAbility set to false - Using pagecapture as fallback")
             }
 
         }
@@ -102,11 +98,7 @@ import { fork } from 'child_process';
             this.screenshotAbility = true
         }
 
-        if (!this.worker && this.useWorker){
-            log.info("communicationhandler @ init: Starting ImageWorker")
-            this.setupImageWorker()
-        }
-
+        if (!this.worker && this.useWorker){  this.setupImageWorker()  }
     }
  
 
@@ -118,15 +110,31 @@ import { fork } from 'child_process';
      * the worker is used to process the screenshot in a separate process
      */
     async setupImageWorker() {
-        const workerFileName = process.platform === 'linux' ? 'imageWorkerLinux.js' : 'imageWorkerSharp.js';
+        const workerFileName = process.platform === 'linux' ? 'imageWorkerLinux.js' : 'imageWorkerSharp.mjs';
         const workerPath = app.isPackaged
             ? join(process.resourcesPath, 'app.asar.unpacked', 'public', workerFileName)
             : join(__dirname, '../../public', workerFileName);
-
-        this.worker = fork(workerPath, [], { stdio: ['ignore', 'ignore', 'pipe', 'ipc'], env: { ...process.env } });
-        this.worker.on('error', error => { log.error('Worker error:', error);  });
-        this.worker.stderr.on('data', data => log.error('Worker stderr:', data.toString()));
-        this.worker.on('exit', code => { log.error(`Worker exited with code ${code}`);  if (code !== 0) this.setupImageWorker(); });
+    
+        // Konvertiere den absoluten Pfad in ein URL-Objekt (ohne .href)
+        const workerURL = pathToFileURL(workerPath);
+        
+        this.worker = new Worker(workerURL, { type: 'module', env: { ...process.env } });
+        log.info("communicationhandler @ setupImageWorker: ImageWorker initialized - using " + workerFileName)
+        
+        this.worker.on('error', error => {
+            log.error('communicationhandler @ setupImageWorker: Worker error:', error);
+        });
+        
+        this.worker.on('exit', code => {
+            if (code !== 0) {
+                this.workerFails += 1
+                if (this.workerFails > 4){
+                    this.useWorker = false
+                    log.error('communicationhandler @ setupImageWorker: Worker failed 5 times - switching to no processing')
+                }
+                else { this.setupImageWorker(); }
+            }
+        });
     }
 
 
@@ -142,8 +150,12 @@ import { fork } from 'child_process';
                 this.useWorker = false
                 throw new Error('Worker not initialized');
             }
-            this.worker.send({ imgBuffer: Array.from(imgBuffer) });
-            const result = await new Promise(resolve => this.worker.once('message', resolve));
+            this.worker.postMessage({ imgBuffer: Array.from(imgBuffer) });
+            const result = await new Promise(resolve => {
+                this.worker.once('message', (message) => {
+                    resolve(message);
+                });
+            });
             
             if (!result.success) throw new Error(result.error);
             return result; 
@@ -180,22 +192,35 @@ import { fork } from 'child_process';
     }
     isGNOME() {
         try { 
-            let desktop = shell('echo $XDG_CURRENT_DESKTOP').trim();
-            return desktop === 'GNOME';
+            let desktop = shell('echo $XDG_CURRENT_DESKTOP').trim().toLowerCase();
+            return desktop.includes('gnome'); // Case-insensitive Suche
         }
-        catch(error) { log.warn("communicationhandler @ isGNOME: no data ");  return false; }
+        catch(error) {
+            log.warn("communicationhandler @ isGNOME: no data ", error);
+            return false;
+        }
+    }
+    isUNITY() {
+        try { 
+            let desktop = shell('echo $XDG_CURRENT_DESKTOP').trim().toLowerCase();
+            return desktop.includes('unity'); // Case-insensitive Suche
+        }
+        catch(error) {
+            log.warn("communicationhandler @ isUNITY: no data ", error);
+            return false;
+        }
     }
     imagemagickAvailable(){
         try{ shell(`which import`); return true}
         catch(error){
-            log.error("communicationhandler @ imagemagickAvailable: ImageMagick is required to take screenshots on linux")
+            log.error("communicationhandler @ imagemagickAvailable: ImageMagick is required to take screenshots and preprocess images on linux")
             return false
         }
     }
     flameshotAvailable(){
         try{ shell(`which flameshot`); return true}
         catch(error){
-            log.error("communicationhandler @ flameshotAvailable: flameshot is required to take screenshots on wayland")
+            log.error("communicationhandler @ flameshotAvailable: Flameshot is required to take screenshots on kde/wayland")
             return false
         }
     }
@@ -378,7 +403,7 @@ import { fork } from 'child_process';
         })
         .then(data => {
             if (data && data.status === "error") {
-                log.error("communicationhandler @ doScreenshotUpdate: status error", data.message);
+                log.error("communicationhandler @ doScreenshotUpdate: Status Error:", data.message);
             }
         })
         .catch(error => {

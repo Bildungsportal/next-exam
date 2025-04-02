@@ -456,38 +456,57 @@ class IpcHandler {
         /**
          * re-check hostip and enable multicast client
          */ 
-        ipcMain.handle('checkhostip', (event) => { 
-            let address = false
-            try { address = this.multicastClient.client.address() }   // this just checks if the multicastclient is running
-            catch (e) { log.error("ipcHandler @ checkhostip: multicastclient not running") }
-            if (address) { return this.config.hostip }  // everything is ok - return the hostip and stop here
-
-
-            try { //bind to the correct interface
-                const { gateway, interface: iface} = gateway4sync(); 
-                this.config.hostip = ip.address(iface)    // this returns the ip of the interface that has a default gateway..  should work in MOST cases.  probably provide "ip-options" in UI ?
-                this.config.gateway = true
+        ipcMain.handle('checkhostip', async (event) => { 
+            let address = false;
+            try {    address = this.multicastClient.client.address();            }
+            catch (e) {   log.error("ipcHandler @ checkhostip: multicastclient not running", e);            }
+            
+            // Falls bereits eine Adresse vorhanden ist, liefern wir sie zurück.
+            if (address) {  return this.config.hostip;  }
+            
+            // Versuche, an die korrekte Schnittstelle zu binden
+            try {
+                // Falls gateway4sync() blockierend ist, kannst du diesen Aufruf in ein Promise packen:
+                const { gateway, interface: iface } = await new Promise((resolve, reject) => {
+                    try {
+                        const res = gateway4sync();
+                        resolve(res);
+                    } catch(err) {  reject(err);   }
+                });
+                this.config.hostip = ip.address(iface); // Liefert die IP der Schnittstelle, welche das Default Gateway hat
+                this.config.gateway = true;
             }
             catch (e) {
-                this.config.hostip = false
-                this.config.gateway = false
+                this.config.hostip = false;
+                this.config.gateway = false;
             }
-
+            
+            // Falls keine IP (mit Gateway) verfügbar ist, hole eine alternative Adresse
             if (!this.config.hostip) {
-                try {this.config.hostip = ip.address() }  //this delivers an ip even if gateway is not set
+                try {
+                    this.config.hostip = ip.address(); // Liefert auch eine IP, wenn kein Gateway verfügbar ist
+                }
                 catch (e) {
-                    log.error("ipcHandler @ checkhostip: Unable to determine ip address")
-                    this.config.hostip = false
-                    this.config.gateway = false
+                    log.error("ipcHandler @ checkhostip: Unable to determine ip address", e);
+                    this.config.hostip = false;
+                    this.config.gateway = false;
                 }
             }
-
-            // check if multicast client is running - otherwise start it
-            if (this.config.hostip == "127.0.0.1") { this.config.hostip = false }
-            if (this.config.hostip && !address ) { this.multicastClient.init(this.config.gateway) }   // multicastclient.init() will only start the client if it is not already running
-            console.log("ipchandler @ checkhostip: hostip", this.config.hostip)
-            return this.config.hostip 
-        })
+            
+            // Verfälschte Adressen (z. B. localhost) ignorieren
+            if (this.config.hostip === "127.0.0.1") {    this.config.hostip = false;   }
+            
+            // Wenn die Multicast-Client nicht läuft, initialisieren
+            if (this.config.hostip && !address) {
+                try {
+                    // Falls init() asynchron umgesetzt werden kann, warten wir hier darauf.
+                    await this.multicastClient.init(this.config.gateway);
+                }
+                catch(err) {  log.error("ipcHandler @ checkhostip: Error initializing multicast client", err); }
+            }
+        
+            return this.config.hostip;
+        });
 
 
 
@@ -638,7 +657,7 @@ class IpcHandler {
         /**
          * Returns all found Servers and the information about this client
          */ 
-        ipcMain.handle('getinfoasync', (event) => {   
+        ipcMain.handle('getinfoasync', async (event) => {   
             let serverstatus = false   
             // serverstatus objekt wird nur bei beginn des exams an das exam window durchgereicht für basis einstellungen
             // alle weiteren updates über das serverstatus object werden im communication handler gelesen und ggf. auf das clientinfo object gelegt
@@ -648,13 +667,16 @@ class IpcHandler {
 
             //count number of files in exam directory
             if (!this.multicastClient.clientinfo.exammode){
-                const workdir = path.join(config.examdirectory,"/")
-                if (!fs.existsSync(workdir)){ fs.mkdirSync(workdir, { recursive: true });  } //do not crash if the directory is deleted after the app is started ^^
-                let filelist =  fs.readdirSync(workdir, { withFileTypes: true })
-                    .filter(dirent => dirent.isFile())
-                    .map(dirent => dirent.name)
-                this.multicastClient.clientinfo.numberOfFiles = filelist.length
-                //console.log(filelist)
+                const workdir = path.join(config.examdirectory, "/")
+                try {
+                    await fs.promises.mkdir(workdir, { recursive: true })  // erstellt falls nötig
+                    const filelist = (await fs.promises.readdir(workdir, { withFileTypes: true }))
+                        .filter(dirent => dirent.isFile())
+                        .map(dirent => dirent.name)
+                    this.multicastClient.clientinfo.numberOfFiles = filelist.length
+                } catch (err) {
+                    this.multicastClient.clientinfo.numberOfFiles = 0
+                }
             }
             
 

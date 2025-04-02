@@ -598,6 +598,7 @@ export default {
 
         
                 let isBip = this.selectedExam && this.selectedExam.bip && this.servername === this.selectedExam.examName ? true : false
+                let bipId = this.selectedExam && this.selectedExam.id ? this.selectedExam.id : null
 
                 if (isBip && !this.bipToken){
                     this.status(this.$t("startserver.bipnotloggedin")); 
@@ -607,7 +608,8 @@ export default {
 
                 let payload = {
                     workdir: this.workdir,
-                    bip: isBip
+                    bip: isBip,
+                    bipId: bipId
                 }
 
 

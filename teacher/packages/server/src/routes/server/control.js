@@ -143,7 +143,7 @@ router.get('/msauth', async (req, res) => {
     if (!requestSourceAllowed(req, res)) return   // for the webversion we need to check user permissions here (future stuff)
 
     const bip = req.body.bip  // this info is also sent via multicastserver message
-    
+    const bipId = req.body.bipId
 
     const servername = req.params.servername 
     const mcServer = config.examServerList[servername]
@@ -167,7 +167,7 @@ router.get('/msauth', async (req, res) => {
     
     log.info('control @ start: Initializing new Exam Server:', servername)
     let mcs = new multiCastserver();
-    mcs.init(servername, pin, req.params.passwd, bip)
+    mcs.init(servername, pin, req.params.passwd, bip, bipId)
 
     config.examServerList[servername]=mcs
     // log.info(config.workdirectory)
@@ -771,7 +771,7 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
     if ( !mcServer) {  return res.send({sender: "server", message:"notavailable", status: "error"} )  }  // server is gone - disconnect student
 
     let student = mcServer.studentList.find(element => element.token === studenttoken)
-    if ( !student ) {return res.send({ sender: "server", message:"removed", status: "error" }) } // student kicked - disconnect student
+    if ( !student ) {return res.send({ sender: "server", message:"removed from server", status: "error" }) } // student kicked - disconnect student
 
     //update important student attributes
     student.focus = clientinfo.focus
@@ -813,7 +813,7 @@ router.post('/updatescreenshot', async function (req, res, next) {
     const mcServer = config.examServerList[servername]
     if ( !mcServer) {  return res.send({sender: "server", message:"notavailable", status: "error"} )  }
     let student = mcServer.studentList.find(element => element.token === studenttoken)
-    if ( !student ) {return res.send({ sender: "server", message:"removed", status: "error" }) } //check if the student is registered on this server
+    if ( !student ) {return res.send({ sender: "server", message:"removed from server", status: "error" }) } //check if the student is registered on this server
   
     if (req.body.screenshot ) {
         const screenshotBase64 = req.body.screenshot;   // Der Base64-String muss nicht konvertiert werden, er kann direkt verwendet werden

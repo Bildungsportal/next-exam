@@ -39,7 +39,7 @@ const config = {
     accessToken: false,
     buildforWEB: false,
 
-    version: '${process.env.VERSION}-${process.env.BUILD_NUMBER}',
+    version: '${process.env.VERSION}.${process.env.BUILD_NUMBER}',
     info: '${process.env.INFO}'
 }
 export default config;

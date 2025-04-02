@@ -44,14 +44,14 @@ class MulticastServer {
      * @param servername the given name of the server (for example "math")
      * @param pin the pin needed to register as student
      */
-    init (servername, pin, password, bip=false) {
+    init (servername, pin, password, bip=false, bipId=null) {
         this.server = createSocket('udp4')
         this.serverinfo = {
             servername: servername,   //should be unique if several servers are allowed
             pin: pin,
             password: password,
             timestamp: 0,
-            id:crypto.randomUUID(),
+            id: bipId ? bipId : crypto.randomUUID(),
             ip: config.hostip,
             servertoken: `server-${crypto.randomUUID()}`,
             bip: bip
