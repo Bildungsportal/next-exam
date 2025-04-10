@@ -26,14 +26,16 @@
   <img src="./img/hb_start_exam.png" style="max-width:400px"><br>
 
 
+<div class="page"/>
 
 #### **1.2. Einführung in das Dashboard von Next-Exam**
     Das Teacher-Dashboard bietet eine Übersicht über alle verbundenen Schüler:innen, stellt alle prüfungsrelevanten Informationen übersichtlich dar und ermöglicht es auf einfache Weise die Prüfung einzustellen und einzelne Schüler:innen zu verwalten.
 
 Benutzeroberfläche (wichtige Schaltflächen und Funktionen)<br>
-Erklärung der Sektionen: Prüfungsmodi, Materialien, Schülerverwaltung, Prüfungsordner
+Erklärung der Sektionen: Prüfungsmodi, Materialien, Schülerverwaltung, Prüfungsordner<br><br>
 <img src="./img/hb_teacher_dashboard.png" style="max-width:800px">
 
+<div class="page"/>
 
 #### **1.2 Prüfungsmodi**
     Next-Exam ermöglicht viele verschiedene Prüfungsvarianten.
@@ -76,7 +78,7 @@ Erklärung der Sektionen: Prüfungsmodi, Materialien, Schülerverwaltung, Prüfu
     Ein .docx bzw. .xlsx Template muss über Next-Exam bereitgestellt werden. Dieser Modus erstellt aus dem Template automatisch Kopien für jede:n Schüler:in auf dem Onedrive der Lehrperson und generiert "Share-Links" für die Bearbeitung der Dokumente für die verbundenen Schüler:innen.
 
 
-
+<div class="page"/>
 #### **1.3. Materialien definieren**
 
 - **Materialien bereitstellen:**
