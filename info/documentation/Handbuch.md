@@ -215,11 +215,21 @@ Erklärung der Sektionen: Prüfungsmodi, Materialien, Schülerverwaltung, Prüfu
   &nbsp;<img src="./img/hb_config_main.png" style="max-width:340px;">
 
 
-- **OCR-Funktion aktivieren:** Erkennung von Versuchen, die Prüfungsumgebung zu umgehen
 - **Automatisches Abgabeintervall einstellen** Zusätzlich zur manuellen Abgabe die automatische Archivierung der Arbeiten einstellen
-- **Screenshot-Intervall einstellen**
-- **Automatische Bereinigung alter Arbeitsdateien in Schülerordnern** Beim Beenden der Prüfung die Arbeitsordner auf Schüler:innenseite löschen
+- **Screenshot-Intervall einstellen** Zeitintervall für Screenshot Aktualisierung
+- **OCR Sicherheit:** Erweiterte Erkennung von Versuchen, die Prüfungsumgebung zu umgehen
+- **Prüfungsabschnitte aktivieren:** Unterteilung in mehrere unabhängige Prüfungsabschnitte aktivieren
+- **Gruppen:** Die Gruppen A/B sichtbar machen und Zuweisung unterschiedlicher Materialien ermöglichen
+- **Audio stummschalten:** Systemsounds (Warnungen, etc.) deaktivieren
 - **Autonomer Druck** Schüler:innen Zugriff auf installierten Drucker am Prüfungsserver gewähren
+
+
+
+- **Automatische Bereinigung alter Arbeitsdateien in Schülerordnern** Beim Beenden der Prüfung die Arbeitsordner auf Schüler:innenseite löschen
+
+
+
+
 #### **2.5. Integration ins Bildungsportal**
     Über das kommende Bildungsportal Plugin können Prüfungen im Vorfeld konfiguriert, Materialien festgelegt und Listen aller Teilnehmer:innen definiert werden.
 
