@@ -78,7 +78,9 @@ Erklärung der Sektionen: Prüfungsmodi, Materialien, Schülerverwaltung, Prüfu
     Ein .docx bzw. .xlsx Template muss über Next-Exam bereitgestellt werden. Dieser Modus erstellt aus dem Template automatisch Kopien für jede:n Schüler:in auf dem Onedrive der Lehrperson und generiert "Share-Links" für die Bearbeitung der Dokumente für die verbundenen Schüler:innen.
 
 
+
 <div class="page"/>
+
 #### **1.3. Materialien definieren**
 
 - **Materialien bereitstellen:**
@@ -180,6 +182,8 @@ Erklärung der Sektionen: Prüfungsmodi, Materialien, Schülerverwaltung, Prüfu
   - Standarddrucker wählen
 
 ---
+<div class="page"/>
+
 
 ### **Teil 2: Erweiterte Funktionen**
 
@@ -232,6 +236,7 @@ Erklärung der Sektionen: Prüfungsmodi, Materialien, Schülerverwaltung, Prüfu
 
 ---
 
+<div class="page"/>
 
 ## **Teil 3: Fehlerbehandlung**
 
