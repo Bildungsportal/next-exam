@@ -11,16 +11,8 @@
 
 ### **Teil 1: Grundlegende Funktionen**
 
-#### **1.1. Einführung in das Dashboard von Next-Exam**
-    Das Teacher-Dashboard bietet eine Übersicht über alle verbundenen Schüler:innen, stellt alle prüfungsrelevanten Informationen übersichtlich dar und ermöglicht es auf einfache Weise die Prüfung einzustellen und einzelne Schüler:innen zu verwalten.
 
-Benutzeroberfläche (wichtige Schaltflächen und Funktionen)<br>
-Erklärung der Sektionen: Prüfungsmodi, Materialien, Schülerverwaltung, Prüfungsordner
-<img src="./img/hb_teacher_dashboard.png" style="max-width:800px">
-
-#### **1.2. Prüfungen anlegen**
-
-
+#### **1.1. Prüfungen anlegen**
 
 - Prüfung benennen
 - Arbeitsverzeichnis festlegen
@@ -32,6 +24,15 @@ Erklärung der Sektionen: Prüfungsmodi, Materialien, Schülerverwaltung, Prüfu
 
 
   <img src="./img/hb_start_exam.png" style="max-width:400px"><br>
+
+
+
+#### **1.2. Einführung in das Dashboard von Next-Exam**
+    Das Teacher-Dashboard bietet eine Übersicht über alle verbundenen Schüler:innen, stellt alle prüfungsrelevanten Informationen übersichtlich dar und ermöglicht es auf einfache Weise die Prüfung einzustellen und einzelne Schüler:innen zu verwalten.
+
+Benutzeroberfläche (wichtige Schaltflächen und Funktionen)<br>
+Erklärung der Sektionen: Prüfungsmodi, Materialien, Schülerverwaltung, Prüfungsordner
+<img src="./img/hb_teacher_dashboard.png" style="max-width:800px">
 
 
 #### **1.2 Prüfungsmodi**
@@ -52,12 +53,14 @@ Erklärung der Sektionen: Prüfungsmodi, Materialien, Schülerverwaltung, Prüfu
       Zusätzliche Hilfsmittel in Form einer Webseite können definiert werden. (z.B. Wörtherbuch)<br>
       Eine passive Rechtschreibhilfe durch das "LanguageTool" kann aktiviert und konfiguriert werden.
     
-    - Mathematik
+    - Mathematik<br>
+    In diesem Prüfungsmodus arbeiten die Schüler:innen mit GeoGebra Classic/Suite
 
       <img src="./img/hb_config_math.png" style="max-width:400px"><br>
       Zusätzliche Hilfsmittel in Form einer Webseite (z.B. Formelsammlung) können definiert werden.
   
-    - Eduvidual
+    - Eduvidual/Moodle <br>
+    Next-Exam übernimmt die Absicherung des Moodle Tests. Es müssen in der Lernplattform keinerlei Einstellungen für das Zusammenspiel mit der Prüfungsumgebung vorgenommen werden.
 
       <img src="./img/hb_config_eduvidual.png" style="max-width:400px"><br>
 
@@ -69,7 +72,8 @@ Erklärung der Sektionen: Prüfungsmodi, Materialien, Schülerverwaltung, Prüfu
 
       <img src="./img/hb_config_forms.png" style="max-width:400px"><br>
 
-    - Microsoft365
+    - Microsoft365<br>
+    Ein .docx bzw. .xlsx Template muss über Next-Exam bereitgestellt werden. Dieser Modus erstellt aus dem Template automatisch Kopien für jede:n Schüler:in auf dem Onedrive der Lehrperson und generiert "Share-Links" für die Bearbeitung der Dokumente für die verbundenen Schüler:innen.
 
 
 
@@ -88,9 +92,9 @@ Erklärung der Sektionen: Prüfungsmodi, Materialien, Schülerverwaltung, Prüfu
 - **Dateien bereitstellen:**
   - Allen Schüler:innen oder einzelnen Schüler:innen Dateien auch während der Prüfung bereitstellen (Nachteilsausgleich, Zwischenstände, etc.)
   
-    <img src="./img/hb_teacher_student_view.png" style="max-width:400px">
-    <img src="./img/hb_teacher_sidebar.png" style="max-width:400px">
-    <img src="./img/hb_teacher_filebuttons.png" style="max-width:400px">
+    <img src="./img/hb_teacher_student_view.png" style="max-width:100px"> &nbsp;
+    <img src="./img/hb_teacher_sidebar.png" style="max-height:264px"> &nbsp;
+    
     <br>
     Das Next-Exam System sieht für diesen Zweck mehrere Möglichkeiten vor die dem Anlass entsprechend sinnvoll gewählt werden können.
     Die Sidebar im Dashboard ermöglicht es Dateien im Original an alle Schüler:innen zu senden.<br><br>
@@ -99,17 +103,38 @@ Erklärung der Sektionen: Prüfungsmodi, Materialien, Schülerverwaltung, Prüfu
   
   - Sicherungen zurücksenden
 
+    <img src="./img/hb_teacher_filebuttons.png" style="max-width:200px;"><br>
     <img src="./img/hb_send_bak.png" style="max-width:340px;">
 
     Der Dateimanager erlaubt es die spezifische Datei direkt auszuwählen und an einzelne Schüler:innen zu senden. Diese Funktion bietet sich an 
     um .bak Dateien (Sicherungsdateien des Editors) zur Weiterbearbeitung nach Unterbrechung den Schüler:innen zukommen zu lassen.
     
     <img src="./img/student_replace_content_bak.png" style="max-width:340px;">
+    <br><br>
 
 
 
   - Studentview  
     Das "Studentview" erlaubt die individuelle Handhabung einzelner Schüler:innen und ebenso das Verteilen von Dateien.
+    
+    <img src="./img/hb_teacher_student_view.png" style="max-width:100px"> &nbsp;
+
+#### **1.5 Sprache der Benutzeroberfläche wählen**
+  <img src="./img/hb_lang_switch.png" style="max-width:100px"> &nbsp;
+
+
+#### **1.6 Informationskanal vom Bildungsportal abrufen**
+  <img src="./img/hb_bip_news.png" style="max-width:100px"> &nbsp;
+
+
+#### **1.7 Lokal gesicherte Prüfungen löschen bzw. fortsetzen**
+    Next-Exam sichert jede Prüfung im Arbeitsordner "EXAM-TEACHER" und speichert in diesem alle Arbeiten der Schüler:innen sowie die Exam-Konfiguration.
+  <img src="./img/hb_local_exams.png" style="max-width:400px"> &nbsp;
+  <br>
+  Durch Klick auf das "x" Symbol kann die lokale Sicherung der Prüfung entfernt werden. Ein Klick auf den Namen aktiviert die gesicherte Prüfung und ermöglicht es diese fortzusetzen.
+
+  <br>
+  <br><br>
 
 
 #### **1.4. Prüfung starten aus Sicht der Schüler:innen**
