@@ -184,7 +184,7 @@ export default {
             info: config.info,
             config: this.$route.params.config,  //achtung: config enthält rekursive elemente und wird daher in ipchandler.copyConfig() kopiert
             title: document.title,
-            servername : this.$route.params.config.development ? "5A-Mathematik":"",
+            servername : this.$route.params.config.development ? "5a-mathematik":"",
             password: this.$route.params.config.development ? "password": Math.floor(1000 + Math.random() * 9000),   //we could use this password to allow students to manually leave exam mode 
             prod : false,
             serverApiPort: this.$route.params.serverApiPort,
@@ -613,7 +613,7 @@ export default {
                 }
 
 
-                fetch(`https://${this.hostname}:${this.serverApiPort}/server/control/start/${this.servername}/${this.password}`, { 
+                fetch(`https://${this.hostname}:${this.serverApiPort}/server/control/start/${this.servername.toLowerCase()}/${this.password}`, { 
                     method: 'POST',
                     headers: {'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
