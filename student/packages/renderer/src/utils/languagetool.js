@@ -194,7 +194,8 @@ async function LTfindWordPositions() {
             while ((match = regex.exec(text)) !== null) {
                 const range = document.createRange();
                 range.setStart(textNode, match.index);
-                range.setEnd(textNode, match.index + word.wrongWord.length);
+                //range.setEnd(textNode, match.index + word.wrongWord.length);   // beim verändern des textes (korrektur) wird ja die länge des wortes verändert und setEnd trifft dann nicht mehr auf das richtige wort mit der richtigen länge
+                range.setEnd(textNode, match.index + match[0].length);
                 const rects = range.getClientRects(); // Positionsinformationen des Textes
 
                 Array.from(rects).forEach(rect => {

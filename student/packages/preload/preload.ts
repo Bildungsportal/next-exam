@@ -44,3 +44,16 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel), // Entfernt alle Listener für einen Channel
   });
 
+
+
+let spacePressed = false;
+
+window.addEventListener("keydown", (e) => {
+  if (e.code === "Space") { spacePressed = true;}
+  if (e.key.toLowerCase() === "l" && spacePressed) { e.preventDefault();}
+});
+
+window.addEventListener("keyup", (e) => {
+  if (e.code === "Space") { spacePressed = false; }
+});
+  
