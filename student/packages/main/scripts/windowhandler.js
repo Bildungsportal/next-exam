@@ -614,7 +614,10 @@ class WindowHandler {
                         const hideusByID = ['ShowHideEquationToolsPane','LinkGroup','GraphicsEditor','InsertTableOfContentsInInsertTab','InsertOnlinevideo','Picture','Ribbon-PictureMenuMLRDropdown','InsertAddInFlyout','Designer','Editor','FarPane','Help','InsertAppsForOffice','FileMenuLauncherContainer','Help-wrapper','Review-wrapper','Header','FarPeripheralControlsContainer','BusinessBar']
                         for (entry of hideusByID) {
                             let element = document.getElementById(entry)
-                            if (element) { element.style.display = "none" }
+                            if (element) { 
+                                element.style.display = "none" 
+                                element.style.setProperty("display", "none", "important");
+                            }
                         }
 
                         let buttonAppsOverflow = document.getElementsByName('Add-Ins')[0];  // this button is redrawn on resize (doesn't happen in exam mode but still there must be a cleaner way - inserting css before it appears is not working)
@@ -649,10 +652,10 @@ class WindowHandler {
             this.lockScheduler = new SchedulerService(this.lockCallback, 400)
             this.lockScheduler.start()
 
-            // Wait until the webContents is fully loaded
+            // Wait until the webContents is fully loaded  // this is not working reliably because the page is loaded in many steps and the ui elements are not available yet
             browserView.webContents.on('did-finish-load', async () => {
                 browserView.webContents.mainFrame.frames.filter((frame) => {
-                    if (frame && frame.name === 'WebApplicationFrame') {
+                    if (frame) {
                         frame.executeJavaScript(executeCode); 
                     }
                 })
@@ -689,7 +692,7 @@ class WindowHandler {
         if (browserView.webContents && browserView.webContents.mainFrame){
             browserView.webContents.mainFrame.frames.filter((frame) => {
                 //log.info("found frame", frame.name)
-                if (frame && frame.name === 'WebApplicationFrame' || frame.name === 'WacFrame_Word_0') {
+                if (frame && (frame.name === 'WebApplicationFrame' || frame.name === 'WacFrame_Word_0' || frame.name === 'WacFrame_Excel_0')) {
                     //log.info("found frame")
                     frame.executeJavaScript(executeCode); 
                 }
