@@ -299,7 +299,6 @@ app.whenReady()
     globalShortcut.register('CommandOrControl+D', () => {});  //show desktop
     globalShortcut.register('CommandOrControl+L', () => {});  //lockscreen
     globalShortcut.register('CommandOrControl+P', () => {});  //change screen layout
-    globalShortcut.register('Space+L', () => {});             // chatgpt default shortcut
 
     if (!config.development){
     }

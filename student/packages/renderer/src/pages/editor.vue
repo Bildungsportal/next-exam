@@ -1303,7 +1303,11 @@ export default {
         handlePaste(event){
             event.preventDefault()
             event.stopPropagation();
-        }
+        },
+        handleDrop(event) {
+            event.preventDefault()
+            event.stopPropagation();
+        },
 
     },
     
@@ -1475,11 +1479,13 @@ export default {
             this.editorContent = this.editorcontentcontainer.querySelector('.ProseMirror');
             if (this.editorContent) {
                 this.editorContent.addEventListener('paste', this.handlePaste, true);
+                this.editorContent.addEventListener('drop', this.handleDrop, true);
             } 
         })
     
 
     },
+
     beforeMount(){ },
 
     beforeUnmount() {
@@ -1491,24 +1497,17 @@ export default {
 
         if (this.editorContent) {
             this.editorContent.removeEventListener('paste', this.handlePaste, true);
+            this.editorContent.removeEventListener('drop', this.handleDrop, true);
         }   
-
-
         //document.removeEventListener('input', this.checkAllWordsOnSpacebar)
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
         // document.body.removeEventListener('keydown', this.handleCtrlAlt);
         window.removeEventListener('visibilitychange', this.handleVisibilityChange);
 
-
         document.removeEventListener('click', this.hideSpellcheckMenu);
         this.editorcontentcontainer.removeEventListener('mouseup',  this.getSelectedTextInfo );
-        
-
         document.getElementById('editormaincontainer').removeEventListener('scroll', this.LTupdateHighlights, { passive: true });
 
-        this.editor.destroy()
-
-        
         this.saveinterval.removeEventListener('action', this.saveContentCallback);
         this.saveinterval.stop() 
 
@@ -1526,6 +1525,8 @@ export default {
         ipcRenderer.removeAllListeners('denied')
         ipcRenderer.removeAllListeners('backup')
         ipcRenderer.removeAllListeners('loadfilelist')
+
+        this.editor.destroy()
     },
 }
 </script>
