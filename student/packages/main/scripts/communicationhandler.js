@@ -110,7 +110,7 @@ const __dirname = import.meta.dirname;
      * the worker is used to process the screenshot in a separate process
      */
     async setupImageWorker() {
-        const workerFileName = process.platform === 'linux' ? 'imageWorkerLinux.js' : 'imageWorkerSharp.mjs';
+        const workerFileName = process.platform === 'linux' ? 'imageWorkerLinux.js' : 'imageWorkerSharp.js';
         const workerPath = app.isPackaged
             ? join(process.resourcesPath, 'app.asar.unpacked', 'public', workerFileName)
             : join(__dirname, '../../public', workerFileName);

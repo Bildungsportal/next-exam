@@ -909,7 +909,7 @@ class WindowHandler {
             if (activeWin && activeWin.owner && activeWin.owner.name) {
                 let name = activeWin.owner.name
                 let wpath = activeWin.owner.path
-         
+
                 if (name.includes("exam") || name.includes("next")  || name.includes("Electron")|| name.includes("electron") ||  wpath.includes("EaseOfAccessDialog")  ){  
                     // fokus is on allowed window instance
                     this.focusTargetAllowed = true
@@ -960,7 +960,7 @@ class WindowHandler {
 
         log.info("windowhandler @ blurevent: student tried to leave exam window")
 
-        if (!this.isWayland){
+        if (process.platform !== 'linux'){
             await this.windowTracker()  //checks if new focus window is allowed
             log.info("windowtracker check done...")
         }

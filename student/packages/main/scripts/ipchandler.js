@@ -996,7 +996,7 @@ class IpcHandler {
                 }
             })
             .catch(error => {
-                log.error('ipchandler @ get-wlan-info: Fehler beim Auslesen der WLAN-Verbindung:', error);
+                // log.error('ipchandler @ get-wlan-info: Fehler beim Auslesen der WLAN-Verbindung:', error);
                 return false
             }); 
             return wifiInfo   
