@@ -29,6 +29,13 @@
        
         <div v-if="freeDiscspace < 0.1" class="warning">  {{ $t("startserver.freespacewarning") }}   </div>
         
+        <div class="form-check form-switch m-1 mb-2 mt-2">
+            <input id="advanced" type="checkbox"  v-model="advanced" class="form-check-input" @change="toggleAdvanced">
+            <label for="advanced" class="form-check-label">{{$t('startserver.extendedsettings')}}</label>
+        </div>
+
+
+
 
         <!-- previous exams start -->
         <div id="previous" class="m-1 mt-4 " v-if="previousExams && previousExams.length > 0">
@@ -98,15 +105,21 @@
     <div id="content" class="fadeinslow p-3">
         <div class="col8">
             <div class="input-group  mb-1 mt-0">
-                <span class="input-group-text col-2 grayback" id="inputGroup-sizing-lg" style="width:160px;max-width:160px;min-width:160px;">{{$t("startserver.examname")}}</span>
-                <input v-model="servername" maxlength="20" type="text" class="form-control" id="servername" placeholder="Mathe-5a" style="width:200px;max-width:200px;min-width:135px;">
-    
-            </div>   
-            <div class="input-group mb-3" style="max-width: fit-content">  
-                <span id="workdir" class="input-group-text col-2 grayback"  style="width:160px;">{{$t("startserver.workfolder")}}</span>
-                <span class="form-control " style="font-family: monospace; font-size: 0.9em; padding-top: 8px; white-space: pre;">{{ workdir }}</span>
-                <button @click="setWorkdir()" id="workdir" class="btn btn-info p-0" style="width:40px;" :title="$t('startserver.select')">
-                   
+                <span class="input-group-text col-2 grayback" id="inputGroup-sizing-lg" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.examname")}}</span>
+                <input v-model="servername" maxlength="20" type="text" class="form-control" id="servername" placeholder="5a-mathematik" style="width:200px;max-width:200px;min-width:135px;">
+            </div> 
+
+            <!-- could be used to set an ESCAPE PASSWORD for students to make it harder to leave on connection loss -->
+            <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content"> 
+                <span id="pwd" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.pwd")}}</span>
+                <input v-model="password" type="text" class="form-control " style="width:200px;" >
+            </div>
+
+
+            <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content">  
+                <span id="backupdir" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.backupfolder")}}</span>
+                <span class="form-control " style="width:360px;  font-size: 0.9em; padding-top: 8px; white-space: pre;">{{ backupdir }}</span>
+                <button @click="setBackupdir()" id="backupdirbutton" class="btn btn-info p-0" style="width:40px;" :title="$t('startserver.backupfolderinfo')" >
                     <img src="/src/assets/img/svg/settings.svg" style="vertical-align: sub;" class="" width="18" height="18" >
                 </button>
             </div>
@@ -114,16 +127,10 @@
 
 
             
-            <!-- 
-                we do not need to display the password in electron standalone version because no other exams are ever listed and you can not leave the exam without ending the server 
-                could be used to set an ESCAPE PASSWORD for students to make it harder to leave on connection loss
-            -->
-            <div class="input-group  mb-3" :class="(electron) ? 'hidden':''"> 
-                <input v-model="password" type="text" class="form-control " id="password" placeholder="password" style="width:135px;max-width:135px;min-width:135px;">
-                <span class="input-group-text col-4" style="width:135px;" id="inputGroup-sizing-lg">{{$t("startserver.pwd")}}</span>
-            </div>
+            
+         
 
-            <button @click="startServer()" :class="(!hostip) ? 'disabled':''" id="examstart" class="ps-1 pe-1 mb-5 btn btn-success" value="start exam" style="width:160px;max-width:160px;min-width:160px;">{{$t("startserver.start")}}</button>
+            <button @click="startServer()" :class="(!hostip) ? 'disabled':''" id="examstart" class="ps-1 pe-1  mb-5 btn btn-success" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
             
         </div>
 
@@ -185,7 +192,7 @@ export default {
             config: this.$route.params.config,  //achtung: config enthält rekursive elemente und wird daher in ipchandler.copyConfig() kopiert
             title: document.title,
             servername : this.$route.params.config.development ? "5a-mathematik":"",
-            password: this.$route.params.config.development ? "password": Math.floor(1000 + Math.random() * 9000),   //we could use this password to allow students to manually leave exam mode 
+            password: this.$route.params.config.development ? "password": Math.floor(100000 + Math.random() * 9000),   //we could use this password to allow students to manually leave exam mode 
             prod : false,
             serverApiPort: this.$route.params.serverApiPort,
             electron: this.$route.params.electron,
@@ -193,6 +200,7 @@ export default {
             hostip: this.$route.params.config.hostip,
             advanced: false,
             workdir: this.$route.params.config.workdirectory,
+            backupdir: '',
             freeDiscspace: 100,
             previousExams: [],
             onlineExams: [],
@@ -573,18 +581,20 @@ export default {
         },
 
 
-        async setWorkdir(){   // achtung: custom workdir spreizt sich mit der idee die teacher instanz als reine webversion laufen zulassen - wontfix?
-            let response = await ipcRenderer.invoke('setworkdir')
-            this.workdir = response.workdir
-            if (response.message == "error"){
+        async setBackupdir(){   // achtung: custom workdir spreizt sich mit der idee die teacher instanz als reine webversion laufen zulassen - wontfix?
+            let response = await ipcRenderer.invoke('setbackupdir')
+            this.backupdir = response.backupdir
+            if (response.message == "error"){   
                 this.status(this.$t("startserver.directoryerror"))
             }
-            this.checkDiscspace()
-            this.getPreviousExams()
         },
 
         toggleAdvanced(){
-            if (this.advanced) {this.advanced = false} else {this.advanced = true}
+            if (!this.advanced){
+                if (!this.password){
+                    this.password = Math.floor(100000 + Math.random() * 9000)
+                }
+            }
         },
 
         async startServer(){
@@ -595,8 +605,6 @@ export default {
                 this.status(this.$t("startserver.emptypw")); 
             }
             else {
-
-        
                 let isBip = this.selectedExam && this.selectedExam.bip && this.servername === this.selectedExam.examName ? true : false
                 let bipId = this.selectedExam && this.selectedExam.id ? this.selectedExam.id : null
 
@@ -605,13 +613,10 @@ export default {
                     return;
                 }
                 
-
                 let payload = {
-                    workdir: this.workdir,
                     bip: isBip,
                     bipId: bipId
                 }
-
 
                 fetch(`https://${this.hostname}:${this.serverApiPort}/server/control/start/${this.servername.toLowerCase()}/${this.password}`, { 
                     method: 'POST',

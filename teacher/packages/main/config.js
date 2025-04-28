@@ -11,6 +11,7 @@ const config = {
 
     workdirectory : "",   // (desktop path + examdir)
     tempdirectory : "",   // (desktop path + 'tmp')
+    backupdirectory: "",  // (optional)
     serverdirectory: 'EXAM-TEACHER',
 
     serverApiPort: 22422,  // this is needed to be reachable on the teachers pc for basic functionality

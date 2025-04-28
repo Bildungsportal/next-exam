@@ -26,6 +26,7 @@ const config = {
 
     workdirectory : "",   // (desktop path + examdir)
     tempdirectory : "",   // (desktop path + 'tmp')
+    backupdirectory: false,  // (optional)
     serverdirectory: '${process.env.CLIENT_DIRECTORY}',
 
     serverApiPort: ${process.env.SERVER_API_PORT},  // this is needed to be reachable on the teachers pc for basic functionality

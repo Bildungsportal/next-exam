@@ -239,7 +239,7 @@ router.get('/msauth', async (req, res) => {
 router.get('/serverlist', function (req, res, next) {
     let serverlist = []
     Object.values(config.examServerList).forEach( server => {
-        serverlist.push({servername: server.serverinfo.servername, serverip: server.serverinfo.ip, reachable: true}) 
+        serverlist.push({servername: server.serverinfo.servername, serverip: server.serverinfo.ip, reachable: true, password: server.serverinfo.password}) 
     });
     res.send({serverlist:serverlist, status: "success"})
 })
@@ -897,21 +897,25 @@ router.post('/printrequest/:servername/:studenttoken', function (req, res, next)
         student.printrequest = pdfDocument  // we put the base64 string of the document on printrequest which is checkt by the frontend on every fetch cycle
     }
 
+
+    let filename = `${submissionnumber}.abgabe.pdf`
+    const pdfBuffer = Buffer.from(pdfDocument, 'base64');
+
     //save base64 string to file 
     const filepath = path.join(config.workdirectory, mcServer.serverinfo.servername, student.clientname, "ABGABE");
     if (!fs.existsSync(filepath)) {fs.mkdirSync(filepath, { recursive: true }); }
-
-    let filename = `${submissionnumber}.abgabe.pdf`;
-
     let absoluteFilename = path.join(filepath, filename);
-    const pdfBuffer = Buffer.from(pdfDocument, 'base64');
-
-    fs.writeFile(absoluteFilename, pdfBuffer, err => {
-        if (err) { log.error(`control @ printrequest: ${err}` ); }
-    });
+    fs.writeFile(absoluteFilename, pdfBuffer, err => { if (err) { log.error(`control @ printrequest: ${err}` ); } });
 
 
-
+    // save a copy of the pdf to the backup directory if it is enabled
+    if (config.backupdirectory){
+        log.info("control @ printrequest: backup enabled - saving to backup directory");
+        const backuppath = path.join(config.backupdirectory, mcServer.serverinfo.servername, student.clientname, "ABGABE");
+        if (!fs.existsSync(backuppath)) {fs.mkdirSync(backuppath, { recursive: true }); }
+        let absoluteBackupFilename = path.join(backuppath, filename);
+        fs.writeFile(absoluteBackupFilename, pdfBuffer, err => {  if (err) { log.error(`control @ printrequest: ${err}` ); } });
+    }
 
     res.send({sender: "server", message:"success", status:"success" })
 })

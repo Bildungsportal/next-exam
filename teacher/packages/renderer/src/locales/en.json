@@ -10,6 +10,7 @@
         "name": "Name",
         "login": "login",
         "nopw": "Please provide a password"
+       
     },
     "startserver" : {
         "connected": "connected",
@@ -29,7 +30,10 @@
         "folderdelete": "Delete local exam folder?",
         "onlineexams": "BiP Exams",
         "bipnotloggedin": "Please log in to BiP before starting the exam",
-        "noNews":"No News available"
+        "noNews":"No News available",
+        "backupfolder": "Backup-Directory",
+        "backupfolderinfo": "Please provide a path for the backup directory",
+        "extendedsettings": "Extended Settings"
     },
     "dashboard":{
         "server": "Server",

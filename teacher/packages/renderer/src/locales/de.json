@@ -29,7 +29,10 @@
         "folderdelete": "Wollen Sie die den lokalen Prüfungsordner löschen?",
         "onlineexams": "BiP Prüfungen",
         "bipnotloggedin": "Bitte melden Sie sich am BiP an, bevor Sie die Prüfung starten",
-        "noNews":"Keine Neuigkeiten verfügbar"
+        "noNews":"Keine Neuigkeiten verfügbar",
+        "backupfolder": "Backupverzeichnis",
+        "backupfolderinfo": "Bitte geben Sie einen Pfad für das Backup-Verzeichnis ein",
+        "extendedsettings": "Erweitert"
     },
     "dashboard":{
         "server": "Server-Adresse",
