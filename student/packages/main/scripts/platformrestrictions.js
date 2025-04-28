@@ -82,7 +82,7 @@ let configStore = {
 }
 
 // list of apps we do not want to run in background
-const appsToClose = ['ChatGPT','NortonSecurity','NAV','Teams','ms-teams', 'zoom.us', 'Google Chrome', 'Microsoft Edge', 'Microsoft Teams','firefox', 'discord', 'zoom', 'chrome', 'msedge', 'teams', 'teamviewer', 'google-chrome','skypeforlinux','skype','brave','opera','anydesk','safari'];
+const appsToClose = ['NortonSecurity','NAV','Teams','ms-teams', 'zoom.us', 'Google Chrome', 'Microsoft Edge', 'Microsoft Teams','firefox', 'discord', 'zoom', 'chrome', 'msedge', 'teams', 'teamviewer', 'google-chrome','skypeforlinux','skype','brave','opera','anydesk','safari'];
 
 let isKDE = false
 let isGNOME = false
