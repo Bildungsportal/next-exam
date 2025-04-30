@@ -23,7 +23,9 @@
 
 
     <!-- filelist start - show local files from workfolder (pdf and gbb only)-->
-    <div id="toolbar" class="d-inline p-1 pt-0">  
+    <div id="toolbar" class="d-inline p-1 pt-0"> 
+        <button class="btn btn-primary p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="reloadWebview"> <img src="/src/assets/img/svg/edit-redo.svg" class="" width="22" height="20" >{{domain}}</button>
+
         <div v-for="file in localfiles" class="d-inline">
             <div v-if="(file.type == 'pdf')" class="btn btn-secondary  p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="22" height="20" > {{file.name}} </div>
             <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
@@ -51,7 +53,7 @@
         </div>
         <!-- focuswarning end  -->
 
-        <webview id="webview" autosize="on" :src="url"></webview>
+        <webview id="webview"  ref="wv"  style="width:100%;height:100%"  :src="url" allowpopups></webview>
 
     </div>
 </template>
@@ -103,12 +105,14 @@ export default {
     mounted() {
 
         this.url = this.serverstatus.examSections[this.serverstatus.lockedSection].domainname
- 
+        this.domain = this.url.replace(/https?:\/\//, '').split('/')[0]; // Remove protocol and any path
+                 
         console.log(`website @ mounted: ${this.url}`)
 
         this.currentFile = this.clientname
         this.entrytime = new Date().getTime()  
-         
+
+  
         this.$nextTick(() => { // Code that will run only after the entire view has been rendered
             
             
@@ -150,7 +154,6 @@ export default {
             webview.addEventListener('dom-ready', () => {
                 if (config.showdevtools){ webview.openDevTools();   }
 
-                webview.openDevTools();
                 const css = `
   
                 `;
@@ -165,41 +168,44 @@ export default {
                 `);
             });
 
-            
+                    
             // Event abfangen, wenn eine Navigation beginnt
             webview.addEventListener('will-navigate', (event) => {
                 if (!event.url.includes(this.url)){  //we block everything except pages that contain the following keyword-combinations
-                    console.log(event.url)
+                    // console.log(event.url)
 
                     const domain = this.url.replace(/https?:\/\//, '').split('/')[0]; // Remove protocol and any path
                  
                     const isValidUrl = (testUrl) => {
-                        console.log(testUrl)
+                        // console.log(testUrl)
                         const pattern = new RegExp(`^https?:\/\/([a-zA-Z0-9-]+\\.)*${domain.replace(/\./g, '\\.')}(\/|$)`); // Allow paths after the domain
                         //const pattern = new RegExp(`^https?:\/\/([a-zA-Z0-9-]+\\.)*${domain.replace(/\./g, '\\.')}$`); // Escape dots in domain
                         return pattern.test(testUrl);
                     };
 
                     //check if this an exception (subdomain, login, init) - if URL doesn't include either of these combinations - block! EXPLICIT is easier to read ;-)
-                    if ( isValidUrl(event.url) )                                                    { console.log(" url allowed") }  // allow subdomain
+                    if ( isValidUrl(event.url) )                                                    { console.log("webview @ will-navigate: url allowed") }  // allow subdomain
                    
-                    else if ( event.url.includes("login") && event.url.includes("Microsoft") )                                 { console.log(" url allowed") }
-                    else if ( event.url.includes("login") && event.url.includes("Google") )                                    { console.log(" url allowed") }
-                    else if ( event.url.includes("login") && event.url.includes("microsoftonline") )                           { console.log(" url allowed") }
-                    else if ( event.url.includes("accounts") && event.url.includes("google.com") )                             { console.log(" url allowed") }
+                    else if ( event.url.includes("login") && event.url.includes("Microsoft") )                                 { console.log("webview @ will-navigate: url allowed") }
+                    else if ( event.url.includes("login") && event.url.includes("Google") )                                    { console.log("webview @ will-navigate: url allowed") }
+                    else if ( event.url.includes("login") && event.url.includes("microsoftonline") )                           { console.log("webview @ will-navigate: url allowed") }
+                    else if ( event.url.includes("accounts") && event.url.includes("google.com") )                             { console.log("webview @ will-navigate: url allowed") }
 
 
                     else {
-                        console.log("blocked leaving exam mode")
+                        console.log("webview @ will-navigate: blocked leaving exam mode")
                         webview.stop()
                     }
                 }
-                else { console.log("entered valid test environment")  }
+                else { console.log("webview @ will-navigate: entered valid test environment")  }
             });
         });
     },
     methods: { 
-     reconnect(){
+        reloadWebview(){
+            this.$refs.wv.setAttribute("src", this.url);
+        },
+        reconnect(){
             this.$swal.fire({
                 title: this.$t("editor.reconnect"),
                 text:  this.$t("editor.info"),
@@ -293,8 +299,8 @@ export default {
 
             const pdfEmbed = document.querySelector("#pdfembed");
             pdfEmbed.style.backgroundImage = '';
-            pdfEmbed.style.height = "96vh";
-            pdfEmbed.style.marginTop = "-48vh";
+            pdfEmbed.style.height = "90vh";
+            pdfEmbed.style.marginTop = "-44vh";
 
             document.querySelector("#pdfembed").setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0`);
             document.querySelector("#preview").style.display = 'block';
