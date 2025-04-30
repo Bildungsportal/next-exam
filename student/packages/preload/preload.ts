@@ -46,14 +46,14 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 
 
 
-let spacePressed = false;
+// let spacePressed = false;
 
-window.addEventListener("keydown", (e) => {
-  if (e.code === "Space") { spacePressed = true;}
-  if (e.key.toLowerCase() === "l" && spacePressed) { e.preventDefault();}
-});
+// window.addEventListener("keydown", (e) => {
+//   if (e.code === "Space") { spacePressed = true;}
+//   if (e.key.toLowerCase() === "l" && spacePressed) { e.preventDefault();}
+// });
 
-window.addEventListener("keyup", (e) => {
-  if (e.code === "Space") { spacePressed = false; }
-});
+// window.addEventListener("keyup", (e) => {
+//   if (e.code === "Space") { spacePressed = false; }
+// });
   

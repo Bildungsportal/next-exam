@@ -771,7 +771,7 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
     if ( !mcServer) {  return res.send({sender: "server", message:"notavailable", status: "error"} )  }  // server is gone - disconnect student
 
     let student = mcServer.studentList.find(element => element.token === studenttoken)
-    if ( !student ) {return res.send({ sender: "server", message:"removed from server", status: "error" }) } // student kicked - disconnect student
+    if ( !student ) {return res.send({ sender: "server", message:"removed", status: "error" }) } // student kicked - disconnect student
 
     //update important student attributes
     student.focus = clientinfo.focus
