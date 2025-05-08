@@ -110,9 +110,14 @@ function stopserver(){
 function kick(studenttoken, studentip){
     if ( this.studentlist.length <= 0 ) { this.status(this.$t("dashboard.noclients")); return; }
     
+    //get student name
+    console.log("studentlist:", this.studentlist)
+    const studentname = this.studentlist.find(student => student.token === studenttoken).clientname
+    console.log("studentname:", studentname)
+
     this.$swal.fire({
         title: this.$t("dashboard.sure"),
-        text:  this.$t("dashboard.reallykick"),
+        html:  `<span style='font-weight:bold;'>${studentname}</span> ${this.$t("dashboard.reallykick")}`,
         icon: "warning",
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
