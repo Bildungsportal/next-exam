@@ -53,6 +53,12 @@
         </div>
         <!-- focuswarning end  -->
 
+
+        <div v-if="isLoading" class="overlay">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+
         <webview id="webview"  ref="wv"  style="width:100%;height:100%"  :src="url" allowpopups></webview>
 
     </div>
@@ -97,6 +103,7 @@ export default {
             battery: null,
             url: null,
             currentpreview: null,
+            isLoading: true,
             wlanInfo: null,
             hostip: null
         }
@@ -186,12 +193,15 @@ export default {
                     //check if this an exception (subdomain, login, init) - if URL doesn't include either of these combinations - block! EXPLICIT is easier to read ;-)
                     if ( isValidUrl(event.url) )                                                    { console.log("webview @ will-navigate: url allowed") }  // allow subdomain
                    
-                    else if ( event.url.includes("login") && event.url.includes("Microsoft") )                                 { console.log("webview @ will-navigate: url allowed") }
-                    else if ( event.url.includes("login") && event.url.includes("Google") )                                    { console.log("webview @ will-navigate: url allowed") }
-                    else if ( event.url.includes("login") && event.url.includes("microsoftonline") )                           { console.log("webview @ will-navigate: url allowed") }
-                    else if ( event.url.includes("accounts") && event.url.includes("google.com") )                             { console.log("webview @ will-navigate: url allowed") }
-
-
+                    // allow microsoft login / google login / google accounts / 2fa activation / microsoft365 login / google lookup
+                    else if ( event.url.includes("login") && event.url.includes("Microsoft") )                                 { console.log("webview @ will-navigate: url allowed") }  // microsoft login
+                    else if ( event.url.includes("login") && event.url.includes("Google") )                                    { console.log("webview @ will-navigate: url allowed") }  // google login
+                    else if ( event.url.includes("accounts") && event.url.includes("google.com") )                             { console.log("webview @ will-navigate: url allowed") }  // google accounts
+                    else if ( event.url.includes("mysignins") && event.url.includes("microsoft") )                             { console.log("webview @ will-navigate: url allowed") }  // 2fa activation
+                    else if ( event.url.includes("account") && event.url.includes("windowsazure") )                            { console.log("webview @ will-navigate: url allowed") }  // microsoft braucht mehr contact information (telnr)
+                    else if ( event.url.includes("login") && event.url.includes("microsoftonline") )                           { console.log("webview @ will-navigate: url allowed") }  // microsoft365 login
+                    else if ( event.url.includes("lookup") && event.url.includes("google") )                                   { console.log("webview @ will-navigate: url allowed") }  // google lookup
+       
                     else {
                         console.log("webview @ will-navigate: blocked leaving exam mode")
                         webview.stop()
@@ -199,6 +209,39 @@ export default {
                 }
                 else { console.log("webview @ will-navigate: entered valid test environment")  }
             });
+
+
+            webview.addEventListener('did-finish-load', () => {
+                if (!this.url.includes("lms.at")){ return} // only for lms.at
+                const preloadScriptContent = `
+                    (function() {
+                        const css = \`
+                        * {transition: .1s !important;}
+                        #ibook-menu {display: none !important;}
+                        .attempt-list {display: none !important;}
+                        \`;
+
+                        const style = document.createElement('style');
+                        style.type = 'text/css';
+                        style.innerHTML = css;
+                        document.head.appendChild(style);
+                    })();
+                `;
+                webview.executeJavaScript(preloadScriptContent)
+                .then(() => {     this.isLoading = false;  })  // Verberge das Overlay und zeige den Webview-Inhalt
+                .catch((err) => { this.isLoading = false;  })
+            });
+
+
+
+
+            // loading events to hide css manipulation
+            webview.addEventListener('did-start-loading', () => { this.isLoading = true;   }); // Zeige das Overlay während des Ladens
+            webview.addEventListener('did-stop-loading', () => {   this.isLoading = false;  });           // Verberge das Overlay, wenn das Laden gestoppt ist
+            
+
+
+
         });
     },
     methods: { 
@@ -378,6 +421,42 @@ export default {
 </script>
 
 <style scoped>
+
+
+#toolbar {
+    z-index: 10001;
+    background-color: rgba(var(--bs-dark-rgb))
+}
+
+
+.overlay {
+  position: fixed;
+  top:45px;
+  left: 0;
+  width: 100%;
+  height: 100%;
+
+  background-color: #eef2f8;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.spinner {
+  border: 16px solid #fff;
+  border-top: 16px solid #3498db;
+  border-radius: 50%;
+  width: 120px;
+  height: 120px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
 
 
 
