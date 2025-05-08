@@ -581,7 +581,7 @@ export default {
             // ASK for confirmation!
             this.$swal.fire({
                 title: this.$t("startserver.previousexams"),
-                text: this.$t("startserver.folderdelete"),
+                html: `${this.$t("startserver.folderdelete")} <br> <br> <span style="font-weight:bold;">${name}</span>`,
                 icon: "warning",
                 showCancelButton: true,
                 cancelButtonText: this.$t("dashboard.cancel"),
@@ -632,6 +632,9 @@ export default {
                 // check if the servername equals a previous exam
                 if (this.previousExams.some(exam => exam.examName === this.servername)){
                     this.selectedExam = this.previousExams.find(exam => exam.examName === this.servername)
+                }
+                else {
+                    this.selectedExam = null
                 }
            
 

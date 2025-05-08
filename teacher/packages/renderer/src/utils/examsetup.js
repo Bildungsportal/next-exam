@@ -330,6 +330,7 @@ async function configureEditor(){
             }
 
             const defaultFontSize = this.serverstatus.examSections[this.serverstatus.activeSection].fontsize || '12pt';
+            console.log("defaultFontSize:", defaultFontSize)
             const selectElement2 = document.getElementById('fontsize');
             if (selectElement2) {
                 setTimeout(() => {
