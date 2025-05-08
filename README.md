@@ -14,7 +14,7 @@ A next-generation digital examination environment for the secure administration 
 https://next-exam.at
 
 
-![screenshot](/info/screenshot.png)
+![screenshot](/info/documentation/img/hb_teacher_dashboard.png)
 
 
 
