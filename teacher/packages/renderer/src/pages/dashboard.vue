@@ -551,6 +551,7 @@ export default {
             serverstatus:{   // this object contains all neccessary information for students about the current exam settings
                 bip: false,
                 id: "1234",
+                nextexamVersion: this.$route.params.version,
                 examName: this.$route.params.servername,
                 examDate: new Date().toISOString().slice(0, 19),
                 examDurationMinutes: 100, 

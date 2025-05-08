@@ -33,7 +33,8 @@
         "noNews":"No News available",
         "backupfolder": "Backup-Directory",
         "backupfolderinfo": "Please provide a path for the backup directory",
-        "extendedsettings": "Extended Settings"
+        "extendedsettings": "Extended Settings",
+        "incompatible": "Incompatible with current version"
     },
     "dashboard":{
         "server": "Server",

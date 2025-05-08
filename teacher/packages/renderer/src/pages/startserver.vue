@@ -43,8 +43,16 @@
             <div v-for="exam of previousExams">
                 <div class="input-group" style="display:inline;">
                     <div class="btn btn-sm btn-warning mt-1" @click="delPreviousExam(exam.examName)">x</div>
-                    <div v-if="servername === exam.examName" class="btn btn-sm btn-info mt-1" :id="exam.examName" @click="setPreviousExam(exam)">{{exam.examName}}</div>  
-                    <div v-else class="btn btn-sm btn-secondary mt-1" :id="exam.examName" @click="setPreviousExam(exam)">{{exam.examName}}</div> 
+                    <div  class="btn btn-sm mt-1" :id="exam.examName" 
+                        :class="[ servername === exam.examName ? 
+                            (exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? 'btn-info cursornotallowed' : 'btn-info ')  : 
+                            (exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? 'btn-secondary cursornotallowed' : 'btn-secondary ')
+                        ]"
+                        @click="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? '' : setPreviousExam(exam)"
+                        :title="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? $t('startserver.incompatible') : ''"
+                        >
+                        {{ exam.examName }}
+                    </div>
                     <div v-if="exam.bip" class="btn btn-sm btn-cyan mt-1" style="width:14px; height: 31px;">
                         <div style="writing-mode:vertical-rl; font-size:0.8em; margin-left:-10px; margin-top:2px;color: whitesmoke;">BiP</div>
                     </div>
@@ -218,7 +226,7 @@ export default {
     },
     components: {},
     directives: {
-        // Diese Direktive sucht alle <a>-Tags in dem Element und fügt target="_blank" hinzu.
+        // Diese Direktive sucht alle <a>-Tags in dem Element und fügt target="_blank" hinzu. (zb. für Digi4school Schulbücher die ausschliesslich in einem Popup angezeigt werden sollen)
         externalLinks: {
             mounted(el) {
                 // Wird beim ersten Rendern ausgeführt (in Vue 3 ist "mounted" anstelle von "inserted")
@@ -531,8 +539,16 @@ export default {
         },
 
         async getPreviousExams(){
-            this.previousExams = await ipcRenderer.invoke('scanWorkdir')
-            //console.log(this.previousExams)
+            // get previously created exams from workdir
+            let previousExams = await ipcRenderer.invoke('scanWorkdir')
+
+            // filter out exams that are not compatible with the current version
+           // previousExams = previousExams.filter(exam => exam.nextexamVersion === this.version)
+
+            this.previousExams = previousExams
+           
+
+
             this.config = await ipcRenderer.invoke('getconfigasync') 
             this.workdir = this.config.workdirectory   // just in case this is already altered in the backend make sure to display current settings
         },
@@ -613,6 +629,18 @@ export default {
                     return;
                 }
                 
+                // check if the servername equals a previous exam
+                if (this.previousExams.some(exam => exam.examName === this.servername)){
+                    this.selectedExam = this.previousExams.find(exam => exam.examName === this.servername)
+                }
+           
+
+                // check if the exam is compatible with the current version
+                if (this.selectedExam && this.selectedExam.nextexamVersion && this.selectedExam.nextexamVersion.slice(0, 3) !== this.version.slice(0, 3) || (this.selectedExam && !this.selectedExam.nextexamVersion)){
+                    this.status(this.$t("startserver.incompatible")); 
+                    return;
+                }
+
                 let payload = {
                     bip: isBip,
                     bipId: bipId
@@ -774,7 +802,14 @@ export default {
 <style scoped>
 
 .disabledbutton {
-    pointer-events: none; /* Deaktiviert Klicks */
+    pointer-events: none; 
+}
+
+
+
+.cursornotallowed {
+    cursor: not-allowed !important;
+   
 }
 
 #statusdiv {

@@ -32,7 +32,8 @@
         "noNews":"Keine Neuigkeiten verfügbar",
         "backupfolder": "Backupverzeichnis",
         "backupfolderinfo": "Bitte geben Sie einen Pfad für das Backup-Verzeichnis ein",
-        "extendedsettings": "Erweitert"
+        "extendedsettings": "Erweitert",
+        "incompatible": "Nicht kompatibel mit der aktuellen Version"
     },
     "dashboard":{
         "server": "Server-Adresse",
