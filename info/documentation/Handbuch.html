@@ -107,7 +107,7 @@
           </ul>
         </li>
         <li>
-          <a href="#teil-4-fehlerbehandlung">Teil 4: Fehlerbehandlung</a>
+          <a href="#teil-4-fehlerbehandlung">Teil 4: Fehlerbehandlung - FAQ</a>
           <ul>
             <li><a href="#fehlerbehandlung">4.1. Fehlerbehandlung</a></li>
           </ul>
@@ -548,15 +548,91 @@
     <div class="page-break"></div>
 
     <a id="teil-4-fehlerbehandlung"></a>
-    <h3><strong>Teil 4: Fehlerbehandlung</strong></h3>
+    <h3><strong>Teil 4: Fehlerbehandlung - FAQ</strong></h3>
 
     <a id="fehlerbehandlung"></a>
     <h4><strong>4.1. Fehlerbehandlung</strong></h4>
     <ul>
       <li>Fehlermeldungen beim Verbindungsaufbau und deren Ursachen</li>
-      <li>Schritt-für-Schritt-Anleitung zur Problembehandlung</li>
+      <div class="infobox">
+        Alle Teilnehmer:innen müssen sich im selben Netzwerk befinden und miteinander kompatible Versionen von Next-Exam-Student und Next-Exam-Teacher nutzen.
+        Sollte die Prüfung nicht automatisch im Netzwerk gefunden werden kann die IP-Adresse von den Schüler:innen manuell eingegeben werden um die Teacher Instanz (API) zu erreichen.
+      </div>
+      <br>
       <li>Fortsetzen der Prüfung bei Fehlern auf Schülerseite</li>
+      <div class="infobox">
+        Bei einem Fehler mit Next-Exam-Student sollte das Programm geschlossen und neu gestartet werden. <br>
+        Der Editor wird bereits vorhandene Backupdateien automatisch wiederherstellen.
+        Die Lehrperson hat zusätzlich die Möglichkeit bereits gesicherte Backups an den/die betroffene Schüler:in zu senden um die Prüfung nahtlos fortsetzen zu können.
+      </div>
+
+      <br>
       <li>Fortsetzen der Prüfung bei Fehlern auf Teacherseite</li>
+      <div class="infobox">
+        Sollte die Teacher Instanz beendet werden müssen während einer laufenden Prüfung so ist zu beachten, dass die Schüler:innen die Verbindung zum Prüfungsserver erst wieder herstellen dürfen, wenn der Teacher wieder online ist und alle Einstellungen wieder hergestellt wurden.
+        Insbesondere muss die ABSICHERUNG der Geräte wieder aktiviert werden da die Prüflinge sonst beim Verbindungsaufbau zu einer nicht gesicherten Umgebung verbinden und die Prüfung dadurch für sie sofort beendet wird.
+      </div>
+      
+      <br>
+      <li>Language Tool funktioniert nicht</li>
+      <div class="infobox">
+        Avast Antivirus, Norton Antivirus oder ähnliche Programme können die Language Tool Funktion von Next-Exam blockieren. <br>
+        In diesem Fall muss das Programm "Avast Security" gestartet und die Next-Exam-Student.exe Datei von der Liste der blockierten Programme entfernt werden bzw. auf die Ausnahmeliste gesetzt werden.
+      </div>
+
+      <br>
+      <li>Screenhots auf MacOS funktionieren nicht</li>
+      <div class="infobox">
+        MacOS benötigt die Berechtigung um Screenshots zu erstellen. <br>
+        Sollte diese Berechtigung nicht erteilt werden, wird Next-Exam als "Fallback" Variante auf Page-Capture zurückgreifen und nur das Programmfenster übertragen.
+      </div>
+
+      <br>
+      <li>Screenhots auf Linux funktionieren nicht</li>
+      <div class="infobox">
+        Linux benötigt ImageMagick um Screenshots zu erstellen. <br>
+        Sollte dieses Programm nicht installiert sein, wird Next-Exam als "Fallback" Variante auf Page-Capture zurückgreifen und nur das Programmfenster übertragen.
+        Auf Gnome/Wayland Systemen werden Screenshots derzeit nicht unterstützt.
+      </div>
+
+
+      <br>
+      <li>Die Prüfung wird nicht automatisch gefunden </li>
+      <div class="infobox">
+        Es handelt sich bei Next-Exam um eine Netzwerkapplikation.
+        Um volle Funktionsfähigkeit zu gewährleisten muss die Firewall die App durchlassen.
+        Sollte die Ausnahme für die Schüler:innen nicht gesetzt werden können, so muss für den Verbindungsaufbau
+        die IP Adresse der Lehrperson genutzt werden.
+      </div>
+
+      <br>
+      <li> Welche Ports werden von Next-Exam verwendet? </li>
+      <div class="infobox">
+        Die Teacher-API (Schnittstelle) nutzt den Port 22422 (tcp).
+        Um "autodiscovery" von Prüfungen zu ermöglichen sollte im lokalen Netzwerk zudem Multicast erlaubt sein.
+        Die Multicastports (udp) in Verwendung sind 6024 und 6025.
+      </div>
+
+      <br>
+      <li>Ubuntu 22.04 kann *.AppImage Pakete nicht starten  </li>
+      <div class="infobox">
+        libfuse2 muss auf Ubuntu nachinstalliert werden.<br>
+        <code>
+          sudo apt install libfuse2
+        </code>
+      </div>
+
+      <br>
+      <li> Neuere Linux Ubuntu basierte Varianten können Next-Exam nicht starten</li>
+      <div class="infobox">
+      <code>
+          echo 'kernel.apparmor_restrict_unprivileged_userns=0' | sudo tee /etc/sysctl.d/99-electron.conf <br>
+          sudo sysctl --system
+      </code><br><br>
+
+      deaktiviert die Einschränkung von User Namespaces durch AppArmor. Electron benötigt dies oft für AppImages, da es sonst keine ausreichenden Rechte bekommt, um richtig zu starten.
+      </div>
+
     </ul>
   </body>
 </html>
