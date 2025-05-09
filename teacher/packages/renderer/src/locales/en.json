@@ -127,6 +127,7 @@
         "abgabeautohint":"(Timeframe in minutes)",
         "eduvidualid": "Eduvidual / Moodle",
         "eduvidualidhint": "Please enter a valid test URL!",
+        "gformshint": "Please enter a valid Google Forms ID!",
         "eduvidualdomain": "Please provide your moodle domain if it's not eduvidual.at",
         "lock":"lock displays",
         "unlock":"unlock displays",

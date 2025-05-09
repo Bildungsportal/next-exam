@@ -126,6 +126,7 @@
         "abgabeautohint":"(Zeitangabe in Minuten)",
         "eduvidualid": "Eduvidual / Moodle",
         "eduvidualidhint": "Bitte geben Sie eine gültige Test-URL ein!",
+        "gformshint": "Bitte geben Sie eine gültige Google Forms ID ein!",
         "eduvidualdomain": "Sollte ihre Moodleinstanz unter einer anderen Domain erreichbar sein, geben Sie diese an",
         "lock":"Bildschirme sperren",
         "unlock":"Bildschirme freigeben",

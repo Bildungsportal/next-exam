@@ -6,6 +6,10 @@
       body {
         font-family: sans-serif;
       }
+      a {
+        text-decoration: none;
+        color: #009966;
+      }
       li {
         margin-bottom: 6px;
       }
@@ -14,11 +18,12 @@
       }
 
       .infobox{
-        background-color: #e6eafc;
+        background-color: #479f76;
         padding: 10px;
         border-radius: 5px;
-        font-style: italic;
+        
         max-width: 800px;
+        color: white;
       }
       
       li.check {
@@ -51,6 +56,16 @@
         margin-top: 10px;
         margin-bottom: 10px;
      }
+
+
+     @media print {
+      .page-break {
+        page-break-before: always; /* ältere Browser */
+        break-before: page;        /* moderner Standard */
+      }
+    }
+
+
     </style>
   </head>
   <body>
@@ -60,42 +75,29 @@
     <div id="inhaltsverzeichnis">
       <h2>Inhaltsverzeichnis</h2>
       <ul>
-        <li><a href="#handbuch">Dashboard</a></li>
         <li>
           <a href="#teil-1-grundlegende-funktionen">Teil 1: Grundlegende Funktionen (Teacher)</a>
           <ul>
             <li><a href="#pruefungen-anlegen">1.1. Prüfungen anlegen</a></li>
             <li><a href="#dashboard-next-exam">1.2. Dashboard</a></li>
             <li><a href="#pruefungsmodi">1.3 Prüfungsmodi</a></li>
-            <li><a href="#materialien-definieren">1.4 Materialien definieren</a></li>
+            <li><a href="#materialien-definieren">1.4 Prüfungsunterlagen definieren</a></li>
             <li><a href="#schueler-fokussieren">1.5 Schüler verwalten</a></li>
             <li><a href="#abgaben-einsehen">1.6 Abgaben einsehen und sichern</a></li>
             <li><a href="#pruefung-beenden">1.7 Prüfung beenden</a></li>
           </ul>
         </li>
-
         <li>
           <a href="#teil-2-grundlegende-funktionen">Teil 2: Grundlegende Funktionen (Student)</a>
           <ul>  
             <li><a href="#pruefung-starten-schueler">2.1 Prüfung starten aus Sicht der Schüler:innen</a></li>
-            
           </ul>
         </li>
-
-
-
-
-
         <li>
           <a href="#teil-3-erweiterte-funktionen">Teil 3: Erweiterte Funktionen</a>
           <ul>
             <li><a href="#gruppen-verwalten">3.1 Gruppen verwalten</a></li>
-         
             <li><a href="#bildschirm-abdunkeln">3.2 Bildschirm abdunkeln</a></li>
-
-
-
-
             <li><a href="#sprachoberflaeche-waehlen">3.3 Sprache der Benutzeroberfläche wählen</a></li>
             <li><a href="#informationskanal-bildungsportal">3.4 Informationskanal vom Bildungsportal abrufen</a></li>
             <li><a href="#lokal-gesicherte-pruefungen">3.5 Lokal gesicherte Prüfungen löschen bzw. fortsetzen</a></li>
@@ -112,8 +114,8 @@
         </li>
       </ul>
     </div>
-
-    <hr/>
+    <div class="page-break"></div>
+   
 
     <a id="teil-1-grundlegende-funktionen"></a>
     <h3><strong>Teil 1: Grundlegende Funktionen (Teacher)</strong></h3>
@@ -136,7 +138,7 @@
         </div>
     </p>
     <img src="./img/hb_start_exam.png" style="max-width:500px"><br>
-    <div class="page"></div>
+    <div class="page-break"></div>
 
 
 
@@ -160,7 +162,7 @@
     </p>
     <img src="./img/hb_teacher_dashboard.png" style="max-width:800px">
 
-    <div class="page"></div>
+    <div class="page-break"></div>
 
 
 
@@ -181,11 +183,11 @@
         Der Prüfungsmodus kann durch ein "DropDown Menü" gesetzt und direkt konfiguriert werden.
       </div>
     </p>
-    <img src="./img/hb_teacher_config_exammode.png" style="max-width:400px"><br>
-    <br>
+
 
     <li class="check"><strong>Prüfungsmodus auswählen und konfigurieren:</strong></li>
         <ul>
+          <img src="./img/hb_teacher_config_exammode.png" style="max-width:400px">
           <li>
             <strong>Sprachen</strong><br>
             Einstellungen wie Korrekturrand, Schriftart, Zeilenabstand und Schriftgröße betreffen sowohl die Darstellung im Editor als auch die Erstellung des Ablage-PDF.<br>
@@ -194,6 +196,7 @@
             Eine passive Rechtschreibhilfe über "LanguageTool" kann aktiviert und konfiguriert werden.<br>
             <img src="./img/hb_config_editor.png" style="max-width:400px"><br>
           </li>
+          <div class="page-break"></div>
           <li>
             <strong>Mathematik</strong><br>
             In diesem Modus arbeiten die Schüler:innen mit GeoGebra Classic/Suite.<br>
@@ -207,7 +210,7 @@
           </li>
           <li>
             <strong>Webseiten</strong><br>
-            Eine beliebige Webseite kann in diesem Modus angezeigt werden. Z.B. digi4school.at, lms.at, scratch.mit.edu, ...<br>
+            Eine beliebige Webseite kann in diesem Modus angezeigt und abgesichert werden. Z.B. digi4school.at, lms.at, scratch.mit.edu, ...<br>
             <img src="./img/hb_config_website.png" style="max-width:400px"><br>
           </li>
           <li>
@@ -216,13 +219,14 @@
           </li>
           <li>
             <strong>Microsoft365</strong><br>
-            Ein .docx bzw. .xlsx-Template wird über Next-Exam bereitgestellt. Aus diesem Template werden für jede:n Schüler:in automatisch Kopien im OneDrive der Lehrperson generiert, inklusive individueller "Share-Links" zur Bearbeitung.
+            <img src="./img/hb_mslogin.png" style="max-width:400px"><img src="./img/hb_msselect.png" style="max-width:400px"><img src="./img/hb_msfile.png" style="max-width:400px"><br>
+            Nach dem Login mit Microsoft365 wird ein .docx bzw. .xlsx-Template bereitgestellt. <br> Aus diesem Template werden für jede:n Schüler:in automatisch Kopien im OneDrive der Lehrperson generiert, inklusive individueller "Share-Links" zur Bearbeitung.
           </li>
         </ul>
     
     
 
-    <div class="page"></div>
+    <div class="page-break"></div>
 
 
 
@@ -237,7 +241,7 @@
 
 
     <a id="materialien-definieren"></a>
-    <h4><strong>1.4. Materialien definieren</strong></h4>
+    <h4><strong>1.4. Prüfungsunterlagen definieren</strong></h4>
     <ul>
       <li><strong>Materialien bereitstellen</strong>
         <ul>
@@ -248,18 +252,22 @@
           <li>
             Gruppen- und Einzelschüler-Zuweisung<br>
             <img src="./img/hb_teacher_groupmaterials.png" style="max-width:400px"><br>
-            Die benötigten Materialien werden den Clients in Base64-Codierung bereitgestellt und nicht lokal gespeichert.
+            Die benötigten Materialien werden den Clients in Base64-Codierung bereitgestellt und nicht lokal gespeichert. <br>
+            Samtliche Materialien können auch während der laufenden Prüfung geändert, betrachtet, ggf. abgespielt (audio) oder entfernt werden.
           </li>
         </ul>
       </li>
       <br>
 
+
+      <div class="page-break"></div>
       <li><strong>Dateien bereitstellen</strong>
         <p>
           <div class="infobox">
             Das Next-Exam System bietet mehrere Optionen, um Dateien dem Anlass entsprechend zu versenden.<br>
-            Über die Sidebar im Dashboard können Dateien im Original an alle Schüler:innen gesendet werden.
-            Im Arbeitsordner können Backups an einzelne Schüler:innen gesendet werden.
+            Über die Sidebar im Dashboard können Dateien im Original an alle Schüler:innen gleichzeitig gesendet werden.
+            Über die Schaltflächen im Dateimanager können Backups an einzelne Schüler:innen gesendet werden. <br>
+            Diese Dateien liegen dann im Arbeitsordner der Schüler:innen und können auch im abgesicherten Modus genutzt werden.
           </div>
         </p>
 
@@ -274,6 +282,7 @@
           <li>
             <strong>Sicherungen zurücksenden</strong><br>
             Der Dateimanager ermöglicht es, eine Datei direkt auszuwählen und an einzelne Schüler:innen zu senden. Diese Funktion wird u.a. bei .bak Dateien (Sicherungsdateien des Editors) genutzt.<br>
+            <img src="./img/hb_teacher_filemanager.png" style="max-width:200px"><br>
             <img src="./img/hb_teacher_filebuttons.png" style="max-width:200px"><br>
             <img src="./img/hb_send_bak.png" style="max-width:340px;"><br>
             
@@ -291,26 +300,40 @@
 
 
 
-
+ <div class="page-break"></div>
     <a id="schueler-fokussieren"></a>
     <h4><strong>1.5. Schüler verwalten</strong></h4>
     <ul>
       <li>
         <strong>Sitzplan</strong><br>
-        Der Sitzplan zeigt die aktuelle Verteilung der Schüler:innen auf die Prüfungsstationen an.
-        Dieser kann durch Drag&Drop verändert werden.
       </li>
+      Der Sitzplan zeigt die aktuelle Verteilung der Schüler:innen auf die Prüfungsstationen an.
+      Dieser kann durch Drag&Drop verändert werden.<br>
       <img src="./img/hb_sitzplan.png" style="max-width:300px;">
     </ul>
     
     <ul>
       <li>
         <strong>Student-Widget</strong><br>
-        Über das "Student-Widget" können einzelne Schüler:innen individuell bearbeitet werden.<br>
+      
       </li>
-      <img src="./img/hb_student_widget.png" style="max-width:300px;">
+      Über das "Student-Widget" können einzelne Schüler:innen individuell bearbeitet werden.<br><br>
+      <li class="check">Die Schaltfläche "Info" öffnet die Detailansicht der Schüler:innen.</li>
+      <li class="check">Über die Schaltfläche "A" / "B" können die Schüler:innen den Gruppen zugewiesen werden.</li>
+      <li class="check">"X" entfernt die Schüler:innen vom Prüfungsserver und beendet die Prüfung für diese Person.</li>
+      <li class="check">Der Papierkübel bereinigt den Arbeitsordner am PC der gewählten Schüler:innen.</li>
+      <li class="check">Der "Zauberstab" erlaubt es einzelnen Schüler:innen die Rechtschreibhilfe zu aktivieren.</li>
+      <li class="check">Die roten Dokumenten-Icons geben auskunft darüber wieviele Dateien die Schüler:innen in ihrem Arbeitsordner erstellt haben.</li>
+      
+
+      <img src="./img/hb_student_widget.png" style="max-width:300px;"> <img src="./img/hb_student_widget_badges.png" style="max-width:300px;">
+
+      <li class="check">Weitere temporäre Badges und Schaltflächengeben Auskunft darüber ob die Schüler:innen eine Abgabe senden, eine virtualisierte Arbeitsumgebung nutzen oder versucht haben die Prüfung zu verlassen</li>
     </ul>
-    
+
+
+
+    <div class="page-break"></div>
     <ul>
       <li><strong>Einzelne Schüler verwalten</strong>
         
@@ -356,7 +379,7 @@
     </ul>
 
 
-
+    <div class="page-break"></div>
     <a id="pruefung-beenden"></a>
     <h4><strong>1.7 Prüfung beenden</strong></h4>
     <li><strong>Prüfung beenden:</strong><br>
@@ -409,7 +432,7 @@
 
 
 
-    <div class="page"></div>
+    <div class="page-break"></div>
 
     <a id="teil-3-erweiterte-funktionen"></a>
     <h3><strong>Teil 3: Erweiterte Funktionen</strong></h3>
@@ -458,7 +481,7 @@
 
 
 
-
+    <div class="page-break"></div>
     <a id="pruefungsabschnitte"></a>
     <h4><strong>3.6. Prüfungsabschnitte</strong></h4>
     <p>
@@ -487,6 +510,9 @@
       <li><strong>Autonomer Druck:</strong> Gewährung des Zugriffs auf den am Prüfungsserver installierten Drucker</li>
     </ul>
 
+
+
+    <div class="page-break"></div>
     <a id="bildungsportal-integration"></a>
     <h4><strong>3.8. Integration ins Bildungsportal</strong></h4>
     <p>
@@ -506,7 +532,7 @@
       </li>
     </ul>
 
-    <div class="page"></div>
+    <div class="page-break"></div>
 
     <a id="teil-4-fehlerbehandlung"></a>
     <h3><strong>Teil 4: Fehlerbehandlung</strong></h3>
