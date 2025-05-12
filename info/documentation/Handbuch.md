@@ -63,6 +63,7 @@ Handbuch - Next-Exam
 
  
  Optional:
+ 
  ![](./img/hb_erweitert.png)  
 * **Passwort festlegen**  
 
@@ -70,6 +71,7 @@ Handbuch - Next-Exam
 * **Backup-Ordner festlegen**  
 
  Ein zusätzlicher Backup-Ordner kann individuell gewählt werden (z.B. Netzwerk-Ordner, USB Stick, ...)
+
 ![](./img/hb_start_exam.png)  
 
 
@@ -199,24 +201,24 @@ Handbuch - Next-Exam
 
 
 
-	+ **Bereitstellung von Dateien**   
-	
-	 An alle bzw. an einzelne Schüler:innen während der Prüfung (z.B. für Zwischenstände, Nachteilsausgleich)  
-	
-	![](./img/hb_teacher_student_view.png)  
-	 ![](./img/hb_teacher_sidebar.png)    
-	
-	+ **Sicherungen zurücksenden**  
-	
-	 Der Dateimanager ermöglicht es, eine Datei direkt auszuwählen und an einzelne Schüler:innen zu senden. Diese Funktion wird u.a. bei .bak Dateien (Sicherungsdateien des Editors) genutzt.  
-	
-	![](./img/hb_teacher_filemanager.png)  
-	
-	![](./img/hb_teacher_filebuttons.png)  
-	
-	![](./img/hb_send_bak.png)  
-	
-	![](./img/student_replace_content_bak.png)
++ **Bereitstellung von Dateien**   
+
+  An alle bzw. an einzelne Schüler:innen während der Prüfung (z.B. für Zwischenstände, Nachteilsausgleich)  
+
+![](./img/hb_teacher_student_view.png)  
+  ![](./img/hb_teacher_sidebar.png)    
+
++ **Sicherungen zurücksenden**  
+
+  Der Dateimanager ermöglicht es, eine Datei direkt auszuwählen und an einzelne Schüler:innen zu senden. Diese Funktion wird u.a. bei .bak Dateien (Sicherungsdateien des Editors) genutzt.  
+
+![](./img/hb_teacher_filemanager.png)  
+
+![](./img/hb_teacher_filebuttons.png)  
+
+![](./img/hb_send_bak.png)  
+
+![](./img/student_replace_content_bak.png)
 
 
 
@@ -243,7 +245,10 @@ Handbuch - Next-Exam
 * Der Papierkübel bereinigt den Arbeitsordner am PC der gewählten Schüler:innen.
 * Der "Zauberstab" erlaubt es einzelnen Schüler:innen die Rechtschreibhilfe zu aktivieren.
 * Die roten Dokumenten-Icons geben auskunft darüber wieviele Dateien die Schüler:innen in ihrem Arbeitsordner erstellt haben.
-![](./img/hb_student_widget.png) ![](./img/hb_student_widget_badges.png)* Weitere temporäre Badges und Schaltflächengeben Auskunft darüber ob die Schüler:innen eine Abgabe senden, eine virtualisierte Arbeitsumgebung nutzen oder versucht haben die Prüfung zu verlassen
+
+![](./img/hb_student_widget.png) ![](./img/hb_student_widget_badges.png)
+
+* Weitere temporäre Badges und Schaltflächengeben Auskunft darüber ob die Schüler:innen eine Abgabe senden, eine virtualisierte Arbeitsumgebung nutzen oder versucht haben die Prüfung zu verlassen
 
 
 
@@ -251,6 +256,7 @@ Handbuch - Next-Exam
 * Möglichkeit, die Prüfung für einzelne Schüler:innen zu pausieren
 * Versand von Dateien an einzelne Schüler:innen
 * Verwaltung einzelner Abgaben
+
 ![](./img/hb_teacher_student_view.png)
 
 
@@ -357,6 +363,7 @@ Der Dateimanager von Next-Exam erlaubt es Lehrpersonen, alle Abgaben sowie archi
 
 * 
  Ein Klick auf das "x" Symbol löscht die lokale Sicherung der Prüfung. Mit einem Klick auf den Prüfungsnamen wird die Sicherung aktiviert und kann fortgesetzt werden.
+
 ![](./img/hb_local_exams.png)    
 
 
@@ -386,7 +393,8 @@ Der Dateimanager von Next-Exam erlaubt es Lehrpersonen, alle Abgaben sowie archi
 
 ![](./img/hb_teacher_configure.png)  
 
-  ![](./img/hb_config_main.png)* **OCR-Funktion aktivieren:** Erkennung von Versuchen, die Prüfungsumgebung zu umgehen
+  ![](./img/hb_config_main.png)
+* **OCR-Funktion aktivieren:** Erkennung von Versuchen, die Prüfungsumgebung zu umgehen
 * **Automatisches Abgabeintervall einstellen:** Neben manueller Abgabe erfolgt die automatische Archivierung der Arbeiten
 * **Screenshot-Intervall einstellen**
 * **Automatische Bereinigung alter Arbeitsdateien:** Bereinigung der Schülerordner beim Beenden der Prüfung
@@ -426,13 +434,13 @@ Der Dateimanager von Next-Exam erlaubt es Lehrpersonen, alle Abgaben sowie archi
 #### **4.1. Fehlerbehandlung**
 
 
-* Fehlermeldungen beim Verbindungsaufbau und deren Ursachen
+**Fehlermeldungen beim Verbindungsaufbau und deren Ursachen**
 
  Alle Teilnehmer:innen müssen sich im selben Netzwerk befinden und miteinander kompatible Versionen von Next-Exam-Student und Next-Exam-Teacher nutzen.
  Sollte die Prüfung nicht automatisch im Netzwerk gefunden werden kann die IP-Adresse von den Schüler:innen manuell eingegeben werden um die Teacher Instanz (API) zu erreichen.
  
   
-* Fortsetzen der Prüfung bei Fehlern auf Schülerseite
+**Fortsetzen der Prüfung bei Fehlern auf Schülerseite**
 
  Bei einem Fehler mit Next-Exam-Student sollte das Programm geschlossen und neu gestartet werden.   
 
@@ -440,27 +448,27 @@ Der Dateimanager von Next-Exam erlaubt es Lehrpersonen, alle Abgaben sowie archi
  Die Lehrperson hat zusätzlich die Möglichkeit bereits gesicherte Backups an den/die betroffene Schüler:in zu senden um die Prüfung nahtlos fortsetzen zu können.
  
   
-* Fortsetzen der Prüfung bei Fehlern auf Teacherseite
+**Fortsetzen der Prüfung bei Fehlern auf Teacherseite**
 
  Sollte die Teacher Instanz beendet werden müssen während einer laufenden Prüfung so ist zu beachten, dass die Schüler:innen die Verbindung zum Prüfungsserver erst wieder herstellen dürfen, wenn der Teacher wieder online ist und alle Einstellungen wieder hergestellt wurden.
  Insbesondere muss die ABSICHERUNG der Geräte wieder aktiviert werden da die Prüflinge sonst beim Verbindungsaufbau zu einer nicht gesicherten Umgebung verbinden und die Prüfung dadurch für sie sofort beendet wird.
  
   
-* Language Tool funktioniert nicht
+**Language Tool funktioniert nicht**
 
  Avast Antivirus, Norton Antivirus oder ähnliche Programme können die Language Tool Funktion von Next-Exam blockieren.   
 
  In diesem Fall muss das Programm "Avast Security" gestartet und die Next-Exam-Student.exe Datei von der Liste der blockierten Programme entfernt werden bzw. auf die Ausnahmeliste gesetzt werden.
  
   
-* Screenhots auf MacOS funktionieren nicht
+**Screenhots auf MacOS funktionieren nicht**
 
  MacOS benötigt die Berechtigung um Screenshots zu erstellen.   
 
  Sollte diese Berechtigung nicht erteilt werden, wird Next-Exam als "Fallback" Variante auf Page-Capture zurückgreifen und nur das Programmfenster übertragen.
  
   
-* Screenhots auf Linux funktionieren nicht
+**Screenhots auf Linux funktionieren nicht**
 
  Linux benötigt ImageMagick um Screenshots zu erstellen.   
 
@@ -468,7 +476,7 @@ Der Dateimanager von Next-Exam erlaubt es Lehrpersonen, alle Abgaben sowie archi
  Auf Gnome/Wayland Systemen werden Screenshots derzeit nicht unterstützt.
  
   
-* Die Prüfung wird nicht automatisch gefunden
+**Die Prüfung wird nicht automatisch gefunden**
 
  Es handelt sich bei Next-Exam um eine Netzwerkapplikation.
  Um volle Funktionsfähigkeit zu gewährleisten muss die Firewall die App durchlassen.
@@ -476,21 +484,21 @@ Der Dateimanager von Next-Exam erlaubt es Lehrpersonen, alle Abgaben sowie archi
  die IP Adresse der Lehrperson genutzt werden.
  
   
-*  Welche Ports werden von Next-Exam verwendet?
+**Welche Ports werden von Next-Exam verwendet?**
 
  Die Teacher-API (Schnittstelle) nutzt den Port 22422 (tcp).
  Um "autodiscovery" von Prüfungen zu ermöglichen sollte im lokalen Netzwerk zudem Multicast erlaubt sein.
  Die Multicastports (udp) in Verwendung sind 6024 und 6025.
  
   
-* Ubuntu 22.04 kann *.AppImage Pakete nicht starten
+**Ubuntu 22.04 kann *.AppImage Pakete nicht starten**
 
  libfuse2 muss auf Ubuntu nachinstalliert werden.  
 
 `sudo apt install libfuse2` 
 
   
-*  Neuere Linux Ubuntu basierte Varianten können Next-Exam nicht starten
+**Neuere Linux Ubuntu basierte Varianten können Next-Exam nicht starten**
 
 `echo 'kernel.apparmor_restrict_unprivileged_userns=0' | sudo tee /etc/sysctl.d/99-electron.conf   
 
