@@ -25,9 +25,9 @@
         <!-- filelist start - show local files from workfolder (pdf and gbb only)-->
         <div id="toolbar" class="p-0 pb-0">  
 
-            <div class="btn btn-dark btn-sm shadow"  @click="print()"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" > </div>
+            <!-- <div class="btn btn-dark btn-sm shadow"  @click="print()"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" > </div> -->
 
-            <div v-for="file in localfiles" class="d-inline">
+            <div v-for="file in localfiles" class="d-inline me-2">
                 <div v-if="(file.type == 'pdf')" class="btn btn-secondary  p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="22" height="20" > {{file.name}} </div>
                 <div v-if="(file.type == 'image')" class="btn btn-secondary  p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
 

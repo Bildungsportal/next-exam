@@ -110,7 +110,7 @@ const __dirname = import.meta.dirname;
      * the worker is used to process the screenshot in a separate process
      */
     async setupImageWorker() {
-        const workerFileName = process.platform === 'linux' ? 'imageWorkerLinux.js' : 'imageWorkerSharp.mjs';
+        const workerFileName = process.platform === 'linux' ? 'imageWorkerLinux.js' : 'imageWorkerSharp.js';
         const workerPath = app.isPackaged
             ? join(process.resourcesPath, 'app.asar.unpacked', 'public', workerFileName)
             : join(__dirname, '../../public', workerFileName);
@@ -242,10 +242,21 @@ const __dirname = import.meta.dirname;
 
         // connection lost reset triggered  no serversignal for 20 seconds
         if (this.multicastClient.beaconsLost >= 5 ){  
-            log.warn("communicationhandler @ requestUpdate: Connection to Teacher lost! Removing registration.") //remove server registration locally (same as 'kick')
-            this.multicastClient.beaconsLost = 0
-            this.resetConnection()   // this also resets serverip therefore no api calls are made afterwards
-            this.killScreenlock()       // just in case screens are blocked.. let students work
+             if (this.multicastClient.kicked){
+                this.multicastClient.kicked = false
+                log.warn("communicationhandler @ requestUpdate: Student got kicked by Teacher")
+
+                let serverstatus = {delfolderonexit: false}  // do not delete folder on exit because student got kicked
+                this.endExam(serverstatus)
+                this.resetConnection() 
+                this.multicastClient.beaconsLost = 0
+            }
+            else {
+                log.warn("communicationhandler @ requestUpdate: Connection to Teacher lost! Removing registration.") //remove server registration locally (same as 'kick')
+                this.multicastClient.beaconsLost = 0
+                this.resetConnection()   // this also resets serverip therefore no api calls are made afterwards
+                this.killScreenlock()       // just in case screens are blocked.. let students work
+            }
         }  
 
         if (this.multicastClient.clientinfo.serverip) {  //check if server connected - get ip
@@ -265,9 +276,9 @@ const __dirname = import.meta.dirname;
             })
             .then(data => {
                 if (data.status === "error") {
-                    if      (data.message === "notavailable"){ log.warn('communicationhandler @ requestUpdate: Exam Instance not found!');        this.multicastClient.beaconsLost = 5; } 
-                    else if (data.message === "removed"){      log.warn('communicationhandler @ requestUpdate: Student registration not found!'); this.multicastClient.beaconsLost = 5; } 
-                    else {                                     log.warn("communicationhandler @ requestUpdate: 1 Heartbeat lost..");              this.multicastClient.beaconsLost += 1;} 
+                    if      (data.message === "notavailable"){ log.warn('communicationhandler @ requestUpdate: Exam Instance not found!');        this.multicastClient.beaconsLost = 5; }    // exam instance not available but server reachable
+                    else if (data.message === "removed"){      log.warn('communicationhandler @ requestUpdate: Student registration not found!'); this.multicastClient.beaconsLost = 5; this.multicastClient.kicked = true; }   // student got kicked
+                    else {                                     log.warn(`communicationhandler @ requestUpdate: ${this.multicastClient.beaconsLost} Heartbeat lost..`);              this.multicastClient.beaconsLost += 1;}   // heartbeat lost server not reachable
                 } else if (data.status === "success") {
                     this.multicastClient.beaconsLost = 0; // Dies zählt ebenfalls als erfolgreicher Heartbeat - Verbindung halten
                     this.multicastClient.clientinfo.printrequest = false  //set this to false after the request left the client to prevent double triggering
@@ -718,7 +729,7 @@ const __dirname = import.meta.dirname;
             landscape: false,
             displayHeaderFooter:true,
             footerTemplate: "<div style='height:12px; font-size:10px; text-align: right; width:100%; margin-right: 20px;'><span class=pageNumber></span>|<span class=totalPages></span></div>",
-            headerTemplate: `<div style='display: inline-block; height:12px; font-size:10px; text-align: right; width:100%; margin-right: 20px;margin-left: 20px;'><span style="float:left;">${this.multicastClient.clientinfo.servername}</span><span style="float:left;">&nbsp;|&nbsp; </span><span class=date style="float:left;"></span><span style="float:left;">&nbsp;|&nbsp;Abgabe: ${submissionnumber}</span><span style="float:right;">${this.multicastClient.clientinfo.clientname}</span></div>`,
+            headerTemplate: `<div style='display: inline-block; height:12px; font-size:10px; text-align: right; width:100%; margin-right: 20px;margin-left: 20px;'><span style="float:left;">${this.multicastClient.clientinfo.servername}</span><span style="float:left;">&nbsp;|&nbsp; </span><span class=date style="float:left;"></span><span style="float:left;">&nbsp;|&nbsp;Abgabe: ${submissionnumber}</span><span style="float:right;">${this.multicastClient.clientinfo.name}</span></div>`,
             preferCSSPageSize: false
         }
         // set the title of the exam window and therefore the document title
@@ -846,7 +857,7 @@ const __dirname = import.meta.dirname;
     async endExam(serverstatus){
       
         // delete students work on students pc (makes sense if exam is written on school property)
-        if (serverstatus.delfolderonexit === true){
+        if (serverstatus && serverstatus.delfolderonexit === true){
             log.info("communicationhandler @ endExam: cleaning exam workfolder on exit")
             try {
                 if (fs.existsSync(this.config.examdirectory)){   // set by server.js (desktop path + examdir)
@@ -860,7 +871,7 @@ const __dirname = import.meta.dirname;
 
         if (WindowHandler.examwindow){ // in some edge cases in development this is set but still unusable - use try/catch   
             try {  //send save trigger to exam window
-                if (!serverstatus.delfolderonexit){
+                if (serverstatus && !serverstatus.delfolderonexit){
                     WindowHandler.examwindow.webContents.send('save', 'exitexam') //trigger, why
                     await this.sleep(3000)  // give students time to read whats happening (and the editor time to save the content)
                 }

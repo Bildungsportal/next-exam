@@ -169,7 +169,7 @@ class IpcHandler {
                 return free;    
         });
 
-        ipcMain.handle('setworkdir', async (event, arg) => {
+        ipcMain.handle('setbackupdir', async (event, arg) => {
             const result = await dialog.showOpenDialog( this.WindowHandler.mainwindow, { properties: ['openDirectory']  })
             if (!result.canceled){
                 log.info('directories selected', result.filePaths)
@@ -178,17 +178,18 @@ class IpcHandler {
                     let testdir = join(result.filePaths[0]   , config.serverdirectory)
                     if (!fs.existsSync(testdir)){fs.mkdirSync(testdir)}
                     message = "success"
-                    config.workdirectory = testdir
-                    log.info("setworkdir:", config)
+                    //config.workdirectory = testdir
+                    config.backupdirectory = testdir
+                    log.info("ipchandler @ setbackupdir:", config)
                 }
                 catch (e){
                     message = "error"
                     log.error(e)
                 }
-                return {workdir: config.workdirectory, message : message}
+                return {backupdir: config.backupdirectory, message : message}
             }
             else {
-                return {workdir: config.workdirectory, message : 'canceled'}
+                return {backupdir: config.backupdirectory, message : 'canceled'}
             }
         })
 

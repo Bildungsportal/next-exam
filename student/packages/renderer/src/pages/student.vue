@@ -568,15 +568,20 @@ export default {
 
 
 
-
-    
-            // check im networkconnection is still alive - otherwise exit here
+            /**
+             * check im networkconnection is still alive or if we are already connected and recieved a token 
+             * if not we exit here
+             */
             this.hostip = await ipcRenderer.invoke('checkhostip')
             if (!this.hostip) return;  
             if (this.clientinfo.token) return;   // stop spamming the api if already connected
         
 
-            // CHECK if Servers are still alive otherwise mark with attention sign
+            /**
+             * check if server is still alive otherwise mark with attention sign
+             * this is done by pinging the server with a timeout of 2 seconds
+             * if the server does not respond we mark the server as not reachable
+             */
             for (let server of this.serverlist){  
                 if (!server.serverip) continue;
                 const signal = AbortSignal.timeout(2000); // 2000 Millisekunden = 2 Sekunden

@@ -146,6 +146,7 @@ let studentInfo = {
             lastUpdate: new Date().getTime(),
             bip: true,
             id: "d10cdfc7-ba91-4845-818e-eaae81595dfa", // eindeutige ID im BiP
+            nextexamVersion: "1.1.0",
             examName: "5A-English", // Name der Prüfung wie sie am Client dargstellt werden soll
             examDate: "2024-10-02T10:30:00", // geplanter Beginn der Prüfung
             examDurationMinutes: 100, // Dauer der Prüfung in Minuten
@@ -351,6 +352,7 @@ let studentInfo = {
             lastUpdate: new Date().getTime(),
             bip: true,
             id: "uy5cdfc7-cu91-4845-818e-eaae8159uui", // eindeutige ID im BiP
+            nextexamVersion: "1.1.0",
             examName: "5B-Mathematik", // Name der Prüfung wie sie am Client dargstellt werden soll
             examDate: "2025-02-02T10:30:00", // geplanter Beginn der Prüfung
             examDurationMinutes: 100, // Dauer der Prüfung in Minuten

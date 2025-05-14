@@ -29,6 +29,13 @@
        
         <div v-if="freeDiscspace < 0.1" class="warning">  {{ $t("startserver.freespacewarning") }}   </div>
         
+        <div class="form-check form-switch m-1 mb-2 mt-2">
+            <input id="advanced" type="checkbox"  v-model="advanced" class="form-check-input" @change="toggleAdvanced">
+            <label for="advanced" class="form-check-label">{{$t('startserver.extendedsettings')}}</label>
+        </div>
+
+
+
 
         <!-- previous exams start -->
         <div id="previous" class="m-1 mt-4 " v-if="previousExams && previousExams.length > 0">
@@ -36,8 +43,16 @@
             <div v-for="exam of previousExams">
                 <div class="input-group" style="display:inline;">
                     <div class="btn btn-sm btn-warning mt-1" @click="delPreviousExam(exam.examName)">x</div>
-                    <div v-if="servername === exam.examName" class="btn btn-sm btn-info mt-1" :id="exam.examName" @click="setPreviousExam(exam)">{{exam.examName}}</div>  
-                    <div v-else class="btn btn-sm btn-secondary mt-1" :id="exam.examName" @click="setPreviousExam(exam)">{{exam.examName}}</div> 
+                    <div  class="btn btn-sm mt-1" :id="exam.examName" 
+                        :class="[ servername === exam.examName ? 
+                            (exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? 'btn-info cursornotallowed' : 'btn-info ')  : 
+                            (exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? 'btn-secondary cursornotallowed' : 'btn-secondary ')
+                        ]"
+                        @click="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? '' : setPreviousExam(exam)"
+                        :title="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? $t('startserver.incompatible') : ''"
+                        >
+                        {{ exam.examName }}
+                    </div>
                     <div v-if="exam.bip" class="btn btn-sm btn-cyan mt-1" style="width:14px; height: 31px;">
                         <div style="writing-mode:vertical-rl; font-size:0.8em; margin-left:-10px; margin-top:2px;color: whitesmoke;">BiP</div>
                     </div>
@@ -98,15 +113,21 @@
     <div id="content" class="fadeinslow p-3">
         <div class="col8">
             <div class="input-group  mb-1 mt-0">
-                <span class="input-group-text col-2 grayback" id="inputGroup-sizing-lg" style="width:160px;max-width:160px;min-width:160px;">{{$t("startserver.examname")}}</span>
-                <input v-model="servername" maxlength="20" type="text" class="form-control" id="servername" placeholder="Mathe-5a" style="width:200px;max-width:200px;min-width:135px;">
-    
-            </div>   
-            <div class="input-group mb-3" style="max-width: fit-content">  
-                <span id="workdir" class="input-group-text col-2 grayback"  style="width:160px;">{{$t("startserver.workfolder")}}</span>
-                <span class="form-control " style="font-family: monospace; font-size: 0.9em; padding-top: 8px; white-space: pre;">{{ workdir }}</span>
-                <button @click="setWorkdir()" id="workdir" class="btn btn-info p-0" style="width:40px;" :title="$t('startserver.select')">
-                   
+                <span class="input-group-text col-2 grayback" id="inputGroup-sizing-lg" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.examname")}}</span>
+                <input v-model="servername" maxlength="20" type="text" class="form-control" id="servername" placeholder="5a-mathematik" style="width:200px;max-width:200px;min-width:135px;">
+            </div> 
+
+            <!-- could be used to set an ESCAPE PASSWORD for students to make it harder to leave on connection loss -->
+            <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content"> 
+                <span id="pwd" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.pwd")}}</span>
+                <input v-model="password" type="text" class="form-control " style="width:200px;" >
+            </div>
+
+
+            <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content">  
+                <span id="backupdir" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.backupfolder")}}</span>
+                <span class="form-control " style="width:360px;  font-size: 0.9em; padding-top: 8px; white-space: pre;">{{ backupdir }}</span>
+                <button @click="setBackupdir()" id="backupdirbutton" class="btn btn-info p-0" style="width:40px;" :title="$t('startserver.backupfolderinfo')" >
                     <img src="/src/assets/img/svg/settings.svg" style="vertical-align: sub;" class="" width="18" height="18" >
                 </button>
             </div>
@@ -114,16 +135,10 @@
 
 
             
-            <!-- 
-                we do not need to display the password in electron standalone version because no other exams are ever listed and you can not leave the exam without ending the server 
-                could be used to set an ESCAPE PASSWORD for students to make it harder to leave on connection loss
-            -->
-            <div class="input-group  mb-3" :class="(electron) ? 'hidden':''"> 
-                <input v-model="password" type="text" class="form-control " id="password" placeholder="password" style="width:135px;max-width:135px;min-width:135px;">
-                <span class="input-group-text col-4" style="width:135px;" id="inputGroup-sizing-lg">{{$t("startserver.pwd")}}</span>
-            </div>
+            
+         
 
-            <button @click="startServer()" :class="(!hostip) ? 'disabled':''" id="examstart" class="ps-1 pe-1 mb-5 btn btn-success" value="start exam" style="width:160px;max-width:160px;min-width:160px;">{{$t("startserver.start")}}</button>
+            <button @click="startServer()" :class="(!hostip) ? 'disabled':''" id="examstart" class="ps-1 pe-1  mb-5 btn btn-success" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
             
         </div>
 
@@ -184,8 +199,8 @@ export default {
             info: config.info,
             config: this.$route.params.config,  //achtung: config enthält rekursive elemente und wird daher in ipchandler.copyConfig() kopiert
             title: document.title,
-            servername : this.$route.params.config.development ? "5A-Mathematik":"",
-            password: this.$route.params.config.development ? "password": Math.floor(1000 + Math.random() * 9000),   //we could use this password to allow students to manually leave exam mode 
+            servername : this.$route.params.config.development ? "5a-mathematik":"",
+            password: this.$route.params.config.development ? "password": Math.floor(100000 + Math.random() * 9000),   //we could use this password to allow students to manually leave exam mode 
             prod : false,
             serverApiPort: this.$route.params.serverApiPort,
             electron: this.$route.params.electron,
@@ -193,6 +208,7 @@ export default {
             hostip: this.$route.params.config.hostip,
             advanced: false,
             workdir: this.$route.params.config.workdirectory,
+            backupdir: '',
             freeDiscspace: 100,
             previousExams: [],
             onlineExams: [],
@@ -210,7 +226,7 @@ export default {
     },
     components: {},
     directives: {
-        // Diese Direktive sucht alle <a>-Tags in dem Element und fügt target="_blank" hinzu.
+        // Diese Direktive sucht alle <a>-Tags in dem Element und fügt target="_blank" hinzu. (zb. für Digi4school Schulbücher die ausschliesslich in einem Popup angezeigt werden sollen)
         externalLinks: {
             mounted(el) {
                 // Wird beim ersten Rendern ausgeführt (in Vue 3 ist "mounted" anstelle von "inserted")
@@ -523,8 +539,16 @@ export default {
         },
 
         async getPreviousExams(){
-            this.previousExams = await ipcRenderer.invoke('scanWorkdir')
-            //console.log(this.previousExams)
+            // get previously created exams from workdir
+            let previousExams = await ipcRenderer.invoke('scanWorkdir')
+
+            // filter out exams that are not compatible with the current version
+           // previousExams = previousExams.filter(exam => exam.nextexamVersion === this.version)
+
+            this.previousExams = previousExams
+           
+
+
             this.config = await ipcRenderer.invoke('getconfigasync') 
             this.workdir = this.config.workdirectory   // just in case this is already altered in the backend make sure to display current settings
         },
@@ -557,7 +581,7 @@ export default {
             // ASK for confirmation!
             this.$swal.fire({
                 title: this.$t("startserver.previousexams"),
-                text: this.$t("startserver.folderdelete"),
+                html: `${this.$t("startserver.folderdelete")} <br> <br> <span style="font-weight:bold;">${name}</span>`,
                 icon: "warning",
                 showCancelButton: true,
                 cancelButtonText: this.$t("dashboard.cancel"),
@@ -573,18 +597,20 @@ export default {
         },
 
 
-        async setWorkdir(){   // achtung: custom workdir spreizt sich mit der idee die teacher instanz als reine webversion laufen zulassen - wontfix?
-            let response = await ipcRenderer.invoke('setworkdir')
-            this.workdir = response.workdir
-            if (response.message == "error"){
+        async setBackupdir(){   // achtung: custom workdir spreizt sich mit der idee die teacher instanz als reine webversion laufen zulassen - wontfix?
+            let response = await ipcRenderer.invoke('setbackupdir')
+            this.backupdir = response.backupdir
+            if (response.message == "error"){   
                 this.status(this.$t("startserver.directoryerror"))
             }
-            this.checkDiscspace()
-            this.getPreviousExams()
         },
 
         toggleAdvanced(){
-            if (this.advanced) {this.advanced = false} else {this.advanced = true}
+            if (!this.advanced){
+                if (!this.password){
+                    this.password = Math.floor(100000 + Math.random() * 9000)
+                }
+            }
         },
 
         async startServer(){
@@ -595,8 +621,6 @@ export default {
                 this.status(this.$t("startserver.emptypw")); 
             }
             else {
-
-        
                 let isBip = this.selectedExam && this.selectedExam.bip && this.servername === this.selectedExam.examName ? true : false
                 let bipId = this.selectedExam && this.selectedExam.id ? this.selectedExam.id : null
 
@@ -605,15 +629,27 @@ export default {
                     return;
                 }
                 
+                // check if the servername equals a previous exam
+                if (this.previousExams.some(exam => exam.examName === this.servername)){
+                    this.selectedExam = this.previousExams.find(exam => exam.examName === this.servername)
+                }
+                else {
+                    this.selectedExam = null
+                }
+           
+
+                // check if the exam is compatible with the current version
+                if (this.selectedExam && this.selectedExam.nextexamVersion && this.selectedExam.nextexamVersion.slice(0, 3) !== this.version.slice(0, 3) || (this.selectedExam && !this.selectedExam.nextexamVersion)){
+                    this.status(this.$t("startserver.incompatible")); 
+                    return;
+                }
 
                 let payload = {
-                    workdir: this.workdir,
                     bip: isBip,
                     bipId: bipId
                 }
 
-
-                fetch(`https://${this.hostname}:${this.serverApiPort}/server/control/start/${this.servername}/${this.password}`, { 
+                fetch(`https://${this.hostname}:${this.serverApiPort}/server/control/start/${this.servername.toLowerCase()}/${this.password}`, { 
                     method: 'POST',
                     headers: {'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -624,20 +660,18 @@ export default {
                     if (response.status === "success") {  //directly log in
                         this.status(response.message);
                         await this.sleep(1000);
-                        if (this.electron){
+                      
+                        this.$router.push({  // for some reason this doesn't work on mobile
+                            name: 'dashboard', 
+                            params:{
+                                servername: this.servername.toLowerCase(), 
+                                passwd: this.password,
+                                bipToken: this.bipToken,
+                                bipUsername: this.bipUsername,
+                                bipuserID:this.bipuserID
+                            }
+                        })
                         
-                            this.$router.push({  // for some reason this doesn't work on mobile
-                                name: 'dashboard', 
-                                params:{
-                                    servername: this.servername, 
-                                    passwd: this.password,
-                                    bipToken: this.bipToken,
-                                    bipUsername: this.bipUsername,
-                                    bipuserID:this.bipuserID
-                                }
-                            })
-                        }
-                        else {window.location.href = `#/dashboard/${this.servername}/${this.password}`}
                     }
                     else { 
                         this.status(response.message); 
@@ -771,7 +805,14 @@ export default {
 <style scoped>
 
 .disabledbutton {
-    pointer-events: none; /* Deaktiviert Klicks */
+    pointer-events: none; 
+}
+
+
+
+.cursornotallowed {
+    cursor: not-allowed !important;
+   
 }
 
 #statusdiv {

@@ -80,7 +80,7 @@ async function getFormsID(){
         icon: 'question',
         input: 'text',
         html: `
-        ${this.$t("dashboard.eduvidualidhint")} <br>
+        ${this.$t("dashboard.gformshint")} <br>
         <span style="font-size:0.8em">
             (https://docs.google.com/forms/d/e/<span style="background-color: lightblue; padding:0 3px 0 3px;">1FAIpQLScuTG7yldD0VRhFgOC_2fhbVdgXn95Kf_w2rUbJm79S1kJBnA</span>/viewform)
         </span>`,
@@ -330,6 +330,7 @@ async function configureEditor(){
             }
 
             const defaultFontSize = this.serverstatus.examSections[this.serverstatus.activeSection].fontsize || '12pt';
+            console.log("defaultFontSize:", defaultFontSize)
             const selectElement2 = document.getElementById('fontsize');
             if (selectElement2) {
                 setTimeout(() => {

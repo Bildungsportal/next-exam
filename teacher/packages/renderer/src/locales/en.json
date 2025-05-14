@@ -10,6 +10,7 @@
         "name": "Name",
         "login": "login",
         "nopw": "Please provide a password"
+       
     },
     "startserver" : {
         "connected": "connected",
@@ -29,7 +30,11 @@
         "folderdelete": "Delete local exam folder?",
         "onlineexams": "BiP Exams",
         "bipnotloggedin": "Please log in to BiP before starting the exam",
-        "noNews":"No News available"
+        "noNews":"No News available",
+        "backupfolder": "Backup-Directory",
+        "backupfolderinfo": "Please provide a path for the backup directory",
+        "extendedsettings": "Extended Settings",
+        "incompatible": "Incompatible with current version"
     },
     "dashboard":{
         "server": "Server",
@@ -122,6 +127,7 @@
         "abgabeautohint":"(Timeframe in minutes)",
         "eduvidualid": "Eduvidual / Moodle",
         "eduvidualidhint": "Please enter a valid test URL!",
+        "gformshint": "Please enter a valid Google Forms ID!",
         "eduvidualdomain": "Please provide your moodle domain if it's not eduvidual.at",
         "lock":"lock displays",
         "unlock":"unlock displays",

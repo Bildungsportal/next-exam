@@ -1,15 +1,6 @@
-
-
-
 const canvas = document.createElement('canvas');
 const gl = canvas.getContext('webgl');
 let virtual = false;
-
-
-
-
-
-
 
 if (gl) {
     const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
@@ -18,23 +9,33 @@ if (gl) {
     if (debugInfo) {
         const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL).toLowerCase();
         const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL).toLowerCase();
-        // console.log(vendor);
-        // console.log(renderer);
-
+  
+        // Erweiterte Keywords für moderne VM-Setups
         const keywords = [
             'vmware', 'virtualbox', 'parallels', 'solarwinds', 
             'qemu', 'hyper-v', 'bootcamp', 'xen', 
-            'citrix', 'kvm', 'wsl', 'docker', 'cloud'
+            'citrix', 'kvm', 'wsl', 'docker', 'cloud',
+            'llvmpipe', 'microsoft basic render driver', 'basic render'
         ];
 
-        // Überprüfe beide Parameter auf Virtualisierungs-Keywords
+        // Zusätzliche Checks für indirekte VM-Indikatoren
+        const isLowEndGraphics = renderer.includes('swiftshader') || 
+                                renderer.includes('llvmpipe') || 
+                                renderer.includes('basic render');
+
+        // Überprüfe beide Parameter und indirekte Indikatoren
         let matchFound = false;
         keywords.forEach(keyword => {
             if (vendor.includes(keyword) || renderer.includes(keyword)) {
-                matchFound = true;  // VM-Indikator gefunden
+                matchFound = true;
                 virtual = true;
             }
         });
+
+        // Wenn Low-End-Grafik erkannt wurde, könnte es sich um eine VM handeln
+        if (isLowEndGraphics) {
+            virtual = true;
+        }
 
         // Erkennung von Wayland über Umgebungsvariable
         const isWayland = typeof process !== 'undefined' && process.env.WAYLAND_DISPLAY;

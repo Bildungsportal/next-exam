@@ -23,7 +23,9 @@
 
 
     <!-- filelist start - show local files from workfolder (pdf and gbb only)-->
-    <div id="toolbar" class="d-inline p-1 pt-0">  
+    <div id="toolbar" class="d-inline p-1 pt-0"> 
+        <button class="btn btn-primary p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="reloadWebview"> <img src="/src/assets/img/svg/edit-redo.svg" class="" width="22" height="20" >{{domain}}</button>
+
         <div v-for="file in localfiles" class="d-inline">
             <div v-if="(file.type == 'pdf')" class="btn btn-secondary  p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="22" height="20" > {{file.name}} </div>
             <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
@@ -51,7 +53,13 @@
         </div>
         <!-- focuswarning end  -->
 
-        <webview id="webview" autosize="on" :src="url"></webview>
+
+        <div v-if="isLoading" class="overlay">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+
+        <webview id="webview"  ref="wv"  style="width:100%;height:100%"  :src="url" allowpopups></webview>
 
     </div>
 </template>
@@ -95,6 +103,7 @@ export default {
             battery: null,
             url: null,
             currentpreview: null,
+            isLoading: true,
             wlanInfo: null,
             hostip: null
         }
@@ -103,12 +112,14 @@ export default {
     mounted() {
 
         this.url = this.serverstatus.examSections[this.serverstatus.lockedSection].domainname
- 
+        this.domain = this.url.replace(/https?:\/\//, '').split('/')[0]; // Remove protocol and any path
+                 
         console.log(`website @ mounted: ${this.url}`)
 
         this.currentFile = this.clientname
         this.entrytime = new Date().getTime()  
-         
+
+  
         this.$nextTick(() => { // Code that will run only after the entire view has been rendered
             
             
@@ -150,7 +161,6 @@ export default {
             webview.addEventListener('dom-ready', () => {
                 if (config.showdevtools){ webview.openDevTools();   }
 
-                webview.openDevTools();
                 const css = `
   
                 `;
@@ -165,41 +175,80 @@ export default {
                 `);
             });
 
-            
+                    
             // Event abfangen, wenn eine Navigation beginnt
             webview.addEventListener('will-navigate', (event) => {
                 if (!event.url.includes(this.url)){  //we block everything except pages that contain the following keyword-combinations
-                    console.log(event.url)
+                    // console.log(event.url)
 
                     const domain = this.url.replace(/https?:\/\//, '').split('/')[0]; // Remove protocol and any path
                  
                     const isValidUrl = (testUrl) => {
-                        console.log(testUrl)
+                        // console.log(testUrl)
                         const pattern = new RegExp(`^https?:\/\/([a-zA-Z0-9-]+\\.)*${domain.replace(/\./g, '\\.')}(\/|$)`); // Allow paths after the domain
                         //const pattern = new RegExp(`^https?:\/\/([a-zA-Z0-9-]+\\.)*${domain.replace(/\./g, '\\.')}$`); // Escape dots in domain
                         return pattern.test(testUrl);
                     };
 
                     //check if this an exception (subdomain, login, init) - if URL doesn't include either of these combinations - block! EXPLICIT is easier to read ;-)
-                    if ( isValidUrl(event.url) )                                                    { console.log(" url allowed") }  // allow subdomain
+                    if ( isValidUrl(event.url) )                                                    { console.log("webview @ will-navigate: url allowed") }  // allow subdomain
                    
-                    else if ( event.url.includes("login") && event.url.includes("Microsoft") )                                 { console.log(" url allowed") }
-                    else if ( event.url.includes("login") && event.url.includes("Google") )                                    { console.log(" url allowed") }
-                    else if ( event.url.includes("login") && event.url.includes("microsoftonline") )                           { console.log(" url allowed") }
-                    else if ( event.url.includes("accounts") && event.url.includes("google.com") )                             { console.log(" url allowed") }
-
-
+                    // allow microsoft login / google login / google accounts / 2fa activation / microsoft365 login / google lookup
+                    else if ( event.url.includes("login") && event.url.includes("Microsoft") )                                 { console.log("webview @ will-navigate: url allowed") }  // microsoft login
+                    else if ( event.url.includes("login") && event.url.includes("Google") )                                    { console.log("webview @ will-navigate: url allowed") }  // google login
+                    else if ( event.url.includes("accounts") && event.url.includes("google.com") )                             { console.log("webview @ will-navigate: url allowed") }  // google accounts
+                    else if ( event.url.includes("mysignins") && event.url.includes("microsoft") )                             { console.log("webview @ will-navigate: url allowed") }  // 2fa activation
+                    else if ( event.url.includes("account") && event.url.includes("windowsazure") )                            { console.log("webview @ will-navigate: url allowed") }  // microsoft braucht mehr contact information (telnr)
+                    else if ( event.url.includes("login") && event.url.includes("microsoftonline") )                           { console.log("webview @ will-navigate: url allowed") }  // microsoft365 login
+                    else if ( event.url.includes("lookup") && event.url.includes("google") )                                   { console.log("webview @ will-navigate: url allowed") }  // google lookup
+       
                     else {
-                        console.log("blocked leaving exam mode")
+                        console.log("webview @ will-navigate: blocked leaving exam mode")
                         webview.stop()
                     }
                 }
-                else { console.log("entered valid test environment")  }
+                else { console.log("webview @ will-navigate: entered valid test environment")  }
             });
+
+
+            webview.addEventListener('did-finish-load', () => {
+                if (!this.url.includes("lms.at")){ return} // only for lms.at
+                const preloadScriptContent = `
+                    (function() {
+                        const css = \`
+                        * {transition: .1s !important;}
+                        #ibook-menu {display: none !important;}
+                        .attempt-list {display: none !important;}
+                        \`;
+
+                        const style = document.createElement('style');
+                        style.type = 'text/css';
+                        style.innerHTML = css;
+                        document.head.appendChild(style);
+                    })();
+                `;
+                webview.executeJavaScript(preloadScriptContent)
+                .then(() => {     this.isLoading = false;  })  // Verberge das Overlay und zeige den Webview-Inhalt
+                .catch((err) => { this.isLoading = false;  })
+            });
+
+
+
+
+            // loading events to hide css manipulation
+            webview.addEventListener('did-start-loading', () => { this.isLoading = true;   }); // Zeige das Overlay während des Ladens
+            webview.addEventListener('did-stop-loading', () => {   this.isLoading = false;  });           // Verberge das Overlay, wenn das Laden gestoppt ist
+            
+
+
+
         });
     },
     methods: { 
-     reconnect(){
+        reloadWebview(){
+            this.$refs.wv.setAttribute("src", this.url);
+        },
+        reconnect(){
             this.$swal.fire({
                 title: this.$t("editor.reconnect"),
                 text:  this.$t("editor.info"),
@@ -293,8 +342,8 @@ export default {
 
             const pdfEmbed = document.querySelector("#pdfembed");
             pdfEmbed.style.backgroundImage = '';
-            pdfEmbed.style.height = "96vh";
-            pdfEmbed.style.marginTop = "-48vh";
+            pdfEmbed.style.height = "90vh";
+            pdfEmbed.style.marginTop = "-44vh";
 
             document.querySelector("#pdfembed").setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0`);
             document.querySelector("#preview").style.display = 'block';
@@ -372,6 +421,42 @@ export default {
 </script>
 
 <style scoped>
+
+
+#toolbar {
+    z-index: 10001;
+    background-color: rgba(var(--bs-dark-rgb))
+}
+
+
+.overlay {
+  position: fixed;
+  top:45px;
+  left: 0;
+  width: 100%;
+  height: 100%;
+
+  background-color: #eef2f8;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.spinner {
+  border: 16px solid #fff;
+  border-top: 16px solid #3498db;
+  border-radius: 50%;
+  width: 120px;
+  height: 120px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
 
 
 

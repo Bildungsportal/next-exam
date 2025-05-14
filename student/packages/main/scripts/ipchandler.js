@@ -977,20 +977,7 @@ class IpcHandler {
         })
      
         ipcMain.on('get-cpu-info', (event) => {
-            const cpus = os.cpus().map(cpu => cpu.model.toLowerCase());
-            const vmCpuKeywords = ['qemu', 'virtual', 'vmware', 'kvm', 'xen', 'hyper-v'];
-    
-
-            let virtualCpu = false;
-            cpus.forEach(cpu => {
-                vmCpuKeywords.forEach(keyword => {
-                    if (cpu.includes(keyword)) {
-                        virtualCpu = true;
-                    }
-                });
-            });
-    
-            event.returnValue = virtualCpu;
+            event.returnValue = this.isVirtualMachine()
         });
 
 
@@ -1009,7 +996,7 @@ class IpcHandler {
                 }
             })
             .catch(error => {
-                log.error('ipchandler @ get-wlan-info: Fehler beim Auslesen der WLAN-Verbindung:', error);
+                // log.error('ipchandler @ get-wlan-info: Fehler beim Auslesen der WLAN-Verbindung:', error);
                 return false
             }); 
             return wifiInfo   
@@ -1018,7 +1005,38 @@ class IpcHandler {
 
     }
 
+    isVirtualMachine() {
 
+        if (process.platform === 'linux') {
+        try {
+            const cpuinfo = fs.readFileSync('/proc/cpuinfo', 'utf8')                // Linux CPU flags
+            if (/^flags.* hypervisor/m.test(cpuinfo)) return true
+        } catch {}
+        
+        try {
+            const v = fs.readFileSync('/sys/class/dmi/id/sys_vendor', 'utf8')        // Linux DMI vendor
+            const p = fs.readFileSync('/sys/class/dmi/id/product_name', 'utf8')      // Linux DMI product
+            if (/Oracle|VirtualBox|VMware|QEMU|KVM|Xen/i.test(v + p)) return true
+        } catch {}
+        }
+
+        if (process.platform === 'win32') {
+        try {
+            const ps = execSync('powershell -NoProfile -Command "(Get-CimInstance Win32_ComputerSystem).Manufacturer, (Get-CimInstance Win32_ComputerSystem).Model" ',  { encoding: 'utf8' })                                                                   
+            // Convert to lowercase for case-insensitive comparison and check for common VM identifiers
+            const psLower = ps.toLowerCase();
+            if (psLower.includes('virtualbox') || 
+                psLower.includes('vmware') || 
+                psLower.includes('kvm') || 
+                psLower.includes('hyper-v') || 
+                psLower.includes('xen') ||
+                psLower.includes('innotek'))  { 
+                    return true
+                 }
+            } catch {}
+        }
+        return false                                                           // default to physical
+    }
 
     compareVersions(versionA, versionB) {
         const partsA = versionA.split('.').map(Number);

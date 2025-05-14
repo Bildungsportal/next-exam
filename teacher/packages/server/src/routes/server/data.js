@@ -634,56 +634,9 @@ router.post('/getexammaterials/:servername/:token', async (req, res, next) => {
         
        
         if (file){
-           
-                let absoluteFilepath = path.join(config.workdirectory, mcServer.serverinfo.servername, filename);
-                if (filename.includes(".zip")){  //ABGABE as ZIP
-
-                    log.info("data @ receive: Receiving ZIP File from: ", student.clientname)
-
-                    let studentdirectory =  path.join(config.workdirectory, mcServer.serverinfo.servername, student.clientname)
-                    let tstring = String(time).replace(/:/g, "_");
-                    let studentarchivedir = path.join(studentdirectory, tstring)
-
-                   
-
-                    // check directories
-                    try {
-                        if (!fs.existsSync(studentdirectory)){ fs.mkdirSync(studentdirectory, { recursive: true });  }
-                        if (!fs.existsSync(studentarchivedir)){ fs.mkdirSync(studentarchivedir, { recursive: true }); }
-                        log.info(`data @ receive: Target Directories, OK`)
-                    }catch (err) {log.error("data @ receive: ",err)}
-            
-
-                    // extract zip file to archive
-
-                    log.info(`data @ receive: Storing Zipfile to ${absoluteFilepath}`)
-                    fs.writeFile(absoluteFilepath, fileContent, (err) => {
-                        if (err) { errors++; log.error( t("data.couldnotstore") ) }
-                        else {
-                            log.info(`data @ receive: Extracting Zipfile to ${studentarchivedir}`)
-                            extract(absoluteFilepath, { dir: studentarchivedir }).then( () => {
-                                fs.unlink(absoluteFilepath, (err) => { if (err) log.error(err); }); // remove zip file after extracting
-                                // log.info("data @ receive: ZIP file received!")
-                                log.info(`data @ receive: Successfully saved files to ${studentarchivedir}, informing Student...`)
-                                res.json({ status:"success", sender: "server", message:t("data.filereceived"), errors: errors  })
-                            }).catch( err => log.error("data @ receive: ",err))
-                        }                     
-                    });
-                }
-                else { // this is another file (most likely a screenshot as we do not yet transfer other files)
-             
-                    fs.writeFile(absoluteFilepath, fileContent, (err) => {
-                        if (err) { errors++; log.error( t("data.couldnotstore") ) }
-                        else {
-                            log.info("data @ receive: Single file received")
-                            res.json({ status:"success", sender: "server", message:t("data.filereceived"), errors: errors  })
-                        }
-                    });
-
-                    
-                }
-            
-           
+                archiveAndExtractZip(config.workdirectory, filename, student, mcServer, time, fileContent)
+                if (config.backupdirectory){   archiveAndExtractZip(config.backupdirectory, filename, student, mcServer, time, fileContent)    }
+                res.json({ status:"success", sender: "server", message:t("data.filereceived"), errors: errors  })
         }
         else {
             res.json({ status:"error",  sender: "server", message:t("data.nofilereceived"), errors: errors })
@@ -789,7 +742,52 @@ router.post('/upload/:servername/:servertoken/:studenttoken', async (req, res, n
 
 export default router
 
+function archiveAndExtractZip(savepath, filename, student, mcServer, time, fileContent){
+    let absoluteFilepath = path.join(savepath, mcServer.serverinfo.servername, filename);
+    
+    if (filename.includes(".zip")){  //ABGABE as ZIP
 
+                    log.info("data @ receive: Receiving ZIP File from: ", student.clientname)
+
+                    let studentdirectory =  path.join(savepath, mcServer.serverinfo.servername, student.clientname)
+                    let tstring = String(time).replace(/:/g, "_");
+                    let studentarchivedir = path.join(studentdirectory, tstring)
+
+                   
+
+                    // check directories
+                    try {
+                        if (!fs.existsSync(studentdirectory)){ fs.mkdirSync(studentdirectory, { recursive: true });  }
+                        if (!fs.existsSync(studentarchivedir)){ fs.mkdirSync(studentarchivedir, { recursive: true }); }
+                        log.info(`data @ receive: Target Directories, OK`)
+                    }catch (err) {log.error("data @ receive: ",err)}
+            
+
+                    // extract zip file to archive
+
+                    log.info(`data @ receive: Storing Zipfile to ${absoluteFilepath}`)
+                    fs.writeFile(absoluteFilepath, fileContent, (err) => {
+                        if (err) { errors++; log.error( t("data.couldnotstore") ) }
+                        else {
+                            log.info(`data @ receive: Extracting Zipfile to ${studentarchivedir}`)
+                            extract(absoluteFilepath, { dir: studentarchivedir }).then( () => {
+                                fs.unlink(absoluteFilepath, (err) => { if (err) log.error(err); }); // remove zip file after extracting
+                                // log.info("data @ receive: ZIP file received!")
+                                log.info(`data @ receive: Successfully saved files to ${studentarchivedir}, informing Student...`)
+                               
+                            }).catch( err => log.error("data @ receive: ",err))
+                        }                     
+                    });
+                }
+
+
+
+
+
+
+
+
+}
 
 /**
  * Checks if the token is valid in order to process api request

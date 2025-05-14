@@ -225,11 +225,11 @@ export default {
                     else if ( event.url.includes("auth") && event.url.includes(this.serverstatus.moodleDomain) )           { console.log(" url allowed") }
 
                     else {
-                        console.log("blocked leaving exam mode")
+                        console.log("webview @ will-navigate: blocked leaving exam mode")
                         webview.stop()
                     }
                 }
-                else { console.log("entered valid test environment")  }
+                else { console.log("webview @ will-navigate: entered valid test environment")  }
             });
         });
     },

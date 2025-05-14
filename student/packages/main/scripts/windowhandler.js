@@ -406,8 +406,7 @@ class WindowHandler {
                 spellcheck: false,  
                 contextIsolation: true,
                 webviewTag: true,
-                webSecurity: false
-            }
+                webSecurity: false            }
         });
 
 
@@ -429,10 +428,6 @@ class WindowHandler {
                 if (process.platform ==='darwin') { this.examwindow.setAlwaysOnTop(true, "pop-up-menu", 0)  }  // do not display above popup because of colorpicker in editor (fix that!)
                 else {                              this.examwindow.setAlwaysOnTop(true, "screen-saver", 1) }
 
-                // this.examwindow.setMinimizable(false)
-                // this.examwindow.setVisibleOnAllWorkspaces(true); 
-                // this.examwindow.setFullScreen(true)
-
                 this.examwindow.focus();
                 this.examwindow.setKiosk(true); 
                 this.examwindow.setOpacity(1)
@@ -443,14 +438,8 @@ class WindowHandler {
                 enableRestrictions(this)  // enable restriction only when exam window is fully loaded and in focus
                 await this.sleep(2000)    // wait an additional 2 sec for windows restrictions to kick in (they steal focus)
                 this.examwindow.focus();  // focus again just to be sure
-               
-
             }
         })
-
-
-
-
 
 
         this.examwindow.serverstatus = serverstatus //we keep it there to make it accessable via examwindow in ipcHandler
@@ -465,10 +454,7 @@ class WindowHandler {
 
         if (examtype === "microsoft365"  ) { //external page
             log.info("starting microsoft365 exam...")
-           
             let urlview = this.multicastClient.clientinfo.msofficeshare   
-           
-
             if (!urlview) {// we wait for the next update tick - msofficeshare needs to be set ! (could happen when a student connects later then exam mode is set but his share url needs some time)
                 log.warn("no url for microsoft365 was set")
                 log.warn(this.multicastClient.clientinfo)
@@ -479,8 +465,6 @@ class WindowHandler {
                 this.multicastClient.clientinfo.focus = true
                 return
             }
-
-
             // load top menu in MainPage
             let url = examtype   // editor || math || eduvidual || tbd.
             if (app.isPackaged) {
@@ -491,8 +475,6 @@ class WindowHandler {
                 let backgroundurl = `http://${process.env['VITE_DEV_SERVER_HOST']}:${process.env['VITE_DEV_SERVER_PORT']}/#/${url}/${token}/`
                 this.examwindow.loadURL(backgroundurl);
             }
-
-
             // Define the MainContentPage view
             let contentView = new BrowserView({
                 webPreferences: {
@@ -500,8 +482,7 @@ class WindowHandler {
                   contextIsolation: true,
                 }
             });
-            
-           
+        
             contentView.setBounds({
                 x: 0,
                 y: this.examwindow.menuHeight,
@@ -526,7 +507,6 @@ class WindowHandler {
                 });
             });
 
-
             this.examwindow.on('resize', () => {
                 let newBounds = this.examwindow.getBounds();
                 contentView.setBounds({
@@ -537,6 +517,7 @@ class WindowHandler {
                 });
             });
         }
+        // this is the normal exam mode (editor, math, eduvidual, website, gforms)
         else { 
             let url = examtype   // editor || math || tbd.
             if (app.isPackaged) {
@@ -555,11 +536,27 @@ class WindowHandler {
          * Handle special NAVIGATION situations
          */
 
+
+        /***************************
+         *  Website
+         ***************************/
+        if (serverstatus.examSections[serverstatus.lockedSection].examtype === "website" ){ 
+            // jede WebView abfangen und Popups im selben WebView laden
+            this.examwindow.webContents.on('did-attach-webview', (event, webviewContents) => {
+                webviewContents.setWindowOpenHandler(({ url }) => {
+                    console.log("windowhandler @ examwindow: did-attach-webview: new-window", url)
+                    webviewContents.loadURL(url);         // URL im selben WebView öffnen
+                    return { action: 'deny' };            // neues Fenster unterbinden
+                });
+            });
+        }
+
+
+
         /***************************
          *  Texteditor
          ***************************/
         if (serverstatus.examSections[serverstatus.lockedSection].examtype === "editor" ){  // do not under any circumstances allow navigation away from the editor
-           
             this.examwindow.webContents.on('will-navigate', (event, url) => {    // a pdf could contain a link - ATTENTION: also set in communicationhandler.js (or direct to a common function)
                 if ( url.includes( serverstatus.examSections[serverstatus.lockedSection].allowedUrl)){
                     console.log("url allowed")
@@ -569,7 +566,6 @@ class WindowHandler {
                     event.preventDefault()
                 }
             })  //Prevent navigation away from the editor
-
 
             // if a new window should open triggered by window.open()
             this.examwindow.webContents.on('new-window', (event, url) => { 
@@ -582,9 +578,6 @@ class WindowHandler {
                 console.log("setWindowOpenHandler", url)
                 return { action: 'deny' };   
             }); // Prevent the new window from opening
-    
-
-
         }
 
         /***************************
@@ -607,14 +600,16 @@ class WindowHandler {
             // if a new window should open triggered by target="_blank"
             browserView.webContents.setWindowOpenHandler(({ url }) => { return { action: 'deny' };   }); // Prevent the new window from opening
             
-            
             let executeCode =  `
                     function lock(){
                         // 'WACDialogOuterContainer','WACDialogInnerContainer','WACDialogPanel',
                         const hideusByID = ['ShowHideEquationToolsPane','LinkGroup','GraphicsEditor','InsertTableOfContentsInInsertTab','InsertOnlinevideo','Picture','Ribbon-PictureMenuMLRDropdown','InsertAddInFlyout','Designer','Editor','FarPane','Help','InsertAppsForOffice','FileMenuLauncherContainer','Help-wrapper','Review-wrapper','Header','FarPeripheralControlsContainer','BusinessBar']
                         for (entry of hideusByID) {
                             let element = document.getElementById(entry)
-                            if (element) { element.style.display = "none" }
+                            if (element) { 
+                                element.style.display = "none" 
+                                element.style.setProperty("display", "none", "important");
+                            }
                         }
 
                         let buttonAppsOverflow = document.getElementsByName('Add-Ins')[0];  // this button is redrawn on resize (doesn't happen in exam mode but still there must be a cleaner way - inserting css before it appears is not working)
@@ -645,14 +640,12 @@ class WindowHandler {
                     `
 
             this.lockCallback = () => this.lock365(browserView, executeCode); 
-
             this.lockScheduler = new SchedulerService(this.lockCallback, 400)
             this.lockScheduler.start()
-
-            // Wait until the webContents is fully loaded
+            // Wait until the webContents is fully loaded  // this is not working reliably because the page is loaded in many steps and the ui elements are not available yet
             browserView.webContents.on('did-finish-load', async () => {
                 browserView.webContents.mainFrame.frames.filter((frame) => {
-                    if (frame && frame.name === 'WebApplicationFrame') {
+                    if (frame) {
                         frame.executeJavaScript(executeCode); 
                     }
                 })
@@ -689,7 +682,7 @@ class WindowHandler {
         if (browserView.webContents && browserView.webContents.mainFrame){
             browserView.webContents.mainFrame.frames.filter((frame) => {
                 //log.info("found frame", frame.name)
-                if (frame && frame.name === 'WebApplicationFrame' || frame.name === 'WacFrame_Word_0') {
+                if (frame && (frame.name === 'WebApplicationFrame' || frame.name === 'WacFrame_Word_0' || frame.name === 'WacFrame_Excel_0')) {
                     //log.info("found frame")
                     frame.executeJavaScript(executeCode); 
                 }
@@ -906,7 +899,7 @@ class WindowHandler {
             if (activeWin && activeWin.owner && activeWin.owner.name) {
                 let name = activeWin.owner.name
                 let wpath = activeWin.owner.path
-         
+
                 if (name.includes("exam") || name.includes("next")  || name.includes("Electron")|| name.includes("electron") ||  wpath.includes("EaseOfAccessDialog")  ){  
                     // fokus is on allowed window instance
                     this.focusTargetAllowed = true
@@ -957,7 +950,7 @@ class WindowHandler {
 
         log.info("windowhandler @ blurevent: student tried to leave exam window")
 
-        if (!this.isWayland){
+        if (process.platform !== 'linux'){
             await this.windowTracker()  //checks if new focus window is allowed
             log.info("windowtracker check done...")
         }

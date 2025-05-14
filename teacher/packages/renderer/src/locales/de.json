@@ -29,7 +29,11 @@
         "folderdelete": "Wollen Sie die den lokalen Prüfungsordner löschen?",
         "onlineexams": "BiP Prüfungen",
         "bipnotloggedin": "Bitte melden Sie sich am BiP an, bevor Sie die Prüfung starten",
-        "noNews":"Keine Neuigkeiten verfügbar"
+        "noNews":"Keine Neuigkeiten verfügbar",
+        "backupfolder": "Backupverzeichnis",
+        "backupfolderinfo": "Bitte geben Sie einen Pfad für das Backup-Verzeichnis ein",
+        "extendedsettings": "Erweitert",
+        "incompatible": "Nicht kompatibel mit der aktuellen Version"
     },
     "dashboard":{
         "server": "Server-Adresse",
@@ -66,7 +70,7 @@
         "exitexaminfo": "Alle bestehenden Verbindungen werden unterbrochen",
         "exitkiosk": "Abgesicherten Modus beenden. Dies schließt das Prüfungsfenster für alle Schüler:innen!",
         "exitkioskshort": "Abgesicherten Modus beenden.",
-        "reallykick": "Schüler:in vom Prüfungsserver entfernen",
+        "reallykick": "vom Prüfungsserver entfernen",
         "kick": "Verbindung trennen",
         "leftkiosk": "Absicherung verlassen",
         "online":"Info",
@@ -122,6 +126,7 @@
         "abgabeautohint":"(Zeitangabe in Minuten)",
         "eduvidualid": "Eduvidual / Moodle",
         "eduvidualidhint": "Bitte geben Sie eine gültige Test-URL ein!",
+        "gformshint": "Bitte geben Sie eine gültige Google Forms ID ein!",
         "eduvidualdomain": "Sollte ihre Moodleinstanz unter einer anderen Domain erreichbar sein, geben Sie diese an",
         "lock":"Bildschirme sperren",
         "unlock":"Bildschirme freigeben",
