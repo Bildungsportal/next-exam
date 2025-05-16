@@ -15,5 +15,5 @@ jobs:
       uses: actions/setup-node@v4
     - name: Build teacher ------
       run: cd teacher
-    - run: npm ci
+    - run: npm install
     - run: npm run build --if-present
