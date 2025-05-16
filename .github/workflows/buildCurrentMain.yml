@@ -13,11 +13,14 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '22.x'
-    - name: Teacher install dependencies and build
+    - name: Teacher install dependencies
       working-directory: ./teacher
-      run: |
-        npm install
-        npm run build
+      run: npm install
+    - name: clean release folder
+      run: rm -rf ./release
+    - name: Teacher install build
+      working-directory: ./teacher
+      run: npm run build
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
