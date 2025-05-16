@@ -1,9 +1,7 @@
 
 name: Build current Main Branch with Node.js CI
 
-on:
-  workflow_dispatch:
-    branches: [ "main" ]
+on: workflow_dispatch
 
 jobs:
   build:
