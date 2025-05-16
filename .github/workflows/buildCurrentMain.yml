@@ -13,5 +13,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Use Node.js 
       uses: actions/setup-node@v4
+    - name: Build teacher ------
+      run: cd teacher
     - run: npm ci
     - run: npm run build --if-present
