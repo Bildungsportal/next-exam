@@ -8,11 +8,7 @@ asarUnpack:
 afterPack: scripts/afterpack.js
 afterSign: scripts/notarize.cjs
 directories:
-<<<<<<< HEAD
-  output: ../release/1.1.0.1_20250410
-=======
-  output: ../release/1.1.0.1_20250512
->>>>>>> e51ebc5bee6a3d60643611be791529e0dd11b257
+  output: ../release/1.1.0.1_20250515
 compression: normal
 files:
   - dist
@@ -22,11 +18,7 @@ linux:
   target: AppImage
   category: Utility
   icon: public/icons/256x256.png
-<<<<<<< HEAD
-  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20250410_${arch}.${ext}
-=======
-  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20250512_${arch}.${ext}
->>>>>>> e51ebc5bee6a3d60643611be791529e0dd11b257
+  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20250515_${arch}.${ext}
   files:
     - dist
     - public
@@ -35,11 +27,7 @@ linux:
     - "!public/minimal-jre-11-mac-arm64/**/*"
 mac:
   icon: public/icons/icon.png
-<<<<<<< HEAD
-  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20250410_${arch}.${ext}
-=======
-  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20250512_${arch}.${ext}
->>>>>>> e51ebc5bee6a3d60643611be791529e0dd11b257
+  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20250515_${arch}.${ext}
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: scripts/entitlements.mac.plist
@@ -74,11 +62,7 @@ win:
     - target: msi
       arch:
         - x64
-<<<<<<< HEAD
-  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20250410_${arch}.${ext}
-=======
-  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20250512_${arch}.${ext}
->>>>>>> e51ebc5bee6a3d60643611be791529e0dd11b257
+  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20250515_${arch}.${ext}
   signtoolOptions:
     certificateSubjectName: OSOS Austria
     signingHashAlgorithms:

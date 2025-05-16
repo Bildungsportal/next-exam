@@ -38,11 +38,11 @@ Handbuch - Next-Exam
 
 
 
-### **Teil 1: Grundlegende Funktionen (Teacher)**
+### **Teil 1: Grundlegende Funktionen (Teacher)** {#teil-1-grundlegende-funktionen}
 
 
 
-#### **1.1. Prüfungen anlegen**
+#### **1.1. Prüfungen anlegen** {#pruefungen-anlegen}
 
 
 * Prüfung benennen
@@ -77,7 +77,7 @@ Handbuch - Next-Exam
 
 
 
-#### **1.2. Dashboard**
+#### **1.2. Dashboard** {#dashboard-next-exam}
 
 
 
@@ -97,7 +97,7 @@ Handbuch - Next-Exam
 ![](./img/hb_teacher_dashboard.png)
 
 
-#### **1.3 Prüfungsmodi**
+#### **1.3 Prüfungsmodi** {#pruefungsmodi}
 
 
 
@@ -169,7 +169,7 @@ Handbuch - Next-Exam
 
 
 
-#### **1.4. Prüfungsunterlagen definieren**
+#### **1.4. Prüfungsunterlagen definieren** {#materialien-definieren}
 
 
 * **Materialien bereitstellen**
@@ -223,7 +223,7 @@ Handbuch - Next-Exam
 
 
 
-#### **1.5. Schüler verwalten**
+#### **1.5. Schüler verwalten** {#schueler-fokussieren}
 
 
 * **Sitzplan**  
@@ -261,7 +261,7 @@ Handbuch - Next-Exam
 
 
 
-#### **1.6 Abgaben einsehen und sichern**
+#### **1.6 Abgaben einsehen und sichern** {#abgaben-einsehen}
 
 
 Der Dateimanager von Next-Exam erlaubt es Lehrpersonen, alle Abgaben sowie archivierte Zwischenstände einzusehen und zu verwalten.
@@ -285,7 +285,7 @@ Der Dateimanager von Next-Exam erlaubt es Lehrpersonen, alle Abgaben sowie archi
 
 
 
-#### **1.7 Prüfung beenden**
+#### **1.7 Prüfung beenden** {#pruefung-beenden}
 
 
 - **Prüfung beenden:**  
@@ -301,11 +301,11 @@ Der Dateimanager von Next-Exam erlaubt es Lehrpersonen, alle Abgaben sowie archi
   
 
 
-### **Teil 2: Grundlegende Funktionen (Student)**
+### **Teil 2: Grundlegende Funktionen (Student)** {#teil-2-grundlegende-funktionen}
 
 
 
-#### **2.1 Prüfung starten aus Sicht der Schüler:innen**
+#### **2.1 Prüfung starten aus Sicht der Schüler:innen** {#pruefung-starten-schueler}
 
 
 
@@ -323,37 +323,37 @@ Der Dateimanager von Next-Exam erlaubt es Lehrpersonen, alle Abgaben sowie archi
 
 
 
-### **Teil 3: Erweiterte Funktionen**
+### **Teil 3: Erweiterte Funktionen** {#teil-3-erweiterte-funktionen}
 
 
 
-#### **3.1 Gruppen verwalten**
+#### **3.1 Gruppen verwalten** {#gruppen-verwalten}
 
 
 * Aktivierung, Änderung der Gruppenzugehörigkeit oder Zuweisung gruppenspezifischer Materialien
 
 
 
-#### **3.2 Bildschirm abdunkeln**
+#### **3.2 Bildschirm abdunkeln** {#bildschirm-abdunkeln}
 
 
 * Abdunkeln des Bildschirms, um die Aufmerksamkeit zu lenken
 
 
 
-#### **3.3 Sprache der Benutzeroberfläche wählen**
+#### **3.3 Sprache der Benutzeroberfläche wählen** {#sprachoberflaeche-waehlen}
 
 
 ![](./img/hb_lang_switch.png)  
 
  
-#### **3.4 Informationskanal vom Bildungsportal abrufen**
+#### **3.4 Informationskanal vom Bildungsportal abrufen** {#informationskanal-bildungsportal}
 
 
 ![](./img/hb_bip_news.png)  
 
  
-#### **3.5 Lokal gesicherte Prüfungen löschen bzw. fortsetzen**
+#### **3.5 Lokal gesicherte Prüfungen löschen bzw. fortsetzen** {#lokal-gesicherte-pruefungen}
 
 
 
@@ -372,7 +372,7 @@ Der Dateimanager von Next-Exam erlaubt es Lehrpersonen, alle Abgaben sowie archi
 
 
 
-#### **3.6. Prüfungsabschnitte**
+#### **3.6. Prüfungsabschnitte** {#pruefungsabschnitte}
 
 
 
@@ -388,7 +388,7 @@ Der Dateimanager von Next-Exam erlaubt es Lehrpersonen, alle Abgaben sowie archi
 
 
 
-#### **3.7. Erweiterte Sicherheitsfunktionen**
+#### **3.7. Erweiterte Sicherheitsfunktionen** {#sicherheitsfunktionen}
 
 
 ![](./img/hb_teacher_configure.png)  
@@ -403,7 +403,7 @@ Der Dateimanager von Next-Exam erlaubt es Lehrpersonen, alle Abgaben sowie archi
 
 
 
-#### **3.8. Integration ins Bildungsportal**
+#### **3.8. Integration ins Bildungsportal** {#bildungsportal-integration}
 
 
 
@@ -427,11 +427,11 @@ Der Dateimanager von Next-Exam erlaubt es Lehrpersonen, alle Abgaben sowie archi
 
 
 
-### **Teil 4: Fehlerbehandlung - FAQ**
+### **Teil 4: Fehlerbehandlung - FAQ** {#teil-4-fehlerbehandlung}
 
 
 
-#### **4.1. Fehlerbehandlung**
+#### **4.1. Fehlerbehandlung** {#fehlerbehandlung}
 
 
 **Fehlermeldungen beim Verbindungsaufbau und deren Ursachen**
