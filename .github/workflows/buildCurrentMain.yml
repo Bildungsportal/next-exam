@@ -1,0 +1,28 @@
+
+name: Build current Main Branch with Node.js CI
+
+on: workflow_dispatch
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22.x'
+    - name: Teacher install dependencies
+      working-directory: ./teacher
+      run: npm install
+#    - name: clean release folder
+#      run: rm -rf ./release
+    - name: Teacher install build
+      working-directory: ./teacher
+      run: npm run build
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: teacher-current-main-linux
+        path: ./teacher/dist/
