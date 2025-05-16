@@ -18,9 +18,9 @@
     "prebuild": "node scripts/prebuild.js",
     "build": "npm run prebuild && npm run clean && node scripts/build.mjs && electron-builder -l",
     "build:mac": "npm run prebuild && npm run clean && node scripts/build.mjs && electron-builder -m",
-    "build:win": "npm run prebuild && npm run cleanwin && node scripts/build.mjs && electron-builder -w",
-    "build:win:msi": "npm run prebuild && npm run cleanwin && node scripts/build.mjs && electron-builder -w --x64 --config.extraMetadata.build.win.target=msi",
-    "build:win:portable": "npm run prebuild && npm run cleanwin && node scripts/build.mjs && electron-builder -w --x64 --config.extraMetadata.build.win.target=portable"
+    "build:win": "npm run prebuild && node scripts/build.mjs && electron-builder -w",
+    "build:win:portable": "npm run prebuild && node scripts/build.mjs && electron-builder -w portable:x64",
+    "build:win:msi": "npm run prebuild && node scripts/build.mjs && electron-builder -w msi:x64"
   },
   "engines": {
     "node": ">=22.0.0"
