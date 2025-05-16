@@ -25,6 +25,6 @@ jobs:
         name: teacher-current-main-linux
         path: |
           ./release/
-          !./relrease/*/linux-unpacked/*.*
+          !./release/*/linux-unpacked/*.*
         retention-days: 1
 
