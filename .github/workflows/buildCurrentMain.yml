@@ -13,7 +13,9 @@ jobs:
     - uses: actions/checkout@v4
     - name: Use Node.js 
       uses: actions/setup-node@v4
-    - name: Build teacher ------
-      run: cd teacher
-    - run: npm install
-    - run: npm run build --if-present
+    - name: Teacher install dependencies
+      working-directory: ./teacher
+      run: npm install
+    - name: Teacher build
+      working-directory: ./teacher
+      run: npm run build --if-present
