@@ -1,5 +1,5 @@
 
-name: Build current Main Branch with Node.js CI
+name: Build current Linux Main Branch
 
 on: workflow_dispatch
 
@@ -16,8 +16,6 @@ jobs:
     - name: Teacher install dependencies
       working-directory: ./teacher
       run: npm install
-#    - name: clean release folder
-#      run: rm -rf ./release
     - name: Teacher install build
       working-directory: ./teacher
       run: npm run build
@@ -25,4 +23,8 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: teacher-current-main-linux
-        path: ./teacher/dist/
+        path: |
+          ./release/
+          !./relrease/*/linux-unpacked/*.*
+        retention-days: 1
+
