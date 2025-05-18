@@ -26,9 +26,13 @@ function watchMain(server) {
     plugins: [{
       name: 'electron-main-watcher',
       writeBundle() {
-        electronProcess && electronProcess.kill()
+        if (electronProcess) electronProcess.kill();
         electronProcess = spawn(electron, ['.', '--js-flags=--expose-gc', '--inspect=5858'], { stdio: 'inherit', env })
         //electronProcess = spawn(electron, ['.'], { stdio: 'inherit', env })
+        electronProcess.on('exit', () => {
+          server.close(); // Vite-Dev-Server beenden
+          process.exit(0); // Hauptprozess beenden
+        });
       },
     }],
     build: {

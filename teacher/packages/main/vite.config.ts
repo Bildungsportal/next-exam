@@ -17,6 +17,7 @@ export default defineConfig({
     // externalizeDepsPlugin({
     //   //include: ['electron-log'], // Stelle sicher, dass electron-log eingeschlossen ist
     // }),
+
  
   ],
   optimizeDeps: {
@@ -27,7 +28,7 @@ export default defineConfig({
     emptyOutDir: true,
 
     lib: {
-      entry: 'main.ts',
+      entry: 'main.js',
       formats: ['es'],  // Ändere 'cjs' zu 'es' für ESModule
       fileName: () => '[name].mjs',  // Ändere Dateiendung zu '.mjs' für ESModule
     },

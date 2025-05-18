@@ -32,6 +32,10 @@ exports.default = async function notarizing(context) {
     console.log("Skipping for this platform");
     return;
   }
+  if (process.env.DISABLE_NOTARIZE) {
+    console.log("Notarization disabled by env variable.");
+    return;
+  }
 
   const appName = context.packager.appInfo.productFilename;
   const appPath = path.join(appOutDir, `${appName}.app`, 'Contents', 'Resources', 'app.asar.unpacked', 'public', 'LanguageTool', 'libs');

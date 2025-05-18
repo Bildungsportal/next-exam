@@ -9,6 +9,10 @@ exports.default = async function notarizing(context) {
     return;
   }
 
+  if (process.env.DISABLE_NOTARIZE) {
+    console.log("Notarization disabled by env variable.");
+    return;
+  }
 
   // Notarization-Prozess starten
   console.log("Notarizing Next-Exam-Teacher");

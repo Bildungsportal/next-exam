@@ -12,15 +12,18 @@
   "description": "An exam managment tool for digital exams",
   "type": "module",
   "scripts": {
-    "dev": "concurrently --prefix-colors \"green,blue\" \"node bip-demo-api/api.js\" \"npm run prebuild && node scripts/watch.mjs\"",
+    "dev": "concurrently --kill-others --prefix-colors \"green,blue\" \"node bip-demo-api/api.js\" \"npm run prebuild && node scripts/watch.mjs\"",
     "clean": "rm -rf ./dist",
     "cleanwin": "rmdir /s /q dist",
     "prebuild": "node scripts/prebuild.js",
     "build": "npm run prebuild && npm run clean && node scripts/build.mjs && electron-builder -l",
+    
     "build:mac": "npm run prebuild && npm run clean && node scripts/build.mjs && electron-builder -m",
-    "build:win": "npm run prebuild && node scripts/build.mjs && electron-builder -w",
-    "build:win:portable": "npm run prebuild && node scripts/build.mjs && electron-builder -w portable:x64",
-    "build:win:msi": "npm run prebuild && node scripts/build.mjs && electron-builder -w msi:x64"
+    "build:mac:notarize": "DISABLE_NOTARIZE=1 npm run prebuild && npm run clean && node scripts/build.mjs && electron-builder -m --mac.identity=null --disable-notarize",
+
+    "build:win": "npm run prebuild && npm run cleanwin && node scripts/build.mjs && electron-builder -w",
+    "build:win:portable": "npm run prebuild && npm run cleanwin && node scripts/build.mjs && electron-builder -w portable:x64 --win.sign=false",
+    "build:win:msi": "npm run prebuild && npm run cleanwin && node scripts/build.mjs && electron-builder -w msi:x64 --win.sign=false"
   },
   "engines": {
     "node": ">=22.0.0"
