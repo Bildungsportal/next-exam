@@ -18,20 +18,16 @@ parentPort.on('message', async (message) => {
     
     const [resizedBuffer, headerBuffer] = await Promise.all([
       image.clone().resize({ width: 1024 }).toBuffer(),
-      image.clone().extract({ left: 0, top: 0, width: cropWidth, height: 100 }).toBuffer()
+      image.clone().extract({ left: 0, top: 0, width: cropWidth, height: 150 }).toBuffer()
     ]);
 
     const headerRaw = await sharp(headerBuffer).raw().toBuffer();
     let isAllBlack = true;
-    for (let y = 0; y < 10; y++) {
-      for (let x = 0; x < 10; x++) {
-        const offset = (y * cropWidth + x) * 4;
-        if (headerRaw[offset] !== 0 || headerRaw[offset + 1] !== 0 || headerRaw[offset + 2] !== 0) {
-          isAllBlack = false;
-          break;
-        }
+    for (let i = 0; i < headerRaw.length; i += 4) { // 4 = RGBA
+      if (headerRaw[i] !== 0 || headerRaw[i + 1] !== 0 || headerRaw[i + 2] !== 0) { // check RGB
+        isAllBlack = false;
+        break;
       }
-      if (!isAllBlack) break;
     }
     
     if (image) { image.destroy(); }
