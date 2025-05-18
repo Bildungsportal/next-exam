@@ -244,10 +244,21 @@ class WindowHandler {
         
         blockwin.removeMenu() 
         blockwin.setMinimizable(false)
-        blockwin.setKiosk(true)
+
+        if (process.platform ==='darwin') { 
+            blockwin.setFullScreen(true);
+            blockwin.on('leave-full-screen', () => {
+                blockwin.setFullScreen(true); // sofort wieder zurücksetzen
+            }); 
+        }  
+        else {   
+            blockwin.setKiosk(true); // Kiosk = “take over main screen”. on macos that's why we use fullScreen workaround with event listener
+        }
+
         blockwin.setAlwaysOnTop(true, "screen-saver", 1) 
         blockwin.show()
         blockwin.moveTop();
+
         this.blockwindows.push(blockwin)
     }
 
