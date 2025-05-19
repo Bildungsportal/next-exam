@@ -27,4 +27,18 @@ jobs:
           ./release/
           !./release/**/linux-unpacked
         retention-days: 1
+    - name: Student install dependencies
+      working-directory: ./student
+      run: npm install
+    - name: Student install build
+      working-directory: ./student
+      run: npm run build
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: student-current-main-linux
+        path: |
+          ./release/
+          !./release/**/linux-unpacked
+        retention-days: 1
 
