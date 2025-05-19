@@ -3,8 +3,8 @@ nav:
   - Home: index.md
   - Teacher - Grundlagen: teacher.md
   - Student - Grundlagen: student.md
-  - Erweiterte Funktionen: erweitert.md
-  - Fehlerbehandlung: fehler.md
+  - Erweiterte Funktionen: advanced.md
+  - Fehlerbehandlung: error.md
        
 theme:
     name: material
@@ -24,6 +24,8 @@ theme:
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
+plugins:
+  - glightbox
 
 extra:
   consent:
