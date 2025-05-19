@@ -5,9 +5,9 @@
 
 const config = {
     development: false,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
-    showdevtools: true,
-    bipIntegration: true,
-    bipDemo: true,
+    showdevtools: false,
+    bipIntegration: false,
+    bipDemo: false,
 
     workdirectory : "",   // (desktop path + examdir)
     tempdirectory : "",   // (desktop path + 'tmp')
