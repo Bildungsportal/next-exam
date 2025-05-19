@@ -16,7 +16,7 @@ jobs:
     - name: Teacher install dependencies
       working-directory: ./teacher
       run: npm install
-    - name: Teacher install build
+    - name: Teacher build
       working-directory: ./teacher
       run: npm run build
     - name: Upload artifacts
@@ -30,7 +30,7 @@ jobs:
     - name: Student install dependencies
       working-directory: ./student
       run: npm install
-    - name: Student install build
+    - name: Student build
       working-directory: ./student
       run: npm run build
     - name: Upload artifacts
