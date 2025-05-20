@@ -1,6 +1,6 @@
 # Teacher - Grundlegende Funktionen
 
-## Prüfungen anlegennnnnnnnnn
+## Prüfungen anlegen
 - Prüfung benennen
 - Prüfungsserver starten
 
