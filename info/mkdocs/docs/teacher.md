@@ -4,7 +4,7 @@
 - Prüfung benennen
 - Prüfungsserver starten
 
-> Der Prüfungsname kann frei gewählt werden. Der Arbeitsordner am Desktop beinhaltet alle archivierten Arbeiten und Abgaben sowie die Prüfungsordner und die Konfiguration.
+> Der `Prüfungsname` kann frei gewählt werden. Der Arbeitsordner am Desktop beinhaltet alle archivierten Arbeiten und Abgaben sowie die Prüfungsordner und die Konfiguration.
 
 ### Passwort festlegen (optional)
 > Ein Passwort kann festgelegt werden um zu verhindern, dass die Prüfung bei Verbindungsverlust vom Student verlassen werden kann.
