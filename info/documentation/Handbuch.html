@@ -68,9 +68,9 @@
 
     </style>
   </head>
-  <body>
+  <>
     <a id="handbuch"></a>
-    <h3>Handbuch für die Prüfungssoftware <em>Next-Exam</em></h3>
+    <h1>Handbuch für die Prüfungssoftware <em>Next-Exam</em></h1>
 
     <div id="inhaltsverzeichnis">
       <h2>Inhaltsverzeichnis</h2>
@@ -118,12 +118,9 @@
    
 
     <a id="teil-1-grundlegende-funktionen"></a>
-    <h3><strong>Teil 1: Grundlegende Funktionen (Teacher)</strong></h3>
-
-
-
+    <h2>Teil 1: Grundlegende Funktionen (Teacher)</h2>
     <a id="pruefungen-anlegen"></a>
-    <h4><strong>1.1. Prüfungen anlegen</strong></h4>
+    <h3>1.1. Prüfungen anlegen</h3>
     <ul>
       <li class="check">Prüfung benennen</li>
       <li class="check">Prüfungsserver starten</li>
@@ -131,24 +128,19 @@
     <p>
         <div class="infobox">
             Der Prüfungsname kann frei gewählt werden<br>
-            Der Arbeitsordner am Desktop beinhaltet alle archivierten Arbeiten und Abgaben sowie die Prüfungsordner und Konfiguration<br>
+            Der Arbeitsordner am Desktop beinhaltet alle archivierten Arbeiten und Abgaben sowie die Prüfungsordner und die Konfiguration.<br>
         </div>
     </p>
-    <img src="./img/hb_startexam.png" style="max-width:500px"><br>
-   
-    Optional:
-    <ul>
+    <img src="./img/hb_startexam.png" style="max-width:500px">
+  
+    <h3>Optional</h3>
       <img src="./img/hb_erweitert.png" style="max-width:500px"><br>
-      <li>
-        <strong>Passwort festlegen</strong><br>
-        Ein Passwort kann festgelegt werden um zu verhindern, dass die Prüfung bei Verbindungsverlust verlassen werden kann
-      </li>
-      <li>
-        <strong>Backup-Ordner festlegen</strong><br>
-        Ein zusätzlicher Backup-Ordner kann individuell gewählt werden (z.B. Netzwerk-Ordner, USB Stick, ...)
-      </li>
+      
+        <h4>Passwort festlegen</h4>
+        <p>Ein Passwort kann festgelegt werden um zu verhindern, dass die Prüfung bei Verbindungsverlust vom Student verlassen werden kann.</p>
+        <h4>Backup-Ordner festlegen</h4>
+        <p>Das zusätzliche Backupverzeichnis kann individuell gewählt werden (z.B. Netzwerk-Ordner, USB Stick, ...). Hier werden die Prüfungsdaten (Arbeiten der Schüler:innen, Konfiguration, ...) zusätzlich zum oben genannten Arbeitsordner abgelegt.</p>
       <img src="./img/hb_start_exam.png" style="max-width:500px"><br>
-    </ul>
 
 
 
@@ -156,246 +148,209 @@
 
     <div class="page-break"></div>
     <a id="dashboard-next-exam"></a>
-    <h4><strong>1.2. Dashboard</strong></h4>
-    <p>
-      <div class="infobox">
-        Das Teacher-Dashboard bietet eine Übersicht über alle verbundenen Schüler:innen, stellt alle prüfungsrelevanten Informationen übersichtlich dar und ermöglicht es auf einfache Weise, die Prüfung einzustellen und einzelne Schüler:innen zu verwalten.
-      </div>
-    </p>
+    <h3>1.2. Dashboard</h3>
+    <div class="infobox">
+      Das Teacher-Dashboard bietet eine Übersicht über alle verbundenen Schüler:innen, stellt alle prüfungsrelevanten Informationen dar.<br>
+      Es ermöglicht die Konfiguration der Prüfung und die Verwaltung der Schüler:innen.
+    </div>
     <p>
       Der automatisch generierte Pin-Code wird benötigt um der Prüfung beizutreten.<br>
-      Sollte im (w)LAN Multicast unterbunden sein, kann die Prüfung über die IP-Adresse der Lehrperson gefunden werden.
+      Sollte im (W)LAN Multicast unterbunden sein, kann die Prüfung über die IP-Adresse der Lehrperson gefunden werden.
     </p>
     <img src="./img/hb_teacher_dashboard.png" style="max-width:800px">
 
     <div class="page-break"></div>
 
-
-
-
-
-
-
-
-
-
-
     <a id="pruefungsmodi"></a>
-    <h4><strong>1.3 Prüfungsmodi</strong></h4>
-    <p>
-      <div class="infobox">
-        Next-Exam ermöglicht viele verschiedene Prüfungsvarianten.<br>
-        Verfügbare Prüfungsmodi sind: Sprachen, Mathematik, Eduvidual, Webseite, Forms, Office365<br>
-        Der Prüfungsmodus kann durch ein "DropDown Menü" gesetzt und direkt konfiguriert werden.
-      </div>
-    </p>
+    <h3><strong>1.3 Prüfungsmodi</strong></h3>
+
+    <div class="infobox">
+      Next-Exam ermöglicht viele verschiedene Prüfungsvarianten.<br>
+      Verfügbare Prüfungsmodi sind:
+      <ul>
+        <li>Sprachen</li>
+        <li>Mathematik</li>
+        <li>Eduvidual/Moodle</li>
+        <li>Webseiten</li>
+        <li>Google Forms</li>
+        <li>Microsoft365</li>
+        <li>RDP</li>
+      </ul>
+      Der Prüfungsmodus kann im Dropdown-Feld Prüfungsmodus gewählt werden. Beim Auswählen des Modus gelangen ggf. in die Konfigurationsansicht.<br>
+      Danach können sie die Konfiguration jederzeit über das Zahnrad-Symbol offnen.
+    </div>
 
 
-    <li class="check"><strong>Prüfungsmodus auswählen und konfigurieren:</strong></li>
-        <ul>
+
+    <li class="check"><strong>Prüfungsmodus auswählen und konfigurieren</strong></li>
+
           <img src="./img/hb_teacher_config_exammode.png" style="max-width:400px">
-          <li>
-            <strong>Sprachen</strong><br>
-            Einstellungen wie Korrekturrand, Schriftart, Zeilenabstand und Schriftgröße betreffen sowohl die Darstellung im Editor als auch die Erstellung des Ablage-PDF.<br>
-            Audiodateien (Anzahl erlaubter Abspielversuche) können eingeschränkt werden.<br>
+
+            <h4>Sprachen</h4>
+            <p>
+              Einstellungen wie Korrekturrand, Schriftart, Zeilenabstand und Schriftgröße betreffen sowohl die Darstellung im Editor als auch die Erstellung des Ablage-PDF.<br>
+              Audiodateien (Anzahl erlaubter Abspielversuche) können eingeschränkt werden.<br>
             Zusätzliche Hilfsmittel in Form von Webseiten (z.B. Wörtherbuch) lassen sich definieren.<br>
             Eine passive Rechtschreibhilfe über "LanguageTool" kann aktiviert und konfiguriert werden.<br>
+            </p>
             <img src="./img/hb_config_editor.png" style="max-width:400px"><br>
-          </li>
           <div class="page-break"></div>
-          <li>
-            <strong>Mathematik</strong><br>
-            In diesem Modus arbeiten die Schüler:innen mit GeoGebra Classic/Suite.<br>
+            <h4>Mathematik</h4>
+            <p>In diesem Modus arbeiten die Schüler:innen mit GeoGebra Classic/Suite.<br>
             Zusätzliche Hilfsmittel, wie eine Formelsammlung über eine Webseite, können gesetzt werden.<br>
+            </p>
             <img src="./img/hb_config_math.png" style="max-width:400px"><br>
-          </li>
-          <li>
-            <strong>Eduvidual/Moodle</strong><br>
-            Next-Exam übernimmt die Absicherung des Moodle-Tests. Alle nötigen Einstellungen für die Prüfungsumgebung erfolgen über Moodle selbst.<br>
-            <img src="./img/hb_config_eduvidual.png" style="max-width:400px"><br>
-          </li>
-          <li>
-            <strong>Webseiten</strong><br>
-            Eine beliebige Webseite kann in diesem Modus angezeigt und abgesichert werden. Z.B. digi4school.at, lms.at, scratch.mit.edu, ...<br>
-            <img src="./img/hb_config_website.png" style="max-width:400px"><br>
-          </li>
-          <li>
-            <strong>Google Forms</strong><br>
-            <img src="./img/hb_config_forms.png" style="max-width:400px"><br>
-          </li>
-          <li>
-            <strong>Microsoft365</strong><br>
-            <img src="./img/hb_mslogin.png" style="max-width:400px"><img src="./img/hb_msselect.png" style="max-width:400px"><img src="./img/hb_msfile.png" style="max-width:400px"><br>
-            Nach dem Login mit Microsoft365 wird ein .docx bzw. .xlsx-Template bereitgestellt. <br> Aus diesem Template werden für jede:n Schüler:in automatisch Kopien im OneDrive der Lehrperson generiert, inklusive individueller "Share-Links" zur Bearbeitung.<br><br>
-          </li>
-          <li>
-            <strong>RDP</strong><br>
-            Über das Remote Desktop Protocol (RDP) kann auf einen Windows-Server (oder Virtuelle Maschine) zugegriffen werden. <br>
-            Gibt man als Lehrperson den Benutzernamen und das Passwort des Schülers:in ein (zb. Gast), wird dieser automatisch angemeldet und die aktuelle Sitzung in Next-Exam-Student angezeigt. <br>
-            <img src="./img/hb_rdpconfig.png" style="max-width:400px"><br>
-          </li>
 
-        </ul>
+            <h4>Eduvidual/Moodle</h4>
+            <p>
+              Next-Exam übernimmt die Absicherung des Moodle-Tests. Alle nötigen Einstellungen für die Prüfungsumgebung erfolgen über Moodle selbst.<br>
+            </p>
+            <img src="./img/hb_config_eduvidual.png" style="max-width:400px"><br>
+            <h4>Webseiten</h4>
+            <p>
+              Eine beliebige Webseite kann in diesem Modus angezeigt und abgesichert werden. Z.B. digi4school.at, lms.at, scratch.mit.edu, ...
+            </p>
+            <img src="./img/hb_config_website.png" style="max-width:400px"><br>
+
+            <h4>Google Forms</h4>
+            <p>
+              Google Forms können in diesem Modus angezeigt und abgesichert werden.
+            </p>
+            <img src="./img/hb_config_forms.png" style="max-width:400px"><br>
+            <h4>Microsoft365</h4>
+            <p>
+              Nach dem Login mit Microsoft365 wird ein .docx bzw. .xlsx-Template bereitgestellt. <br>
+              Aus diesem Template werden für jede:n Schüler:in automatisch Kopien im OneDrive der Lehrperson generiert, inklusive individueller "Share-Links" zur Bearbeitung.
+            </p>
+            <img src="./img/hb_mslogin.png" style="max-width:400px"><img src="./img/hb_msselect.png" style="max-width:400px"><img src="./img/hb_msfile.png" style="max-width:400px"><br>
+            <h4>RDP</h4>
+            <p>
+              Über das Remote Desktop Protocol (RDP) kann auf einen Windows-Server (oder Virtuelle Maschine) zugegriffen werden. <br>
+              Gibt man als Lehrperson den Benutzernamen und das Passwort des Schülers:in ein (zb. Gast), wird dieser automatisch angemeldet und die aktuelle Sitzung in Next-Exam-Student angezeigt.
+            </p>
+            <img src="./img/hb_rdpconfig.png" style="max-width:400px"><br>
     
     
 
     <div class="page-break"></div>
 
-
-
-
-
-
-
-
-
-
-
-
-
     <a id="materialien-definieren"></a>
-    <h4><strong>1.4. Prüfungsunterlagen definieren</strong></h4>
-    <ul>
-      <li><strong>Materialien bereitstellen</strong>
-        <ul>
-          <li>
-            Auswahl der zugänglichen Materialien (Textdokumente, PDFs, Formelsammlungen, Wörterbücher, Audiodateien, Bilder)<br>
-            <img src="./img/hb_teacher_upload_materials.png" style="max-width:400px"><br>
-          </li>
-          <li>
-            Gruppen- und Einzelschüler-Zuweisung<br>
-            <img src="./img/hb_teacher_groupmaterials.png" style="max-width:400px"><br>
-            Die benötigten Materialien werden den Clients in Base64-Codierung bereitgestellt und nicht lokal gespeichert. <br>
-            Samtliche Materialien können auch während der laufenden Prüfung geändert, betrachtet, ggf. abgespielt (audio) oder entfernt werden.
-          </li>
-        </ul>
-      </li>
-      <br>
+    <h3>1.4. Prüfungsunterlagen definieren</h3>
+      <h4>Prüfungsmaterialien bereitstellen</h4>
+      <!-- TODO: Wie kommt auf diese Stelle? -->
+      <p>
+        Auswahl der zugänglichen Materialien (Textdokumente, PDFs, Formelsammlungen, Wörterbücher, Audiodateien, Bilder)<br>
+      </p>
+      <img src="./img/hb_teacher_upload_materials.png" style="max-width:400px"><br>
+
+      <h4>Gruppen- und Einzelschüler-Zuweisung</h4>
+      <p>Die benötigten Materialien werden den Clients in Base64-Codierung bereitgestellt und nicht lokal gespeichert. <br>
+      Samtliche Materialien können auch während der laufenden Prüfung geändert, betrachtet, ggf. abgespielt (audio) oder entfernt werden.<br>
+      </p>
+      <img src="./img/hb_teacher_groupmaterials.png" style="max-width:400px"><br>
 
 
       <div class="page-break"></div>
-      <li><strong>Dateien bereitstellen</strong>
-        <p>
+      <!-- TODO: umstrukturieren -->
+      <h4>Dateien bereitstellen</h4>
+
           <div class="infobox">
             Das Next-Exam System bietet mehrere Optionen, um Dateien dem Anlass entsprechend zu versenden.<br>
             Über die Sidebar im Dashboard können Dateien im Original an alle Schüler:innen gleichzeitig gesendet werden.
             Über die Schaltflächen im Dateimanager können Backups an einzelne Schüler:innen gesendet werden. <br>
             Diese Dateien liegen dann im Arbeitsordner der Schüler:innen und können auch im abgesicherten Modus genutzt werden.
           </div>
-        </p>
 
-        <ul>
-          <li>
-            <strong>Bereitstellung von Dateien </strong><br>
-            An alle bzw. an einzelne Schüler:innen während der Prüfung (z.B. für Zwischenstände, Nachteilsausgleich)<br>
+
+
+            <p>An alle bzw. an einzelne Schüler:innen während der Prüfung (z.B. für Zwischenstände, Nachteilsausgleich)
+            </p>
             <img src="./img/hb_teacher_student_view.png" style="max-width:100px"> &nbsp;
             <img src="./img/hb_teacher_sidebar.png" style="max-height:264px"> &nbsp;<br>
-           
-          </li>
-          <li>
-            <strong>Sicherungen zurücksenden</strong><br>
-            Der Dateimanager ermöglicht es, eine Datei direkt auszuwählen und an einzelne Schüler:innen zu senden. Diese Funktion wird u.a. bei .bak Dateien (Sicherungsdateien des Editors) genutzt.<br>
+            <h4>Sicherungen zurücksenden</h4>
+            <p>Der Dateimanager ermöglicht es, eine Datei direkt auszuwählen und an einzelne Schüler:innen zu senden. Diese Funktion wird u.a. bei .bak Dateien (Sicherungsdateien des Editors) genutzt.
+            </p>
             <img src="./img/hb_teacher_filemanager.png" style="max-width:200px"><br>
             <img src="./img/hb_teacher_filebuttons.png" style="max-width:200px"><br>
             <img src="./img/hb_send_bak.png" style="max-width:340px;"><br>
             
             <img src="./img/student_replace_content_bak.png" style="max-width:340px"><br><br>
-          </li>
+
+
+ <div class="page-break"></div>
+    <a id="schueler-fokussieren"></a>
+    <h3>1.5. Schüler verwalten</h3>
+
+        <h4>Sitzplan</h4>
+        <p>
+      Der Sitzplan zeigt die aktuelle Position der Schüler:innen im Raum an und kann durch Drag&Drop verändert werden.
+      </p>
+      <img src="./img/hb_sitzplan.png" style="max-width:300px;">
+        <h4>Student-Widget</h4>
+      
+      Über das "Student-Widget" können die Einstellungen für einzelne Schüler:innen bearbeitet werden.<br>
+<ul>
+      <li class="check">Die Schaltfläche "Info" öffnet die Detailansicht der Schüler:innen.</li>
+      <li class="check">Über die Schaltfläche "A" / "B" können die Schüler:innen der gewünschten Gruppen zugewiesen werden.</li>
+      <li class="check">"X" beendet die Prüfung für die entsprechende Person.</li>
+      <li class="check">Der "Papierkorb" bereinigt den Arbeitsordner am PC der gewählten Schüler:innen.</li>
+      <li class="check">Der "Zauberstab" erlaubt es einzelnen Schüler:innen die Rechtschreibhilfe zu aktivieren.</li>
+      <li class="check">Die roten Dokumenten-Symbole geben über die Anzahl der Dateien, die Schüler:innen in ihrem Arbeitsordner erstellt haben, Auskunft.</li>
+
+      <img src="./img/hb_student_widget.png" style="max-width:300px;"> <img src="./img/hb_student_widget_badges.png" style="max-width:300px;">
+
+      <li class="check">Weitere Symbole und Schaltflächen werden in folgenden Fällen angezeigt:
+        <ul>
+          <li>Schüler:in versendet Abgabe</li>
+          <li>Schüler:in versucht eine Virtualisierte Arbeitsumgebung zu nutzen</li>
+          <li>Schüler:in hat die Prüfung verlassen</li>
         </ul>
       </li>
     </ul>
 
 
 
-
-
-
-
-
-
- <div class="page-break"></div>
-    <a id="schueler-fokussieren"></a>
-    <h4><strong>1.5. Schüler verwalten</strong></h4>
-    <ul>
-      <li>
-        <strong>Sitzplan</strong><br>
-      </li>
-      Der Sitzplan zeigt die aktuelle Verteilung der Schüler:innen auf die Prüfungsstationen an.
-      Dieser kann durch Drag&Drop verändert werden.<br>
-      <img src="./img/hb_sitzplan.png" style="max-width:300px;">
-    </ul>
-    
-    <ul>
-      <li>
-        <strong>Student-Widget</strong><br>
-      
-      </li>
-      Über das "Student-Widget" können einzelne Schüler:innen individuell bearbeitet werden.<br><br>
-      <li class="check">Die Schaltfläche "Info" öffnet die Detailansicht der Schüler:innen.</li>
-      <li class="check">Über die Schaltfläche "A" / "B" können die Schüler:innen den Gruppen zugewiesen werden.</li>
-      <li class="check">"X" entfernt die Schüler:innen vom Prüfungsserver und beendet die Prüfung für diese Person.</li>
-      <li class="check">Der Papierkübel bereinigt den Arbeitsordner am PC der gewählten Schüler:innen.</li>
-      <li class="check">Der "Zauberstab" erlaubt es einzelnen Schüler:innen die Rechtschreibhilfe zu aktivieren.</li>
-      <li class="check">Die roten Dokumenten-Icons geben auskunft darüber wieviele Dateien die Schüler:innen in ihrem Arbeitsordner erstellt haben.</li>
-      
-
-      <img src="./img/hb_student_widget.png" style="max-width:300px;"> <img src="./img/hb_student_widget_badges.png" style="max-width:300px;">
-
-      <li class="check">Weitere temporäre Badges und Schaltflächengeben Auskunft darüber ob die Schüler:innen eine Abgabe senden, eine virtualisierte Arbeitsumgebung nutzen oder versucht haben die Prüfung zu verlassen</li>
-    </ul>
-
-
-
     <div class="page-break"></div>
-    <ul>
-      <li><strong>Einzelne Schüler verwalten</strong>
-        
+<h4>Einzelne Schüler verwalten</h4>
+        <ul>
           <li class="check">Schüler:innen freischalten oder entfernen</li>
           <li class="check">Möglichkeit, die Prüfung für einzelne Schüler:innen zu pausieren</li>
           <li class="check">Versand von Dateien an einzelne Schüler:innen</li>
           <li class="check">Verwaltung einzelner Abgaben</li>
-        
+        </ul>
         <img src="./img/hb_teacher_student_view.png" style="max-width:140px;">
-      </li>
-    </ul>
 
 
 
 
 
     <a id="abgaben-einsehen"></a>
-    <h4><strong>1.6 Abgaben einsehen und sichern</strong></h4>
+    <h3>1.6 Abgaben einsehen und sichern</h3>
     <p>Der Dateimanager von Next-Exam erlaubt es Lehrpersonen, alle Abgaben sowie archivierte Zwischenstände einzusehen und zu verwalten.</p>
     <img src="./img/hb_teacher_archived_folder.png" style="max-width:400px"><br>
-    <ul>
-      <li><strong>Verwaltung der Prüfungsabgaben:</strong>
-        <ul>
+<h4>Verwaltung der Prüfungsabgaben:</h4>
+      <ul>
           <li>Überwachung des Schülerfortschritts</li>
           <li>Einsicht, Archivierung und Download von Abgaben</li>
           <li>Automatische Archivierung mit Timestamp</li>
           <li>Zusammenfassung der neuesten Abgaben als PDF (mit Index: Name, Abgabezeitpunkt, Zeichenanzahl)</li>
         </ul>
-      </li>
-      <li><strong>Abgabe:</strong>
+<h4>Abgabe:</h4>
         <ul>
           <li>Finale Abgabe mit Nummerierung</li>
           <li>Direkter Versand der Dokumente an den Teacher</li>
           <li>Automatische Ablage im Ordner "ABGABE"</li>
         </ul>
-      </li>
-      <li><strong>Direktdruck:</strong>
+<h4>Direktdruck:</h4>
         <ul>
           <li>Möglichkeit für Schüler:innen, ihre Arbeit direkt zu drucken</li>
           <li>Auswahl eines Standarddruckers</li>
         </ul>
-      </li>
-    </ul>
-
 
     <div class="page-break"></div>
     <a id="pruefung-beenden"></a>
-    <h4><strong>1.7 Prüfung beenden</strong></h4>
-    <li><strong>Prüfung beenden:</strong><br>
+    <h3>1.7 Prüfung beenden</h3>
+<h4>Prüfung beenden:</h4>
       <img src="./img/hb_teacher_maintoolbar_red.png" style="max-width:400px"><br>
       <ul>
         <li class="check">Kontrolle, Zusammenfassung und Archivierung der Abgaben</li>
@@ -403,119 +358,83 @@
         <li class="check">Entsperren der Geräte</li>
         <li class="check">Freischalten oder Entfernen einzelner Schüler:innen</li>
       </ul>
-    </li>
-
-
-
-
-
-    <br><br>
-
-
-
-
-
-
-
-
-
-
-
 
 
     <a id="teil-2-grundlegende-funktionen"></a>
-    <h3><strong>Teil 2: Grundlegende Funktionen (Student)</strong></h3>
-
+    <h2>Teil 2: Grundlegende Funktionen (Student)</h2>
+<!-- TODO: ergänzen -->
     <a id="pruefung-starten-schueler"></a>
-    <h4><strong>2.1 Prüfung starten aus Sicht der Schüler:innen</strong></h4>
+    <h4>2.1 Prüfung starten aus Sicht der Schüler:innen</h4>
     <p>
       In der Schüler-Version von Next-Exam werden im Netzwerk gefundene Prüfungen automatisch angezeigt. Diese können mit einem frei wählbaren Benutzernamen und dem entsprechenden PIN-Code betreten werden.
     </p>
-    <ul>
-      <li><strong>Verbindung mit dem Prüfungsserver herstellen:</strong><br>
+<h4>Verbindung mit dem Prüfungsserver herstellen:</h4>
         <img src="./img/hb_student_start.png" style="max-width:600px"><br>
         <ul>
-          <li>Automatische Verbindung via Multicast oder manuelle Eingabe per IP-Adresse</li>
+          <li>Automatische Verbindung oder manuelle Eingabe per IP-Adresse</li>
           <li>PIN-Code zur Authentifizierung</li>
         </ul>
-      </li>
-    </ul>
-
-
-
-
 
     <div class="page-break"></div>
 
     <a id="teil-3-erweiterte-funktionen"></a>
-    <h3><strong>Teil 3: Erweiterte Funktionen</strong></h3>
-
+    <h2>Teil 3: Erweiterte Funktionen</h2>
+<!-- TODO: ergänzen -->
     <a id="gruppen-verwalten"></a>
-    <h4><strong>3.1 Gruppen verwalten</strong></h4>
-    <ul>
-        <li>Aktivierung, Änderung der Gruppenzugehörigkeit oder Zuweisung gruppenspezifischer Materialien</li>
-    </ul>
-  
+    <h3>3.1 Gruppen verwalten</h4>
+    <p>
+      Aktivierung, Änderung der Gruppenzugehörigkeit oder Zuweisung gruppenspezifischer Materialien
+    </p>
 
 
 
     <a id="bildschirm-abdunkeln"></a>
-    <h4><strong>3.2 Bildschirm abdunkeln</strong></h4>
-    <ul>
-      <li>Abdunkeln des Bildschirms, um die Aufmerksamkeit zu lenken</li>
-    </ul>
-
+    <h3>3.2 Bildschirm abdunkeln</h3>
+    <p>
+      Abdunkeln des Bildschirms, um die Aufmerksamkeit zu lenken
+    </p>
 
     <a id="sprachoberflaeche-waehlen"></a>
-    <h4><strong>3.3 Sprache der Benutzeroberfläche wählen</strong></h4>
+    <h3>3.3 Sprache der Benutzeroberfläche wählen</h3>
     <img src="./img/hb_lang_switch.png" style="max-width:100px"> &nbsp;
 
     <a id="informationskanal-bildungsportal"></a>
-    <h4><strong>3.4 Informationskanal vom Bildungsportal abrufen</strong></h4>
+    <h3>3.4 Informationskanal vom Bildungsportal abrufen</h3>
     <img src="./img/hb_bip_news.png" style="max-width:100px"> &nbsp;
 
     <a id="lokal-gesicherte-pruefungen"></a>
-    <h4><strong>3.5 Lokal gesicherte Prüfungen löschen bzw. fortsetzen</strong></h4>
-    <p>
+    <h3>3.5 Lokal gesicherte Prüfungen löschen bzw. fortsetzen.</h3>
+
       <div class="infobox">
         Next-Exam sichert jede Prüfung im Arbeitsordner "EXAM-TEACHER" und speichert darin alle Schülerarbeiten sowie die Exam-Konfiguration.<br>
       </div>
-      <ul>
-        <li>
-          Ein Klick auf das "x" Symbol löscht die lokale Sicherung der Prüfung. Mit einem Klick auf den Prüfungsnamen wird die Sicherung aktiviert und kann fortgesetzt werden.
-        </li>
+
+      <p>
+        Ein Klick auf das "x" Symbol löscht die lokale Sicherung der Prüfung. Mit einem Klick auf den Prüfungsnamen wird die Sicherung aktiviert und kann fortgesetzt werden.
+      </p>
+
         
         <img src="./img/hb_local_exams.png" style="max-width:400px"> &nbsp;<br>
-        
-      </ul>
-    </p>
 
-
-
-
-
-    <div class="page-break"></div>
+        <div class="page-break"></div>
     <a id="pruefungsabschnitte"></a>
-    <h4><strong>3.6. Prüfungsabschnitte</strong></h4>
-    <p>
+    <h3>3.6. Prüfungsabschnitte</h3>
+
       <div class="infobox">
         Für Sprachschularbeiten oder Tests, die in getrennte Bereiche unterteilt werden, können Prüfungsabschnitte aktiviert werden.
       </div>
-    </p>
     <img src="./img/hb_teacher_examsections.png" style="max-width:700px;">
-    <ul>
-      <li>Unterteilung der Prüfung in Abschnitte</li>
-      <li>Festlegung unterschiedlicher Bedingungen pro Abschnitt</li>
-    </ul>
+ <p>Unterteilung der Prüfung in Abschnitte.</p>
+ <p>Festlegung unterschiedlicher Bedingungen pro Abschnitt.</p>
 
     <a id="sicherheitsfunktionen"></a>
-    <h4><strong>3.7. Erweiterte Sicherheitsfunktionen</strong></h4>
+    <h3>3.7. Erweiterte Sicherheitsfunktionen</h3>
    
-    <ul>
+
     <img src="./img/hb_teacher_configure.png" style="max-width:140px;"><br>
     &nbsp;<img src="./img/hb_config_main.png" style="max-width:340px;">
 
-
+    <ul>
       <li><strong>OCR-Funktion aktivieren:</strong> Erkennung von Versuchen, die Prüfungsumgebung zu umgehen</li>
       <li><strong>Automatisches Abgabeintervall einstellen:</strong> Neben manueller Abgabe erfolgt die automatische Archivierung der Arbeiten</li>
       <li><strong>Screenshot-Intervall einstellen</strong></li>
@@ -527,7 +446,7 @@
 
     <div class="page-break"></div>
     <a id="bildungsportal-integration"></a>
-    <h4><strong>3.8. Integration ins Bildungsportal</strong></h4>
+    <h3>3.8. Integration ins Bildungsportal</h3>
     <p>
       <div class="infobox">
         Mit dem kommenden Bildungsportal-Plugin können Prüfungen vorab konfiguriert, Materialien festgelegt und Teilnehmerlisten erstellt werden.
@@ -548,56 +467,53 @@
     <div class="page-break"></div>
 
     <a id="teil-4-fehlerbehandlung"></a>
-    <h3><strong>Teil 4: Fehlerbehandlung - FAQ</strong></h3>
-
+    <h2>Teil 4: Fehlerbehandlung - FAQ</h2>
+<!-- TODO: trennen einen Teil in ein technisches Handbuch und einen in die FAQ -->
     <a id="fehlerbehandlung"></a>
-    <h4><strong>4.1. Fehlerbehandlung</strong></h4>
-    <ul>
-      <li>Fehlermeldungen beim Verbindungsaufbau und deren Ursachen</li>
+    <h3>4.1. Fehlerbehandlung</h3>
+      <h4>Fehlermeldungen beim Verbindungsaufbau und deren Ursachen</h4>
       <div class="infobox">
-        Alle Teilnehmer:innen müssen sich im selben Netzwerk befinden und miteinander kompatible Versionen von Next-Exam-Student und Next-Exam-Teacher nutzen.
-        Sollte die Prüfung nicht automatisch im Netzwerk gefunden werden kann die IP-Adresse von den Schüler:innen manuell eingegeben werden um die Teacher Instanz (API) zu erreichen.
-      </div>
-      <br>
-      <li>Fortsetzen der Prüfung bei Fehlern auf Schülerseite</li>
-      <div class="infobox">
-        Bei einem Fehler mit Next-Exam-Student sollte das Programm geschlossen und neu gestartet werden. <br>
-        Der Editor wird bereits vorhandene Backupdateien automatisch wiederherstellen.
-        Die Lehrperson hat zusätzlich die Möglichkeit bereits gesicherte Backups an den/die betroffene Schüler:in zu senden um die Prüfung nahtlos fortsetzen zu können.
+        Überprüfen Sie ob alle Teilnehmer:innen
+        <ul>
+        <li>sich im selben Netzwerk befinden</li>
+        <li>miteinander kompatible Versionen von Next-Exam nutzen (Lehrpersonen und Schüler:innen)</li>
+        </ul>
+        Sollte die Prüfung nicht automatisch gefunden werden, kann die IP-Adresse bei den Schüler:innen manuell eingegeben werden um Next-Exam-Teacher erreichen.
       </div>
 
-      <br>
-      <li>Fortsetzen der Prüfung bei Fehlern auf Teacherseite</li>
+      <h4>Fortsetzen der Prüfung bei Fehlern auf Schülerseite</h4>
       <div class="infobox">
-        Sollte die Teacher Instanz beendet werden müssen während einer laufenden Prüfung so ist zu beachten, dass die Schüler:innen die Verbindung zum Prüfungsserver erst wieder herstellen dürfen, wenn der Teacher wieder online ist und alle Einstellungen wieder hergestellt wurden.
-        Insbesondere muss die ABSICHERUNG der Geräte wieder aktiviert werden da die Prüflinge sonst beim Verbindungsaufbau zu einer nicht gesicherten Umgebung verbinden und die Prüfung dadurch für sie sofort beendet wird.
+        Bei Fehlern auf dem Next-Exam-Student sollte das Programm geschlossen und neu gestartet werden. <br>
+        Der Editor wird bereits vorhandene Dateien automatisch wiederherstellen.
+        Die Lehrperson hat zusätzlich die Möglichkeit bereits gesicherte Dateien an den/die betroffene Schüler:in zu senden um die Prüfung nahtlos fortzusetzen.
       </div>
-      
-      <br>
-      <li>Language Tool funktioniert nicht</li>
+
+      <h4>Fortsetzen der Prüfung bei Fehlern auf Teacherseite</h4>
+      <div class="infobox">
+        Sollte die Next-Exam-Teacher beendet werden, müssen während einer laufenden Prüfung so ist zu beachten, dass die Schüler:innen die Verbindung zum Prüfungsserver erst wieder herstellen dürfen, wenn der Next-Exam-Teacher wieder online ist und alle Einstellungen wieder hergestellt wurden.
+        Insbesondere muss die ABSICHERUNG der Geräte wieder aktiviert werden, da die Schüler:innen sonst beim Verbindungsaufbau zu einer nicht gesicherten Umgebung verbinden und die Prüfung dadurch sofort beendet wird.
+      </div>
+
+      <h4>Language Tool funktioniert nicht</h4>
       <div class="infobox">
         Avast Antivirus, Norton Antivirus oder ähnliche Programme können die Language Tool Funktion von Next-Exam blockieren. <br>
         In diesem Fall muss das Programm "Avast Security" gestartet und die Next-Exam-Student.exe Datei von der Liste der blockierten Programme entfernt werden bzw. auf die Ausnahmeliste gesetzt werden.
       </div>
 
-      <br>
-      <li>Screenhots auf MacOS funktionieren nicht</li>
+      <h4>Screenhots auf macOS funktionieren nicht</h4>
       <div class="infobox">
-        MacOS benötigt die Berechtigung um Screenshots zu erstellen. <br>
-        Sollte diese Berechtigung nicht erteilt werden, wird Next-Exam als "Fallback" Variante auf Page-Capture zurückgreifen und nur das Programmfenster übertragen.
+        macOS benötigt die Berechtigung Screenshots zu erstellen. <br>
+        Sollte diese Berechtigung nicht erteilt werden, wird Next-Exam nur das Programmfenster übertragen.
       </div>
 
-      <br>
-      <li>Screenhots auf Linux funktionieren nicht</li>
+      <h4>Screenhots auf Linux funktionieren nicht</h4>
       <div class="infobox">
         Linux benötigt ImageMagick um Screenshots zu erstellen. <br>
-        Sollte dieses Programm nicht installiert sein, wird Next-Exam als "Fallback" Variante auf Page-Capture zurückgreifen und nur das Programmfenster übertragen.
+        Sollte dieses Programm nicht installiert sein, wird Next-Exam nur das Programmfenster übertragen.
         Auf Gnome/Wayland Systemen werden Screenshots derzeit nicht unterstützt.
       </div>
 
-
-      <br>
-      <li>Die Prüfung wird nicht automatisch gefunden </li>
+      <h4>Die Prüfung wird nicht automatisch gefunden </h4>
       <div class="infobox">
         Es handelt sich bei Next-Exam um eine Netzwerkapplikation.
         Um volle Funktionsfähigkeit zu gewährleisten muss die Firewall die App durchlassen.
@@ -605,17 +521,14 @@
         die IP Adresse der Lehrperson genutzt werden.
       </div>
 
-      <br>
-      <div class="page-break"></div>
-      <li> Welche Ports werden von Next-Exam verwendet? </li>
+      <h4> Welche Ports werden von Next-Exam verwendet? </h4>
       <div class="infobox">
         Die Teacher-API (Schnittstelle) nutzt den Port 22422 (tcp).
         Um "autodiscovery" von Prüfungen zu ermöglichen sollte im lokalen Netzwerk zudem Multicast erlaubt sein.
         Die Multicastports (udp) in Verwendung sind 6024 und 6025.
       </div>
 
-      <br>
-      <li>Ubuntu 22.04 kann *.AppImage Pakete nicht starten  </li>
+      <h4>Ubuntu 22.04 kann *.AppImage Pakete nicht starten  </h4>
       <div class="infobox">
         libfuse2 muss auf Ubuntu nachinstalliert werden.<br>
         <code>
@@ -623,17 +536,15 @@
         </code>
       </div>
 
-      <br>
-      <li> Neuere Linux Ubuntu basierte Varianten können Next-Exam nicht starten</li>
+      <h4> Neuere Linux Ubuntu basierte Varianten können Next-Exam nicht starten</h4>
       <div class="infobox">
       <code>
           echo 'kernel.apparmor_restrict_unprivileged_userns=0' | sudo tee /etc/sysctl.d/99-electron.conf <br>
           sudo sysctl --system
-      </code><br><br>
+      </code><br>
 
       deaktiviert die Einschränkung von User Namespaces durch AppArmor. Electron benötigt dies oft für AppImages, da es sonst keine ausreichenden Rechte bekommt, um richtig zu starten.
       </div>
 
-    </ul>
   </body>
 </html>
