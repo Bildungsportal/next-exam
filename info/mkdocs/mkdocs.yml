@@ -27,6 +27,12 @@ theme:
 plugins:
   - glightbox
 
+markdown_extensions:
+  - md_in_html
+  - attr_list
+  - md_in_html
+  - pymdownx.blocks.caption
+
 extra:
   consent:
     title: Cookie consent
