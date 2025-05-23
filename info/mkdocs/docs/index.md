@@ -1,6 +1,7 @@
 # Willkommen im Next-Exam-Handbuch
 
 Download der Software unter [next-exam.at](https://www.next-exam.at).
+Das Handbuch basiert auf der Next-Exam-Version 1.1.0.1
 
 ## Sicher prüfen leicht gemacht
 

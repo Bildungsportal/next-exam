@@ -24,6 +24,11 @@ theme:
         name: Switch to light mode
 plugins:
   - glightbox
+  - with-pdf:
+      author: DPU-Team
+      copyright: Bundesministerium für Bildung
+      cover_title: Next-Exam
+      cover_subtitle: Handbuch
 
 markdown_extensions:
   - md_in_html
