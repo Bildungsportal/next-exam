@@ -8,17 +8,15 @@ nav:
        
 theme:
     name: material
-    
+    favicon: img/favicon.png
+
     palette: 
-    
     # Palette toggle for light mode
     - scheme: default
       primary: green
       toggle:
         icon: material/brightness-7 
         name: Switch to dark mode
-        
-
     # Palette toggle for dark mode
     - scheme: slate
       toggle:
@@ -32,6 +30,8 @@ markdown_extensions:
   - attr_list
   - md_in_html
   - pymdownx.blocks.caption
+  - toc:
+      toc_depth: 3
 
 extra:
   consent:
