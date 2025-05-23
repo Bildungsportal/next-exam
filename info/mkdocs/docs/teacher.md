@@ -138,4 +138,4 @@ Folgende Aktionen sind im Dateimanager durchführbar:
 - Auswahl eines Standarddruckers
 
 ## Prüfung beenden
-Die Prüfung kann über die rote Schaltfläche am Dashboard `Gerät freigeben` beendet werden. Damit wird der abgesicherte Modus bei den Schüler:innen beendet. Am PC der Schüler:innen erscheint die Meldung "Wollen Sie die Anwendung Next-Exam beenden?".
+Die Prüfung kann über die rote Schaltfläche am Dashboard `Gerät freigeben` beendet werden. Damit wird der abgesicherte Modus bei den Schüler:innen beendet. Am PC der Schüler:innen erscheint die Meldung "*Wollen Sie die Anwendung Next-Exam beenden?*".
