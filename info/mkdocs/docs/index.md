@@ -14,3 +14,4 @@ Das Handbuch basiert auf der Next-Exam-Version 1.1.0.1
 
 
 <img src="https://www.bildung.gv.at/filter/faq/elementfile.php?l=de&p=212&f=/preview_teacher.png" alt="Logo" width="800">
+

@@ -1,5 +1,6 @@
 site_name: Next-Exam Handbuch
 nav:
+  - Quickstart Guide: quickstart.md
   - Home: index.md
   - Teacher - Grundlagen: teacher.md
   - Student - Grundlagen: student.md
