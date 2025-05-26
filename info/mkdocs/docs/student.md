@@ -55,14 +55,14 @@ Der Texteditor stellt über die Symbolleiste Formatierungsmöglichkeiten und Bef
 #### Rechtschreibhilfe
 Wenn in der Teacher-Version `LanguageTool aktivieren` angehakt wurde, erscheint in der Student-Version der entsprechende Seitenbereich über den Rechtschreibhilfen in Anspruch genommen werden können.
 ##### LanguageTool
-> Wurde lediglich `LanguageTool aktivieren` (Teacher-Version) angehakt, werden mögliche Rechtschreibfehler angezeigt.
+> Wurde lediglich `LanguageTool aktivieren` in der Teacher-Version angehakt, werden mögliche Rechtschreibfehler angezeigt.
 <figure markdown="span">
     ![Exam-Name](img/student_sprache_languagetool.png){width="50%"}
     <figcaption>LanguageTool ohne Vorschläge</figcaption>
 </figure>
 
 ##### LanguageTool mit Vorschlägen
-> Wurde `LanguageTool aktivieren` und `Vorschläge anzeigen` (Teacher-Version) angehakt, werden mögliche Rechtschreibfehler und entsprechende Verbesserungsvorschläge angezeigt.
+> Wurde `LanguageTool aktivieren` und `Vorschläge anzeigen` in der Teacher-Version angehakt, werden mögliche Rechtschreibfehler und entsprechende Verbesserungsvorschläge angezeigt.
 <figure markdown="span">
     ![Exam-Name](img/student_sprache_languagetool_vorschlaege.png){width="50%"}
     <figcaption>LanguageTool ohne Vorschläge</figcaption>
