@@ -22,3 +22,4 @@ release
 logs
 *.log
 npm-debug.log*
+.venv
