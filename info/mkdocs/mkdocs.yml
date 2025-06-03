@@ -1,4 +1,6 @@
 site_name: Next-Exam Handbuch
+site_dir: ../../docs
+site_url: https://next-exam.github.io/handbuch
 nav:
   - Quickstart Guide: quickstart.md
   - Home: index.md
