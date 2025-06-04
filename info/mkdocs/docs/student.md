@@ -65,5 +65,5 @@ Wenn in der Teacher-Version `LanguageTool aktivieren` angehakt wurde, erscheint 
 > Wurde `LanguageTool aktivieren` und `Vorschläge anzeigen` in der Teacher-Version angehakt, werden mögliche Rechtschreibfehler und entsprechende Verbesserungsvorschläge angezeigt.
 <figure markdown="span">
     ![Exam-Name](img/student_sprache_languagetool_vorschlaege.png){width="50%"}
-    <figcaption>LanguageTool ohne Vorschläge</figcaption>
+    <figcaption>LanguageTool mit Vorschlägen</figcaption>
 </figure>
