@@ -21,6 +21,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
-      - run: echo "PATH=$PATH:$(python -c 'import site; print(site.getuserbase())')/bin" >> $GITHUB_ENV
-      - run: pip install mkdocs-material mkdocs-glightbox mkdocs-with-pdf
+      - name: Install dependencies
+        run: pip install mkdocs-material mkdocs-glightbox mkdocs-with-pdf "markdown<3.4"
       - run: mkdocs gh-deploy --force
