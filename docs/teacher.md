@@ -132,7 +132,7 @@ Folgende Aktionen sind im Dateimanager durchführbar:
 - Automatische Archivierung mit Timestamp
 - Zusammenfassung der neuesten Abgaben als PDF (mit Index: Name, Abgabezeitpunkt, Zeichenanzahl)
 #### Abgabe:
-- Finale Abgabe mit Nummerierung
+- Finale Abgabe mit Nummerierung und Namen
 - Direkter Versand der Dokumente an den Teacher
 - Automatische Ablage im Ordner "ABGABE"
 #### Direktdruck:
