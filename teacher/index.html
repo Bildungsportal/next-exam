@@ -1,0 +1,804 @@
+<!DOCTYPE html><html lang="en" class="no-js"><head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://bildungsportal.github.io/next-exam/teacher/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../student/">
+      
+      
+      <link rel="icon" href="../img/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.20">
+    
+    
+      
+        <title>Teacher - Grundlagen - Next-Exam Handbuch</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.e53b48f4.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  <link href="../assets/stylesheets/glightbox.min.css" rel="stylesheet"><script src="../assets/javascripts/glightbox.min.js"></script><style id="glightbox-style">
+            html.glightbox-open { overflow: initial; height: 100%; }
+            .gslide-title { margin-top: 0px; user-select: text; }
+            .gslide-desc { color: #666; user-select: text; }
+            .gslide-image img { background: white; }
+            .gscrollbar-fixer { padding-right: 15px; }
+            .gdesc-inner { font-size: 0.75rem; }
+            body[data-md-color-scheme="slate"] .gdesc-inner { background: var(--md-default-bg-color); }
+            body[data-md-color-scheme="slate"] .gslide-title { color: var(--md-default-fg-color); }
+            body[data-md-color-scheme="slate"] .gslide-desc { color: var(--md-default-fg-color); }
+        </style></head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="green" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#teacher-grundlegende-funktionen" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Next-Exam Handbuch" class="md-header__button md-logo" aria-label="Next-Exam Handbuch" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"></path></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Next-Exam Handbuch
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Teacher - Grundlagen
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="green" data-md-color-accent="indigo" aria-label="Switch to dark mode" type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo" aria-label="Switch to light mode" type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"></path></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Next-Exam Handbuch" class="md-nav__button md-logo" aria-label="Next-Exam Handbuch" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"></path></svg>
+
+    </a>
+    Next-Exam Handbuch
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Quickstart Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Teacher - Grundlagen
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Teacher - Grundlagen
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prufungen-anlegen" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prüfungen anlegen
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dashboard
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prufungsmodi" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prüfungsmodi
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prufung-starten" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prüfung starten
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prufungsunterlagen" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prüfungsunterlagen
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schuler-verwalten" class="md-nav__link">
+    <span class="md-ellipsis">
+      Schüler verwalten
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#abgaben-einsehen-und-sichern" class="md-nav__link">
+    <span class="md-ellipsis">
+      Abgaben einsehen und sichern
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prufung-beenden" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prüfung beenden
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../student/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Student - Grundlagen
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Erweiterte Funktionen
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Fehlerbehandlung - FAQ
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#prufungen-anlegen" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prüfungen anlegen
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dashboard
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prufungsmodi" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prüfungsmodi
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prufung-starten" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prüfung starten
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prufungsunterlagen" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prüfungsunterlagen
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schuler-verwalten" class="md-nav__link">
+    <span class="md-ellipsis">
+      Schüler verwalten
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#abgaben-einsehen-und-sichern" class="md-nav__link">
+    <span class="md-ellipsis">
+      Abgaben einsehen und sichern
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prufung-beenden" class="md-nav__link">
+    <span class="md-ellipsis">
+      Prüfung beenden
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="teacher-grundlegende-funktionen">Teacher - Grundlegende Funktionen</h1>
+<h2 id="prufungen-anlegen">Prüfungen anlegen</h2>
+<blockquote>
+<p>Der <code>Prüfungsname</code> kann frei gewählt werden. Der Arbeitsordner am Desktop beinhaltet alle archivierten Arbeiten und Abgaben sowie die Prüfungsordner und die Prüfungs-Konfiguration.</p>
+</blockquote>
+<figure>
+    <a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/teacher_exam_name.png" data-desc-position="bottom"><img alt="Exam-Name" src="../img/teacher_exam_name.png" width="50%"></a>
+    <figcaption>Prüfung anlegen, Prüfungsserver starten</figcaption>
+</figure>
+<h3 id="passwort-festlegen-optional">Passwort festlegen (optional)</h3>
+<blockquote>
+<p>Ein <code>Passwort</code> kann festgelegt werden um zu verhindern, dass die Prüfung bei Verbindungsverlust vom Student verlassen werden kann.</p>
+</blockquote>
+<h3 id="backup-ordner-festlegen-optional">Backup-Ordner festlegen (optional)</h3>
+<blockquote>
+<p>Das zusätzliche <code>Backupverzeichnis</code> kann individuell gewählt werden (z.B. Netzwerk-Ordner, USB Stick, ...). Hier werden die Prüfungsdaten (Arbeiten der Schüler:innen, Konfiguration, ...) zusätzlich zum oben genannten Arbeitsordner abgelegt.</p>
+</blockquote>
+<figure>
+    <a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/teacher_exam_advanced.png" data-desc-position="bottom"><img alt="Exam-Name" src="../img/teacher_exam_advanced.png" width="50%"></a>
+    <figcaption>Passwort, Backupverzeichnis</figcaption>
+</figure>
+<h2 id="dashboard">Dashboard</h2>
+<p>Das Teacher-Dashboard bietet eine Übersicht über alle verbundenen Schüler:innen und stellt alle prüfungsrelevanten Informationen dar.
+Es ermöglicht die Konfiguration der Prüfung und die Verwaltung der Schüler:innen.</p>
+<figure>
+    <a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/teacher_dashboard-01.png" data-desc-position="bottom"><img alt="Exam-Name" src="../img/teacher_dashboard-01.png" width="50%"></a>
+    <figcaption>Dashboard</figcaption>
+</figure>
+<p>Der automatisch generierte <code>Pincode</code> wird von den Schüler:innen benötigt, um der Prüfung beizutreten.
+Sollte die Prüfung bei den Schüler:innen nicht aufscheinen, können sie die Prüfung durch Eingabe der <code>Server-Adresse</code> finden.</p>
+<h2 id="prufungsmodi">Prüfungsmodi</h2>
+<blockquote>
+<p>Next-Exam ermöglicht viele verschiedene Prüfungsvarianten. </p>
+</blockquote>
+<figure>
+    <a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/teacher_dashboard-02.png" data-desc-position="bottom"><img alt="Exam-Name" src="../img/teacher_dashboard-02.png" width="50%"></a>
+    <figcaption>Prüfungsmodi</figcaption>
+</figure>
+<p>Verfügbare Prüfungsmodi sind:</p>
+<ul>
+<li><code>Mathematik</code> - ... mit GeoGebra-Integration</li>
+<li><code>Sprachen</code> - Texteditor mit erweiterten Features</li>
+<li><code>Eduvidual/Moodle</code> - LMS-Test im Kiosk-Mode</li>
+<li><code>Google Forms</code> - Formular im Kiosk-Mode</li>
+<li><code>Microsoft 365</code> - online-Versionen von Word, Excel usw.</li>
+<li><code>Website</code> - Website im Kiosk-Mode</li>
+</ul>
+<blockquote>
+<p>Der Prüfungsmodus kann im Dropdown-Feld <code>Prüfungsmodus</code> gewählt werden. Je nach Prüfungsmodus erscheint ein Konfigurationsfenster. Im Nachhinein kann die Prüfungskonfiguration jederzeit über das Zahnrad-Symbol (oben rechts) geöffnet werden.</p>
+</blockquote>
+<h3 id="sprachen">Sprachen</h3>
+<figure>
+    <a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/teacher_languages.png" data-desc-position="bottom"><img alt="Exam-Name" src="../img/teacher_languages.png" width="50%"></a>
+    <figcaption>Prüfungsmodus "Sprachen" - Konfiguration</figcaption>
+</figure>
+<blockquote>
+<p>Einstellungen wie Korrekturrand, Schriftart, Zeilenabstand und Schriftgröße betreffen sowohl die Darstellung im Editor als auch die Erstellung des Ablage-PDF. Audiodateien (Anzahl erlaubter Abspielversuche) können eingeschränkt werden. Zusätzliche Hilfsmittel in Form von Webseiten (z.B. Wörterbuch) lassen sich definieren. Eine passive Rechtschreibhilfe über das <code>LanguageTool</code> kann aktiviert und konfiguriert werden.</p>
+</blockquote>
+<h3 id="mathematik">Mathematik</h3>
+<blockquote>
+<p>In diesem Modus arbeiten die Schüler:innen mit GeoGebra Classic/Suite. Zusätzliche Hilfsmittel, wie eine Formelsammlung über eine Webseite, können gesetzt werden.</p>
+</blockquote>
+<h3 id="eduvidualmoodle">Eduvidual/Moodle</h3>
+<p>Next-Exam übernimmt die Absicherung des Moodle-Tests. Alle nötigen Einstellungen für die Prüfungsumgebung erfolgen über Moodle selbst.</p>
+<h3 id="webseiten">Webseiten</h3>
+<p>Eine beliebige Webseite kann in diesem Modus angezeigt und abgesichert werden. Z.B. digi4school.at, lms.at, scratch.mit.edu, ...</p>
+<h3 id="google-forms">Google Forms</h3>
+<p>Google Forms können in diesem Modus angezeigt und abgesichert werden.</p>
+<h3 id="microsoft365">Microsoft365</h3>
+<p>Nach dem Login mit Microsoft365 wird ein .docx bzw. .xlsx-Template bereitgestellt.
+Aus diesem Template werden für jede:n Schüler:in automatisch Kopien im OneDrive der Lehrperson generiert, inklusive individueller "Share-Links" zur Bearbeitung.</p>
+<h3 id="rdp">RDP</h3>
+<p>Über das Remote Desktop Protocol (RDP) kann auf einen Windows-Server (oder Virtuelle Maschine) zugegriffen werden.</p>
+<blockquote>
+<p>Als Lehrperson muss man den Domainnamen (fqdn) des RDP Servers angeben. Die Schüler:innen erhalten dann einen Login-Screen und können sich mit ihrem Domänenbenutzer einloggen und arbeiten.<br>
+Am Windows Server muss der RD Web Client installiert sein!</p>
+</blockquote>
+<h2 id="prufung-starten">Prüfung starten</h2>
+<p>Der grüne Button am Dashboard 'Geräte absichern' startet die Prüfung. Die Endgeräte der Schüler:innen wechseln in den abgesichterten Modus.</p>
+<h2 id="prufungsunterlagen">Prüfungsunterlagen</h2>
+<h3 id="prufungsmaterialien-bereitstellen">Prüfungsmaterialien bereitstellen</h3>
+<blockquote>
+<p>Auswahl der zugänglichen Materialien (Textdokumente, PDFs, Formelsammlungen, Wörterbücher, Audiodateien, Bilder)</p>
+</blockquote>
+<h3 id="gruppen-und-einzelschuler-zuweisung">Gruppen- und Einzelschüler-Zuweisung</h3>
+<p>Die benötigten Materialien werden den Clients in Base64-Codierung bereitgestellt und nicht lokal gespeichert.
+Samtliche Materialien können auch während der laufenden Prüfung geändert, betrachtet, ggf. abgespielt (audio) oder entfernt werden.</p>
+<h3 id="dateien-bereitstellen">Dateien bereitstellen</h3>
+<p>Das Next-Exam System bietet mehrere Optionen, um Dateien dem Anlass entsprechend zu versenden.</p>
+<blockquote>
+<p>Über die Sidebar im Dashboard können Dateien im Original an alle Schüler:innen gleichzeitig gesendet werden. Über die Schaltflächen im Dateimanager können Backups an einzelne Schüler:innen gesendet werden. Diese Dateien liegen dann im Arbeitsordner der Schüler:innen und können auch im abgesicherten Modus genutzt werden (an alle bzw. an einzelne Schüler:innen während der Prüfung (z.B. für Zwischenstände, Nachteilsausgleich)).</p>
+</blockquote>
+<h3 id="sicherungen-zurucksenden">Sicherungen zurücksenden</h3>
+<p>Der Dateimanager ermöglicht es, eine Datei direkt auszuwählen und an einzelne Schüler:innen zu senden. Diese Funktion wird u.a. bei .bak Dateien (Sicherungsdateien des Editors) genutzt.</p>
+<h2 id="schuler-verwalten">Schüler verwalten</h2>
+<h3 id="sitzplan">Sitzplan</h3>
+<p>Das Dashboard ist gleichzeitig der Sitzplan. Er zeigt die aktuelle Position der Schüler:innen im Raum an. Diese können per Drag&amp;Drop verändert werden.</p>
+<h3 id="student-widget">Student-Widget</h3>
+<p>Über das "Student-Widget" können die Einstellungen für einzelne Schüler:innen bearbeitet werden.</p>
+<figure>
+    <a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/teacher_student_widget.png" data-desc-position="bottom"><img alt="Exam-Name" src="../img/teacher_student_widget.png" width="50%"></a>
+    <figcaption>Student-Widgets</figcaption>
+</figure>
+<ul>
+<li>Die Schaltfläche <code>Info</code> öffnet die Detailansicht der Schüler:innen.<blockquote>
+<p>Schüler:innen können dort freigeschaltet bzw. aus der Prüfung entfernt, Dateien an einzelne Schüler:innen versendet oder Abgaben verwaltet werden.</p>
+</blockquote>
+</li>
+<li>Falls der Gruppenmodus in den Prüfungseinstellungen aktiviert wurde, können Über die Schaltflächen <code>A</code> / <code>B</code> die Schüler:innen den gewünschten Gruppen zugewiesen werden.</li>
+<li>Die Schaltfläche <code>X</code> beendet die Prüfung für die jeweiligen Person.</li>
+<li>Der <code>Papierkorb</code> bereinigt den Arbeitsordner am PC der jeweiligen Schüler:innen.</li>
+<li>Der <code>Zauberstab</code> erlaubt es einzelnen Schüler:innen die Rechtschreibhilfe zu aktivieren.</li>
+<li>Die roten <code>Dokumenten-Symbole</code> geben über die Anzahl der Dateien, die Schüler:innen in ihrem Arbeitsordner erstellt haben, Auskunft.</li>
+</ul>
+<p>Weitere Symbole und Schaltflächen werden in folgenden Fällen angezeigt:</p>
+<ul>
+<li>Schüler:in versendet Abgabe</li>
+<li>Schüler:in versucht eine <code>Virtualisierte Arbeitsumgebung</code> zu nutzen</li>
+<li>Schüler:in hat die Prüfung verlassen</li>
+</ul>
+<h2 id="abgaben-einsehen-und-sichern">Abgaben einsehen und sichern</h2>
+<p>Der Dateimanager (Schaltfläche <code>Ordner öffnen</code> am Dashboard) erlaubt es den Lehrpersonen, alle Abgaben sowie archivierte Zwischenstände einzusehen und zu verwalten.</p>
+<figure>
+    <a class="glightbox" data-type="image" data-width="auto" data-height="auto" href="../img/teacher_filemanager.png" data-desc-position="bottom"><img alt="Exam-Name" src="../img/teacher_filemanager.png" width="50%"></a>
+    <figcaption>Dateimanager</figcaption>
+</figure>
+<p>Folgende Aktionen sind im Dateimanager durchführbar:</p>
+<h4 id="verwaltung-der-prufungsabgaben">Verwaltung der Prüfungsabgaben:</h4>
+<ul>
+<li>Überwachung des Schülerfortschritts</li>
+<li>Einsicht, Archivierung und Download von Abgaben</li>
+<li>Automatische Archivierung mit Timestamp</li>
+<li>Zusammenfassung der neuesten Abgaben als PDF (mit Index: Name, Abgabezeitpunkt, Zeichenanzahl)</li>
+</ul>
+<h4 id="abgabe">Abgabe:</h4>
+<ul>
+<li>Finale Abgabe mit Nummerierung und Namen</li>
+<li>Direkter Versand der Dokumente an den Teacher</li>
+<li>Automatische Ablage im Ordner "ABGABE"</li>
+</ul>
+<h4 id="direktdruck">Direktdruck:</h4>
+<ul>
+<li>Möglichkeit für Schüler:innen, ihre Arbeit direkt zu drucken</li>
+<li>Auswahl eines Standarddruckers</li>
+</ul>
+<h2 id="prufung-beenden">Prüfung beenden</h2>
+<p>Die Prüfung kann über die rote Schaltfläche am Dashboard <code>Gerät freigeben</code> beendet werden. Damit wird der abgesicherte Modus bei den Schüler:innen beendet. Am PC der Schüler:innen erscheint die Meldung "<em>Wollen Sie die Anwendung Next-Exam beenden?</em>".</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+      <div class="md-consent" data-md-component="consent" id="__consent" hidden>
+        <div class="md-consent__overlay"></div>
+        <aside class="md-consent__inner">
+          <form class="md-consent__form md-grid md-typeset" name="consent">
+            
+
+
+  
+
+
+<h4>Cookie consent</h4>
+<p>We use cookies to recognize your repeated visits and preferences, as well as to measure the effectiveness of our documentation and whether users find what they're searching for. With your consent, you're helping us to make our documentation better.</p>
+<input class="md-toggle" type="checkbox" id="__settings">
+<div class="md-consent__settings">
+  <ul class="task-list">
+    
+    
+      
+    
+    
+      
+    
+    
+  </ul>
+</div>
+<div class="md-consent__controls">
+  
+    
+      <button class="md-button md-button--primary">Accept</button>
+    
+    
+    
+  
+    
+    
+    
+      <label class="md-button" for="__settings">Manage settings</label>
+    
+  
+</div>
+          </form>
+        </aside>
+      </div>
+      <script>var consent=__md_get("__consent");if(consent)for(var input of document.forms.consent.elements)input.name&&(input.checked=consent[input.name]||!1);else"file:"!==location.protocol&&setTimeout((function(){document.querySelector("[data-md-component=consent]").hidden=!1}),250);var form=document.forms.consent;for(var action of["submit","reset"])form.addEventListener(action,(function(e){if(e.preventDefault(),"reset"===e.type)for(var n of document.forms.consent.elements)n.name&&(n.checked=!1);__md_set("__consent",Object.fromEntries(Array.from(new FormData(form).keys()).map((function(e){return[e,!0]})))),location.hash="",location.reload()}))</script>
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.f55a23d4.min.js"></script>
+      
+    
+  
+<script id="init-glightbox">const lightbox = GLightbox({"touchNavigation": true, "loop": false, "zoomable": true, "draggable": true, "openEffect": "zoom", "closeEffect": "zoom", "slideEffect": "slide"});
+document$.subscribe(()=>{ lightbox.reload(); });
+</script></body></html>
