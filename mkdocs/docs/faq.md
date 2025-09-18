@@ -8,7 +8,7 @@
 - sich im selben Netzwerk befinden,
 - kompatible Versionen von Next-Exam verwenden (Lehrpersonen und Schüler:innen).
 
-Wird die Prüfung nicht automatisch gefunden, kann die IP-Adresse bei den Schüler:innen manuell eingegeben werden, um eine Verbindung zu **Next-Exam-Teacher** herzustellen.
+Wird die Prüfung nicht automatisch gefunden, kann die Server-Adresse bei den Schüler:innen manuell eingegeben werden, um eine Verbindung zu **Next-Exam-Teacher** herzustellen.
 
 ---
 
