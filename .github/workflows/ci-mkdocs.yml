@@ -1,0 +1,26 @@
+name: Deploy MkDocs to GitHub Pages
+on:
+  push:
+    branches:
+      - handbuch
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure Git
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.x
+      - run: echo "PATH=$PATH:$(python -c 'import site; print(site.getuserbase())')/bin" >> $GITHUB_ENV
+      - run: pip install mkdocs-material mkdocs-glightbox mkdocs-with-pdf
+      - run: mkdocs gh-deploy --force
