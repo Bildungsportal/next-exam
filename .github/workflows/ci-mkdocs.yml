@@ -22,5 +22,5 @@ jobs:
         with:
           python-version: 3.x
       - name: Install dependencies
-        run: pip install mkdocs-material mkdocs-glightbox mkdocs-with-pdf "markdown<3.4"
+        run: pip install mkdocs-material mkdocs-glightbox mkdocs-with-pdf pymdown-extensions "markdown<3.4"
       - run: mkdocs gh-deploy --force
