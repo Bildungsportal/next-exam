@@ -33,9 +33,7 @@ plugins:
       cover_subtitle: Handbuch
 
 markdown_extensions:
-  - md_in_html
   - attr_list
-  - md_in_html
   - pymdownx.blocks.caption
   - toc:
       toc_depth: 2
