@@ -75,7 +75,9 @@ Aus diesem Template werden für jede:n Schüler:in automatisch Kopien im OneDriv
 
 ### RDP
 Über das Remote Desktop Protocol (RDP) kann auf einen Windows-Server (oder Virtuelle Maschine) zugegriffen werden.
->Gibt man als Lehrperson den Benutzernamen und das Passwort der Schülerin oder des Schülers ein (z. B. Gast), wird diese Person automatisch angemeldet und die aktuelle Sitzung in Next-Exam-Student angezeigt.
+>Als Lehrperson muss man den Domainnamen (fqdn) des RDP Servers angeben. Die Schüler:innen erhalten dann einen Login-Screen und können sich mit ihrem Domänenbenutzer einloggen und arbeiten.  
+>Am Windows Server muss der RD Web Client installiert sein!
+
 
 ## Prüfung starten
 Der grüne Button am Dashboard 'Geräte absichern' startet die Prüfung. Die Endgeräte der Schüler:innen wechseln in den abgesichterten Modus.
