@@ -3,7 +3,7 @@ name: Deploy MkDocs to GitHub Pages
 on:
   push:
     branches:
-      - handbuch
+      - handbuch # Oder dein entsprechender Branch
 
 permissions:
   contents: write
@@ -15,13 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Deploy with Docker
+        uses: docker://squidfunk/mkdocs-material:latest
         with:
-          python-version: '3.x'
-      - name: Install dependencies
-        run: pip install mkdocs mkdocs-material mkdocs-glightbox mkdocs-with-pdf pymdown-extensions "markdown<3.4"
-      - run: mkdocs build
-      - uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
+          args: gh-deploy --force
