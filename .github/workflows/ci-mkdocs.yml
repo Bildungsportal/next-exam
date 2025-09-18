@@ -3,7 +3,7 @@ name: Deploy MkDocs to GitHub Pages
 on:
   push:
     branches:
-      - handbuch
+      - handbuch # Oder dein entsprechender Branch
 
 permissions:
   contents: write
@@ -15,20 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-      - name: Create and activate virtual environment
+      - name: Install dependencies and deploy
         run: |
-          python -m venv .venv
-          source .venv/bin/activate
-      - name: Install dependencies
-        run: |
-          source .venv/bin/activate
-          pip install --upgrade pip
-          pip install mkdocs mkdocs-material mkdocs-glightbox mkdocs-with-pdf pymdown-extensions "markdown<3.4"
-      - name: Build and deploy
-        run: |
-          source .venv/bin/activate
+          pip install mkdocs mkdocs-material mkdocs-glightbox mkdocs-with-pdf pymdown-extensions
           mkdocs gh-deploy --force

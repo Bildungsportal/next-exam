@@ -51,7 +51,7 @@ Der Texteditor stellt über die Symbolleiste Formatierungsmöglichkeiten und Bef
 - `h1` ... `h6` - Symbole ... wenden die entsprechenden Formatvorlagen für Überschriften an.
 - `hochstellen`, `tiefstellen` - Symbole ... stellen die Schrift auf die entsprechenden Formatierungen um.
 - `ungeordnete Liste`, `geordnete Liste` - Symbole ... versehen Absätze mit Aufzählungszeichen bzw. Nummerierungen.
-- `</>`, `{}` - Symbole ... formatieren speziell für HTML- oder Programmiercode-Bereiche.
+- `code` - Symbole ... formatieren speziell für HTML- oder Programmiercode-Bereiche.
 - `linksbündig`, `zentriert`, `rechtsbündig` - Symbole ... beeinflussen die Textausrichtung.
 - `Textfarbe` - Symbol ... passt die Farbe des Textes an.
 

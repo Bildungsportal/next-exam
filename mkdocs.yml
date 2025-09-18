@@ -7,17 +7,16 @@ nav:
   - Student - Grundlagen: student.md
   - Erweiterte Funktionen: advanced.md
   - Fehlerbehandlung - FAQ: faq.md
-       
-theme:
-    name: material
-    favicon: img/favicon.png
 
-    palette: 
+theme:
+  name: material
+  favicon: img/favicon.png
+  palette:
     # Palette toggle for light mode
     - scheme: default
       primary: green
       toggle:
-        icon: material/brightness-7 
+        icon: material/brightness-7
         name: Switch to dark mode
     # Palette toggle for dark mode
     - scheme: slate
@@ -42,7 +41,7 @@ markdown_extensions:
 extra:
   consent:
     title: Cookie consent
-    description: >- 
+    description: >-
       We use cookies to recognize your repeated visits and preferences, as well
       as to measure the effectiveness of our documentation and whether users
       find what they're searching for. With your consent, you're helping us to
