@@ -14,7 +14,7 @@ jobs:
         with:
           repository: BiP-org/next-exam
           ref: main
-          token: ${{ secrets.PAT_USER_ADMINISTRATION }}
+          token: ${{ secrets.PAT_BiP_ORG_NEXT_EXAM }}
           
       - name: Use Node.js
         uses: actions/setup-node@v4
