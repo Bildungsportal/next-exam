@@ -43,59 +43,48 @@ jobs:
       - name: Checkout Private Repository
         uses: actions/checkout@v4
         with:
+          # Checkout des Repos, in dem die electron-builder.yml liegt
           repository: BiP-org/next-exam
           ref: main
           token: ${{ secrets.PAT_BiP_ORG_NEXT_EXAM }}
-          
+          # Fetch-depth 0 ist wichtig, um alle Tags zu holen
+          fetch-depth: 0
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: rel
           merge-multiple: true
 
-      - name: Determine new patch version
-        id: increment_tag
+      # Neuer Schritt: Lese die Version aus der YAML-Datei
+      - name: Read version from electron-builder.yml
+        id: version_reader
         run: |
-          git fetch --tags
-          
-          LAST_RELEASE_TAG=$(git tag --sort=-v:refname | grep "^v" | head -n 1)
-          LAST_PRERELEASE_TAG=$(git tag --sort=-v:refname | grep "^pre" | head -n 1)
-          
-          # Release tag in major, minor und patch teilen
-          if [[ -z "$LAST_RELEASE_TAG" ]]; then
-            if [[ -z "$LAST_PRERELEASE_TAG" ]]; then
-              MAJOR=1
-              NEW_MINOR=0
-            else
-              LAST_PRERELEASE_VERSION=${LAST_PRERELEASE_TAG#pre}
-              MAJOR=$(echo $LAST_PRERELEASE_VERSION | cut -d. -f1)
-              NEW_MINOR=$(echo $LAST_PRERELEASE_VERSION | cut -d. -f2)
-            fi
-          else
-            LAST_RELEASE_VERSION=${LAST_RELEASE_TAG#v}
-            MAJOR=$(echo $LAST_RELEASE_VERSION | cut -d. -f1)
-            MINOR=$(echo $LAST_RELEASE_VERSION | cut -d. -f2)
-            NEW_MINOR=$((MINOR + 1))
-          fi
-          
-          # Patch erhöhen, wenn es bereits einen Prelease gibt, sonst 0
-          if [[ -z "$LAST_PRERELEASE_TAG" ]]; then
-            NEW_PATCH=0
-          else
-            LAST_PRERELEASE_VERSION=${LAST_PRERELEASE_TAG#pre}
-            PATCH=$(echo $LAST_PRERELEASE_VERSION | cut -d. -f3) # Extract patch version
-            NEW_PATCH=$((PATCH + 1))
-          fi
-        
-          NEW_TAG="pre${MAJOR}.${NEW_MINOR}.${NEW_PATCH}"
-          
-          echo "::set-output name=new_prerelease_tag::$NEW_TAG"
-          echo "::set-output name=last_release_tag::$LAST_RELEASE_TAG"
+          # Installiere yq (ein Kommandozeilen-YAML-Prozessor)
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
+
+          # Lese die buildVersion aus der /student/electron-builder.yml
+          VERSION=$(yq e '.buildVersion' student/electron-builder.yml)
+          echo "Gelesene Version: $VERSION"
+
+          # Erstelle den neuen Pre-Release-Tag
+          NEW_TAG="pre$VERSION"
+          echo "Neuer Tag: $NEW_TAG"
+
+          # Finde den letzten echten Release-Tag für das Changelog
+          LAST_RELEASE_TAG=$(git tag --sort=-v:refname | grep "^v[0-9]" | head -n 1)
+          echo "Letzter Release-Tag für Changelog: $LAST_RELEASE_TAG"
+
+          # Setze die Outputs für spätere Schritte
+          echo "new_prerelease_tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
+          echo "last_release_tag=$LAST_RELEASE_TAG" >> "$GITHUB_OUTPUT"
 
       - name: Tag Release
         run: |
-          git tag ${{ steps.increment_tag.outputs.new_prerelease_tag }}
-          git push origin ${{ steps.increment_tag.outputs.new_prerelease_tag }}
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.version_reader.outputs.new_prerelease_tag }}
+          git push origin ${{ steps.version_reader.outputs.new_prerelease_tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_BiP_ORG_NEXT_EXAM }}
 
@@ -104,7 +93,8 @@ jobs:
         uses: mikepenz/release-changelog-builder-action@v5
         with:
           ignorePreReleases: false
-          fromTag: ${{ steps.increment_tag.outputs.last_release_tag }}
+          # Verwende den letzten echten Release-Tag als Startpunkt
+          fromTag: ${{ steps.version_reader.outputs.last_release_tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -112,7 +102,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           prerelease: true
-          tag_name: ${{ steps.increment_tag.outputs.new_prerelease_tag }}
+          tag_name: ${{ steps.version_reader.outputs.new_prerelease_tag }}
           body: ${{ steps.changelog.outputs.changelog }}
           files: |
             rel/**
