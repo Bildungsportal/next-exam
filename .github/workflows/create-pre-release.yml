@@ -1,0 +1,120 @@
+name: prerelease
+
+on:
+  workflow_call: { }
+  workflow_dispatch: { }
+
+jobs:
+  linux:
+    uses: ./.github/workflows/build-Linux-x64-AppImage.yml
+    secrets: inherit
+    with:
+      prerelease: true
+
+  macos-arm64:
+    uses: ./.github/workflows/build-MacOS-arm64-DMG.yml
+    secrets: inherit
+    with:
+      prerelease: true
+
+  macos-x64:
+    uses: ./.github/workflows/build-MacOS-x64-DMG.yml
+    secrets: inherit
+    with:
+      prerelease: true
+
+  windows-msi:
+    uses: ./.github/workflows/build-Windows-x64-MSI.yml
+    secrets: inherit
+    with:
+      prerelease: true
+
+  windows-portable:
+    uses: ./.github/workflows/build-Windows-x64-Portable-EXE.yml
+    secrets: inherit
+    with:
+      prerelease: true
+
+
+  release:
+    needs: [linux, macos-arm64, macos-x64, windows-msi, windows-portable]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Private Repository
+        uses: actions/checkout@v4
+        with:
+          repository: BiP-org/next-exam
+          ref: main
+          token: ${{ secrets.PAT_BiP_ORG_NEXT_EXAM }}
+          
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: rel
+          merge-multiple: true
+
+      - name: Determine new patch version
+        id: increment_tag
+        run: |
+          git fetch --tags
+          
+          LAST_RELEASE_TAG=$(git tag --sort=-v:refname | grep "^v" | head -n 1)
+          LAST_PRERELEASE_TAG=$(git tag --sort=-v:refname | grep "^pre" | head -n 1)
+          
+          # Release tag in major, minor und patch teilen
+          if [[ -z "$LAST_RELEASE_TAG" ]]; then
+            if [[ -z "$LAST_PRERELEASE_TAG" ]]; then
+              MAJOR=1
+              NEW_MINOR=0
+            else
+              LAST_PRERELEASE_VERSION=${LAST_PRERELEASE_TAG#pre}
+              MAJOR=$(echo $LAST_PRERELEASE_VERSION | cut -d. -f1)
+              NEW_MINOR=$(echo $LAST_PRERELEASE_VERSION | cut -d. -f2)
+            fi
+          else
+            LAST_RELEASE_VERSION=${LAST_RELEASE_TAG#v}
+            MAJOR=$(echo $LAST_RELEASE_VERSION | cut -d. -f1)
+            MINOR=$(echo $LAST_RELEASE_VERSION | cut -d. -f2)
+            NEW_MINOR=$((MINOR + 1))
+          fi
+          
+          # Patch erhöhen, wenn es bereits einen Prelease gibt, sonst 0
+          if [[ -z "$LAST_PRERELEASE_TAG" ]]; then
+            NEW_PATCH=0
+          else
+            LAST_PRERELEASE_VERSION=${LAST_PRERELEASE_TAG#pre}
+            PATCH=$(echo $LAST_PRERELEASE_VERSION | cut -d. -f3) # Extract patch version
+            NEW_PATCH=$((PATCH + 1))
+          fi
+        
+          NEW_TAG="pre${MAJOR}.${NEW_MINOR}.${NEW_PATCH}"
+          
+          echo "::set-output name=new_prerelease_tag::$NEW_TAG"
+          echo "::set-output name=last_release_tag::$LAST_RELEASE_TAG"
+
+      - name: Tag Release
+        run: |
+          git tag ${{ steps.increment_tag.outputs.new_prerelease_tag }}
+          git push origin ${{ steps.increment_tag.outputs.new_prerelease_tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_BiP_ORG_NEXT_EXAM }}
+
+      - name: Generate changelog
+        id: changelog
+        uses: mikepenz/release-changelog-builder-action@v5
+        with:
+          ignorePreReleases: false
+          fromTag: ${{ steps.increment_tag.outputs.last_release_tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          tag_name: ${{ steps.increment_tag.outputs.new_prerelease_tag }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          files: |
+            rel/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

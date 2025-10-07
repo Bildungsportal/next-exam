@@ -1,0 +1,97 @@
+name: Build Windows x64 Portable EXE
+
+on:
+  workflow_call:
+    inputs:
+      prerelease:
+        type: boolean
+        required: false
+        default: false
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout This Repository
+        if: ${{ inputs.prerelease == false }}
+        uses: actions/checkout@v4
+
+      - name: Checkout Private Repository
+        if: ${{ inputs.prerelease == true }}
+        uses: actions/checkout@v4
+        with:
+          repository: BiP-org/next-exam
+          ref: main
+          token: ${{ secrets.PAT_BiP_ORG_NEXT_EXAM }}
+        
+        
+      - name: Decode .p12 file
+        env:
+          P12_BASE64: ${{ secrets.P12_BASE64 }}
+        run: |
+          [System.IO.File]::WriteAllBytes('./certificate.p12', [System.Convert]::FromBase64String($env:P12_BASE64))
+  
+  
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          
+          
+      - name: Teacher cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./teacher/.npm
+            ./teacher/node_modules
+          key: ${{ runner.os }}-node-t-${{ hashFiles('./teacher/**/package-lock.json') }}
+          
+      - name: Teacher install dependencies
+        working-directory: ./teacher
+        run: |
+          npm install
+          mkdir dist
+          
+      - name: Teacher build
+        working-directory: ./teacher
+        env:
+          CSC_LINK: "file://../certificate.p12"
+          CSC_KEY_PASSWORD: ${{ secrets.P12_PASSWORD }}
+        run: npm run build:win:portable
+        
+      - name: Upload Teacher Windows x64 Portable EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-exam-teacher-windows-x64-portable-exe
+          path: ./release/**/Next-Exam-Teacher*x64.exe
+          retention-days: 5
+          
+          
+      - name: Student cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./student/.npm
+            ./student/node_modules
+          key: ${{ runner.os }}-node-s-${{ hashFiles('./student/**/package-lock.json') }}
+          
+      - name: Student install dependencies
+        working-directory: ./student
+        run: |
+          npm install
+          mkdir dist
+          
+      - name: Student build
+        working-directory: ./student
+        env:
+          CSC_LINK: "file://../certificate.p12"
+          CSC_KEY_PASSWORD: ${{ secrets.P12_PASSWORD }}
+        run: npm run build:win:portable
+        
+      - name: Upload Student Windows x64 Portable EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-exam-student-windows-x64-portable-exe
+          path: ./release/**/Next-Exam-Student*x64.exe
+          retention-days: 5

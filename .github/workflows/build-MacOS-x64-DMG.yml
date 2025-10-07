@@ -1,0 +1,129 @@
+name: Build MacOS x64 DMG
+
+on:
+  workflow_call:
+    inputs:
+      prerelease:
+        type: boolean
+        required: false
+        default: false
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout This Repository
+        if: ${{ inputs.prerelease == false }}
+        uses: actions/checkout@v4
+
+      - name: Checkout Private Repository
+        if: ${{ inputs.prerelease == true }}
+        uses: actions/checkout@v4
+        with:
+          repository: BiP-org/next-exam
+          ref: main
+          token: ${{ secrets.PAT_BiP_ORG_NEXT_EXAM }}
+
+
+      - name: Decode .p12 file
+        env:
+          P12_BASE64_APPLE: ${{ secrets.P12_BASE64_APPLE }}
+        run: echo "$P12_BASE64_APPLE" | base64 -d > ./certificate.p12
+
+      - name: Import signing certificate
+        run: |
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import ./certificate.p12 -k ~/Library/Keychains/build.keychain -P "$CSC_KEY_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+        env:
+          CSC_KEY_PASSWORD: ${{ secrets.P12_PASSWORD_APPLE }}
+
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'npm'
+          cache-dependency-path: |
+            student/package-lock.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+
+      - name: Teacher cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./teacher/.npm
+            ./teacher/node_modules
+          key: ${{ runner.os }}-node-s-${{ hashFiles('./teacher/**/package-lock.json') }}
+
+      - name: Teacher install dependencies
+        working-directory: ./teacher
+        run: |
+          npm install
+          mkdir dist
+
+      - name: Teacher build
+        working-directory: ./teacher
+        env:
+          CSC_LINK: "file://../certificate.p12"
+          CSC_KEY_PASSWORD: ${{ secrets.P12_PASSWORD_APPLE }}
+          APPLEID: ${{ secrets.APPLEID }}
+          APPLEIDPASS: ${{ secrets.APPLEIDPASS }}
+          TEAMID: ${{ secrets.TEAMID }}
+        run: npm run build:mac:x64
+
+      - name: Upload Teacher MacOS x64 DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-exam-teacher-macos-x64-dmg
+          path: ./release/**/Next-Exam-Teacher*x64*.dmg
+          retention-days: 5
+
+
+      - name: Student cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./student/.npm
+            ./student/node_modules
+          key: ${{ runner.os }}-node-s-${{ hashFiles('./student/**/package-lock.json') }}
+
+      - name: Cache node-gyp
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/node-gyp
+            ~/.npm/_libvips
+          key: ${{ runner.os }}-gyp-${{ hashFiles('student/package-lock.json') }}
+
+      - name: Student install dependencies
+        working-directory: ./student
+        run: |
+          npm install
+          mkdir dist
+
+      - name: Student build
+        working-directory: ./student
+        env:
+          CSC_LINK: "file://../certificate.p12"
+          CSC_KEY_PASSWORD: ${{ secrets.P12_PASSWORD_APPLE }}
+          APPLEID: ${{ secrets.APPLEID }}
+          APPLEIDPASS: ${{ secrets.APPLEIDPASS }}
+          TEAMID: ${{ secrets.TEAMID }}
+          SHAID: ${{ secrets.SHAID }}
+        run: npm run build:mac:x64
+
+      - name: Upload Student MacOS x64 DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-exam-student-macos-x64-dmg
+          path: ./release/**/Next-Exam-Student*x64*.dmg
+          retention-days: 5
