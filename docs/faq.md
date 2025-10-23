@@ -8,7 +8,7 @@
 - sich im selben Netzwerk befinden,
 - kompatible Versionen von Next-Exam verwenden (Lehrpersonen und Schüler:innen).
 
-Wird die Prüfung nicht automatisch gefunden, kann die IP-Adresse bei den Schüler:innen manuell eingegeben werden, um eine Verbindung zu **Next-Exam-Teacher** herzustellen.
+Wird die Prüfung nicht automatisch gefunden, kann die Server-Adresse bei den Schüler:innen manuell eingegeben werden, um eine Verbindung zu **Next-Exam-Teacher** herzustellen.
 
 ---
 
@@ -97,9 +97,9 @@ Temporär kann man das AppImage auch mit `--no-sandbox` starten.
 ---
 
 ## Next-Exam funktioniert nicht über VLANs hinweg
-Dies ist eine erwünschte Einschränkung und eine der Hauptfunktionen von VLANs. Dies kann nicht von der Software behoben werden.
+
+*Dies ist eine erwünschte Einschränkung und eine der Hauptfunktionen von VLANs. Dies kann nicht von der Software behoben werden.*
 
 Sie können auf ihrerm Layer3 Device jedoch dafür sorgen dass der Port 22422 (Next-Exam Teacher API Port) über die VLANs hinweg geroutet wird. Dazu erstellen Sie zB. auf der "OPNSense" Firewall eine "pass" Regel für das Ziel Netzwerk. Bei "Port" filtern sie den Port "22422"
 
 Durch diese Einstellungen werden Ziele in anderen Subnetzen erreichbar sofern der definierte Port angesprochen wird.
-

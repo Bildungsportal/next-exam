@@ -14,12 +14,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "advanced.md",
+                "file": "faq.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "advanced"
+              "title": "faq"
             }
           }
         ]
@@ -116,7 +116,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "advanced.md",
+                "file": "faq.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -126,7 +126,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for advanced"
+              "title": "Backlinks for faq"
             }
           },
           {
@@ -192,6 +192,7 @@
   },
   "active": "2ca18dffd3e7eb38",
   "lastOpenFiles": [
+    "advanced.md",
     "teacher.md",
     "Pasted image 20251023115353.png",
     "faq.md",
