@@ -43,6 +43,13 @@ In diesem Fall:
 macOS benötigt eine explizite Berechtigung zum Erstellen von Screenshots.  
 Wird diese nicht erteilt, überträgt **Next-Exam** nur das Programmfenster.
 
+Mit Hilfe von folgendem Terminalbefehl können sie alle Berechtigungen von Next-Exam löschen und beim nächsten Start neu setzen.
+
+```bash
+tccutil reset All com.nextexam-student.app
+```
+
+
 ---
 
 ## Screenshots auf Linux funktionieren nicht
@@ -75,9 +82,24 @@ Falls keine Ausnahme für Schüler:innen gesetzt werden kann, muss die IP-Adress
 
 ---
 
-## Neuere Linux Ubuntu basierte Varianten können Next-Exam nicht starten
+## Neuere Ubuntu basierte Linux Variannten können *.AppImage* Pakete nicht starten
 
-> echo 'kernel.apparmor_restrict_unprivileged_userns=0' | sudo tee /etc/sysctl.d/99-electron.conf  
-> sudo sysctl --system
+**appArmor** erlaubt keine unpriviligierten Usernamespaces. Mit folgendem Befehl können sie die Restriktion dauerhaft deaktivieren.
 
-deaktiviert die Einschränkung von User Namespaces durch **AppArmor**. Electron benötigt dies oft für AppImages, da es sonst keine ausreichenden Rechte bekommt, um richtig zu starten.
+```bash
+echo "kernel.apparmor_restrict_unprivileged_userns = 0" | sudo tee /etc/sysctl.d/20-apparmor-userns.conf
+
+sudo sysctl -p /etc/sysctl.d/20-apparmor-userns.conf // Apply change instantly
+
+```
+Temporär kann man das AppImage auch mit `--no-sandbox` starten.
+
+---
+
+## Next-Exam funktioniert nicht über VLANs hinweg
+Dies ist eine erwünschte Einschränkung und eine der Hauptfunktionen von VLANs. Dies kann nicht von der Software behoben werden.
+
+Sie können auf ihrerm Layer3 Device jedoch dafür sorgen dass der Port 22422 (Next-Exam Teacher API Port) über die VLANs hinweg geroutet wird. Dazu erstellen Sie zB. auf der "OPNSense" Firewall eine "pass" Regel für das Ziel Netzwerk. Bei "Port" filtern sie den Port "22422"
+
+Durch diese Einstellungen werden Ziele in anderen Subnetzen erreichbar sofern der definierte Port angesprochen wird.
+
