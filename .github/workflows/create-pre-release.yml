@@ -92,9 +92,12 @@ jobs:
         id: changelog
         uses: mikepenz/release-changelog-builder-action@v5
         with:
+          mode: "COMMIT"
           ignorePreReleases: false
           # Verwende den letzten echten Release-Tag als Startpunkt
           fromTag: ${{ steps.version_reader.outputs.last_release_tag }}
+          # Endpunkt: neuer Pre-Release-Tag
+          toTag: ${{ steps.version_reader.outputs.new_prerelease_tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
