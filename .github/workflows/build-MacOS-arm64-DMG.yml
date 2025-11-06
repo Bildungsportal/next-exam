@@ -78,6 +78,8 @@ jobs:
           APPLEID: ${{ secrets.APPLEID }}
           APPLEIDPASS: ${{ secrets.APPLEIDPASS }}
           TEAMID: ${{ secrets.TEAMID }}
+          USE_HARD_LINKS: "false"
+          ELECTRON_BUILDER_DISABLE_LINKS: "true"
         run: npm run build:mac:arm64
 
       - name: Upload Teacher MacOS arm64 DMG
@@ -119,6 +121,8 @@ jobs:
           APPLEIDPASS: ${{ secrets.APPLEIDPASS }}
           TEAMID: ${{ secrets.TEAMID }}
           SHAID: ${{ secrets.SHAID }}
+          USE_HARD_LINKS: "false"
+          ELECTRON_BUILDER_DISABLE_LINKS: "true"
         run: npm run build:mac:arm64
 
       - name: Upload Student MacOS arm64 DMG
