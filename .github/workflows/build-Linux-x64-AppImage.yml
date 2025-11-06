@@ -44,8 +44,16 @@ jobs:
         working-directory: ./teacher
         run: npm install
         
+      - name: Clean electron-builder temp directories
+        run: |
+          rm -rf /tmp/t-* 2>/dev/null || true
+          rm -rf ~/.cache/electron-builder 2>/dev/null || true
+        
       - name: Teacher build
         working-directory: ./teacher
+        env:
+          USE_HARD_LINKS: "false"
+          ELECTRON_BUILDER_DISABLE_LINKS: "true"
         run: npm run build:linux
         
       - name: Upload Teacher Linux x64 AppImage
@@ -68,8 +76,16 @@ jobs:
         working-directory: ./student
         run: npm install
         
+      - name: Clean electron-builder temp directories
+        run: |
+          rm -rf /tmp/t-* 2>/dev/null || true
+          rm -rf ~/.cache/electron-builder 2>/dev/null || true
+        
       - name: Student build
         working-directory: ./student
+        env:
+          USE_HARD_LINKS: "false"
+          ELECTRON_BUILDER_DISABLE_LINKS: "true"
         run: npm run build:linux
         
       - name: Upload Student Linux x64 AppImage
