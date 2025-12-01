@@ -8,17 +8,17 @@
 </figure>
 
 ### Passwort festlegen (optional)
-> Ein `Passwort` kann festgelegt werden um zu verhindern, dass die Prüfung bei Verbindungsverlust vom Student verlassen werden kann.
+> Ein `Passwort` kann festgelegt werden um zu verhindern, dass die Prüfung bei Verbindungsverlust vom Student, ohne Kenntnis des `Passwort`-Wertes, verlassen werden kann.
 
-### Backup-Ordner festlegen (optional)
-> Das zusätzliche `Backupverzeichnis` kann individuell gewählt werden (z.B. Netzwerk-Ordner, USB Stick, ...). Hier werden die Prüfungsdaten (Arbeiten der Schüler:innen, Konfiguration, ...) zusätzlich zum oben genannten Arbeitsordner abgelegt.
+### Backupverzeichnis festlegen (optional)
+> Das `Backupverzeichnis` kann individuell gewählt werden (z.B. Netzwerk-Ordner, USB Stick, ...). Hier werden die Prüfungsdaten (Arbeiten der Schüler:innen, Konfiguration, ...) zusätzlich zum oben genannten Arbeitsordner abgelegt.
 <figure markdown="span">
     ![Exam-Name](img/teacher_exam_advanced.png){width="50%"}
     <figcaption>Passwort, Backupverzeichnis</figcaption>
 </figure>
 
 ## Dashboard
-Das Teacher-Dashboard bietet eine Übersicht über alle verbundenen Schüler:innen und stellt alle prüfungsrelevanten Informationen dar.
+Das Teacher-Dashboard bietet eine Übersicht über alle verbundenen Schüler:innen-Geräte und stellt alle prüfungsrelevanten Informationen dar.
 Es ermöglicht die Konfiguration der Prüfung und die Verwaltung der Schüler:innen.
 
 <figure markdown="span">
@@ -30,7 +30,7 @@ Der automatisch generierte `Pincode` wird von den Schüler:innen benötigt, um d
 Sollte die Prüfung bei den Schüler:innen nicht aufscheinen, können sie die Prüfung durch Eingabe der `Server-Adresse` finden.
 
 ## Prüfungsmodi
-> Next-Exam ermöglicht viele verschiedene Prüfungsvarianten. 
+> Next-Exam ermöglicht verschiedene Prüfungsvarianten. 
 
 <figure markdown="span">
     ![Exam-Name](img/teacher_dashboard-02.png){width="50%"}
@@ -45,8 +45,9 @@ Verfügbare Prüfungsmodi sind:
 - `Google Forms` - Formular im Kiosk-Mode
 - `Microsoft 365` - online-Versionen von Word, Excel usw.
 - `Website` - Website im Kiosk-Mode
+- `RDP` - RD Web Client
 
-> Der Prüfungsmodus kann im Dropdown-Feld `Prüfungsmodus` gewählt werden. Je nach Prüfungsmodus erscheint ein Konfigurationsfenster. Im Nachhinein kann die Prüfungskonfiguration jederzeit über das Zahnrad-Symbol (oben rechts) geöffnet werden.
+> Die Auswahl des `Prüfungsmodus` kann im gleichnamigen Dropdown-Feld. Je nach Prüfungsmodus erscheint ein angepasstes Konfigurationsfenster. Im Nachhinein kann die Prüfungskonfiguration über das Zahnrad-Symbol (oben rechts) geöffnet werden. Dies ist nicht möglich wenn die Prüfung bereits ausgeführt wird, Geräte bereits abgesichert wurden.
 
 ### Sprachen
 
@@ -55,10 +56,10 @@ Verfügbare Prüfungsmodi sind:
     <figcaption>Prüfungsmodus "Sprachen" - Konfiguration</figcaption>
 </figure>
 
-> Einstellungen wie Korrekturrand, Schriftart, Zeilenabstand und Schriftgröße betreffen sowohl die Darstellung im Editor als auch die Erstellung des Ablage-PDF. Audiodateien (Anzahl erlaubter Abspielversuche) können eingeschränkt werden. Zusätzliche Hilfsmittel in Form von Webseiten (z.B. Wörterbuch) lassen sich definieren. Eine passive Rechtschreibhilfe über das `LanguageTool` kann aktiviert und konfiguriert werden.
+> Einstellungen wie Korrekturrand, Schriftart, Zeilenabstand und Schriftgröße betreffen sowohl die Darstellung im Editor als auch die Erstellung des Abgabe-PDF. Audiodateien können ausgewählt und deren Anzahl erlaubter Abspielversuche eingeschränkt werden. Zusätzliche Hilfsmittel in Form von Webseiten oder anderen Dateien (z.B. Wörterbuch) lassen sich, außerhalb des Dialogs, im Bereich `Prüfungsmaterialen` definieren. Eine passive Rechtschreibhilfe über das `LanguageTool` kann aktiviert und konfiguriert werden.
 
 ### Mathematik
->In diesem Modus arbeiten die Schüler:innen mit GeoGebra Classic/Suite. Zusätzliche Hilfsmittel, wie eine Formelsammlung über eine Webseite, können gesetzt werden.
+>In diesem Modus arbeiten die Schüler:innen mit GeoGebra Classic/Suite. Zusätzliche Hilfsmittel, wie eine Formelsammlung über eine Webseite, können gesetzt werden. Zusätzliche Hilfsmittel in Form von Webseiten oder anderen Dateien (z.B. Formelsammlung, ...) lassen sich im Bereich `Prüfungsmaterialen` definieren.
 
 ### Eduvidual/Moodle
 Next-Exam übernimmt die Absicherung des Moodle-Tests. Alle nötigen Einstellungen für die Prüfungsumgebung erfolgen über Moodle selbst.
@@ -74,18 +75,29 @@ Nach dem Login mit Microsoft365 wird ein .docx bzw. .xlsx-Template bereitgestell
 Aus diesem Template werden für jede:n Schüler:in automatisch Kopien im OneDrive der Lehrperson generiert, inklusive individueller "Share-Links" zur Bearbeitung.
 
 ### RDP
-Über das Remote Desktop Protocol (RDP) kann auf einen Windows-Server (oder Virtuelle Maschine) zugegriffen werden.
->Als Lehrperson muss man den Domainnamen (fqdn) des RDP Servers angeben. Die Schüler:innen erhalten dann einen Login-Screen und können sich mit ihrem Domänenbenutzer einloggen und arbeiten.  
->Am Windows Server muss der RD Web Client installiert sein!
+Über das Windows Remote Desktop Gateway, das auf dem Windows-Server installiert sein muss, kann auf einen Windows-Server (oder Virtuelle Maschine) zugegriffen werden.
+>Als Lehrperson muss man den `Domainnamen (URL)` des RDP Servers angeben. Die Schüler:innen erhalten dann einen Login-Screen und können sich mit ihrem Domänenbenutzer einloggen und arbeiten.  
+>Am Windows-Server muss der RD Web Client installiert sein!
 
 
 ## Prüfung starten
 Der grüne Button am Dashboard 'Geräte absichern' startet die Prüfung. Die Endgeräte der Schüler:innen wechseln in den abgesichterten Modus.
 
-## Prüfungsunterlagen
+## Prüfungsmaterialien und URLs
 ### Prüfungsmaterialien bereitstellen
->Auswahl der zugänglichen Materialien (Textdokumente, PDFs, Formelsammlungen, Wörterbücher, Audiodateien, Bilder)
+<figure markdown="span">
+    ![Exam-Name](img/teacher_pruefungsmaterialien.png){width="50%"}
+    <figcaption>Prüfungsmodus "Sprachen" - Konfiguration</figcaption>
+</figure>
+>Auswahl der zugänglichen Materialien (Textdokumente, PDFs, Formelsammlungen, Wörterbücher, Audiodateien, Bilder) und URLs erfolg über das `+`-Icon.
+<figure markdown="span">
+    ![Exam-Name](img/teacher_pruefungsmaterialien_dialog.png){width="50%"}
+    <figcaption>Prüfungsmodus "Sprachen" - Konfiguration</figcaption>
+</figure>
+> Die Auswahl der Datei oder URL erfolgt im darauffolgenden Dialog. Durch Klicken auf `OK` wird das neue `Prüfungsmaterial`in der Liste ergänzt. Durch Klick auf das `X` Symbol in neben den Einträgen in der `Prüfungsmaterialien`-Liste werden Materialien wieder entfernt.
 ### Gruppen- und Einzelschüler-Zuweisung
+> Der Bereich `Gruppen` steht im Dialog für Prüfungsmaterialien nur dann zur Verfügung, wenn bei der Prüfung Gruppen aktiviert wurden. (siehe [Erweiterte Funktionen](advanced.md))
+
 Die benötigten Materialien werden den Clients in Base64-Codierung bereitgestellt und nicht lokal gespeichert.
 Samtliche Materialien können auch während der laufenden Prüfung geändert, betrachtet, ggf. abgespielt (audio) oder entfernt werden.
 
@@ -107,7 +119,7 @@ Das Dashboard ist gleichzeitig der Sitzplan. Er zeigt die aktuelle Position der 
 </figure>
 - Die Schaltfläche `Info` öffnet die Detailansicht der Schüler:innen.
 > Schüler:innen können dort freigeschaltet bzw. aus der Prüfung entfernt, Dateien an einzelne Schüler:innen versendet oder Abgaben verwaltet werden.
-- Falls der Gruppenmodus in den Prüfungseinstellungen aktiviert wurde, können Über die Schaltflächen `A` / `B` die Schüler:innen den gewünschten Gruppen zugewiesen werden.
+- Falls der Gruppenmodus (siehe [Erweiterte Funktionen](advanced.md)) in den Prüfungseinstellungen aktiviert wurde, können Über die Schaltflächen `A` / `B` die Schüler:innen den gewünschten Gruppen zugewiesen werden.
 - Die Schaltfläche `X` beendet die Prüfung für die jeweiligen Person.
 - Der `Papierkorb` bereinigt den Arbeitsordner am PC der jeweiligen Schüler:innen.
 - Der `Zauberstab` erlaubt es einzelnen Schüler:innen die Rechtschreibhilfe zu aktivieren.
@@ -131,10 +143,12 @@ Folgende Aktionen sind im Dateimanager durchführbar:
 - Einsicht, Archivierung und Download von Abgaben
 - Automatische Archivierung mit Timestamp
 - Zusammenfassung der neuesten Abgaben als PDF (mit Index: Name, Abgabezeitpunkt, Zeichenanzahl)
+ (Auf der Zusammenfassung befindet sich lediglich das letzte von den Schüler:innen abgegebene Dokument, unabhängig von Abschnitt und Anzahl der abgegebenen  Dokumenten pro Schüler:in. Dieses Verhalten wird in einer zukünftigen Version verbessert.)
 #### Abgabe:
+Abgegebene Dateien befinden sich im Ordner `ABGABE`
 - Finale Abgabe mit Nummerierung und Namen
 - Direkter Versand der Dokumente an den Teacher
-- Automatische Ablage im Ordner "ABGABE"
+- Automatische Ablage
 #### Direktdruck:
 - Möglichkeit für Schüler:innen, ihre Arbeit direkt zu drucken
 - Auswahl eines Standarddruckers

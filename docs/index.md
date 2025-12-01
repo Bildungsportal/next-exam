@@ -11,7 +11,7 @@ Das Handbuch basiert auf der Next-Exam-Version 1.1.0.1
 - `Google Forms` - Formular im Kiosk-Mode
 - `Microsoft 365` - online-Versionen von Word, Excel usw.
 - `Website` - Website im Kiosk-Mode
-- `RDP` - Windows Remote Desktop Gateway
+- `RDP` - RD Web Client
 
 <figure markdown="span">
     ![Exam-Name](img/preview_teacher.png){width="800"}
