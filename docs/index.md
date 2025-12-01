@@ -11,7 +11,10 @@ Das Handbuch basiert auf der Next-Exam-Version 1.1.0.1
 - `Google Forms` - Formular im Kiosk-Mode
 - `Microsoft 365` - online-Versionen von Word, Excel usw.
 - `Website` - Website im Kiosk-Mode
+- `RDP` - Windows Remote Desktop Gateway
 
-
-<img src="https://www.bildung.gv.at/filter/faq/elementfile.php?l=de&p=212&f=/preview_teacher.png" alt="Logo" width="800">
+<figure markdown="span">
+    ![Exam-Name](img/preview_teacher.png){width="800"}
+    <figcaption>Next-Exam Teacher</figcaption>
+</figure>
 
