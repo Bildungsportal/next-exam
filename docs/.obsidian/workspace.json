@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "student.md",
+                "file": "index.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "student"
+              "title": "index"
             }
           },
           {
@@ -106,7 +106,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "student.md",
+                "file": "index.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -116,7 +116,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for student"
+              "title": "Backlinks for index"
             }
           },
           {
@@ -182,9 +182,9 @@
   },
   "active": "2ca18dffd3e7eb38",
   "lastOpenFiles": [
+    "student.md",
     "teacher.md",
     "img/teacher_filemanager.png",
-    "student.md",
     "advanced.md",
     "index.md",
     "img/teacher_pruefungsmaterialien_dialog.png",

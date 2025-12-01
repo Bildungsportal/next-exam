@@ -1,20 +1,46 @@
 # Willkommen im Next-Exam-Handbuch
 
-Download der Software unter [next-exam.at](https://www.next-exam.at).
-Das Handbuch basiert auf der Next-Exam-Version 1.1.0.1
+Dieses Handbuch unterstützt Lehrkräfte und Administrator*innen bei der Einrichtung und Verwendung der **Next-Exam Prüfungsumgebung**.  
+Es basiert auf der Next-Exam-Version **1.1.0**.
 
-## Sicher prüfen leicht gemacht
+> **Download:** Die aktuelle Version von Next-Exam steht unter  
+> **https://www.next-exam.at**  
+> zum Herunterladen bereit.
 
-- `Mathematik` - ... mit GeoGebra-Integration
-- `Sprachen` - Texteditor mit erweiterten Features
-- `Eduvidual/Moodle` - LMS-Test im Kiosk-Mode
-- `Google Forms` - Formular im Kiosk-Mode
-- `Microsoft 365` - online-Versionen von Word, Excel usw.
-- `Website` - Website im Kiosk-Mode
-- `RDP` - RD Web Client
+---
+
+## Sicher prüfen – leicht gemacht
+
+Next-Exam bietet eine sichere und flexible Umgebung für digitale Prüfungen in verschiedenen Szenarien:
+
+- **Mathematik**  
+  Prüfungen mit integrierter **GeoGebra-Umgebung**.
+
+- **Sprachen**  
+  Texteditor mit erweiterten Eingabe- und Formatierungsfunktionen.
+
+- **Eduvidual / Moodle**  
+  Sichere Lernmanagment-Tests im **Kiosk-Modus**.
+
+- **Google Forms**  
+  Durchführung von Formularprüfungen im **Kiosk-Modus**.
+
+- **Microsoft 365**  
+  Web-Versionen von Word, Excel und weiteren Tools, abgesichert gegen das Verlassen der Prüfungsoberfläche.
+
+- **Webseiten**  
+  Beliebige Webinhalte im eingeschränkten Kiosk-Modus.
+
+- **RDP**  
+  Zugriff auf Remote-Desktops über den **RD Web Client**.
+
+---
+
+## Next-Exam Teacher
+
+Der „Teacher“-Bereich bietet eine übersichtliche Steuerungsoberfläche für die Verwaltung von Prüfungen, die Zuordnung von Geräten und die Live-Überwachung der Session.
 
 <figure markdown="span">
-    ![Exam-Name](img/preview_teacher.png){width="800"}
-    <figcaption>Next-Exam Teacher</figcaption>
+    ![Next-Exam Teacher](img/preview_teacher.png){width="800"}
+    <figcaption>Übersicht: Next-Exam Teacher</figcaption>
 </figure>
-
