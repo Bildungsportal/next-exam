@@ -39,6 +39,7 @@ markdown_extensions:
       toc_depth: 2
 
 extra:
+  software_version: "v1.1.0"
   consent:
     title: Cookie consent
     description: >-
