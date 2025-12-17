@@ -39,8 +39,7 @@ markdown_extensions:
       toc_depth: 2
 
 extra:
-  footer: |
-    © 2025 Next-Exam Handbuch – Erstellt vom DPU-Team
+  copyright: "© 2025 DPU-Team - basiert auf Version 1.1.0"
   software_version: "v1.1.0"
   consent:
     title: Cookie consent
