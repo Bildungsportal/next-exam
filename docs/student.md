@@ -25,7 +25,7 @@ Wird eine Mathematik-Prüfung gestartet, steht in der Student-Version eine abges
 </figure>
 
 #### GeoGebra® Version wechseln
-> Mit den Schaltflächen `Suite` und `Classic` kann in die gewünschte Version von Geogebra gewechselt werden.
+> Mit den Schaltflächen `Suite` und `Classic` kann in die gewünschte Version von Geogebra gewechselt werden. In der aktuellen Next-Exam-Version wird Geogebra 6.0.899.
 
 ### Sprachen-Prüfung durchführen
 Wird eine Sprachen-Prüfung gestartet, öffnet sich in der Student-Version ein abgesicherter Texteditor.
@@ -71,3 +71,6 @@ Wenn in der Teacher-Version `LanguageTool aktivieren` angehakt wurde, erscheint 
     ![Exam-Name](img/student_sprache_languagetool_vorschlaege.png){width="50%"}
     <figcaption>LanguageTool mit Vorschlägen</figcaption>
 </figure>
+
+## Client lokal absperren
+Wenn einzelne Computer abgesperrt werden sollen und eine Steuerung über eine Teacher-Instanz nicht notwendig ist, kann die Funktion "Lokal absperren" verwendet werden. Die Modi Mathematik und Sprachen mit grundlegenden Einstellungsmöglichkeiten sind vorhanden.
