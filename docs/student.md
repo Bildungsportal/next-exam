@@ -78,3 +78,8 @@ Wenn einzelne Computer abgesperrt werden sollen und eine Steuerung über eine Te
     ![Exam-Name](img/loc_local_settings.png){width="50%"}
     <figcaption>Client lokal absperren</figcaption>
 </figure>
+Um den abgesperrten Modus verlassen zu können, ist die Eingabe des vorher definierten Passwortes notwendig.
+<figure markdown="span">
+    ![Exam-Name](img/loc_local_exit.png){width="50%"}
+    <figcaption>Passworteingabe beim Verlassen</figcaption>
+</figure>

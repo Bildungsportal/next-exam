@@ -10,6 +10,7 @@ nav:
 
 theme:
   name: material
+  custom_dir: overrides
   favicon: img/favicon.png
   palette:
     # Palette toggle for light mode
@@ -39,8 +40,6 @@ markdown_extensions:
       toc_depth: 2
 
 extra:
-  copyright: "© 2025 DPU-Team - basiert auf Version 1.1.0"
-  software_version: "v1.1.0"
   consent:
     title: Cookie consent
     description: >-
