@@ -73,4 +73,8 @@ Wenn in der Teacher-Version `LanguageTool aktivieren` angehakt wurde, erscheint 
 </figure>
 
 ## Client lokal absperren
-Wenn einzelne Computer abgesperrt werden sollen und eine Steuerung über eine Teacher-Instanz nicht notwendig ist, kann die Funktion "Lokal absperren" verwendet werden. Die Modi Mathematik und Sprachen mit grundlegenden Einstellungsmöglichkeiten sind vorhanden.
+Wenn einzelne Computer abgesperrt werden sollen und eine Steuerung über eine Teacher-Instanz nicht notwendig ist, kann die Funktion "Lokal absperren" verwendet werden. Am Dashboard befindet sich dafür ein Button "Lokal absperren". Die Modi Mathematik und Sprachen mit grundlegenden Einstellungsmöglichkeiten sind vorhanden.
+<figure markdown="span">
+    ![Exam-Name](img/loc_local_settings.png){width="50%"}
+    <figcaption>Client lokal absperren</figcaption>
+</figure>
