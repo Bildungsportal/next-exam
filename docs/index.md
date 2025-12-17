@@ -36,11 +36,22 @@ Next-Exam bietet eine sichere und flexible Umgebung für digitale Prüfungen in 
 
 ---
 
+Next-Exam besteht aus zwei Anwendungen - Teacher und Student.
+
 ## Next-Exam Teacher
 
 Der „Teacher“-Bereich bietet eine übersichtliche Steuerungsoberfläche für die Verwaltung von Prüfungen, die Zuordnung von Geräten und die Live-Überwachung der Session.
 
 <figure markdown="span">
-    ![Next-Exam Teacher](img/preview_teacher.png){width="800"}
+    ![Next-Exam Teacher](img/preview_teacher.png){width="50%"}
     <figcaption>Übersicht: Next-Exam Teacher</figcaption>
+</figure>
+
+## Next-Exam Student
+
+Der "Student"-Bereich dient den Lernenden zum Einstieg in die Prüfung. Name, Pincode und ev. die Server-Adresse sind anzugeben.
+
+<figure markdown="span">
+    ![Next-Exam Teacher](img/student_exam_anmelden.png){width="50%"}
+    <figcaption>Übersicht: Next-Exam Student</figcaption>
 </figure>
