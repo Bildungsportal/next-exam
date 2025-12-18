@@ -7,7 +7,7 @@ nav:
   - Student - Grundlagen: student.md
   - Erweiterte Funktionen: advanced.md
   - Fehlerbehandlung - FAQ: faq.md
-  - Known Issues: issues.md
+  - Bekannte Probleme: issues.md
 
 theme:
   name: material
