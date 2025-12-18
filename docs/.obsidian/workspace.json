@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "teacher.md",
+                "file": "issues.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "teacher"
+              "title": "issues"
             }
           },
           {
@@ -106,7 +106,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "teacher.md",
+                "file": "issues.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -116,7 +116,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for teacher"
+              "title": "Backlinks for issues"
             }
           },
           {
@@ -182,16 +182,16 @@
   },
   "active": "2ca18dffd3e7eb38",
   "lastOpenFiles": [
-    "index.md",
-    "student.md",
+    "faq.md",
     "teacher.md",
+    "student.md",
+    "quickstart.md",
+    "index.md",
     "img/teacher_filemanager.png",
     "advanced.md",
     "img/teacher_pruefungsmaterialien_dialog.png",
-    "faq.md",
     "img/teacher_pruefungsmaterialien.png",
     "Pasted image 20251023115353.png",
-    "quickstart.md",
     "teacher/teacher.md",
     "teacher"
   ]
