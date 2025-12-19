@@ -77,7 +77,7 @@
     </div> 
     <!-- angabe/pdf preview end -->
 
-
+  <div>
     <!-- focus warning start -->
     <div v-if="!focus" class="focus-container">
         <div id="focuswarning" class="infodiv p-4 d-block focuswarning" >
@@ -98,6 +98,7 @@
     </div>
 
     <webview id="webviewmain" autosize="on" :src="url" :style="{ visibility: isLoading ? 'hidden' : 'visible' }"></webview>
+  </div>
 
 
 </template>

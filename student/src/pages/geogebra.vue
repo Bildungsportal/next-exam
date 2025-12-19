@@ -121,7 +121,7 @@
             </div>
         </div>
         <!-- focuswarning end  -->
-        <iframe id="geogebraframe" src="./geogebra/classic.html"></iframe>
+        <iframe id="geogebraframe" src="../../packages/renderer/geogebra/classic.html"></iframe>
     </div>
 
 
@@ -130,7 +130,7 @@
         <img src="/src/assets/img/svg/edit-paste-style.svg" class="white" width="16" height="16" >{{ item }}
       </button>
     </div>
-    </div>
+  </div>
 
 </template>
 
@@ -392,8 +392,8 @@ export default {
         },
         setsource(source){
             let iFrame = document.getElementById('geogebraframe')
-            if (source === "suite")   { iFrame.src = `./geogebra/suite.html`  }
-            if (source === "classic") { iFrame.src = `./geogebra/classic.html`}
+            if (source === "suite")   { iFrame.src = `../../packages/renderer/public/geogebra/suite.html`  }
+            if (source === "classic") { iFrame.src = `../../packages/renderer/public/geogebra/classic.html`}
             iFrame.parentNode.replaceChild(iFrame.cloneNode(), iFrame);
             this.redefineConsole()
         },  
@@ -640,6 +640,10 @@ export default {
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.4);
     z-index:100001;
+}
+
+#content {
+  flex-grow: 1;
 }
 
 
