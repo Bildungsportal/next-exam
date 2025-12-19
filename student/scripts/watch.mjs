@@ -11,7 +11,6 @@ function watchMain(server) {
    */
   let electronProcess = null
   const address = server.httpServer.address()
-  console.log(address)
   const env = Object.assign(process.env, {
     VITE_DEV_SERVER_HOST: address.address,
     VITE_DEV_SERVER_PORT: address.port,
@@ -21,7 +20,7 @@ function watchMain(server) {
 
 
   return build({
-    configFile: 'packages/main/vite.config.ts',
+    configFile: 'quasar.config.ts',
     mode: 'development',
     plugins: [{
       name: 'electron-main-watcher',
