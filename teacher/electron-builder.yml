@@ -7,7 +7,7 @@ asarUnpack:
   - public
 afterPack: scripts/afterpack.js
 directories:
-  output: ../release/1.1.0.18_20251212
+  output: ../release/1.1.0.18_20251215
 compression: normal
 files:
   - dist
@@ -16,13 +16,13 @@ linux:
   target: AppImage
   category: Utility
   icon: public/icons/256x256.png
-  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20251212_${arch}.${ext}
+  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20251215_${arch}.${ext}
   files:
     - dist
     - public
 mac:
   icon: public/icons/icon.png
-  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20251212_${arch}.${ext}
+  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20251215_${arch}.${ext}
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: scripts/entitlements.mac.plist
@@ -57,7 +57,7 @@ win:
     - target: msi
       arch:
         - x64
-  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20251212_${arch}.${ext}
+  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20251215_${arch}.${ext}
   files:
     - dist
     - public

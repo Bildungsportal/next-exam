@@ -1,6 +1,6 @@
 {
   "name": "next-exam-student",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "main": "dist/main/main.mjs",
   "author": {
     "name": "Thomas Michael Weissel",
@@ -133,6 +133,6 @@
     "ml-regression-simple-linear": "2.0.5",
     "tiff": "5.0.3"
   },
-  "buildNumber": "18",
-  "buildVersion": "1.1.0.18"
+  "buildNumber": "0",
+  "buildVersion": "1.1.1.0"
 }
