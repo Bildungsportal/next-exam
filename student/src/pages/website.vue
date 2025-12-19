@@ -1,5 +1,5 @@
  <template> 
-
+  <div class="column" style="height: 100%">
     <!-- HEADER START -->
     <exam-header
     :serverstatus="serverstatus"
@@ -78,7 +78,7 @@
 
 
 
-    <div id="content">
+    <div id="content" style="flex-grow: 1">
         <!-- focus warning start -->
         <div v-if="!focus" class="focus-container">
             <div id="focuswarning" class="infodiv p-4 d-block focuswarning" >
@@ -101,6 +101,7 @@
         <webview id="webviewmain" autosize="on" ref="wvmain"   :src="url" :style="{ visibility: isLoading ? 'hidden' : 'visible' }"  allowpopups></webview>
 
     </div>
+  </div>
 </template>
 
 <script>

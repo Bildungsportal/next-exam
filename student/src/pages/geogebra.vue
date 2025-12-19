@@ -11,7 +11,7 @@
  
  
  <template> 
-
+    <div class="column" style="height: 100%">
 
     <!-- HEADER START -->
     <exam-header
@@ -130,7 +130,7 @@
         <img src="/src/assets/img/svg/edit-paste-style.svg" class="white" width="16" height="16" >{{ item }}
       </button>
     </div>
-
+    </div>
 
 </template>
 

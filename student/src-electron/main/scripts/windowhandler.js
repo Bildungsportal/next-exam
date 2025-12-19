@@ -390,7 +390,7 @@ class WindowHandler {
             screenlockWindow.loadFile(path, {hash: `#/${url}/`})
         } 
         else {
-            url = `http://${process.env['VITE_DEV_SERVER_HOST']}:${process.env['VITE_DEV_SERVER_PORT']}/#/${url}/`
+            url = `${process.env.APP_URL}/#/${url}/`
             screenlockWindow.loadURL(url)
         }
 
@@ -565,7 +565,7 @@ class WindowHandler {
                 this.examwindow.loadFile(path, {hash: `#/${url}/${token}`})
             } 
             else {
-                let backgroundurl = `http://${process.env['VITE_DEV_SERVER_HOST']}:${process.env['VITE_DEV_SERVER_PORT']}/#/${url}/${token}/`
+                let backgroundurl = `${process.env.APP_URL}/#/${url}/${token}/`
                 this.examwindow.loadURL(backgroundurl);
             }
             // Define the MainContentPage view
@@ -618,7 +618,7 @@ class WindowHandler {
                 this.examwindow.loadFile(path, {hash: `#/${url}/${token}`})
             } 
             else {
-                url = `http://${process.env['VITE_DEV_SERVER_HOST']}:${process.env['VITE_DEV_SERVER_PORT']}/#/${url}/${token}/`
+                url = `${process.env.APP_URL}/#/${url}/${token}/`
                 this.examwindow.loadURL(url)
             }
         }

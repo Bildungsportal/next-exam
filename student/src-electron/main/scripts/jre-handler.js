@@ -34,13 +34,6 @@ class JreHandler {
         this.jTest()
     }
 
-    jTest(){
-        let javapath = this.driver()
-        let javacmdline =  `${javapath}  -version`
-        log.info(`jre-handler @ jTest: testing java process: ${javacmdline}`)
-        return spawn(javacmdline);
-    }
-
     fail(reason) {
         log.error(reason);
         process.exit(1);

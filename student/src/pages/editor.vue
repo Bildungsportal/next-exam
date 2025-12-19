@@ -602,6 +602,8 @@ import {isElectronWindow} from "../types/electron.ts";
 
 const lowlight = createLowlight(common)
 
+
+
 export default {
     components: {
         EditorContent,
@@ -883,11 +885,9 @@ export default {
 
                 this.internetCheckCounter++
                 if (this.internetCheckCounter % 5 === 0) {
-                    if (isElectronWindow(window)) {
                         this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
                         this.hostip = await window.ipcRenderer.invoke('checkhostip')
                         this.internetCheckCounter = 0
-                    }
                 }
             }
 

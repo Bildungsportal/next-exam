@@ -2,7 +2,7 @@
 
 
     <!-- Header START -->
-    <div v-show="!isLoading" class="w-100 p-3 text-white bg-dark text-right" style="height: 66px; z-index: 1000;">
+    <div v-show="!isLoading" class="w-100 p-3 text-white bg-dark text-left" style="height: 66px; z-index: 1000;">
     <span class="text-white m-1">
         <img src='/src/assets/img/svg/speedometer.svg' class="white me-2  " width="32" height="32">
         <span class="fs-4 align-middle me-4" @click="handleClick">Next-Exam</span>
@@ -218,6 +218,7 @@ import validator from 'validator'
 import log from 'electron-log/renderer'
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {isElectronWindow} from "../types/electron.ts";
+import config from '../../src-electron/main/config.js'
 
 
 // Capture unhandled promise rejections
