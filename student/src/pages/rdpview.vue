@@ -1,5 +1,5 @@
 <template>
-
+  <div class="column" style="height: 100%">
     <!-- HEADER START -->
     <exam-header
         :serverstatus="serverstatus"
@@ -124,6 +124,7 @@
         <!-- RDP Viewer end -->
 
     </div>
+  </div>
 </template>
 
 <script>

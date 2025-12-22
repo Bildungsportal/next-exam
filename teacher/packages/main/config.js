@@ -4,8 +4,8 @@
  */
 
 const config = {
-    development: false,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
-    showdevtools: false,
+    development: true,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
+    showdevtools: true,
     bipIntegration: false,
     bipDemo: false,
 
@@ -38,7 +38,7 @@ const config = {
     },
 
     version: '1.1.0.18',
-    buildDate: '20251211',
+    buildDate: '20251222',
     buildNumber: '18',
     info: 'Release'
 }

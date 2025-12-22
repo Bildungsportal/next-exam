@@ -235,7 +235,7 @@ export default {
             version: this.$route.params.version,
             token: "",
             username: this.$route.params.config.development ? "Thomas" : "",
-            pincode: this.$route.params.config.development ? "1337" : "",
+            pincode: this.$route.params.config.development ? "5404" : "",
             clientinfo: {},
             serverlist: [],
             serverlistAdvanced: [],

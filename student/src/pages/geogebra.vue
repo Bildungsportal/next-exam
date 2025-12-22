@@ -121,7 +121,7 @@
             </div>
         </div>
         <!-- focuswarning end  -->
-        <iframe id="geogebraframe" src="../../packages/renderer/geogebra/classic.html"></iframe>
+        <iframe id="geogebraframe" src="/geogebra/classic.html"></iframe>
     </div>
 
 
@@ -209,13 +209,13 @@ export default {
         this.entrytime = new Date().getTime()  
          
         if (isElectronWindow(window)) {
-            ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            window.ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
                 console.log("editor @ save: Teacher saverequest received")
                 this.saveContent(true, why)
             });
 
 
-            ipcRenderer.on('fileerror', (event, msg) => {
+            window.ipcRenderer.on('fileerror', (event, msg) => {
                 console.log('geogebra @ fileerror: writing/deleting file error received');
                 this.$swal.fire({
                     title: "Error",
@@ -229,7 +229,7 @@ export default {
                 })
             });
 
-            ipcRenderer.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            window.ipcRenderer.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
                 console.log("geogebra @ getmaterials: get materials request received")
                 this.getExamMaterials()
             });
@@ -560,9 +560,9 @@ export default {
         
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
         if (isElectronWindow(window)) {
-            ipcRenderer.removeAllListeners('getmaterials')
-            ipcRenderer.removeAllListeners('fileerror')
-            ipcRenderer.removeAllListeners('save')
+            window.ipcRenderer.removeAllListeners('getmaterials')
+            window.ipcRenderer.removeAllListeners('fileerror')
+            window.ipcRenderer.removeAllListeners('save')
         }
         // Clean up preview click listener
         const preview = document.querySelector("#preview");

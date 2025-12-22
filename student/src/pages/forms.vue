@@ -1,5 +1,5 @@
 <template>
-
+  <div class="column" style="height: 100%">
     <!-- HEADER START -->
     <exam-header
         :serverstatus="serverstatus"
@@ -128,6 +128,7 @@
                  :src="`https://docs.google.com/forms/d/e/${gformsTestId}/viewform`"></webview>
 
     </div>
+  </div>
 </template>
 
 <script>
