@@ -549,9 +549,17 @@ function isEmbed() {
 	display: none !important;
 }
 
+.GeoGebraFrame.GeoGebraHeader.suiteHeader {
+	height: 50px;
+}
+.GeoGebraFrame.GeoGebraHeader.suiteHeader .upperHeader {
+	height: 40px;
+	padding:4px;
+}
 
-
-
+.GeoGebraFrame.GeoGebraHeader.suiteHeader .upperHeader .suiteAppPickerButton {
+	margin: 0px;
+}
 
 /* Für Taschenrechner und Wahrscheinlichkeit: Position 4 und 7 ausblenden (ohne Druckvorschau) */
 #ggbApplet[aria-label*="Taschenrechner"] .menuPanelContainer .menuView li:nth-of-type(4),
@@ -589,34 +597,6 @@ if (appID == "scientific") {
 }
 
 window.addEventListener("load", function() {
-	if (showHeader) {
-		document.getElementById("logoID").parentElement.parentElement.style.display = "none";
-	}
-	var offline = document.getElementById("logoID").getAttribute("href") == "#";
-	if (offline) {
-	    document.getElementById("logoID").classList.add("hideButton");
-	}
-
-window.ggbHeaderResize = function(event) {
-	var elAppPicker = document.getElementById("suiteAppPicker");
-	var rectAppPicker = elAppPicker.getBoundingClientRect();
-	var rectButtonsLeft = document.getElementById("buttonsID").getBoundingClientRect().left;
-	var elExam = document.getElementById("examId");
-	var rectExamLeft = elExam ? elExam.getBoundingClientRect().left : 0;
-	var overlap = rectAppPicker.right > Math.max(rectButtonsLeft, rectExamLeft);
-	elAppPicker.style.visibility = overlap ? "hidden" : "visible";
-
-	var headerAppSide = document.getElementById("logoID").parentElement;
-	var headerAppSideRight = headerAppSide.getBoundingClientRect().right;
-	var elExamType = document.getElementById("examTypeId");
-    var examTypeLeft = elExamType ? elExamType.getBoundingClientRect().left : 0;
-	var overlapExam = examTypeLeft < headerAppSideRight;
-	if (elExamType) {
-	    elExamType.style.visibility = overlapExam ? "hidden" : "visible";
-	}
-}
-
-window.addEventListener("resize", ggbHeaderResize);
 
 });
 </script>

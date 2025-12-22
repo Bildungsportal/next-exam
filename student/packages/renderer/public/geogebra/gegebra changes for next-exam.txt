@@ -11,38 +11,37 @@ gleich zu beginn bei der variablen definition
 
 
 
-// remove links in head hamburger menu
-	/* file operations */
-	.menuBarClassic ul li:nth-of-type(0) {
-		display: none !important;
-	}
 	/* hilfe */
-	.menuBarClassic ul li:nth-of-type(6) {
-		display: none !important;
-	}
-	/* anmelden */
-	.menuBarClassic ul li:nth-of-type(7) {
+	.menuBarClassic > ul > li:nth-of-type(6) {
 		display: none !important;
 	}
 
-//remove links in popup panel on start
 
-	.gwt-PopupPanel .popupContent .gwt-MenuBar li:nth-of-type(1) {
-		display: none !important;
-	}
-	.gwt-PopupPanel .popupContent .gwt-MenuBar li:nth-of-type(2) {
-		display: none !important;
-	}
-	.gwt-PopupPanel .popupContent .gwt-MenuBar li:nth-of-type(9) {
-		display: none !important;
-	}
-	.gwt-PopupPanel .popupContent .gwt-MenuBar li:nth-of-type(10) {
-		display: none !important;
-	}
-	.gwt-PopupPanel .popupContent .gwt-MenuBar li:nth-of-type(11) {
+	/* prüfungsmodus */
+	.menuBarClassic > ul > li:nth-of-type(2) >  .gwt-StackPanelContent > ul > li:nth-of-type(7) {
 		display: none !important;
 	}
 
+
+
+	/* gwt-MenuBar gwt-MenuBar-vertical GeoGebraMenuBar */
+
+
+	.perspectivePopup .popupContent .gwt-MenuBar li:nth-of-type(1) {
+		display: none !important;
+	}
+	.perspectivePopup .popupContent .gwt-MenuBar li:nth-of-type(2) {
+		display: none !important;
+	}
+	.perspectivePopup .popupContent .gwt-MenuBar li:nth-of-type(9) {
+		display: none !important;
+	}
+	.perspectivePopup .popupContent .gwt-MenuBar li:nth-of-type(10) {
+		display: none !important;
+	}
+	.perspectivePopup .popupContent .gwt-MenuBar li:nth-of-type(11) {
+		display: none !important;
+	}
 
 
 

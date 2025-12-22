@@ -500,17 +500,22 @@ export default {
                 });
             }
             else {
-                ggbApplet.getBase64( async (base64GgbFile) => {
-                    let response = await ipcRenderer.invoke('saveGGB', {filename: filename, content: base64GgbFile, reason: reason })   // send base64 string to backend for saving
-                    if (response.status === "success" && reason == "manual" ){  // we wait for a response - only show feed back if manually saved
-                        this.loadFilelist()
-                        this.$swal.fire({
-                            title: this.$t("editor.saved"),
-                            text: filename,
-                            icon: "info"
-                        })
-                    }
-                })
+                if (ggbApplet && ggbApplet.getBase64){
+                    ggbApplet.getBase64( async (base64GgbFile) => {
+                        let response = await ipcRenderer.invoke('saveGGB', {filename: filename, content: base64GgbFile, reason: reason })   // send base64 string to backend for saving
+                        if (response.status === "success" && reason == "manual" ){  // we wait for a response - only show feed back if manually saved
+                            this.loadFilelist()
+                            this.$swal.fire({
+                                title: this.$t("editor.saved"),
+                                text: filename,
+                                icon: "info"
+                            })
+                        }
+                    })
+                }
+                else {
+                   console.log("geogebra @ saveContent: ggbApplet not found")
+                }
             }
  
             this.loadFilelist()

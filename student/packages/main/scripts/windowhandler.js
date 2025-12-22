@@ -643,7 +643,7 @@ class WindowHandler {
         // Block navigation on examwindow.webContents level for all modes that can display PDFs in examheader
         // This prevents navigation when clicking links in PDFs displayed in the examheader
         // Webview/BrowserView blocking is handled separately via IPC in ipchandler.js or mode-specific handlers below
-        const examTypesWithPdfInHeader = ["gforms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets"];
+        const examTypesWithPdfInHeader = ["gforms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math"];
         if (examTypesWithPdfInHeader.includes(serverstatus.examSections[serverstatus.lockedSection].examtype)) {
             this.examwindow.webContents.on('will-navigate', (event, url) => {
                 event.preventDefault(); // Prevent navigation away from the Vue app (e.g. from PDF links in examheader)

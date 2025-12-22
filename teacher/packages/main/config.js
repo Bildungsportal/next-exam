@@ -37,9 +37,9 @@ const config = {
         activesheets: false
     },
 
-    version: '1.1.0.18',
-    buildDate: '20251215',
-    buildNumber: '18',
+    version: '1.1.1.0',
+    buildDate: '20251222',
+    buildNumber: '0',
     info: 'Release'
 }
 export default config;
