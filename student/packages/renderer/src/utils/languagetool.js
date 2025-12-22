@@ -112,7 +112,7 @@ async function LTcheckAllWords(closeLT = true){
     }
 
     try {
-        const response = await fetch('http://127.0.0.1:8088/v2/check', {
+        const response = await fetch(`http://${this.LThost}:8088/v2/check`, {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
             body: new URLSearchParams({ text: this.text, language: this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang}).toString() 

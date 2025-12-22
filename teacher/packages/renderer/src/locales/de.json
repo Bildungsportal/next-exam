@@ -126,6 +126,8 @@
         "spellcheckactivate": "Rechtschreibhilfe aktivieren",
         "spellcheckchoose": "Bitte wählen Sie eine Sprache für die Prüfung",
         "suggest":"Vorschläge zeigen",
+        "customhost": "Eigener LT Host",
+        "languagetoolhost": "LanguageTool Host",
         "none": "andere",
         "cmargin": "Korrekturrand Position",
         "cmargin-left": "links",

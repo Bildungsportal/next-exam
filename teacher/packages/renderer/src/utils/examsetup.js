@@ -471,7 +471,11 @@ async function configureEditor(){
                 <input class="form-check-input" type="checkbox" id="checkboxLT">
                 <label class="form-check-label" for="checkboxLT"> LanguageTool ${this.$t("dashboard.activate")} </label> <br>
                 <input class="form-check-input" type="checkbox" id="checkboxsuggestions">
-                <label class="form-check-label" for="checkboxsuggestions"> ${this.$t("dashboard.suggest")} </label><br><br>
+                <label class="form-check-label" for="checkboxsuggestions"> ${this.$t("dashboard.suggest")} </label><br>
+                <input class="form-check-input" type="checkbox" id="checkboxCustomHost">
+                <label class="form-check-label" for="checkboxCustomHost"> ${this.$t("dashboard.customhost")} </label><br>
+                <label class="form-check-label" for="languagetoolhost"> ${this.$t("dashboard.languagetoolhost")}: </label>
+                <input type="text" id="languagetoolhost" class="form-control" style="width: 150px; display: inline-block; margin-left: 5px; color: #6c757d;" value="127.0.0.1" disabled><br><br>
                <h6 style="margin-bottom:0px">${this.$t("dashboard.spellcheckchoose")}</h6>
             </div>
              
@@ -545,6 +549,30 @@ async function configureEditor(){
                 }
             });
 
+            // Initialize LanguageTool Host field
+            const checkboxCustomHost = document.getElementById('checkboxCustomHost');
+            const languagetoolhostInput = document.getElementById('languagetoolhost');
+            const savedHost = this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost;
+            
+            // Set default value or saved value
+            if (savedHost) {
+                languagetoolhostInput.value = savedHost;
+                checkboxCustomHost.checked = true;
+                languagetoolhostInput.disabled = false;
+                languagetoolhostInput.style.color = '#000000';
+            } else {
+                languagetoolhostInput.value = '127.0.0.1';
+                checkboxCustomHost.checked = false;
+                languagetoolhostInput.disabled = true;
+                languagetoolhostInput.style.color = '#6c757d';
+            }
+            
+            // Event Listener für checkboxCustomHost, um das Textinput zu aktivieren/deaktivieren
+            checkboxCustomHost.addEventListener('change', () => {
+                languagetoolhostInput.disabled = !checkboxCustomHost.checked;
+                languagetoolhostInput.style.color = checkboxCustomHost.checked ? '#000000' : '#6c757d';
+            });
+
             
         },
         willClose: () => {
@@ -561,12 +589,21 @@ async function configureEditor(){
             // Save all values before dialog closes (Electron 39 compatibility)
             const checkboxSuggestionsElement = document.getElementById('checkboxsuggestions');
             const checkboxLTElement = document.getElementById('checkboxLT');
+            const checkboxCustomHostElement = document.getElementById('checkboxCustomHost');
+            const languagetoolhostElement = document.getElementById('languagetoolhost');
             const marginValueElement = document.getElementById('marginValue');
             const audioRepeatElement = document.getElementById('audiorepeat');
             const fontSizeElement = document.getElementById('fontsize');
 
             this.serverstatus.examSections[this.serverstatus.activeSection].suggestions = checkboxSuggestionsElement ? checkboxSuggestionsElement.checked : false; 
-            this.serverstatus.examSections[this.serverstatus.activeSection].languagetool = checkboxLTElement ? checkboxLTElement.checked : false; 
+            this.serverstatus.examSections[this.serverstatus.activeSection].languagetool = checkboxLTElement ? checkboxLTElement.checked : false;
+            
+            // Save LanguageTool Host value if custom host checkbox is checked
+            if (checkboxCustomHostElement && checkboxCustomHostElement.checked && languagetoolhostElement) {
+                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost = languagetoolhostElement.value || '127.0.0.1';
+            } else {
+                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost = null;
+            } 
 
             const radioButtons = document.querySelectorAll('input[name="correction_margin"]');
             const marginValue = marginValueElement ? marginValueElement.value : '';

@@ -61,24 +61,48 @@ das burgermenü oben links anpassen:
 
 
 
-/** open */
-.menuPanelContainer .menuView li:nth-of-type(2) {	display: none !important;}
 
-/* save online */
+/* bild exportieren */
+.menuPanelContainer .menuView li:nth-of-type(2) {	display: none !important;}
+/* herunterladen als */
 .menuPanelContainer .menuView li:nth-of-type(3) {	display: none !important;}
 
-/* save to your computer */
-.menuPanelContainer .menuView li:nth-of-type(4) {	display: none !important;}
 
-/* share */
-.menuPanelContainer .menuView li:nth-of-type(5) {	display: none !important;}
-
-
-
-/* hide login, assign share button in top header */
-.suiteHeader  {
+/* Standard: Position 5 und 8 ausblenden (für Modi mit Druckvorschau) */
+.menuPanelContainer .menuView li:nth-of-type(4),
+.menuPanelContainer .menuView li:nth-of-type(5),
+.menuPanelContainer .menuView li:nth-of-type(8) {
 	display: none !important;
 }
+
+.GeoGebraFrame.GeoGebraHeader.suiteHeader {
+	height: 50px;
+}
+.GeoGebraFrame.GeoGebraHeader.suiteHeader .upperHeader {
+	height: 40px;
+	padding:4px;
+}
+
+.GeoGebraFrame.GeoGebraHeader.suiteHeader .upperHeader .suiteAppPickerButton {
+	margin: 0px;
+}
+
+/* Für Taschenrechner und Wahrscheinlichkeit: Position 4 und 7 ausblenden (ohne Druckvorschau) */
+#ggbApplet[aria-label*="Taschenrechner"] .menuPanelContainer .menuView li:nth-of-type(4),
+#ggbApplet[aria-label*="Taschenrechner"] .menuPanelContainer .menuView li:nth-of-type(7),
+#ggbApplet[aria-label*="Wahrscheinlichkeit"] .menuPanelContainer .menuView li:nth-of-type(4),
+#ggbApplet[aria-label*="Wahrscheinlichkeit"] .menuPanelContainer .menuView li:nth-of-type(7) {
+	display: none !important;
+}
+
+/* Für Taschenrechner und Wahrscheinlichkeit: Position 5 und 8 wieder anzeigen (überschreibt Standard) */
+#ggbApplet[aria-label*="Taschenrechner"] .menuPanelContainer .menuView li:nth-of-type(5),
+#ggbApplet[aria-label*="Taschenrechner"] .menuPanelContainer .menuView li:nth-of-type(8),
+#ggbApplet[aria-label*="Wahrscheinlichkeit"] .menuPanelContainer .menuView li:nth-of-type(5),
+#ggbApplet[aria-label*="Wahrscheinlichkeit"] .menuPanelContainer .menuView li:nth-of-type(8) {
+	display: block !important;
+}
+
 
 
 
