@@ -642,9 +642,4 @@ export default {
     z-index:100001;
 }
 
-#content {
-  flex-grow: 1;
-}
-
-
 </style>

@@ -78,7 +78,7 @@
 
 
 
-    <div id="content" style="flex-grow: 1">
+    <div id="content">
         <!-- focus warning start -->
         <div v-if="!focus" class="focus-container">
             <div id="focuswarning" class="infodiv p-4 d-block focuswarning" >
