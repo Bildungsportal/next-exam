@@ -392,8 +392,8 @@ export default {
         },
         setsource(source){
             let iFrame = document.getElementById('geogebraframe')
-            if (source === "suite")   { iFrame.src = `../../packages/renderer/public/geogebra/suite.html`  }
-            if (source === "classic") { iFrame.src = `../../packages/renderer/public/geogebra/classic.html`}
+            if (source === "suite")   { iFrame.src = `/geogebra/suite.html`  }
+            if (source === "classic") { iFrame.src = `/geogebra/classic.html`}
             iFrame.parentNode.replaceChild(iFrame.cloneNode(), iFrame);
             this.redefineConsole()
         },  
