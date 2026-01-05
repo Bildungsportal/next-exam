@@ -31,8 +31,6 @@ export default defineBoot(async ( { app, router } ) => {
         }
     };
 
-// --- ENDE DES BEREINIGTEN CODE ---
-
     app.use(i18n)
 // Das Plugin wird mit den Optionen installiert, die nun den globalen didOpen Hook enthalten.
     app.use(VueSweetalert2, options)
