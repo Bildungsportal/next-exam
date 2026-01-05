@@ -13,7 +13,7 @@ const buildDate = now.getFullYear() +
 
 
 // 1. Update config.js
-const configJsPath = './packages/main/config.js';
+const configJsPath = './src-electron/main/config.js';
 
 let configJsContent = `
 /**
@@ -88,11 +88,11 @@ if (process.env.SIGN === 'false') {
 }
 else {
     // füge die Sign- und Notarize-Optionen wieder hinzu
-   // builderConfig.win.signtoolOptions = {
-   //     certificateSubjectName: 'OSOS Austria',
-   //     signingHashAlgorithms: ['sha256']
-   // };
-   // builderConfig.win.sign = true;
+    builderConfig.win.signtoolOptions = {
+        certificateSubjectName: 'OSOS Austria',
+        signingHashAlgorithms: ['sha256']
+    };
+    builderConfig.win.sign = true;
     builderConfig.afterSign = 'scripts/notarize.cjs';
 }
 
