@@ -526,12 +526,9 @@ class IpcHandler {
                     } catch(err) {  reject(err);   }
                 });
                 this.config.hostip = ip.address(iface); // Liefert die IP der Schnittstelle, welche das Default Gateway hat
-                console.log("Iface", iface);
-                console.log("Hostip",this.config.hostip);
                 this.config.gateway = true;
             }
             catch (e) {
-                console.log("Catch");
                 this.config.hostip = false;
                 this.config.gateway = false;
             }

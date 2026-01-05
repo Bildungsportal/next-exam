@@ -114,40 +114,40 @@ class PlatformDispatcher {
 
   _resolveJREDir() {
     // use bundled jre because its smaller and provides only the needed java modules
-    // if (process.env.useBundledJRE) {
-    //   if (app.isPackaged) {
-    //     this.messages.push("platformDispatcher @ _resolveJREDir: app.isPackaged: " + join(process.resourcesPath, 'app.asar.unpacked', 'public', this.jre));
-    //     return join(process.resourcesPath, 'app.asar.unpacked', 'public', this.jre);
-    //   } else {
+    if (process.env.useBundledJRE) {
+      if (app.isPackaged) {
+        this.messages.push("platformDispatcher @ _resolveJREDir: app.isPackaged: " + join(process.resourcesPath, 'app.asar.unpacked', 'public', this.jre));
+        return join(process.resourcesPath, 'app.asar.unpacked', 'public', this.jre);
+      } else {
         this.messages.push("platformDispatcher @ _resolveJREDir: !app.isPackaged: " + join(__dirname, '../../public', this.jre));
         return join(__dirname, '../../public', this.jre);
-    //   }
-    // }
-    // else {  // use system jre
-    //   // Try to find Java installation using which/where command
-    //   try {
-    //     const javaCommand = this._platform === 'win32' ? 'where java' : 'which java';
-    //     const javaPath = execSync(javaCommand, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
-    //
-    //     if (javaPath) {
-    //       // Get the directory containing the java executable
-    //       const javaDir = path.dirname(javaPath);
-    //       // Go up to the JRE/JDK root (usually 2 levels up from bin/)
-    //       const jreRoot = path.dirname(path.dirname(javaDir));
-    //       return jreRoot;
-    //     }
-    //   } catch (err) {
-    //     // Java not found in PATH
-    //   }
-    //
-    //   // If no Java found, fall back to bundled JRE
-    //   log.warn("platformDispatcher @ _resolveJREDir: No system Java found, falling back to bundled JRE");
-    //   if (app.isPackaged) {
-    //     return join(process.resourcesPath, 'app.asar.unpacked', 'public', this.jre);
-    //   } else {
-    //     return join(__dirname, '../../public', this.jre);
-    //   }
-    // }
+      }
+    }
+    else {  // use system jre
+      // Try to find Java installation using which/where command
+      try {
+        const javaCommand = this._platform === 'win32' ? 'where java' : 'which java';
+        const javaPath = execSync(javaCommand, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
+
+        if (javaPath) {
+          // Get the directory containing the java executable
+          const javaDir = path.dirname(javaPath);
+          // Go up to the JRE/JDK root (usually 2 levels up from bin/)
+          const jreRoot = path.dirname(path.dirname(javaDir));
+          return jreRoot;
+        }
+      } catch (err) {
+        // Java not found in PATH
+      }
+
+      // If no Java found, fall back to bundled JRE
+      log.warn("platformDispatcher @ _resolveJREDir: No system Java found, falling back to bundled JRE");
+      if (app.isPackaged) {
+        return join(process.resourcesPath, 'app.asar.unpacked', 'public', this.jre);
+      } else {
+        return join(__dirname, '../../public', this.jre);
+      }
+    }
   }
 
   _resolveJavaBin() {
@@ -197,7 +197,7 @@ class PlatformDispatcher {
     const workerPath = app.isPackaged
       ? join(baseDir, 'app.asar.unpacked', 'public', this.workerFileName)
       : join(baseDir, '../../public', this.workerFileName);
-  
+
     return pathToFileURL(workerPath);
   }
 
