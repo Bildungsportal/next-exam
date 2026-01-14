@@ -1,9 +1,11 @@
 # Bekannte Probleme
 Folgende Probleme sind bekannt. An der Behebung wird gearbeitet.
 
-## GeoGebra Suite – Wahrscheinlichkeitsrechner
+## GeoGebra Suite – Wahrscheinlichkeitsrechner und Autovervollständigung
 Wird in der GeoGebra Suite zum Wahrscheinlichkeitsrechner gewechselt, kann dieser anschließend nicht mehr über das Menü verlassen werden.  
 **Workaround:** Wechsel zu GeoGebra Classic oder den Wahrscheinlichkeitsrechner von Beginn an in der Classic-Variante verwenden.
+
+Die Autovervollständigung bei der Eingabe von Funktionen ist ebenfalls unvollständig.
 ## Debian - Anzeige "virtualisiert"
 Debian wird durch /dev/vhost-vsock als "virtualisiert" angezeigt
 

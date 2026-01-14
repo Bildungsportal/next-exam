@@ -22,6 +22,20 @@
             }
           },
           {
+            "id": "71b3874fdab0b425",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "issues.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "issues"
+            }
+          },
+          {
             "id": "bc4be2bdb44bfc52",
             "type": "leaf",
             "state": {
@@ -33,7 +47,8 @@
               "title": "teacher_pruefungsmaterialien"
             }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -180,7 +195,7 @@
       "bases:Create new base": false
     }
   },
-  "active": "2ca18dffd3e7eb38",
+  "active": "71b3874fdab0b425",
   "lastOpenFiles": [
     "faq.md",
     "teacher.md",
