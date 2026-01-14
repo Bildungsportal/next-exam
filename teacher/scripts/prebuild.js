@@ -154,3 +154,15 @@ console.log(`BIP Demo: ${process.env.BIP_DEMO}`);
 console.log(`BIP Integration: ${process.env.BIP_INTEGRATION}`);
 console.log(`Sign: ${process.env.SIGN}`);
 console.log(`__________________________________________________________________`);
+
+
+// 4. Patch portable.nsi template in node_modules (no official custom script support for portable target)
+const customPortableNsi = './scripts/portable.nsi';
+const targetPortableNsi = './node_modules/app-builder-lib/templates/nsis/portable.nsi';
+
+if (fs.existsSync(customPortableNsi)) {
+    fs.copyFileSync(customPortableNsi, targetPortableNsi);
+    console.log('✅ Custom portable.nsi copied to node_modules template');
+} else {
+    console.log('⚠️ Custom portable.nsi not found, using default template');
+}

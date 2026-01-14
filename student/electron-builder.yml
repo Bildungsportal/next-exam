@@ -54,8 +54,8 @@ mac:
 dmg:
   sign: false
 portable:
-  useZip: true
-  unpackDirName: true
+  useZip: false
+  unpackDirName: next-exam-student
   splashImage: public/splash.bmp
 msi:
   perMachine: true

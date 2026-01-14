@@ -39,7 +39,7 @@ mac:
 dmg:
   sign: false
 portable:
-  useZip: true
+  useZip: false
   unpackDirName: next-exam-teacher
   splashImage: public/splash.bmp
 msi:
