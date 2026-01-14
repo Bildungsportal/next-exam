@@ -889,6 +889,11 @@ export default {
                 previewElement.classList.remove('fadeinfast');
             }
 
+            
+             // SAVE AS HTML (bak) - also save editorcontent as *html file - used to re-populate the editor window in case something went completely wrong
+            let editorcontent = this.editor.getHTML(); 
+            ipcRenderer.send('storeHTML', {filename: filename, editorcontent: editorcontent })
+            
 
             // SAVE AS PDF - inform mainprocess to save webcontent as pdf (see @media css query for adjustments for pdf)
             // printPDF will trigger a reload of the filelist if finished and send files to teacher if reason (why) is "teacherrequest"
@@ -898,10 +903,7 @@ export default {
 
 
 
-            // SAVE AS HTML (bak) - also save editorcontent as *html file - used to re-populate the editor window in case something went completely wrong
-            let editorcontent = this.editor.getHTML(); 
-            ipcRenderer.send('storeHTML', {filename: filename, editorcontent: editorcontent })
-            
+       
 
         },
 

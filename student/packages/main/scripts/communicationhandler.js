@@ -703,6 +703,20 @@ const __dirname = import.meta.dirname;
     // ATTENTION: there is a similar method in ipchandler.js that also generates a pdf but stores it as file in the exam directory
     async getBase64PDF(submissionnumber, sectionname, printBackground=false){
         log.info("communicationhandler @ getBase64PDF: getting base64 encoded pdf")
+        
+        // Wait for any ongoing print operation to finish (max 30 seconds)
+        let waitCount = 0;
+        const maxWait = 300; // 30 seconds with 100ms intervals
+        while (IpcHandler.isPrintingPdf && waitCount < maxWait) {
+            await this.sleep(100);
+            waitCount++;
+        }
+        
+        if (IpcHandler.isPrintingPdf) {
+            log.error("communicationhandler @ getBase64PDF: printToPDF lock timeout - another print operation is still running");
+            return { sender: "client", message: "PDF generation timeout - another print operation is in progress", status: "error" };
+        }
+        
         var options = {
             margins: {top:0.5, right:0, bottom:0.5, left:0 },
             pageSize: 'A4',
@@ -716,16 +730,24 @@ const __dirname = import.meta.dirname;
             headerTemplate: `<div style='display: inline-block; height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-left: 30px; margin-top:10px;'><span style="float:left;">${this.multicastClient.clientinfo.servername}</span><span style="float:left;">&nbsp;|&nbsp; </span><span style="float:left;">${sectionname}</span><span style="float:left;">&nbsp;|&nbsp; </span><span class=date style="float:left;"></span><span style="float:left;">&nbsp;|&nbsp;Abgabe: ${submissionnumber}</span><span style="float:right;">${this.multicastClient.clientinfo.name}</span></div>`,
             preferCSSPageSize: false
         }
+        
         // set the title of the exam window and therefore the document title
         await WindowHandler.examwindow.webContents.executeJavaScript(`document.title = "${this.multicastClient.clientinfo.clientname} - ${this.multicastClient.clientinfo.servername} - Version ${submissionnumber}"`);
+        
+        // Set lock before starting PDF generation
+        IpcHandler.isPrintingPdf = true;
+        
         try {
             const data = await WindowHandler.examwindow.webContents.printToPDF(options);
             const base64pdf = data.toString('base64');
             const dataUrl = `data:application/pdf;base64,${base64pdf}`;
             return { sender: "client", message:"PDF generated", dataUrl:dataUrl, base64pdf: base64pdf, status: "success" };
         } catch (error) {
-            log.error("Error generating PDF:", error);
+            log.error("communicationhandler @ getBase64PDF: Error generating PDF:", error);
             return { sender: "client", message: "Error generating PDF", status: "error" };
+        } finally {
+            // Always release the lock, even if an error occurred
+            IpcHandler.isPrintingPdf = false;
         }
     }
 
