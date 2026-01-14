@@ -531,7 +531,7 @@ class WindowHandler {
                     this.examwindow.focus()
 
                     if (!this.isWayland){ this.checkWindowInterval.start() } // constantly check if the active window is the examwindow - if not, bring it to front
-                    enableRestrictions(this)  // disable keyboard shortcuts etc.
+                    await enableRestrictions(this)  // disable keyboard shortcuts etc.
                     
                     await this.sleep(1000)  // do not set blur listener too early
                     this.addBlurListener()  // add blur listener to the examwindow

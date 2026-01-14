@@ -82,7 +82,8 @@ let configStore = {
 }
 
 // list of apps we do not want to run in background
-const appsToClose = ['chatgpt','ChatGPT','NortonSecurity','NAV','Teams','ms-teams', 'zoom.us', 'Google Chrome', 'Microsoft Edge', 'Microsoft Teams','firefox', 'discord', 'zoom', 'chrome', 'msedge', 'teams', 'teamviewer', 'google-chrome','skypeforlinux','skype','brave','opera','anydesk','safari'];
+// Browsers first to ensure they are killed before explorer.exe
+const appsToClose = ['Google Chrome', 'chrome', 'google-chrome', 'Microsoft Edge', 'msedge', 'firefox', 'safari', 'brave', 'opera', 'chatgpt', 'ChatGPT', 'NortonSecurity', 'NAV', 'Teams', 'ms-teams', 'zoom.us', 'Microsoft Teams', 'discord', 'zoom', 'teams', 'teamviewer', 'skypeforlinux', 'skype', 'anydesk'];
 
 let isKDE = false
 let isGNOME = false
@@ -99,7 +100,7 @@ childProcess.exec('echo $XDG_CURRENT_DESKTOP', (error, stdout, stderr) => {
 
 
 
-function enableRestrictions(winhandler){
+async function enableRestrictions(winhandler){
     if (config.development) {return}
     
     log.info("platformrestrictions @ enableRestrictions: enabling platform restrictions")
@@ -270,20 +271,27 @@ function enableRestrictions(winhandler){
         // } catch (err){log.error(`platformrestrictions @ enableRestrictions (win clipboard): ${err}`);}
        
 
+        // Close all apps first, then kill explorer.exe
+        // Use for...of loop to process apps sequentially
         try {
-            appsToClose.forEach(app => {
+            for (const app of appsToClose) {
                 // Escape app name for PowerShell - replace single quotes with double single quotes
                 const escapedApp = app.replace(/'/g, "''");
                 // PowerShell command: set app name as variable first to avoid string interpolation issues
                 // Uses -ErrorAction SilentlyContinue to handle access denied and other errors gracefully
                 const command = `powershell -NoProfile -Command "$appName = '${escapedApp}'; try { $procs = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -ilike ('*' + $appName + '*') }; if ($procs -and $procs.Count -gt 0) { $procs | Stop-Process -Force -ErrorAction SilentlyContinue; Write-Output 'killed' } } catch { }"`;
-                childProcess.exec(command, (error, stdout, stderr) => {
-                    if (!error && stdout && stdout.trim().includes('killed')) { // success - process was found and killed
-                        log.info(`platformrestrictions @ enableRestrictions: closed ${app}`);
-                    }
-                    // no process found or other errors are silently ignored
+                
+                // Wait for each app to be closed before moving to the next
+                await new Promise((resolveApp) => {
+                    childProcess.exec(command, (error, stdout, stderr) => {
+                        if (!error && stdout && stdout.trim().includes('killed')) { // success - process was found and killed
+                            log.info(`platformrestrictions @ enableRestrictions: closed ${app}`);
+                        }
+                        // no process found or other errors are silently ignored
+                        resolveApp(); // Resolve regardless of success/failure
+                    });
                 });
-            });
+            }
         } catch (err) {
             // silently ignore errors
         }
@@ -314,17 +322,38 @@ function enableRestrictions(winhandler){
 
 
         // kill EXPLORER windowsbutton and swipe gestures - kill everything else
-        try {
-            childProcess.exec('taskkill /f /im explorer.exe', (error, stdout, stderr) => {
-                if (!error && stdout) {
-                    // Only log if taskkill was successful (process found and killed)
-                    log.info(`platformrestrictions @ enableRestrictions: closed explorer.exe`);
+        // Wait for examwindow to exist before killing explorer.exe (apps are already closed above)
+        if (!winhandler) {
+            log.warn(`platformrestrictions @ enableRestrictions: winhandler is not provided - skipping explorer.exe kill`);
+        } else {
+            let retryCount = 0;
+            const maxRetries = 100; // 10 seconds max wait (100 * 100ms)
+            const killExplorerWhenWindowExists = () => {
+                if (winhandler.examwindow && !winhandler.examwindow.isDestroyed?.()) {
+                    try {
+                        childProcess.exec('taskkill /f /im explorer.exe', (error, stdout, stderr) => {
+                            if (!error && stdout) {
+                                // Only log if taskkill was successful (process found and killed)
+                                log.info(`platformrestrictions @ enableRestrictions: closed explorer.exe`);
+                            }
+                            // If error (e.g. process not found), silently ignore - no logging needed
+                        });
+                    } catch (err){
+                        // silently ignore errors
+                    }
+                } else if (retryCount < maxRetries) {
+                    // Retry after 100ms if examwindow doesn't exist yet
+                    retryCount++;
+                    setTimeout(killExplorerWhenWindowExists, 100);
+                } else {
+                    // Timeout reached - log warning but don't kill explorer
+                    log.warn(`platformrestrictions @ enableRestrictions: examwindow not found after ${maxRetries * 100}ms - skipping explorer.exe kill`);
                 }
-                // If error (e.g. process not found), silently ignore - no logging needed
-            });
-        } catch (err){
-            // silently ignore errors
-        }
+            };
+            
+            // Start checking for examwindow existence (apps are already closed above)
+            killExplorerWhenWindowExists();
+        } 
     }
 
 

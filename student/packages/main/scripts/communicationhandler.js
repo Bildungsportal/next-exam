@@ -832,7 +832,7 @@ const __dirname = import.meta.dirname;
                 if (!this.config.development) { 
                     WindowHandler.examwindow.setFullScreen(true)  //go fullscreen again
                     WindowHandler.examwindow.setAlwaysOnTop(true, "screen-saver", 1)  //make sure the window is 1 level above everything
-                    enableRestrictions(WindowHandler)
+                    await enableRestrictions(WindowHandler)
                     await this.sleep(2000) // wait an additional 2 sec for windows restrictions to kick in (they steal focus)
                     WindowHandler.addBlurListener();
                     // For reconnect: initialize block windows after window is repositioned
