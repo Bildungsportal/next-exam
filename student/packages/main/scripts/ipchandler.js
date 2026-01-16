@@ -689,8 +689,14 @@ class IpcHandler {
 
                 this.isPrintingPdf = true
 
-                // print the exam window to pdf
-                webContents.printToPDF(options).then(data => {
+                // set the title of the exam window and therefore the document title for PDF metadata
+                const pdfTitle = args.filename ? args.filename : `${this.multicastClient.clientinfo.name} - ${args.servername || this.multicastClient.clientinfo.servername || ''}`
+                // escape quotes and special characters for JavaScript string
+                const escapedTitle = pdfTitle.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "\\'")
+                webContents.executeJavaScript(`document.title = "${escapedTitle}"`).then(() => {
+                    // print the exam window to pdf
+                    return webContents.printToPDF(options)
+                }).then(data => {
                     // delete the old pdf file if it exists
                     try { if (fs.existsSync(pdffilepath)) { fs.unlinkSync(pdffilepath); }}
                     catch(err) { log.error(`ipchandler @ printpdf: ${err.message}`);  }

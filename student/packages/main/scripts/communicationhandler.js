@@ -732,7 +732,7 @@ const __dirname = import.meta.dirname;
         }
         
         // set the title of the exam window and therefore the document title
-        await WindowHandler.examwindow.webContents.executeJavaScript(`document.title = "${this.multicastClient.clientinfo.clientname} - ${this.multicastClient.clientinfo.servername} - Version ${submissionnumber}"`);
+        await WindowHandler.examwindow.webContents.executeJavaScript(`document.title = "${this.multicastClient.clientinfo.name} - ${this.multicastClient.clientinfo.servername} - Version ${submissionnumber}"`);
         
         // Set lock before starting PDF generation
         IpcHandler.isPrintingPdf = true;
