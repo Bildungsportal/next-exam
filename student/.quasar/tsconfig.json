@@ -77,6 +77,30 @@
       ],
       "#q-app/bex/private/bex-bridge": [
         "./../node_modules/@quasar/app-vite/types/bex/bex-bridge.d.ts"
+      ],
+      "@capacitor/app": [
+        "./../src-capacitor/node_modules/@capacitor/app"
+      ],
+      "@capacitor/app/*": [
+        "./../src-capacitor/node_modules/@capacitor/app/*"
+      ],
+      "@capacitor/cli": [
+        "./../src-capacitor/node_modules/@capacitor/cli"
+      ],
+      "@capacitor/cli/*": [
+        "./../src-capacitor/node_modules/@capacitor/cli/*"
+      ],
+      "@capacitor/core": [
+        "./../src-capacitor/node_modules/@capacitor/core"
+      ],
+      "@capacitor/core/*": [
+        "./../src-capacitor/node_modules/@capacitor/core/*"
+      ],
+      "@capacitor/ios": [
+        "./../src-capacitor/node_modules/@capacitor/ios"
+      ],
+      "@capacitor/ios/*": [
+        "./../src-capacitor/node_modules/@capacitor/ios/*"
       ]
     }
   },
