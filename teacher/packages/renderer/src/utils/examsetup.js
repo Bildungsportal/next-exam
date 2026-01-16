@@ -536,22 +536,10 @@ async function configureEditor(){
 
             const checkboxLT = document.getElementById('checkboxLT');
             const checkboxSuggestions = document.getElementById('checkboxsuggestions');
-            
-            // Initial: suggestions-Checkbox deaktivieren, falls LT nicht gecheckt ist
-            checkboxSuggestions.disabled = !checkboxLT.checked;
-            
-            // Event Listener für checkboxLT, um den Status von checkboxsuggestions anzupassen
-            checkboxLT.addEventListener('change', () => {
-                checkboxSuggestions.disabled = !checkboxLT.checked;
-                // Wenn checkboxLT abgewählt wird, soll suggestions zusätzlich zurückgesetzt werden:
-                if (!checkboxLT.checked) {
-                    checkboxSuggestions.checked = false;
-                }
-            });
-
-            // Initialize LanguageTool Host field
             const checkboxCustomHost = document.getElementById('checkboxCustomHost');
             const languagetoolhostInput = document.getElementById('languagetoolhost');
+            
+            // Initialize LanguageTool Host field
             const savedHost = this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost;
             
             // Set default value or saved value
@@ -566,6 +554,28 @@ async function configureEditor(){
                 languagetoolhostInput.disabled = true;
                 languagetoolhostInput.style.color = '#6c757d';
             }
+            
+            // Initial: suggestions and custom host checkboxes deaktivieren, falls LT nicht gecheckt ist
+            checkboxSuggestions.disabled = !checkboxLT.checked;
+            checkboxCustomHost.disabled = !checkboxLT.checked;
+            // Also disable input field if LT is not checked
+            if (!checkboxLT.checked) {
+                languagetoolhostInput.disabled = true;
+                languagetoolhostInput.style.color = '#6c757d';
+            }
+            
+            // Event Listener für checkboxLT, um den Status von checkboxsuggestions und checkboxCustomHost anzupassen
+            checkboxLT.addEventListener('change', () => {
+                checkboxSuggestions.disabled = !checkboxLT.checked;
+                checkboxCustomHost.disabled = !checkboxLT.checked;
+                // Wenn checkboxLT abgewählt wird, sollen suggestions und custom host zusätzlich zurückgesetzt werden:
+                if (!checkboxLT.checked) {
+                    checkboxSuggestions.checked = false;
+                    checkboxCustomHost.checked = false;
+                    languagetoolhostInput.disabled = true;
+                    languagetoolhostInput.style.color = '#6c757d';
+                }
+            });
             
             // Event Listener für checkboxCustomHost, um das Textinput zu aktivieren/deaktivieren
             checkboxCustomHost.addEventListener('change', () => {
