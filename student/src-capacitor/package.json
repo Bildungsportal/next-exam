@@ -1,0 +1,17 @@
+{
+  "name": "next-exam-student",
+  "version": "1.1.0",
+  "description": "An exam managment tool for digital exams",
+  "author": {
+    "name": "Thomas Michael Weissel",
+    "email": "valueerror@gmail.com",
+    "url": "https://next-exam.at"
+  },
+  "private": true,
+  "dependencies": {
+    "@capacitor/app": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.4.4"
+  }
+}
