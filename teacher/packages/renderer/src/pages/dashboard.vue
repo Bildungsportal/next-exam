@@ -495,7 +495,7 @@
                                 @mouseout="hideDescription" @click='activateSpellcheckForStudent(student.token,student.clientname)' 
                                 type="button" 
                                 class="btn btn-sm pt-0 mt-0 pe-0 float-end" 
-                                style="z-index:1000; position:relative;">
+                                style="z-index:100; position:relative;">
                                 <img src="/src/assets/img/svg/autocorrection.svg" class="widgetbutton" width="22" height="22" >
                             </button> 
      
@@ -2358,7 +2358,7 @@ computed: {
     padding-right: 10px;
     border-bottom-right-radius: 5px;
     border-top-right-radius: 5px;
-    z-index: 1000;
+    z-index: 100;
 }
 
 .widgetbutton {
