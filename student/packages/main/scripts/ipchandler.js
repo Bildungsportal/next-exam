@@ -1209,20 +1209,6 @@ class IpcHandler {
             return warnAndReturn('systemd-detect-virt meldet Virtualisierung')
           } catch {}
 
-          // Zusätzliche QEMU-spezifische Erkennung
-          try {
-            // Prüfe auf QEMU-spezifische Geräte
-            const qemuDevices = [
-              '/dev/vhost-vsock'
-            ]
-            for (const device of qemuDevices) {
-              try {
-                if (require('fs').existsSync(device)) {
-                  return warnAndReturn(`QEMU-Gerät gefunden: ${device}`)
-                }
-              } catch {}
-            }
-          } catch {}
 
           // Prüfe auf QEMU-Prozesse
           try {
