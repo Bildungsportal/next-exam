@@ -15,7 +15,7 @@
     "test": "echo \"No test specified\" && exit 0",
     "dev": "quasar dev",
     "build": "quasar build",
-    "postinstall": "quasar prepare",
+    "postinstall": "patch-package && quasar prepare",
     "prebuild": "node scripts/prebuild.js",
     "dev:electron": " npm run prebuild && quasar dev --verbose -m electron",
     "build:electron": " npm run prebuild && quasar build --verbose -m electron"
@@ -123,6 +123,7 @@
     "electron": "^39.2.7",
     "electron-builder": "^25.0.5",
     "nodemon": "^3.1.6",
+    "patch-package": "^8.0.1",
     "typescript": "~5.5.3",
     "vite": "^5.4.6",
     "vite-plugin-commonjs": "^0.10.3",
@@ -135,7 +136,7 @@
     "yarn": ">= 1.21.1"
   },
   "overrides": {
-    "signal-exit": "3.0.7",
+    "signal-exit": "^4.1.0",
     "ml-regression-simple-linear": "2.0.5",
     "tiff": "5.0.3"
   },
