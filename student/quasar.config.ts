@@ -5,6 +5,7 @@ import { defineConfig } from '@quasar/app-vite/wrappers';
 import {watch} from "./scripts/watch.mjs";
 import {builtinModules} from "module";
 import pkg from './package.json'
+import { viteStaticCopy } from 'vite-plugin-static-copy'
 
 export default defineConfig(( ctx: any ) => {
   return {
@@ -91,10 +92,19 @@ export default defineConfig(( ctx: any ) => {
         external: [
           'electron',
           'sharp',
+          'html2pdf-jspdf2',
           ...builtinModules,
           ...Object.keys(pkg.dependencies || {}),
         ],
       },
+      viteStaticCopy({
+        target: [
+          {
+            src: 'node_modules/pdfjs-dist/build/pdf.worker.mjs',
+            dest: '.'
+          }
+        ]
+      })
     },
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#devserver
