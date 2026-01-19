@@ -11,13 +11,13 @@ Var MutexHandle
 Function .onInit
   ; MUTEX CHECK - NO Global\ prefix (requires admin rights!)
   ; Simple user-session mutex is sufficient
-  System::Call 'kernel32::CreateMutexW(p 0, i 1, w "NextExamPortableMutex") p.r0 ?e'
+  System::Call 'kernel32::CreateMutexW(p 0, i 1, w "NextExamStudentPortableMutex") p.r0 ?e'
   Pop $1 ; $1 = GetLastError (183 = ERROR_ALREADY_EXISTS)
   StrCpy $MutexHandle $0
   
   IntCmp $1 183 already_running continue_init continue_init
 already_running:
-  MessageBox MB_OK|MB_ICONEXCLAMATION "Next-Exam is already running!"
+  MessageBox MB_OK|MB_ICONEXCLAMATION "Next-Exam Student is already running!"
   Quit ; hard kill the process
 continue_init:
   !ifndef SPLASH_IMAGE
