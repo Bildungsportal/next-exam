@@ -27,6 +27,7 @@ import config from './main/config.js';
 import multicastClient from './main/scripts/multicastclient.js'
 import path from 'path'
 import fs from 'fs'
+import os from 'os'
 import * as fsExtra from 'fs-extra';
 import ip from 'ip'
 import { gateway4sync } from 'default-gateway';
@@ -43,6 +44,9 @@ JreHandler.init()
 app.commandLine.appendSwitch('lang', 'de');
 app.commandLine.appendSwitch('enable-unsafe-swiftshader');
 app.commandLine.appendSwitch('log-level', '3'); // 3 = WARN, 2 = ERROR, 1 = INFO
+app.commandLine.appendSwitch('disk-cache-size', '0'); // disable disk cache to prevent cache corruption errors
+app.commandLine.appendSwitch('disable-http-cache'); // disable HTTP cache
+app.commandLine.appendSwitch('aggressive-cache-discard'); // aggressively discard cache
 
 if (process.platform === 'linux'){
     app.commandLine.appendSwitch('disable-features', 'VaapiVideoDecoder,OutOfProcessRasterization,CanvasOopRasterization'); // disable fragile GPU features
@@ -120,6 +124,36 @@ app.on('second-instance', () => {
  */
 
 const __dirname = import.meta.dirname;
+
+// clear cache directory on startup to prevent disk cache corruption errors
+async function clearCacheDirectory() {
+    try {
+        let userDataPath;
+        try {
+            userDataPath = app.getPath('userData');
+        } catch (e) {
+            // if app.getPath is not available yet, construct path manually
+            const homeDir = os.homedir();
+            if (process.platform === 'linux') {
+                userDataPath = path.join(homeDir, '.config', app.getName());
+            } else if (process.platform === 'darwin') {
+                userDataPath = path.join(homeDir, 'Library', 'Application Support', app.getName());
+            } else {
+                userDataPath = path.join(homeDir, 'AppData', 'Roaming', app.getName());
+            }
+        }
+        const cachePath = path.join(userDataPath, 'Cache');
+        if (fs.existsSync(cachePath)) {
+            await fsExtra.remove(cachePath);
+            log.info('main @ clearCacheDirectory: Cleared cache directory');
+        }
+    } catch (err) {
+        log.warn('main @ clearCacheDirectory: Error clearing cache directory:', err);
+    }
+}
+
+// clear cache before app is ready
+clearCacheDirectory();
 config.electron = true
 
 config.homedirectory = platformDispatcher.homedirectory;
@@ -342,6 +376,12 @@ app.whenReady()
 .then(async ()=>{
 
     nativeTheme.themeSource = 'light'  // prevent theme settings from being adopted from windows
+    // clear cache on startup to prevent disk cache corruption errors
+    try {
+        await session.defaultSession.clearCache();
+    } catch (err) {
+        log.warn('main @ whenReady: Error clearing cache on startup:', err);
+    }
     session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
 
