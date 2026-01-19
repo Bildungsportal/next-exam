@@ -80,6 +80,7 @@ class IpcHandler {
             return new Promise((resolve, reject) => {
                 let hiddenWin = new BrowserWindow({
                     show: false,
+                    useContentSize: true, // Ensure width/height refers to content area
                     webPreferences: {
                         plugins: true,
                         webSecurity: false,
@@ -156,9 +157,10 @@ class IpcHandler {
                                 printBackground: true,
                                 scaleFactor: 1,
                                 pagesPerSheet: 1,
+                                landscape: false,
                                 dpi: {
-                                    horizontal: 1200,
-                                    vertical: 1200
+                                    horizontal: 600,
+                                    vertical: 600
                                 },
                                 pageSize: 'A4', 
                                 margins: {
