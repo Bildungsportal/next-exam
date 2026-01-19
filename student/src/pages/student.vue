@@ -902,7 +902,7 @@ export default {
                  * If not we exit here
                  */
                 const newHostip = await window.ipcRenderer.invoke('checkhostip');
-                console.log(newHostip);
+                // console.log(newHostip);
                 this.safeAssign('hostip', newHostip); // Optimized: Only set if changed
                 if (!this.hostip) return;
                 if (this.clientinfo.token) return;   // stop spamming the api if already connected
