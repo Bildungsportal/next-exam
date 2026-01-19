@@ -1,5 +1,5 @@
 <template>
-  <div :id="id" v-show="visible" class="position-relative w-100">
+  <div v-if="visible" :id="id" class="position-relative w-100">
     
       <ul
       class="nav nav-tabs position-absolute top-0 start-0 end-0 w-100 bg-white"
@@ -49,6 +49,7 @@
     </ul>
 
     <webview
+      v-if="visible"
       ref="wv"
       id="safebrowser"
       :src="src || ''"

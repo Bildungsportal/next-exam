@@ -404,8 +404,10 @@
     <div v-if="!splitview" id="editormaincontainer"
          style="height: 100%; overflow-x:auto; overflow-y: scroll; background-color: #eeeefa;">
         <div id="editorcontainer" class="shadow" style="">
-            <editor-content :editor="editor" class='p-0' id="editorcontent"
-                            style="background-color: #fff; border-radius:0;"/>
+            <template v-if="editor">
+                <editor-content :editor="editor" class='p-0' id="editorcontent"
+                                style="background-color: #fff; border-radius:0;"/>
+            </template>
         </div>
         <canvas id="highlight-layer"></canvas>
     </div>
@@ -457,9 +459,10 @@
         <div id="editormaincontainer"
              style="min-width:230mm!important;padding:10px; overflow-x: auto !important; overflow-y: scroll !important; background-color: #eeeefa !important;">
             <div id="editorcontainer" class="shadow">
-                <editor-content :editor="editor" class="p-0" id="editorcontent"
-                                style="background-color: #fff !important; border-radius: 0 !important;"/>
-
+                <template v-if="editor">
+                    <editor-content :editor="editor" class="p-0" id="editorcontent"
+                                    style="background-color: #fff !important; border-radius: 0 !important;"/>
+                </template>
             </div>
             <canvas id="highlight-layer"></canvas>
         </div>
@@ -1332,10 +1335,17 @@ export default {
             }
 
             // re-activate eventlisteners on repaint of the editor frame
-            document.getElementById(`editorcontainer`).style.zoom = this.zoom
-            document.getElementById('editorcontent').addEventListener('mouseup', this.getSelectedTextInfo);   // show amount of words and characters
-            document.getElementById('editorcontent').addEventListener('keydown', this.insertSpaceInsteadOfTab)   //this changes the tab behaviour and allows tabstops  
-            document.getElementById('editormaincontainer').addEventListener('scroll', this.LTupdateHighlights, {passive: true});
+            const editorcontainer = document.getElementById(`editorcontainer`);
+            if (editorcontainer) editorcontainer.style.zoom = this.zoom;
+            const editorcontent = document.getElementById('editorcontent');
+            if (editorcontent) {
+                editorcontent.addEventListener('mouseup', this.getSelectedTextInfo);   // show amount of words and characters
+                editorcontent.addEventListener('keydown', this.insertSpaceInsteadOfTab)   //this changes the tab behaviour and allows tabstops
+            }
+            const editormaincontainer = document.getElementById('editormaincontainer');
+            if (editormaincontainer) {
+                editormaincontainer.addEventListener('scroll', this.LTupdateHighlights, {passive: true});
+            }
 
 
         },
@@ -1394,8 +1404,9 @@ export default {
                 if (!this.config.development && !response.focus) {  //immediately block frontend
                     this.focus = false
                     const editorcontentcontainer = document.getElementById('editorcontent');
+                    if (!editorcontentcontainer) return;
                     const editableDiv = editorcontentcontainer.firstElementChild;
-                    editableDiv.blur()  // remove text cursor (carret)
+                    if (editableDiv) editableDiv.blur()  // remove text cursor (carret)
                 }
             }
         },
@@ -1810,9 +1821,13 @@ export default {
         /**
          *   INSERT EVENT LISTENERS
          */
-        this.editorcontentcontainer = document.getElementById('editorcontent');
-        this.editorcontentcontainer.addEventListener('mouseup', this.getSelectedTextInfo);   // show amount of words and characters
-        this.editorcontentcontainer.addEventListener('keydown', this.insertSpaceInsteadOfTab)   //this changes the tab behaviour and allows tabstops
+        this.$nextTick(() => {
+            this.editorcontentcontainer = document.getElementById('editorcontent');
+            if (this.editorcontentcontainer) {
+                this.editorcontentcontainer.addEventListener('mouseup', this.getSelectedTextInfo);   // show amount of words and characters
+                this.editorcontentcontainer.addEventListener('keydown', this.insertSpaceInsteadOfTab)   //this changes the tab behaviour and allows tabstops
+            }
+        });
 
 
         // update LThighlights positions on scroll
