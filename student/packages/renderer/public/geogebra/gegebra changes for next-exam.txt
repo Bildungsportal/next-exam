@@ -60,6 +60,11 @@ var defaultParams = {"vendor":"GeoGebra", "preloadModules":"", "language":"de"};
 das burgermenü oben links anpassen:
 
 
+oder einfach haupt menu ausblenden
+/* hauptmenue button ausblenden */
+button.landscapeMenuBtn[aria-label="Hauptmenü"] {	display: none !important;}
+
+
 
 
 /* bild exportieren */

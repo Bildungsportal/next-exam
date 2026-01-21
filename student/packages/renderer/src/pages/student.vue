@@ -164,7 +164,13 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 
 // Capture unhandled promise rejections
 window.addEventListener('unhandledrejection', event => {
-  log.error('Unhandled promise rejection:', event.reason); // Log the error
+  const reason = event?.reason;
+  const msg = typeof reason === 'string' ? reason : reason && reason.message;
+  if (msg && msg.includes('GUEST_VIEW_MANAGER_CALL') && (msg.includes('object could not be cloned') || msg.includes('ERR_FAILED'))) {
+    event.preventDefault(); // swallow guest view clone errors and ERR_FAILED
+    return;
+  }
+  log.error('Unhandled promise rejection:', reason); // log all other errors
 });
 
 Object.assign(console, log.functions);  // Replace all console logs with logger

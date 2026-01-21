@@ -121,7 +121,7 @@
             </div>
         </div>
         <!-- focuswarning end  -->
-        <iframe id="geogebraframe" src="./geogebra/classic.html"></iframe>
+        <webview id="geogebraframe" src="/geogebra/suite.html"></webview>
     </div>
 
 
@@ -193,7 +193,11 @@ export default {
             
             // Event listener references for cleanup
             _onPreviewClick: null,
-            internetCheckCounter:0
+            _onWebviewConsoleMessage: null,
+            _onUnhandledRejection: null,
+            _onDomReady: null,
+            internetCheckCounter:0,
+            ggbReady:false
         }
     }, 
     components: { ExamHeader, WebviewPane, PdfviewPane  },  
@@ -202,12 +206,19 @@ export default {
     },
     async mounted() {
 
-        this.redefineConsole()  // overwrite console log to grep specific outputs and store as clipboard entry
-
         this.currentFile = this.clientname
         this.entrytime = new Date().getTime()  
          
-    
+        this._onUnhandledRejection = (event) => {
+            const reason = event?.reason;
+            const message = typeof reason === 'string' ? reason : reason && reason.message;
+            if (message && message.includes('GUEST_VIEW_MANAGER_CALL')) {
+                event.preventDefault(); // one line comment
+                return;
+            }
+        };
+        window.addEventListener('unhandledrejection', this._onUnhandledRejection);
+
         ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
             console.log("editor @ save: Teacher saverequest received")
             this.saveContent(true, why) 
@@ -247,6 +258,76 @@ export default {
             this.saveinterval.start();
             
             document.body.addEventListener('mouseleave', this.sendFocuslost);
+
+            const geogebraWebview = document.getElementById('geogebraframe');
+            if (geogebraWebview) {
+                if (this._onDomReady) {
+                    geogebraWebview.removeEventListener('dom-ready', this._onDomReady);
+                }
+                this._onDomReady = () => {
+                    this.ggbReady = true; // webview is ready for JS calls
+
+                    // im Devmode DevTools für das GeoGebra-Webview öffnen
+                    if (this.config && this.config.development && typeof geogebraWebview.openDevTools === 'function') {
+                        geogebraWebview.openDevTools(); // one line comment
+                    }
+
+                    geogebraWebview.executeJavaScript(`
+                        (function() {
+                            try {
+                                window.evalFromHost = (cmd) => {
+                                    try {
+                                        if (window.ggbApplet) {
+                                            window.ggbApplet.evalCommand(cmd); // one line comment
+                                        }
+                                    } catch (e) {
+                                        console.log('evalFromHost error:', e && e.message); // one line comment
+                                    }
+                                };
+                                window.clearAllFromHost = () => {
+                                    try {
+                                        if (window.ggbApplet) {
+                                            window.ggbApplet.reset(); // one line comment
+                                            if (typeof window.ggbApplet.newConstruction === 'function') {
+                                                window.ggbApplet.newConstruction(); // one line comment
+                                            }
+                                        }
+                                    } catch (e) {
+                                        console.log('clearAllFromHost error:', e && e.message); // one line comment
+                                    }
+                                };
+                                window.loadBase64FromHost = (base64) => {
+                                    try {
+                                        if (window.ggbApplet && window.ggbApplet.setBase64) {
+                                            window.ggbApplet.setBase64(base64); // one line comment
+                                        }
+                                    } catch (e) {
+                                        console.log('loadBase64FromHost error:', e && e.message); // one line comment
+                                    }
+                                };
+                                window.exportBase64FromHost = () => {
+                                    return new Promise((resolve) => {
+                                        try {
+                                            if (!window.ggbApplet || !window.ggbApplet.getBase64) {
+                                                resolve(null); // one line comment
+                                                return;
+                                            }
+                                            window.ggbApplet.getBase64((data) => resolve(data)); // one line comment
+                                        } catch (e) {
+                                            console.log('exportBase64FromHost error:', e && e.message); // one line comment
+                                            resolve(null); // one line comment
+                                        }
+                                    });
+                                };
+                            } catch (e) {
+                                console.log('geogebra API init error:', e && e.message); // one line comment
+                            }
+                        })();
+                    `).catch(() => {}); // swallow any rejection from executeJavaScript itself
+                    this.redefineConsole(); // setup console listener after each dom-ready
+                };
+                geogebraWebview.addEventListener('dom-ready', this._onDomReady);
+            }
 
             this.loadFilelist()
             this.getExamMaterials()
@@ -340,26 +421,37 @@ export default {
 
 
         redefineConsole(){
-            const ggbIframe = document.getElementById('geogebraframe');
-            const iframeWindow = ggbIframe.contentWindow;  // Zugriff auf den Kontext des iframe
-            const originalIframeConsoleLog = iframeWindow.console.log;  // Speichern der originalen console.log Funktion des iframe
-           
-       
-            
-            iframeWindow.console.log = (message) => {
-                // Prüfen, ob die Nachricht ein GeoGebra-spezifisches Muster enthält
-               
+            const geogebraWebview = document.getElementById('geogebraframe');
+            if (!geogebraWebview) {
+                return;
+            }
+
+            if (!this._onWebviewConsoleMessage) {
+            this._onWebviewConsoleMessage = (event) => {
+                const message = event && typeof event.message === "string" ? event.message : "";
                 if (typeof message === "string" && message.includes("existing")) {
-                    const partAfterExistingGeo = message.split("existing geo:")[1].trim();
-                    const extractedText = partAfterExistingGeo.split("=")[1].trim();
-                    this.customClipboard.push( extractedText )
-                    if (this.customClipboard.length > 10) {    this.customClipboard.shift();     }   //customclipboard länge begrenzen
-                } 
-                else {
-                    // geogebra spammed jede aktion in die console daher unterdrücken wir das erstmal
-                    //originalIframeConsoleLog.apply(iframeWindow.console, arguments);      // Aufrufen der ursprünglichen Funktion für alle anderen Nachrichten
+                    const splitMessage = message.split("existing geo:");
+                    if (splitMessage.length > 1) {
+                        const partAfterExistingGeo = splitMessage[1].trim();
+                        const parts = partAfterExistingGeo.split("=");
+                        if (parts.length > 1) {
+                            const extractedText = parts[1].trim();
+                            if (!this.customClipboard.includes(extractedText)) {
+                                this.customClipboard.push(extractedText);
+                                if (this.customClipboard.length > 10) {
+                                    this.customClipboard.shift();
+                                }
+                            }
+                        }
+                    }
                 }
             };
+            }
+
+            if (this._onWebviewConsoleMessage) {
+                geogebraWebview.removeEventListener('console-message', this._onWebviewConsoleMessage);
+            }
+            geogebraWebview.addEventListener('console-message', this._onWebviewConsoleMessage);
         },
         
         async sendFocuslost(ctrlalt = false){
@@ -385,11 +477,16 @@ export default {
             this.localfiles = filelist;
         },
         setsource(source){
-            let iFrame = document.getElementById('geogebraframe')
-            if (source === "suite")   { iFrame.src = `./geogebra/suite.html`  }
-            if (source === "classic") { iFrame.src = `./geogebra/classic.html`}
-            iFrame.parentNode.replaceChild(iFrame.cloneNode(), iFrame);
-            this.redefineConsole()
+            const geogebraWebview = document.getElementById('geogebraframe');
+            if (!geogebraWebview) {
+                return;
+            }
+            this.ggbReady = false; // new content will be loaded
+            if (source === "suite") {
+                geogebraWebview.src = `/geogebra/suite.html`;
+            } else if (source === "classic") {
+                geogebraWebview.src = `/geogebra/classic.html`;
+            }
         },  
         clock(){
             this.now = new Date().getTime()
@@ -429,16 +526,20 @@ export default {
             this.isClipboardVisible = this.isClipboardVisible ? false: true;
         },
         insertFromClipboar(value){
-            const ggbIframe = document.getElementById('geogebraframe');
-            const ggbApplet = ggbIframe.contentWindow.ggbApplet;   // get the geogebra applet and all of its methods
-            
-            ggbApplet.evalCommand(value);
+            const geogebraWebview = document.getElementById('geogebraframe');
+            if (!geogebraWebview) {
+                return;
+            }
+            const safeValue = JSON.stringify(value);
+            geogebraWebview.executeJavaScript(`window.evalFromHost(${safeValue})`);
             this.showClipboard()
         },
 
         clearAll(){
-            const ggbIframe = document.getElementById('geogebraframe');
-            const ggbApplet = ggbIframe.contentWindow.ggbApplet;   // get the geogebra applet and all of its methods
+            const geogebraWebview = document.getElementById('geogebraframe');
+            if (!geogebraWebview) {
+                return;
+            }
             this.$swal({
                 title: "",
                 text: this.$t("math.clear") ,
@@ -452,8 +553,7 @@ export default {
              })
             .then((result) => {
                 if (result.isConfirmed) { 
-                    ggbApplet.reset()
-                    ggbApplet.newConstruction(); // start a new empty construction (if supported)
+                    geogebraWebview.executeJavaScript('window.clearAllFromHost()');
                 }
                 else {return; }
             });
@@ -461,8 +561,40 @@ export default {
 
          /** Saves Content as GGB */
         async saveContent(event=false, reason=false) { 
-            const ggbIframe = document.getElementById('geogebraframe');
-            const ggbApplet = ggbIframe.contentWindow.ggbApplet;   // get the geogebra applet and all of its methods
+            const geogebraWebview = document.getElementById('geogebraframe');
+            if (!geogebraWebview) {
+                console.log("geogebra @ saveContent: webview not found"); // one line comment
+                return;
+            }
+
+            if (!this.ggbReady) {
+                console.log("geogebra @ saveContent: webview not ready"); // one line comment
+                return;
+            }
+
+            const getBase64FromWebview = async () => {
+                const currentWebview = document.getElementById('geogebraframe');
+                if (!currentWebview || currentWebview !== geogebraWebview || !this.ggbReady) {
+                    return null; // webview was replaced or not ready
+                }
+                try {
+                    const result = await currentWebview.executeJavaScript(`
+                        (async () => {
+                            try {
+                                const data = await window.exportBase64FromHost();
+                                return data;
+                            } catch (e) {
+                                return null;
+                            }
+                        })()
+                    `);
+                    return result;
+                } catch (error) {
+                    console.log("geogebra @ saveContent: error getting base64 from webview"); // one line comment
+                    return null;
+                }
+            };
+
             let filename = `${this.clientname}.ggb`
             if (reason == "manual" ){ 
                 await this.$swal({
@@ -482,39 +614,41 @@ export default {
                         }                   
                      },
                  }).then((result) => {
-                    if (result.isConfirmed) { 
-                        filename = `${result.value}-bak.ggb`
-                        ggbApplet.getBase64( async (base64GgbFile) => {
-                            let response = await ipcRenderer.invoke('saveGGB', {filename: filename, content: base64GgbFile})   // send base64 string to backend for saving
+                    if (result.isConfirmed) {
+                        filename = `${result.value}-bak.ggb`;
+                        getBase64FromWebview().then(async (base64GgbFile) => {
+                            if (!base64GgbFile) {
+                                console.log("geogebra @ saveContent: no base64 content returned"); // one line comment
+                                return;
+                            }
+                            let response = await ipcRenderer.invoke('saveGGB', {filename: filename, content: base64GgbFile});   // send base64 string to backend for saving
                             if (response.status === "success" && reason == "manual" ){  // we wait for a response - only show feed back if manually saved
-                                this.loadFilelist()
+                                this.loadFilelist();
                                 this.$swal.fire({
                                     title: this.$t("editor.saved"),
                                     text: filename,
                                     icon: "info"
-                                })
+                                });
                             }
-                        })
+                        });
                     }
                     else {return; }
                 });
             }
             else {
-                if (ggbApplet && ggbApplet.getBase64){
-                    ggbApplet.getBase64( async (base64GgbFile) => {
-                        let response = await ipcRenderer.invoke('saveGGB', {filename: filename, content: base64GgbFile, reason: reason })   // send base64 string to backend for saving
-                        if (response.status === "success" && reason == "manual" ){  // we wait for a response - only show feed back if manually saved
-                            this.loadFilelist()
-                            this.$swal.fire({
-                                title: this.$t("editor.saved"),
-                                text: filename,
-                                icon: "info"
-                            })
-                        }
-                    })
-                }
-                else {
-                   console.log("geogebra @ saveContent: ggbApplet not found")
+                const base64GgbFile = await getBase64FromWebview();
+                if (!base64GgbFile) {
+                    console.log("geogebra @ saveContent: no base64 content returned"); // one line comment
+                } else {
+                    let response = await ipcRenderer.invoke('saveGGB', {filename: filename, content: base64GgbFile, reason: reason });   // send base64 string to backend for saving
+                    if (response.status === "success" && reason == "manual" ){  // we wait for a response - only show feed back if manually saved
+                        this.loadFilelist();
+                        this.$swal.fire({
+                            title: this.$t("editor.saved"),
+                            text: filename,
+                            icon: "info"
+                        });
+                    }
                 }
             }
  
@@ -536,6 +670,20 @@ export default {
         this.clockinterval.stop() 
         
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
+
+        const geogebraWebview = document.getElementById('geogebraframe');
+        if (geogebraWebview) {
+            if (this._onWebviewConsoleMessage) {
+                geogebraWebview.removeEventListener('console-message', this._onWebviewConsoleMessage);
+            }
+            if (this._onDomReady) {
+                geogebraWebview.removeEventListener('dom-ready', this._onDomReady);
+            }
+        }
+
+        if (this._onUnhandledRejection) {
+            window.removeEventListener('unhandledrejection', this._onUnhandledRejection);
+        }
 
         ipcRenderer.removeAllListeners('getmaterials')
         ipcRenderer.removeAllListeners('fileerror')

@@ -44,6 +44,7 @@ app.commandLine.appendSwitch('lang', 'de');
 app.commandLine.appendSwitch('enable-unsafe-swiftshader');
 app.commandLine.appendSwitch('log-level', '3'); // 3 = WARN, 2 = ERROR, 1 = INFO
 
+
 if (process.platform === 'linux'){
     app.commandLine.appendSwitch('disable-features', 'VaapiVideoDecoder,OutOfProcessRasterization,CanvasOopRasterization'); // disable fragile GPU features
     app.commandLine.appendSwitch('disable-zero-copy'); 
@@ -166,6 +167,16 @@ fsExtra.emptyDirSync(config.tempdirectory)  // clean temp directory
  */
 process.stdout.on('error', (err) => { if (err.code === 'EPIPE') { log.transports.console.level = false } });
 
+// filter GUEST_VIEW_MANAGER_CALL clone errors from stderr
+// const originalStderrWrite = process.stderr.write;
+// process.stderr.write = function(chunk, encoding, fd) {
+//     const chunkStr = chunk?.toString() || '';
+//     if (chunkStr.includes('GUEST_VIEW_MANAGER_CALL') && chunkStr.includes('object could not be cloned')) {
+//         //return true; // drop this specific error - produced by geogebra webview
+//     }
+//     return originalStderrWrite.apply(this, arguments);
+// };
+
 process.on('uncaughtException', (err) => {
     if (err.code === 'EPIPE') {
         log.transports.console.level = false;
@@ -248,6 +259,7 @@ app.on('certificate-error', (event, webContents, url, error, certificate, callba
 
 // Handle WebContents load failures to prevent app crashes
 app.on('web-contents-created', (event, webContents) => {
+
     webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame, frameProcessId, frameRoutingId) => {
         // Log the error but don't crash the app
         log.warn(`main @ did-fail-load: Error ${errorCode} - ${errorDescription} for URL: ${validatedURL}`);

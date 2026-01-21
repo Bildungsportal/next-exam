@@ -849,6 +849,7 @@ const __dirname = import.meta.dirname;
                 WindowHandler.examwindow = null;
                 this.multicastClient.clientinfo.exammode = false
                 this.multicastClient.clientinfo.focus = true
+                this.multicastClient.clientinfo.token = false
                 return  // in that case.. we are finished here !
             }
         }

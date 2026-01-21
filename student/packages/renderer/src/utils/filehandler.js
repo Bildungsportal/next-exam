@@ -448,22 +448,26 @@ export async function loadGGB(file, base64=false){
     .then(async (result) => {
         if (result.isConfirmed) {
 
+            const geogebraWebview = document.getElementById('geogebraframe');
+            if (!geogebraWebview) {
+                console.error('filehandler @ loadGGB: geogebra webview not found'); // one line comment
+                return;
+            }
+
             if (!base64){
                 const result = await ipcRenderer.invoke('loadGGB', file);
                 if (result.status === "success") {
                     const base64GgbFile = result.content;
-                    const ggbIframe = document.getElementById('geogebraframe');
-                    const ggbApplet = ggbIframe.contentWindow.ggbApplet;
-                    ggbApplet.setBase64(base64GgbFile);
+                    const safeBase64 = JSON.stringify(base64GgbFile);
+                    geogebraWebview.executeJavaScript(`window.loadBase64FromHost(${safeBase64})`);
                 } else {
                     console.error('filehandler @ loadGGB: Error loading file');
                 }
             }
             else {
                 const base64GgbFile = file.filecontent.split(',')[1];
-                const ggbIframe = document.getElementById('geogebraframe');
-                const ggbApplet = ggbIframe.contentWindow.ggbApplet;
-                ggbApplet.setBase64(base64GgbFile);
+                const safeBase64 = JSON.stringify(base64GgbFile);
+                geogebraWebview.executeJavaScript(`window.loadBase64FromHost(${safeBase64})`);
             }
         } 
     }); 
