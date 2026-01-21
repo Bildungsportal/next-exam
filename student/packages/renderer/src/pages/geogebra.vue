@@ -261,72 +261,7 @@ export default {
 
             const geogebraWebview = document.getElementById('geogebraframe');
             if (geogebraWebview) {
-                if (this._onDomReady) {
-                    geogebraWebview.removeEventListener('dom-ready', this._onDomReady);
-                }
-                this._onDomReady = () => {
-                    this.ggbReady = true; // webview is ready for JS calls
-
-                    // im Devmode DevTools für das GeoGebra-Webview öffnen
-                    if (this.config && this.config.development && typeof geogebraWebview.openDevTools === 'function') {
-                        geogebraWebview.openDevTools(); // one line comment
-                    }
-
-                    geogebraWebview.executeJavaScript(`
-                        (function() {
-                            try {
-                                window.evalFromHost = (cmd) => {
-                                    try {
-                                        if (window.ggbApplet) {
-                                            window.ggbApplet.evalCommand(cmd); // one line comment
-                                        }
-                                    } catch (e) {
-                                        console.log('evalFromHost error:', e && e.message); // one line comment
-                                    }
-                                };
-                                window.clearAllFromHost = () => {
-                                    try {
-                                        if (window.ggbApplet) {
-                                            window.ggbApplet.reset(); // one line comment
-                                            if (typeof window.ggbApplet.newConstruction === 'function') {
-                                                window.ggbApplet.newConstruction(); // one line comment
-                                            }
-                                        }
-                                    } catch (e) {
-                                        console.log('clearAllFromHost error:', e && e.message); // one line comment
-                                    }
-                                };
-                                window.loadBase64FromHost = (base64) => {
-                                    try {
-                                        if (window.ggbApplet && window.ggbApplet.setBase64) {
-                                            window.ggbApplet.setBase64(base64); // one line comment
-                                        }
-                                    } catch (e) {
-                                        console.log('loadBase64FromHost error:', e && e.message); // one line comment
-                                    }
-                                };
-                                window.exportBase64FromHost = () => {
-                                    return new Promise((resolve) => {
-                                        try {
-                                            if (!window.ggbApplet || !window.ggbApplet.getBase64) {
-                                                resolve(null); // one line comment
-                                                return;
-                                            }
-                                            window.ggbApplet.getBase64((data) => resolve(data)); // one line comment
-                                        } catch (e) {
-                                            console.log('exportBase64FromHost error:', e && e.message); // one line comment
-                                            resolve(null); // one line comment
-                                        }
-                                    });
-                                };
-                            } catch (e) {
-                                console.log('geogebra API init error:', e && e.message); // one line comment
-                            }
-                        })();
-                    `).catch(() => {}); // swallow any rejection from executeJavaScript itself
-                    this.redefineConsole(); // setup console listener after each dom-ready
-                };
-                geogebraWebview.addEventListener('dom-ready', this._onDomReady);
+                this.setupWebviewListeners(geogebraWebview);
             }
 
             this.loadFilelist()
@@ -476,17 +411,117 @@ export default {
             let filelist = await ipcRenderer.invoke('getfilesasync', null)
             this.localfiles = filelist;
         },
+        setupWebviewListeners(geogebraWebview){
+            if (!geogebraWebview) {
+                return;
+            }
+            // remove existing listener if any
+            if (this._onDomReady) {
+                geogebraWebview.removeEventListener('dom-ready', this._onDomReady);
+            }
+            // create new dom-ready handler
+            this._onDomReady = () => {
+                this.ggbReady = true; // webview is ready for JS calls
+
+                // im Devmode DevTools für das GeoGebra-Webview öffnen
+               // if (this.config && this.config.development && typeof geogebraWebview.openDevTools === 'function') {
+               //     geogebraWebview.openDevTools(); // one line comment
+               // }
+
+                geogebraWebview.executeJavaScript(`
+                    (function() {
+                        try {
+                            window.evalFromHost = (cmd) => {
+                                try {
+                                    if (window.ggbApplet) {
+                                        window.ggbApplet.evalCommand(cmd); // one line comment
+                                    }
+                                } catch (e) {
+                                    console.log('evalFromHost error:', e && e.message); // one line comment
+                                }
+                            };
+                            window.clearAllFromHost = () => {
+                                try {
+                                    if (window.ggbApplet) {
+                                        window.ggbApplet.reset(); // one line comment
+                                        if (typeof window.ggbApplet.newConstruction === 'function') {
+                                            window.ggbApplet.newConstruction(); // one line comment
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.log('clearAllFromHost error:', e && e.message); // one line comment
+                                }
+                            };
+                            window.loadBase64FromHost = (base64) => {
+                                try {
+                                    if (window.ggbApplet && window.ggbApplet.setBase64) {
+                                        window.ggbApplet.setBase64(base64); // one line comment
+                                    }
+                                } catch (e) {
+                                    console.log('loadBase64FromHost error:', e && e.message); // one line comment
+                                }
+                            };
+                            window.exportBase64FromHost = () => {
+                                return new Promise((resolve) => {
+                                    try {
+                                        if (!window.ggbApplet || !window.ggbApplet.getBase64) {
+                                            resolve(null); // one line comment
+                                            return;
+                                        }
+                                        window.ggbApplet.getBase64((data) => resolve(data)); // one line comment
+                                    } catch (e) {
+                                        console.log('exportBase64FromHost error:', e && e.message); // one line comment
+                                        resolve(null); // one line comment
+                                    }
+                                });
+                            };
+                        } catch (e) {
+                            console.log('geogebra API init error:', e && e.message); // one line comment
+                        }
+                    })();
+                `).catch(() => {}); // swallow any rejection from executeJavaScript itself
+                this.redefineConsole(); // setup console listener after each dom-ready
+            };
+            // register dom-ready listener
+            geogebraWebview.addEventListener('dom-ready', this._onDomReady);
+        },
         setsource(source){
             const geogebraWebview = document.getElementById('geogebraframe');
             if (!geogebraWebview) {
                 return;
             }
-            this.ggbReady = false; // new content will be loaded
-            if (source === "suite") {
-                geogebraWebview.src = `/geogebra/suite.html`;
-            } else if (source === "classic") {
-                geogebraWebview.src = `/geogebra/classic.html`;
+            
+            const parentElement = geogebraWebview.parentElement;
+            if (!parentElement) {
+                return;
             }
+            
+            this.ggbReady = false; // new content will be loaded
+            
+            // remove old webview from DOM (listeners are automatically removed when element is removed)
+            try {
+                geogebraWebview.remove();
+            } catch (e) {
+                // force remove if normal remove fails
+                parentElement.removeChild(geogebraWebview);
+            }
+            
+            // create new webview element
+            const newWebview = document.createElement('webview');
+            newWebview.id = 'geogebraframe';
+            newWebview.setAttribute('allowpopups', 'true');
+            newWebview.setAttribute('webpreferences', 'contextIsolation=no,nodeIntegration=no');
+            
+            // set source based on parameter
+            if (source === "suite") {
+                newWebview.src = `/geogebra/suite.html`;
+            } else if (source === "classic") {
+                newWebview.src = `/geogebra/classic.html`;
+            }
+            
+            // insert new webview into DOM and setup event listeners
+            parentElement.appendChild(newWebview);
+            this.setupWebviewListeners(newWebview);
         },  
         clock(){
             this.now = new Date().getTime()
