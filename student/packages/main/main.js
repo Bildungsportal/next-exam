@@ -304,12 +304,14 @@ app.on('window-all-closed', () => {  // if window is closed
     clearInterval( CommHandler.updateStudentIntervall )
     WindowHandler.mainwindow = null
     // if (process.platform !== 'darwin'){ app.quit() }
+    toggleMacOSSystemShortcuts(true)
     app.quit()   
 })
 
 app.on('before-quit', async () => {
     try {
         await session.defaultSession.clearStorageData({}); // clear cookies, cache, localStorage etc.
+        toggleMacOSSystemShortcuts(true)
     } catch (err) {
         log.error('main @ before-quit: Error clearing cache:', err);
     }
@@ -356,7 +358,8 @@ app.whenReady()
     nativeTheme.themeSource = 'light'  // prevent theme settings from being adopted from windows
     session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
-
+    
+    toggleMacOSSystemShortcuts(false);
    
     /******* Create main window *******/
     WindowHandler.createMainWindow()
@@ -388,4 +391,35 @@ app.whenReady()
     globalShortcut.register('CommandOrControl+L', () => {});  //lockscreen
     globalShortcut.register('CommandOrControl+P', () => {});  //change screen layout
     globalShortcut.register('Alt+Left', () => {  return false });  // Navigation attempt blocked
+
+
+  
+
 })
+
+
+import { exec } from 'child_process';
+
+// Alle kritischen IDs für Mission Control & Desktop-Wechsel
+const mcIds = [32, 33, 34, 35, 79, 80, 81, 82];
+
+function toggleMacOSSystemShortcuts(enable) {
+  if (process.platform !== 'darwin') return;
+
+  const state = enable ? 'true' : 'false';
+  
+  // Wir bauen EINEN langen Befehl, um die DB nicht zu stressen
+  const commands = mcIds.map(id => 
+    `defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add ${id} "<dict><key>enabled</key><${state}/></dict>"`
+  ).join('; ');
+
+  // Danach Einstellungen forcieren
+  const finalize = '; /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u';
+  
+  exec(commands + finalize, (err) => {
+    if (err) {
+      // Fallback: Wenn activateSettings nicht reicht, Dock neu starten
+      exec('killall Dock');
+    }
+  });
+}

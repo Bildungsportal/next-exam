@@ -530,6 +530,8 @@ class WindowHandler {
                     this.examwindow.moveTop()
                     this.examwindow.focus()
 
+                    this.examwindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+
                     if (!this.isWayland){ this.checkWindowInterval.start() } // constantly check if the active window is the examwindow - if not, bring it to front
                     await enableRestrictions(this)  // disable keyboard shortcuts etc.
                     
