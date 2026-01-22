@@ -575,7 +575,6 @@ class IpcHandler {
             
             if (filename){
                 htmlfilename = `${filename}.bak`
-                log.info(`ipchandler: storeHTML: creating manual backup as ${htmlfilename}`)
             }
 
             const htmlfile = path.join(this.config.examdirectory, htmlfilename);
@@ -658,7 +657,7 @@ class IpcHandler {
                 let pdffilename = `${this.multicastClient.clientinfo.name}.pdf`  // default filename = clientname.pdf
                 if (args.filename){  // in case of manual backup the user can set a custom filename
                     pdffilename = `${args.filename}.pdf`
-                    log.info(`ipchandler @ printpdf: creating manual backup as ${pdffilename}`)
+                    
                 }
                 const pdffilepath = path.join(this.config.examdirectory, pdffilename);  // path points to the current exam directory
                 const alternatefilename = `${pdffilename}-aux.pdf`    //thomas.pdf-aux.pdf 

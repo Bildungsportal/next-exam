@@ -402,11 +402,12 @@ async function configureEditor(){
 
     const { value: language } = await this.$swal.fire({
         customClass: {
-            popup: 'my-popup',
+            popup: 'my-popup-sprachen',
             title: 'my-title',
             content: 'my-content',
-            input: 'my-custom-input',
-            actions: 'my-swal2-actions'
+            input: 'my-custom-input-select',
+            actions: 'my-swal2-actions',
+           
         },
         title: this.$t("dashboard.texteditor"),
         html: `
@@ -474,9 +475,9 @@ async function configureEditor(){
                 <label class="form-check-label" for="checkboxsuggestions"> ${this.$t("dashboard.suggest")} </label><br>
                 <input class="form-check-input" type="checkbox" id="checkboxCustomHost">
                 <label class="form-check-label" for="checkboxCustomHost"> ${this.$t("dashboard.customhost")} </label><br>
-                <label class="form-check-label" for="languagetoolhost"> ${this.$t("dashboard.languagetoolhost")}: </label>
-                <input type="text" id="languagetoolhost" class="form-control" style="width: 150px; display: inline-block; margin-left: 5px; color: #6c757d;" value="http://127.0.0.1" disabled><br><br>
-               <h6 style="margin-bottom:0px">${this.$t("dashboard.spellcheckchoose")}</h6>
+                
+                <input type="text" id="languagetoolhost" class="form-control" style="margin-top:4px; width: 100%; display: block; color: #6c757d;" value="http://127.0.0.1" disabled><br><br>
+                <h6 style="margin-bottom:0px;">${this.$t("dashboard.spellcheckchoose")}</h6>
             </div>
              
         </div>`,

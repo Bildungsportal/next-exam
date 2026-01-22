@@ -75,8 +75,8 @@
         <!-- local files start -->
         <div class="white text-muted me-2 ms-2 small d-inline-block mb-0" style="vertical-align: middle;">{{ $t('editor.localfiles') }} </div>
         <div v-for="file in localfiles" class="d-inline mb-0">
-            <div v-if="(file.type == 'pdf')"   class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
-            <div v-if="(file.type == 'ggb')"   class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadGGB(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
+            <div v-if="(file.type == 'pdf')"   :class="{'bg-warning': file.name == currentFile}" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
+            <div v-if="(file.type == 'ggb')"   :class="{'bg-warning': file.name == currentFile}" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadGGB(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
             <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
         </div>
         <!-- local files end -->
@@ -206,7 +206,7 @@ export default {
     },
     async mounted() {
 
-        this.currentFile = this.clientname
+        this.currentFile = `${this.clientname}.ggb`
         this.entrytime = new Date().getTime()  
          
         this._onUnhandledRejection = (event) => {
@@ -630,7 +630,7 @@ export default {
                 }
             };
 
-            let filename = `${this.clientname}.ggb`
+            let filename = this.currentFile
             if (reason == "manual" ){ 
                 await this.$swal({
                     title: this.$t("math.filename") ,
@@ -651,6 +651,7 @@ export default {
                  }).then((result) => {
                     if (result.isConfirmed) {
                         filename = `${result.value}-bak.ggb`;
+                        this.currentFile = filename
                         getBase64FromWebview().then(async (base64GgbFile) => {
                             if (!base64GgbFile) {
                                 console.log("geogebra @ saveContent: no base64 content returned"); // one line comment

@@ -197,6 +197,9 @@ export async function loadHTML(file){
             
             this.editor.commands.clearContent(true)
             this.editor.commands.insertContent(data)  
+            //set currentFile to the loaded filename remove extension .bak from filename
+            let filename = file.replace(/\.bak$/, '')  //remove extension .bak from filename
+            this.currentFile = filename
         } 
     }); 
 }
@@ -436,7 +439,8 @@ async function soundtest(context){
 export async function loadGGB(file, base64=false){
     let filename = file
     if (base64){filename = file.filename}
-
+   
+    
     this.$swal.fire({
         title: this.$t("editor.replace"),
         html:  `${this.$t("editor.replacecontent1")} <b>${filename}</b> ${this.$t("editor.replacecontent2")}`,
@@ -460,6 +464,7 @@ export async function loadGGB(file, base64=false){
                     const base64GgbFile = result.content;
                     const safeBase64 = JSON.stringify(base64GgbFile);
                     geogebraWebview.executeJavaScript(`window.loadBase64FromHost(${safeBase64})`);
+                    this.currentFile = filename
                 } else {
                     console.error('filehandler @ loadGGB: Error loading file');
                 }
@@ -468,6 +473,7 @@ export async function loadGGB(file, base64=false){
                 const base64GgbFile = file.filecontent.split(',')[1];
                 const safeBase64 = JSON.stringify(base64GgbFile);
                 geogebraWebview.executeJavaScript(`window.loadBase64FromHost(${safeBase64})`);
+                this.currentFile = filename
             }
         } 
     }); 

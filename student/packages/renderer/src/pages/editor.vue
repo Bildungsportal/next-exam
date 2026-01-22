@@ -132,8 +132,8 @@
            
            
             <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
-                <div v-if="(file.type == 'bak' && !file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
-                <div v-if="(file.type == 'bak' && file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
+                <div v-if="(file.type == 'bak' && !file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
+                <div v-if="(file.type == 'bak' && file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
 
                 <div v-if="(file.type == 'docx')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadDOCX(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
                 
@@ -832,7 +832,7 @@ export default {
 
         /** Converts the Editor View into a multipage PDF */
         async saveContent(backup, why) {     
-            let filename = false  // this is set manually... otherwise use clientname
+            let filename = this.currentFile  // this can be set manually... otherwise currentFile is used (clientname unless you load another file)
             if (why === "manual"){
                 await this.$swal({
                     title: this.$t("math.filename") ,
@@ -852,7 +852,10 @@ export default {
                         }                   
                     },
                 }).then((result) => {
-                    if (result.isConfirmed) { filename = `${result.value}`}
+                    if (result.isConfirmed) { 
+                        filename = `${result.value}`
+                        this.currentFile = filename
+                    }
                     else {return; }
                 });
             }
@@ -1303,6 +1306,7 @@ export default {
             // check if there is a bak file in the exam directory and load it
             // This must run early to read the file before editor overwrites it after 20 seconds
             let backupfileName = filename ? filename : this.clientname + ".bak"
+            this.currentFile = backupfileName.replace(/\.bak$/, '')  //remove extension .bak from filename and set currentFile to the backup file name
             console.log(`editor @ loadBackupFile: Checking for backup file: ${backupfileName}`)
             try {
                 let backupfileContent = await ipcRenderer.invoke('getbackupfile', backupfileName )
