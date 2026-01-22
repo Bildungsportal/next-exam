@@ -475,7 +475,7 @@ async function configureEditor(){
                 <input class="form-check-input" type="checkbox" id="checkboxCustomHost">
                 <label class="form-check-label" for="checkboxCustomHost"> ${this.$t("dashboard.customhost")} </label><br>
                 <label class="form-check-label" for="languagetoolhost"> ${this.$t("dashboard.languagetoolhost")}: </label>
-                <input type="text" id="languagetoolhost" class="form-control" style="width: 150px; display: inline-block; margin-left: 5px; color: #6c757d;" value="127.0.0.1" disabled><br><br>
+                <input type="text" id="languagetoolhost" class="form-control" style="width: 150px; display: inline-block; margin-left: 5px; color: #6c757d;" value="http://127.0.0.1" disabled><br><br>
                <h6 style="margin-bottom:0px">${this.$t("dashboard.spellcheckchoose")}</h6>
             </div>
              
@@ -549,7 +549,7 @@ async function configureEditor(){
                 languagetoolhostInput.disabled = false;
                 languagetoolhostInput.style.color = '#000000';
             } else {
-                languagetoolhostInput.value = '127.0.0.1';
+                languagetoolhostInput.value = 'http://127.0.0.1';
                 checkboxCustomHost.checked = false;
                 languagetoolhostInput.disabled = true;
                 languagetoolhostInput.style.color = '#6c757d';
@@ -610,7 +610,7 @@ async function configureEditor(){
             
             // Save LanguageTool Host value if custom host checkbox is checked
             if (checkboxCustomHostElement && checkboxCustomHostElement.checked && languagetoolhostElement) {
-                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost = languagetoolhostElement.value || '127.0.0.1';
+                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost = languagetoolhostElement.value || 'http://127.0.0.1';
             } else {
                 this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost = null;
             } 

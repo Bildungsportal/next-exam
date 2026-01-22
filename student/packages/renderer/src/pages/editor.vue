@@ -474,7 +474,7 @@ export default {
             allowedUrls: [],
             lockedSection: 1,
             internetCheckCounter:0,
-            LThost: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].languagetoolhost || "127.0.0.1"
+            LThost: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].languagetoolhost || "http://127.0.0.1"
         }
     },
     computed: {
