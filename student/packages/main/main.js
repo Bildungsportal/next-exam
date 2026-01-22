@@ -29,6 +29,7 @@ import path from 'path'
 import fs from 'fs'
 import * as fsExtra from 'fs-extra';
 import ip from 'ip'
+import { exec } from 'child_process';
 import { gateway4sync } from 'default-gateway';
 import WindowHandler from './scripts/windowhandler.js'
 import CommHandler from './scripts/communicationhandler.js'
@@ -304,14 +305,14 @@ app.on('window-all-closed', () => {  // if window is closed
     clearInterval( CommHandler.updateStudentIntervall )
     WindowHandler.mainwindow = null
     // if (process.platform !== 'darwin'){ app.quit() }
-    toggleMacOSSystemShortcuts(true)
+    toggleMacOSLockdown(true)
     app.quit()   
 })
 
 app.on('before-quit', async () => {
     try {
         await session.defaultSession.clearStorageData({}); // clear cookies, cache, localStorage etc.
-        toggleMacOSSystemShortcuts(true)
+        toggleMacOSLockdown(true)
     } catch (err) {
         log.error('main @ before-quit: Error clearing cache:', err);
     }
@@ -359,7 +360,7 @@ app.whenReady()
     session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
     
-    toggleMacOSSystemShortcuts(false);
+    toggleMacOSLockdown(false);
    
     /******* Create main window *******/
     WindowHandler.createMainWindow()
@@ -398,28 +399,40 @@ app.whenReady()
 })
 
 
-import { exec } from 'child_process';
-
-// Alle kritischen IDs für Mission Control & Desktop-Wechsel
-const mcIds = [32, 33, 34, 35, 79, 80, 81, 82];
-
-function toggleMacOSSystemShortcuts(enable) {
+/**
+ * disables/enables mission control, spaces and trackpad gestures
+ * @param {boolean} enable - true restores everything, false locks everything
+ */
+function toggleMacOSLockdown(enable) {
   if (process.platform !== 'darwin') return;
 
+  // 32-35: mission control & co, 79-82: space switching, 118-121: additional spaces
+  const mcIds = [32, 33, 34, 35, 79, 80, 81, 82, 118, 119, 120, 121];
+
   const state = enable ? 'true' : 'false';
-  
-  // Wir bauen EINEN langen Befehl, um die DB nicht zu stressen
-  const commands = mcIds.map(id => 
+  const boolState = enable ? 'true' : 'false'; // for defaults -bool
+
+  // 1. keyboard shortcuts (symbolic hotkeys)
+  const hotkeyCommands = mcIds.map(id => 
     `defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add ${id} "<dict><key>enabled</key><${state}/></dict>"`
   ).join('; ');
 
-  // Danach Einstellungen forcieren
-  const finalize = '; /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u';
-  
-  exec(commands + finalize, (err) => {
+  // 2. trackpad gestures (dock preferences)
+  // disables 3- or 4-finger swiping for mission control & app exposé
+  const gestureCommands = [
+    `defaults write com.apple.dock showMissionControlGestureEnabled -bool ${boolState}`,
+    `defaults write com.apple.dock showAppExposeGestureEnabled -bool ${boolState}`,
+    `defaults write com.apple.dock showDesktopGestureEnabled -bool ${boolState}`
+  ].join('; ');
+
+  // 3. merge and force system update
+  // 'activateSettings' for hotkeys, 'killall Dock' for gestures
+  const fullCommand = `${hotkeyCommands}; ${gestureCommands}; /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u; killall Dock`;
+
+  exec(fullCommand, (err) => {
     if (err) {
-      // Fallback: Wenn activateSettings nicht reicht, Dock neu starten
-      exec('killall Dock');
+      // if an error occurs (e.g. dock process not found)
+      console.error('Lockdown Error:', err);
     }
   });
 }
