@@ -121,7 +121,7 @@
             </div>
         </div>
         <!-- focuswarning end  -->
-        <webview id="geogebraframe" src="/geogebra/suite.html"></webview>
+        <webview id="geogebraframe" src="./geogebra/suite.html"></webview>
     </div>
 
 
@@ -514,9 +514,9 @@ export default {
             
             // set source based on parameter
             if (source === "suite") {
-                newWebview.src = `/geogebra/suite.html`;
+                newWebview.src = `./geogebra/suite.html`;
             } else if (source === "classic") {
-                newWebview.src = `/geogebra/classic.html`;
+                newWebview.src = `./geogebra/classic.html`;
             }
             
             // insert new webview into DOM and setup event listeners
