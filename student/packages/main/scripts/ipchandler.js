@@ -157,7 +157,7 @@ class IpcHandler {
             if (targetUrl.includes("login") && targetUrl.includes("live.com")) return true;   // LMS
             if (targetUrl.includes("login") && targetUrl.includes("msftauth.net")) return true;   // LMS
             if (targetUrl.includes("aadcdn") && targetUrl.includes("msftauth.net")) return true;   // LMS
-
+            if (targetUrl.includes("googlesyndication.com")) return true; 
 
 
             return false;
@@ -182,6 +182,8 @@ class IpcHandler {
                         const domain = urlObj.hostname;
                         
                         if (domain === allowedDomain) return true;
+                        // Explicitly allow www. subdomain
+                        if (domain === 'www.' + allowedDomain) return true;
                         if (domain.endsWith('.' + allowedDomain)) {
                             const prefix = domain.slice(0, -(allowedDomain.length + 1));
                             if (prefix && !prefix.includes('.') && /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(prefix)) {
