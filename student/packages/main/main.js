@@ -468,7 +468,7 @@ function toggleMacOSLockdown(enable) {
       fi;
       ${gestureCommands};
       killall -9 cfprefsd;
-      sleep 1;
+      sleep 0.5;
       /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u;
       killall Dock
     `;
