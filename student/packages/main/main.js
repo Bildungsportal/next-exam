@@ -309,6 +309,13 @@ app.on('window-all-closed', () => {  // if window is closed
     app.quit()   
 })
 
+app.on('will-quit', () => {  // if window is closed
+
+    toggleMacOSLockdown(false)
+  
+})
+
+
 app.on('before-quit', async () => {
     try {
         await session.defaultSession.clearStorageData({}); // clear cookies, cache, localStorage etc.
