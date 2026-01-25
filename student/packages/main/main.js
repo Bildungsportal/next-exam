@@ -305,14 +305,14 @@ app.on('window-all-closed', () => {  // if window is closed
     clearInterval( CommHandler.updateStudentIntervall )
     WindowHandler.mainwindow = null
     // if (process.platform !== 'darwin'){ app.quit() }
-    toggleMacOSLockdown(true)
+    toggleMacOSLockdown(false)
     app.quit()   
 })
 
 app.on('before-quit', async () => {
     try {
         await session.defaultSession.clearStorageData({}); // clear cookies, cache, localStorage etc.
-        toggleMacOSLockdown(true)
+        toggleMacOSLockdown(false)
     } catch (err) {
         log.error('main @ before-quit: Error clearing cache:', err);
     }
@@ -360,7 +360,7 @@ app.whenReady()
     session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
     
-    toggleMacOSLockdown(false);
+    toggleMacOSLockdown(true);
    
     /******* Create main window *******/
     WindowHandler.createMainWindow()
@@ -403,36 +403,71 @@ app.whenReady()
  * disables/enables mission control, spaces and trackpad gestures
  * @param {boolean} enable - true restores everything, false locks everything
  */
+
+
+import os from 'os';
+
 function toggleMacOSLockdown(enable) {
   if (process.platform !== 'darwin') return;
 
-  // 32-35: mission control & co, 79-82: space switching, 118-121: additional spaces
   const mcIds = [32, 33, 34, 35, 79, 80, 81, 82, 118, 119, 120, 121];
+  const plistPath = path.join(os.homedir(), 'Library/Preferences/com.apple.symbolichotkeys.plist');
+  const backupPath = path.join(os.tmpdir(), 'next_exam_hotkeys_backup.plist');
 
-  const state = enable ? 'true' : 'false';
-  const boolState = enable ? 'true' : 'false'; // for defaults -bool
+  if (enable) {
+    // LOCKDOWN AKTIVIEREN
+    // 1. Backup nur erstellen, wenn es noch nicht existiert (Originalzustand bewahren)
+    // 2. Shortcuts deaktivieren
+    // 3. WICHTIG: killall -9 cfprefsd erzwingt das Neuladen unter Sequoia/Monterey
+    const hotkeyCommands = mcIds.map(id => 
+      `defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add ${id} "<dict><key>enabled</key><false/></dict>"`
+    ).join('; ');
 
-  // 1. keyboard shortcuts (symbolic hotkeys)
-  const hotkeyCommands = mcIds.map(id => 
-    `defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add ${id} "<dict><key>enabled</key><${state}/></dict>"`
-  ).join('; ');
+    const gestureCommands = [
+      `defaults write com.apple.dock showMissionControlGestureEnabled -bool false`,
+      `defaults write com.apple.dock showAppExposeGestureEnabled -bool false`,
+      `defaults write com.apple.dock showDesktopGestureEnabled -bool false`
+    ].join('; ');
 
-  // 2. trackpad gestures (dock preferences)
-  // disables 3- or 4-finger swiping for mission control & app exposé
-  const gestureCommands = [
-    `defaults write com.apple.dock showMissionControlGestureEnabled -bool ${boolState}`,
-    `defaults write com.apple.dock showAppExposeGestureEnabled -bool ${boolState}`,
-    `defaults write com.apple.dock showDesktopGestureEnabled -bool ${boolState}`
-  ].join('; ');
+    const fullCommand = `
+      if [ ! -f "${backupPath}" ]; then cp "${plistPath}" "${backupPath}"; fi;
+      ${hotkeyCommands};
+      ${gestureCommands};
+      killall -9 cfprefsd;
+      sleep 1;
+      /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u;
+      killall Dock
+    `;
 
-  // 3. merge and force system update
-  // 'activateSettings' for hotkeys, 'killall Dock' for gestures
-  const fullCommand = `${hotkeyCommands}; ${gestureCommands}; /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u; killall Dock`;
+    exec(fullCommand, (err) => {
+      if (err) console.error('Lockdown Enable Error:', err);
+    });
 
-  exec(fullCommand, (err) => {
-    if (err) {
-      // if an error occurs (e.g. dock process not found)
-      console.error('Lockdown Error:', err);
-    }
-  });
+  } else {
+    // LOCKDOWN DEAKTIVIEREN (Wiederherstellen)
+    // 1. Wenn Backup existiert, Datei zurückkopieren und Backup löschen
+    // 2. Gesten wieder auf true setzen
+    // 3. Cache-Flush wie oben
+    const gestureCommands = [
+      `defaults write com.apple.dock showMissionControlGestureEnabled -bool true`,
+      `defaults write com.apple.dock showAppExposeGestureEnabled -bool true`,
+      `defaults write com.apple.dock showDesktopGestureEnabled -bool true`
+    ].join('; ');
+
+    const fullCommand = `
+      if [ -f "${backupPath}" ]; then 
+        cp "${backupPath}" "${plistPath}"; 
+        rm "${backupPath}"; 
+      fi;
+      ${gestureCommands};
+      killall -9 cfprefsd;
+      sleep 1;
+      /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u;
+      killall Dock
+    `;
+    log.info('main @ toggleMacOSLockdown: Enable MissionContol');
+    exec(fullCommand, (err) => {
+      if (err) console.error('Lockdown Disable Error:', err);
+    });
+  }
 }

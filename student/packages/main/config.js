@@ -27,7 +27,7 @@ const config = {
     isPuavo: false,
     
     version: '1.1.1.1',
-    buildDate: '20260123',
+    buildDate: '20260125',
     buildNumber: '1',
     info: 'Release'
 }
