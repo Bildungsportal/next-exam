@@ -386,9 +386,9 @@ async function enableRestrictions(winhandler){
 
         //mission control
         //let scriptfile = join(__dirname, '../../public/mc.appelscript')   //spaces, shortcuts
-        let mcscriptfile = join(__dirname, '../../public/spaces.applescript')
-        if (app.isPackaged) { mcscriptfile = join(process.resourcesPath, 'app.asar.unpacked', 'public/spaces.applescript') }
-        childProcess.execFile('osascript', [mcscriptfile], (error, stdout, stderr) => {if (stderr) { log.info(stderr)  } })
+        //let mcscriptfile = join(__dirname, '../../public/spaces.applescript')
+        //if (app.isPackaged) { mcscriptfile = join(process.resourcesPath, 'app.asar.unpacked', 'public/spaces.applescript') }
+        //childProcess.execFile('osascript', [mcscriptfile], (error, stdout, stderr) => {if (stderr) { log.info(stderr)  } })
     }
 }
 

@@ -305,8 +305,11 @@ app.on('web-contents-created', (event, webContents) => {
 app.on('window-all-closed', () => {  // if window is closed
     clearInterval( CommHandler.updateStudentIntervall )
     WindowHandler.mainwindow = null
-    // if (process.platform !== 'darwin'){ app.quit() }
     app.quit()   
+})
+
+app.on('will-quit', () => {  // if window is closed
+    toggleMacOSLockdown(false)
 })
 
 app.on('before-quit', async () => {
@@ -315,7 +318,7 @@ app.on('before-quit', async () => {
     } catch (err) {
         log.error('main @ before-quit: Error clearing cache:', err);
     }
-  });
+});
 
 app.on('activate', () => {
     const allWindows = BrowserWindow.getAllWindows()
