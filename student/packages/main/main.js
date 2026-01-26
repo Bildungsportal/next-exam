@@ -169,15 +169,41 @@ fsExtra.emptyDirSync(config.tempdirectory)  // clean temp directory
  */
 process.stdout.on('error', (err) => { if (err.code === 'EPIPE') { log.transports.console.level = false } });
 
-// filter GUEST_VIEW_MANAGER_CALL clone errors from stderr
-// const originalStderrWrite = process.stderr.write;
-// process.stderr.write = function(chunk, encoding, fd) {
-//     const chunkStr = chunk?.toString() || '';
-//     if (chunkStr.includes('GUEST_VIEW_MANAGER_CALL') && chunkStr.includes('object could not be cloned')) {
-//         //return true; // drop this specific error - produced by geogebra webview
-//     }
-//     return originalStderrWrite.apply(this, arguments);
-// };
+// Filter GUEST_VIEW_MANAGER_CALL errors and WebContents subframe errors from stderr/stdout
+const originalStderrWrite = process.stderr.write;
+const originalStdoutWrite = process.stdout.write;
+
+process.stderr.write = function(chunk, encoding, fd) {
+    const chunkStr = chunk?.toString() || '';
+    // Suppress GUEST_VIEW_MANAGER_CALL errors (ERR_ABORTED from webview navigation blocking)
+    if (chunkStr.includes('GUEST_VIEW_MANAGER_CALL') && (chunkStr.includes('ERR_ABORTED') || chunkStr.includes('(-3)'))) {
+        return true; // Drop this error
+    }
+    // Suppress WebContents subframe errors
+    if (chunkStr.includes('WebContents#did-fail-load') || chunkStr.includes('WebContents#did-fail-provisional-load')) {
+        const suppressCodes = [-3, -100, -101, -105];
+        if (chunkStr.includes('isMainFrame: false') || suppressCodes.some(code => chunkStr.includes(`errorCode: ${code}`))) {
+            return true; // Drop this error
+        }
+    }
+    return originalStderrWrite.apply(this, arguments);
+};
+
+process.stdout.write = function(chunk, encoding, fd) {
+    const chunkStr = chunk?.toString() || '';
+    // Suppress GUEST_VIEW_MANAGER_CALL errors (ERR_ABORTED from webview navigation blocking)
+    if (chunkStr.includes('GUEST_VIEW_MANAGER_CALL') && (chunkStr.includes('ERR_ABORTED') || chunkStr.includes('(-3)'))) {
+        return true; // Drop this error
+    }
+    // Suppress WebContents subframe errors
+    if (chunkStr.includes('WebContents#did-fail-load') || chunkStr.includes('WebContents#did-fail-provisional-load')) {
+        const suppressCodes = [-3, -100, -101, -105];
+        if (chunkStr.includes('isMainFrame: false') || suppressCodes.some(code => chunkStr.includes(`errorCode: ${code}`))) {
+            return true; // Drop this error
+        }
+    }
+    return originalStdoutWrite.apply(this, arguments);
+};
 
 process.on('uncaughtException', (err) => {
     if (err.code === 'EPIPE') {
@@ -263,21 +289,41 @@ app.on('certificate-error', (event, webContents, url, error, certificate, callba
 app.on('web-contents-created', (event, webContents) => {
     const suppressCodes = [-3, -100, -101, -105];
 
-    webContents.on('did-fail-provisional-load', (event, errorCode, errorDescription, validatedURL, isMainFrame, frameProcessId, frameRoutingId) => {
-        if (suppressCodes.includes(errorCode)) {
-            event.preventDefault();
-            return;
-        }
-        log.warn(`main @ did-fail-provisional-load: Error ${errorCode} - ${errorDescription} for URL: ${validatedURL}`);
-    });
+    // Store if we've already set up listeners to avoid duplicates
+    if (webContents._errorSuppressionSetup) return;
+    webContents._errorSuppressionSetup = true;
 
-    webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame, frameProcessId, frameRoutingId) => {
-        if (suppressCodes.includes(errorCode)) {
-            event.preventDefault();
-            return;
-        }
-        log.warn(`main @ did-fail-load: Error ${errorCode} - ${errorDescription} for URL: ${validatedURL}`);
-    });
+    // Set up listeners that persist across navigation
+    const setupErrorSuppression = () => {
+        // Remove old listeners first to avoid duplicates
+        webContents.removeAllListeners('did-fail-provisional-load');
+        webContents.removeAllListeners('did-fail-load');
+        
+        webContents.on('did-fail-provisional-load', (event, errorCode, errorDescription, validatedURL, isMainFrame, frameProcessId, frameRoutingId) => {
+            // Silently suppress subframe errors and common error codes
+            if (!isMainFrame || suppressCodes.includes(errorCode)) {
+                event.preventDefault();
+                return;
+            }
+            log.warn(`main @ did-fail-provisional-load: Error ${errorCode} - ${errorDescription} for URL: ${validatedURL}`);
+        });
+
+        webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame, frameProcessId, frameRoutingId) => {
+            // Silently suppress subframe errors and common error codes
+            if (!isMainFrame || suppressCodes.includes(errorCode)) {
+                event.preventDefault();
+                return;
+            }
+            log.warn(`main @ did-fail-load: Error ${errorCode} - ${errorDescription} for URL: ${validatedURL}`);
+        });
+    };
+
+    // Set up immediately
+    setupErrorSuppression();
+
+    // Re-setup on navigation to ensure listeners persist
+    webContents.on('did-start-navigation', setupErrorSuppression);
+    webContents.on('did-frame-navigate', setupErrorSuppression);
     
     // Handle renderer process crashes for specific webContents (V8 fatal errors, etc.)
     webContents.on('render-process-gone', (event, details) => {

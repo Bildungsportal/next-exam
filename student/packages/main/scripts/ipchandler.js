@@ -178,15 +178,25 @@ class IpcHandler {
                         // Exact match
                         if (targetHostname === allowedDomain) return true;
                         
-                        // Allow www. subdomain explicitly
-                        if (targetHostname === 'www.' + allowedDomain) return true;
+                        // Check if allowedDomain is a specific subdomain (contains dots)
+                        const isSpecificSubdomain = allowedDomain.includes('.');
                         
-                        // Allow other subdomains (e.g., sub.duden.de if duden.de is allowed)
-                        if (targetHostname.endsWith('.' + allowedDomain)) {
-                            const prefix = targetHostname.slice(0, -(allowedDomain.length + 1));
-                            // Validate prefix: must be valid subdomain name (alphanumeric and hyphens)
-                            if (prefix && !prefix.includes('.') && /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(prefix)) {
-                                return true;
+                        if (isSpecificSubdomain) {
+                            // If a specific subdomain is specified, only allow that exact subdomain and www. variant
+                            if (targetHostname === 'www.' + allowedDomain) return true;
+                            // Don't allow other subdomains when a specific one is specified
+                        } else {
+                            // If only base domain is specified (e.g., "orf.at"), allow all subdomains
+                            // Allow www. subdomain explicitly
+                            if (targetHostname === 'www.' + allowedDomain) return true;
+                            
+                            // Allow other subdomains (e.g., sub.duden.de if duden.de is allowed)
+                            if (targetHostname.endsWith('.' + allowedDomain)) {
+                                const prefix = targetHostname.slice(0, -(allowedDomain.length + 1));
+                                // Validate prefix: must be valid subdomain name (alphanumeric and hyphens)
+                                if (prefix && !prefix.includes('.') && /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(prefix)) {
+                                    return true;
+                                }
                             }
                         }
                     } catch (error) {

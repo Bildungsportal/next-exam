@@ -119,15 +119,17 @@ export default {
       this._onDidStop = () => { updateNav() }                         // after stop loading
       this.wv?.addEventListener('did-stop-loading', this._onDidStop)
 
-      // Suppress common WebView load errors
+      // Suppress common WebView load errors and subframe errors
       const suppressCodes = [-3, -100, -101, -105];
       this._onDidFailLoad = (event) => {
-        if (suppressCodes.includes(event.errorCode)) {
+        // Silently suppress subframe errors and common error codes
+        if (!event.isMainFrame || suppressCodes.includes(event.errorCode)) {
           event.preventDefault();
         }
       };
       this._onDidFailProvisionalLoad = (event) => {
-        if (suppressCodes.includes(event.errorCode)) {
+        // Silently suppress subframe errors and common error codes
+        if (!event.isMainFrame || suppressCodes.includes(event.errorCode)) {
           event.preventDefault();
         }
       };
