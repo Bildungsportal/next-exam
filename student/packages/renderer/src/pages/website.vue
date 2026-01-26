@@ -382,9 +382,9 @@ export default {
             // webview.addEventListener('did-navigate', this._onDidNavigate);
 
             // loading events to hide css manipulation
-            this._onDidStartLoading = () => { this.isLoading = true;   }; // Zeige das Overlay während des Ladens
+           // this._onDidStartLoading = () => { this.isLoading = true;   }; // Zeige das Overlay während des Ladens
             this._onDidStopLoading = () => {   this.isLoading = false;  };           // Verberge das Overlay, wenn das Laden gestoppt ist
-            webview.addEventListener('did-start-loading', this._onDidStartLoading);
+           // webview.addEventListener('did-start-loading', this._onDidStartLoading);
             webview.addEventListener('did-stop-loading', this._onDidStopLoading);
 
             this.wlanInfo = await ipcRenderer.invoke('get-wlan-info')
