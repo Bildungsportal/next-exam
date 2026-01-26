@@ -166,7 +166,7 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 window.addEventListener('unhandledrejection', event => {
   const reason = event?.reason;
   const msg = typeof reason === 'string' ? reason : reason && reason.message;
-  if (msg && msg.includes('GUEST_VIEW_MANAGER_CALL') && (msg.includes('object could not be cloned') || msg.includes('ERR_FAILED'))) {
+  if (msg && ( msg.includes('GUEST_VIEW_MANAGER_CALL') || msg.includes('ERR_FAILED'))) {
     event.preventDefault(); // swallow guest view clone errors and ERR_FAILED
     return;
   }

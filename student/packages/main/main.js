@@ -261,11 +261,22 @@ app.on('certificate-error', (event, webContents, url, error, certificate, callba
 
 // Handle WebContents load failures to prevent app crashes
 app.on('web-contents-created', (event, webContents) => {
+    const suppressCodes = [-3, -100, -101, -105];
+
+    webContents.on('did-fail-provisional-load', (event, errorCode, errorDescription, validatedURL, isMainFrame, frameProcessId, frameRoutingId) => {
+        if (suppressCodes.includes(errorCode)) {
+            event.preventDefault();
+            return;
+        }
+        log.warn(`main @ did-fail-provisional-load: Error ${errorCode} - ${errorDescription} for URL: ${validatedURL}`);
+    });
 
     webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame, frameProcessId, frameRoutingId) => {
-        // Log the error but don't crash the app
+        if (suppressCodes.includes(errorCode)) {
+            event.preventDefault();
+            return;
+        }
         log.warn(`main @ did-fail-load: Error ${errorCode} - ${errorDescription} for URL: ${validatedURL}`);
-
     });
     
     // Handle renderer process crashes for specific webContents (V8 fatal errors, etc.)

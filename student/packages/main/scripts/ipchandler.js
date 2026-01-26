@@ -115,29 +115,6 @@ class IpcHandler {
            
         }) 
 
-
-        ipcMain.handle('start-blocking-for-webview', (event, { guestId, allowedUrls }) => {
-            const guest = webContents.fromId(Number(guestId));
-            if (!guest || guest.isDestroyed?.()) return false;
-          
-            // Entferne alte Listener, um Doppel-Registrierungen zu vermeiden
-            guest.removeAllListeners('will-navigate');
-       
-            const allow = allowedUrls.map(s => String(s).toLowerCase());
-            guest.setWindowOpenHandler(({ url }) => {
-                const urlStr = String(url || '').toLowerCase();
-                if (allow.some(u => urlStr.includes(u))) { guest.loadURL(url); log.warn("ipchandler @ start-blocking-for-webview: allowed navigation to", url) }
-                else return { action: 'deny' };
-            });
-            
-            guest.on('will-navigate', (e, url) => {
-                const urlStr = String(url || '').toLowerCase();
-                if (!allow.some(u => urlStr.includes(u))) { e.preventDefault(); log.warn("ipchandler @ start-blocking-for-webview: blocked navigation to", url) }
-            });
-              
-            return true;
-        });
-
         // Helper function for common exception URLs (used by all exam modes)
         const checkCommonExceptions = (targetUrl) => {
             if (targetUrl.includes("login") && targetUrl.includes("Microsoft")) return true;
@@ -162,6 +139,84 @@ class IpcHandler {
 
             return false;
         };
+
+        ipcMain.handle('start-blocking-for-webview', (event, { guestId, allowedUrls }) => {
+            const guest = webContents.fromId(Number(guestId));
+            if (!guest || guest.isDestroyed?.()) return false;
+          
+            // Entferne alte Listener, um Doppel-Registrierungen zu vermeiden
+            guest.removeAllListeners('will-navigate');
+       
+            const allow = allowedUrls.map(s => String(s).toLowerCase());
+            
+            // Helper function to check if URL matches allowed domain (supports subdomains and paths)
+            const isUrlAllowed = (targetUrl) => {
+                if (!targetUrl) return false;
+                const urlStr = String(targetUrl).toLowerCase();
+                
+                // Check common exceptions first
+                if (checkCommonExceptions(urlStr)) return true;
+                
+                // Check each allowed URL
+                for (const allowedUrl of allow) {
+                    try {
+                        // Try to parse as URL to extract hostname
+                        const urlObj = new URL(targetUrl);
+                        const targetHostname = urlObj.hostname.toLowerCase();
+                        
+                        // Parse allowed URL to extract domain
+                        let allowedDomain = allowedUrl;
+                        if (allowedUrl.startsWith('http://') || allowedUrl.startsWith('https://')) {
+                            const allowedUrlObj = new URL(allowedUrl);
+                            allowedDomain = allowedUrlObj.hostname.toLowerCase();
+                        } else if (allowedUrl.includes('/')) {
+                            // If it's a path without protocol, extract domain part
+                            const parts = allowedUrl.split('/');
+                            allowedDomain = parts[0].toLowerCase();
+                        }
+                        
+                        // Exact match
+                        if (targetHostname === allowedDomain) return true;
+                        
+                        // Allow www. subdomain explicitly
+                        if (targetHostname === 'www.' + allowedDomain) return true;
+                        
+                        // Allow other subdomains (e.g., sub.duden.de if duden.de is allowed)
+                        if (targetHostname.endsWith('.' + allowedDomain)) {
+                            const prefix = targetHostname.slice(0, -(allowedDomain.length + 1));
+                            // Validate prefix: must be valid subdomain name (alphanumeric and hyphens)
+                            if (prefix && !prefix.includes('.') && /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(prefix)) {
+                                return true;
+                            }
+                        }
+                    } catch (error) {
+                        // If URL parsing fails, fall back to simple includes check for paths
+                        if (urlStr.includes(allowedUrl)) return true;
+                    }
+                }
+                
+                return false;
+            };
+            
+            guest.setWindowOpenHandler(({ url }) => {
+                const isAllowed = isUrlAllowed(url);
+                if (isAllowed) { 
+                    guest.loadURL(url); 
+                    log.warn("ipchandler @ start-blocking-for-webview: allowed navigation to", url) 
+                }
+                else return { action: 'deny' };
+            });
+            
+            guest.on('will-navigate', (e, url) => {
+                const isAllowed = isUrlAllowed(url);
+                if (!isAllowed) { 
+                    e.preventDefault(); 
+                    log.warn("ipchandler @ start-blocking-for-webview: blocked navigation to", url) 
+                }
+            });
+              
+            return true;
+        });
 
         // Unified IPC handler for webview blocking - supports website, eduvidual, forms, rdp modes
         ipcMain.handle('start-blocking-for-website-webview', (event, { guestId, mode, allowedDomain, baseUrl, moodleTestId, moodleDomain, gformsTestId }) => {

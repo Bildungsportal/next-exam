@@ -79,10 +79,24 @@ export default {
       lastAllowedUrl: '',          // track last allowedUrl
       disableNavigation: false,    // flag to keep buttons disabled
       _onDidStop: null,            // store listener reference for cleanup
-      _onDomReady: null            // store listener reference for cleanup
+      _onDomReady: null,           // store listener reference for cleanup
+      _onUnhandledRejection: null, // store unhandled rejection handler for cleanup
+      _onDidFailLoad: null,        // store did-fail-load handler for cleanup
+      _onDidFailProvisionalLoad: null // store did-fail-provisional-load handler for cleanup
     }
   },
   mounted() {
+    // Add unhandled rejection handler to catch WebView errors
+    this._onUnhandledRejection = (event) => {
+      const reason = event?.reason;
+      const message = typeof reason === 'string' ? reason : reason && reason.message;
+      if (message && message.includes('GUEST_VIEW_MANAGER_CALL')) {
+        event.preventDefault(); // Suppress WebView guest view manager errors
+        return;
+      }
+    };
+    window.addEventListener('unhandledrejection', this._onUnhandledRejection);
+    
     this.$nextTick(() => {
       this.wv = this.$refs.wv                                         // webview ref
       this.lastAllowedUrl = this.allowedUrl                     // store initial allowedUrl
@@ -105,6 +119,21 @@ export default {
       this._onDidStop = () => { updateNav() }                         // after stop loading
       this.wv?.addEventListener('did-stop-loading', this._onDidStop)
 
+      // Suppress common WebView load errors
+      const suppressCodes = [-3, -100, -101, -105];
+      this._onDidFailLoad = (event) => {
+        if (suppressCodes.includes(event.errorCode)) {
+          event.preventDefault();
+        }
+      };
+      this._onDidFailProvisionalLoad = (event) => {
+        if (suppressCodes.includes(event.errorCode)) {
+          event.preventDefault();
+        }
+      };
+      this.wv?.addEventListener('did-fail-load', this._onDidFailLoad);
+      this.wv?.addEventListener('did-fail-provisional-load', this._onDidFailProvisionalLoad);
+
       // open links in same WebView (target="_blank")
       this._onDomReady = () => {
         this.wv?.executeJavaScript(`
@@ -120,12 +149,23 @@ export default {
     })
   },
   unmounted() {
+    // Remove unhandled rejection handler
+    if (this._onUnhandledRejection) {
+      window.removeEventListener('unhandledrejection', this._onUnhandledRejection);
+    }
+    
     if (!this.wv) return                                            // guard
     if (this._onDidStop) {
       this.wv?.removeEventListener('did-stop-loading', this._onDidStop)
     }
     if (this._onDomReady) {
       this.wv?.removeEventListener('dom-ready', this._onDomReady)
+    }
+    if (this._onDidFailLoad) {
+      this.wv?.removeEventListener('did-fail-load', this._onDidFailLoad)
+    }
+    if (this._onDidFailProvisionalLoad) {
+      this.wv?.removeEventListener('did-fail-provisional-load', this._onDidFailProvisionalLoad)
     }
   },
   watch: {

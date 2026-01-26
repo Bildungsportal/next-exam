@@ -530,7 +530,7 @@ class WindowHandler {
                     this.examwindow.moveTop()
                     this.examwindow.focus()
                     
-                    // probably not needed because we disable missioncontrol anyways
+                    // probably not needed because we disable missioncontrol anyways - seems to interfere with kiosk mode on macos (again)
                     // this.examwindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
                     if (!this.isWayland){ this.checkWindowInterval.start() } // constantly check if the active window is the examwindow - if not, bring it to front
