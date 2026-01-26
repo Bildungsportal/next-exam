@@ -853,10 +853,11 @@ class WindowHandler {
                         this.mainwindow.allowexit = true;  // allow close flow
                         return;
                     }
-                    this.mainwindow.hide();
+                   
                     e.preventDefault();
                     await this.showMinimizeWarning()
-                    log.warn(`windowhandler @ createMainWindow: Minimizing Next-Exam to Systemtray`) 
+                    log.warn(`windowhandler @ createMainWindow: Minimizing Next-Exam to Systemtray`)  
+                    this.mainwindow.hide();
                     return
                 }
             }
