@@ -453,6 +453,11 @@ const __dirname = import.meta.dirname;
             if (studentstatus.fetchfiles === true){
                 this.requestFileFromServer(studentstatus.files)
             }
+            if (studentstatus.getmaterials === true){
+                if (WindowHandler.examwindow){  
+                    WindowHandler.examwindow.webContents.send('getmaterials')  // if we change group we need to get the materials again
+                }
+            }
             
             // this is an microsoft365 thing. check if exam mode is office, check if this is set - otherwise do not enter exammode - it will fail
             //set or update sharing link - it will be used in "microsoft365" exam mode
@@ -481,6 +486,9 @@ const __dirname = import.meta.dirname;
         
         /***********************************
          * SWITCH EXAM SECTION  START
+         * ATTENTION: move this to a separate function - it is too complex and should be split up
+         * in the future we well determine if section switch is handled by the teacher or by the student and act accordingly
+         * if handled by student the teacher stttus is ignored and the swich section function is called directly (probably move to ipchandler.js)
          */
 
         // if student is in locked state in exam mode
@@ -626,8 +634,6 @@ const __dirname = import.meta.dirname;
         /**
          * SWITCH EXAM SECTION  END
          ************************************/
-      
-
 
         if (serverstatus.screenslocked && !this.multicastClient.clientinfo.screenlock) {  this.activateScreenlock() }
         else if (!serverstatus.screenslocked ) { this.killScreenlock() }

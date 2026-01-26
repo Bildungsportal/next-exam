@@ -856,10 +856,14 @@ function defineMaterials(who) {
                 this.serverstatus.examSections[this.serverstatus.activeSection].groupB.allowedUrls.push(allowedUrl);
             }
 
-            this.setServerStatus()
+           
         }
       
-        if (!input.value) {   return;   } // no further processing if no files are selected
+        if (!input.value) { 
+            this.setStudentStatus({getmaterials: true}, 'all'); 
+            this.setServerStatus()
+            return;   
+        } // no further processing if no files are selected
 
         this.status(this.$t("dashboard.processingfiles"));
         const files = input.value;
@@ -900,7 +904,7 @@ function defineMaterials(who) {
                 console.error(`exammanagement @ defineMaterials: Error processing file ${file.name}:`, error);
             }
         }
-
+        this.setStudentStatus({getmaterials: true}, 'all'); 
         this.setServerStatus()
     });    
 }
@@ -1110,7 +1114,7 @@ function openAllowedUrl(allowedUrl){
     document.querySelector("#printPDF").style.display = 'none';
     document.querySelector("#closePDF").style.display = 'none';
     document.querySelector("#pdfembed").style.display = 'none';
-
+    document.querySelector("#pdfrenderer").style.display = 'none';
 }
 
 

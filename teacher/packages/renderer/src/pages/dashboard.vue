@@ -1120,6 +1120,8 @@ computed: {
                 if (result.isConfirmed) {
                     if (group === 'A') { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.examInstructionFiles.splice(index, 1); } 
                     else {               this.serverstatus.examSections[this.serverstatus.activeSection].groupB.examInstructionFiles.splice(index, 1); }
+                    this.setStudentStatus({getmaterials: true}, 'all'); 
+                    this.setServerStatus()
                 }
             })
 
