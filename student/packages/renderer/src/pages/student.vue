@@ -404,11 +404,11 @@ export default {
                     <div class=" m-2 mt-4"> 
                         <div class="input-group  m-1 mb-1"> 
                             <span class="input-group-text col-3" style="width:140px;">${this.$t("student.username")} </span>
-                            <input class="form-control" type=text id=localuser placehoder='Username'>
+                            <input class="form-control" type=text id=localuser placehoder='Username' required>
                         </div>
                         <div class="input-group m-1 mb-1"> 
                             <span class="input-group-text col-3" style="width:140px;">${this.$t("student.password")}</span>
-                            <input class="form-control" type=password id=localpassword placehoder='Password'>
+                            <input class="form-control" type=password id=localpassword placehoder='Password' required>
                         </div>
                     </div>
                     <hr id="spellcheckSeparator" style="display: block;">
@@ -428,12 +428,37 @@ export default {
                 focusConfirm: false,
                 icon: false,
                 didOpen:() => {
-                    document.getElementById("localuser").addEventListener("keypress", function(e) {
+                    const localUserElement = document.getElementById("localuser");
+                    const localPasswordElement = document.getElementById("localpassword");
+                    
+                    localUserElement.addEventListener("keypress", function(e) {
                          // var lettersOnly = /^[a-zA-Z ]+$/;
                         var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
                         var key = e.key || String.fromCharCode(e.which);
+                        // Allow Enter key to pass through
+                        if (e.key === 'Enter') { return; }
                         if (!lettersOnly.test(key)) { e.preventDefault(); }
                     });
+                    
+                    // Add Enter key listener to confirm dialog - attach to both input fields and document
+                    const swalInstance = this.$swal;
+                    const handleEnterKey = (e) => {
+                        if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+                            e.preventDefault();
+                            swalInstance.clickConfirm();
+                        }
+                    };
+                    
+                    // Add listener to document for general Enter key handling
+                    document.addEventListener('keydown', handleEnterKey);
+                    // Add listener directly to input fields to catch Enter when focused
+                    localUserElement.addEventListener('keydown', handleEnterKey);
+                    localPasswordElement.addEventListener('keydown', handleEnterKey);
+                    
+                    // Store handler reference for cleanup (will be cleaned up when dialog closes)
+                    this._enterKeyHandler = handleEnterKey;
+                    this._enterKeyHandlerUser = handleEnterKey;
+                    this._enterKeyHandlerPassword = handleEnterKey;
                     
                     const checkboxLT = document.getElementById('checkboxLT');
                     const checkboxSuggestions = document.getElementById('checkboxsuggestions');
@@ -487,6 +512,24 @@ export default {
                         }, 100);
                     }
                 },
+                didClose: () => {
+                    // Remove Enter key listener when dialog closes
+                    if (this._enterKeyHandler) {
+                        document.removeEventListener('keydown', this._enterKeyHandler);
+                        this._enterKeyHandler = null;
+                    }
+                    // Remove listeners from input fields if they still exist
+                    const localUserElement = document.getElementById("localuser");
+                    const localPasswordElement = document.getElementById("localpassword");
+                    if (localUserElement && this._enterKeyHandlerUser) {
+                        localUserElement.removeEventListener('keydown', this._enterKeyHandlerUser);
+                        this._enterKeyHandlerUser = null;
+                    }
+                    if (localPasswordElement && this._enterKeyHandlerPassword) {
+                        localPasswordElement.removeEventListener('keydown', this._enterKeyHandlerPassword);
+                        this._enterKeyHandlerPassword = null;
+                    }
+                },
                 preConfirm: () => {
                     // Save all input values before dialog closes (Electron 39 compatibility)
                     const localUserElement = document.getElementById('localuser');
@@ -495,7 +538,7 @@ export default {
                     const checkboxSuggestionsElement = document.getElementById('checkboxsuggestions');
                     const radioButtons = document.querySelectorAll('input[name="etesttype"]');
                     
-                    savedUsername = localUserElement ? localUserElement.value : '';
+                    savedUsername = localUserElement ? localUserElement.value.trim() : '';
                     savedPassword = localPasswordElement ? localPasswordElement.value : '';
                     savedLanguagetool = checkboxLTElement ? checkboxLTElement.checked : false;
                     savedSuggestions = checkboxSuggestionsElement ? checkboxSuggestionsElement.checked : false;
@@ -505,6 +548,16 @@ export default {
                             savedExammode = radio.value;
                         }
                     });
+                    
+                    // Validate mandatory fields
+                    if (!savedUsername || savedUsername === '') {
+                        this.$swal.showValidationMessage(this.$t("student.nouser") || 'Username is required');
+                        return false;
+                    }
+                    if (!savedPassword || savedPassword === '') {
+                        this.$swal.showValidationMessage(this.$t("student.nopin") || 'Password is required');
+                        return false;
+                    }
                 }
             }).then((result) => {
                 if (result.isConfirmed) { 

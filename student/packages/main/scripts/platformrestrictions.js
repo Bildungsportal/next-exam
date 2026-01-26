@@ -40,7 +40,7 @@ import { app, TouchBar, clipboard, globalShortcut} from 'electron'
 import config from '../config.js';
 import log from 'electron-log';
 import {SchedulerService} from './schedulerservice.ts'
-
+import os from 'os'
 const __dirname = import.meta.dirname;
 
 // unfortunately there is no convenient way for gnome-shell to un-set ALL shortcuts at once
@@ -557,8 +557,8 @@ function toggleMacOSLockdown(enable) {
     log.info(`platformrestrictions @ toggleMacOSLockdown: ${enable ? 'enable' : 'disable'} mission control lockdown`)
   
     const mcIds = [32, 33, 34, 35, 79, 80, 81, 82, 118, 119, 120, 121];
-    const plistPath = path.join(os.homedir(), 'Library/Preferences/com.apple.symbolichotkeys.plist');
-    const backupPath = path.join(os.tmpdir(), 'next_exam_hotkeys_backup.plist');
+    const plistPath = join(os.homedir(), 'Library/Preferences/com.apple.symbolichotkeys.plist');
+    const backupPath = join(os.tmpdir(), 'next_exam_hotkeys_backup.plist');
   
     if (enable) {
       // LOCKDOWN AKTIVIEREN
