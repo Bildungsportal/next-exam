@@ -47,7 +47,7 @@ const __dirname = import.meta.dirname;
 const gnomeKeybindings = [  
     'activate-window-menu','maximize-horizontally','move-to-side-n','move-to-workspace-8','switch-applications','switch-to-workspace-3','switch-windows-backward',
     'always-on-top','maximize-vertically','move-to-side-s','move-to-workspace-9','switch-applications-backward','  switch-to-workspace-4','toggle-above',
-    'begin-move','minimize','move-to-side-w','move-to-workspace-down','switch-group','switch-to-workspace-5','toggle-fullscreen',
+    'begin-move','minimize','move-to-side-w','move-to-workspacoe-down','switch-group','switch-to-workspace-5','toggle-fullscreen',
     'begin-resize','move-to-center','move-to-workspace-1','move-to-workspace-last','switch-group-backward','switch-to-workspace-6','toggle-maximized',
     'close','move-to-corner-ne','move-to-workspace-10','move-to-workspace-left','switch-input-source','switch-to-workspace-7','toggle-on-all-workspaces',
     'cycle-group','move-to-corner-nw','move-to-workspace-11','move-to-workspace-right','switch-input-source-backward  switch-to-workspace-8','toggle-shaded',
@@ -546,4 +546,83 @@ function disableRestrictions(){
     // TODO: undo restrictions mac (currently only touchbar which should be reset once we close next-exam)
 }
 
-export {enableRestrictions, disableRestrictions}
+
+
+/**
+ * disables/enables mission control, spaces and trackpad gestures
+ * @param {boolean} enable - true restores everything, false locks everything
+ */
+function toggleMacOSLockdown(enable) {
+    if (process.platform !== 'darwin') return;
+    log.info(`platformrestrictions @ toggleMacOSLockdown: ${enable ? 'enable' : 'disable'} mission control lockdown`)
+  
+    const mcIds = [32, 33, 34, 35, 79, 80, 81, 82, 118, 119, 120, 121];
+    const plistPath = path.join(os.homedir(), 'Library/Preferences/com.apple.symbolichotkeys.plist');
+    const backupPath = path.join(os.tmpdir(), 'next_exam_hotkeys_backup.plist');
+  
+    if (enable) {
+      // LOCKDOWN AKTIVIEREN
+      // 1. Backup nur erstellen, wenn es noch nicht existiert (Originalzustand bewahren)
+      // 2. Shortcuts deaktivieren
+      // 3. WICHTIG: killall -9 cfprefsd erzwingt das Neuladen unter Sequoia/Monterey
+      const hotkeyCommands = mcIds.map(id => 
+        `defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add ${id} "<dict><key>enabled</key><false/></dict>"`
+      ).join('; ');
+  
+      const gestureCommands = [
+        `defaults write com.apple.dock showMissionControlGestureEnabled -bool false`,
+        `defaults write com.apple.dock showAppExposeGestureEnabled -bool false`,
+        `defaults write com.apple.dock showDesktopGestureEnabled -bool false`
+      ].join('; ');
+  
+      const fullCommand = `
+        if [ ! -f "${backupPath}" ]; then cp "${plistPath}" "${backupPath}"; fi;
+        ${hotkeyCommands};
+        ${gestureCommands};
+        killall -9 cfprefsd;
+        sleep 1;
+        /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u;
+        killall Dock
+      `;
+  
+      childProcess.exec(fullCommand, (err) => {
+        if (err) console.error('Lockdown Enable Error:', err);
+      });
+  
+    } else {
+      // LOCKDOWN DEAKTIVIEREN (Wiederherstellen)
+      // 1. Wenn Backup existiert, Datei zurückkopieren und Backup löschen
+      // 2. Gesten wieder auf true setzen
+      // 3. Cache-Flush wie oben
+      const gestureCommands = [
+        `defaults write com.apple.dock showMissionControlGestureEnabled -bool true`,
+        `defaults write com.apple.dock showAppExposeGestureEnabled -bool true`,
+        `defaults write com.apple.dock showDesktopGestureEnabled -bool true`
+      ].join('; ');
+  
+      const fullCommand = `
+        if [ -f "${backupPath}" ]; then 
+          cp "${backupPath}" "${plistPath}"; 
+          rm "${backupPath}"; 
+        fi;
+        ${gestureCommands};
+        killall -9 cfprefsd;
+        sleep 1;
+        /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u;
+        killall Dock
+      `;
+      log.info('main @ toggleMacOSLockdown: Enable MissionContol');
+      childProcess.exec(fullCommand, (err) => {
+        if (err) console.error('Lockdown Disable Error:', err);
+      });
+    }
+  }
+  
+
+
+
+
+
+
+
+export {enableRestrictions, disableRestrictions, toggleMacOSLockdown}
