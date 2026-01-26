@@ -6,39 +6,32 @@
 const config = {
     development: true,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
     showdevtools: true,
+    useBundledJRE: true,
     bipIntegration: false,
     bipDemo: false,
 
     workdirectory : "",   // (desktop path + examdir)
     tempdirectory : "",   // (desktop path + 'tmp')
-    backupdirectory: false,  // (optional)
-    serverdirectory: 'EXAM-TEACHER',
+    homedirectory : "",   // set in main.ts
+    examdirectory : "",    // set after registering in ipcHandler
+    clientdirectory: 'EXAM-STUDENT',
 
     serverApiPort: 22422,  // this is needed to be reachable on the teachers pc for basic functionality
     multicastClientPort: 6024,  // only needed for exam autodiscovery
-    multicastServerClientPort: 6025,   // needed to find other exams in the network with the same name and prevent using the same exam name twice (confusion alert)
 
     multicastServerAdrr: '239.255.255.250',
-    hostip: "0.0.0.0",       // server.js
+    hostip: "",       // server.js
     gateway: true,
-    examServerList: {},
-    accessToken: false,
-    buildforWEB: false,
+    electron: false,
+    virtualized: false,
     isPuavo: false,
     
-    exammodes: {
-        rdp: true,
-        website: true,
-        gforms: true,
-        eduvidual: true,
-        editor: true,
-        math: true,
-        microsoft365: true,
-        activesheets: false
-    },
-
     version: '1.1.0.18',
-    buildDate: '20260105',
+<<<<<<< HEAD:student/packages/main/config.js
+    buildDate: '20251212',
+=======
+    buildDate: '20260119',
+>>>>>>> 91bccce18460f62abc119b1408e74334412cc8fa:student/src-electron/main/config.js
     buildNumber: '18',
     info: 'Release'
 }
