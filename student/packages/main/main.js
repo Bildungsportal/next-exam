@@ -414,12 +414,12 @@ async function runParentProcessCheck() {
 
 app.whenReady()
 .then(async ()=>{
-
+    
     nativeTheme.themeSource = 'light'  // prevent theme settings from being adopted from windows
     session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
     
-    toggleMacOSLockdown(true);
+    //toggleMacOSLockdown(true);
    
     /******* Create main window *******/
     WindowHandler.createMainWindow()
@@ -452,8 +452,35 @@ app.whenReady()
     globalShortcut.register('CommandOrControl+P', () => {});  //change screen layout
     globalShortcut.register('Alt+Left', () => {  return false });  // Navigation attempt blocked
 
-
-  
-
 })
 
+
+
+import { systemPreferences } from 'electron'
+import { powerMonitor } from 'electron'
+import { spawn } from 'child_process'
+
+systemPreferences.subscribeWorkspaceNotification( 'NSWorkspaceActiveSpaceDidChangeNotification', () => {
+    console.log("erwischt deskopswitch")
+  }
+)
+
+powerMonitor.on('lock-screen', () => {
+    console.log("erwischt lock")
+})
+
+powerMonitor.on('unlock-screen', () => {
+    console.log("erwischt unlock")
+})
+
+const logProcess = spawn('log', [
+    'stream', 
+    '--predicate', 'subsystem == "com.apple.dock" AND category == "missioncontrol"',
+    '--level', 'default'
+  ])
+  
+logProcess.stdout.on('data', (data) => {
+    const line = data.toString()
+    if (line.includes('mode 0')) {      console.log('Signal erwischt: Mission Control START') } 
+    else if (line.includes('mode 1')) { console.log('Signal erwischt: Mission Control STOP') }
+  })

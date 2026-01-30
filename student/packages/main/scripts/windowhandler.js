@@ -835,11 +835,13 @@ class WindowHandler {
             resizable: false, // verhindert das Ändern der Größe  
             fullscreenable: false, // verhindert den Vollbildmodus - wichtig für macos denn wenn auf macos das mainwindow auf fullscreen ist greift beim examwindow der kiosk mode nicht  - electron bug (needs example code): >> https://github.com/electron/electron/issues/44755
             show: true,
-            visibleOnAllWorkspaces: true,
+            //visibleOnAllWorkspaces: true,
+            
+           
             webPreferences: {
                 preload: join(__dirname, '../preload/preload.cjs'),
                 spellcheck: false,
-                backgroundThrottling: false  // Prevent throttling when window is in background
+                backgroundThrottling: true  // Prevent throttling when window is in background
             }
         })
 
@@ -867,6 +869,10 @@ class WindowHandler {
         this.mainwindow.removeMenu()
         this.mainwindow.focus()
         this.mainwindow.moveTop()
+        this.mainwindow.setHiddenInMissionControl(true)
+
+        //this.mainwindow.setKiosk(true)
+
 
         if (app.isPackaged || process.env["DEBUG"]) {
             const filePath = join(__dirname, '../renderer/index.html')

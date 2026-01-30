@@ -1128,6 +1128,37 @@ export default {
     async mounted() {  
         document.querySelector("#statusdiv").style.visibility = "hidden";
         
+
+
+this.lastFrameTime = performance.now(); // Initialize timing
+
+const checkFrameGap = () => {
+  const currentTime = performance.now(); // Get high-res timestamp
+  const delta = currentTime - this.lastFrameTime; // Calculate time since last frame
+
+
+
+  if (delta > 200) { // Threshold for macOS occlusion/suspension
+   
+    this.$swal({
+      title: 'Ausbruch erkannt!',
+      text: `Die App wurde für ${Math.round(delta)}ms unterbrochen.`,
+      icon: 'warning',
+      confirmButtonText: 'Verstanden'
+    });
+  }
+
+  this.lastFrameTime = currentTime; // Update last frame reference
+  requestAnimationFrame(checkFrameGap); // Schedule next frame check
+};
+
+requestAnimationFrame(checkFrameGap); // Start the loop
+
+
+
+
+
+
         this.isLoading = false;
 
         // Focus username input field when component is mounted
