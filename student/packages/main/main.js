@@ -493,9 +493,9 @@ systemPreferences.subscribeNotification('com.apple.dock.expose.start', () => {
 })
 
 
-const log = spawn('log', ['stream', '--predicate', 'subsystem == "com.apple.dock" AND category == "missioncontrol"'])
+const logx = spawn('log', ['stream', '--predicate', 'subsystem == "com.apple.dock" AND category == "missioncontrol"'])
 
-log.stdout.on('data', (data) => {
+logx.stdout.on('data', (data) => {
   if (data.toString().includes('mode')) {
     console.log('Mission Control Event erkannt') // Triggered on any mode change // English comment
   }
