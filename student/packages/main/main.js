@@ -484,3 +484,19 @@ logProcess.stdout.on('data', (data) => {
     if (line.includes('mode 0')) {      console.log('Signal erwischt: Mission Control START') } 
     else if (line.includes('mode 1')) { console.log('Signal erwischt: Mission Control STOP') }
   })
+
+
+
+
+systemPreferences.subscribeNotification('com.apple.dock.expose.start', () => {
+  console.log('ERWISCHT: Dock Expose START') // Direct link to dock-visibility log // English comment
+})
+
+
+const log = spawn('log', ['stream', '--predicate', 'subsystem == "com.apple.dock" AND category == "missioncontrol"'])
+
+log.stdout.on('data', (data) => {
+  if (data.toString().includes('mode')) {
+    console.log('Mission Control Event erkannt') // Triggered on any mode change // English comment
+  }
+})
