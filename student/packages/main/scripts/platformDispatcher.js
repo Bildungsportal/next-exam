@@ -39,14 +39,15 @@ const __dirname = import.meta.dirname;
 class PlatformDispatcher {
   constructor() {
 
-    this._platform = process.platform;
+    this.platform = process.platform;
     this._arch = process.arch;
     this._env = process.env;
-    
-  
+
     this.messages = []
     this.arch = this._normalizeArch();
     this.displayServer = this._getDisplayServer();
+    this.isKDE = this._isKDE();
+    this.isGNOME = this._isGNOME();
     this.flameshot = this._getVersion('flameshot');
     this.imagemagick = this._getVersion('convert');
     this.imVersion = this._getImageMagickVersion();
@@ -87,9 +88,9 @@ class PlatformDispatcher {
   }
 
   _detectJREId() {
-    if (this._platform === 'linux') return 'minimal-jre-11-lin';
-    if (this._platform === 'win32') return 'minimal-jre-11-win';
-    if (this._platform === 'darwin') {
+    if (this.platform === 'linux') return 'minimal-jre-11-lin';
+    if (this.platform === 'win32') return 'minimal-jre-11-win';
+    if (this.platform === 'darwin') {
       return this._arch === 'arm64' ? 'minimal-jre-11-mac-arm64' : 'minimal-jre-11-mac';
     }
   }
@@ -126,7 +127,7 @@ class PlatformDispatcher {
     else {  // use system jre
       // Try to find Java installation using which/where command
       try {
-        const javaCommand = this._platform === 'win32' ? 'where java' : 'which java';
+        const javaCommand = this.platform === 'win32' ? 'where java' : 'which java';
         const javaPath = execSync(javaCommand, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
         
         if (javaPath) {
@@ -151,16 +152,16 @@ class PlatformDispatcher {
   }
 
   _resolveJavaBin() {
-    switch (this._platform) {
+    switch (this.platform) {
       case 'darwin': return ['bin', 'java'];
       case 'win32': return ['bin', 'javaw.exe'];
       case 'linux': return ['bin', 'java'];
-      default: this._fail(`unsupported platform: ${this._platform}`);
+      default: this._fail(`unsupported platform: ${this.platform}`);
     }
   }
 
   _getDisplayServer() {
-    if (this._platform !== 'linux') return 'n/a';
+    if (this.platform !== 'linux') return 'n/a';
     if (this._env.XDG_SESSION_TYPE === 'wayland') return 'wayland';
     if (this._env.XDG_SESSION_TYPE === 'x11' || this._env.DISPLAY) return 'x11';
     return 'unknown';
@@ -188,7 +189,7 @@ class PlatformDispatcher {
   }
 
   _getWorkerFileName() {
-    return this._platform === 'linux' ? 'imageWorkerLinux.mjs' : 'imageWorkerSharp.mjs';
+    return this.platform === 'linux' ? 'imageWorkerLinux.mjs' : 'imageWorkerSharp.mjs';
   }
 
   _getWorkerURL() {
@@ -267,7 +268,7 @@ class PlatformDispatcher {
   }
 
   _getDesktopPath() {
-    if (this._platform === 'win32') {
+    if (this.platform === 'win32') {
       return path.join(process.env['USERPROFILE'], 'Desktop');
     } else {
       return path.join(os.homedir(), 'Desktop');
@@ -296,7 +297,7 @@ class PlatformDispatcher {
   }
 
   _getUseWorker() {
-    if (this._platform === 'linux') {
+    if (this.platform === 'linux') {
       return this._imagemagickAvailable();
     } else {
       return true;
@@ -304,7 +305,7 @@ class PlatformDispatcher {
   }
 
   _getScreenshotAbility() {
-    if (this._platform === 'linux') {
+    if (this.platform === 'linux') {
       if ((this._isGNOME() || this._isUNITY()) && this.isWayland()) {
         this.messages.push("platformDispatcher @ _getScreenshotAbility: GNOME/Unity + Wayland – ScreenshotAbility set to false");
         return false;

@@ -869,7 +869,7 @@ class WindowHandler {
         this.mainwindow.removeMenu()
         this.mainwindow.focus()
         this.mainwindow.moveTop()
-        this.mainwindow.setHiddenInMissionControl(true)
+        //this.mainwindow.setHiddenInMissionControl(true)
 
         //this.mainwindow.setKiosk(true)
 

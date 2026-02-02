@@ -1,628 +1,112 @@
 /**
  * @license GPL LICENSE
  * Copyright (c) 2021 Thomas Michael Weissel
- * 
- * This program is free software: you can redistribute it and/or modify it 
+ *
+ * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
  * You should have received a copy of the GNU General Public License along with this program.
  * If not, see <http://www.gnu.org/licenses/>
  */
 
-
 /**
  * most of the keyboard restrictions could be handled by "iohook" for all platforms
  * unfortunalety it's not yet released for node v16.x and electron v16.x  (also it's "big sur" intel only on macs)
  * https://wilix-team.github.io/iohook/installation.html
- * 
+ *
  * "node-global-key-listener" would be another solution for windows and macos (although it requires "accessability" permissions on mac)
  * but for now it seems the module can not run in a final electron build
  * https://github.com/LaunchMenu/node-global-key-listener/issues/18
- * 
- * hardcoding the keyboardshortcuts we want to capture into iohook(or n-g-k-l) and manually compiling it for mac and windows could be done - (but not until i get paid for this amount of work ;-) 
+ *
+ * hardcoding the keyboardshortcuts we want to capture into iohook(or n-g-k-l) and manually compiling it for mac and windows could be done - (but not until i get paid for this amount of work ;-)
  */
 
-
 /**
- * the next best solution i came up with is to kill all of the shells - starting with explorer.exe because its absolutely impossible to 
+ * the next best solution i came up with is to kill all of the shells - starting with explorer.exe because its absolutely impossible to
  * deactivate this nasty "windows" button or 3FingerSlideUp Gesture in windows 11 - you could edit the registry and reboot but thats obviously not what we want
  */
 
-import { join } from 'path'
-import childProcess from 'child_process'   //needed to run bash commands on linux 
-import { app, TouchBar, clipboard, globalShortcut} from 'electron'
+import childProcess from 'child_process';
+import { clipboard, globalShortcut } from 'electron';
 import config from '../config.js';
 import log from 'electron-log';
-import {SchedulerService} from './schedulerservice.ts'
-import os from 'os'
-const __dirname = import.meta.dirname;
+import { SchedulerService } from './schedulerservice.ts';
+import platformDispatcher from './platformDispatcher.js';
+import { enableLinuxRestrictions, disableLinuxRestrictions } from './restrictions/lin.js';
+import { enableWindowsRestrictions, disableWindowsRestrictions } from './restrictions/win.js';
+import { enableMacRestrictions, disableMacRestrictions, toggleMacOSLockdown as toggleMacOSLockdownImpl } from './restrictions/mac.js';
 
-// unfortunately there is no convenient way for gnome-shell to un-set ALL shortcuts at once
-const gnomeKeybindings = [  
-    'activate-window-menu','maximize-horizontally','move-to-side-n','move-to-workspace-8','switch-applications','switch-to-workspace-3','switch-windows-backward',
-    'always-on-top','maximize-vertically','move-to-side-s','move-to-workspace-9','switch-applications-backward','  switch-to-workspace-4','toggle-above',
-    'begin-move','minimize','move-to-side-w','move-to-workspacoe-down','switch-group','switch-to-workspace-5','toggle-fullscreen',
-    'begin-resize','move-to-center','move-to-workspace-1','move-to-workspace-last','switch-group-backward','switch-to-workspace-6','toggle-maximized',
-    'close','move-to-corner-ne','move-to-workspace-10','move-to-workspace-left','switch-input-source','switch-to-workspace-7','toggle-on-all-workspaces',
-    'cycle-group','move-to-corner-nw','move-to-workspace-11','move-to-workspace-right','switch-input-source-backward  switch-to-workspace-8','toggle-shaded',
-    'cycle-group-backward','move-to-corner-se','move-to-workspace-12','move-to-workspace-up','switch-panels','switch-to-workspace-9','unmaximize',
-    'cycle-panels','move-to-corner-sw','move-to-workspace-2','panel-main-menu','switch-panels-backward','switch-to-workspace-down',      
-    'cycle-panels-backward','move-to-monitor-down','move-to-workspace-3','panel-run-dialog','switch-to-workspace-1','switch-to-workspace-last',              
-    'cycle-windows','move-to-monitor-left','move-to-workspace-4','raise','switch-to-workspace-10','switch-to-workspace-left',    
-    'cycle-windows-backward','move-to-monitor-right','move-to-workspace-5','raise-or-lower','switch-to-workspace-11','switch-to-workspace-right',   
-    'lower','move-to-monitor-up','move-to-workspace-6','set-spew-mark','switch-to-workspace-12','switch-to-workspace-up',     
-    'maximize','move-to-side-e','move-to-workspace-7','show-desktop','switch-to-workspace-2','switch-windows'  
-]
-const gnomeShellKeybindings = ['focus-active-notification','open-application-menu','screenshot','screenshot-window','shift-overview-down',
-    'shift-overview-up','switch-to-application-1','switch-to-application-2','switch-to-application-3','switch-to-application-4','switch-to-application-5',
-    'switch-to-application-6','switch-to-application-7','switch-to-application-8','switch-to-application-9','show-screenshot-ui','show-screen-recording-ui',
-    'toggle-application-view','toggle-message-tray','toggle-overview'  ]
-
-const gnomeMutterKeybindings = ['rotate-monitor','switch-monitor','tab-popup-cancel','tab-popup-select','toggle-tiled-left','toggle-tiled-right']
-
-const gnomeDashToDockKeybindings = ['app-ctrl-hotkey-1','app-ctrl-hotkey-10','app-ctrl-hotkey-2','app-ctrl-hotkey-3','app-ctrl-hotkey-4','app-ctrl-hotkey-5',
-    'app-ctrl-hotkey-6','app-ctrl-hotkey-7','app-ctrl-hotkey-8','app-ctrl-hotkey-9',
-    'app-hotkey-1','app-hotkey-10','app-hotkey-2','app-hotkey-3','app-hotkey-4','app-hotkey-5','app-hotkey-6','app-hotkey-7','app-hotkey-8','app-hotkey-9',
-    'app-shift-hotkey-1','app-shift-hotkey-10','app-shift-hotkey-2','app-shift-hotkey-3','app-shift-hotkey-4','app-shift-hotkey-5',
-    'app-shift-hotkey-6','app-shift-hotkey-7','app-shift-hotkey-8','app-shift-hotkey-9','shortcut']
-
-const gnomeWaylandKeybindings = ['switch-to-session-1','switch-to-session-2','switch-to-session-3','switch-to-session-4','switch-to-session-5','switch-to-session-6','switch-to-session-7','switch-to-session-8','switch-to-session-9','switch-to-session-10','switch-to-session-11','switch-to-session-12' ]
-
-let clipboardInterval
+let clipboardInterval;
 let configStore = {
     linux: {},
     windows: {},
     macos: {}
-}
+};
 
 // list of apps we do not want to run in background
-// Browsers first to ensure they are killed before explorer.exe
 const appsToClose = ['Google Chrome', 'chrome', 'google-chrome', 'Microsoft Edge', 'msedge', 'firefox', 'safari', 'brave', 'opera', 'chatgpt', 'ChatGPT', 'NortonSecurity', 'NAV', 'Teams', 'ms-teams', 'zoom.us', 'Microsoft Teams', 'discord', 'zoom', 'teams', 'teamviewer', 'skypeforlinux', 'skype', 'anydesk'];
 
-let isKDE = false
-let isGNOME = false
+async function enableRestrictions(winhandler) {
+    if (config.development) { return; }
 
-childProcess.exec('echo $XDG_CURRENT_DESKTOP', (error, stdout, stderr) => {
-    if (error) {
-      console.error(`exec error: ${error}`);
-      return;
-    } 
-    if (stdout.trim() === 'KDE') { isKDE = true } 
-    if (stdout.trim() === 'GNOME') { isGNOME = true }
-});
+    log.info("platformrestrictions @ enableRestrictions: enabling platform restrictions");
 
+    globalShortcut.register('CommandOrControl+V', () => { console.log('no clipboard'); });
+    globalShortcut.register('CommandOrControl+Shift+V', () => { console.log('no clipboard'); });
+    globalShortcut.register('CommandOrControl+X', () => { console.log('no clipboard'); });
+    globalShortcut.register('CommandOrControl+C', () => { console.log('no clipboard'); });
 
+    clipboard.clear();
+    clipboardInterval = new SchedulerService(() => { clipboard.clear(); }, 1000);
+    clipboardInterval.start();
 
-
-async function enableRestrictions(winhandler){
-    if (config.development) {return}
-    
-    log.info("platformrestrictions @ enableRestrictions: enabling platform restrictions")
-
-    globalShortcut.register('CommandOrControl+V', () => {console.log('no clipboard')});
-    globalShortcut.register('CommandOrControl+Shift+V', () => {console.log('no clipboard')});
-    globalShortcut.register('CommandOrControl+X', () => {console.log('no clipboard')});
-    globalShortcut.register('CommandOrControl+C', () => {console.log('no clipboard')});
-    
-    clipboard.clear()  //this should clean the clipboard for the electron app
-  
-    clipboardInterval = new SchedulerService( ()=> {  clipboard.clear();}  , 1000)
-    clipboardInterval.start()
-
-
-    /********************
-     * L I N U X
-     ****************************************/
-    if (process.platform === 'linux') {
-        
-        try {
-            appsToClose.forEach(app => {
-                // First check if process exists, then kill it
-                // Use pgrep to find processes by name (case-insensitive, process name only, not full command line)
-                // Without -f flag, pgrep only searches process names, not command lines
-                // This avoids killing processes that only contain the app name in their command line (e.g. Cursor containing "chrome")
-                childProcess.exec(`pgrep -i "${app}"`, (pgrepError, stdout) => {
-                    if (!pgrepError && stdout && stdout.trim()) {
-                        // Process found, now kill it
-                        childProcess.exec(`pgrep -i "${app}" | xargs -r kill -9`, (killError) => {
-                            if (!killError) {
-                                log.info(`platformrestrictions @ enableRestrictions: closed ${app}`);
-                            }
-                        });
-                    }
-                    // If pgrep returns error or no output, process doesn't exist - no logging needed
-                });
-            });
-        } catch (err) {
-            // silently ignore errors
-        }
-
-        //////////////
-        // PLASMASHELL
-        //////////////
-
-        if (isKDE) {
-            log.info("platformrestrictions @ enableRestrictions: enabling KDE restrictions")
-            // read and save current config
-            childProcess.execFile('kreadconfig5', ['--file', 'kwinrc', '--group', 'Desktops', '--key', 'Number'], (error, stdout, stderr) => {
-                if (error) {
-                    log.error(`platformrestrictions @ enableRestrictions (kreadconfig): ${error.message}`);
-                    configStore.linux.numberOfDesktops = 1
-                    return;
-                }
-                configStore.linux.numberOfDesktops = stdout.trim();
-            });
-            //disable META Key for Launchermenu 
-
-            log.info(`platformrestrictions @ enableRestrictions: reconfiguring kwin`); 
-            
-            childProcess.execFile('kwriteconfig5', ['--file', `${config.homedirectory}/.config/kwinrc`,'--group', 'ModifierOnlyShortcuts','--key','Meta','""'])              
-            childProcess.execFile('kwriteconfig5', ['--file',`kwinrc`,'--group','Desktops','--key','Number','1'])  //remove virtual desktops
-            childProcess.execFile('qdbus', ['org.kde.KWin','/KWin','reconfigure'])   // das reloaded alle configs und würde auch andere settings neu laden so wie kgloalaccel und kliper
-            childProcess.execFile('qdbus', ['org.kde.KWin','/KWin','setCurrentDesktop','1'])  // setzt die aktuelle desktop auf 1
-           
-           
-            log.info(`platformrestrictions @ enableRestrictions: disabling effects`  )
-            childProcess.execFile('qdbus', ['org.kde.KWin','/Effects','org.kde.kwin.Effects.unloadEffect', 'desktopgrid']);
-            childProcess.execFile('qdbus', ['org.kde.KWin','/Effects','org.kde.kwin.Effects.unloadEffect', 'screenedge']);
-            childProcess.execFile('qdbus', ['org.kde.KWin','/Effects','org.kde.kwin.Effects.unloadEffect', 'overview']);
-
-            log.info(`platformrestrictions @ enableRestrictions: additional tty's`  )
-            childProcess.execFile('kwriteconfig5', ['--file', 'kxkbrc', '--group', 'Layout', '--key', 'Options', 'srvrkeys:none'])
-            childProcess.execFile('dbus-send', ['--session',  '--type=signal', '--dest=org.kde.keyboard', '/Layouts', 'org.kde.keyboard.reloadConfig'])
-
-
-            log.info(`platformrestrictions @ enableRestrictions: clearing clipboard history`  )
-            childProcess.execFile('qdbus', ['org.kde.klipper' ,'/klipper', 'org.kde.klipper.klipper.clearClipboardHistory']) // Clear Clipboard history 
-            
-            setTimeout( () => {  //needs timeout otherwise kwin /reconfigure will reset it
-                log.info(`platformrestrictions @ enableRestrictions: disabling global keyboardshortcuts`  )
-                childProcess.execFile('qdbus', ['org.kde.kglobalaccel' ,'/kglobalaccel', 'org.kde.KGlobalAccel.blockGlobalShortcuts', 'true']) // Temporarily deactivate ALL global keyboardshortcuts 
-            }, 2000)
-            
-        }
-  
-        
-
-   
-       
-
-
-        //////////
-        // GNOME
-        ///////////
-
-        //we probably should do it the "windows - way" and just kill gnomeshell for as long as the exam-mode is active
-        //but it seems there is no convenient way to kill gnome-shell without all applications started on top of it 
-         // for gnome3 we need to set every key individually => reset will obviously set defaults (so we may mess up customized shortcuts here)
-        // possible fix: instead of set > reset we could use get - set - set.. first get the current bindings and store them - then set to nothing - then set to previous setting
-            
-        if (isGNOME) {
-            log.info("platformrestrictions @ enableRestrictions: enabling GNOME restrictions")
-            try {
-                for (let binding of gnomeKeybindings){
-                    childProcess.execFile('gsettings', ['set' ,'org.gnome.desktop.wm.keybindings', `${binding}`, `['']`])
-                }
-                for (let binding of gnomeWaylandKeybindings){
-                    childProcess.execFile('gsettings', ['set' ,'org.gnome.mutter.wayland.keybindings', `${binding}`, `['']`])
-                }
-                for (let binding of gnomeShellKeybindings){
-                    childProcess.execFile('gsettings', ['set' ,'org.gnome.shell.keybindings', `${binding}`, `['']`])
-                }
-                for (let binding of gnomeMutterKeybindings){
-                    childProcess.execFile('gsettings', ['set' ,'org.gnome.mutter.keybindings', `${binding}`, `['']`])
-                }
-                for (let binding of gnomeDashToDockKeybindings){  // we could use gsettings reset-recursively org.gnome.shell to reset everything
-                    childProcess.execFile('gsettings', ['set' ,'org.gnome.shell.extensions.dash-to-dock', `${binding}`, `['']`])
-                }
-                childProcess.execFile('gsettings', ['set' ,'org.gnome.mutter', `overlay-key`, `''`])  // kind of the menu key
-                childProcess.exec('gsettings set org.gnome.mutter dynamic-workspaces false')  // deactivate multiple desktops
-                childProcess.exec('gsettings set org.gnome.desktop.wm.preferences num-workspaces 1')  
-            }
-            catch(err){ log.error(`platformrestrictions @ enableRestrictions (gsettings): ${err}`); }
-        }
-
-        try { // clear clipboard  (this will fail unless xclip or xsell are installed)
-            childProcess.execFile('wl-copy', ['-c'])   // wayland
-            childProcess.exec('xclip -i /dev/null')
-            childProcess.exec('xclip -selection clipboard')
-            childProcess.exec('xsel -bc')
-        }
-        catch(err){ log.error(`platformrestrictions @ enableRestrictions (gsettings): ${err}`) }
-        
-        
+    if (platformDispatcher.platform === 'linux') {
+        enableLinuxRestrictions(configStore, appsToClose, platformDispatcher.isKDE, platformDispatcher.isGNOME);
     }
 
-
-
-
-
-
-
-
-    /**
-     *  W I N D O W S
-     ****************************************/
-    if (process.platform === 'win32') {
-            
-        //block important keyboard shortcuts (disable-shortcuts.exe is a selfmade C application - shortcuts are hardcoded there - need to rebuild if adding shortcuts)
-        try {    
-            let executable1 = join(__dirname, '../../public/disable-shortcuts.exe')
-            childProcess.execFile(executable1, [], { detached: true, stdio: 'ignore', shell: false, windowsHide: true})
-            log.info("platformrestrictions @ enableRestrictions: windows shortcuts disabled")
-            //subprocess.unref();  //completely detach
-        } catch (err){log.error(`platformrestrictions @ enableRestrictions (win shortcuts): ${err}`);}
-        
-
-        //clear clipboard - stop copy before and paste after examstart
-        // try {
-        //     let executable0 = join(__dirname, '../../public/clear-clipboard.bat')
-        //     childProcess.execFile(executable0, [], (error, stdout, stderr) => {
-        //         if (error)  {  
-        //             log.error(`platformrestrictions @ enableRestrictions (win clipboard): ${error.message}`);
-        //         }
-        //     })
-        // } catch (err){log.error(`platformrestrictions @ enableRestrictions (win clipboard): ${err}`);}
-       
-
-        // Close all apps first, then kill explorer.exe
-        // Use for...of loop to process apps sequentially
-        try {
-            for (const app of appsToClose) {
-                // Escape app name for PowerShell - replace single quotes with double single quotes
-                const escapedApp = app.replace(/'/g, "''");
-                // PowerShell command: set app name as variable first to avoid string interpolation issues
-                // Uses -ErrorAction SilentlyContinue to handle access denied and other errors gracefully
-                const command = `powershell -NoProfile -Command "$appName = '${escapedApp}'; try { $procs = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -ilike ('*' + $appName + '*') }; if ($procs -and $procs.Count -gt 0) { $procs | Stop-Process -Force -ErrorAction SilentlyContinue; Write-Output 'killed' } } catch { }"`;
-                
-                // Wait for each app to be closed before moving to the next
-                await new Promise((resolveApp) => {
-                    childProcess.exec(command, (error, stdout, stderr) => {
-                        if (!error && stdout && stdout.trim().includes('killed')) { // success - process was found and killed
-                            log.info(`platformrestrictions @ enableRestrictions: closed ${app}`);
-                        }
-                        // no process found or other errors are silently ignored
-                        resolveApp(); // Resolve regardless of success/failure
-                    });
-                });
-            }
-        } catch (err) {
-            // silently ignore errors
-        }
-          
-
-
-        //must be tested because its dangerous - i potentially kills unwanted processes because it searches for substrings in process names
-        // try {
-        //     appsToClose.forEach(app => {
-        //         const command = `powershell -Command "Get-Process | Where-Object { $_.Name -like '*${app}*' } | ForEach-Object { $_.Kill() }"`;
-        //         childProcess.exec(command, (error, stdout, stderr) => {
-        //             if (error) {
-        //                 log.error(`Error closing app: ${app}`, error);
-        //             }
-        //             if (stderr) {
-        //                 log.error(`stderr: ${stderr}`);
-        //             }
-        //             if (stdout) {
-        //                 log.info(`stdout: ${stdout}`);
-        //             }
-        //         });
-        //     });
-        // } catch (err) {
-        //     log.error(`platformrestrictions @ enableRestrictions (PowerShell): ${err}`);
-        // }
-
-
-
-
-        // kill EXPLORER windowsbutton and swipe gestures - kill everything else
-        // Wait for examwindow to exist before killing explorer.exe (apps are already closed above)
-        if (!winhandler) {
-            log.warn(`platformrestrictions @ enableRestrictions: winhandler is not provided - skipping explorer.exe kill`);
-        } else {
-            let retryCount = 0;
-            const maxRetries = 100; // 10 seconds max wait (100 * 100ms)
-            const killExplorerWhenWindowExists = () => {
-                if (winhandler.examwindow && !winhandler.examwindow.isDestroyed?.()) {
-                    try {
-                        childProcess.exec('taskkill /f /im explorer.exe', (error, stdout, stderr) => {
-                            if (!error && stdout) {
-                                // Only log if taskkill was successful (process found and killed)
-                                log.info(`platformrestrictions @ enableRestrictions: closed explorer.exe`);
-                            }
-                            // If error (e.g. process not found), silently ignore - no logging needed
-                        });
-                    } catch (err){
-                        // silently ignore errors
-                    }
-                } else if (retryCount < maxRetries) {
-                    // Retry after 100ms if examwindow doesn't exist yet
-                    retryCount++;
-                    setTimeout(killExplorerWhenWindowExists, 100);
-                } else {
-                    // Timeout reached - log warning but don't kill explorer
-                    log.warn(`platformrestrictions @ enableRestrictions: examwindow not found after ${maxRetries * 100}ms - skipping explorer.exe kill`);
-                }
-            };
-            
-            // Start checking for examwindow existence (apps are already closed above)
-            killExplorerWhenWindowExists();
-        } 
+    if (platformDispatcher.platform === 'win32') {
+        await enableWindowsRestrictions(winhandler, appsToClose);
     }
 
-
-
-
-    /**
-     * M A C O S  
-     ****************************************/
-    if (process.platform === 'darwin') {
-        const { TouchBarLabel, TouchBarButton, TouchBarSpacer } = TouchBar
-        const textlabel = new TouchBarLabel({label: "Next-Exam"})
-        const touchBar = new TouchBar({
-            items: [
-            new TouchBarSpacer({ size: 'flexible' }),
-            textlabel,
-            new TouchBarSpacer({ size: 'flexible' }),
-            ]
-        })
-        winhandler.examwindow?.setTouchBar(touchBar)
-
-        // clear clipboard
-        childProcess.exec('pbcopy < /dev/null')
-
-        appsToClose.forEach(app => {
-            // pkill-Befehl für macOS
-            childProcess.exec(`pkill -9 -f "${app}"`, (error, stderr, stdout) => {
-   
-            });
-        });
-
-        //mission control
-        //let scriptfile = join(__dirname, '../../public/mc.appelscript')   //spaces, shortcuts
-        //let mcscriptfile = join(__dirname, '../../public/spaces.applescript')
-        //if (app.isPackaged) { mcscriptfile = join(process.resourcesPath, 'app.asar.unpacked', 'public/spaces.applescript') }
-        //childProcess.execFile('osascript', [mcscriptfile], (error, stdout, stderr) => {if (stderr) { log.info(stderr)  } })
+    if (platformDispatcher.platform === 'darwin') {
+        enableMacRestrictions(winhandler, appsToClose);
     }
 }
 
+function disableRestrictions() {
+    if (config.development) { return; }
+    log.info("platformrestrictions @ disableRestrictions: removing restrictions...");
 
-
-
-
-
-
-
-
-
-
-
-function disableRestrictions(){
-    if (config.development) {return}
-    log.info("platformrestrictions @ disableRestrictions: removing restrictions...")
-
-    if (clipboardInterval) {    
-        clipboardInterval.stop()
+    if (clipboardInterval) {
+        clipboardInterval.stop();
     }
 
-    globalShortcut.unregister('CommandOrControl+V', () => {console.log('activate clipboard')});
-    globalShortcut.unregister('CommandOrControl+Shift+V', () => {console.log('activate clipboard')});
-    globalShortcut.unregister('CommandOrControl+C', () => {console.log('activate clipboard')});
-    globalShortcut.unregister('CommandOrControl+X', () => {console.log('activate clipboard')});
+    globalShortcut.unregister('CommandOrControl+V', () => { console.log('activate clipboard'); });
+    globalShortcut.unregister('CommandOrControl+Shift+V', () => { console.log('activate clipboard'); });
+    globalShortcut.unregister('CommandOrControl+C', () => { console.log('activate clipboard'); });
+    globalShortcut.unregister('CommandOrControl+X', () => { console.log('activate clipboard'); });
 
-
-
-    /********************
-     * L I N U X
-     ****************************************/
-    if (process.platform === 'linux') {
-        // on wayland
-        childProcess.execFile('wl-copy', ['-c'])
-        // clear clipboard gnome and x11  (this will fail unless xclip or xsell are installed)
-        childProcess.exec('xclip -i /dev/null')
-        childProcess.exec('xclip -selection clipboard')
-        childProcess.exec('xsel -bc')
-
-        //enable META Key for Launchermenu
-        //childProcess.execFile('sed', ['-i', '-e', 's/global=.*/global=Alt+F1/g', `${config.homedirectory}/.config/plasma-org.kde.plasma.desktop-appletsrc` ])
-        //childProcess.exec('kwin --replace &')
-
-        childProcess.exec('echo $XDG_CURRENT_DESKTOP', (error, stdout, stderr) => {
-            if (error) {
-              log.error(`platformrestrictions @ disableRestrictions (linux): exec error: ${error}`);
-              return;
-            }
-            if (stdout.trim() === 'KDE') {
-                log.info("platformrestrictions @ disableRestrictions (linux): KDE detected")
-                // Clear Clipboard history 
-                childProcess.execFile('qdbus', ['org.kde.klipper' ,'/klipper', 'org.kde.klipper.klipper.clearClipboardHistory'])
-                // reset all shortcuts KDE
-                childProcess.execFile('qdbus', ['org.kde.kglobalaccel' ,'/kglobalaccel', 'blockGlobalShortcuts', 'false'])
-                // activate ALL 3d Effects (present window, change desktop, etc.) 
-                childProcess.execFile('qdbus', ['org.kde.KWin' ,'/Compositor', 'org.kde.kwin.Compositing.resume'])
-                // reactivate shortcutssystem
-                childProcess.exec('kstart5 kglobalaccel5&')
-                // enable meta key, kwin and restart plasmashell
-                childProcess.execFile('kwriteconfig5', ['--file',`${config.homedirectory}/.config/kwinrc`,'--group','ModifierOnlyShortcuts','--key','Meta','--delete']) 
-                childProcess.execFile('kwriteconfig5', ['--file',`kwinrc`,'--group','Desktops','--key','Number',configStore.linux.numberOfDesktops])  //add previous virtual desktops
-
-            
-                childProcess.execFile('kwriteconfig5', ['--file', 'kxkbrc', '--group', 'Layout', '--key', 'Options', ''])
-                childProcess.execFile('dbus-send', ['--session',  '--type=signal', '--dest=org.kde.keyboard', '/Layouts', 'org.kde.keyboard.reloadConfig'])
-    
-
-
-
-                childProcess.execFile('qdbus', ['org.kde.KWin','/KWin','reconfigure'])
-                const child = childProcess.exec('kstart5 plasmashell &', {
-                    detached: true,               // run independently
-                    stdio: 'ignore'               // disconnect stdio
-                });
-                child.unref();                  // fully detach process
-            } 
-        });
-
-
-        // reset specific shortcuts GNOME
-        for (let binding of gnomeKeybindings){
-            childProcess.execFile('gsettings', ['reset' ,'org.gnome.desktop.wm.keybindings', `${binding}`])
-        }
-        for (let binding of gnomeShellKeybindings){
-            childProcess.execFile('gsettings', ['reset' ,'org.gnome.shell.keybindings', `${binding}`])
-        }
-        for (let binding of gnomeMutterKeybindings){
-            childProcess.execFile('gsettings', ['reset' ,'org.gnome.mutter.keybindings', `${binding}`])
-        }
-        for (let binding of gnomeDashToDockKeybindings){
-            childProcess.execFile('gsettings', ['reset' ,'org.gnome.shell.extensions.dash-to-dock', `${binding}`])
-        }
-        childProcess.execFile('gsettings', ['reset' ,'org.gnome.mutter', `overlay-key`])
-
+    if (platformDispatcher.platform === 'linux') {
+        disableLinuxRestrictions(configStore);
     }
 
-
-    /****************
-     *  W I N D O W S
-    ****************************************/
-    if (process.platform === 'win32') {
-        // unblock important keyboard shortcuts (disable-shortcuts.exe)
-        // hier gibt es irgendeine race condition oder abhängigkeit von explorer.exe.  einfach reihenfolge umkehren und ein timeout setzen
-
-        log.info("platformrestrictions @ disableRestrictions (win): unblocking shortcuts...")
-        try { 
-            childProcess.exec(`taskkill  /IM "disable-shortcuts.exe" /T /F`, (error, stdout, stderr) => { 
-                if (!error && stdout) {
-                    // Only log if taskkill was successful (process found and killed)
-                    log.info(`platformrestrictions @ disableRestrictions: closed disable-shortcuts.exe`);
-                }
-                // If error (e.g. process not found), silently ignore - no logging needed
-            });
-        }catch(e){
-            // silently ignore errors
-        }
-
-        // start explorer.exe windowsshell again
-        // Überprüfe, ob explorer.exe läuft
-        try { 
-            childProcess.exec('tasklist /FI "IMAGENAME eq explorer.exe"', (error, stdout, stderr) => {
-                if (error) {
-                    log.error(`tasklist error: ${error}`);
-                    return;
-                }
-
-                // Prüfe, ob "explorer.exe" in der Ausgabe vorhanden ist
-                if (!stdout.includes('explorer.exe')) {
-                    // Starte explorer.exe, wenn es nicht läuft
-                    log.info("platformrestrictions @ disableRestrictions (win): restarting explorer...")
-                    const child = childProcess.exec('start explorer.exe', {
-                        detached: true,               // run independently
-                        stdio: 'ignore'               // disconnect stdio
-                      });
-                      
-                    child.unref();                  // fully detach process
-                        
-                }
-            });
-        }catch(e){log.error(`platformrestrictions @ disablerestrictions (win explorer): ${e.message}`)}
-
-
-        // try{
-        //     //clear clipboard - stop keeping screenshots of exam in clipboard
-        //     let executable0 = join(__dirname, '../../public/clear-clipboard.bat')
-        //     childProcess.execFile(executable0, [], (error, stdout, stderr) => {
-        //         if (stderr) { log.info(stderr) }
-        //         if (error) { log.info(error) }
-        //     })
-        // }catch(e){log.error(`platformrestrictions @ disablerestrictions (win clipboard): ${e.message}`)}
-
+    if (platformDispatcher.platform === 'win32') {
+        disableWindowsRestrictions();
     }
 
-    // TODO: undo restrictions mac (currently only touchbar which should be reset once we close next-exam)
+    if (platformDispatcher.platform === 'darwin') {
+        disableMacRestrictions();
+    }
 }
 
-
-
-/**
- * disables/enables mission control, spaces and trackpad gestures
- * @param {boolean} enable - true restores everything, false locks everything
- */
 function toggleMacOSLockdown(enable) {
-    if (process.platform !== 'darwin') return;
-    log.info(`platformrestrictions @ toggleMacOSLockdown: ${enable ? 'enable' : 'disable'} mission control lockdown`)
-  
-    const mcIds = [32, 33, 34, 35, 79, 80, 81, 82, 118, 119, 120, 121];
-    const plistPath = join(os.homedir(), 'Library/Preferences/com.apple.symbolichotkeys.plist');
-    const backupPath = join(os.tmpdir(), 'next_exam_hotkeys_backup.plist');
-  
-    if (enable) {
-      // LOCKDOWN AKTIVIEREN
-      // 1. Backup nur erstellen, wenn es noch nicht existiert (Originalzustand bewahren)
-      // 2. Shortcuts deaktivieren
-      // 3. WICHTIG: killall -9 cfprefsd erzwingt das Neuladen unter Sequoia/Monterey
-      const hotkeyCommands = mcIds.map(id => 
-        `defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add ${id} "<dict><key>enabled</key><false/></dict>"`
-      ).join('; ');
-  
-      const gestureCommands = [
-        `defaults write com.apple.dock showMissionControlGestureEnabled -bool false`,
-        `defaults write com.apple.dock showAppExposeGestureEnabled -bool false`,
-        `defaults write com.apple.dock showDesktopGestureEnabled -bool false`
-      ].join('; ');
-  
-      const fullCommand = `
-        if [ ! -f "${backupPath}" ]; then cp "${plistPath}" "${backupPath}"; fi;
-        ${hotkeyCommands};
-        ${gestureCommands};
-        killall -9 cfprefsd;
-        sleep 1;
-        /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u;
-        killall Dock
-      `;
-  
-      childProcess.exec(fullCommand, (err) => {
-        if (err) console.error('Lockdown Enable Error:', err);
-      });
-  
-    } else {
-      // LOCKDOWN DEAKTIVIEREN (Wiederherstellen)
-      // 1. Wenn Backup existiert, Datei zurückkopieren und Backup löschen
-      // 2. Gesten wieder auf true setzen
-      // 3. Cache-Flush wie oben
-      const gestureCommands = [
-        `defaults write com.apple.dock showMissionControlGestureEnabled -bool true`,
-        `defaults write com.apple.dock showAppExposeGestureEnabled -bool true`,
-        `defaults write com.apple.dock showDesktopGestureEnabled -bool true`
-      ].join('; ');
-  
-      const fullCommand = `
-        if [ -f "${backupPath}" ]; then 
-          cp "${backupPath}" "${plistPath}"; 
-          rm "${backupPath}"; 
-        fi;
-        ${gestureCommands};
-        killall -9 cfprefsd;
-        sleep 1;
-        /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u;
-        killall Dock
-      `;
-      log.info('main @ toggleMacOSLockdown: Enable MissionContol');
-      childProcess.exec(fullCommand, (err) => {
-        if (err) console.error('Lockdown Disable Error:', err);
-      });
-    }
-  }
-  
+    toggleMacOSLockdownImpl(enable);
+}
 
-
-
-
-
-
-
-export {enableRestrictions, disableRestrictions, toggleMacOSLockdown}
+export { enableRestrictions, disableRestrictions, toggleMacOSLockdown };
