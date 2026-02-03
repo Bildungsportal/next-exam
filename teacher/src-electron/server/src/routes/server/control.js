@@ -153,7 +153,7 @@ router.get('/msauth', async (req, res) => {
     
     //generate random pin
     let pin = String(Math.floor(Math.random()*9000) + 1000)  // 4 digits is enough  Math.floor(Math.random() * 9000) + 1000;
-    if (config.development){ pin = "1337" }  
+    if (config.development){ pin = "1111" }  
 
     // // check if server is already running locally or in LAN
     if (mcServer) { 

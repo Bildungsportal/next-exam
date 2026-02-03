@@ -241,7 +241,7 @@ export default {
             version: this.$route.params.version,
             token: "",
             username: this.$route.params.config.development ? "Thomas" : "",
-            pincode: this.$route.params.config.development ? "5404" : "",
+            pincode: this.$route.params.config.development ? "1111" : "",
             clientinfo: {},
             serverlist: [],
             serverlistAdvanced: [],
@@ -1087,8 +1087,9 @@ export default {
 
 
                 //  console.log({clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode, bipuserID:this.bipuserID })
+                let IPCresponse = null
                 if (isElectronWindow(window)) {
-                    let IPCresponse = window.ipcRenderer.sendSync('register', {
+                    IPCresponse = window.ipcRenderer.sendSync('register', {
                         clientname: this.username,
                         servername: servername,
                         serverip,
@@ -1102,7 +1103,7 @@ export default {
                     }
                 }
 
-                if (IPCresponse.status === "success") {
+                if (IPCresponse && IPCresponse.status === "success") {
                     this.$swal.fire({
                         title: "OK",
                         html: `<div style="white-space: pre-line;">${this.$t("student.registeredinfo")}</div>`,
@@ -1116,7 +1117,7 @@ export default {
 
 
                 }
-                if (IPCresponse.status === "error") {
+                if (IPCresponse && IPCresponse.status === "error") {
                     this.$swal.fire({
                         title: "Error",
                         text: IPCresponse.message,

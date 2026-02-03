@@ -219,7 +219,7 @@ export default defineConfig(( ctx: any ) => {
       builder: {
         // https://www.electron.build/configuration/configuration
 
-        appId: 'next-exam-student'
+        appId: 'next-exam-teacher'
       }
     },
 

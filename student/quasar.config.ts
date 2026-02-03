@@ -2,7 +2,6 @@
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
 import { defineConfig } from '@quasar/app-vite/wrappers';
-import {watch} from "./scripts/watch.mjs";
 import {builtinModules} from "module";
 import pkg from './package.json'
 
@@ -103,7 +102,7 @@ export default defineConfig(( ctx: any ) => {
       open: true, // opens browser window automatically
       host: 'localhost',
       port: 9300,
-      vueDevtools: true
+      vueDevtools: false
     },
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#framework

@@ -6,7 +6,7 @@
 const config = {
     development: true,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
     showdevtools: true,
-    bipIntegration: false,
+    bipIntegration: true,
     bipDemo: false,
 
     workdirectory : "",   // (desktop path + examdir)
@@ -34,10 +34,10 @@ const config = {
         editor: true,
         math: true,
         microsoft365: true,
-        activesheets: false
+        activesheets: true
     },
 
-    version: '1.1.1.1',
+    version: '2.0.0.1',
     buildDate: '20260203',
     buildNumber: '1',
     info: 'Release'

@@ -29,6 +29,9 @@ import multicastClient from './main/scripts/multicastclient.js';
 import WindowHandler from './main/scripts/windowhandler.js';
 import IpcHandler from './main/scripts/ipchandler.js';
 
+// So Electron single-instance lock uses a different userData than student (lock key = userData + execPath)
+app.setName('next-exam-teacher');
+
 log.initialize(); // initialize the logger for any renderer process
 let logfile = `${config.workdirectory}/next-exam-teacher.log`
 
