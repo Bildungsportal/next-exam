@@ -15,20 +15,15 @@
  * If not, see <http://www.gnu.org/licenses/>
  */
 
-
-
 import { app, BrowserWindow, BrowserView, dialog, screen} from 'electron'
-import path, { join } from 'path'
-import childProcess from 'child_process' 
+import { join } from 'path'
 import {disableRestrictions, enableRestrictions} from './platformrestrictions.js';
-
 import log from 'electron-log'
 import {SchedulerService} from './schedulerservice.ts'
 import { activeWindow } from 'get-windows';
-import languageToolServer from './lt-server.js';
 import platformDispatcher from './platformDispatcher.js';
 import {fileURLToPath} from "node:url";
-
+import path from 'path';
 
 const __dirname = import.meta.dirname;
 
@@ -522,9 +517,12 @@ class WindowHandler {
                     await this.initBlockWindows()
                     this.examwindow.moveTop()
                     this.examwindow.focus()
+                    
+                    // probably not needed because we disable missioncontrol anyways - seems to interfere with kiosk mode on macos (again)
+                    // this.examwindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
                     if (!this.isWayland){ this.checkWindowInterval.start() } // constantly check if the active window is the examwindow - if not, bring it to front
-                    enableRestrictions(this)  // disable keyboard shortcuts etc.
+                    await enableRestrictions(this)  // disable keyboard shortcuts etc.
                     
                     await this.sleep(1000)  // do not set blur listener too early
                     this.addBlurListener()  // add blur listener to the examwindow
@@ -636,7 +634,7 @@ class WindowHandler {
         // Block navigation on examwindow.webContents level for all modes that can display PDFs in examheader
         // This prevents navigation when clicking links in PDFs displayed in the examheader
         // Webview/BrowserView blocking is handled separately via IPC in ipchandler.js or mode-specific handlers below
-        const examTypesWithPdfInHeader = ["gforms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets"];
+        const examTypesWithPdfInHeader = ["gforms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math"];
         if (examTypesWithPdfInHeader.includes(serverstatus.examSections[serverstatus.lockedSection].examtype)) {
             this.examwindow.webContents.on('will-navigate', (event, url) => {
                 event.preventDefault(); // Prevent navigation away from the Vue app (e.g. from PDF links in examheader)
@@ -826,13 +824,16 @@ class WindowHandler {
             resizable: false, // verhindert das Ändern der Größe  
             fullscreenable: false, // verhindert den Vollbildmodus - wichtig für macos denn wenn auf macos das mainwindow auf fullscreen ist greift beim examwindow der kiosk mode nicht  - electron bug (needs example code): >> https://github.com/electron/electron/issues/44755
             show: true,
-            visibleOnAllWorkspaces: true,
+            //visibleOnAllWorkspaces: true,
+            
+           
             webPreferences: {
                 preload: path.resolve(
                     currentDir,
                     path.join(process.env.QUASAR_ELECTRON_PRELOAD_FOLDER, 'electron-preload' + process.env.QUASAR_ELECTRON_PRELOAD_EXTENSION)
                 ),
-                spellcheck: false
+                spellcheck: false,
+                backgroundThrottling: true  // allow throttling when window is in background
             }
         })
 
@@ -846,10 +847,11 @@ class WindowHandler {
                         this.mainwindow.allowexit = true;  // allow close flow
                         return;
                     }
-                    this.mainwindow.hide();
+                   
                     e.preventDefault();
                     await this.showMinimizeWarning()
-                    log.warn(`windowhandler @ createMainWindow: Minimizing Next-Exam to Systemtray`) 
+                    log.warn(`windowhandler @ createMainWindow: Minimizing Next-Exam to Systemtray`)  
+                    this.mainwindow.hide();
                     return
                 }
             }
@@ -859,6 +861,7 @@ class WindowHandler {
         this.mainwindow.removeMenu()
         this.mainwindow.focus()
         this.mainwindow.moveTop()
+        //this.mainwindow.setHiddenInMissionControl(true)
 
         if (this.config.showdevtools) { this.mainwindow.webContents.openDevTools()  }
 

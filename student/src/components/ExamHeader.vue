@@ -138,11 +138,6 @@
         // additional messages: 'nointerface', 'givingup'  - not handled here for now - just silently ignore them
 
         switch (message) {
-          case 'error':
-            title = 'WLAN-Fehler';
-            text = 'Es konnte keine WLAN-Information abgerufen werden. Bitte überprüfen Sie die Netzwerkverbindung.';
-            icon = 'error';
-            break;
 
           case 'nopermissions':
             title = 'Standortberechtigung erforderlich';

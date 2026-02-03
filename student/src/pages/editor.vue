@@ -288,20 +288,26 @@
                 </div>
 
 
+
+
+
                 <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
-                    <div v-if="(file.type == 'bak' && !file.name.includes( clientname) )"
-                         class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
-                         @click="selectedFile=file.name; loadHTML(file.name)"><img
-                        src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22"
-                        style="vertical-align: top;"> {{ file.name }}
-                        ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})
-                    </div>
-                    <div v-if="(file.type == 'bak' && file.name.includes( clientname) )"
-                         class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
-                         @click="selectedFile=file.name; loadHTML(file.name)"><img
-                        src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22"
-                        style="vertical-align: top;"> {{ file.name }}
-                    </div>
+                 
+
+   	<div v-if="(file.type == 'bak' && !file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
+        <div v-if="(file.type == 'bak' && file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
+
+
+
+
+
+
+
+
+
+
+
+
 
                     <div v-if="(file.type == 'docx')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
                          @click="selectedFile=file.name; loadDOCX(file.name)"><img
@@ -404,10 +410,10 @@
     <div v-if="!splitview" id="editormaincontainer"
          style="height: 100%; overflow-x:auto; overflow-y: scroll; background-color: #eeeefa;">
         <div id="editorcontainer" class="shadow" style="">
-            <template v-if="editor">
+            <div v-if="editor">
                 <editor-content :editor="editor" class='p-0' id="editorcontent"
                                 style="background-color: #fff; border-radius:0;"/>
-            </template>
+            </div>
         </div>
         <canvas id="highlight-layer"></canvas>
     </div>
@@ -459,10 +465,10 @@
         <div id="editormaincontainer"
              style="min-width:230mm!important;padding:10px; overflow-x: auto !important; overflow-y: scroll !important; background-color: #eeeefa !important;">
             <div id="editorcontainer" class="shadow">
-                <template v-if="editor">
+                <div v-if="editor">
                     <editor-content :editor="editor" class="p-0" id="editorcontent"
                                     style="background-color: #fff !important; border-radius: 0 !important;"/>
-                </template>
+                </div>
             </div>
             <canvas id="highlight-layer"></canvas>
         </div>
@@ -694,7 +700,8 @@ export default {
             isMac: false,
             allowedUrls: [],
             lockedSection: 1,
-            internetCheckCounter: 0
+            internetCheckCounter:0,
+            LThost: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].languagetoolhost || "http://127.0.0.1"
         }
     },
     computed: {
@@ -1069,7 +1076,9 @@ export default {
 
         /** Converts the Editor View into a multipage PDF */
         async saveContent(backup, why) {
-            let filename = false  // this is set manually... otherwise use clientname
+
+            let filename = this.currentFile  // this can be set manually... otherwise currentFile is used (clientname unless you load another file)
+
             if (why === "manual") {
                 await this.$swal({
                     title: this.$t("math.filename"),
@@ -1091,9 +1100,9 @@ export default {
                 }).then((result) => {
                     if (result.isConfirmed) {
                         filename = `${result.value}`
-                    } else {
-                        return;
+                        this.currentFile = filename
                     }
+                    else {return; }
                 });
             }
             if (isElectronWindow(window)) {
@@ -1130,6 +1139,11 @@ export default {
                     previewElement.classList.remove('fadeinfast');
                 }
 
+            
+                // SAVE AS HTML (bak) - also save editorcontent as *html file - used to re-populate the editor window in case something went completely wrong
+                let editorcontent = this.editor.getHTML(); 
+                ipcRenderer.send('storeHTML', {filename: filename, editorcontent: editorcontent })
+                
 
                 // SAVE AS PDF - inform mainprocess to save webcontent as pdf (see @media css query for adjustments for pdf)
                 // printPDF will trigger a reload of the filelist if finished and send files to teacher if reason (why) is "teacherrequest"
@@ -1141,10 +1155,6 @@ export default {
                     reason: why
                 })
 
-
-                // SAVE AS HTML (bak) - also save editorcontent as *html file - used to re-populate the editor window in case something went completely wrong
-                let editorcontent = this.editor.getHTML();
-                ipcRenderer.send('storeHTML', {filename: filename, editorcontent: editorcontent})
 
             }
         },

@@ -7,7 +7,7 @@ const config = {
     development: true,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
     showdevtools: true,
     useBundledJRE: true,
-    bipIntegration: false,
+    bipIntegration: true,
     bipDemo: false,
 
     workdirectory : "",   // (desktop path + examdir)
@@ -26,9 +26,9 @@ const config = {
     virtualized: false,
     isPuavo: false,
     
-    version: '1.1.0.18',
-    buildDate: '20260119',
-    buildNumber: '18',
+    version: '2.0.0.1',
+    buildDate: '20260203',
+    buildNumber: '1',
     info: 'Release'
 }
 export default config;

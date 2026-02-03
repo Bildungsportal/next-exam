@@ -223,7 +223,13 @@ import config from '../../src-electron/main/config.js'
 
 // Capture unhandled promise rejections
 window.addEventListener('unhandledrejection', event => {
-    log.error('Unhandled promise rejection:', event.reason); // Log the error
+  const reason = event?.reason;
+  const msg = typeof reason === 'string' ? reason : reason && reason.message;
+  if (msg && ( msg.includes('GUEST_VIEW_MANAGER_CALL') || msg.includes('ERR_FAILED'))) {
+    event.preventDefault(); // swallow guest view clone errors and ERR_FAILED
+    return;
+  }
+  log.error('Unhandled promise rejection:', reason); // log all other errors
 });
 
 Object.assign(console, log.functions);  // Replace all console logs with logger
@@ -490,16 +496,39 @@ export default {
                 cancelButtonText: this.$t("editor.cancel"),
                 focusConfirm: false,
                 icon: false,
-                didOpen: () => {
-                    document.getElementById("localuser").addEventListener("keypress", function (e) {
-                        // var lettersOnly = /^[a-zA-Z ]+$/;
+                didOpen:() => {
+                    const localUserElement = document.getElementById("localuser");
+                    const localPasswordElement = document.getElementById("localpassword");
+                    
+                    localUserElement.addEventListener("keypress", function(e) {
+                         // var lettersOnly = /^[a-zA-Z ]+$/;
                         var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
                         var key = e.key || String.fromCharCode(e.which);
-                        if (!lettersOnly.test(key)) {
-                            e.preventDefault();
-                        }
+                        // Allow Enter key to pass through
+                        if (e.key === 'Enter') { return; }
+                        if (!lettersOnly.test(key)) { e.preventDefault(); }
                     });
-
+                    
+                    // Add Enter key listener to confirm dialog - attach to both input fields and document
+                    const swalInstance = this.$swal;
+                    const handleEnterKey = (e) => {
+                        if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+                            e.preventDefault();
+                            swalInstance.clickConfirm();
+                        }
+                    };
+                    
+                    // Add listener to document for general Enter key handling
+                    document.addEventListener('keydown', handleEnterKey);
+                    // Add listener directly to input fields to catch Enter when focused
+                    localUserElement.addEventListener('keydown', handleEnterKey);
+                    localPasswordElement.addEventListener('keydown', handleEnterKey);
+                    
+                    // Store handler reference for cleanup (will be cleaned up when dialog closes)
+                    this._enterKeyHandler = handleEnterKey;
+                    this._enterKeyHandlerUser = handleEnterKey;
+                    this._enterKeyHandlerPassword = handleEnterKey;
+                    
                     const checkboxLT = document.getElementById('checkboxLT');
                     const checkboxSuggestions = document.getElementById('checkboxsuggestions');
                     const spellcheckSection = document.getElementById('spellcheckSection');
@@ -552,6 +581,24 @@ export default {
                         }, 100);
                     }
                 },
+                didClose: () => {
+                    // Remove Enter key listener when dialog closes
+                    if (this._enterKeyHandler) {
+                        document.removeEventListener('keydown', this._enterKeyHandler);
+                        this._enterKeyHandler = null;
+                    }
+                    // Remove listeners from input fields if they still exist
+                    const localUserElement = document.getElementById("localuser");
+                    const localPasswordElement = document.getElementById("localpassword");
+                    if (localUserElement && this._enterKeyHandlerUser) {
+                        localUserElement.removeEventListener('keydown', this._enterKeyHandlerUser);
+                        this._enterKeyHandlerUser = null;
+                    }
+                    if (localPasswordElement && this._enterKeyHandlerPassword) {
+                        localPasswordElement.removeEventListener('keydown', this._enterKeyHandlerPassword);
+                        this._enterKeyHandlerPassword = null;
+                    }
+                },
                 preConfirm: () => {
                     // Save all input values before dialog closes (Electron 39 compatibility)
                     const localUserElement = document.getElementById('localuser');
@@ -559,8 +606,8 @@ export default {
                     const checkboxLTElement = document.getElementById('checkboxLT');
                     const checkboxSuggestionsElement = document.getElementById('checkboxsuggestions');
                     const radioButtons = document.querySelectorAll('input[name="etesttype"]');
-
-                    savedUsername = localUserElement ? localUserElement.value : '';
+                    
+                    savedUsername = localUserElement ? localUserElement.value.trim() : '';
                     savedPassword = localPasswordElement ? localPasswordElement.value : '';
                     savedLanguagetool = checkboxLTElement ? checkboxLTElement.checked : false;
                     savedSuggestions = checkboxSuggestionsElement ? checkboxSuggestionsElement.checked : false;
@@ -570,6 +617,16 @@ export default {
                             savedExammode = radio.value;
                         }
                     });
+                    
+                    // Validate mandatory fields
+                    if (!savedUsername || savedUsername === '') {
+                        this.$swal.showValidationMessage(this.$t("student.nouser") || 'Username is required');
+                        return false;
+                    }
+                    if (!savedPassword || savedPassword === '') {
+                        this.$swal.showValidationMessage(this.$t("student.nopin") || 'Password is required');
+                        return false;
+                    }
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
@@ -1130,6 +1187,37 @@ export default {
     },
     async mounted() {
         document.querySelector("#statusdiv").style.visibility = "hidden";
+        
+
+
+// this.lastFrameTime = performance.now(); // Initialize timing
+
+// const checkFrameGap = () => {
+//   const currentTime = performance.now(); // Get high-res timestamp
+//   const delta = currentTime - this.lastFrameTime; // Calculate time since last frame
+
+
+
+//   if (delta > 200) { // Threshold for macOS occlusion/suspension
+   
+//     this.$swal({
+//       title: 'Ausbruch erkannt!',
+//       text: `Die App wurde für ${Math.round(delta)}ms unterbrochen.`,
+//       icon: 'warning',
+//       confirmButtonText: 'Verstanden'
+//     });
+//   }
+
+//   this.lastFrameTime = currentTime; // Update last frame reference
+//   requestAnimationFrame(checkFrameGap); // Schedule next frame check
+// };
+
+// requestAnimationFrame(checkFrameGap); // Start the loop
+
+
+
+
+
 
         this.isLoading = false;
 

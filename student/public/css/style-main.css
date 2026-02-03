@@ -29,7 +29,7 @@ body {
     font-family: 'Inter', sans-serif !important;
 }
 
-#app {
+#q-app {
     display: flex;
     flex-flow: column;
     height: 100vh;

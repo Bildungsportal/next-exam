@@ -115,29 +115,6 @@ class IpcHandler {
            
         }) 
 
-
-        ipcMain.handle('start-blocking-for-webview', (event, { guestId, allowedUrls }) => {
-            const guest = webContents.fromId(Number(guestId));
-            if (!guest || guest.isDestroyed?.()) return false;
-          
-            // Entferne alte Listener, um Doppel-Registrierungen zu vermeiden
-            guest.removeAllListeners('will-navigate');
-       
-            const allow = allowedUrls.map(s => String(s).toLowerCase());
-            guest.setWindowOpenHandler(({ url }) => {
-                const urlStr = String(url || '').toLowerCase();
-                if (allow.some(u => urlStr.includes(u))) { guest.loadURL(url); log.warn("ipchandler @ start-blocking-for-webview: allowed navigation to", url) }
-                else return { action: 'deny' };
-            });
-            
-            guest.on('will-navigate', (e, url) => {
-                const urlStr = String(url || '').toLowerCase();
-                if (!allow.some(u => urlStr.includes(u))) { e.preventDefault(); log.warn("ipchandler @ start-blocking-for-webview: blocked navigation to", url) }
-            });
-              
-            return true;
-        });
-
         // Helper function for common exception URLs (used by all exam modes)
         const checkCommonExceptions = (targetUrl) => {
             if (targetUrl.includes("login") && targetUrl.includes("Microsoft")) return true;
@@ -157,11 +134,99 @@ class IpcHandler {
             if (targetUrl.includes("login") && targetUrl.includes("live.com")) return true;   // LMS
             if (targetUrl.includes("login") && targetUrl.includes("msftauth.net")) return true;   // LMS
             if (targetUrl.includes("aadcdn") && targetUrl.includes("msftauth.net")) return true;   // LMS
-
+            if (targetUrl.includes("googlesyndication.com")) return true; 
 
 
             return false;
         };
+
+        ipcMain.handle('start-blocking-for-webview', (event, { guestId, allowedUrls }) => {
+            const guest = webContents.fromId(Number(guestId));
+            if (!guest || guest.isDestroyed?.()) return false;
+          
+            // Entferne alte Listener, um Doppel-Registrierungen zu vermeiden
+            guest.removeAllListeners('will-navigate');
+       
+            const allow = allowedUrls.map(s => String(s).toLowerCase());
+            
+            // Helper function to check if URL matches allowed domain (supports subdomains and paths)
+            const isUrlAllowed = (targetUrl) => {
+                if (!targetUrl) return false;
+                const urlStr = String(targetUrl).toLowerCase();
+                
+                // Check common exceptions first
+                if (checkCommonExceptions(urlStr)) return true;
+                
+                // Check each allowed URL
+                for (const allowedUrl of allow) {
+                    try {
+                        // Try to parse as URL to extract hostname
+                        const urlObj = new URL(targetUrl);
+                        const targetHostname = urlObj.hostname.toLowerCase();
+                        
+                        // Parse allowed URL to extract domain
+                        let allowedDomain = allowedUrl;
+                        if (allowedUrl.startsWith('http://') || allowedUrl.startsWith('https://')) {
+                            const allowedUrlObj = new URL(allowedUrl);
+                            allowedDomain = allowedUrlObj.hostname.toLowerCase();
+                        } else if (allowedUrl.includes('/')) {
+                            // If it's a path without protocol, extract domain part
+                            const parts = allowedUrl.split('/');
+                            allowedDomain = parts[0].toLowerCase();
+                        }
+                        
+                        // Exact match
+                        if (targetHostname === allowedDomain) return true;
+                        
+                        // Check if allowedDomain is a specific subdomain (contains dots)
+                        const isSpecificSubdomain = allowedDomain.includes('.');
+                        
+                        if (isSpecificSubdomain) {
+                            // If a specific subdomain is specified, only allow that exact subdomain and www. variant
+                            if (targetHostname === 'www.' + allowedDomain) return true;
+                            // Don't allow other subdomains when a specific one is specified
+                        } else {
+                            // If only base domain is specified (e.g., "orf.at"), allow all subdomains
+                            // Allow www. subdomain explicitly
+                            if (targetHostname === 'www.' + allowedDomain) return true;
+                            
+                            // Allow other subdomains (e.g., sub.duden.de if duden.de is allowed)
+                            if (targetHostname.endsWith('.' + allowedDomain)) {
+                                const prefix = targetHostname.slice(0, -(allowedDomain.length + 1));
+                                // Validate prefix: must be valid subdomain name (alphanumeric and hyphens)
+                                if (prefix && !prefix.includes('.') && /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(prefix)) {
+                                    return true;
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        // If URL parsing fails, fall back to simple includes check for paths
+                        if (urlStr.includes(allowedUrl)) return true;
+                    }
+                }
+                
+                return false;
+            };
+            
+            guest.setWindowOpenHandler(({ url }) => {
+                const isAllowed = isUrlAllowed(url);
+                if (isAllowed) { 
+                    guest.loadURL(url); 
+                    log.warn("ipchandler @ start-blocking-for-webview: allowed navigation to", url) 
+                }
+                else return { action: 'deny' };
+            });
+            
+            guest.on('will-navigate', (e, url) => {
+                const isAllowed = isUrlAllowed(url);
+                if (!isAllowed) { 
+                    e.preventDefault(); 
+                    log.warn("ipchandler @ start-blocking-for-webview: blocked navigation to", url) 
+                }
+            });
+              
+            return true;
+        });
 
         // Unified IPC handler for webview blocking - supports website, eduvidual, forms, rdp modes
         ipcMain.handle('start-blocking-for-website-webview', (event, { guestId, mode, allowedDomain, baseUrl, moodleTestId, moodleDomain, gformsTestId }) => {
@@ -182,6 +247,8 @@ class IpcHandler {
                         const domain = urlObj.hostname;
                         
                         if (domain === allowedDomain) return true;
+                        // Explicitly allow www. subdomain
+                        if (domain === 'www.' + allowedDomain) return true;
                         if (domain.endsWith('.' + allowedDomain)) {
                             const prefix = domain.slice(0, -(allowedDomain.length + 1));
                             if (prefix && !prefix.includes('.') && /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(prefix)) {
@@ -575,7 +642,6 @@ class IpcHandler {
             
             if (filename){
                 htmlfilename = `${filename}.bak`
-                log.info(`ipchandler: storeHTML: creating manual backup as ${htmlfilename}`)
             }
 
             const htmlfile = path.join(this.config.examdirectory, htmlfilename);
@@ -658,7 +724,7 @@ class IpcHandler {
                 let pdffilename = `${this.multicastClient.clientinfo.name}.pdf`  // default filename = clientname.pdf
                 if (args.filename){  // in case of manual backup the user can set a custom filename
                     pdffilename = `${args.filename}.pdf`
-                    log.info(`ipchandler @ printpdf: creating manual backup as ${pdffilename}`)
+                    
                 }
                 const pdffilepath = path.join(this.config.examdirectory, pdffilename);  // path points to the current exam directory
                 const alternatefilename = `${pdffilename}-aux.pdf`    //thomas.pdf-aux.pdf 
@@ -689,8 +755,14 @@ class IpcHandler {
 
                 this.isPrintingPdf = true
 
-                // print the exam window to pdf
-                webContents.printToPDF(options).then(data => {
+                // set the title of the exam window and therefore the document title for PDF metadata
+                const pdfTitle = args.filename ? args.filename : `${this.multicastClient.clientinfo.name} - ${args.servername || this.multicastClient.clientinfo.servername || ''}`
+                // escape quotes and special characters for JavaScript string
+                const escapedTitle = pdfTitle.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "\\'")
+                webContents.executeJavaScript(`document.title = "${escapedTitle}"`).then(() => {
+                    // print the exam window to pdf
+                    return webContents.printToPDF(options)
+                }).then(data => {
                     // delete the old pdf file if it exists
                     try { if (fs.existsSync(pdffilepath)) { fs.unlinkSync(pdffilepath); }}
                     catch(err) { log.error(`ipchandler @ printpdf: ${err.message}`);  }
@@ -1203,20 +1275,6 @@ class IpcHandler {
             return warnAndReturn('systemd-detect-virt meldet Virtualisierung')
           } catch {}
 
-          // Zusätzliche QEMU-spezifische Erkennung
-          try {
-            // Prüfe auf QEMU-spezifische Geräte
-            const qemuDevices = [
-              '/dev/vhost-vsock'
-            ]
-            for (const device of qemuDevices) {
-              try {
-                if (require('fs').existsSync(device)) {
-                  return warnAndReturn(`QEMU-Gerät gefunden: ${device}`)
-                }
-              } catch {}
-            }
-          } catch {}
 
           // Prüfe auf QEMU-Prozesse
           try {

@@ -1,6 +1,6 @@
 {
   "name": "next-exam-student",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "main": "dist/main/main.mjs",
   "author": {
     "name": "Thomas Michael Weissel",
@@ -13,12 +13,20 @@
   "type": "module",
   "scripts": {
     "test": "echo \"No test specified\" && exit 0",
-    "dev": "quasar dev",
-    "build": "quasar build",
+    "dev:quasar": "quasar dev",
+    "build:quasar": "quasar build",
     "postinstall": "patch-package && quasar prepare",
+    "dev": " npm run prebuild && quasar dev --verbose -m electron",
+    "build": " npm run prebuild && quasar build --verbose -m electron",
+    "clean": "rm -rf ./dist",
+    "cleanwin": "if exist dist rmdir /s /q dist",
     "prebuild": "node scripts/prebuild.js",
-    "dev:electron": " npm run prebuild && quasar dev --verbose -m electron",
-    "build:electron": " npm run prebuild && quasar build --verbose -m electron"
+    "protect:main": "node scripts/protect-main.mjs",
+    "build:linux": "npm run prebuild && npm run clean && node scripts/build.mjs && npm run protect:main && electron-builder -l",
+    "build:mac:x64": "npm run prebuild && npm run clean && node scripts/build.mjs && npm run protect:main && electron-builder -m dmg:x64",
+    "build:mac:arm64": "npm run prebuild && npm run clean && node scripts/build.mjs && npm run protect:main && electron-builder -m dmg:arm64",
+    "build:win:portable": "npm run prebuild && npm run cleanwin && node scripts/build.mjs && npm run protect:main && electron-builder -w portable:x64",
+    "build:win:msi": "npm run prebuild && npm run cleanwin && node scripts/build.mjs && npm run protect:main && electron-builder -w msi:x64"
   },
   "env": {
     "//": "Used in build scripts",
@@ -101,7 +109,7 @@
     "ps-tree": "^1.2.0",
     "quasar": "^2.16.0",
     "sass": "^1.77.0",
-    "screenshot-desktop-wayland": "^1.15.2",
+    "screenshot-desktop-wayland": "^1.15.7",
     "sharp": "^0.33.5",
     "simple-get": "^4.0.1",
     "tesseract.js": "^6.0.0",
@@ -136,10 +144,9 @@
     "yarn": ">= 1.21.1"
   },
   "overrides": {
-    "signal-exit": "^4.1.0",
     "ml-regression-simple-linear": "2.0.5",
     "tiff": "5.0.3"
   },
-  "buildNumber": "18",
-  "buildVersion": "1.1.0.18"
+  "buildNumber": "1",
+  "buildVersion": "2.0.0.1"
 }
