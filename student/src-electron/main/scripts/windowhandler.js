@@ -103,29 +103,29 @@ class WindowHandler {
         });
 
         this.bipwindow.webContents.on('did-navigate', (event, url) => {    // a pdf could contain a link ^^
-            log.info("did-navigate")
+            log.info("windowhandler @ createBiPLoginWin: did-navigate")
             log.info(url)
         })
         this.bipwindow.webContents.on('will-navigate', (event, url) => {    // a pdf could contain a link ^^
-            log.info("will-navigate")
+            log.info("windowhandler @ createBiPLoginWin: will-navigate")
             log.info(url)
         })
 
          this.bipwindow.webContents.on('new-window', (event, url) => {  // if a new window should open triggered by window.open()
-            log.info("new-window")
+            log.info("windowhandler @ createBiPLoginWin: new-window")
             log.info(url)
             event.preventDefault();    // Prevent the new window from opening
         }); 
      
          
          this.bipwindow.webContents.setWindowOpenHandler(({ url }) => { // if a new window should open triggered by target="_blank"
-            log.info("target: _blank")
+            log.info("windowhandler @ createBiPLoginWin: target: _blank")
             log.info(url)
             return { action: 'deny' };   // Prevent the new window from opening
         }); 
 
         this.bipwindow.webContents.on('will-redirect', (event, url) => {
-            log.info('Redirecting to:', url);
+            log.info('windowhandler @ createBiPLoginWin: Redirecting to:', url);
             // Prüfen, ob die URL das gewünschte Format hat
             if (url.startsWith('bildungsportal://')) {
                 event.preventDefault(); // Verhindert den Standard-Redirect
@@ -134,8 +134,8 @@ class WindowHandler {
                 const token = url.substring(prefix.length);
                 
     
-                log.info('Captured Token:');
-                log.info(token);
+                log.info('windowhandler @ createBiPLoginWin: Captured Token:');
+                log.info('windowhandler @ createBiPLoginWin: ' + token);
                 this.mainwindow.webContents.send('bipToken', token);
                 this.bipwindow.close();
             }
