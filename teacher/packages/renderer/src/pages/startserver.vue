@@ -277,9 +277,9 @@ export default {
             //console.log("loginBiP", this.config)
             if (this.config.bipDemo){   // skip bip logon and fake bip info
                 // fake bip info
-                this.bipUsername = "Weissel Thomas"
-                this.bipuserID = 92136
-                this.bipToken = "4hedh443gc34lm34wb43moeinlz0082droeib45beio"
+                this.bipUsername = "Katherine Johnson"
+                this.bipuserID = 5
+                this.bipToken = "65bd836eab7f095eb2b2edee083bc184"
                 
                 this.fetchBipExams()
                 return  //skip real login
@@ -320,8 +320,8 @@ export default {
             console.log(tokens); // Zeigt die extrahierten Tokens, falls vorhanden
             let token = tokens[1]
 
-            let url = `https://www.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json`
-            if (this.biptest){ url = `https://q.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json` }
+            let url = `http://localhost/moodle/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json`
+            if (this.biptest){ url = `http://localhost/moodle/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json` }
 
             fetch(url, { method: 'POST'})
             .then( res => res.json() )
@@ -368,11 +368,11 @@ export default {
             if (!this.bipToken) return;  // cannot fetch from bip api without valid token
 
             // if (this.config.development){
-                let url= "http://localhost:3000/teacher"
+                let url= "http://localhost/moodle/webservice/rest/server.php?wstoken="+this.bipToken+"&wsfunction=local_dpu_get_exams_teacher&moodlewsrestformat=json&teacherID="+this.bipuserID
 
                 fetch(url, {
                     method: "GET",
-                    headers: {"Content-Type": "application/json" }
+                    headers: {"Content-Type": "application/x-www-form-urlencoded"}
                 })
                 .then(response => { return response.json(); } )                  
                 .then(data => {

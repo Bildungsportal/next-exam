@@ -1699,11 +1699,12 @@ computed: {
             }
 
             // if (this.config.development){  // call to demo api
-                let url= "http://localhost:3000/teacher"
+                let url= "http://localhost/moodle/webservice/rest/server.php?wstoken="+this.bipToken+"&wsfunction=local_dpu_update_exam_status_teacher&moodlewsrestformat=json"
+           
                 fetch(url, {
                     method: "POST",
-                    headers: {"Content-Type": "application/json" },
-                    body: JSON.stringify(payload) // Daten als JSON-String senden
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: new URLSearchParams(payload).toString() // Daten als JSON-String senden
                 })
                 .then(response => { return response.json(); } )                  
                 .then(data => { 

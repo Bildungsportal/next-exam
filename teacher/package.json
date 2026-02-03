@@ -13,7 +13,7 @@
   "description": "An exam managment tool for digital exams",
   "type": "module",
   "scripts": {
-    "dev": "concurrently --kill-others --prefix-colors \"green,blue\" \"node bip-demo-api/api.js\" \"npm run prebuild && node scripts/watch.mjs\"",
+    "dev": "npm run prebuild && node scripts/watch.mjs",
     "clean": "rm -rf ./dist",
     "cleanwin": "if exist dist rmdir /s /q dist",
     "prebuild": "node scripts/prebuild.js",

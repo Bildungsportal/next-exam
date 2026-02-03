@@ -293,9 +293,9 @@ export default {
 
         async loginBiP() {
             if (this.config.bipDemo) {   // skip bip logon and fake bip info
-                this.bipUsername = "Robert Schrenk"
-                this.bipuserID = 123456
-                this.bipToken = "4hedh443gc34lm34wb43moeinlz0082droeib45beio"
+                this.bipUsername = "Marie Curie"
+                this.bipuserID = 7
+                this.bipToken = "726f30c49023fe2c4363532f60b99c7a"
                 this.username = this.bipUsername
 
                 await this.fetchBipExams()
@@ -370,11 +370,11 @@ export default {
             if (!this.bipToken) return;  // cannot fetch from bip api without valid token
 
             // if (this.config.development){
-            let url = "http://10.0.0.100:3000/student"
+            let url = "http://localhost/moodle/webservice/rest/server.php?wstoken="+this.bipToken+"&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json&studentID="+this.bipuserID
 
             await fetch(url, {
                 method: "GET",
-                headers: {"Content-Type": "application/json"}
+                headers: {"Content-Type": "application/x-www-form-urlencoded"}
             })
                 .then(response => {
                     return response.json();
