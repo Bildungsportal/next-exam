@@ -402,11 +402,12 @@ async function configureEditor(){
 
     const { value: language } = await this.$swal.fire({
         customClass: {
-            popup: 'my-popup',
+            popup: 'my-popup-sprachen',
             title: 'my-title',
             content: 'my-content',
-            input: 'my-custom-input',
-            actions: 'my-swal2-actions'
+            input: 'my-custom-input-select',
+            actions: 'my-swal2-actions',
+           
         },
         title: this.$t("dashboard.texteditor"),
         html: `
@@ -471,8 +472,12 @@ async function configureEditor(){
                 <input class="form-check-input" type="checkbox" id="checkboxLT">
                 <label class="form-check-label" for="checkboxLT"> LanguageTool ${this.$t("dashboard.activate")} </label> <br>
                 <input class="form-check-input" type="checkbox" id="checkboxsuggestions">
-                <label class="form-check-label" for="checkboxsuggestions"> ${this.$t("dashboard.suggest")} </label><br><br>
-               <h6 style="margin-bottom:0px">${this.$t("dashboard.spellcheckchoose")}</h6>
+                <label class="form-check-label" for="checkboxsuggestions"> ${this.$t("dashboard.suggest")} </label><br>
+                <input class="form-check-input" type="checkbox" id="checkboxCustomHost">
+                <label class="form-check-label" for="checkboxCustomHost"> ${this.$t("dashboard.customhost")} </label><br>
+                
+                <input type="text" id="languagetoolhost" class="form-control" style="margin-top:4px; width: 100%; display: block; color: #6c757d;" value="http://127.0.0.1" disabled><br><br>
+                <h6 style="margin-bottom:0px;">${this.$t("dashboard.spellcheckchoose")}</h6>
             </div>
              
         </div>`,
@@ -532,17 +537,51 @@ async function configureEditor(){
 
             const checkboxLT = document.getElementById('checkboxLT');
             const checkboxSuggestions = document.getElementById('checkboxsuggestions');
+            const checkboxCustomHost = document.getElementById('checkboxCustomHost');
+            const languagetoolhostInput = document.getElementById('languagetoolhost');
             
-            // Initial: suggestions-Checkbox deaktivieren, falls LT nicht gecheckt ist
+            // Initialize LanguageTool Host field
+            const savedHost = this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost;
+            
+            // Set default value or saved value
+            if (savedHost) {
+                languagetoolhostInput.value = savedHost;
+                checkboxCustomHost.checked = true;
+                languagetoolhostInput.disabled = false;
+                languagetoolhostInput.style.color = '#000000';
+            } else {
+                languagetoolhostInput.value = 'http://127.0.0.1';
+                checkboxCustomHost.checked = false;
+                languagetoolhostInput.disabled = true;
+                languagetoolhostInput.style.color = '#6c757d';
+            }
+            
+            // Initial: suggestions and custom host checkboxes deaktivieren, falls LT nicht gecheckt ist
             checkboxSuggestions.disabled = !checkboxLT.checked;
+            checkboxCustomHost.disabled = !checkboxLT.checked;
+            // Also disable input field if LT is not checked
+            if (!checkboxLT.checked) {
+                languagetoolhostInput.disabled = true;
+                languagetoolhostInput.style.color = '#6c757d';
+            }
             
-            // Event Listener für checkboxLT, um den Status von checkboxsuggestions anzupassen
+            // Event Listener für checkboxLT, um den Status von checkboxsuggestions und checkboxCustomHost anzupassen
             checkboxLT.addEventListener('change', () => {
                 checkboxSuggestions.disabled = !checkboxLT.checked;
-                // Wenn checkboxLT abgewählt wird, soll suggestions zusätzlich zurückgesetzt werden:
+                checkboxCustomHost.disabled = !checkboxLT.checked;
+                // Wenn checkboxLT abgewählt wird, sollen suggestions und custom host zusätzlich zurückgesetzt werden:
                 if (!checkboxLT.checked) {
                     checkboxSuggestions.checked = false;
+                    checkboxCustomHost.checked = false;
+                    languagetoolhostInput.disabled = true;
+                    languagetoolhostInput.style.color = '#6c757d';
                 }
+            });
+            
+            // Event Listener für checkboxCustomHost, um das Textinput zu aktivieren/deaktivieren
+            checkboxCustomHost.addEventListener('change', () => {
+                languagetoolhostInput.disabled = !checkboxCustomHost.checked;
+                languagetoolhostInput.style.color = checkboxCustomHost.checked ? '#000000' : '#6c757d';
             });
 
             
@@ -561,12 +600,21 @@ async function configureEditor(){
             // Save all values before dialog closes (Electron 39 compatibility)
             const checkboxSuggestionsElement = document.getElementById('checkboxsuggestions');
             const checkboxLTElement = document.getElementById('checkboxLT');
+            const checkboxCustomHostElement = document.getElementById('checkboxCustomHost');
+            const languagetoolhostElement = document.getElementById('languagetoolhost');
             const marginValueElement = document.getElementById('marginValue');
             const audioRepeatElement = document.getElementById('audiorepeat');
             const fontSizeElement = document.getElementById('fontsize');
 
             this.serverstatus.examSections[this.serverstatus.activeSection].suggestions = checkboxSuggestionsElement ? checkboxSuggestionsElement.checked : false; 
-            this.serverstatus.examSections[this.serverstatus.activeSection].languagetool = checkboxLTElement ? checkboxLTElement.checked : false; 
+            this.serverstatus.examSections[this.serverstatus.activeSection].languagetool = checkboxLTElement ? checkboxLTElement.checked : false;
+            
+            // Save LanguageTool Host value if custom host checkbox is checked
+            if (checkboxCustomHostElement && checkboxCustomHostElement.checked && languagetoolhostElement) {
+                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost = languagetoolhostElement.value || 'http://127.0.0.1';
+            } else {
+                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost = null;
+            } 
 
             const radioButtons = document.querySelectorAll('input[name="correction_margin"]');
             const marginValue = marginValueElement ? marginValueElement.value : '';
@@ -808,10 +856,14 @@ function defineMaterials(who) {
                 this.serverstatus.examSections[this.serverstatus.activeSection].groupB.allowedUrls.push(allowedUrl);
             }
 
-            this.setServerStatus()
+           
         }
       
-        if (!input.value) {   return;   } // no further processing if no files are selected
+        if (!input.value) { 
+            this.setStudentStatus({getmaterials: true}, 'all'); 
+            this.setServerStatus()
+            return;   
+        } // no further processing if no files are selected
 
         this.status(this.$t("dashboard.processingfiles"));
         const files = input.value;
@@ -852,7 +904,7 @@ function defineMaterials(who) {
                 console.error(`exammanagement @ defineMaterials: Error processing file ${file.name}:`, error);
             }
         }
-
+        this.setStudentStatus({getmaterials: true}, 'all'); 
         this.setServerStatus()
     });    
 }
@@ -1062,7 +1114,7 @@ function openAllowedUrl(allowedUrl){
     document.querySelector("#printPDF").style.display = 'none';
     document.querySelector("#closePDF").style.display = 'none';
     document.querySelector("#pdfembed").style.display = 'none';
-
+    document.querySelector("#pdfrenderer").style.display = 'none';
 }
 
 

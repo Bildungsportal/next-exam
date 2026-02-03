@@ -495,7 +495,7 @@
                                 @mouseout="hideDescription" @click='activateSpellcheckForStudent(student.token,student.clientname)' 
                                 type="button" 
                                 class="btn btn-sm pt-0 mt-0 pe-0 float-end" 
-                                style="z-index:1000; position:relative;">
+                                style="z-index:100; position:relative;">
                                 <img src="/src/assets/img/svg/autocorrection.svg" class="widgetbutton" width="22" height="22" >
                             </button> 
      
@@ -1120,6 +1120,8 @@ computed: {
                 if (result.isConfirmed) {
                     if (group === 'A') { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.examInstructionFiles.splice(index, 1); } 
                     else {               this.serverstatus.examSections[this.serverstatus.activeSection].groupB.examInstructionFiles.splice(index, 1); }
+                    this.setStudentStatus({getmaterials: true}, 'all'); 
+                    this.setServerStatus()
                 }
             })
 
@@ -2358,7 +2360,7 @@ computed: {
     padding-right: 10px;
     border-bottom-right-radius: 5px;
     border-top-right-radius: 5px;
-    z-index: 1000;
+    z-index: 100;
 }
 
 .widgetbutton {
@@ -2766,7 +2768,8 @@ hr {
     font-size: 1.125em;
     margin: 0em 0em 3px;
     min-height: 1.2em;
-    padding: 0.5em;
+    height: 38px !important;
+    padding: .375em .625em;
     color: #545454;
     width: 99% !important;
 }
@@ -2802,6 +2805,12 @@ hr {
 .my-popup {
     justify-content: flex-start !important;
     justify-items: flex-start !important;
+
+}
+.my-popup-sprachen {
+    justify-content: flex-start !important;
+    justify-items: flex-start !important;
+    width: unset !important;
 }
 
 .my-input-label {    
@@ -2817,10 +2826,17 @@ hr {
     margin: 1em 2em 3px !important;
 }  
 
+.my-custom-input-select {
+    margin-top: 0px !important;
+    width: -webkit-fill-available !important;
+    margin: 0px 2em 3px !important;
+    width: 343px !important;
+}  
 .my-swal2-actions {
     margin-top: 10px !important;
-    width: 100% !important;
+    width: 80% !important;
     margin-left: 1.9em !important;
+    margin-right: 1.9em !important;
     justify-content: flex-start !important; /* Richtet die Buttons linksbündig aus */
 }
 

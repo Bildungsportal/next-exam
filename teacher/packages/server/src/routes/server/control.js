@@ -733,6 +733,7 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
     const group = req.body.group
     const kicked = req.body.kick
     const msofficeshare = req.body.msofficeshare
+    const getmaterials = req.body.getmaterials
 
 
     if (req.params.csrfservertoken === mcServer.serverinfo.servertoken) {  //first check if csrf token is valid and server is allowed to trigger this api request
@@ -742,6 +743,7 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
                 if (delfolder)  { student.status.delfolder = true   } // on the next update cycle the student gets informed to delete workfolder
                 if (group) {student.status.group = group; }
                 if (typeof msofficeshare !== 'undefined') {student.status.msofficeshare = msofficeshare; }   // we need to set this to false for every student to trigger a new upload of the msOfficeFile on section change
+                if (getmaterials) {student.status.getmaterials = true; }
             }
         }
         else {
@@ -765,7 +767,7 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
                 if (group) {student.status.group = group; }
                 if (typeof msofficeshare !== 'undefined') {student.status.msofficeshare = msofficeshare; }
                 if (kicked) { student.status.kicked = true }
-
+                if (getmaterials) {student.status.getmaterials = true; }
 
                 //log.info("control @ setstudentstatus:", req.body)
               
@@ -839,6 +841,7 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
     student.status.delfolder = false 
     student.status.sendexam = false // request only once
     student.status.focus = true
+    student.status.getmaterials = false
     //student.status.activatePrivateSpellcheck = false   // activate only once - when student retrieved "studentstatus" we can reset some values of "student.status"
 
     // return current serverinformation to process on clientside 
@@ -846,7 +849,7 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
     const serverstatusCopy = { ...mcServer.serverstatus };
     serverstatusCopy.examSections = { ...mcServer.serverstatus.examSections };
     
-    // Clear examInstructionFiles in all 4 examSections for both groupA and groupB
+    // Clear examInstructionFiles in all 4 examSections for both groupA and groupB (we dont want to send the materials to the student on every update)
     for (let sectionKey of [1, 2, 3, 4]) {
         if (serverstatusCopy.examSections[sectionKey]) {
             serverstatusCopy.examSections[sectionKey] = {

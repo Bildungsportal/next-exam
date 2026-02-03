@@ -127,6 +127,8 @@
         "spellcheckactivate": "activate spellcheck",
         "spellcheckchoose": "Please choose a language",
         "suggest":"Show suggestions",
+        "customhost": "Custom LT Host",
+        "languagetoolhost": "LanguageTool Host",
         "none": "none",
         "cmargin": "Correction Margin Position",
         "cmargin-left": "left",

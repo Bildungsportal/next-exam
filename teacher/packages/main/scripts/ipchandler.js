@@ -80,8 +80,16 @@ class IpcHandler {
             return new Promise((resolve, reject) => {
                 let hiddenWin = new BrowserWindow({
                     show: false,
-                    webPreferences: {plugins: true,  webSecurity: false }
+                    useContentSize: true, // Ensure width/height refers to content area
+                    webPreferences: {
+                        plugins: true,
+                        webSecurity: false,
+                        zoomFactor: 1.0  // Force 1:1 scaling to ignore system scale factor
+                    }
                 });
+                
+                // Set zoom factor to 1.0 to ignore system DPI scaling (fixes Chromium print bug)
+                hiddenWin.webContents.setZoomFactor(1.0);
                 
                 let dataUrl = ``;
                 if (previewType === "pdf") {
@@ -149,9 +157,10 @@ class IpcHandler {
                                 printBackground: true,
                                 scaleFactor: 1,
                                 pagesPerSheet: 1,
+                                landscape: false,
                                 dpi: {
-                                    horizontal: 1200,
-                                    vertical: 1200
+                                    horizontal: 600,
+                                    vertical: 600
                                 },
                                 pageSize: 'A4', 
                                 margins: {
