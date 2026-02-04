@@ -4,7 +4,7 @@
  */
 
 const config = {
-    development: true,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
+    development: false,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
     showdevtools: true,
     bipIntegration: true,
     bipDemo: true,
@@ -37,8 +37,8 @@ const config = {
         activesheets: false
     },
 
-    version: '1.1.1.1',
-    buildDate: '20260203',
+    version: '2.0.0.1.1',
+    buildDate: '20260204',
     buildNumber: '1',
     info: 'Release'
 }
