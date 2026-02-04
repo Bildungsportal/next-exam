@@ -15,6 +15,7 @@
  * If not, see <http://www.gnu.org/licenses/>
  */
 
+
 /**
  * most of the keyboard restrictions could be handled by "iohook" for all platforms
  * unfortunalety it's not yet released for node v16.x and electron v16.x  (also it's "big sur" intel only on macs)
@@ -26,6 +27,7 @@
  *
  * hardcoding the keyboardshortcuts we want to capture into iohook(or n-g-k-l) and manually compiling it for mac and windows could be done - (but not until i get paid for this amount of work ;-)
  */
+
 
 /**
  * the next best solution i came up with is to kill all of the shells - starting with explorer.exe because its absolutely impossible to

@@ -37,6 +37,7 @@ import IpcHandler from './scripts/ipchandler.js'
 import { updateSystemTray } from './scripts/traymenu.js'
 import JreHandler from './scripts/jre-handler.js';
 import { checkParentProcess } from './scripts/checkparent.js';
+
 import { toggleMacOSLockdown } from './scripts/platformrestrictions.js'
 JreHandler.init()
 

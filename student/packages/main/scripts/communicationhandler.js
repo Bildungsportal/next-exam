@@ -634,6 +634,8 @@ const __dirname = import.meta.dirname;
         /**
          * SWITCH EXAM SECTION  END
          ************************************/
+      
+
 
         if (serverstatus.screenslocked && !this.multicastClient.clientinfo.screenlock) {  this.activateScreenlock() }
         else if (!serverstatus.screenslocked ) { this.killScreenlock() }

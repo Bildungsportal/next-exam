@@ -158,10 +158,6 @@ class IpcHandler {
                                 scaleFactor: 1,
                                 pagesPerSheet: 1,
                                 landscape: false,
-                                dpi: {
-                                    horizontal: 600,
-                                    vertical: 600
-                                },
                                 pageSize: 'A4', 
                                 margins: {
                                     marginType: 'none'

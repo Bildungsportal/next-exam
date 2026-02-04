@@ -467,7 +467,7 @@ export default {
                     const editorRadio = document.getElementById('editor');
                     const mathRadio = document.getElementById('math');
                     const selectElement = document.querySelector('.swal2-select');
-                    
+
                     // Function to toggle spellcheck section visibility
                     const toggleSpellcheckSection = () => {
                         const isEditor = editorRadio.checked;
@@ -485,10 +485,10 @@ export default {
                             }
                         }
                     };
-                    
+
                     // Initial: suggestions-Checkbox deaktivieren, falls LT nicht gecheckt ist
                     checkboxSuggestions.disabled = !checkboxLT.checked;
-                    
+
                     // Event Listener für checkboxLT, um den Status von checkboxsuggestions anzupassen
                     checkboxLT.addEventListener('change', () => {
                         checkboxSuggestions.disabled = !checkboxLT.checked;
@@ -497,11 +497,11 @@ export default {
                             checkboxSuggestions.checked = false;
                         }
                     });
-                    
+
                     // Event Listener für Radio-Buttons, um Spellcheck-Sektion ein/auszublenden
                     editorRadio.addEventListener('change', toggleSpellcheckSection);
                     mathRadio.addEventListener('change', toggleSpellcheckSection);
-                    
+
                     // Initial visibility based on selected radio button
                     toggleSpellcheckSection();
 
@@ -542,7 +542,7 @@ export default {
                     savedPassword = localPasswordElement ? localPasswordElement.value : '';
                     savedLanguagetool = checkboxLTElement ? checkboxLTElement.checked : false;
                     savedSuggestions = checkboxSuggestionsElement ? checkboxSuggestionsElement.checked : false;
-                    
+
                     radioButtons.forEach((radio) => {
                         if (radio.checked) {
                             savedExammode = radio.value;
@@ -560,7 +560,7 @@ export default {
                     }
                 }
             }).then((result) => {
-                if (result.isConfirmed) { 
+                if (result.isConfirmed) {
 
                     let exammode = savedExammode; // Use saved value instead of reading from DOM
                     let username = savedUsername; // Use saved value instead of reading from DOM
