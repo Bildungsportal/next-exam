@@ -54,8 +54,8 @@
                     <img id="biplogo"
                          style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; "
                          src="/src/assets/img/login_students.jpg">
-                    <span v-if="bipUsername" id="biploginbuttonlabel">{{ bipUsername }}</span><span v-else
-                                                                                                    id="biploginbuttonlabel">Login</span>
+                    <span v-if="bipUsername" id="biploginbuttonlabel">{{ bipUsername }}</span>
+                    <span v-else id="biploginbuttonlabel">Logout</span>
                 </div>
                 <div v-else id="biploginbutton" title="login" @click="loginBiP()" class="btn btn-info m-1 "
                      style="padding:0;" :class="(token)? 'disabledexam':''">
@@ -304,7 +304,11 @@ export default {
             }
             if (isElectronWindow(window)) {
                 let IPCresponse = window.ipcRenderer.sendSync('loginBiP', this.biptest)
+                if (IPCresponse.status === "success") {
+                    
+                }
                 console.log(IPCresponse)
+
             }
         },
 
@@ -369,6 +373,10 @@ export default {
         async fetchBipExams() {
             if (!this.bipToken) return;  // cannot fetch from bip api without valid token
 
+            return // disable bip api call for now - this must connect to the real bip api server
+            //probably the path needs to be set in .env and config.js
+
+
             // if (this.config.development){
             let url = "http://10.0.0.100:3000/student"
 
@@ -431,6 +439,7 @@ export default {
                     if (response.fullname) {
                         this.username = response.fullname
                         this.bipuserID = response.userid
+                        this.bipUsername = response.fullname
                     }
                 })
                 .catch(err => {
