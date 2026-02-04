@@ -15,6 +15,7 @@
  * If not, see <http://www.gnu.org/licenses/>
  */
 
+import fs from 'fs';
 import { app, BrowserWindow, BrowserView, dialog, screen} from 'electron'
 import { join } from 'path'
 import {disableRestrictions, enableRestrictions} from './platformrestrictions.js';
@@ -26,6 +27,19 @@ import {fileURLToPath} from "node:url";
 import path from 'path';
 
 const __dirname = import.meta.dirname;
+
+// When packaged, dist/ is in app.asar.unpacked; otherwise use __dirname
+function getRendererIndexPath() {
+  if (app.isPackaged) {
+    const unpacked = join(process.resourcesPath, 'app.asar.unpacked', 'dist', 'renderer', 'index.html');
+    if (fs.existsSync(unpacked)) return unpacked;
+  }
+  const distRendererPath = join(__dirname, 'dist', 'renderer', 'index.html');
+  if (fs.existsSync(distRendererPath)) return distRendererPath;
+  const quasarPath = join(__dirname, 'index.html');
+  if (fs.existsSync(quasarPath)) return quasarPath;
+  return join(__dirname, '../renderer/index.html');
+}
 
 
 
@@ -220,8 +234,7 @@ class WindowHandler {
     
         let url = "notfound"
         if (app.isPackaged) {
-            let path = join(__dirname, `../renderer/index.html`)
-            blockwin.loadFile(path, {hash: `#/${url}/`})
+            blockwin.loadFile(getRendererIndexPath(), {hash: `#/${url}/`})
         } 
         else {
             url = `${process.env.APP_URL}/#/${url}/`
@@ -381,8 +394,7 @@ class WindowHandler {
 
         let url = "lock"
         if (app.isPackaged) {
-            let path = join(__dirname, `../renderer/index.html`)
-            screenlockWindow.loadFile(path, {hash: `#/${url}/`})
+            screenlockWindow.loadFile(getRendererIndexPath(), {hash: `#/${url}/`})
         } 
         else {
             url = `${process.env.APP_URL}/#/${url}/`
@@ -559,8 +571,7 @@ class WindowHandler {
             // load top menu in MainPage
             let url = examtype   // editor || math || eduvidual || tbd.
             if (app.isPackaged) {
-                let path = join(__dirname, `../renderer/index.html`)
-                this.examwindow.loadFile(path, {hash: `#/${url}/${token}`})
+                this.examwindow.loadFile(getRendererIndexPath(), {hash: `#/${url}/${token}`})
             } 
             else {
                 let backgroundurl = `${process.env.APP_URL}/#/${url}/${token}/`
@@ -612,8 +623,7 @@ class WindowHandler {
         else { 
             let url = examtype   // editor || math || tbd.
             if (app.isPackaged) {
-                let path = join(__dirname, `../renderer/index.html`)
-                this.examwindow.loadFile(path, {hash: `#/${url}/${token}`})
+                this.examwindow.loadFile(getRendererIndexPath(), {hash: `#/${url}/${token}`})
             } 
             else {
                 url = `${process.env.APP_URL}/#/${url}/${token}/`
@@ -866,7 +876,7 @@ class WindowHandler {
         if (this.config.showdevtools) { this.mainwindow.webContents.openDevTools()  }
 
         if (app.isPackaged || process.env["DEBUG"]) {
-            const filePath = join(__dirname, '../renderer/index.html')
+            const filePath = getRendererIndexPath();
             log.info(`windowhandler @ createMainWindow: Loading file: ${filePath}`)
             this.mainwindow.loadFile(filePath)
         }

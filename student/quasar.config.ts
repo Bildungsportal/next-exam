@@ -5,6 +5,7 @@ import { defineConfig } from '@quasar/app-vite/wrappers';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { builtinModules } from 'module';
+import fse from 'fs-extra';
 import pkg from './package.json';
 import dotenv from 'dotenv';
 
@@ -90,6 +91,7 @@ export default defineConfig(( ctx: any ) => {
       // minify: false,
       // polyfillModulePreload: true,
       // distDir
+      showBuildSummary: false,
 
       extendViteConf (viteConf: any) {
         // Suppress SASS deprecation warnings for Bootstrap color functions
@@ -107,6 +109,39 @@ export default defineConfig(( ctx: any ) => {
         viteConf.optimizeDeps = viteConf.optimizeDeps || {};
         viteConf.optimizeDeps.include = viteConf.optimizeDeps.include || [];
         viteConf.optimizeDeps.include.push('pdfjs-dist');
+        viteConf.build = viteConf.build || {};
+        viteConf.build.chunkSizeWarningLimit = 1500;
+        // Electron: renderer in dist/renderer; public + src/assets into renderer so ./ and /src/assets work; public also to UnPackaged/public for main
+        if (ctx.mode.electron && ctx.prod) {
+          const baseOut = viteConf.build?.outDir ?? path.join(__dirname, 'dist', 'electron', 'UnPackaged');
+          const rendererOut = path.join(baseOut, 'dist', 'renderer');
+          viteConf.build.outDir = rendererOut;
+          viteConf.base = './';
+          viteConf.publicDir = false;
+          const publicDir = path.resolve(__dirname, 'public');
+          const srcAssetsDir = path.resolve(__dirname, 'src', 'assets');
+          viteConf.plugins = viteConf.plugins || [];
+          viteConf.plugins.push({
+            name: 'quasar-electron-public-folder',
+            closeBundle () {
+              fse.copySync(publicDir, path.join(baseOut, 'public'));
+              fse.copySync(publicDir, rendererOut);
+              fse.copySync(srcAssetsDir, path.join(rendererOut, 'src', 'assets'));
+            }
+          });
+          viteConf.plugins.push({
+            name: 'quasar-electron-rewrite-src-assets',
+            transformIndexHtml: (html) => html.replace(/(["'])\/src\/assets/g, '$1./src/assets'),
+            generateBundle (_, bundle) {
+              const rewrite = (s) => s.replace(/"\/src\/assets/g, '"./src/assets').replace(/'\/src\/assets/g, "'./src/assets");
+              for (const item of Object.values(bundle)) {
+                const entry = item as { type?: string; code?: string; source?: string | Buffer };
+                if (entry?.type === 'chunk' && entry.code) entry.code = rewrite(entry.code);
+                if (entry?.type === 'asset' && typeof entry.source === 'string') entry.source = rewrite(entry.source);
+              }
+            }
+          });
+        }
       },
       viteVuePluginOptions: {
         template: {
@@ -255,8 +290,9 @@ export default defineConfig(( ctx: any ) => {
         asar: { smartUnpack: true },
         afterPack: 'scripts/afterpack.js',
         asarUnpack: [
+          'public/**/*',
+          'dist/**/*',
           'node_modules/screenshot-desktop-wayland/lib/win32',
-          'public',
           'node_modules/get-windows/**/*',
           'node_modules/@img/**/*',
           'node_modules/sharp/**/*',

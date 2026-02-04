@@ -74,10 +74,6 @@ try {
  }
 
 
-if (typeof window !== 'undefined'){
-    if (window.process.type == "renderer") config.electron = true
-   
-}
 
 
 

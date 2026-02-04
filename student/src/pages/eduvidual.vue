@@ -112,7 +112,6 @@ import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import { getExamMaterials, loadPDF, loadImage} from '../utils/filehandler.js'
 import PdfviewPane from '../components/PdfviewPane.vue'
 import WebviewPane from '../components/WebviewPane.vue';
-import {ipcRenderer} from "electron";
 
 export default {
     data() {
@@ -179,7 +178,7 @@ export default {
     components: { ExamHeader, PdfviewPane, WebviewPane },  
     mounted() {
         if (isElectronWindow(window)) {
-            ipcRenderer.on('getmaterials', (event) => {
+            window.ipcRenderer.on('getmaterials', (event) => {
                 console.log("eduvidual @ getmaterials: get materials request received")
                 this.getExamMaterials()
             });

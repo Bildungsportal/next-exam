@@ -1,19 +1,21 @@
 // scripts/SystemTrayManager.js
-import { app, Tray, Menu } from 'electron'; 
-import path from 'path'; // Path module import
-import log from 'electron-log'; // Logging module
-import WindowHandler from './windowhandler.js'; // Window manager
-import CommHandler from './communicationhandler.js'; // Communication logic
-import i18n from '../../../src/locales/locales.js'; // I18n instance
+import { app, Tray, Menu } from 'electron';
+import path from 'path';
+import log from 'electron-log';
+import WindowHandler from './windowhandler.js';
+import CommHandler from './communicationhandler.js';
+import platformDispatcher from './platformDispatcher.js';
+import i18n from '../../../src/locales/locales.js';
 
+const __dirname = import.meta.dirname;
 
+let tray = null;
 
-const __dirname = import.meta.dirname; // Get current directory
-
-let tray = null; // Private tray instance
-
-// Path to the app icon
-const iconPath = path.join(__dirname, '../../public/icons','icon24x24.png'); 
+// Resolve icon path: packaged app uses unpacked public dir, dev uses project public
+function getTrayIconPath() {
+  const publicBase = platformDispatcher.getPackagedPublicBase();
+  return path.join(publicBase, 'icons', 'icon24x24.png');
+} 
 
 // === replace the helper setLocale (exact block) ===
 const setLocale = (loc) => {
@@ -41,8 +43,8 @@ export const updateSystemTray = (locale) => {
     setLocale(locale);                                      // set current locale
     const t = (k) => i18n.global.t(k);                      // always resolve live
   
-    if (!tray) {                                            // create tray once
-      tray = new Tray(iconPath);                            // create tray icon
+    if (!tray) {
+      tray = new Tray(getTrayIconPath());
       tray.on('click', () => {                              // toggle window
         WindowHandler.mainwindow.isVisible() 
           ? WindowHandler.mainwindow.hide() 

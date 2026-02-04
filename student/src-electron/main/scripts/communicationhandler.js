@@ -259,7 +259,7 @@ const __dirname = import.meta.dirname;
              */
             if (process.platform === "darwin" && this.firstCheckScreenshot && imgBuffer !== null){  //this is for macOS because it delivers a blank background screenshot without permissions. we catch that case with a workaround
                 this.firstCheckScreenshot = false   //never do this again
-                const publicPath = app.isPackaged ? path.join(process.resourcesPath,'app.asar.unpacked', 'public') : path.resolve(__dirname, '../../public');
+                const publicPath = platformDispatcher.getPackagedPublicBase();
                 try{
                     const { data: { text } }   = await Tesseract.recognize(imgBuffer , 'eng',{ langPath: publicPath } );
                     let appWindowVisible = text.includes("Exam")   //check if the word "Exam" can be found in screenshot - otherwise it is most likely a blank desktop - macos quirk

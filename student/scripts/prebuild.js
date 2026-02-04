@@ -37,7 +37,6 @@ const config = {
     multicastServerAdrr: '239.255.255.250',
     hostip: "",       // server.js
     gateway: true,
-    electron: false,
     virtualized: false,
     isPuavo: ${process.env.IS_PUAVO},
     

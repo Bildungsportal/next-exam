@@ -123,8 +123,6 @@ app.on('second-instance', () => {
 
 const __dirname = import.meta.dirname;
 
-config.electron = true
-
 config.homedirectory = platformDispatcher.homedirectory;
 config.workdirectory = platformDispatcher.workdirectory;
 config.tempdirectory = platformDispatcher.tempdirectory;

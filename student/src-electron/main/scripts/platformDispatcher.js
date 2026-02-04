@@ -22,6 +22,7 @@
 
 
 import { execSync } from 'child_process';
+import fs from 'fs';
 import { join } from 'path';
 import { app } from 'electron';
 import log from 'electron-log';
@@ -32,6 +33,13 @@ import path from 'path';
 import dotenv from 'dotenv';
 dotenv.config();
 const __dirname = import.meta.dirname;
+
+// When packaged: Quasar puts public contents at app root; old build had public/ subdir. Resolve at runtime.
+function getPackagedPublicBase() {
+  const unpacked = join(process.resourcesPath, 'app.asar.unpacked');
+  const withPublic = join(unpacked, 'public');
+  return fs.existsSync(withPublic) ? withPublic : unpacked;
+}
 
 
 
@@ -116,8 +124,9 @@ class PlatformDispatcher {
     // use bundled jre because its smaller and provides only the needed java modules
     if (config.useBundledJRE) {
       if (app.isPackaged) {
-        this.messages.push("platformDispatcher @ _resolveJREDir: app.isPackaged: " + join(process.resourcesPath, 'app.asar.unpacked', 'public', this.jre));
-        return join(process.resourcesPath, 'app.asar.unpacked', 'public', this.jre);
+        const base = getPackagedPublicBase();
+        this.messages.push("platformDispatcher @ _resolveJREDir: app.isPackaged: " + join(base, this.jre));
+        return join(base, this.jre);
       } else {
         this.messages.push("platformDispatcher @ _resolveJREDir: !app.isPackaged: " + join(__dirname, '../../public', this.jre));
         return join(__dirname, '../../public', this.jre);
@@ -143,7 +152,7 @@ class PlatformDispatcher {
       // If no Java found, fall back to bundled JRE
       log.warn("platformDispatcher @ _resolveJREDir: No system Java found, falling back to bundled JRE");
       if (app.isPackaged) {
-        return join(process.resourcesPath, 'app.asar.unpacked', 'public', this.jre);
+        return join(getPackagedPublicBase(), this.jre);
       } else {
         return join(__dirname, '../../public', this.jre);
       }
@@ -192,12 +201,8 @@ class PlatformDispatcher {
   }
 
   _getWorkerURL() {
-    // Worker-Logik direkt anschließen
-    const baseDir = app.isPackaged ? process.resourcesPath : import.meta.dirname;
-    const workerPath = app.isPackaged
-      ? join(baseDir, 'app.asar.unpacked', 'public', this.workerFileName)
-      : join(baseDir, '../../public', this.workerFileName);
-  
+    const baseDir = app.isPackaged ? getPackagedPublicBase() : join(import.meta.dirname, '../../public');
+    const workerPath = join(baseDir, this.workerFileName);
     return pathToFileURL(workerPath);
   }
 
@@ -321,6 +326,11 @@ class PlatformDispatcher {
     } else {
       return true;
     }
+  }
+
+  /** Resolved base path for public assets when packaged (Quasar: app root; old build: app.asar.unpacked/public). In dev returns project public dir. */
+  getPackagedPublicBase() {
+    return app.isPackaged ? getPackagedPublicBase() : join(__dirname, '../../public');
   }
 }
 

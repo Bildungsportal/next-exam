@@ -4,7 +4,7 @@
  */
 
 const config = {
-    development: true,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
+    development: false,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
     showdevtools: true,
     useBundledJRE: true,
     bipIntegration: true,
@@ -22,7 +22,6 @@ const config = {
     multicastServerAdrr: '239.255.255.250',
     hostip: "",       // server.js
     gateway: true,
-    electron: false,
     virtualized: false,
     isPuavo: false,
     
