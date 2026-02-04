@@ -370,7 +370,7 @@ export default {
             if (!this.bipToken) return;  // cannot fetch from bip api without valid token
 
             // if (this.config.development){
-            let url = "http://localhost/moodle/webservice/rest/server.php?wstoken="+this.bipToken+"&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json&studentID="+this.bipuserID
+            let url = "http://localhost/moodle/webservice/rest/server.php?wstoken="+this.bipToken+"&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json"
 
             await fetch(url, {
                 method: "GET",

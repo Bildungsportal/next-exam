@@ -11,7 +11,7 @@ var config = {
   showdevtools: true,
   useBundledJRE: true,
   bipIntegration: true,
-  bipDemo: false,
+  bipDemo: true,
   workdirectory: "",
   // (desktop path + examdir)
   tempdirectory: "",
