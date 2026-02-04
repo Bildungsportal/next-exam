@@ -2,8 +2,31 @@
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
 import { defineConfig } from '@quasar/app-vite/wrappers';
-import {builtinModules} from "module";
-import pkg from './package.json'
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { builtinModules } from 'module';
+import pkg from './package.json';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const pdfjsLegacyPdf = path.resolve(__dirname, 'node_modules/pdfjs-dist/legacy/build/pdf.mjs');
+const pdfjsLegacyWorker = path.resolve(__dirname, 'node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs');
+
+const buildDate = (() => {
+  const now = new Date();
+  return now.getFullYear() +
+    String(now.getMonth() + 1).padStart(2, '0') +
+    String(now.getDate()).padStart(2, '0');
+})();
+
+const productName = process.env.PRODUCT_NAME || pkg.name || 'Next-Exam-Student';
+const version = process.env.VERSION || pkg.version || '2.0.0';
+const buildNumber = process.env.BUILD_NUMBER || '1';
+const artifactDate = buildDate;
+const artifactNamePattern = `${productName}_${version}.${buildNumber}_${artifactDate}_\${arch}.\${ext}`;
+const signEnabled = process.env.SIGN !== 'false';
 
 export default defineConfig(( ctx: any ) => {
   return {
@@ -74,6 +97,16 @@ export default defineConfig(( ctx: any ) => {
         viteConf.css.preprocessorOptions = viteConf.css.preprocessorOptions || {};
         viteConf.css.preprocessorOptions.scss = viteConf.css.preprocessorOptions.scss || {};
         viteConf.css.preprocessorOptions.scss.silenceDeprecations = ['color-functions'];
+        // Resolve pdfjs-dist legacy build (package has no exports for legacy subpath)
+        viteConf.resolve = viteConf.resolve || {};
+        viteConf.resolve.alias = {
+          ...viteConf.resolve.alias,
+          'pdfjs-dist/legacy/build/pdf.mjs': pdfjsLegacyPdf,
+          'pdfjs-dist/legacy/build/pdf.worker.mjs': pdfjsLegacyWorker,
+        };
+        viteConf.optimizeDeps = viteConf.optimizeDeps || {};
+        viteConf.optimizeDeps.include = viteConf.optimizeDeps.include || [];
+        viteConf.optimizeDeps.include.push('pdfjs-dist');
       },
       viteVuePluginOptions: {
         template: {
@@ -216,10 +249,68 @@ export default defineConfig(( ctx: any ) => {
       },
 
       builder: {
-        // https://www.electron.build/configuration/configuration
-
-        appId: 'next-exam-student'
-      }
+        appId: 'com.nextexam.student',
+        productName,
+        buildVersion: `${version}.${buildNumber}`,
+        asar: { smartUnpack: true },
+        afterPack: 'scripts/afterpack.js',
+        asarUnpack: [
+          'node_modules/screenshot-desktop-wayland/lib/win32',
+          'public',
+          'node_modules/get-windows/**/*',
+          'node_modules/@img/**/*',
+          'node_modules/sharp/**/*',
+          'node_modules/detect-libc/**/*',
+          'node_modules/semver/**/*',
+          'node_modules/color/**/*',
+          'node_modules/color-name/**/*',
+          'node_modules/color-string/**/*',
+          'node_modules/color-convert/**/*',
+          'node_modules/simple-swizzle/**/*',
+          'node_modules/is-arrayish/**/*',
+        ],
+        directories: { output: `../release/${version}.${buildNumber}_${artifactDate}` },
+        compression: 'normal',
+        linux: {
+          target: 'AppImage',
+          category: 'Utility',
+          icon: 'public/icons/256x256.png',
+          artifactName: artifactNamePattern,
+          // Quasar UnPackaged root has electron-main.js, index.html, preload/, assets/ – include all, exclude other platforms’ JRE
+          files: ['**/*', '!public/minimal-jre-11-win/**', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**'],
+        },
+        mac: {
+          icon: 'public/icons/icon.png',
+          artifactName: artifactNamePattern,
+          hardenedRuntime: true,
+          gatekeeperAssess: false,
+          entitlements: 'scripts/entitlements.mac.plist',
+          entitlementsInherit: 'scripts/entitlements.mac.plist',
+          category: 'public.app-category.utilities',
+          target: { target: 'dmg', arch: ['x64', 'arm64'] },
+          files: ['**/*', '!public/minimal-jre-11-win/**', '!public/minimal-jre-11-lin/**'],
+        },
+        dmg: { sign: false },
+        portable: { useZip: false, unpackDirName: 'next-exam-student', splashImage: 'public/splash.bmp' },
+        msi: {
+          perMachine: true,
+          createDesktopShortcut: true,
+          createStartMenuShortcut: true,
+          upgradeCode: '95a8e931-7946-44c5-9a9c-ec31d1553b03',
+          shortcutName: 'Next-Exam Student',
+        },
+        win: {
+          icon: 'public/icons/icon.ico',
+          target: [{ target: 'portable', arch: ['x64'] }, { target: 'msi', arch: ['x64'] }],
+          artifactName: artifactNamePattern,
+          files: ['**/*', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**', '!public/minimal-jre-11-lin/**'],
+          ...(signEnabled && {
+            sign: true,
+            signtoolOptions: { certificateSubjectName: 'OSOS Austria', signingHashAlgorithms: ['sha256'] },
+          }),
+        },
+        ...(signEnabled && { afterSign: 'scripts/notarize.cjs' }),
+      },
     },
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/developing-browser-extensions/configuring-bex

@@ -2,7 +2,6 @@
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
 import { defineConfig } from '@quasar/app-vite/wrappers';
-import {watch} from "./scripts/watch.mjs";
 import {builtinModules} from "module";
 import pkg from './package.json'
 

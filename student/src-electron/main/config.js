@@ -1,6 +1,6 @@
 
 /**
- * DO NOT EDIT - this file is written by prebuild.js via electron-builder.env - edit vars in electron-builder.env file!
+ * DO NOT EDIT - this file is written by prebuild.js from .env - edit vars in .env file!
  */
 
 const config = {
@@ -27,7 +27,7 @@ const config = {
     isPuavo: false,
     
     version: '2.0.0.1',
-    buildDate: '20260203',
+    buildDate: '20260204',
     buildNumber: '1',
     info: 'Release'
 }

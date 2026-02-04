@@ -30,8 +30,7 @@ import { pathToFileURL } from 'url';
 import os from 'os';
 import path from 'path';
 import dotenv from 'dotenv';
-import fs from 'fs';
-dotenv.config({ path: 'electron-builder.env' });
+dotenv.config();
 const __dirname = import.meta.dirname;
 
 
