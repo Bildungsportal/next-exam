@@ -357,23 +357,25 @@ app.on('web-contents-created', (event, webContents) => {
     });
 });
 
-app.on('window-all-closed', () => {  // if window is closed
+app.on('window-all-closed', async () => {  // last window closed – clear storage here to avoid Linux segfault in before-quit
     clearInterval( CommHandler.updateStudentIntervall )
+    if (WindowHandler.checkWindowInterval?.stop) WindowHandler.checkWindowInterval.stop()
+    if (CommHandler.updateScheduler?.stop) CommHandler.updateScheduler.stop()
+    if (CommHandler.screenshotScheduler?.stop) CommHandler.screenshotScheduler.stop()
+    if (multicastClient.refreshExamsScheduler?.stop) multicastClient.refreshExamsScheduler.stop()
     WindowHandler.mainwindow = null
-    app.quit()
-})
+
+    try {
+        await session.defaultSession.clearStorageData({}); // clear cookies, cache, localStorage etc. while session still valid
+    } catch (err) {
+        log.error('main @ window-all-closed: Error clearing storage:', err);
+    }
+    app.quit();
+});
 
 app.on('will-quit', () => {  // if window is closed
     toggleMacOSLockdown(false)
 })
-
-app.on('before-quit', async () => {
-    try {
-        await session.defaultSession.clearStorageData({}); // clear cookies, cache, localStorage etc.
-    } catch (err) {
-        log.error('main @ before-quit: Error clearing cache:', err);
-    }
-});
 
 app.on('activate', () => {
     const allWindows = BrowserWindow.getAllWindows()
