@@ -360,7 +360,7 @@ app.on('web-contents-created', (event, webContents) => {
 app.on('window-all-closed', () => {  // if window is closed
     clearInterval( CommHandler.updateStudentIntervall )
     WindowHandler.mainwindow = null
-    app.quit()   
+    app.quit()
 })
 
 app.on('will-quit', () => {  // if window is closed

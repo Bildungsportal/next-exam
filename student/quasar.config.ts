@@ -106,32 +106,38 @@ export default defineConfig(( ctx: any ) => {
           'pdfjs-dist/legacy/build/pdf.mjs': pdfjsLegacyPdf,
           'pdfjs-dist/legacy/build/pdf.worker.mjs': pdfjsLegacyWorker,
         };
+        // Ensure single copy of TipTap/ProseMirror to avoid "Duplicate use of selection JSON ID gapcursor"
+        viteConf.resolve.dedupe = viteConf.resolve.dedupe || [];
+        [ '@tiptap/pm', '@tiptap/core', '@tiptap/vue-3', '@tiptap/extension-gapcursor' ].forEach((pkg) => {
+          if (!viteConf.resolve.dedupe.includes(pkg)) viteConf.resolve.dedupe.push(pkg);
+        });
         viteConf.optimizeDeps = viteConf.optimizeDeps || {};
         viteConf.optimizeDeps.include = viteConf.optimizeDeps.include || [];
         viteConf.optimizeDeps.include.push('pdfjs-dist');
         viteConf.build = viteConf.build || {};
         viteConf.build.chunkSizeWarningLimit = 1500;
-        // Electron: renderer in dist/renderer; public + src/assets into renderer so ./ and /src/assets work; public also to UnPackaged/public for main
+        // Electron: build renderer into public/ so one copy – no duplication; base ./ so relative paths work from public/index.html
         if (ctx.mode.electron && ctx.prod) {
           const baseOut = viteConf.build?.outDir ?? path.join(__dirname, 'dist', 'electron', 'UnPackaged');
-          const rendererOut = path.join(baseOut, 'dist', 'renderer');
-          viteConf.build.outDir = rendererOut;
+          const publicOut = path.join(baseOut, 'public');
+          viteConf.build.outDir = publicOut;
           viteConf.base = './';
-          viteConf.publicDir = false;
-          const publicDir = path.resolve(__dirname, 'public');
+          viteConf.publicDir = path.resolve(__dirname, 'public');
           const srcAssetsDir = path.resolve(__dirname, 'src', 'assets');
           viteConf.plugins = viteConf.plugins || [];
           viteConf.plugins.push({
             name: 'quasar-electron-public-folder',
             closeBundle () {
-              fse.copySync(publicDir, path.join(baseOut, 'public'));
-              fse.copySync(publicDir, rendererOut);
-              fse.copySync(srcAssetsDir, path.join(rendererOut, 'src', 'assets'));
+              fse.copySync(srcAssetsDir, path.join(publicOut, 'src', 'assets'));
             }
           });
           viteConf.plugins.push({
-            name: 'quasar-electron-rewrite-src-assets',
-            transformIndexHtml: (html) => html.replace(/(["'])\/src\/assets/g, '$1./src/assets'),
+            name: 'quasar-electron-rewrite-assets',
+            transformIndexHtml: (html) => {
+              let out = html.replace(/(["'])\/src\/assets/g, '$1./src/assets');
+              out = out.replace(/href=["']public\//g, 'href="./');
+              return out;
+            },
             generateBundle (_, bundle) {
               const rewrite = (s) => s.replace(/"\/src\/assets/g, '"./src/assets').replace(/'\/src\/assets/g, "'./src/assets");
               for (const item of Object.values(bundle)) {
@@ -291,7 +297,6 @@ export default defineConfig(( ctx: any ) => {
         afterPack: 'scripts/afterpack.js',
         asarUnpack: [
           'public/**/*',
-          'dist/**/*',
           'node_modules/screenshot-desktop-wayland/lib/win32',
           'node_modules/get-windows/**/*',
           'node_modules/@img/**/*',

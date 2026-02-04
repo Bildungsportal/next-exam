@@ -28,12 +28,14 @@ import path from 'path';
 
 const __dirname = import.meta.dirname;
 
-// When packaged, dist/ is in app.asar.unpacked; otherwise use __dirname
+// Renderer built into public/ (one copy); when packaged use app.asar.unpacked/public
 function getRendererIndexPath() {
   if (app.isPackaged) {
-    const unpacked = join(process.resourcesPath, 'app.asar.unpacked', 'dist', 'renderer', 'index.html');
+    const unpacked = join(process.resourcesPath, 'app.asar.unpacked', 'public', 'index.html');
     if (fs.existsSync(unpacked)) return unpacked;
   }
+  const publicPath = join(__dirname, 'public', 'index.html');
+  if (fs.existsSync(publicPath)) return publicPath;
   const distRendererPath = join(__dirname, 'dist', 'renderer', 'index.html');
   if (fs.existsSync(distRendererPath)) return distRendererPath;
   const quasarPath = join(__dirname, 'index.html');
@@ -91,7 +93,7 @@ class WindowHandler {
     createBiPLoginWin(biptest) {
         this.bipwindow = new BrowserWindow({
             title: 'Next-Exam',
-            icon: join(__dirname, '../../public/icons/icon.png'),
+            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
             center:true,
             width: 1000,
             height:800,
@@ -164,7 +166,7 @@ class WindowHandler {
     createEasterWin() {
         this.easterwin = new BrowserWindow({
             title: 'Next-Exam',
-            icon: join(__dirname, '../../public/icons/icon.png'),
+            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
             center:true,
             width: 768,
             height:480,
@@ -179,7 +181,7 @@ class WindowHandler {
             transparent: false
         })
      
-        this.easterwin.loadFile(join(__dirname, `../../public/cowsonice/index.html`))
+        this.easterwin.loadFile(join(platformDispatcher.getPackagedPublicBase(), 'cowsonice', 'index.html'))
 
         // Electron 39: ready-to-show fires AFTER show() is called, so use did-finish-load instead
         this.easterwin.webContents.once('did-finish-load', () => {
@@ -226,7 +228,7 @@ class WindowHandler {
             // resizable:false,   // leads to weird 20px bottomspace on windows
             movable: false,
             frame: false,
-            icon: join(__dirname, '../../public/icons/icon.png'),
+            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
             webPreferences: {
                 preload: join(__dirname, './preload/electron-preload.cjs'),
             },
@@ -386,7 +388,7 @@ class WindowHandler {
             // resizable:false, // leads to weird 20px bottomspace on windows
             movable: false,
             frame: false,
-            icon: join(__dirname, '../../public/icons/icon.png'),
+            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
             webPreferences: {
                 preload: join(__dirname, './preload/electron-preload.cjs'),
             },
@@ -504,7 +506,7 @@ class WindowHandler {
             kiosk: this.config.development ? false : true,
             show: true,
             transparent: false,
-            icon: join(__dirname, '../../public/icons/icon.png'),
+            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
             webPreferences: {
                 preload: join(__dirname, './preload/electron-preload.cjs'),
                 spellcheck: false,
@@ -824,7 +826,7 @@ class WindowHandler {
 
         this.mainwindow = new BrowserWindow({
             title: 'Main window',
-            icon: join(__dirname, '../../public/icons/icon.png'),
+            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
             x: x,
             y: y,
             width: windowWidth,
