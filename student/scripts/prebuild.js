@@ -1,9 +1,7 @@
 import fs from 'fs';
-import yaml from 'yaml';
 import dotenv from 'dotenv';
 
-// Lade die env Datei
-dotenv.config({ path: 'electron-builder.env' });
+dotenv.config();
 
 // Erstelle Datums-String
 const now = new Date();
@@ -17,7 +15,7 @@ const configJsPath = './src-electron/main/config.js';
 
 let configJsContent = `
 /**
- * DO NOT EDIT - this file is written by prebuild.js via electron-builder.env - edit vars in electron-builder.env file!
+ * DO NOT EDIT - this file is written by prebuild.js from .env - edit vars in .env file!
  */
 
 const config = {
@@ -25,7 +23,7 @@ const config = {
     showdevtools: ${process.env.SHOWDEVTOOLS},
     useBundledJRE: ${process.env.USE_BUNDLED_JRE},
     bipIntegration: ${process.env.BIP_INTEGRATION},
-    bipDemo: ${process.env.BIP_DEMO},
+    bipApiUrl: '${process.env.BIP_API_URL}',
 
     workdirectory : "",   // (desktop path + examdir)
     tempdirectory : "",   // (desktop path + 'tmp')
@@ -39,7 +37,6 @@ const config = {
     multicastServerAdrr: '239.255.255.250',
     hostip: "",       // server.js
     gateway: true,
-    electron: false,
     virtualized: false,
     isPuavo: ${process.env.IS_PUAVO},
     
@@ -51,7 +48,6 @@ const config = {
 export default config;
 `;
 
-// Schreibe die aktualisierte config.js
 fs.writeFileSync(configJsPath, configJsContent);
 
 
@@ -61,67 +57,10 @@ fs.writeFileSync(configJsPath, configJsContent);
 
 
 
+const buildVersion = (process.env.VERSION || '2.0.0') + '.' + (process.env.BUILD_NUMBER || '1');
+const filename = `${process.env.PRODUCT_NAME || 'Next-Exam-Student'}_${process.env.VERSION}.${process.env.BUILD_NUMBER}_${buildDate}`;
 
-
-
-
-
-
-
-// 2. Update electron-builder.yml
-const builderConfigPath = './electron-builder.yml';
-const builderConfig = yaml.parse(fs.readFileSync(builderConfigPath, 'utf8'));
-
-let buildVersion = process.env.VERSION + '.' + process.env.BUILD_NUMBER;
-
-
-const artifactNamePattern = `\${productName}_\${env.VERSION}.\${env.BUILD_NUMBER}_${buildDate}_\${arch}.\${ext}`;
-const buildNumber = process.env.BUILD_NUMBER;
-const filename = `${process.env.PRODUCT_NAME}_${process.env.VERSION}.${process.env.BUILD_NUMBER}_${buildDate}`;
-
-// Falls SIGN ausgeschaltet werden soll, entferne den entsprechenden Abschnitt aus dem win-Objekt
-if (process.env.SIGN === 'false') {
-    // Entferne den Abschnitt "signtoolOptions"
-    delete builderConfig.win.signtoolOptions;
-    delete builderConfig.afterSign;
-    //builderConfig.win.sign = false;
-}
-else {
-    // füge die Sign- und Notarize-Optionen wieder hinzu
-    builderConfig.win.signtoolOptions = {
-        certificateSubjectName: 'OSOS Austria',
-        signingHashAlgorithms: ['sha256']
-    };
-    builderConfig.win.sign = true;
-    builderConfig.afterSign = 'scripts/notarize.cjs';
-}
-
-
-// Setze die Werte aus der env
-builderConfig.buildNumber = process.env.BUILD_NUMBER;
-builderConfig.buildVersion = buildVersion;
-builderConfig.productName = process.env.PRODUCT_NAME;
-
-// Windows
-if (builderConfig.win) {    builderConfig.win.artifactName = artifactNamePattern;}
-// Mac
-if (builderConfig.mac) {    builderConfig.mac.artifactName = artifactNamePattern;}
-// Linux
-if (builderConfig.linux) {    builderConfig.linux.artifactName = artifactNamePattern;}
-
-// Setze das Output-Verzeichnis
-builderConfig.directories = builderConfig.directories || {};
-builderConfig.directories.output = `../release/${process.env.VERSION}.${process.env.BUILD_NUMBER}_${buildDate}`;
-
-
-
-// Schreibe die aktualisierte yml
-fs.writeFileSync(builderConfigPath, yaml.stringify(builderConfig));
-
-
-
-
-// 3. Update package.json
+// 2. Update package.json
 const packageJsonPath = './package.json';
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
@@ -151,7 +90,7 @@ console.log(`Development: ${process.env.DEVELOPMENT}`);
 console.log(`__________________________________________________________________`);
 
 
-// 4. Patch portable.nsi template in node_modules (no official custom script support for portable target)
+// 3. Patch portable.nsi template in node_modules (no official custom script support for portable target)
 const customPortableNsi = './scripts/portable.nsi';
 const targetPortableNsi = './node_modules/app-builder-lib/templates/nsis/portable.nsi';
 

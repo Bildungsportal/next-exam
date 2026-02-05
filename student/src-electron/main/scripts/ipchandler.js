@@ -30,6 +30,7 @@ import {disableRestrictions} from './platformrestrictions.js';
 import mammoth from 'mammoth';
 
 import languageToolServer from './lt-server';
+import platformDispatcher from './platformDispatcher.js';
 import { updateSystemTray } from './traymenu.js';
 import { ensureNetworkOrReset } from './testpermissionsMac.js';
 import { getWlanInfo } from './getwlaninfo.js';
@@ -1220,12 +1221,7 @@ class IpcHandler {
                 const __dirname = import.meta.dirname;
                 
                 let pdfPath;
-                if (app.isPackaged) {
-                    pdfPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'public', pdfFilename);
-                } else {
-                    // From scripts/ go up 3 levels to reach student/ then public/
-                    pdfPath = path.join(__dirname, '../../public', pdfFilename);
-                }
+                pdfPath = path.join(platformDispatcher.getPackagedPublicBase(), pdfFilename);
                 
                 if (!fs.existsSync(pdfPath)) {
                     log.warn(`ipchandler @ getPdfFromPublic: PDF not found at: ${pdfPath}`);

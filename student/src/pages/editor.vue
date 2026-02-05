@@ -410,7 +410,8 @@
     <div v-if="!splitview" id="editormaincontainer"
          style="height: 100%; overflow-x:auto; overflow-y: scroll; background-color: #eeeefa;">
         <div id="editorcontainer" class="shadow" style="">
-            <div v-if="editor">
+            <!-- Wrapper with dynamic key so EditorContent is not hoisted and ref owner context is preserved -->
+            <div v-if="editor" :key="'main-' + (editor ? 'ready' : '')">
                 <editor-content :editor="editor" class='p-0' id="editorcontent"
                                 style="background-color: #fff; border-radius:0;"/>
             </div>
@@ -465,7 +466,8 @@
         <div id="editormaincontainer"
              style="min-width:230mm!important;padding:10px; overflow-x: auto !important; overflow-y: scroll !important; background-color: #eeeefa !important;">
             <div id="editorcontainer" class="shadow">
-                <div v-if="editor">
+                <!-- Wrapper with dynamic key so EditorContent is not hoisted and ref owner context is preserved -->
+                <div v-if="editor" :key="'split-' + (editor ? 'ready' : '')">
                     <editor-content :editor="editor" class="p-0" id="editorcontent"
                                     style="background-color: #fff !important; border-radius: 0 !important;"/>
                 </div>

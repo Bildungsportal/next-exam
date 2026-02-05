@@ -1,6 +1,6 @@
 
 /**
- * DO NOT EDIT - this file is written by prebuild.js via electron-builder.env - edit vars in electron-builder.env file!
+ * DO NOT EDIT - this file is written by prebuild.js from .env - edit vars in .env file!
  */
 
 const config = {
@@ -8,7 +8,7 @@ const config = {
     showdevtools: true,
     useBundledJRE: true,
     bipIntegration: true,
-    bipDemo: true,
+    bipApiUrl: 'https://www.bildung.gv.at/webservice/rest/next-exam/student',
 
     workdirectory : "",   // (desktop path + examdir)
     tempdirectory : "",   // (desktop path + 'tmp')
@@ -22,12 +22,11 @@ const config = {
     multicastServerAdrr: '239.255.255.250',
     hostip: "",       // server.js
     gateway: true,
-    electron: false,
     virtualized: false,
     isPuavo: false,
     
     version: '2.0.0.1',
-    buildDate: '20260204',
+    buildDate: '20260205',
     buildNumber: '1',
     info: 'Release'
 }

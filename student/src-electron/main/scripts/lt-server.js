@@ -1,17 +1,16 @@
 import path from 'path';
 import log from 'electron-log';
-import { app } from 'electron'
+import { app } from 'electron';
 import JreHandler from './jre-handler.js';
+import platformDispatcher from './platformDispatcher.js';
 import { exec } from 'child_process';
 import os from 'os';
+
 const __dirname = import.meta.dirname;
+const publicBase = () => (app.isPackaged ? platformDispatcher.getPackagedPublicBase() : path.join(__dirname, '../../public'));
 
-
-let languageToolJarPath = path.join(__dirname, '../../public/LanguageTool/languagetool-server.jar')
-if (app.isPackaged) { languageToolJarPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'public/LanguageTool/languagetool-server.jar') }
-
-let languageToolConfigPath = path.join(__dirname, '../../public/LanguageTool/server.properties')
-if (app.isPackaged) { languageToolConfigPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'public/LanguageTool/server.properties') }
+let languageToolJarPath = path.join(publicBase(), 'LanguageTool/languagetool-server.jar');
+let languageToolConfigPath = path.join(publicBase(), 'LanguageTool/server.properties');
 
 
 

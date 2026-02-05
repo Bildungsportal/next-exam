@@ -15,6 +15,7 @@
  * If not, see <http://www.gnu.org/licenses/>
  */
 
+import fs from 'fs';
 import { app, BrowserWindow, BrowserView, dialog, screen} from 'electron'
 import { join } from 'path'
 import {disableRestrictions, enableRestrictions} from './platformrestrictions.js';
@@ -26,6 +27,21 @@ import {fileURLToPath} from "node:url";
 import path from 'path';
 
 const __dirname = import.meta.dirname;
+
+// Renderer built into public/ (one copy); when packaged use app.asar.unpacked/public
+function getRendererIndexPath() {
+  if (app.isPackaged) {
+    const unpacked = join(process.resourcesPath, 'app.asar.unpacked', 'public', 'index.html');
+    if (fs.existsSync(unpacked)) return unpacked;
+  }
+  const publicPath = join(__dirname, 'public', 'index.html');
+  if (fs.existsSync(publicPath)) return publicPath;
+  const distRendererPath = join(__dirname, 'dist', 'renderer', 'index.html');
+  if (fs.existsSync(distRendererPath)) return distRendererPath;
+  const quasarPath = join(__dirname, 'index.html');
+  if (fs.existsSync(quasarPath)) return quasarPath;
+  return join(__dirname, '../renderer/index.html');
+}
 
 
 
@@ -77,7 +93,7 @@ class WindowHandler {
     createBiPLoginWin(biptest) {
         this.bipwindow = new BrowserWindow({
             title: 'Next-Exam',
-            icon: join(__dirname, '../../public/icons/icon.png'),
+            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
             center:true,
             width: 1000,
             height:800,
@@ -103,29 +119,29 @@ class WindowHandler {
         });
 
         this.bipwindow.webContents.on('did-navigate', (event, url) => {    // a pdf could contain a link ^^
-            log.info("did-navigate")
+            log.info("windowhandler @ createBiPLoginWin: did-navigate")
             log.info(url)
         })
         this.bipwindow.webContents.on('will-navigate', (event, url) => {    // a pdf could contain a link ^^
-            log.info("will-navigate")
+            log.info("windowhandler @ createBiPLoginWin: will-navigate")
             log.info(url)
         })
 
          this.bipwindow.webContents.on('new-window', (event, url) => {  // if a new window should open triggered by window.open()
-            log.info("new-window")
+            log.info("windowhandler @ createBiPLoginWin: new-window")
             log.info(url)
             event.preventDefault();    // Prevent the new window from opening
         }); 
      
          
          this.bipwindow.webContents.setWindowOpenHandler(({ url }) => { // if a new window should open triggered by target="_blank"
-            log.info("target: _blank")
+            log.info("windowhandler @ createBiPLoginWin: target: _blank")
             log.info(url)
             return { action: 'deny' };   // Prevent the new window from opening
         }); 
 
         this.bipwindow.webContents.on('will-redirect', (event, url) => {
-            log.info('Redirecting to:', url);
+            log.info('windowhandler @ createBiPLoginWin: Redirecting to:', url);
             // Prüfen, ob die URL das gewünschte Format hat
             if (url.startsWith('bildungsportal://')) {
                 event.preventDefault(); // Verhindert den Standard-Redirect
@@ -134,8 +150,8 @@ class WindowHandler {
                 const token = url.substring(prefix.length);
                 
     
-                log.info('Captured Token:');
-                log.info(token);
+                log.info('windowhandler @ createBiPLoginWin: Captured Token:');
+                log.info('windowhandler @ createBiPLoginWin: ' + token);
                 this.mainwindow.webContents.send('bipToken', token);
                 this.bipwindow.close();
             }
@@ -150,7 +166,7 @@ class WindowHandler {
     createEasterWin() {
         this.easterwin = new BrowserWindow({
             title: 'Next-Exam',
-            icon: join(__dirname, '../../public/icons/icon.png'),
+            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
             center:true,
             width: 768,
             height:480,
@@ -165,7 +181,7 @@ class WindowHandler {
             transparent: false
         })
      
-        this.easterwin.loadFile(join(__dirname, `../../public/cowsonice/index.html`))
+        this.easterwin.loadFile(join(platformDispatcher.getPackagedPublicBase(), 'cowsonice', 'index.html'))
 
         // Electron 39: ready-to-show fires AFTER show() is called, so use did-finish-load instead
         this.easterwin.webContents.once('did-finish-load', () => {
@@ -212,7 +228,7 @@ class WindowHandler {
             // resizable:false,   // leads to weird 20px bottomspace on windows
             movable: false,
             frame: false,
-            icon: join(__dirname, '../../public/icons/icon.png'),
+            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
             webPreferences: {
                 preload: join(__dirname, './preload/electron-preload.cjs'),
             },
@@ -220,8 +236,7 @@ class WindowHandler {
     
         let url = "notfound"
         if (app.isPackaged) {
-            let path = join(__dirname, `../renderer/index.html`)
-            blockwin.loadFile(path, {hash: `#/${url}/`})
+            blockwin.loadFile(getRendererIndexPath(), {hash: `#/${url}/`})
         } 
         else {
             url = `${process.env.APP_URL}/#/${url}/`
@@ -373,7 +388,7 @@ class WindowHandler {
             // resizable:false, // leads to weird 20px bottomspace on windows
             movable: false,
             frame: false,
-            icon: join(__dirname, '../../public/icons/icon.png'),
+            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
             webPreferences: {
                 preload: join(__dirname, './preload/electron-preload.cjs'),
             },
@@ -381,8 +396,7 @@ class WindowHandler {
 
         let url = "lock"
         if (app.isPackaged) {
-            let path = join(__dirname, `../renderer/index.html`)
-            screenlockWindow.loadFile(path, {hash: `#/${url}/`})
+            screenlockWindow.loadFile(getRendererIndexPath(), {hash: `#/${url}/`})
         } 
         else {
             url = `${process.env.APP_URL}/#/${url}/`
@@ -492,7 +506,7 @@ class WindowHandler {
             kiosk: this.config.development ? false : true,
             show: true,
             transparent: false,
-            icon: join(__dirname, '../../public/icons/icon.png'),
+            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
             webPreferences: {
                 preload: join(__dirname, './preload/electron-preload.cjs'),
                 spellcheck: false,
@@ -559,8 +573,7 @@ class WindowHandler {
             // load top menu in MainPage
             let url = examtype   // editor || math || eduvidual || tbd.
             if (app.isPackaged) {
-                let path = join(__dirname, `../renderer/index.html`)
-                this.examwindow.loadFile(path, {hash: `#/${url}/${token}`})
+                this.examwindow.loadFile(getRendererIndexPath(), {hash: `#/${url}/${token}`})
             } 
             else {
                 let backgroundurl = `${process.env.APP_URL}/#/${url}/${token}/`
@@ -612,8 +625,7 @@ class WindowHandler {
         else { 
             let url = examtype   // editor || math || tbd.
             if (app.isPackaged) {
-                let path = join(__dirname, `../renderer/index.html`)
-                this.examwindow.loadFile(path, {hash: `#/${url}/${token}`})
+                this.examwindow.loadFile(getRendererIndexPath(), {hash: `#/${url}/${token}`})
             } 
             else {
                 url = `${process.env.APP_URL}/#/${url}/${token}/`
@@ -814,7 +826,7 @@ class WindowHandler {
 
         this.mainwindow = new BrowserWindow({
             title: 'Main window',
-            icon: join(__dirname, '../../public/icons/icon.png'),
+            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
             x: x,
             y: y,
             width: windowWidth,
@@ -866,7 +878,7 @@ class WindowHandler {
         if (this.config.showdevtools) { this.mainwindow.webContents.openDevTools()  }
 
         if (app.isPackaged || process.env["DEBUG"]) {
-            const filePath = join(__dirname, '../renderer/index.html')
+            const filePath = getRendererIndexPath();
             log.info(`windowhandler @ createMainWindow: Loading file: ${filePath}`)
             this.mainwindow.loadFile(filePath)
         }
