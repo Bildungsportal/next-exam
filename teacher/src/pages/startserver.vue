@@ -1,7 +1,7 @@
 <template>
 
 <!-- Header START -->
-<div class="w-100 p-3 text-white bg-dark text-right" style="height: 63px; z-index: 1000;">
+<div class="w-100 p-3 text-white bg-dark text-left" style="height: 63px; z-index: 1000;">
     <span class="text-white m-1">
         <img src="/src/assets/img/svg/shield-lock-fill.svg" class="white me-2  " width="32" height="32" >
         <span style="font-size:23px;" class="align-middle me-1 ">Next-Exam</span>

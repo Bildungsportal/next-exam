@@ -2,8 +2,30 @@
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
 import { defineConfig } from '@quasar/app-vite/wrappers';
-import {builtinModules} from "module";
-import pkg from './package.json'
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { builtinModules } from 'module';
+import fse from 'fs-extra';
+import pkg from './package.json';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const buildDate = (() => {
+  const now = new Date();
+  return now.getFullYear() +
+    String(now.getMonth() + 1).padStart(2, '0') +
+    String(now.getDate()).padStart(2, '0');
+})();
+
+const productName = process.env.PRODUCT_NAME || pkg.name || 'Next-Exam-Teacher';
+const version = process.env.VERSION || pkg.version || '2.0.0';
+const buildNumber = process.env.BUILD_NUMBER || '1';
+const artifactDate = buildDate;
+const artifactNamePattern = `${productName}_${version}.${buildNumber}_${artifactDate}_\${arch}.\${ext}`;
+const signEnabled = process.env.SIGN !== 'false';
 
 export default defineConfig(( ctx: any ) => {
   return {
@@ -67,13 +89,33 @@ export default defineConfig(( ctx: any ) => {
       // minify: false,
       // polyfillModulePreload: true,
       // distDir
+      showBuildSummary: false,
 
       extendViteConf (viteConf: any) {
-        // Suppress SASS deprecation warnings for Bootstrap color functions
+        // suppress SASS deprecation warnings for Bootstrap color functions
         viteConf.css = viteConf.css || {};
         viteConf.css.preprocessorOptions = viteConf.css.preprocessorOptions || {};
         viteConf.css.preprocessorOptions.scss = viteConf.css.preprocessorOptions.scss || {};
         viteConf.css.preprocessorOptions.scss.silenceDeprecations = ['color-functions', 'if-function'];
+
+        viteConf.build = viteConf.build || {};
+        viteConf.build.chunkSizeWarningLimit = 1500;
+
+        if (ctx.mode.electron && ctx.prod) {
+          const baseOut = viteConf.build?.outDir ?? path.join(__dirname, 'dist', 'electron', 'UnPackaged');
+          const publicOut = path.join(baseOut, 'public');
+          viteConf.build.outDir = publicOut;
+          viteConf.base = './';
+          viteConf.publicDir = path.resolve(__dirname, 'public');
+          const srcAssetsDir = path.resolve(__dirname, 'src', 'assets');
+          viteConf.plugins = viteConf.plugins || [];
+          viteConf.plugins.push({
+            name: 'quasar-electron-public-folder-teacher',
+            closeBundle () {
+              fse.copySync(srcAssetsDir, path.join(publicOut, 'src', 'assets'));
+            }
+          });
+        }
       },
       viteVuePluginOptions: {
         template: {
@@ -200,26 +242,64 @@ export default defineConfig(( ctx: any ) => {
       // specify the debugging port to use for the Electron app when running in development mode
       inspectPort: 5858,
 
-      bundler: 'builder', // 'packager' or 'builder'
+      bundler: 'builder',
       nodeIntegration: true,
       packager: {
         // https://github.com/electron-userland/electron-packager/blob/master/docs/api.md#options
-
-        // OS X / Mac App Store
-        // appBundleId: '',
-        // appCategoryType: '',
-        // osxSign: '',
-        // protocol: 'myapp://path',
-
-        // Windows only
-        // win32metadata: { ... }
       },
 
       builder: {
-        // https://www.electron.build/configuration/configuration
-
-        appId: 'next-exam-teacher'
-      }
+        appId: 'com.nextexam.teacher',
+        productName,
+        buildVersion: `${version}.${buildNumber}`,
+        asar: true,
+        asarUnpack: [
+          'public',
+        ],
+        afterPack: 'scripts/afterpack.js',
+        directories: { output: `../release/${version}.${buildNumber}_${artifactDate}` },
+        compression: 'normal',
+        // include entire UnPackaged folder (electron-main.js at root, public/, preload/, etc.)
+        files: ['**/*'],
+        linux: {
+          target: 'AppImage',
+          category: 'Utility',
+          icon: 'public/icons/256x256.png',
+          artifactName: artifactNamePattern,
+          files: ['**/*'],
+        },
+        mac: {
+          icon: 'public/icons/icon.png',
+          artifactName: artifactNamePattern,
+          hardenedRuntime: true,
+          gatekeeperAssess: false,
+          entitlements: 'scripts/entitlements.mac.plist',
+          entitlementsInherit: 'scripts/entitlements.mac.plist',
+          category: 'public.app-category.utilities',
+          target: { target: 'dmg', arch: ['x64', 'arm64'] },
+          files: ['**/*'],
+        },
+        dmg: { sign: false },
+        portable: { useZip: false, unpackDirName: 'next-exam-teacher', splashImage: 'public/splash.bmp' },
+        msi: {
+          perMachine: true,
+          createDesktopShortcut: true,
+          createStartMenuShortcut: true,
+          upgradeCode: '77234b48-9292-4b75-acfe-e5645ad97c46',
+          shortcutName: 'Next-Exam Teacher',
+        },
+        win: {
+          icon: 'public/icons/icon.ico',
+          target: [{ target: 'portable', arch: ['x64'] }, { target: 'msi', arch: ['x64'] }],
+          artifactName: artifactNamePattern,
+          files: ['**/*'],
+          // electron-builder 26: use signtoolOptions to enable signing (no win.sign boolean)
+          ...(signEnabled && {
+            signtoolOptions: { certificateSubjectName: 'OSOS Austria', signingHashAlgorithms: ['sha256'] },
+          }),
+        },
+        ...(signEnabled && { afterSign: 'scripts/notarize.cjs' }),
+      },
     },
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/developing-browser-extensions/configuring-bex
