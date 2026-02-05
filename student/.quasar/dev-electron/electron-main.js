@@ -1181,7 +1181,7 @@ var WindowHandler = class {
     if (app2.isPackaged) {
       blockwin.loadFile(getRendererIndexPath(), { hash: `#/${url}/` });
     } else {
-      url = `${"http://localhost:9301"}/#/${url}/`;
+      url = `${"http://localhost:9300"}/#/${url}/`;
       blockwin.loadURL(url);
     }
     blockwin.removeMenu();
@@ -1294,7 +1294,7 @@ var WindowHandler = class {
     if (app2.isPackaged) {
       screenlockWindow.loadFile(getRendererIndexPath(), { hash: `#/${url}/` });
     } else {
-      url = `${"http://localhost:9301"}/#/${url}/`;
+      url = `${"http://localhost:9300"}/#/${url}/`;
       screenlockWindow.loadURL(url);
     }
     if (this.config.showdevtools) {
@@ -1421,7 +1421,7 @@ var WindowHandler = class {
       if (app2.isPackaged) {
         this.examwindow.loadFile(getRendererIndexPath(), { hash: `#/${url}/${token}` });
       } else {
-        let backgroundurl = `${"http://localhost:9301"}/#/${url}/${token}/`;
+        let backgroundurl = `${"http://localhost:9300"}/#/${url}/${token}/`;
         this.examwindow.loadURL(backgroundurl);
       }
       let contentView = new BrowserView({
@@ -1466,7 +1466,7 @@ var WindowHandler = class {
       if (app2.isPackaged) {
         this.examwindow.loadFile(getRendererIndexPath(), { hash: `#/${url}/${token}` });
       } else {
-        url = `${"http://localhost:9301"}/#/${url}/${token}/`;
+        url = `${"http://localhost:9300"}/#/${url}/${token}/`;
         this.examwindow.loadURL(url);
       }
     }
@@ -1657,7 +1657,7 @@ var WindowHandler = class {
       log7.info(`windowhandler @ createMainWindow: Loading file: ${filePath}`);
       this.mainwindow.loadFile(filePath);
     } else {
-      const url = `${"http://localhost:9301"}`;
+      const url = `${"http://localhost:9300"}`;
       log7.info(`windowhandler @ createMainWindow: Loading URL: ${url}`);
       this.mainwindow.loadURL(url);
     }

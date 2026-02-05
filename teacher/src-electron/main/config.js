@@ -7,7 +7,7 @@ const config = {
     development: true,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
     showdevtools: true,
     bipIntegration: true,
-    bipApiUrl: https://www.bildung.gv.at/webservice/rest/next-exam/teacher,
+    bipApiUrl: 'https://www.bildung.gv.at/webservice/rest/next-exam/teacher',
 
     workdirectory : "",   // (desktop path + examdir)
     tempdirectory : "",   // (desktop path + 'tmp')

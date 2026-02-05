@@ -49,7 +49,6 @@
     </ul>
 
     <webview
-      v-if="visible"
       ref="wv"
       id="safebrowser"
       :src="src || ''"

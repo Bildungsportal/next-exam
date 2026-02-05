@@ -1,8 +1,6 @@
 import { defineBoot } from '#q-app/wrappers'
 import i18n from "../locales/locales.js";
 import VueSweetalert2 from "vue-sweetalert2";
-import {createApp} from "vue";
-import App from "../App.vue";
 
 // "async" is optional;
 // more info on params: https://v2.quasar.dev/quasar-cli-vite/boot-files

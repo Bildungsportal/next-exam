@@ -274,6 +274,11 @@ export default {
                     URL.revokeObjectURL(this.currentpreview);
                 };
                 document.querySelector("#preview").addEventListener("click", this._onPreviewClick);
+
+                const geogebraWebview = document.getElementById('geogebraframe');
+                if (geogebraWebview) {
+                    this.setupWebviewListeners(geogebraWebview);
+                }
             })
             this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
             this.hostip = await window.ipcRenderer.invoke('checkhostip')
@@ -415,10 +420,7 @@ export default {
             }
         },
 
-
-
-
-setupWebviewListeners(geogebraWebview){
+        setupWebviewListeners(geogebraWebview){
             if (!geogebraWebview) {
                 return;
             }
