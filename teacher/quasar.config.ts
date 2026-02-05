@@ -115,6 +115,24 @@ export default defineConfig(( ctx: any ) => {
               fse.copySync(srcAssetsDir, path.join(publicOut, 'src', 'assets'));
             }
           });
+          viteConf.plugins.push({
+            name: 'quasar-electron-rewrite-assets-teacher',
+            transformIndexHtml: (html) => {
+              let out = html.replace(/([\"'])\/src\/assets/g, '$1./src/assets');
+              out = out.replace(/href=[\"']public\//g, 'href=\"./');
+              return out;
+            },
+            generateBundle (_, bundle) {
+              const rewrite = (s) => s
+                .replace(/"\/src\/assets/g, '"./src/assets')
+                .replace(/'\/src\/assets/g, "'./src/assets");
+              for (const item of Object.values(bundle)) {
+                const entry = item as { type?: string; code?: string; source?: string | Buffer };
+                if (entry?.type === 'chunk' && entry.code) entry.code = rewrite(entry.code);
+                if (entry?.type === 'asset' && typeof entry.source === 'string') entry.source = rewrite(entry.source);
+              }
+            }
+          });
         }
       },
       viteVuePluginOptions: {

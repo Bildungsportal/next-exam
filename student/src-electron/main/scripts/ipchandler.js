@@ -1080,7 +1080,8 @@ class IpcHandler {
             }
         
             if (filename && publicdir) {
-                let filepath = path.join(__dirname, "../../public",filename);
+                const publicBase = platformDispatcher.publicBase;
+                let filepath = path.join(publicBase, filename);
                 const audioData = fs.readFileSync(filepath);
                 return audioData.toString('base64');
             }
@@ -1221,7 +1222,7 @@ class IpcHandler {
                 const __dirname = import.meta.dirname;
                 
                 let pdfPath;
-                pdfPath = path.join(platformDispatcher.getPackagedPublicBase(), pdfFilename);
+                pdfPath = path.join(platformDispatcher.publicBase, pdfFilename);
                 
                 if (!fs.existsSync(pdfPath)) {
                     log.warn(`ipchandler @ getPdfFromPublic: PDF not found at: ${pdfPath}`);

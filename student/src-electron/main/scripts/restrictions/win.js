@@ -7,6 +7,7 @@
 import { join } from 'path';
 import childProcess from 'child_process';
 import log from 'electron-log';
+import platformDispatcher from '../platformDispatcher.js';
 
 const __dirname = import.meta.dirname;
 
@@ -17,8 +18,8 @@ const __dirname = import.meta.dirname;
  */
 export async function enableWindowsRestrictions(winhandler, appsToClose) {
     try {
-        // one more level up: restrictions/ -> scripts/ -> main/ -> packages/ (same target as original platformrestrictions.js in scripts/)
-        const executable1 = join(__dirname, '../../../public/disable-shortcuts.exe');
+        const publicBase = platformDispatcher.publicBase;
+        const executable1 = join(publicBase, 'disable-shortcuts.exe');
         childProcess.execFile(executable1, [], { detached: true, stdio: 'ignore', shell: false, windowsHide: true });
         log.info("platformrestrictions @ enableRestrictions: windows shortcuts disabled");
     } catch (err) { log.error(`platformrestrictions @ enableRestrictions (win shortcuts): ${err}`); }
