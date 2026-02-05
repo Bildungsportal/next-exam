@@ -8,6 +8,9 @@ dist-ssr
 .directory
 .vscode/
 
+# Quasar build artifacts (recreated on each dev/build)
+**/.quasar
+
 csrf*.jpg
 
 tmp
