@@ -320,8 +320,8 @@ export default {
             console.log(tokens); // Zeigt die extrahierten Tokens, falls vorhanden
             let token = tokens[1]
 
-            let url = `http://localhost/moodle/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json`
-            if (this.biptest){ url = `http://localhost/moodle/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json` }
+            let url = `http://localhost:80/moodle/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json`
+            if (this.biptest){ url = `http://localhost:80/moodle/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json` }
 
             fetch(url, { method: 'POST'})
             .then( res => res.json() )
@@ -368,7 +368,8 @@ export default {
             if (!this.bipToken) return;  // cannot fetch from bip api without valid token
 
             // if (this.config.development){
-                let url= "http://localhost/moodle/webservice/rest/server.php?wstoken="+this.bipToken+"&wsfunction=local_dpu_get_exams_teacher&moodlewsrestformat=json"
+          console.log('this.config', this.config);
+                let url= this.config.bipApiUrl+"/webservice/rest/server.php?wstoken="+this.bipToken+"&wsfunction=local_dpu_get_exams_teacher&moodlewsrestformat=json"
 
                 fetch(url, {
                     method: "GET",

@@ -928,6 +928,7 @@ class IpcHandler {
             showdevtools: conf.showdevtools,
             bipIntegration: conf.bipIntegration,
             bipDemo: conf.bipDemo,
+            bipApiUrl: conf.bipApiUrl,
             workdirectory: conf.workdirectory,
             tempdirectory: conf.tempdirectory,
             serverdirectory: conf.serverdirectory,

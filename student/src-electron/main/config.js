@@ -8,7 +8,8 @@ const config = {
     showdevtools: true,
     useBundledJRE: true,
     bipIntegration: true,
-    bipApiUrl: 'https://www.bildung.gv.at/webservice/rest/next-exam/student',
+    bipDemo: true,
+    bipApiUrl: 'http://localhost:80/moodle',
 
     workdirectory : "",   // (desktop path + examdir)
     tempdirectory : "",   // (desktop path + 'tmp')

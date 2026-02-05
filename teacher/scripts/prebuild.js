@@ -19,6 +19,7 @@ const config = {
     development: ${process.env.DEVELOPMENT},
     showdevtools: ${process.env.SHOWDEVTOOLS},
     bipIntegration: ${process.env.BIP_INTEGRATION},
+    bipDemo: ${process.env.BIP_DEMO},
     bipApiUrl: '${process.env.BIP_API_URL}',
 
     workdirectory : "",

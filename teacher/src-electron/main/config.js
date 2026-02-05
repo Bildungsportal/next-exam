@@ -6,7 +6,8 @@ const config = {
     development: true,
     showdevtools: true,
     bipIntegration: true,
-    bipApiUrl: 'https://www.bildung.gv.at/webservice/rest/next-exam/teacher',
+    bipDemo: true,
+    bipApiUrl: 'http://localhost:80/moodle',
 
     workdirectory : "",
     tempdirectory : "",

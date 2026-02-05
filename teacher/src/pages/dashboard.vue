@@ -1698,12 +1698,12 @@ computed: {
             }
 
             // if (this.config.development){  // call to demo api
-                let url= "http://localhost/moodle/webservice/rest/server.php?wstoken="+this.bipToken+"&wsfunction=local_dpu_update_exam_status_teacher&moodlewsrestformat=json"
+                let url= this.config.bipApiUrl+"/webservice/rest/server.php?wstoken="+this.bipToken+"&wsfunction=local_dpu_update_exam_status_teacher&moodlewsrestformat=json"
            
                 fetch(url, {
                     method: "POST",
                     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    body: new URLSearchParams(payload).toString() // Daten als JSON-String senden
+                    body: new URLSearchParams(payload).toString()
                 })
                 .then(response => { return response.json(); } )                  
                 .then(data => { 
