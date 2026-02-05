@@ -8,7 +8,7 @@ const config = {
     showdevtools: true,
     useBundledJRE: true,
     bipIntegration: true,
-    bipDemo: false,
+    bipApiUrl: 'https://www.bildung.gv.at/webservice/rest/next-exam/student',
 
     workdirectory : "",   // (desktop path + examdir)
     tempdirectory : "",   // (desktop path + 'tmp')

@@ -23,7 +23,7 @@ const config = {
     showdevtools: ${process.env.SHOWDEVTOOLS},
     useBundledJRE: ${process.env.USE_BUNDLED_JRE},
     bipIntegration: ${process.env.BIP_INTEGRATION},
-    bipApiUrl: ${process.env.BIP_API_URL},
+    bipApiUrl: '${process.env.BIP_API_URL}',
 
     workdirectory : "",   // (desktop path + examdir)
     tempdirectory : "",   // (desktop path + 'tmp')
