@@ -7,7 +7,7 @@ const config = {
     showdevtools: true,
     bipIntegration: true,
     bipDemo: true,
-    bipApiUrl: 'http://localhost:80/moodle',
+    bipApiUrl: 'http://localhost/moodle',
 
     workdirectory : "",
     tempdirectory : "",
