@@ -1,3 +1,5 @@
+/* this is used for the microsoft365 exam mode login window only - triggerd by the backend in control.js */
+
 body {
     background-color: #212529;
     color: white;

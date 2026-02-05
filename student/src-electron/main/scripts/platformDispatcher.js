@@ -34,15 +34,6 @@ import dotenv from 'dotenv';
 dotenv.config();
 const __dirname = import.meta.dirname;
 
-// When packaged: Quasar puts public contents at app root; old build had public/ subdir. Resolve at runtime.
-function getPackagedPublicBase() {
-  const unpacked = join(process.resourcesPath, 'app.asar.unpacked');
-  const withPublic = join(unpacked, 'public');
-  return fs.existsSync(withPublic) ? withPublic : unpacked;
-}
-
-
-
 class PlatformDispatcher {
   constructor() {
 
@@ -62,6 +53,7 @@ class PlatformDispatcher {
     this.useWorker = this._getUseWorker();
     this.screenshotAbility = this._getScreenshotAbility();
     this.jre = this._detectJREId();
+    this.publicBase = this._getPublicBase();
     this.jreDir = this._resolveJREDir();
     this.javaBin = this._resolveJavaBin();
     this.jreInfo = this._getJRE();
@@ -73,6 +65,15 @@ class PlatformDispatcher {
     this.workdirectory = this._getWorkdirectory();
     this.logfile = this._getLogfile();
 
+  }
+
+  _getPublicBase() {
+    if (app.isPackaged) {
+      const unpacked = join(process.resourcesPath, 'app.asar.unpacked');
+      const withPublic = join(unpacked, 'public');
+      return fs.existsSync(withPublic) ? withPublic : unpacked;
+    }
+    return join(__dirname, '../../public');
   }
 
   _getWorkdirectory() {
@@ -124,9 +125,8 @@ class PlatformDispatcher {
     // use bundled jre because its smaller and provides only the needed java modules
     if (config.useBundledJRE) {
       if (app.isPackaged) {
-        const base = getPackagedPublicBase();
-        this.messages.push("platformDispatcher @ _resolveJREDir: app.isPackaged: " + join(base, this.jre));
-        return join(base, this.jre);
+        this.messages.push("platformDispatcher @ _resolveJREDir: app.isPackaged: " + join(this.publicBase, this.jre));
+        return join(this.publicBase, this.jre);
       } else {
         this.messages.push("platformDispatcher @ _resolveJREDir: !app.isPackaged: " + join(__dirname, '../../public', this.jre));
         return join(__dirname, '../../public', this.jre);
@@ -152,7 +152,7 @@ class PlatformDispatcher {
       // If no Java found, fall back to bundled JRE
       log.warn("platformDispatcher @ _resolveJREDir: No system Java found, falling back to bundled JRE");
       if (app.isPackaged) {
-        return join(getPackagedPublicBase(), this.jre);
+        return join(this.publicBase, this.jre);
       } else {
         return join(__dirname, '../../public', this.jre);
       }
@@ -201,8 +201,7 @@ class PlatformDispatcher {
   }
 
   _getWorkerURL() {
-    const baseDir = app.isPackaged ? getPackagedPublicBase() : join(import.meta.dirname, '../../public');
-    const workerPath = join(baseDir, this.workerFileName);
+    const workerPath = join(this.publicBase, this.workerFileName);
     return pathToFileURL(workerPath);
   }
 
@@ -328,10 +327,6 @@ class PlatformDispatcher {
     }
   }
 
-  /** Resolved base path for public assets when packaged (Quasar: app root; old build: app.asar.unpacked/public). In dev returns project public dir. */
-  getPackagedPublicBase() {
-    return app.isPackaged ? getPackagedPublicBase() : join(__dirname, '../../public');
-  }
 }
 
 const platformDispatcher = new PlatformDispatcher();

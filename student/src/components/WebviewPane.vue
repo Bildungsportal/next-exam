@@ -1,5 +1,5 @@
 <template>
-  <div v-if="visible" :id="id" class="position-relative w-100">
+  <div v-show="visible" :id="id" class="position-relative w-100">
     
       <ul
       class="nav nav-tabs position-absolute top-0 start-0 end-0 w-100 bg-white"
@@ -49,7 +49,6 @@
     </ul>
 
     <webview
-      v-if="visible"
       ref="wv"
       id="safebrowser"
       :src="src || ''"
@@ -67,7 +66,7 @@ export default {
   props: {
     id: { type: String, default: '' },
     src: { type: String, default: '' },
-    visible: { type: Boolean, default: true },
+    visible: { type: Boolean, default: false },
     allowedUrl: { type: String, default: '' },
     blockExternal: { type: Boolean, default: false },
   },

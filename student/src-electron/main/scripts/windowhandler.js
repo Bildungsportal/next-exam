@@ -93,7 +93,7 @@ class WindowHandler {
     createBiPLoginWin(biptest) {
         this.bipwindow = new BrowserWindow({
             title: 'Next-Exam',
-            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
+            icon: join(platformDispatcher.publicBase, 'icons', 'icon.png'),
             center:true,
             width: 1000,
             height:800,
@@ -166,7 +166,7 @@ class WindowHandler {
     createEasterWin() {
         this.easterwin = new BrowserWindow({
             title: 'Next-Exam',
-            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
+            icon: join(platformDispatcher.publicBase, 'icons', 'icon.png'),
             center:true,
             width: 768,
             height:480,
@@ -181,7 +181,7 @@ class WindowHandler {
             transparent: false
         })
      
-        this.easterwin.loadFile(join(platformDispatcher.getPackagedPublicBase(), 'cowsonice', 'index.html'))
+        this.easterwin.loadFile(join(platformDispatcher.publicBase, 'cowsonice', 'index.html'))
 
         // Electron 39: ready-to-show fires AFTER show() is called, so use did-finish-load instead
         this.easterwin.webContents.once('did-finish-load', () => {
@@ -228,7 +228,7 @@ class WindowHandler {
             // resizable:false,   // leads to weird 20px bottomspace on windows
             movable: false,
             frame: false,
-            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
+            icon: join(platformDispatcher.publicBase, 'icons', 'icon.png'),
             webPreferences: {
                 preload: join(__dirname, './preload/electron-preload.cjs'),
             },
@@ -388,7 +388,7 @@ class WindowHandler {
             // resizable:false, // leads to weird 20px bottomspace on windows
             movable: false,
             frame: false,
-            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
+            icon: join(platformDispatcher.publicBase, 'icons', 'icon.png'),
             webPreferences: {
                 preload: join(__dirname, './preload/electron-preload.cjs'),
             },
@@ -506,7 +506,7 @@ class WindowHandler {
             kiosk: this.config.development ? false : true,
             show: true,
             transparent: false,
-            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
+            icon: join(platformDispatcher.publicBase, 'icons', 'icon.png'),
             webPreferences: {
                 preload: join(__dirname, './preload/electron-preload.cjs'),
                 spellcheck: false,
@@ -826,7 +826,7 @@ class WindowHandler {
 
         this.mainwindow = new BrowserWindow({
             title: 'Main window',
-            icon: join(platformDispatcher.getPackagedPublicBase(), 'icons', 'icon.png'),
+            icon: join(platformDispatcher.publicBase, 'icons', 'icon.png'),
             x: x,
             y: y,
             width: windowWidth,

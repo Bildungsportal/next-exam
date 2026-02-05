@@ -1,13 +1,12 @@
 import path from 'path';
 import log from 'electron-log';
-import { app } from 'electron';
 import JreHandler from './jre-handler.js';
 import platformDispatcher from './platformDispatcher.js';
 import { exec } from 'child_process';
 import os from 'os';
 
 const __dirname = import.meta.dirname;
-const publicBase = () => (app.isPackaged ? platformDispatcher.getPackagedPublicBase() : path.join(__dirname, '../../public'));
+const publicBase = () => platformDispatcher.publicBase;
 
 let languageToolJarPath = path.join(publicBase(), 'LanguageTool/languagetool-server.jar');
 let languageToolConfigPath = path.join(publicBase(), 'LanguageTool/server.properties');

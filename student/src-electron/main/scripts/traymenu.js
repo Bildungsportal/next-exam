@@ -13,7 +13,7 @@ let tray = null;
 
 // Resolve icon path: packaged app uses unpacked public dir, dev uses project public
 function getTrayIconPath() {
-  const publicBase = platformDispatcher.getPackagedPublicBase();
+  const publicBase = platformDispatcher.publicBase;
   return path.join(publicBase, 'icons', 'icon24x24.png');
 } 
 

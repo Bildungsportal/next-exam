@@ -22,11 +22,11 @@
     "cleanwin": "if exist dist rmdir /s /q dist",
     "prebuild": "node scripts/prebuild.js",
     "protect:main": "node scripts/protect-main.mjs",
-    "build:linux": "npm run prebuild && npm run clean && npm run build:quasar && npm run protect:main && electron-builder -l --publish never",
-    "build:mac:x64": "npm run prebuild && npm run clean && npm run build:quasar && npm run protect:main && electron-builder -m dmg:x64 --publish never",
-    "build:mac:arm64": "npm run prebuild && npm run clean && npm run build:quasar && npm run protect:main && electron-builder -m dmg:arm64 --publish never",
-    "build:win:portable": "npm run prebuild && npm run cleanwin && npm run build:quasar && npm run protect:main && electron-builder -w portable:x64",
-    "build:win:msi": "npm run prebuild && npm run cleanwin && npm run build:quasar && npm run protect:main && electron-builder -w msi:x64"
+    "build:linux": "npm run prebuild && npm run clean && quasar build --verbose -m electron -l",
+    "build:mac:x64": "npm run prebuild && npm run clean && quasar build --verbose -m electron -m --arch x64",
+    "build:mac:arm64": "npm run prebuild && npm run clean && quasar build --verbose -m electron -m --arch arm64",
+    "build:win:portable": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -w portable:x64",
+    "build:win:msi": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -w msi:x64"
   },
   "engines": {
     "node": "^28 || ^26 || ^24 || ^22 || ^20 || ^18",
@@ -107,6 +107,7 @@
     "cors": "^2.8.5",
     "cross-env": "^7.0.3",
     "crypto-js": "^4.2.0",
+    "dotenv": "^16.4.7",
     "default-gateway": "^7.2.2",
     "electron-log": "^5.2.0",
     "electron-vite": "^2.3.0",

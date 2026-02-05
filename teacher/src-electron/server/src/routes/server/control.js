@@ -908,6 +908,7 @@ router.post('/updatescreenshot', async function (req, res, next) {
                     if (!TesseractWorker){
                         TesseractWorker = await Tesseract.createWorker('eng',1,{
                             langPath: publicPath , 
+                            cachePath: config.workdirectory   
                         });
                     }
                      

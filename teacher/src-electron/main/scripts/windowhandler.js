@@ -16,6 +16,7 @@
  */
 
 
+import fs from 'fs';
 import { app, BrowserWindow, dialog, screen } from 'electron'
 import { join } from 'path'
 import path from 'path'
@@ -24,7 +25,29 @@ import log from 'electron-log'
 
 const __dirname = import.meta.dirname
 
+// Base path for public assets (icons, etc.): packaged = app.asar.unpacked/public, dev = project public
+function getPublicBase() {
+  if (app.isPackaged) {
+    const unpacked = join(process.resourcesPath, 'app.asar.unpacked', 'public');
+    return fs.existsSync(unpacked) ? unpacked : join(process.resourcesPath, 'app.asar.unpacked');
+  }
+  return join(__dirname, '../../../public');
+}
 
+// Renderer built into public/ (one copy); when packaged use app.asar.unpacked/public
+function getRendererIndexPath() {
+  if (app.isPackaged) {
+    const unpacked = join(process.resourcesPath, 'app.asar.unpacked', 'public', 'index.html');
+    if (fs.existsSync(unpacked)) return unpacked;
+  }
+  const publicPath = join(__dirname, 'public', 'index.html');
+  if (fs.existsSync(publicPath)) return publicPath;
+  const distRendererPath = join(__dirname, 'dist', 'renderer', 'index.html');
+  if (fs.existsSync(distRendererPath)) return distRendererPath;
+  const quasarPath = join(__dirname, 'index.html');
+  if (fs.existsSync(quasarPath)) return quasarPath;
+  return join(__dirname, '../renderer/index.html');
+}
 
 class WindowHandler {
     constructor () {
@@ -48,7 +71,7 @@ class WindowHandler {
     createBiPLoginWin(biptest) {
         this.bipwindow = new BrowserWindow({
             title: 'Next-Exam',
-            icon: join(__dirname, '../../public/icons/icon.png'),
+            icon: join(getPublicBase(), 'icons', 'icon.png'),
             center:true,
             width: 1200,
             height:920,
@@ -137,7 +160,7 @@ class WindowHandler {
             title: 'Next-Exam-Teacher',
             backgroundColor: '#2e2c29',
             show: false,
-            icon: join(__dirname, '../../public/icons/icon.png'),
+            icon: join(getPublicBase(), 'icons', 'icon.png'),
             center: true,
             width: width,
             height: height,
@@ -162,7 +185,7 @@ class WindowHandler {
         })
 
         if (app.isPackaged || process.env['DEBUG']) {
-            const filePath = join(__dirname, '../renderer/index.html')
+            const filePath = getRendererIndexPath();
             log.info(`windowhandler @ createWindow: Loading file: ${filePath}`)
             this.mainwindow.removeMenu()
             this.mainwindow.loadFile(filePath)
@@ -240,7 +263,7 @@ class WindowHandler {
             width: 500,
             height: 800,
             minimizable: false,
-            icon: join(__dirname, '../../public/icons/icon.png'),
+            icon: join(getPublicBase(), 'icons', 'icon.png'),
             webPreferences: {
                 preload: process.env.QUASAR_ELECTRON_PRELOAD_FOLDER
                     ? path.resolve(currentDir, path.join(process.env.QUASAR_ELECTRON_PRELOAD_FOLDER, 'electron-preload' + (process.env.QUASAR_ELECTRON_PRELOAD_EXTENSION || '.cjs')))
