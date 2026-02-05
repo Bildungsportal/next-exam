@@ -31,8 +31,11 @@ function getPublicBase() {
     const unpacked = join(process.resourcesPath, 'app.asar.unpacked', 'public');
     return fs.existsSync(unpacked) ? unpacked : join(process.resourcesPath, 'app.asar.unpacked');
   }
-  return join(__dirname, '../../../public');
+  return join(__dirname, '../../public');
 }
+
+
+
 
 // Renderer built into public/ (one copy); when packaged use app.asar.unpacked/public
 function getRendererIndexPath() {
