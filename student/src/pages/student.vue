@@ -378,7 +378,7 @@ export default {
 
 
             // if (this.config.development){
-            let url = "http://10.0.0.100:3000/student"
+            let url = this.config.bipApiUrl
 
             await fetch(url, {
                 method: "GET",

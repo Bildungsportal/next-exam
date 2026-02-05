@@ -26,7 +26,7 @@ const config = {
     development: ${process.env.DEVELOPMENT},  // disable kiosk mode on exam mode and other stuff (autofill input fields)
     showdevtools: ${process.env.SHOWDEVTOOLS},
     bipIntegration: ${process.env.BIP_INTEGRATION},
-    bipDemo: ${process.env.BIP_DEMO},
+    bipApiUrl: ${process.env.BIP_API_URL},
 
     workdirectory : "",   // (desktop path + examdir)
     tempdirectory : "",   // (desktop path + 'tmp')
