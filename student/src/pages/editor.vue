@@ -1818,7 +1818,7 @@ export default {
         this.fetchinfointerval.start();
 
         this.saveContentCallback = () => this.saveContent(true, 'auto');  // wegs 2 parameter muss dieser umweg genommen werden sonst kann ich den eventlistener nicht mehr entfernen
-        this.saveinterval = new SchedulerService(20000);
+        this.saveinterval = new SchedulerService(5000);
         this.saveinterval.addEventListener('action', this.saveContentCallback);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
         this.saveinterval.start();
 
@@ -1956,8 +1956,10 @@ export default {
     #editortoolbar, #webview, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer, span.NXTEhighlight::after, #highlight-layer, #languagetool, .split-view-container, #preview, #pdfembed {
         display: none !important;
     }
-    body {
+    body, #vuexambody {
         position: relative !important;
+        height: auto !important;
+        overflow: visible !important;
     }
     //body ist "fixed" um beim autoscrollen nicht zu verscheben - mehrseitiger print wird dadurch aber auf 1seite beschränkt
 
@@ -1989,7 +1991,8 @@ export default {
     }
 
     #editormaincontainer {
-        overflow: hidden !important;
+        height: auto !important;
+        overflow: visible !important;
         margin: 0 !important;
         border-radius: 0px !important;
         background-color: white !important;
@@ -2001,11 +2004,7 @@ export default {
 
     }
 
-    #app {
-        display: block !important;
-        height: 100% !important;
-        overflow: hidden !important;
-    }
+
 
     .ProseMirror {
         padding: 5mm 1mm 5mm 8mm !important;
