@@ -11,7 +11,8 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
     const newLockedSection = newSectionNumber; // New section number (source for loading)
     const examDir = config.examdirectory;
 
-
+    log.warn(`switchExamSection: changing section to ${newLockedSection } ${serverstatus.examSections[newLockedSection].sectionname} , Examtype: ${serverstatus.examSections[newLockedSection].examtype}` )
+                        
     //save all files from the old section (if exam mode is "editor") and send to teacher - trigger sendToTeacher()
     if (multicastClient.clientinfo.examtype === "editor"){
         log.info("switchExamSection: sending exam to teacher (final submit)")

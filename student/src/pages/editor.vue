@@ -19,6 +19,7 @@
         :hostip="hostip"
         @reconnect="reconnect"
         @gracefullyExit="gracefullyExit"
+        @sectionSwitched="fetchInfo"
     ></exam-header>
     <!-- HEADER END -->
 
@@ -1839,6 +1840,10 @@ export default {
                 this.editorcontentcontainer.addEventListener('mouseup', this.getSelectedTextInfo);   // show amount of words and characters
                 this.editorcontentcontainer.addEventListener('keydown', this.insertSpaceInsteadOfTab)   //this changes the tab behaviour and allows tabstops
             }
+
+            // start language tool locally (if allowed)
+            this.startLanguageTool()
+
         });
 
 
@@ -1851,9 +1856,7 @@ export default {
         window.addEventListener('visibilitychange', this.handleVisibilityChange);
 
 
-        // start language tool locally (if allowed)
-        this.startLanguageTool()
-
+      
         // get wlan info and host ip for internet check
         if (isElectronWindow(window)) {
             this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
@@ -1872,6 +1875,7 @@ export default {
     },
 
     beforeMount() {
+
     },
 
     beforeUnmount() {

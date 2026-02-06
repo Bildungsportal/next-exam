@@ -34,6 +34,7 @@ import platformDispatcher from './platformDispatcher.js';
 import { updateSystemTray } from './traymenu.js';
 import { ensureNetworkOrReset } from './testpermissionsMac.js';
 import { getWlanInfo } from './getwlaninfo.js';
+import { switchExamSection } from './switchExamSection.js';
 
 const __dirname = import.meta.dirname;
 
@@ -833,7 +834,7 @@ class IpcHandler {
             // alle weiteren updates über das serverstatus object werden im communication handler gelesen und ggf. auf das clientinfo object gelegt
             // dieser kommunikationsfluss muss in 2.0 gestreamlined werden #FIXME
             
-            if (this.WindowHandler.examwindow) { serverstatus = this.WindowHandler.examwindow.serverstatus }
+            if (this.WindowHandler.examwindow) { serverstatus = this.multicastClient.serverstatus }
 
             //count number of files in exam directory
             if (!this.multicastClient.clientinfo.exammode){
@@ -858,6 +859,13 @@ class IpcHandler {
             }   
         })
 
+        // Student-initiated section switch when allowSectionSwitch is true; always uses current serverstatus and section number
+        ipcMain.handle('switch-exam-section', async (event, sectionNumber) => {
+            const serverstatus = this.WindowHandler.examwindow?.serverstatus;
+            if (!serverstatus?.useExamSections || !serverstatus?.allowSectionSwitch) return;
+            if (this.multicastClient.clientinfo.lockedSection === sectionNumber) return;
+            await switchExamSection(this.CommunicationHandler, serverstatus, sectionNumber);
+        })
 
         /**
          * because of microsoft 365 we need to work with "BrowserView" 

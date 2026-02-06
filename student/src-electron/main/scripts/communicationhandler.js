@@ -371,7 +371,10 @@ import { switchExamSection } from './switchExamSection.js';
      * could also handle kick, focusrestore, and even trigger file requests
      */
     async processUpdatedServerstatus(serverstatus, studentstatus){
-       
+        // update serverstatus in multicastclient so getinfoasync (and thus the frontend) returns current serverstatus on next fetch
+        this.multicastClient.serverstatus = serverstatus;
+        
+        
         ///////////////////////////////
         // individual status updates
 
@@ -490,21 +493,18 @@ import { switchExamSection } from './switchExamSection.js';
          * if handled by student the teacher stttus is ignored and the swich section function is called directly (probably move to ipchandler.js)
          */
 
+
         // if student is in locked state in exam mode
         if (serverstatus.exammode && this.multicastClient.clientinfo.exammode){
-           
             if (serverstatus.useExamSections){  // exam sections are enabled
                 if (!serverstatus.allowSectionSwitch){  // server handles section switch
                     //check if the current active section is the same as the one in the serverstatus - if not change to the new section and send to teacher
                     if (serverstatus.lockedSection !== this.multicastClient.clientinfo.lockedSection){
-                        log.warn(`communicationhandler @ processUpdatedServerstatus: changing section to ${serverstatus.lockedSection} ${serverstatus.examSections[serverstatus.lockedSection].sectionname} , Examtype: ${serverstatus.examSections[serverstatus.lockedSection].examtype}` )
-                        
                         // call switchExamSection function to switch to the new section
                         switchExamSection(this, serverstatus, serverstatus.lockedSection)
                     }
                 }
             }
-
         }
    
       
@@ -518,9 +518,24 @@ import { switchExamSection } from './switchExamSection.js';
         if (serverstatus.screenshotocr) { this.multicastClient.clientinfo.screenshotocr = true  }
         else { this.multicastClient.clientinfo.screenshotocr = false   }
 
-        // Groups handling
-        if (serverstatus.examSections[serverstatus.lockedSection].groups){ this.multicastClient.clientinfo.groups = true}
-        else { this.multicastClient.clientinfo.groups = false}
+        // Groups handling: use client's section when allowSectionSwitch, else server's; group membership from that section's groupA/groupB.users
+        const sectionForSync = serverstatus.allowSectionSwitch ? this.multicastClient.clientinfo.lockedSection : serverstatus.lockedSection;
+        const section = serverstatus.examSections[sectionForSync];
+        if (section?.groups) {
+            this.multicastClient.clientinfo.groups = true;
+            const clientname = this.multicastClient.clientinfo.name;
+            const groupA = section.groupA?.users ?? [];
+            const groupB = section.groupB?.users ?? [];
+            const prevGroup = this.multicastClient.clientinfo.group;
+            if (groupB.includes(clientname)) this.multicastClient.clientinfo.group = 'b';
+            else if (groupA.includes(clientname)) this.multicastClient.clientinfo.group = 'a';
+            else this.multicastClient.clientinfo.group = 'a';
+            if (this.multicastClient.clientinfo.group !== prevGroup && WindowHandler.examwindow) {
+                WindowHandler.examwindow.webContents.send('getmaterials');
+            }
+        } else {
+            this.multicastClient.clientinfo.groups = false;
+        }
 
         //update screenshotinterval
         if (serverstatus.screenshotinterval || serverstatus.screenshotinterval === 0) { //0 is the same as false or undefined but should be treated as number
@@ -697,15 +712,19 @@ import { switchExamSection } from './switchExamSection.js';
         if (!primary || primary === "" || !primary.id){ primary = displays[0] }       
 
         this.multicastClient.clientinfo.exammode = true
-        this.multicastClient.clientinfo.lockedSection = serverstatus.lockedSection
-        this.multicastClient.clientinfo.cmargin = serverstatus.examSections[serverstatus.lockedSection].cmargin  // this is used to configure margin settings for the editor
-        this.multicastClient.clientinfo.linespacing = serverstatus.examSections[serverstatus.lockedSection].linespacing // we try to double linespacing on demand in pdf creation
-        this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[serverstatus.lockedSection].audioRepeat // restrict repetition of audio files (for listening comprehension)
+        // when allowSectionSwitch: client chooses section, clientinfo.lockedSection is authoritative; do not overwrite with server
+        if (!serverstatus.allowSectionSwitch) {
+            this.multicastClient.clientinfo.lockedSection = serverstatus.lockedSection;
+        }
+        const effectiveSection = this.multicastClient.clientinfo.lockedSection;
+        this.multicastClient.clientinfo.cmargin = serverstatus.examSections[effectiveSection].cmargin  // this is used to configure margin settings for the editor
+        this.multicastClient.clientinfo.linespacing = serverstatus.examSections[effectiveSection].linespacing // we try to double linespacing on demand in pdf creation
+        this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[effectiveSection].audioRepeat // restrict repetition of audio files (for listening comprehension)
 
         if (!WindowHandler.examwindow){  // why do we check? because exammode is left if the server connection gets lost but students could reconnect while the exam window is still open and we don't want to create a second one
             log.info("communicationhandler @ startExam: creating exam window")
-            this.multicastClient.clientinfo.examtype = serverstatus.examSections[serverstatus.lockedSection].examtype
-            WindowHandler.createExamWindow(serverstatus.examSections[serverstatus.lockedSection].examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+            this.multicastClient.clientinfo.examtype = serverstatus.examSections[effectiveSection].examtype
+            WindowHandler.createExamWindow(serverstatus.examSections[effectiveSection].examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
         }
         else if (WindowHandler.examwindow){  //reconnect into active exam session with exam window already open
             log.error("communicationhandler @ startExam: found existing Examwindow..")

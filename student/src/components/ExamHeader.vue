@@ -8,7 +8,7 @@
             <span class="fs-5 align-middle me-1" style="float: left;">{{clientname}} @ {{servername}} | {{pincode}}</span>
 
 
-            <span class="fs-5 align-middle me-4 green" style="float: left;" >| {{$t('student.connected')}}</span> 
+            <span class="fs-5 align-middle me-4 teal" style="float: left;" >| {{$t('student.connected')}}</span> 
         </div>
         <div v-if="!online && !localLockdown" class="header-item">
             <img src="/src/assets/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style=" float: left;" />
@@ -29,7 +29,16 @@
         
      
 
-      
+        <!-- Exam sections: show all 4 section buttons and current section; if allowSectionSwitch, buttons trigger switch-exam-section IPC -->
+        <div v-if="serverstatus?.useExamSections" class="header-item me-2">
+            <div v-for="n in 4" :key="n"
+                class="header-item btn btn-sm ms-1 p-0 pe-1 ps-1"
+                :class="(clientinfo?.lockedSection ?? 1) === n ? 'btn-teal' : 'btn-outline-secondary' + (!serverstatus?.allowSectionSwitch ? ' disabledbtn' : '') "
+                @click="switchExamSection(n)">
+                {{ serverstatus?.examSections?.[n]?.sectionname || n }}
+            </div>
+        </div>
+
         <div class="header-item">
 
             <!-- Show WLAN SSID -->
@@ -115,7 +124,6 @@
       };
     },
     computed: {
-  
       warning() {
         return this.wlanInfo?.message === 'nopermissions' ? this.$t('student.wlanNopermissionsText') : null;
       }
@@ -137,8 +145,11 @@
       gracefullyExit() {
         // Clean exit from safe exam mode
         this.$emit('gracefullyExit');
+      },
+      async switchExamSection(sectionNumber) {
+        if (!this.serverstatus?.allowSectionSwitch || (this.clientinfo?.lockedSection ?? 1) === sectionNumber) return;
+        await window.ipcRenderer?.invoke('switch-exam-section', sectionNumber);
       }
-   
     },
   }
 </script>
@@ -167,6 +178,12 @@
     align-self: auto;
     order: 0;
     align-items: center;
+}
+
+.disabledbtn {
+    cursor: not-allowed;
+    opacity: 0.5;
+    pointer-events: none;
 }
 
 

@@ -6,12 +6,21 @@
             <span style="font-size:23px;" class="align-middle me-1 ">Next-Exam</span>
         </span>
         <span class="align-middle ms-3" style="float: right; font-size:23px;">Dashboard</span>
-        <div v-if="serverstatus.useExamSections" style="position: absolute; left:257px; top:38px; min-width: 550px; z-index: 0;">
+        <div v-if="serverstatus.useExamSections && !serverstatus.allowSectionSwitch" style="position: absolute; left:257px; top:38px; min-width: 550px; z-index: 0;">
             <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 1 && !serverstatus.examSections[1].locked, 'sectionbuttonactivered': serverstatus.activeSection == 1 && serverstatus.examSections[1].locked, 'btn-secondary': serverstatus.activeSection != 1,'btn-danger': serverstatus.examSections[1].locked}">{{ serverstatus.examSections[1].sectionname }}</div>
             <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 2 && !serverstatus.examSections[2].locked, 'sectionbuttonactivered': serverstatus.activeSection == 2 && serverstatus.examSections[2].locked, 'btn-secondary': serverstatus.activeSection != 2,'btn-danger': serverstatus.examSections[2].locked}">{{ serverstatus.examSections[2].sectionname }}</div>
             <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 3 && !serverstatus.examSections[3].locked, 'sectionbuttonactivered': serverstatus.activeSection == 3 && serverstatus.examSections[3].locked, 'btn-secondary': serverstatus.activeSection != 3,'btn-danger': serverstatus.examSections[3].locked}">{{ serverstatus.examSections[3].sectionname }}</div>
             <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 4 && !serverstatus.examSections[4].locked, 'sectionbuttonactivered': serverstatus.activeSection == 4 && serverstatus.examSections[4].locked, 'btn-secondary': serverstatus.activeSection != 4,'btn-danger': serverstatus.examSections[4].locked}">{{ serverstatus.examSections[4].sectionname }}</div>
         </div>
+        <!-- allowSectionSwitch: active tab white (sectionbuttonactive), no red border; tabs only switch dashboard view -->
+        <div v-if="serverstatus.useExamSections && serverstatus.allowSectionSwitch" style="position: absolute; left:257px; top:38px; min-width: 550px; z-index: 0;">
+            <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 1 ? 'sectionbuttonactive' : 'btn-secondary'">{{ serverstatus.examSections[1].sectionname }}</div>
+            <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 2 ? 'sectionbuttonactive' : 'btn-secondary'">{{ serverstatus.examSections[2].sectionname }}</div>
+            <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 3 ? 'sectionbuttonactive' : 'btn-secondary'">{{ serverstatus.examSections[3].sectionname }}</div>
+            <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 4 ? 'sectionbuttonactive' : 'btn-secondary'">{{ serverstatus.examSections[4].sectionname }}</div>
+        </div>
+
+
         <div class="btn btn-sm btn-cyan m-0 me-1 mt-0" style="float: right; padding:3px; height:32px; width:32px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22" > </div>
         <div class="btn btn-sm btn-danger m-0 me-1 mt-0" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style="float: right; height:32px;"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" >&nbsp; {{$t('dashboard.stopserver')}}&nbsp; </div>
         <div v-if="!hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 me-1 " style="cursor: unset; float: right">{{ $t("general.offline") }}</div>
@@ -1167,7 +1176,7 @@ computed: {
             }
         },
 
-        // activate section and check if we need to lock the section (start exam section for all students)
+        // activate section: when allowSectionSwitch only switch view; else optionally lock section for all students (confirm dialog)
         activateSection(section){
             this.serverstatus.activeSection = section
             this.setServerStatus()
@@ -1175,6 +1184,7 @@ computed: {
             // Zeige die für diese Section konfigurierten Gruppen an (ohne Schüler zu informieren)
             this.restoreGroupAssignments(false)
 
+            if (this.serverstatus.allowSectionSwitch) return
             if (this.serverstatus.exammode && !this.serverstatus.examSections[this.serverstatus.activeSection].locked) {
                 this.$swal.fire({
                     customClass: {
