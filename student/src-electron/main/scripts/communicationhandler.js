@@ -499,7 +499,7 @@ import { switchExamSection } from './switchExamSection.js';
                     if (serverstatus.lockedSection !== this.multicastClient.clientinfo.lockedSection){
                         log.warn(`communicationhandler @ processUpdatedServerstatus: changing section to ${serverstatus.lockedSection} ${serverstatus.examSections[serverstatus.lockedSection].sectionname} , Examtype: ${serverstatus.examSections[serverstatus.lockedSection].examtype}` )
                         
-                        // call switchExamSection function to switch to the new section (currently locked section on the server )
+                        // call switchExamSection function to switch to the new section
                         switchExamSection(this, serverstatus, serverstatus.lockedSection)
                     }
                 }
