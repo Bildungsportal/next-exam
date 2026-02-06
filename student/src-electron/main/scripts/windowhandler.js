@@ -825,7 +825,7 @@ class WindowHandler {
         }
 
         this.mainwindow = new BrowserWindow({
-            title: 'Main window',
+            title: 'Next-Exam-Student',
             icon: join(platformDispatcher.publicBase, 'icons', 'icon.png'),
             x: x,
             y: y,
