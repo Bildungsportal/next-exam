@@ -51,7 +51,9 @@
         "math": "Mathematik",
         "selectexammode": "Prüfungsmodus auswählen",
         "outdated": "Version",
-        "outdatedinfo": "Bitte installieren sie die selbe Version wie am Prüfungsserver!"
+        "outdatedinfo": "Bitte installieren sie die selbe Version wie am Prüfungsserver!",
+        "wlanNopermissionsTitle": "Standortberechtigung erforderlich",
+        "wlanNopermissionsText": "Windows benötigt Standortberechtigungen, um WLAN-Informationen abzurufen. Bitte aktivieren Sie die Positionsdienste in den Datenschutz- und Sicherheitseinstellungen."
     },
     "control": {
         "tokennotvalid": "das token ist ungültig",

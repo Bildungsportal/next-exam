@@ -330,6 +330,10 @@
                 <input v-model=serverstatus.useExamSections @click="" :title="$t('dashboard.activatesections')" checked=false class="form-check-input" type="checkbox" id="activatesections">
                 <label class="form-check-label">{{$t('dashboard.activatesections')}}   </label><br>
             </div>
+            <div v-if="serverstatus.useExamSections" class="form-check form-switch  m-1 mb-2 ms-3">
+                <input v-model=serverstatus.allowSectionSwitch @click="" :title="$t('dashboard.allowsectionswitch')" checked=false class="form-check-input" type="checkbox" id="allowsectionswitch">
+                <label class="form-check-label">{{$t('dashboard.allowsectionswitchshort')}}   </label><br>
+            </div>
             <div class="form-check form-switch  m-1 mb-2">
                 <input v-model=serverstatus.examSections[serverstatus.activeSection].groups @click="setupGroups()" :title="$t('dashboard.groupinfo')" checked=false class="form-check-input" type="checkbox" id="activategroups">
                 <label class="form-check-label">{{$t('dashboard.groups')}}   </label><br>
@@ -698,6 +702,7 @@ export default {
                 examTeachers: [],
                 examSecurityKey: "oI9xGzHkUFe7Lg2iTXHkYp4pDab3Nvj4kFEOqA93cZE=",
                 useExamSections: false, //if false exam section 1 is used and no tabs are displayed
+                allowSectionSwitch: false, //allow students to switch between exam sections
                 activeSection: 1,
                 lockedSection: 1,
                 examSections: {

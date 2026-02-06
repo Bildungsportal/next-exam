@@ -51,7 +51,9 @@
         "math": "Mathematics",
         "selectexammode": "Select exam mode",
         "outdated": "Version",
-        "outdatedinfo": "Please install the same version as the exam server!"
+        "outdatedinfo": "Please install the same version as the exam server!",
+        "wlanNopermissionsTitle": "Location permission required",
+        "wlanNopermissionsText": "Windows requires location permissions to retrieve WLAN information. Please enable location services in Privacy & Security settings."
     },
     "control": {
         "tokennotvalid": "token is not valid",
