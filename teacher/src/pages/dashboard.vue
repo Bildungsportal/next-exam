@@ -830,10 +830,18 @@ export default {
 
 computed: {
     lockInExammode() {
+        //if sections are disabled, return true if exammode is active
         if (!this.serverstatus.useExamSections) {
             return this.serverstatus.exammode;
         }
-        return this.serverstatus.exammode && this.serverstatus.examSections[this.serverstatus.activeSection].locked;
+
+
+        if (this.serverstatus.allowSectionSwitch) {  //students decide which section to use - do not change them anymore once locked
+            return this.serverstatus.exammode 
+        }
+        else { // allow reconfiguration of sections that are noch active yet
+            return this.serverstatus.exammode && this.serverstatus.examSections[this.serverstatus.activeSection].locked;
+        }
     },
     
     lockDownload() {

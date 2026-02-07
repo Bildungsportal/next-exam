@@ -33,7 +33,7 @@
         <div v-if="serverstatus?.useExamSections" class="header-item me-2">
             <div v-for="n in 4" :key="n"
                 class="header-item btn btn-sm ms-1 p-0 pe-1 ps-1"
-                :class="(clientinfo?.lockedSection ?? 1) === n ? 'btn-teal' : 'btn-outline-secondary' + (!serverstatus?.allowSectionSwitch ? ' disabledbtn' : '') "
+                :class="(clientinfo?.lockedSection === n ? 'btn-teal' : 'btn-outline-secondary') + (!serverstatus?.allowSectionSwitch ? ' disabledbtn' : '') "
                 @click="switchExamSection(n)">
                 {{ serverstatus?.examSections?.[n]?.sectionname || n }}
             </div>
@@ -147,7 +147,8 @@
         this.$emit('gracefullyExit');
       },
       async switchExamSection(sectionNumber) {
-        if (!this.serverstatus?.allowSectionSwitch || (this.clientinfo?.lockedSection ?? 1) === sectionNumber) return;
+        if (!this.serverstatus?.allowSectionSwitch || this.clientinfo?.lockedSection === sectionNumber) return;
+        console.log(`switchExamSection: calling switch-exam-section`)
         await window.ipcRenderer?.invoke('switch-exam-section', sectionNumber);
       }
     },

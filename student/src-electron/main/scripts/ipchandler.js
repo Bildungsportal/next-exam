@@ -864,6 +864,7 @@ class IpcHandler {
             const serverstatus = this.WindowHandler.examwindow?.serverstatus;
             if (!serverstatus?.useExamSections || !serverstatus?.allowSectionSwitch) return;
             if (this.multicastClient.clientinfo.lockedSection === sectionNumber) return;
+            log.info(`ipchandler @ switch-exam-section: switching to section ${sectionNumber}`)
             await switchExamSection(this.CommunicationHandler, serverstatus, sectionNumber);
         })
 
