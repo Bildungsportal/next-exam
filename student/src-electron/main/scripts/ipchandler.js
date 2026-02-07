@@ -89,8 +89,9 @@ class IpcHandler {
             let serverip = clientinfo.serverip
             let token = clientinfo.token
            
-            let payload = { 
+            let payload = {
                 group: clientinfo.group,
+                lockedSection: clientinfo.lockedSection,
             }
 
             let examMaterials = false
