@@ -1718,8 +1718,7 @@ export default {
         this.zoomin()
         this.getExamMaterials()
 
-        console.log(`editor @ mounted: Calling loadBackupFile`)
-        this.loadBackupFile()
+      
 
         if (isElectronWindow(window)) {
             ipcRenderer.on('getmaterials', (event) => {  // get exam materials from teacher
@@ -1869,6 +1868,8 @@ export default {
                 this.editorContent.addEventListener('paste', this.handlePaste, true);
                 this.editorContent.addEventListener('drop', this.handleDrop, true);
             }
+            console.log(`editor @ mounted: Calling loadBackupFile`)
+            this.loadBackupFile()
         })
 
 

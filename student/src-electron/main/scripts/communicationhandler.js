@@ -256,7 +256,7 @@ import { switchExamSection } from './switchExamSection.js';
             /**
              * MACOS WORKAROUND - switch to pagecapture if no permissons are granted
              */
-            if (process.platform !== "darwin" && this.firstCheckScreenshot && imgBuffer !== null){  //this is for macOS because it delivers a blank background screenshot without permissions. we catch that case with a workaround
+            if (process.platform === "darwin" && this.firstCheckScreenshot && imgBuffer !== null){  //this is for macOS because it delivers a blank background screenshot without permissions. we catch that case with a workaround
                 this.firstCheckScreenshot = false   //never do this again
                 const publicPath = platformDispatcher.publicBase;
                 try{
