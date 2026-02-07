@@ -481,7 +481,7 @@
 
     <!-- LANGUAGE TOOL START -->
     <div id="languagetool"
-         v-if="serverstatus.examSections[serverstatus.activeSection].languagetool || privateSpellcheck.activated">
+         v-if="privateSpellcheck.activated || (serverstatus.allowSectionSwitch ? serverstatus.examSections[clientinfo?.lockedSection ?? lockedSection]?.languagetool : serverstatus.examSections[serverstatus.activeSection]?.languagetool)">
         <div id="ltcheck" @click="LTcheckAllWords();">
             <div id="eye" class="darkgreen eyeopen"></div> &nbsp;LanguageTool
         </div>
