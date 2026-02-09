@@ -148,8 +148,21 @@
       },
       async switchExamSection(sectionNumber) {
         if (!this.serverstatus?.allowSectionSwitch || this.clientinfo?.lockedSection === sectionNumber) return;
-        console.log(`switchExamSection: calling switch-exam-section`)
-        await window.ipcRenderer?.invoke('switch-exam-section', sectionNumber);
+
+        //  ask if the user wants to switch to the new section via swal2dialog
+        this.$swal.fire({
+          title: 'Switch Section',
+          text: 'Are you sure you want to switch to the new section?',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Yes',
+          cancelButtonText: 'No',
+        }).then((result) => {
+          if (result.isConfirmed) {
+            console.log(`switchExamSection: calling switch-exam-section`)
+            window.ipcRenderer?.invoke('switch-exam-section', sectionNumber);
+          }
+        });
       }
     },
   }
