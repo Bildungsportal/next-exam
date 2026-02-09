@@ -106,8 +106,12 @@
 import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
-import {isElectronWindow} from "../types/electron.js";
+import {isElectronWindow} from "../types/platform.js";
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
+import {ActionHandler} from '../utils/actionHandler.js'
+
+// actionHandler centralizes ipc calls with platform checks
+const actionHandler = new ActionHandler(window);
 
 import { getExamMaterials, loadPDF, loadImage} from '../utils/filehandler.js'
 import PdfviewPane from '../components/PdfviewPane.vue'
@@ -177,12 +181,10 @@ export default {
     }, 
     components: { ExamHeader, PdfviewPane, WebviewPane },  
     mounted() {
-        if (isElectronWindow(window)) {
-            window.ipcRenderer.on('getmaterials', (event) => {
-                console.log("eduvidual @ getmaterials: get materials request received")
-                this.getExamMaterials()
-            });
-        }
+        actionHandler.on('getmaterials', (event) => {
+            console.log("eduvidual @ getmaterials: get materials request received")
+            this.getExamMaterials()
+        });
  
         this.currentFile = this.clientname
         this.entrytime = new Date().getTime()  
@@ -237,7 +239,7 @@ export default {
                         if (guestId) {
                             try {
                                 if(isElectronWindow(window)) {
-                                    await window.ipcRenderer.invoke('start-blocking-for-website-webview', {
+                                    await actionHandler.invoke('start-blocking-for-website-webview', {
                                         guestId,
                                         mode: 'eduvidual',
                                         moodleTestId: this.moodleTestId,
@@ -307,8 +309,8 @@ export default {
                 webview.addEventListener('did-stop-loading', this._onDidStopLoading);
             }
             if (isElectronWindow(window)) {
-                this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-                this.hostip = await window.ipcRenderer.invoke('checkhostip')
+                this.wlanInfo = await actionHandler.invoke('get-wlan-info')
+                this.hostip = await actionHandler.invoke('checkhostip')
             }
             
         });
@@ -355,7 +357,7 @@ export default {
         },
         async sendFocuslost(){
             if (isElectronWindow(window)) {
-                let response = await window.ipcRenderer.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
+                let response = await actionHandler.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
                 if (!this.config.development && !response.focus) {  //immediately block frontend
                     this.focus = false
                 }
@@ -364,7 +366,7 @@ export default {
 
         async loadFilelist(){
             if(isElectronWindow(window)) {
-                let filelist = await window.ipcRenderer.invoke('getfilesasync', null)
+                let filelist = await actionHandler.invoke('getfilesasync', null)
                 this.localfiles = filelist;
             }
         },
@@ -375,7 +377,7 @@ export default {
         },  
         async fetchInfo() {
             if (isElectronWindow(window)) {
-                let getinfo = await window.ipcRenderer.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+                let getinfo = await actionHandler.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
 
                 this.clientinfo = getinfo.clientinfo;
                 this.token = this.clientinfo.token
@@ -403,8 +405,8 @@ export default {
 
                 this.internetCheckCounter++
                 if (this.internetCheckCounter % 5 === 0) {
-                    this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-                    this.hostip = await window.ipcRenderer.invoke('checkhostip')
+                    this.wlanInfo = await actionHandler.invoke('get-wlan-info')
+                    this.hostip = await actionHandler.invoke('checkhostip')
                     this.internetCheckCounter = 0
                 }
             }

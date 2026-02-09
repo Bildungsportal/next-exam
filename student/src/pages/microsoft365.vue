@@ -134,7 +134,11 @@ import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 import PdfviewPane from '../components/PdfviewPane.vue'
 import WebviewPane from '../components/WebviewPane.vue'
 import {getExamMaterials, loadImage, loadPDF} from '../utils/filehandler.js'
-import {isElectronWindow} from "../types/electron.ts";
+import {isElectronWindow} from "../types/platform.ts";
+import {ActionHandler} from '../utils/actionHandler.js'
+
+// actionHandler centralizes ipc calls with platform checks
+const actionHandler = new ActionHandler(window);
 
 export default {
     data() {
@@ -213,7 +217,7 @@ export default {
                     this.style.display = 'none';
                     this.setAttribute("src", "about:blank");
                     URL.revokeObjectURL(this.currentpreview);
-                    ipcRenderer.send('restore-browserview');
+                    actionHandler.send('restore-browserview');
                 });
 
 
@@ -224,8 +228,8 @@ export default {
                 // Update header height after initial render
                 this.updateHeaderHeight();
 
-                this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-                this.hostip = await window.ipcRenderer.invoke('checkhostip')
+                this.wlanInfo = await actionHandler.invoke('get-wlan-info')
+                this.hostip = await actionHandler.invoke('checkhostip')
 
             }
         });
@@ -253,7 +257,7 @@ export default {
                 if (mainMenuBar) {
                     const height = mainMenuBar.offsetHeight;
                     if (isElectronWindow(window)) {
-                        ipcRenderer.send('update-menu-height', height);
+                        actionHandler.send('update-menu-height', height);
                     }
                 }
             });
@@ -262,7 +266,7 @@ export default {
         // reload the browser view - this needs to load the ms365 domain again in electron browserview
         reloadBrowserView() {
             if (isElectronWindow(window)) {
-                window.ipcRenderer.invoke('reload-browser-view', this.microsoft365Domain);
+                actionHandler.invoke('reload-browser-view', this.microsoft365Domain);
             }
         },
 
@@ -282,13 +286,13 @@ export default {
             preview.setAttribute("src", "about:blank");
             URL.revokeObjectURL(this.currentpreview);
             if (isElectronWindow(window)) {
-                ipcRenderer.send('restore-browserview');   // ms365 only !!!!!!!!!!
+                actionHandler.send('restore-browserview');   // ms365 only !!!!!!!!!!
             }
         },
 
         async sendFocuslost() {
             if (isElectronWindow(window)) {
-                let response = await window.ipcRenderer.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
+                let response = await actionHandler.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
                 if (!this.config.development && !response.focus) {  //immediately block frontend
                     this.focus = false
                 }
@@ -318,7 +322,7 @@ export default {
         },
         async loadFilelist() {
             if (isElectronWindow(window)) {
-                let filelist = await window.ipcRenderer.invoke('getfilesasync', null)
+                let filelist = await actionHandler.invoke('getfilesasync', null)
                 this.localfiles = filelist;
             }
         },
@@ -329,7 +333,7 @@ export default {
         },
         async fetchInfo() {
             if (isElectronWindow(window)) {
-                let getinfo = await window.ipcRenderer.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+                let getinfo = await actionHandler.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
 
                 this.clientinfo = getinfo.clientinfo;
                 this.token = this.clientinfo.token
@@ -341,11 +345,11 @@ export default {
                 if (!this.focus) {
                     this.warning = true
                     this.entrytime = new Date().getTime()
-                    ipcRenderer.send('collapse-browserview')
+                    actionHandler.send('collapse-browserview')
                 }
                 if (this.focus && this.warning) {
                     this.warning = false
-                    ipcRenderer.send('restore-browserview')
+                    actionHandler.send('restore-browserview')
                 }
 
                 if (this.clientinfo && this.clientinfo.token) {
@@ -363,8 +367,8 @@ export default {
 
                 this.internetCheckCounter++
                 if (this.internetCheckCounter % 5 === 0) {
-                    this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-                    this.hostip = await window.ipcRenderer.invoke('checkhostip')
+                    this.wlanInfo = await actionHandler.invoke('get-wlan-info')
+                    this.hostip = await actionHandler.invoke('checkhostip')
                     this.internetCheckCounter = 0
                 }
             }

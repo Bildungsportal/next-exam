@@ -115,6 +115,11 @@
 </template>
   
 <script>
+  import {ActionHandler} from '../utils/actionHandler.js'
+
+  // actionHandler centralizes ipc calls with platform checks
+  const actionHandler = new ActionHandler(window);
+
   export default {
     name: 'ExamHeader',
     props: ['serverstatus','clientinfo','online', 'clientname', 'exammode', 'servername', 'pincode', 'battery', 'currenttime','timesinceentry','componentName','localLockdown','wlanInfo','hostip'],
@@ -160,7 +165,7 @@
         }).then((result) => {
           if (result.isConfirmed) {
             console.log(`switchExamSection: calling switch-exam-section`)
-            window.ipcRenderer?.invoke('switch-exam-section', sectionNumber);
+            actionHandler.invoke('switch-exam-section', sectionNumber);
           }
         });
       }

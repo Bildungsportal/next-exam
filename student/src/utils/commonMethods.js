@@ -1,9 +1,13 @@
 // gracefullyExit.js
 // ES module: import { gracefullyExit } from 'commonMethods.js'
+import {ActionHandler} from './actionHandler.js'
+
+// actionHandler centralizes ipc calls with platform checks
+const actionHandler = new ActionHandler(window);
 
 export function gracefullyExit() {
     if (this.examtype == 'microsoft365'){
-        ipcRenderer.send('collapse-browserview')
+        actionHandler.send('collapse-browserview')
     }
     console.log("commonMethods.js @ gracefullyExit: gracefully exiting")
 
@@ -43,14 +47,14 @@ export function gracefullyExit() {
           });
       },
       preConfirm: () => {
-        if (!needsPw) { ipcRenderer.send('gracefullyexit'); return; }    // no password needed
+        if (!needsPw) { actionHandler.send('gracefullyexit'); return; }    // no password needed
         const value = document.getElementById('localpassword')?.value || ""; // entered password
-        if (value === expected) { ipcRenderer.send('gracefullyexit'); return; } // correct
+        if (value === expected) { actionHandler.send('gracefullyexit'); return; } // correct
         this.$swal.showValidationMessage(this.$t("general.wrongpassword"));          // warning
       }
     }).then(() => {
         if (this.examtype == 'microsoft365'){
-            ipcRenderer.send('restore-browserview')
+            actionHandler.send('restore-browserview')
         }
     });
   }
@@ -60,7 +64,7 @@ export function gracefullyExit() {
 
  export function reconnect() {
     if (this.examtype == 'microsoft365'){
-        ipcRenderer.send('collapse-browserview')
+        actionHandler.send('collapse-browserview')
     }
 
 
@@ -95,7 +99,7 @@ export function gracefullyExit() {
         this.serverip = result.value.ip; // Set new IP
         this.pincode = result.value.pin; // Set new PIN
 
-        let IPCresponse = ipcRenderer.sendSync('register', {clientname:this.clientname, servername:this.servername, serverip: this.serverip, pin:this.pincode }); // Send IPC message
+        let IPCresponse = actionHandler.sendSync('register', {clientname:this.clientname, servername:this.servername, serverip: this.serverip, pin:this.pincode }); // Send IPC message
 
         this.token = IPCresponse.token; // set token (used to determine server connection status)
 
@@ -107,7 +111,7 @@ export function gracefullyExit() {
             showCancelButton: false, // No cancel button
         });
         if (this.examtype == 'microsoft365'){
-            ipcRenderer.send('restore-browserview')
+            actionHandler.send('restore-browserview')
         }
     });
 }
@@ -118,7 +122,7 @@ export function showUrl(url){
     this.urlForWebview = url;
 
     if (this.examtype === 'microsoft365'){
-        ipcRenderer.send('collapse-browserview');
+        actionHandler.send('collapse-browserview');
     }
 
     const applyDomChanges = () => {

@@ -109,6 +109,10 @@ import { getExamMaterials, loadPDF, loadImage} from '../utils/filehandler.js'
 import PdfviewPane from '../components/PdfviewPane.vue'
 import WebviewPane from '../components/WebviewPane.vue';
 import PdfOverlay from '../components/PdfRenderer.vue';
+import {ActionHandler} from '../utils/actionHandler.js'
+
+// actionHandler centralizes ipc calls with platform checks
+const actionHandler = new ActionHandler(window);
 
 export default {
     data() {
@@ -202,7 +206,7 @@ export default {
         },
        
         async sendFocuslost(){
-            let response = await window.ipcRenderer.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
+            let response = await actionHandler.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
             if (!this.config.development && !response.focus){  //immediately block frontend
                 this.focus = false 
             }  
@@ -213,7 +217,7 @@ export default {
 
 
         async loadFilelist(){
-            let filelist = await window.ipcRenderer.invoke('getfilesasync', null)
+            let filelist = await actionHandler.invoke('getfilesasync', null)
             this.localfiles = filelist;
         },
         
@@ -223,7 +227,7 @@ export default {
             let backupfileName = filename ? filename : this.clientname + ".bak"
             console.log(`activesheets @ loadBackupFile: Checking for backup file: ${backupfileName}`)
             try {
-                let backupfileContent = await window.ipcRenderer.invoke('getbackupfile', backupfileName )
+                let backupfileContent = await actionHandler.invoke('getbackupfile', backupfileName )
                
                 if (backupfileContent){
                     // Validate that the content is JSON-parseable before offering to load it
@@ -304,7 +308,7 @@ export default {
                 }
                 
                 // Read the .bak file via IPC
-                const bakContent = await window.ipcRenderer.invoke('getbackupfile', filename);
+                const bakContent = await actionHandler.invoke('getbackupfile', filename);
                 
                 if (!bakContent) {
                     console.warn('activesheets @ loadBAK: No content found in .bak file');
@@ -372,7 +376,7 @@ export default {
             this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
         },  
         async fetchInfo() {
-            let getinfo = await window.ipcRenderer.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+            let getinfo = await actionHandler.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
             
             this.clientinfo = getinfo.clientinfo;
             this.token = this.clientinfo.token
@@ -392,8 +396,8 @@ export default {
             
             this.internetCheckCounter++
             if (this.internetCheckCounter % 5 === 0){
-                this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-                this.hostip = await window.ipcRenderer.invoke('checkhostip')
+                this.wlanInfo = await actionHandler.invoke('get-wlan-info')
+                this.hostip = await actionHandler.invoke('checkhostip')
                 this.internetCheckCounter = 0
             }
 
@@ -474,7 +478,7 @@ export default {
             }
             if (why === "exitexam") { 
                 // stop clipboard clear interval
-                ipcRenderer.send('restrictions')
+                actionHandler.send('restrictions')
 
                 this.$swal.fire({
                     title: this.$t("editor.leaving"),
@@ -517,7 +521,7 @@ export default {
             });
             
             // Save form data to .bak file via IPC
-            ipcRenderer.send('saveActivesheetsBak', {
+            actionHandler.send('saveActivesheetsBak', {
                 filename: filename || this.clientname,
                 formData: formData
             });
@@ -527,12 +531,12 @@ export default {
             // We'll use getPDFbase64 to render the current view
             if (this.currentpreviewBase64) {
                 // If we have a preview PDF, use it
-                ipcRenderer.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: this.currentpreviewBase64 })  
+                actionHandler.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: this.currentpreviewBase64 })  
             } else {
                 // Otherwise generate from current view
-                let response = await window.ipcRenderer.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true})
+                let response = await actionHandler.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true})
                 if (response?.status == "success") {
-                    ipcRenderer.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })  
+                    actionHandler.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })  
                 }
             }
             this.loadFilelist()
@@ -589,7 +593,7 @@ export default {
                 console.error('activesheets @ sendExamToTeacher: Invalid section data');
                 return;
             }
-            let response = await window.ipcRenderer.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true})
+            let response = await actionHandler.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true})
 
             if (response?.status == "success"){
                 let base64pdf = response.base64pdf
@@ -684,24 +688,24 @@ export default {
 
             document.body.addEventListener('mouseleave', this.sendFocuslost);
             
-            ipcRenderer.on('getmaterials', (event) => {   this.getExamMaterials()  });
+            actionHandler.on('getmaterials', (event) => {   this.getExamMaterials()  });
             
-            ipcRenderer.on('finalsubmit', (event) => {  // triggered on exit exam mode - send exam to teacher
+            actionHandler.on('finalsubmit', (event) => {  // triggered on exit exam mode - send exam to teacher
                 console.log("activesheets @ finalsubmit: submit exam request received")
                 this.sendExamToTeacher(true) 
             }); 
 
-            ipcRenderer.on('submitexam', (event, why) => {  //send current work as base64 to teacher
+            actionHandler.on('submitexam', (event, why) => {  //send current work as base64 to teacher
                 console.log("activesheets @ submitexam: submit exam request received")
                 this.printBase64() 
             }); 
             
-            ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            actionHandler.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
                 console.log("activesheets @ save: Teacher saverequest received")
                 this.saveContent(true, why) 
             }); 
             
-            ipcRenderer.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
+            actionHandler.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
                 this.printdenied(why)
             });
 
@@ -716,8 +720,8 @@ export default {
             document.querySelector("#preview").addEventListener("click", this._onPreviewClick);
 
 
-            this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-            this.hostip = await window.ipcRenderer.invoke('checkhostip')
+            this.wlanInfo = await actionHandler.invoke('get-wlan-info')
+            this.hostip = await actionHandler.invoke('checkhostip')
 
 
             this.hidepreview()
@@ -759,13 +763,11 @@ export default {
         }
 
         // Clean up IPC listeners
-        if (typeof ipcRenderer !== 'undefined' && ipcRenderer) {
-            ipcRenderer.removeAllListeners('getmaterials');
-            ipcRenderer.removeAllListeners('finalsubmit');
-            ipcRenderer.removeAllListeners('submitexam');
-            ipcRenderer.removeAllListeners('save');
-            ipcRenderer.removeAllListeners('denied');
-        }
+        actionHandler.removeAllListeners('getmaterials');
+        actionHandler.removeAllListeners('finalsubmit');
+        actionHandler.removeAllListeners('submitexam');
+        actionHandler.removeAllListeners('save');
+        actionHandler.removeAllListeners('denied');
     },
     
 }

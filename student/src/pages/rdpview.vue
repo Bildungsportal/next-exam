@@ -135,7 +135,11 @@ import {getExamMaterials, loadImage, loadPDF} from '../utils/filehandler.js'
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 import PdfviewPane from '../components/PdfviewPane.vue'
 import WebviewPane from '../components/WebviewPane.vue'
-import {isElectronWindow} from "../types/electron.ts";
+import {isElectronWindow} from "../types/platform.ts";
+import {ActionHandler} from '../utils/actionHandler.js'
+
+// actionHandler centralizes ipc calls with platform checks
+const actionHandler = new ActionHandler(window);
 
 export default {
     data() {
@@ -227,8 +231,8 @@ export default {
             webview.addEventListener('did-fail-load', this._onDidFailLoad);
         }
         if (isElectronWindow(window)) {
-            this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-            this.hostip = await window.ipcRenderer.invoke('checkhostip')
+            this.wlanInfo = await actionHandler.invoke('get-wlan-info')
+            this.hostip = await actionHandler.invoke('checkhostip')
         }
     },
     methods: {
@@ -300,7 +304,7 @@ export default {
         },
         async sendFocuslost() {
             if (isElectronWindow(window)) {
-                let response = await window.ipcRenderer.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
+                let response = await actionHandler.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
                 if (!this.config.development && !response.focus) {  //immediately block frontend
                     this.focus = false
                 }
@@ -321,7 +325,7 @@ export default {
         },
         async loadFilelist() {
             if (isElectronWindow(window)) {
-                let filelist = await window.ipcRenderer.invoke('getfilesasync', null)
+                let filelist = await actionHandler.invoke('getfilesasync', null)
                 this.localfiles = filelist;
             }
         },
@@ -336,7 +340,7 @@ export default {
         },
         async fetchInfo() {
             if (isElectronWindow(window)) {
-                let getinfo = await window.ipcRenderer.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+                let getinfo = await actionHandler.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
 
                 this.clientinfo = getinfo.clientinfo;
                 this.token = this.clientinfo.token
@@ -363,8 +367,8 @@ export default {
 
                 this.internetCheckCounter++
                 if (this.internetCheckCounter % 5 === 0) {
-                    this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-                    this.hostip = await window.ipcRenderer.invoke('checkhostip')
+                    this.wlanInfo = await actionHandler.invoke('get-wlan-info')
+                    this.hostip = await actionHandler.invoke('checkhostip')
                     this.internetCheckCounter = 0
                 }
             }

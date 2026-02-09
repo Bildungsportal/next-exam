@@ -145,7 +145,11 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 
 import { getExamMaterials, loadPDF, loadImage, loadGGB} from '../utils/filehandler.js'
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
-import {isElectronWindow} from "../types/electron.ts";
+import {isElectronWindow} from "../types/platform.ts";
+import {ActionHandler} from '../utils/actionHandler.js'
+
+// actionHandler centralizes ipc calls with platform checks
+const actionHandler = new ActionHandler(window);
 
 
 
@@ -221,70 +225,68 @@ export default {
         window.addEventListener('unhandledrejection', this._onUnhandledRejection);
 
 
-        if (isElectronWindow(window)) {
-            window.ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
-                console.log("editor @ save: Teacher saverequest received")
-                this.saveContent(true, why)
-            });
+        actionHandler.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            console.log("editor @ save: Teacher saverequest received")
+            this.saveContent(true, why)
+        });
 
-
-            window.ipcRenderer.on('fileerror', (event, msg) => {
-                console.log('geogebra @ fileerror: writing/deleting file error received');
-                this.$swal.fire({
-                    title: "Error",
-                    text: msg.message,
-                    icon: "error",
-                    //timer: 30000,
-                    showCancelButton: false,
-                    didOpen: () => {
-                        this.$swal.showLoading();
-                    },
-                })
-            });
-
-            window.ipcRenderer.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
-                console.log("geogebra @ getmaterials: get materials request received")
-                this.getExamMaterials()
-            });
-
-            this.$nextTick(function () { // Code that will run only after the entire view has been rendered
-
-                // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
-                this.fetchinfointerval = new SchedulerService(5000);
-                this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
-                this.fetchinfointerval.start();
-
-                this.clockinterval = new SchedulerService(1000);
-                this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
-                this.clockinterval.start();
-
-                this.saveinterval = new SchedulerService(20000);
-                this.saveinterval.addEventListener('action', this.saveContent);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
-                this.saveinterval.start();
-
-                document.body.addEventListener('mouseleave', this.sendFocuslost);
-
-                this.loadFilelist()
-                this.getExamMaterials()
-
-                // add some eventlisteners once
-                this._onPreviewClick = function () {
-                    this.style.display = 'none';
-                    this.setAttribute("src", "about:blank");
-                    URL.revokeObjectURL(this.currentpreview);
-                };
-                document.querySelector("#preview").addEventListener("click", this._onPreviewClick);
-
-                const geogebraWebview = document.getElementById('geogebraframe');
-                if (geogebraWebview) {
-                    this.setupWebviewListeners(geogebraWebview);
-                }
+        actionHandler.on('fileerror', (event, msg) => {
+            console.log('geogebra @ fileerror: writing/deleting file error received');
+            this.$swal.fire({
+                title: "Error",
+                text: msg.message,
+                icon: "error",
+                //timer: 30000,
+                showCancelButton: false,
+                didOpen: () => {
+                    this.$swal.showLoading();
+                },
             })
-            this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-            this.hostip = await window.ipcRenderer.invoke('checkhostip')
-        }
+        });
+
+        actionHandler.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            console.log("geogebra @ getmaterials: get materials request received")
+            this.getExamMaterials()
+        });
+
+        this.$nextTick(async function () { // Code that will run only after the entire view has been rendered
+
+            // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
+            this.fetchinfointerval = new SchedulerService(5000);
+            this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.fetchinfointerval.start();
+
+            this.clockinterval = new SchedulerService(1000);
+            this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.clockinterval.start();
+
+            this.saveinterval = new SchedulerService(20000);
+            this.saveinterval.addEventListener('action', this.saveContent);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.saveinterval.start();
+
+            document.body.addEventListener('mouseleave', this.sendFocuslost);
+
+            this.loadFilelist()
+            this.getExamMaterials()
+
+            // add some eventlisteners once
+            this._onPreviewClick = function () {
+                this.style.display = 'none';
+                this.setAttribute("src", "about:blank");
+                URL.revokeObjectURL(this.currentpreview);
+            };
+            document.querySelector("#preview").addEventListener("click", this._onPreviewClick);
+
+            const geogebraWebview = document.getElementById('geogebraframe');
+            if (geogebraWebview) {
+                this.setupWebviewListeners(geogebraWebview);
+            }
+            
+            this.wlanInfo = await actionHandler.invoke('get-wlan-info')
+            this.hostip = await actionHandler.invoke('checkhostip')
+        });
     },
-    methods: { 
+    methods: {
 
         // from filehandler.js
         getExamMaterials:getExamMaterials,
@@ -353,9 +355,7 @@ export default {
                     validPart.test(part)
                 );
 
-            } catch (e) {
-                return false;
-            }
+            } catch (e) {  return false;  }
         },
 
 
@@ -366,25 +366,25 @@ export default {
             }
 
             if (!this._onWebviewConsoleMessage) {
-            this._onWebviewConsoleMessage = (event) => {
-                const message = event && typeof event.message === "string" ? event.message : "";
-                if (typeof message === "string" && message.includes("existing")) {
-                    const splitMessage = message.split("existing geo:");
-                    if (splitMessage.length > 1) {
-                        const partAfterExistingGeo = splitMessage[1].trim();
-                        const parts = partAfterExistingGeo.split("=");
-                        if (parts.length > 1) {
-                            const extractedText = parts[1].trim();
-                            if (!this.customClipboard.includes(extractedText)) {
-                                this.customClipboard.push(extractedText);
-                                if (this.customClipboard.length > 10) {
-                                    this.customClipboard.shift();
+                this._onWebviewConsoleMessage = (event) => {
+                    const message = event && typeof event.message === "string" ? event.message : "";
+                    if (typeof message === "string" && message.includes("existing")) {
+                        const splitMessage = message.split("existing geo:");
+                        if (splitMessage.length > 1) {
+                            const partAfterExistingGeo = splitMessage[1].trim();
+                            const parts = partAfterExistingGeo.split("=");
+                            if (parts.length > 1) {
+                                const extractedText = parts[1].trim();
+                                if (!this.customClipboard.includes(extractedText)) {
+                                    this.customClipboard.push(extractedText);
+                                    if (this.customClipboard.length > 10) {
+                                        this.customClipboard.shift();
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            };
             }
 
             if (this._onWebviewConsoleMessage) {
@@ -394,11 +394,9 @@ export default {
         },
         
         async sendFocuslost(ctrlalt = false){
-            if (isElectronWindow(window)) {
-                let response = await window.ipcRenderer.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
-                if (!this.config.development && !response.focus) {  //immediately block frontend
-                    this.focus = false
-                }
+            let response = await actionHandler.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
+            if (response && !this.config.development && !response.focus) {  //immediately block frontend
+                this.focus = false
             }
         },
 
@@ -414,10 +412,8 @@ export default {
 
 
         async loadFilelist(){
-            if (isElectronWindow(window)) {
-                let filelist = await window.ipcRenderer.invoke('getfilesasync', null)
-                this.localfiles = filelist;
-            }
+            let filelist = await actionHandler.invoke('getfilesasync', null)
+            this.localfiles = filelist;
         },
 
         setupWebviewListeners(geogebraWebview){
@@ -551,45 +547,44 @@ export default {
 
 
         async fetchInfo() {
-            if (isElectronWindow(window)) {
-                let getinfo = await window.ipcRenderer.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+            let getinfo = await actionHandler.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
 
-                this.clientinfo = getinfo.clientinfo;
-                this.token = this.clientinfo.token
-                this.focus = this.clientinfo.focus
-                this.clientname = this.clientinfo.name
-                this.exammode = this.clientinfo.exammode
-                this.pincode = this.clientinfo.pin
+            this.clientinfo = getinfo.clientinfo;
+            this.token = this.clientinfo.token
+            this.focus = this.clientinfo.focus
+            this.clientname = this.clientinfo.name
+            this.exammode = this.clientinfo.exammode
+            this.pincode = this.clientinfo.pin
 
-                if (this.pincode !== "0000") {
-                    this.localLockdown = false
-                }
-
-                if (!this.focus) {
-                    this.entrytime = new Date().getTime()
-                }
-                if (this.clientinfo && this.clientinfo.token) {
-                    this.online = true
-                } else {
-                    this.online = false
-                }
-
-
-                this.battery = await navigator.getBattery().then(battery => {
-                    return battery
-                })
-                    .catch(error => {
-                        console.error("Error accessing the Battery API:", error);
-                    });
-
-                this.internetCheckCounter++
-                if (this.internetCheckCounter % 5 === 0) {
-                    this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-                    this.hostip = await window.ipcRenderer.invoke('checkhostip')
-                    this.internetCheckCounter = 0
-                }
+            if (this.pincode !== "0000") {
+                this.localLockdown = false
             }
-        }, 
+
+            if (!this.focus) {
+                this.entrytime = new Date().getTime()
+            }
+            if (this.clientinfo && this.clientinfo.token) {
+                this.online = true
+            } else {
+                this.online = false
+            }
+
+
+            this.battery = await navigator.getBattery().then(battery => {
+                return battery
+            })
+            .catch(error => {
+                console.error("Error accessing the Battery API:", error);
+            });
+
+            this.internetCheckCounter++
+            if (this.internetCheckCounter % 5 === 0) {
+                this.wlanInfo = await actionHandler.invoke('get-wlan-info')
+                this.hostip = await actionHandler.invoke('checkhostip')
+                this.internetCheckCounter = 0
+            }
+        },
+
         showClipboard() {
             this.isClipboardVisible = this.isClipboardVisible ? false: true;
         },
@@ -681,7 +676,7 @@ export default {
                             return  this.$t("math.nospecial") ;
                         }                   
                      },
-                 }).then((result) => {
+                }).then((result) => {
                     if (result.isConfirmed) {
                         filename = `${result.value}-bak.ggb`;
                         this.currentFile = filename
@@ -690,9 +685,8 @@ export default {
                                 console.log("geogebra @ saveContent: no base64 content returned"); // one line comment
                                 return;
                             }
-			 if(isElectronWindow(window)) {
-                            let response = await window.ipcRenderer.invoke('saveGGB', {filename: filename, content: base64GgbFile});   // send base64 string to backend for saving
-                            if (response.status === "success" && reason == "manual" ){  // we wait for a response - only show feed back if manually saved
+                            let response = await actionHandler.invoke('saveGGB', {filename: filename, content: base64GgbFile});   // send base64 string to backend for saving
+                            if (response && response.status === "success" && reason == "manual" ){  // we wait for a response - only show feed back if manually saved
                                 this.loadFilelist();
                                 this.$swal.fire({
                                     title: this.$t("editor.saved"),
@@ -700,7 +694,6 @@ export default {
                                     icon: "info"
                                 });
                             }
-			}
                         });
                     }
                     else {return; }
@@ -710,10 +703,10 @@ export default {
                 const base64GgbFile = await getBase64FromWebview();
                 if (!base64GgbFile) {
                     console.log("geogebra @ saveContent: no base64 content returned"); // one line comment
-                } else {
-if(isElectronWindow(window)) {
-                    let response = await window.ipcRenderer.invoke('saveGGB', {filename: filename, content: base64GgbFile, reason: reason });   // send base64 string to backend for saving
-                    if (response.status === "success" && reason == "manual" ){  // we wait for a response - only show feed back if manually saved
+                } 
+                else {
+                    let response = await actionHandler.invoke('saveGGB', {filename: filename, content: base64GgbFile, reason: reason });   // send base64 string to backend for saving
+                    if (response && response.status === "success" && reason == "manual" ){  // we wait for a response - only show feed back if manually saved
                         this.loadFilelist();
                         this.$swal.fire({
                             title: this.$t("editor.saved"),
@@ -721,17 +714,14 @@ if(isElectronWindow(window)) {
                             icon: "info"
                         });
                     }
-}
                 }
             }
  
             this.loadFilelist()
-
-        },
-
-
-
+ 
+        }
     },
+ 
     beforeUnmount() {
         this.saveinterval.removeEventListener('action', this.saveContent);
         this.saveinterval.stop() 
@@ -744,7 +734,6 @@ if(isElectronWindow(window)) {
         
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
-if(isElectronWindow(window)) {
         const geogebraWebview = document.getElementById('geogebraframe');
         if (geogebraWebview) {
             if (this._onWebviewConsoleMessage) {
@@ -759,17 +748,17 @@ if(isElectronWindow(window)) {
             window.removeEventListener('unhandledrejection', this._onUnhandledRejection);
         }
 
-        ipcRenderer.removeAllListeners('getmaterials')
-        ipcRenderer.removeAllListeners('fileerror')
-        ipcRenderer.removeAllListeners('save')
+        actionHandler.removeAllListeners('getmaterials')
+        actionHandler.removeAllListeners('fileerror')
+        actionHandler.removeAllListeners('save')
         
-}
+        
         // Clean up preview click listener
         const preview = document.querySelector("#preview");
         if (preview && this._onPreviewClick) {
             preview.removeEventListener("click", this._onPreviewClick);
         }
-    },
+    }
 }
 
 </script>
