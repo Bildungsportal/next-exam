@@ -75,14 +75,11 @@ $theme-colors: (
   color: $white;
 }
 
-html, body, #q-app {
+html, body {
   height: 100%;
 }
 
-#q-app {
-  height: 100%;
-  overflow: hidden;
-}
+
 
 // SweetAlert2 overrides - must be after Bootstrap to override conflicts
 .swal2-container {

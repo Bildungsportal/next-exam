@@ -11,7 +11,7 @@
  
  
  <template> 
-    <div class="column" style="height: 100%">
+   
 
     <!-- HEADER START -->
     <exam-header
@@ -130,7 +130,7 @@
         <img src="/src/assets/img/svg/edit-paste-style.svg" class="white" width="16" height="16" >{{ item }}
       </button>
     </div>
-  </div>
+ 
 
 </template>
 
@@ -432,10 +432,10 @@ export default {
             this._onDomReady = () => {
                 this.ggbReady = true; // webview is ready for JS calls
 
-                // im Devmode DevTools für das GeoGebra-Webview öffnen
-               if (this.config && this.config.development && typeof geogebraWebview.openDevTools === 'function') {
-                   geogebraWebview.openDevTools(); // one line comment
-               }
+                // im Devmode DevTools für das GeoGebra-Webview öffnen (attention: open devtools kill application on window close)
+            //    if (this.config && this.config.development && typeof geogebraWebview.openDevTools === 'function') {
+            //        geogebraWebview.openDevTools(); // one line comment
+            //    }
 
                 geogebraWebview.executeJavaScript(`
                     (function() {
@@ -811,7 +811,7 @@ if(isElectronWindow(window)) {
         height: 100% !important;
         width: 100% !important;
     }
-    #app {
+    #q-app {
         display:block !important;
         height: 100% !important;
        

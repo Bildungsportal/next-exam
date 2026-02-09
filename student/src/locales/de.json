@@ -165,7 +165,9 @@
         "send":"Arbeit an Lehrperson senden",
         "zoomIn":"Zoom in",
         "zoomOut":"Zoom out",
-        "close":"Schließen"
+        "close":"Schließen",
+        "sectionSwitchTitle": "Prüfungsabschnitt wechseln",
+        "sectionSwitchText": "Sind Sie sicher, dass Sie zum neuen Abschnitt wechseln möchten?"
     },
     "math": {
         "exit":"Abgesicherten Modus beenden?",

@@ -164,7 +164,9 @@
         "send":"Send work to teacher",
         "zoomIn":"Zoom in",
         "zoomOut":"Zoom out",
-        "close":"Close"
+        "close":"Close",
+        "sectionSwitchTitle": "Switch section",
+        "sectionSwitchText": "Are you sure you want to switch to the new section?"
     },
     "math": {
         "exit":"Exit safe exam mode",

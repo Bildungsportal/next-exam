@@ -151,12 +151,12 @@
 
         //  ask if the user wants to switch to the new section via swal2dialog
         this.$swal.fire({
-          title: 'Switch Section',
-          text: 'Are you sure you want to switch to the new section?',
+          title: this.$t('editor.sectionSwitchTitle'),
+          text: this.$t('editor.sectionSwitchText'),
           icon: 'question',
           showCancelButton: true,
-          confirmButtonText: 'Yes',
-          cancelButtonText: 'No',
+          confirmButtonText: 'Ok',
+          cancelButtonText: this.$t('editor.cancel'),
         }).then((result) => {
           if (result.isConfirmed) {
             console.log(`switchExamSection: calling switch-exam-section`)
