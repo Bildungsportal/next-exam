@@ -493,6 +493,13 @@ import { switchExamSection } from './switchExamSection.js';
          * if handled by student the teacher stttus is ignored and the swich section function is called directly (probably move to ipchandler.js)
          */
 
+        if (WindowHandler.examwindow){
+            if (serverstatus.allowSectionSwitch !== WindowHandler.examwindow.serverstatus.allowSectionSwitch){
+                // update serverstatus in examwindow so it is available for the frontend
+                log.info("communicationhandler @ processUpdatedServerstatus: permission to switch exam section changed")
+                WindowHandler.examwindow.serverstatus.allowSectionSwitch = serverstatus.allowSectionSwitch
+            }
+        }
 
         // if student is in locked state in exam mode
         if (serverstatus.exammode && this.multicastClient.clientinfo.exammode){

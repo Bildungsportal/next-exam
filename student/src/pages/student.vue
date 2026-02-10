@@ -219,7 +219,7 @@ import log from 'electron-log/renderer'
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {isElectronWindow} from "../types/platform.ts";
 import config from '../../src-electron/main/config.js'
-import {ActionHandler} from '../utils/actionHandler.js'
+import {SignalBridge} from '../utils/signalBridge.js'
 
 
 // Capture unhandled promise rejections
@@ -235,8 +235,8 @@ window.addEventListener('unhandledrejection', event => {
 
 Object.assign(console, log.functions);  // Replace all console logs with logger
 
-// actionHandler centralizes ipc send calls with platform checks
-const actionHandler = new ActionHandler(window);
+// signalBridge instance centralizes ipc send calls with platform checks
+const signalBridge = new SignalBridge(window);
 
 
 export default {
@@ -290,7 +290,7 @@ export default {
         toggleLocale() {
             // Switch between 'de' and 'en'
             this.$i18n.locale = this.$i18n.locale === 'de' ? 'en' : 'de';
-            actionHandler.send('set-new-locale', this.$i18n.locale);
+            signalBridge.send('set-new-locale', this.$i18n.locale);
         },
 
         async loginBiP() {
@@ -304,7 +304,7 @@ export default {
                 this.bipAutoconnect()
                 return  //skip real login
             }
-            let IPCresponse = actionHandler.sendSync('loginBiP', this.biptest)
+            let IPCresponse = signalBridge.sendSync('loginBiP', this.biptest)
             if (IPCresponse && IPCresponse.status === "success") {
                 
             }
@@ -360,7 +360,7 @@ export default {
             if (this.clickCount > 6) {
                 this.clickCount = 0
                 console.log("Easter Egg");
-                actionHandler.send('reload-url');
+                signalBridge.send('reload-url');
             }
         },
 
@@ -658,7 +658,7 @@ export default {
                     }
 
                     this.localLockdown = true
-                    actionHandler.send('locallockdown', {
+                    signalBridge.send('locallockdown', {
                         password: password,
                         exammode: exammode,
                         clientname: username,
@@ -775,7 +775,7 @@ export default {
 
 
         async fetchInfo() {
-            let getinfo = await actionHandler.invoke('getinfoasync')  // gets serverlist and clientinfo from multicastclient
+            let getinfo = await signalBridge.invoke('getinfoasync')  // gets serverlist and clientinfo from multicastclient
 
 
             if (getinfo.clientinfo.exammode) {
@@ -962,7 +962,7 @@ export default {
              * Check if network connection is still alive or if we are already connected and received a token
              * If not we exit here
              */
-            const newHostip = await actionHandler.invoke('checkhostip');
+            const newHostip = await signalBridge.invoke('checkhostip');
             // console.log(newHostip);
             this.safeAssign('hostip', newHostip); // Optimized: Only set if changed
             if (!this.hostip) return;
@@ -1092,7 +1092,7 @@ export default {
 
 
                 //  console.log({clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode, bipuserID:this.bipuserID })
-                let IPCresponse = actionHandler.sendSync('register', {
+                let IPCresponse = signalBridge.sendSync('register', {
                     clientname: this.username,
                     servername: servername,
                     serverip,
@@ -1255,7 +1255,7 @@ export default {
             }
         });
 
-        actionHandler.on('bipToken', (event, token) => {
+        signalBridge.on('bipToken', (event, token) => {
             console.log("token received: ", token)
             this.bipToken = token
             this.fetchBiPData(token)

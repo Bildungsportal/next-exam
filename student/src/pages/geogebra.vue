@@ -146,10 +146,10 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 import { getExamMaterials, loadPDF, loadImage, loadGGB} from '../utils/filehandler.js'
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import {isElectronWindow} from "../types/platform.ts";
-import {ActionHandler} from '../utils/actionHandler.js'
+import {SignalBridge} from '../utils/signalBridge.js'
 
-// actionHandler centralizes ipc calls with platform checks
-const actionHandler = new ActionHandler(window);
+// signalBridge instance centralizes ipc calls with platform checks
+const signalBridge = new SignalBridge(window);
 
 
 
@@ -225,12 +225,12 @@ export default {
         window.addEventListener('unhandledrejection', this._onUnhandledRejection);
 
 
-        actionHandler.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+        signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
             console.log("editor @ save: Teacher saverequest received")
             this.saveContent(true, why)
         });
 
-        actionHandler.on('fileerror', (event, msg) => {
+        signalBridge.on('fileerror', (event, msg) => {
             console.log('geogebra @ fileerror: writing/deleting file error received');
             this.$swal.fire({
                 title: "Error",
@@ -244,7 +244,7 @@ export default {
             })
         });
 
-        actionHandler.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+        signalBridge.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
             console.log("geogebra @ getmaterials: get materials request received")
             this.getExamMaterials()
         });
@@ -282,8 +282,8 @@ export default {
                 this.setupWebviewListeners(geogebraWebview);
             }
             
-            this.wlanInfo = await actionHandler.invoke('get-wlan-info')
-            this.hostip = await actionHandler.invoke('checkhostip')
+            this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+            this.hostip = await signalBridge.invoke('checkhostip')
         });
     },
     methods: {
@@ -394,7 +394,7 @@ export default {
         },
         
         async sendFocuslost(ctrlalt = false){
-            let response = await actionHandler.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
+            let response = await signalBridge.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
             if (response && !this.config.development && !response.focus) {  //immediately block frontend
                 this.focus = false
             }
@@ -412,7 +412,7 @@ export default {
 
 
         async loadFilelist(){
-            let filelist = await actionHandler.invoke('getfilesasync', null)
+            let filelist = await signalBridge.invoke('getfilesasync', null)
             this.localfiles = filelist;
         },
 
@@ -547,7 +547,7 @@ export default {
 
 
         async fetchInfo() {
-            let getinfo = await actionHandler.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+            let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
 
             this.clientinfo = getinfo.clientinfo;
             this.token = this.clientinfo.token
@@ -555,6 +555,9 @@ export default {
             this.clientname = this.clientinfo.name
             this.exammode = this.clientinfo.exammode
             this.pincode = this.clientinfo.pin
+            
+            this.serverstatus = getinfo.serverstatus
+            this.lockedSection = this.clientinfo.lockedSection
 
             if (this.pincode !== "0000") {
                 this.localLockdown = false
@@ -579,8 +582,8 @@ export default {
 
             this.internetCheckCounter++
             if (this.internetCheckCounter % 5 === 0) {
-                this.wlanInfo = await actionHandler.invoke('get-wlan-info')
-                this.hostip = await actionHandler.invoke('checkhostip')
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+                this.hostip = await signalBridge.invoke('checkhostip')
                 this.internetCheckCounter = 0
             }
         },
@@ -685,7 +688,7 @@ export default {
                                 console.log("geogebra @ saveContent: no base64 content returned"); // one line comment
                                 return;
                             }
-                            let response = await actionHandler.invoke('saveGGB', {filename: filename, content: base64GgbFile});   // send base64 string to backend for saving
+                            let response = await signalBridge.invoke('saveGGB', {filename: filename, content: base64GgbFile});   // send base64 string to backend for saving
                             if (response && response.status === "success" && reason == "manual" ){  // we wait for a response - only show feed back if manually saved
                                 this.loadFilelist();
                                 this.$swal.fire({
@@ -705,7 +708,7 @@ export default {
                     console.log("geogebra @ saveContent: no base64 content returned"); // one line comment
                 } 
                 else {
-                    let response = await actionHandler.invoke('saveGGB', {filename: filename, content: base64GgbFile, reason: reason });   // send base64 string to backend for saving
+                    let response = await signalBridge.invoke('saveGGB', {filename: filename, content: base64GgbFile, reason: reason });   // send base64 string to backend for saving
                     if (response && response.status === "success" && reason == "manual" ){  // we wait for a response - only show feed back if manually saved
                         this.loadFilelist();
                         this.$swal.fire({
@@ -748,9 +751,9 @@ export default {
             window.removeEventListener('unhandledrejection', this._onUnhandledRejection);
         }
 
-        actionHandler.removeAllListeners('getmaterials')
-        actionHandler.removeAllListeners('fileerror')
-        actionHandler.removeAllListeners('save')
+        signalBridge.removeAllListeners('getmaterials')
+        signalBridge.removeAllListeners('fileerror')
+        signalBridge.removeAllListeners('save')
         
         
         // Clean up preview click listener

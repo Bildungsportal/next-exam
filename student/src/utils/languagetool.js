@@ -15,10 +15,10 @@
  * If not, see <http://www.gnu.org/licenses/>
  */
 
-import {ActionHandler} from './actionHandler.js'
+import {SignalBridge} from './signalBridge.js'
 
-// actionHandler centralizes ipc calls with platform checks
-const actionHandler = new ActionHandler(window);
+// signalBridge centralizes ipc calls with platform checks
+const signalBridge = new SignalBridge(window);
 
 
 
@@ -90,7 +90,7 @@ async function LTcheckAllWords(closeLT = true){
     this.LTinfo = "searching..."
 
     try {
-        const ltStatus = await actionHandler.invoke('isLanguageToolRunning')
+        const ltStatus = await signalBridge.invoke('isLanguageToolRunning')
         if (!ltStatus?.running) {
             this.LTinfo = "Der LT-Server ist nicht erreichbar"
             console.warn('languagetool.js @ LTcheckAllwords (status check): LT-Server ist nicht erreichbar')

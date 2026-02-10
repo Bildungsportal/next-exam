@@ -1,13 +1,13 @@
 // gracefullyExit.js
 // ES module: import { gracefullyExit } from 'commonMethods.js'
-import {ActionHandler} from './actionHandler.js'
+import {SignalBridge} from './signalBridge.js'
 
-// actionHandler centralizes ipc calls with platform checks
-const actionHandler = new ActionHandler(window);
+// signalBridge instance centralizes ipc calls with platform checks
+const signalBridge = new SignalBridge(window);
 
 export function gracefullyExit() {
     if (this.examtype == 'microsoft365'){
-        actionHandler.send('collapse-browserview')
+        signalBridge.send('collapse-browserview')
     }
     console.log("commonMethods.js @ gracefullyExit: gracefully exiting")
 
@@ -47,14 +47,14 @@ export function gracefullyExit() {
           });
       },
       preConfirm: () => {
-        if (!needsPw) { actionHandler.send('gracefullyexit'); return; }    // no password needed
+        if (!needsPw) { signalBridge.send('gracefullyexit'); return; }    // no password needed
         const value = document.getElementById('localpassword')?.value || ""; // entered password
-        if (value === expected) { actionHandler.send('gracefullyexit'); return; } // correct
+        if (value === expected) { signalBridge.send('gracefullyexit'); return; } // correct
         this.$swal.showValidationMessage(this.$t("general.wrongpassword"));          // warning
       }
     }).then(() => {
         if (this.examtype == 'microsoft365'){
-            actionHandler.send('restore-browserview')
+            signalBridge.send('restore-browserview')
         }
     });
   }
@@ -64,7 +64,7 @@ export function gracefullyExit() {
 
  export function reconnect() {
     if (this.examtype == 'microsoft365'){
-        actionHandler.send('collapse-browserview')
+        signalBridge.send('collapse-browserview')
     }
 
 
@@ -99,7 +99,7 @@ export function gracefullyExit() {
         this.serverip = result.value.ip; // Set new IP
         this.pincode = result.value.pin; // Set new PIN
 
-        let IPCresponse = actionHandler.sendSync('register', {clientname:this.clientname, servername:this.servername, serverip: this.serverip, pin:this.pincode }); // Send IPC message
+        let IPCresponse = signalBridge.sendSync('register', {clientname:this.clientname, servername:this.servername, serverip: this.serverip, pin:this.pincode }); // Send IPC message
 
         this.token = IPCresponse.token; // set token (used to determine server connection status)
 
@@ -111,7 +111,7 @@ export function gracefullyExit() {
             showCancelButton: false, // No cancel button
         });
         if (this.examtype == 'microsoft365'){
-            actionHandler.send('restore-browserview')
+            signalBridge.send('restore-browserview')
         }
     });
 }
@@ -122,7 +122,7 @@ export function showUrl(url){
     this.urlForWebview = url;
 
     if (this.examtype === 'microsoft365'){
-        actionHandler.send('collapse-browserview');
+        signalBridge.send('collapse-browserview');
     }
 
     const applyDomChanges = () => {

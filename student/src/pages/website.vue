@@ -112,10 +112,10 @@ import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import { getExamMaterials, loadPDF, loadImage} from '../utils/filehandler.js'
 import PdfviewPane from '../components/PdfviewPane.vue'
 import WebviewPane from '../components/WebviewPane.vue';
-import {ActionHandler} from '../utils/actionHandler.js'
+import {SignalBridge} from '../utils/signalBridge.js'
 
-// actionHandler centralizes ipc calls with platform checks
-const actionHandler = new ActionHandler(window);
+// signalBridge instance centralizes ipc calls with platform checks
+const signalBridge = new SignalBridge(window);
 
 
 export default {
@@ -213,18 +213,13 @@ export default {
         },
        
         async sendFocuslost(){
-            let response = await actionHandler.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
+            let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
             if (!this.config.development && !response.focus){  //immediately block frontend
                 this.focus = false 
             }  
         },
-
-
-
-
-
         async loadFilelist(){
-            let filelist = await actionHandler.invoke('getfilesasync', null)
+            let filelist = await signalBridge.invoke('getfilesasync', null)
             this.localfiles = filelist;
         },
         formatTime(unixTime) {
@@ -237,7 +232,7 @@ export default {
             this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
         },  
         async fetchInfo() {
-            let getinfo = await actionHandler.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+            let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
             
             this.clientinfo = getinfo.clientinfo;
             this.token = this.clientinfo.token
@@ -245,8 +240,10 @@ export default {
             this.clientname = this.clientinfo.name
             this.exammode = this.clientinfo.exammode
             this.pincode = this.clientinfo.pin
+            this.serverstatus = getinfo.serverstatus
+            this.lockedSection = this.clientinfo.lockedSection
 
-            if (!this.focus){  this.entrytime = new Date().getTime()}
+            if (!this.focus){  this.entrytime = new Date().getTime() }
             if (this.clientinfo && this.clientinfo.token){  this.online = true  }
             else { this.online = false  }
 
@@ -255,13 +252,11 @@ export default {
             
             this.internetCheckCounter++
             if (this.internetCheckCounter % 5 === 0){
-                this.wlanInfo = await actionHandler.invoke('get-wlan-info')
-                this.hostip = await actionHandler.invoke('checkhostip')
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+                this.hostip = await signalBridge.invoke('checkhostip')
                 this.internetCheckCounter = 0
             }
-
         }, 
-       
     },
     mounted() {
         
@@ -278,7 +273,8 @@ export default {
                 const urlObj = new URL(this.url);
                 this.allowedDomain = urlObj.hostname; // This gives us just the domain without port
                 console.log(`website @ mounted: extracted allowedDomain="${this.allowedDomain}" from url="${this.url}"`);
-            } catch (error) {
+            } 
+            catch (error) {
                 // Fallback to regex extraction if URL parsing fails
                 this.allowedDomain = this.url.replace(/https?:\/\//, '').split('/')[0].split(':')[0];
                 console.log(`website @ mounted: fallback extraction, allowedDomain="${this.allowedDomain}"`);
@@ -299,7 +295,7 @@ export default {
                 
             document.body.addEventListener('mouseleave', this.sendFocuslost);
             
-            actionHandler.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            signalBridge.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
                 console.log("website @ getmaterials: get materials request received")
                 this.getExamMaterials() 
             });
@@ -320,14 +316,15 @@ export default {
                         const guestId = webview.getWebContentsId();
                         if (guestId) {
                             try {
-                                await actionHandler.invoke('start-blocking-for-website-webview', {
+                                await signalBridge.invoke('start-blocking-for-website-webview', {
                                     guestId, 
                                     mode: 'website',
                                     allowedDomain: this.allowedDomain,
                                     baseUrl: this.url
                                 });
                                 console.log(`website @ mounted: backend blocking setup for webview ${guestId}`);
-                            } catch (error) {
+                            } 
+                            catch (error) {
                                 console.error('website @ mounted: failed to setup backend blocking', error);
                             }
                         }
@@ -372,29 +369,13 @@ export default {
                 `);
             };
             webview.addEventListener('dom-ready', this._onDomReady);
-            
-
-                         
-            // Fallback: Use did-navigate to check and navigate back if URL is not allowed
-            // This catches navigation that will-navigate might miss
-            // this._onDidNavigate = (event) => {
-            //     const currentUrl = event.url || webview.getURL();
-            //     if (currentUrl && !this._isUrlAllowed(currentUrl)) {
-            //         console.log("webview @ did-navigate: blocked navigation to", currentUrl);
-            //         // Navigate back to allowed URL
-            //         webview.loadURL(this.url);
-            //     }
-            // };
-            // webview.addEventListener('did-navigate', this._onDidNavigate);
-
+              
             // loading events to hide css manipulation
-           // this._onDidStartLoading = () => { this.isLoading = true;   }; // Zeige das Overlay während des Ladens
             this._onDidStopLoading = () => {   this.isLoading = false;  };           // Verberge das Overlay, wenn das Laden gestoppt ist
-           // webview.addEventListener('did-start-loading', this._onDidStartLoading);
             webview.addEventListener('did-stop-loading', this._onDidStopLoading);
 
-            this.wlanInfo = await actionHandler.invoke('get-wlan-info')
-            this.hostip = await actionHandler.invoke('checkhostip')
+            this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+            this.hostip = await signalBridge.invoke('checkhostip')
 
             
         });

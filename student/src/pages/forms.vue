@@ -140,10 +140,10 @@ import PdfviewPane from '../components/PdfviewPane.vue'
 import WebviewPane from '../components/WebviewPane.vue'
 import {getExamMaterials, loadImage, loadPDF} from '../utils/filehandler.js'
 import {isElectronWindow} from "../types/platform.ts";
-import {ActionHandler} from '../utils/actionHandler.js'
+import {SignalBridge} from '../utils/signalBridge.js'
 
-// actionHandler centralizes ipc calls with platform checks
-const actionHandler = new ActionHandler(window);
+// signalBridge instance centralizes ipc calls with platform checks
+const signalBridge = new SignalBridge(window);
 
 export default {
     data() {
@@ -237,7 +237,7 @@ export default {
                         if (guestId) {
                             try {
                                 if (isElectronWindow(window)) {
-                                    await actionHandler.invoke('start-blocking-for-website-webview', {
+                                    await signalBridge.invoke('start-blocking-for-website-webview', {
                                         guestId,
                                         mode: 'forms',
                                         gformsTestId: this.gformsTestId
@@ -296,8 +296,8 @@ export default {
 
         });
         if (isElectronWindow(window)) {
-            this.wlanInfo = await actionHandler.invoke('get-wlan-info')
-            this.hostip = await actionHandler.invoke('checkhostip')
+            this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+            this.hostip = await signalBridge.invoke('checkhostip')
         }
 
     },
@@ -338,7 +338,7 @@ export default {
 
         async sendFocuslost() {
             if (isElectronWindow(window)) {
-                let response = await actionHandler.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
+                let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
                 if (!this.config.development && !response.focus) {  //immediately block frontend
                     this.focus = false
                 }
@@ -360,7 +360,7 @@ export default {
 
         async loadFilelist() {
             if (isElectronWindow(window)) {
-                let filelist = await actionHandler.invoke('getfilesasync', null)
+                let filelist = await signalBridge.invoke('getfilesasync', null)
                 this.localfiles = filelist;
             }
         },
@@ -377,7 +377,7 @@ export default {
 
         async fetchInfo() {
             if (isElectronWindow(window)) {
-                let getinfo = await actionHandler.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+                let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
 
                 this.clientinfo = getinfo.clientinfo;
                 this.token = this.clientinfo.token
@@ -385,6 +385,9 @@ export default {
                 this.clientname = this.clientinfo.name
                 this.exammode = this.clientinfo.exammode
                 this.pincode = this.clientinfo.pin
+                
+                this.serverstatus = getinfo.serverstatus
+                this.lockedSection = this.clientinfo.lockedSection
 
                 if (!this.focus) {
                     this.entrytime = new Date().getTime()
@@ -404,8 +407,8 @@ export default {
 
                 this.internetCheckCounter++
                 if (this.internetCheckCounter % 5 === 0) {
-                    this.wlanInfo = await actionHandler.invoke('get-wlan-info')
-                    this.hostip = await actionHandler.invoke('checkhostip')
+                    this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+                    this.hostip = await signalBridge.invoke('checkhostip')
                     this.internetCheckCounter = 0
                 }
             }

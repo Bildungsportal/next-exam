@@ -610,13 +610,13 @@ import {
 } from '../utils/languagetool.js'
 import {getExamMaterials, loadDOCX, loadHTML, loadImage, loadPDF, playAudio} from '../utils/filehandler.js'
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
-import {isElectronWindow} from "../types/platform.ts";
-import {ActionHandler} from '../utils/actionHandler.js'
+
+import {SignalBridge} from '../utils/signalBridge.js'
 
 const lowlight = createLowlight(common)
 
-// actionHandler centralizes ipc calls with platform checks
-const actionHandler = new ActionHandler(window);
+// signalBridge instance centralizes ipc calls with platform checks
+const signalBridge = new SignalBridge(window);
 
 
 
@@ -861,7 +861,7 @@ export default {
 
 
         async fetchInfo() {
-            let getinfo = await actionHandler.invoke('getinfoasync')  // we need to fetch the updated version of the systemconfig from express api (server.js)
+            let getinfo = await signalBridge.invoke('getinfoasync')  // we need to fetch the updated version of the systemconfig from express api (server.js)
             this.clientinfo = getinfo.clientinfo;
             this.token = this.clientinfo.token
             this.focus = this.clientinfo.focus
@@ -869,6 +869,7 @@ export default {
             this.exammode = this.clientinfo.exammode
             this.pincode = this.clientinfo.pin
             this.privateSpellcheck = this.clientinfo.privateSpellcheck
+            
             this.serverstatus = getinfo.serverstatus
             this.lockedSection = this.clientinfo.lockedSection
 
@@ -899,8 +900,8 @@ export default {
 
             this.internetCheckCounter++
             if (this.internetCheckCounter % 5 === 0) {
-                    this.wlanInfo = await actionHandler.invoke('get-wlan-info')
-                    this.hostip = await actionHandler.invoke('checkhostip')
+                    this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+                    this.hostip = await signalBridge.invoke('checkhostip')
                     this.internetCheckCounter = 0
             }
         },
@@ -1015,7 +1016,7 @@ export default {
 
         //get all files in user directory
         async loadFilelist() {
-            let filelist = await actionHandler.invoke('getfilesasync', null)
+            let filelist = await signalBridge.invoke('getfilesasync', null)
             this.localfiles = filelist;
 
             // handle audio file objects (playback limitations)
@@ -1104,7 +1105,7 @@ export default {
             }
             if (why === "exitexam") {
                 // stop clipboard clear interval
-                actionHandler.send('restrictions')
+                signalBridge.send('restrictions')
 
                 this.$swal.fire({
                     title: this.$t("editor.leaving"),
@@ -1118,7 +1119,7 @@ export default {
                 })
 
                 let text = this.editor.getText();
-                actionHandler.send('clipboard', text)
+                signalBridge.send('clipboard', text)
 
                 navigator.clipboard.writeText(text).then(function () {
                     console.log('editor @ savecontent: Text erfolgreich kopiert');
@@ -1135,11 +1136,11 @@ export default {
 
                 // SAVE AS HTML (bak) - also save editorcontent as *html file - used to re-populate the editor window in case something went completely wrong
                 let editorcontent = this.editor.getHTML(); 
-                actionHandler.send('storeHTML', {filename: filename, editorcontent: editorcontent })
+                signalBridge.send('storeHTML', {filename: filename, editorcontent: editorcontent })
                 
                 // SAVE AS PDF - inform mainprocess to save webcontent as pdf (see @media css query for adjustments for pdf)
                 // printPDF will trigger a reload of the filelist if finished and send files to teacher if reason (why) is "teacherrequest"
-                actionHandler.send('printpdf', {
+                signalBridge.send('printpdf', {
                     filename: filename,
                     landscape: false,
                     servername: this.servername,
@@ -1203,7 +1204,7 @@ export default {
 
 
         async sendExamToTeacher(directsend = false, type = "send") {
-            let response = await actionHandler.invoke('getPDFbase64', {
+            let response = await signalBridge.invoke('getPDFbase64', {
                 landscape: false,
                 servername: this.servername,
                 clientname: this.clientname,
@@ -1394,7 +1395,7 @@ export default {
             });
         },
         async sendFocuslost(ctrlalt = false) {
-            let response = await actionHandler.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
+            let response = await signalBridge.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
             if (response && !this.config.development && !response.focus) {  //immediately block frontend
                 this.focus = false
                 const editorcontentcontainer = document.getElementById('editorcontent');
@@ -1432,7 +1433,7 @@ export default {
                 return true;
             }
             try {
-                const response = await actionHandler.invoke("startLanguageTool");
+                const response = await signalBridge.invoke("startLanguageTool");
                 if (response) {
                         if (!silent) {
                             this.$swal.fire({
@@ -1572,7 +1573,7 @@ export default {
             let backupfileName = filename ? filename : this.clientname + ".bak"
             console.log(`editor @ loadBackupFile: Checking for backup file: ${backupfileName}`)
             try {
-                let backupfileContent = await actionHandler.invoke('getbackupfile', backupfileName)
+                let backupfileContent = await signalBridge.invoke('getbackupfile', backupfileName)
 
                 if (backupfileContent) {
                     console.log(`editor @ loadBackupFile: Backup file found, waiting for editor to be ready before showing dialog`)
@@ -1699,37 +1700,37 @@ export default {
 
       
 
-        actionHandler.on('getmaterials', (event) => {  // get exam materials from teacher
+        signalBridge.on('getmaterials', (event) => {  // get exam materials from teacher
             console.log("editor @ getmaterials: get materials request received")
             this.getExamMaterials()
         });
 
-        actionHandler.on('finalsubmit', (event) => {  // triggered on exit exam mode - send exam to teacher
+        signalBridge.on('finalsubmit', (event) => {  // triggered on exit exam mode - send exam to teacher
             console.log("editor @ finalsubmit: submit exam request received")
             this.sendExamToTeacher(true)
         });
 
-        actionHandler.on('submitexam', (event, why) => {  //send current work as base64 to teacher
+        signalBridge.on('submitexam', (event, why) => {  //send current work as base64 to teacher
             console.log("editor @ submitexam: submit exam request received")
             this.printBase64()
         });
 
-        actionHandler.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+        signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
             console.log("editor @ save: Teacher saverequest received")
             this.saveContent(true, why)
         });
-        actionHandler.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
+        signalBridge.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
             this.printdenied(why)
         });
-        actionHandler.on('backup', (event, filename) => {
+        signalBridge.on('backup', (event, filename) => {
             console.log("editor @ backup: Replace event received ")
             this.loadHTML(filename)
         });
-        actionHandler.on('loadfilelist', () => {
+        signalBridge.on('loadfilelist', () => {
             //console.log("editor @ loadfilelist: Reload Files event received ")
             this.loadFilelist()
         });
-        actionHandler.on('fileerror', (event, msg) => {
+        signalBridge.on('fileerror', (event, msg) => {
             console.log('editor @ fileerror: ', msg.message);
 
             if (this.showfileerror) {
@@ -1833,8 +1834,8 @@ export default {
 
       
         // get wlan info and host ip for internet check
-        this.wlanInfo = await actionHandler.invoke('get-wlan-info')
-        this.hostip = await actionHandler.invoke('checkhostip')
+        this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+        this.hostip = await signalBridge.invoke('checkhostip')
         // prevent paste in editor - need to wait for editor to be initialized
         this.sleep(1000).then(() => {
             this.editorContent = this.editorcontentcontainer.querySelector('.ProseMirror');
@@ -1910,14 +1911,14 @@ export default {
         this.clockinterval.removeEventListener('action', this.clock);
         this.clockinterval.stop()
 
-        actionHandler.removeAllListeners('getmaterials')
-        actionHandler.removeAllListeners('finalsubmit')
-        actionHandler.removeAllListeners('submitexam')
-        actionHandler.removeAllListeners('fileerror')
-        actionHandler.removeAllListeners('save')
-        actionHandler.removeAllListeners('denied')
-        actionHandler.removeAllListeners('backup')
-        actionHandler.removeAllListeners('loadfilelist')
+        signalBridge.removeAllListeners('getmaterials')
+        signalBridge.removeAllListeners('finalsubmit')
+        signalBridge.removeAllListeners('submitexam')
+        signalBridge.removeAllListeners('fileerror')
+        signalBridge.removeAllListeners('save')
+        signalBridge.removeAllListeners('denied')
+        signalBridge.removeAllListeners('backup')
+        signalBridge.removeAllListeners('loadfilelist')
         this.editor.destroy()
     },
 }

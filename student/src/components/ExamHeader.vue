@@ -115,10 +115,11 @@
 </template>
   
 <script>
-  import {ActionHandler} from '../utils/actionHandler.js'
+  import {SignalBridge} from '../utils/signalBridge.js'
 
-  // actionHandler centralizes ipc calls with platform checks
-  const actionHandler = new ActionHandler(window);
+  // signalBridge instance centralizes ipc calls with platform checks
+  const signalBridge = new SignalBridge(window);
+  
 
   export default {
     name: 'ExamHeader',
@@ -165,7 +166,7 @@
         }).then((result) => {
           if (result.isConfirmed) {
             console.log(`switchExamSection: calling switch-exam-section`)
-            actionHandler.invoke('switch-exam-section', sectionNumber);
+            signalBridge.invoke('switch-exam-section', sectionNumber);
           }
         });
       }

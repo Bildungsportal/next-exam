@@ -36,6 +36,7 @@
     "rollup"
   ],
   "dependencies": {
+    "@capacitor/device": "^8.0.0",
     "@jimp/jpeg": "^0.22.12",
     "@quasar/extras": "^1.16.4",
     "@squoosh/lib": "^0.3.1",

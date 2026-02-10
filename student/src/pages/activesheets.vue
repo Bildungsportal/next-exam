@@ -109,10 +109,10 @@ import { getExamMaterials, loadPDF, loadImage} from '../utils/filehandler.js'
 import PdfviewPane from '../components/PdfviewPane.vue'
 import WebviewPane from '../components/WebviewPane.vue';
 import PdfOverlay from '../components/PdfRenderer.vue';
-import {ActionHandler} from '../utils/actionHandler.js'
+import {SignalBridge} from '../utils/signalBridge.js'
 
-// actionHandler centralizes ipc calls with platform checks
-const actionHandler = new ActionHandler(window);
+// signalBridge instance centralizes ipc calls with platform checks
+const signalBridge = new SignalBridge(window);
 
 export default {
     data() {
@@ -206,7 +206,7 @@ export default {
         },
        
         async sendFocuslost(){
-            let response = await actionHandler.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
+            let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
             if (!this.config.development && !response.focus){  //immediately block frontend
                 this.focus = false 
             }  
@@ -217,7 +217,7 @@ export default {
 
 
         async loadFilelist(){
-            let filelist = await actionHandler.invoke('getfilesasync', null)
+            let filelist = await signalBridge.invoke('getfilesasync', null)
             this.localfiles = filelist;
         },
         
@@ -227,7 +227,7 @@ export default {
             let backupfileName = filename ? filename : this.clientname + ".bak"
             console.log(`activesheets @ loadBackupFile: Checking for backup file: ${backupfileName}`)
             try {
-                let backupfileContent = await actionHandler.invoke('getbackupfile', backupfileName )
+                let backupfileContent = await signalBridge.invoke('getbackupfile', backupfileName )
                
                 if (backupfileContent){
                     // Validate that the content is JSON-parseable before offering to load it
@@ -308,7 +308,7 @@ export default {
                 }
                 
                 // Read the .bak file via IPC
-                const bakContent = await actionHandler.invoke('getbackupfile', filename);
+                const bakContent = await signalBridge.invoke('getbackupfile', filename);
                 
                 if (!bakContent) {
                     console.warn('activesheets @ loadBAK: No content found in .bak file');
@@ -376,7 +376,7 @@ export default {
             this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
         },  
         async fetchInfo() {
-            let getinfo = await actionHandler.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+            let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
             
             this.clientinfo = getinfo.clientinfo;
             this.token = this.clientinfo.token
@@ -384,6 +384,7 @@ export default {
             this.clientname = this.clientinfo.name
             this.exammode = this.clientinfo.exammode
             this.pincode = this.clientinfo.pin
+            
             this.serverstatus = getinfo.serverstatus
             this.lockedSection = this.clientinfo.lockedSection
 
@@ -396,8 +397,8 @@ export default {
             
             this.internetCheckCounter++
             if (this.internetCheckCounter % 5 === 0){
-                this.wlanInfo = await actionHandler.invoke('get-wlan-info')
-                this.hostip = await actionHandler.invoke('checkhostip')
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+                this.hostip = await signalBridge.invoke('checkhostip')
                 this.internetCheckCounter = 0
             }
 
@@ -478,7 +479,7 @@ export default {
             }
             if (why === "exitexam") { 
                 // stop clipboard clear interval
-                actionHandler.send('restrictions')
+                signalBridge.send('restrictions')
 
                 this.$swal.fire({
                     title: this.$t("editor.leaving"),
@@ -521,7 +522,7 @@ export default {
             });
             
             // Save form data to .bak file via IPC
-            actionHandler.send('saveActivesheetsBak', {
+            signalBridge.send('saveActivesheetsBak', {
                 filename: filename || this.clientname,
                 formData: formData
             });
@@ -531,12 +532,12 @@ export default {
             // We'll use getPDFbase64 to render the current view
             if (this.currentpreviewBase64) {
                 // If we have a preview PDF, use it
-                actionHandler.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: this.currentpreviewBase64 })  
+                signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: this.currentpreviewBase64 })  
             } else {
                 // Otherwise generate from current view
-                let response = await actionHandler.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true})
+                let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true})
                 if (response?.status == "success") {
-                    actionHandler.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })  
+                    signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })  
                 }
             }
             this.loadFilelist()
@@ -593,7 +594,7 @@ export default {
                 console.error('activesheets @ sendExamToTeacher: Invalid section data');
                 return;
             }
-            let response = await actionHandler.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true})
+            let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true})
 
             if (response?.status == "success"){
                 let base64pdf = response.base64pdf
@@ -688,24 +689,24 @@ export default {
 
             document.body.addEventListener('mouseleave', this.sendFocuslost);
             
-            actionHandler.on('getmaterials', (event) => {   this.getExamMaterials()  });
+            signalBridge.on('getmaterials', (event) => {   this.getExamMaterials()  });
             
-            actionHandler.on('finalsubmit', (event) => {  // triggered on exit exam mode - send exam to teacher
+            signalBridge.on('finalsubmit', (event) => {  // triggered on exit exam mode - send exam to teacher
                 console.log("activesheets @ finalsubmit: submit exam request received")
                 this.sendExamToTeacher(true) 
             }); 
 
-            actionHandler.on('submitexam', (event, why) => {  //send current work as base64 to teacher
+            signalBridge.on('submitexam', (event, why) => {  //send current work as base64 to teacher
                 console.log("activesheets @ submitexam: submit exam request received")
                 this.printBase64() 
             }); 
             
-            actionHandler.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
                 console.log("activesheets @ save: Teacher saverequest received")
                 this.saveContent(true, why) 
             }); 
             
-            actionHandler.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
+            signalBridge.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
                 this.printdenied(why)
             });
 
@@ -720,8 +721,8 @@ export default {
             document.querySelector("#preview").addEventListener("click", this._onPreviewClick);
 
 
-            this.wlanInfo = await actionHandler.invoke('get-wlan-info')
-            this.hostip = await actionHandler.invoke('checkhostip')
+            this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+            this.hostip = await signalBridge.invoke('checkhostip')
 
 
             this.hidepreview()
@@ -763,11 +764,11 @@ export default {
         }
 
         // Clean up IPC listeners
-        actionHandler.removeAllListeners('getmaterials');
-        actionHandler.removeAllListeners('finalsubmit');
-        actionHandler.removeAllListeners('submitexam');
-        actionHandler.removeAllListeners('save');
-        actionHandler.removeAllListeners('denied');
+        signalBridge.removeAllListeners('getmaterials');
+        signalBridge.removeAllListeners('finalsubmit');
+        signalBridge.removeAllListeners('submitexam');
+        signalBridge.removeAllListeners('save');
+        signalBridge.removeAllListeners('denied');
     },
     
 }

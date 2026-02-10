@@ -39,10 +39,10 @@ const rdpview = () => import('/src/pages/rdpview.vue')
 
 import config from '../../src-electron/main/config.js';
 import {isElectronWindow} from '../types/platform.js';
-import {ActionHandler} from '../utils/actionHandler.js';
+import {SignalBridge} from '../utils/signalBridge.js';
 
-// actionHandler centralizes ipc calls with platform checks
-const actionHandler = new ActionHandler(window);
+// signalBridge instance centralizes ipc calls with platform checks
+const signalBridge = new SignalBridge(window);
 
 
 
@@ -84,7 +84,7 @@ function addParams(to: any) {
  * push a lot of infos to the view
  */
 async function fetchInfo(to: RouteLocationNormalized, from: RouteLocationNormalizedLoaded) {
-  let response = await actionHandler.invoke('getinfoasync')
+  let response = await signalBridge.invoke('getinfoasync')
   if (response) {
     let clientinfo = response.clientinfo
     let serverstatus = response.serverstatus
