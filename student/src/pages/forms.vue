@@ -170,7 +170,9 @@ export default {
             serverstatus: this.$route.params.serverstatus,
             localLockdown: this.$route.params.localLockdown,
 
-            gformsTestId: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.lockedSection].gformsTestId,
+            // section and forms id will be resolved on first fetchInfo based on allowSectionSwitch
+            lockedSection: null,
+            gformsTestId: null,
 
             config: this.$route.params.config,
             clientinfo: null,
@@ -207,6 +209,7 @@ export default {
             this.fetchinfointerval = new SchedulerService(5000);
             this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
             this.fetchinfointerval.start();
+            await this.fetchInfo(); // initial sync for clientinfo, serverstatus and gforms id
 
             this.clockinterval = new SchedulerService(1000);
             this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
@@ -387,7 +390,18 @@ export default {
                 this.pincode = this.clientinfo.pin
                 
                 this.serverstatus = getinfo.serverstatus
-                this.lockedSection = this.clientinfo.lockedSection
+
+                // decide which locked section index is authoritative (client vs server)
+                const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
+                    ? this.clientinfo.lockedSection
+                    : this.serverstatus.lockedSection
+
+                this.lockedSection = sectionIndex
+
+                const section = this.serverstatus.examSections?.[sectionIndex]
+                if (section && section.gformsTestId) {
+                    this.gformsTestId = section.gformsTestId
+                }
 
                 if (!this.focus) {
                     this.entrytime = new Date().getTime()

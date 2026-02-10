@@ -121,7 +121,7 @@ export default {
     data() {
         return {
             componentName: 'Moodle Test',
-       
+        
             online: true,
             focus: true,
             exammode: false,
@@ -139,17 +139,14 @@ export default {
             clientApiPort: this.$route.params.clientApiPort,
             electron: this.$route.params.electron,
             pincode : this.$route.params.pincode,
-            
-
-            activeSection: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection],
-            lockedSection: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.lockedSection],
             serverstatus: this.$route.params.serverstatus,
-            url: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.lockedSection].moodleURL,
-            moodleDomain: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.lockedSection].moodleDomain,
-            moodleTestType: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.lockedSection].moodleTestType,
-            moodleTestId: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.lockedSection].moodleTestId,
-
-
+            // section and moodle config will be resolved on first fetchInfo based on allowSectionSwitch
+            activeSection: null,
+            lockedSection: null,
+            url: null,
+            moodleDomain: null,
+            moodleTestType: null,
+            moodleTestId: null,
 
             config: this.$route.params.config,
             localLockdown: this.$route.params.localLockdown,
@@ -201,6 +198,7 @@ export default {
             this.fetchinfointerval = new SchedulerService(5000);
             this.fetchinfointerval.addEventListener('action',  this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
             this.fetchinfointerval.start();
+            await this.fetchInfo(); // initial sync for clientinfo, serverstatus and moodle url
                 
             this.loadfilelistinterval = new SchedulerService(20000);
             this.loadfilelistinterval.addEventListener('action',  this.loadFilelist);
@@ -308,10 +306,8 @@ export default {
                 webview.addEventListener('did-start-loading', this._onDidStartLoading);
                 webview.addEventListener('did-stop-loading', this._onDidStopLoading);
             }
-            if (isElectronWindow(window)) {
-                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
-                this.hostip = await signalBridge.invoke('checkhostip')
-            }
+            this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+            this.hostip = await signalBridge.invoke('checkhostip')
             
         });
     },
@@ -376,43 +372,57 @@ export default {
             this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
         },  
         async fetchInfo() {
-            if (isElectronWindow(window)) {
-                let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+            
+            let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
 
-                this.clientinfo = getinfo.clientinfo;
-                this.token = this.clientinfo.token
-                this.focus = this.clientinfo.focus
-                this.clientname = this.clientinfo.name
-                this.exammode = this.clientinfo.exammode
-                this.pincode = this.clientinfo.pin
+            this.clientinfo = getinfo.clientinfo;
+            this.token = this.clientinfo.token
+            this.focus = this.clientinfo.focus
+            this.clientname = this.clientinfo.name
+            this.exammode = this.clientinfo.exammode
+            this.pincode = this.clientinfo.pin
 
-                this.serverstatus = getinfo.serverstatus
-                this.lockedSection = this.clientinfo.lockedSection
+            this.serverstatus = getinfo.serverstatus
 
-                if (!this.focus) {
-                    this.entrytime = new Date().getTime()
-                }
-                if (this.clientinfo && this.clientinfo.token) {
-                    this.online = true
-                } else {
-                    this.online = false
-                }
+            // decide which locked section index is authoritative (client vs server)
+            const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
+                ? this.clientinfo.lockedSection
+                : this.serverstatus.lockedSection
 
-                this.battery = await navigator.getBattery().then(battery => {
-                    return battery
-                })
-                    .catch(error => {
-                        console.error("Error accessing the Battery API:", error);
-                    });
+            this.lockedSection = sectionIndex
 
-
-                this.internetCheckCounter++
-                if (this.internetCheckCounter % 5 === 0) {
-                    this.wlanInfo = await signalBridge.invoke('get-wlan-info')
-                    this.hostip = await signalBridge.invoke('checkhostip')
-                    this.internetCheckCounter = 0
-                }
+            const section = this.serverstatus.examSections?.[sectionIndex]
+            if (section) {
+                this.url = section.moodleURL
+                this.moodleDomain = section.moodleDomain
+                this.moodleTestType = section.moodleTestType
+                this.moodleTestId = section.moodleTestId
             }
+
+            if (!this.focus) {
+                this.entrytime = new Date().getTime()
+            }
+            if (this.clientinfo && this.clientinfo.token) {
+                this.online = true
+            } else {
+                this.online = false
+            }
+
+            this.battery = await navigator.getBattery().then(battery => {
+                return battery
+            })
+                .catch(error => {
+                    console.error("Error accessing the Battery API:", error);
+                });
+
+
+            this.internetCheckCounter++
+            if (this.internetCheckCounter % 5 === 0) {
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+                this.hostip = await signalBridge.invoke('checkhostip')
+                this.internetCheckCounter = 0
+            }
+            
         }, 
        
     },

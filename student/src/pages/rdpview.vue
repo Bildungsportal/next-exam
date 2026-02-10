@@ -177,7 +177,8 @@ export default {
             wlanInfo: null,
             examMaterials: [],
             error: null,
-            rdpConfig: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].rdpConfig,
+            // rdpConfig and rdpUrl will be resolved on first fetchInfo based on allowSectionSwitch
+            rdpConfig: null,
             rdpUrl: null,
             activeSession: false,
             hostip: null,
@@ -193,18 +194,12 @@ export default {
 
         this.getExamMaterials()
 
-
-        await this.sleep(1000)
-
-        // this is the RDWeb url schema : https://rdweb.schule.lan/RDWeb/webclient/index.html
-        this.rdpUrl = `https://${this.rdpConfig.domain}/RDWeb/webclient/index.html`
-
-
         this.entrytime = new Date().getTime()
         // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
         this.fetchinfointerval = new SchedulerService(5000);
         this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
         this.fetchinfointerval.start();
+        await this.fetchInfo(); // initial sync for clientinfo, serverstatus, lockedSection and rdpConfig
 
         this.loadfilelistinterval = new SchedulerService(20000);
         this.loadfilelistinterval.addEventListener('action', this.loadFilelist);
@@ -350,7 +345,19 @@ export default {
                 this.pincode = this.clientinfo.pin
 
                 this.serverstatus = getinfo.serverstatus
-                this.lockedSection = this.clientinfo.lockedSection
+
+                // decide which locked section index is authoritative (client vs server)
+                const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
+                    ? this.clientinfo.lockedSection
+                    : this.serverstatus.lockedSection
+
+                this.lockedSection = sectionIndex
+
+                const section = this.serverstatus.examSections?.[sectionIndex]
+                this.rdpConfig = section?.rdpConfig || null
+                this.rdpUrl = this.rdpConfig && this.rdpConfig.domain
+                    ? `https://${this.rdpConfig.domain}/RDWeb/webclient/index.html`
+                    : null
 
                 if (!this.focus) {
                     this.entrytime = new Date().getTime()

@@ -140,8 +140,9 @@ export default {
             config: this.$route.params.config,
             localLockdown: this.$route.params.localLockdown,
 
-            lockedSection: this.$route.params.serverstatus.lockedSection,
-            url: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.lockedSection].domainname,
+            // section and url will be resolved on first fetchInfo based on allowSectionSwitch
+            lockedSection: null,
+            url: null,
             domain: null,
 
             clientinfo: null,
@@ -386,7 +387,13 @@ export default {
             this.pincode = this.clientinfo.pin
             
             this.serverstatus = getinfo.serverstatus
-            this.lockedSection = this.clientinfo.lockedSection
+
+            // decide which locked section index is authoritative (client vs server)
+            const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
+                ? this.clientinfo.lockedSection
+                : this.serverstatus.lockedSection
+
+            this.lockedSection = sectionIndex
 
             if (!this.focus){  this.entrytime = new Date().getTime()}
             if (this.clientinfo && this.clientinfo.token){  this.online = true  }
@@ -663,10 +670,14 @@ export default {
         }
     },
     mounted() {
+        console.log("activesheets @ mounted")
         this.currentFile = this.clientname
         this.entrytime = new Date().getTime()  
     
         this.$nextTick(async () => { 
+
+            await this.fetchInfo()  // Initial fetch for clientinfo, serverstatus and lockedSection
+
             this.fetchinfointerval = new SchedulerService(5000);
             this.fetchinfointerval.addEventListener('action',  this.fetchInfo);
             this.fetchinfointerval.start();
@@ -710,7 +721,7 @@ export default {
                 this.printdenied(why)
             });
 
-            
+
 
             // add some eventlisteners once
             this._onPreviewClick = function() {  
@@ -724,11 +735,10 @@ export default {
             this.wlanInfo = await signalBridge.invoke('get-wlan-info')
             this.hostip = await signalBridge.invoke('checkhostip')
 
-
+           
             this.hidepreview()
             this.loadFilelist()
             await this.getExamMaterials()
-            this.fetchInfo()  // Initial fetch
 
             this.loadPdfParserHtml()
 

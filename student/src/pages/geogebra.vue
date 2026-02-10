@@ -255,6 +255,7 @@ export default {
             this.fetchinfointerval = new SchedulerService(5000);
             this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
             this.fetchinfointerval.start();
+            await this.fetchInfo(); // initial sync for clientinfo, serverstatus and lockedSection
 
             this.clockinterval = new SchedulerService(1000);
             this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
@@ -557,7 +558,13 @@ export default {
             this.pincode = this.clientinfo.pin
             
             this.serverstatus = getinfo.serverstatus
-            this.lockedSection = this.clientinfo.lockedSection
+
+            // decide which locked section index is authoritative (client vs server)
+            const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
+                ? this.clientinfo.lockedSection
+                : this.serverstatus.lockedSection
+
+            this.lockedSection = sectionIndex
 
             if (this.pincode !== "0000") {
                 this.localLockdown = false

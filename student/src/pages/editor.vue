@@ -481,7 +481,7 @@
 
     <!-- LANGUAGE TOOL START -->
     <div id="languagetool"
-         v-if="privateSpellcheck.activated || (serverstatus.allowSectionSwitch ? serverstatus.examSections[clientinfo?.lockedSection ?? lockedSection]?.languagetool : serverstatus.examSections[serverstatus.activeSection]?.languagetool)">
+         v-if="privateSpellcheck.activated || (serverstatus.allowSectionSwitch ? serverstatus.examSections[clientinfo?.lockedSection ?? lockedSection]?.languagetool : serverstatus.examSections[serverstatus.lockedSection]?.languagetool)">
         <div id="ltcheck" @click="LTcheckAllWords();">
             <div id="eye" class="darkgreen eyeopen"></div> &nbsp;LanguageTool
         </div>
@@ -871,7 +871,13 @@ export default {
             this.privateSpellcheck = this.clientinfo.privateSpellcheck
             
             this.serverstatus = getinfo.serverstatus
-            this.lockedSection = this.clientinfo.lockedSection
+
+            // decide which section index is authoritative (client vs server)
+            const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
+                ? this.clientinfo.lockedSection
+                : this.serverstatus.lockedSection
+
+            this.lockedSection = sectionIndex
 
             // console.log(this.serverstatus)
             if (this.pincode !== "0000") {
@@ -891,7 +897,7 @@ export default {
             });
 
             //handle individual spellcheck (only if not globally activated anyways)
-            if (this.serverstatus.examSections[this.serverstatus.activeSection].languagetool === false) {
+            if (this.serverstatus.examSections[this.lockedSection].languagetool === false) {
                 if (this.privateSpellcheck.activate == false && this.LTactive) {
                     this.LTdisable()
                     this.privateSpellcheck.activated = false   // das wird eigentlich eh im communication handler für clientinfo bereits auf false gesetzt und bei fetchinfo() übernommen
@@ -1126,28 +1132,28 @@ export default {
                 }).catch(function (err) {
                     console.log('editor @ savecontent: Fehler beim Kopieren des Textes: ', err.message);
                 });
-                
+            } 
 
-                // Klasse entfernen: Verhindert, dass die Keyframe-Animation beim printToPDF neu startet
-                const previewElement = document.querySelector("#preview");
-                if (previewElement && previewElement.classList.contains('fadeinfast')) {
-                    previewElement.classList.remove('fadeinfast');
-                }
-
-                // SAVE AS HTML (bak) - also save editorcontent as *html file - used to re-populate the editor window in case something went completely wrong
-                let editorcontent = this.editor.getHTML(); 
-                signalBridge.send('storeHTML', {filename: filename, editorcontent: editorcontent })
-                
-                // SAVE AS PDF - inform mainprocess to save webcontent as pdf (see @media css query for adjustments for pdf)
-                // printPDF will trigger a reload of the filelist if finished and send files to teacher if reason (why) is "teacherrequest"
-                signalBridge.send('printpdf', {
-                    filename: filename,
-                    landscape: false,
-                    servername: this.servername,
-                    clientname: this.clientname,
-                    reason: why
-                })
+            // Klasse entfernen: Verhindert, dass die Keyframe-Animation beim printToPDF neu startet
+            const previewElement = document.querySelector("#preview");
+            if (previewElement && previewElement.classList.contains('fadeinfast')) {
+                previewElement.classList.remove('fadeinfast');
             }
+
+            // SAVE AS HTML (bak) - also save editorcontent as *html file - used to re-populate the editor window in case something went completely wrong
+            let editorcontent = this.editor.getHTML(); 
+            signalBridge.send('storeHTML', {filename: filename, editorcontent: editorcontent })
+            
+            // SAVE AS PDF - inform mainprocess to save webcontent as pdf (see @media css query for adjustments for pdf)
+            // printPDF will trigger a reload of the filelist if finished and send files to teacher if reason (why) is "teacherrequest"
+            signalBridge.send('printpdf', {
+                filename: filename,
+                landscape: false,
+                servername: this.servername,
+                clientname: this.clientname,
+                reason: why
+            })
+            
         },
 
 
@@ -1795,7 +1801,7 @@ export default {
         this.fetchinfointerval.start();
 
         this.saveContentCallback = () => this.saveContent(true, 'auto');  // wegs 2 parameter muss dieser umweg genommen werden sonst kann ich den eventlistener nicht mehr entfernen
-        this.saveinterval = new SchedulerService(5000);
+        this.saveinterval = new SchedulerService(20000);
         this.saveinterval.addEventListener('action', this.saveContentCallback);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
         this.saveinterval.start();
 

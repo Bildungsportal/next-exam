@@ -720,7 +720,7 @@ import { switchExamSection } from './switchExamSection.js';
 
         this.multicastClient.clientinfo.exammode = true
         // when allowSectionSwitch: client chooses section, clientinfo.lockedSection is authoritative; do not overwrite with server
-        if (!serverstatus.allowSectionSwitch) {
+        if (!serverstatus.allowSectionSwitch || !this.multicastClient.clientinfo.lockedSection) {
             this.multicastClient.clientinfo.lockedSection = serverstatus.lockedSection;
         }
         const effectiveSection = this.multicastClient.clientinfo.lockedSection;

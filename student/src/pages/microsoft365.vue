@@ -163,6 +163,7 @@ export default {
             serverstatus: this.$route.params.serverstatus,
             localLockdown: this.$route.params.localLockdown,
             config: this.$route.params.config,
+            lockedSection: null,
             clientinfo: null,
             entrytime: 0,
             timesinceentry: 0,
@@ -343,7 +344,13 @@ export default {
                 this.pincode = this.clientinfo.pin
 
                 this.serverstatus = getinfo.serverstatus
-                this.lockedSection = this.clientinfo.lockedSection
+
+                // decide which locked section index is authoritative (client vs server)
+                const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
+                    ? this.clientinfo.lockedSection
+                    : this.serverstatus.lockedSection
+
+                this.lockedSection = sectionIndex
 
                 if (!this.focus) {
                     this.warning = true

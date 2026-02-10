@@ -139,13 +139,13 @@ export default {
             clientApiPort: this.$route.params.clientApiPort,
             electron: this.$route.params.electron,
             pincode : this.$route.params.pincode,
-            serverstatus: this.$route.params.serverstatus,
             config: this.$route.params.config,
             localLockdown: this.$route.params.localLockdown,
 
-            lockedSection: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.lockedSection],
-            serverstatus: this.$route.params.serverstatus[this.$route.params.serverstatus.lockedSection],
-            url: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.lockedSection].domainname,
+            // section and url will be resolved on first fetchInfo based on allowSectionSwitch
+            lockedSection: null,
+            serverstatus: this.$route.params.serverstatus,
+            url: null,
             domain: null,
 
             clientinfo: null,
@@ -241,7 +241,30 @@ export default {
             this.exammode = this.clientinfo.exammode
             this.pincode = this.clientinfo.pin
             this.serverstatus = getinfo.serverstatus
-            this.lockedSection = this.clientinfo.lockedSection
+
+            // decide which locked section index is authoritative (client vs server)
+            const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
+                ? this.clientinfo.lockedSection
+                : this.serverstatus.lockedSection
+
+            this.lockedSection = sectionIndex
+
+            // update url/domain based on current locked section (respect allowSectionSwitch)
+            const section = this.serverstatus?.examSections?.[sectionIndex]
+            if (section && typeof section.domainname === 'string') {
+                this.url = section.domainname
+                this.domain = section.domainname
+                try {
+                    const urlObj = new URL(this.url);
+                    this.allowedDomain = urlObj.hostname; // one line comment
+                } catch (error) {
+                    if (typeof this.url === 'string') {
+                        this.allowedDomain = this.url.replace(/https?:\/\//, '').split('/')[0].split(':')[0];
+                    } else {
+                        this.allowedDomain = null;
+                    }
+                }
+            }
 
             if (!this.focus){  this.entrytime = new Date().getTime() }
             if (this.clientinfo && this.clientinfo.token){  this.online = true  }
@@ -267,23 +290,11 @@ export default {
     
         this.$nextTick(async () => { // Code that will run only after the entire view has been rendered
             
-            this.domain = this.url
-            // Extract domain for navigation validation (remove protocol, path, and port) using URL API for robustness
-            try {
-                const urlObj = new URL(this.url);
-                this.allowedDomain = urlObj.hostname; // This gives us just the domain without port
-                console.log(`website @ mounted: extracted allowedDomain="${this.allowedDomain}" from url="${this.url}"`);
-            } 
-            catch (error) {
-                // Fallback to regex extraction if URL parsing fails
-                this.allowedDomain = this.url.replace(/https?:\/\//, '').split('/')[0].split(':')[0];
-                console.log(`website @ mounted: fallback extraction, allowedDomain="${this.allowedDomain}"`);
-            }
-  
             // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
             this.fetchinfointerval = new SchedulerService(5000);
             this.fetchinfointerval.addEventListener('action',  this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
             this.fetchinfointerval.start();
+            await this.fetchInfo(); // initial sync for clientinfo, serverstatus and url
                 
             this.loadfilelistinterval = new SchedulerService(20000);
             this.loadfilelistinterval.addEventListener('action',  this.loadFilelist);
