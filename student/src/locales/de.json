@@ -9,7 +9,7 @@
     "student" : {
         "password": "Passwort",
         "exams": "Prüfungen",
-        "username": "Benutzername",
+        "username": "Dein Name",
         "pin": "Pincode",
         "ip":"Server-Adresse",
         "examname":"Prüfungsname",

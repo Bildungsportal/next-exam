@@ -1368,20 +1368,19 @@ computed: {
         showinfo(){
             let info = `<span> IP: <strong>${this.serverip}</strong> \nName: ${this.servername}  \nPin: ${this.serverstatus.pin} </span>`
             this.$swal.fire({ 
-                title: `<div style="display: flex; margin-top:0; justify-content: center">
-                            <div style="text-align: right; margin-right: 10px; font-weight:normal; font-size: 0.8em;">${this.$t("dashboard.name")}:
-                            ${this.$t("dashboard.server")}:
-                            ${this.$t("dashboard.pin")}:
-                            </div>
-                            <div style="text-align: left;font-size: 0.8em;">${this.servername}
-                            ${this.serverip}
-                            ${this.serverstatus.pin} 
+                title: `<div style="justify-content: center;""><div style="display:inline-block; text-align: right; margin-right: 10px; font-weight:normal; font-size: 1.1em;">${this.$t("dashboard.name")}:
+                                ${this.$t("dashboard.server")}:
+                                ${this.$t("dashboard.pin")}:
+                                
+                            </div><div style="display:inline-block; text-align: left;font-size: 1.1em;">${this.servername}
+                                ${this.serverip}
+                                ${this.serverstatus.pin} 
 
                             </div>
                         </div>`,
                 icon: "info",
                 customClass: {
-                    popup: 'custom-swal2-popup',
+                    popup: 'custom-swal2-popup-info',
                 },
             })
         },
@@ -2864,7 +2863,9 @@ hr {
 }
 
 
-
+.custom-swal2-popup-info {
+    width: 700px !important;
+}
 
 
 
