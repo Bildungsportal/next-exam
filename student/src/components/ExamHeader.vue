@@ -154,7 +154,10 @@
       },
       async switchExamSection(sectionNumber) {
         if (!this.serverstatus?.allowSectionSwitch || this.clientinfo?.lockedSection === sectionNumber) return;
-
+        
+        if (this.serverstatus.examSections[this.clientinfo.lockedSection].examtype == 'microsoft365'){
+          signalBridge.send('collapse-browserview');
+        }
         //  ask if the user wants to switch to the new section via swal2dialog
         this.$swal.fire({
           title: this.$t('editor.sectionSwitchTitle'),
@@ -163,10 +166,15 @@
           showCancelButton: true,
           confirmButtonText: 'Ok',
           cancelButtonText: this.$t('editor.cancel'),
-        }).then((result) => {
+        }).then( (result) => {
           if (result.isConfirmed) {
             console.log(`switchExamSection: calling switch-exam-section`)
             signalBridge.invoke('switch-exam-section', sectionNumber);
+          }
+          else {
+            if (this.serverstatus.examSections[this.clientinfo.lockedSection].examtype == 'microsoft365'){
+              signalBridge.send('restore-browserview');
+            }
           }
         });
       }

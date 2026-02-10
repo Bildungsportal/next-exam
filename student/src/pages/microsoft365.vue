@@ -181,8 +181,8 @@ export default {
             urlForWebview: null,
             allowedUrls: [],
             webviewVisible: false,
-            microsoft365Domain: this.$route.params.microsoft365Domain,
-            internetCheckCounter: 0
+            internetCheckCounter: 0,
+            msOfficeShare: null,
         }
     },
     components: {
@@ -266,9 +266,7 @@ export default {
 
         // reload the browser view - this needs to load the ms365 domain again in electron browserview
         reloadBrowserView() {
-            if (isElectronWindow(window)) {
-                signalBridge.invoke('reload-browser-view', this.microsoft365Domain);
-            }
+            signalBridge.invoke('reload-browser-view', this.msOfficeShare);
         },
 
         loadBase64file(file) {
@@ -342,6 +340,7 @@ export default {
                 this.clientname = this.clientinfo.name
                 this.exammode = this.clientinfo.exammode
                 this.pincode = this.clientinfo.pin
+                this.msOfficeShare = this.clientinfo.msofficeshare;
 
                 this.serverstatus = getinfo.serverstatus
 
