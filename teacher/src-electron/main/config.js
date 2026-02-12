@@ -7,7 +7,7 @@ const config = {
     showdevtools: true,
     bipIntegration: true,
     bipDemo: true,
-    bipApiUrl: 'http://localhost/moodle',
+    bipApiUrl: 'https://localhost:8444',
 
     workdirectory : "",
     tempdirectory : "",
@@ -38,7 +38,7 @@ const config = {
     },
 
     version: '2.0.0.1',
-    buildDate: '20260205',
+    buildDate: '20260210',
     buildNumber: '1',
     info: 'Release'
 }

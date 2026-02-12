@@ -278,8 +278,8 @@ export default {
             if (this.config.bipDemo){   // skip bip logon and fake bip info
                 // fake bip info
                 this.bipUsername = "Katherine Johnson"
-                this.bipuserID = 5
-                this.bipToken = "65bd836eab7f095eb2b2edee083bc184"
+                this.bipuserID = 6
+                this.bipToken = "cb77d9e76348214154850a6b32186143"
                 
                 this.fetchBipExams()
                 return  //skip real login

@@ -294,8 +294,8 @@ export default {
         async loginBiP() {
             if (this.config.bipDemo) {   // skip bip logon and fake bip info
                 this.bipUsername = "Marie Curie"
-                this.bipuserID = 7
-                this.bipToken = "726f30c49023fe2c4363532f60b99c7a"
+                this.bipuserID = 8
+                this.bipToken = "4fce5b97fe36cb42313621ebf3ff2a1a"
                 this.username = this.bipUsername
 
                 await this.fetchBipExams()
@@ -346,7 +346,7 @@ export default {
                                 //console.log(exam)
                                 this.serverip = teacher.teacherIP
                                 this.username = this.bipUsername
-                                this.pincode = parseInt(exam.examPin)     // Set the pin to the exam pin for auto connect
+                                this.pincode = parseInt(exam.examPin)     // Set the pin to the exam pin for auto connect TODO parseInt not necessary, is already an int in BIP
                                 console.log(`connecting to exam: ${exam.examName} with teacher: ${teacher.teacherID} and pin: ${exam.examPin}`)
                                 this.registerClient(teacher.teacherIP, exam.examName)
                             }
