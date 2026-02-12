@@ -295,9 +295,9 @@ export default {
 
         async loginBiP() {
             if (this.config.bipDemo) {   // skip bip logon and fake bip info
-                this.bipUsername = "Robert Schrenk"
-                this.bipuserID = 123456
-                this.bipToken = "4hedh443gc34lm34wb43moeinlz0082droeib45beio"
+                this.bipUsername = "Marie Curie"
+                this.bipuserID = 8
+                this.bipToken = "3bb55e2ae29dc744e74dcbdca7722615"
                 this.username = this.bipUsername
 
                 await this.fetchBipExams()
