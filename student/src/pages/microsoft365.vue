@@ -51,10 +51,10 @@
                 </div>
             </div>
             <div v-if="allowedUrls.length !== 0" v-for="allowedUrl in allowedUrls  "
-                 class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button" :title="allowedUrl"
-                 @click="showUrl(allowedUrl)">
+                 class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button" :title="getUrlDisplay(allowedUrl)"
+                 @click="showUrl(getUrlDisplay(allowedUrl))">
                 <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22"
-                     style="vertical-align: top;"> {{ allowedUrl }}
+                     style="vertical-align: top;"> {{ getUrlDisplay(allowedUrl) }}
             </div>
             <!-- exam materials end -->
 
@@ -249,6 +249,9 @@ export default {
         gracefullyExit: gracefullyExit,
         showUrl: showUrl,
         reconnect: reconnect,
+        getUrlDisplay(allowedUrl) {
+            return typeof allowedUrl === 'object' ? allowedUrl.url : allowedUrl;
+        },
 
 
         // Update header height and send to backend

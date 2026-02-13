@@ -37,8 +37,8 @@
             <div v-if="(file.filetype == 'audio')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
             <div v-if="(file.filetype == 'image')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
         </div>
-        <div v-if="allowedUrls.length !== 0"  v-for="allowedUrl in allowedUrls  " class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button" :title="allowedUrl" @click="showUrl(allowedUrl)">
-            <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{allowedUrl}} 
+        <div v-if="allowedUrls.length !== 0"  v-for="allowedUrl in allowedUrls  " class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button" :title="getUrlDisplay(allowedUrl)" @click="showUrl(getUrlDisplay(allowedUrl))">
+            <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{getUrlDisplay(allowedUrl)}}
         </div>
         <!-- exam materials end -->
 
@@ -166,7 +166,9 @@ export default {
             allowedUrls: [],
             webviewVisible: false,
             allowedDomain: null, // Extracted domain for navigation validation
-            
+            blockSubdomains: false, // Block subdomains setting from teacher
+            blockSubfolders: false, // Block subfolders setting from teacher
+
             // Event listener references for cleanup
             _onDidStartLoading: null,
             _onDidStopLoading: null,
@@ -187,6 +189,10 @@ export default {
         gracefullyExit:gracefullyExit,
         showUrl:showUrl,
         reconnect:reconnect,
+
+        getUrlDisplay(allowedUrl) {
+            return typeof allowedUrl === 'object' ? allowedUrl.url : allowedUrl;
+        },
         
         hidepreview(){
             let preview = document.querySelector("#preview")
@@ -254,9 +260,11 @@ export default {
             if (section && typeof section.domainname === 'string') {
                 this.url = section.domainname
                 this.domain = section.domainname
+                this.blockSubdomains = !!section.blockSubdomains
+                this.blockSubfolders = !!section.blockSubfolders
                 try {
                     const urlObj = new URL(this.url);
-                    this.allowedDomain = urlObj.hostname; // one line comment
+                    this.allowedDomain = urlObj.hostname;
                 } catch (error) {
                     if (typeof this.url === 'string') {
                         this.allowedDomain = this.url.replace(/https?:\/\//, '').split('/')[0].split(':')[0];
@@ -321,20 +329,22 @@ export default {
                 const iframe = shadowRoot.querySelector('iframe');
                 if (iframe) { iframe.style.height = '100%'; } 
                 
-                // Setup blocking in backend via IPC - this ensures events are caught early
+                // Setup blocking in backend via IPC - uses unified start-blocking-for-webview with webFilter
                 const setupBackendBlocking = async () => {
                     if (webview.getWebContentsId) {
                         const guestId = webview.getWebContentsId();
                         if (guestId) {
                             try {
-                                await signalBridge.invoke('start-blocking-for-website-webview', {
-                                    guestId, 
-                                    mode: 'website',
-                                    allowedDomain: this.allowedDomain,
-                                    baseUrl: this.url
+                                await signalBridge.invoke('start-blocking-for-webview', {
+                                    guestId,
+                                    allowedUrls: [{
+                                        url: this.url,
+                                        blockSubdomains: this.blockSubdomains,
+                                        blockSubfolders: this.blockSubfolders
+                                    }]
                                 });
                                 console.log(`website @ mounted: backend blocking setup for webview ${guestId}`);
-                            } 
+                            }
                             catch (error) {
                                 console.error('website @ mounted: failed to setup backend blocking', error);
                             }

@@ -736,6 +736,8 @@ export default {
                         fontsize: '12pt',
                         audioRepeat: 0,
                         domainname: false,
+                        blockSubdomains: false,
+                        blockSubfolders: false,
                         rdpConfig: null,
 
                         groups: false, 
@@ -763,6 +765,8 @@ export default {
                         fontsize: '12pt',
                         audioRepeat: 0,
                         domainname: false,
+                        blockSubdomains: false,
+                        blockSubfolders: false,
                         rdpConfig: null,
 
                         groups: false, 
