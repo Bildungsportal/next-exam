@@ -370,17 +370,16 @@ export default {
         async fetchBipExams() {
             if (!this.bipToken) return;  // cannot fetch from bip api without valid token
 
-            return // disable bip api call for now - this must connect to the real bip api server
+          //  return // disable bip api call for now - this must connect to the real bip api server
             //probably the path needs to be set in .env and config.js
 
 
             // if (this.config.development){
-            let url = this.config.bipApiUrl
-
+            let url = this.config.bipApiUrl + "/webservice/rest/server.php?wstoken="+this.bipToken+"&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json"
+           
             await fetch(url, {
                 method: "GET",
-                headers: {"Content-Type": "application/json"}
-            })
+                headers: {"Content-Type": "application/x-www-form-urlencoded"}            })
             .then(response => {
                 return response.json();
             })
@@ -388,6 +387,7 @@ export default {
                 // console.log("Data from API:", data);
                 this.bipData = data   // Store all of the information in data
                 this.onlineExams = data.exams
+                console.log(data)
                 return
             })
             .catch(error => {

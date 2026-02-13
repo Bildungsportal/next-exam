@@ -8,7 +8,8 @@ const config = {
     showdevtools: true,
     useBundledJRE: true,
     bipIntegration: true,
-    bipApiUrl: 'https://www.bildung.gv.at/webservice/rest/next-exam/student',
+    bipDemo: true,
+    bipApiUrl: 'https://localhost:8443',
 
     workdirectory : "",   // (desktop path + examdir)
     tempdirectory : "",   // (desktop path + 'tmp')
@@ -26,7 +27,7 @@ const config = {
     isPuavo: false,
     
     version: '2.0.0.1',
-    buildDate: '20260210',
+    buildDate: '20260212',
     buildNumber: '1',
     info: 'Release'
 }
