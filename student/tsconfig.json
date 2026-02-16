@@ -2,8 +2,8 @@
   "extends": "./.quasar/tsconfig.json",
   "compilerOptions": {
     "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "nodenext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "importHelpers": true,
     "jsx": "preserve",
     "esModuleInterop": true,

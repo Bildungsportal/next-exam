@@ -27,12 +27,15 @@ import { gateway4sync } from 'default-gateway';
 import os from 'os'
 import log from 'electron-log';
 import {disableRestrictions} from './platformrestrictions.js';
+import * as webFilter from './webFilter.js';
 import mammoth from 'mammoth';
 
 import languageToolServer from './lt-server';
+import platformDispatcher from './platformDispatcher.js';
 import { updateSystemTray } from './traymenu.js';
 import { ensureNetworkOrReset } from './testpermissionsMac.js';
 import { getWlanInfo } from './getwlaninfo.js';
+import { switchExamSection } from './switchExamSection.js';
 
 const __dirname = import.meta.dirname;
 
@@ -87,8 +90,9 @@ class IpcHandler {
             let serverip = clientinfo.serverip
             let token = clientinfo.token
            
-            let payload = { 
+            let payload = {
                 group: clientinfo.group,
+                lockedSection: clientinfo.lockedSection,
             }
 
             let examMaterials = false
@@ -115,29 +119,6 @@ class IpcHandler {
            
         }) 
 
-
-        ipcMain.handle('start-blocking-for-webview', (event, { guestId, allowedUrls }) => {
-            const guest = webContents.fromId(Number(guestId));
-            if (!guest || guest.isDestroyed?.()) return false;
-          
-            // Entferne alte Listener, um Doppel-Registrierungen zu vermeiden
-            guest.removeAllListeners('will-navigate');
-       
-            const allow = allowedUrls.map(s => String(s).toLowerCase());
-            guest.setWindowOpenHandler(({ url }) => {
-                const urlStr = String(url || '').toLowerCase();
-                if (allow.some(u => urlStr.includes(u))) { guest.loadURL(url); log.warn("ipchandler @ start-blocking-for-webview: allowed navigation to", url) }
-                else return { action: 'deny' };
-            });
-            
-            guest.on('will-navigate', (e, url) => {
-                const urlStr = String(url || '').toLowerCase();
-                if (!allow.some(u => urlStr.includes(u))) { e.preventDefault(); log.warn("ipchandler @ start-blocking-for-webview: blocked navigation to", url) }
-            });
-              
-            return true;
-        });
-
         // Helper function for common exception URLs (used by all exam modes)
         const checkCommonExceptions = (targetUrl) => {
             if (targetUrl.includes("login") && targetUrl.includes("Microsoft")) return true;
@@ -157,117 +138,135 @@ class IpcHandler {
             if (targetUrl.includes("login") && targetUrl.includes("live.com")) return true;   // LMS
             if (targetUrl.includes("login") && targetUrl.includes("msftauth.net")) return true;   // LMS
             if (targetUrl.includes("aadcdn") && targetUrl.includes("msftauth.net")) return true;   // LMS
-
+            if (targetUrl.includes("googlesyndication.com")) return true; 
 
 
             return false;
         };
 
-        // Unified IPC handler for webview blocking - supports website, eduvidual, forms, rdp modes
-        ipcMain.handle('start-blocking-for-website-webview', (event, { guestId, mode, allowedDomain, baseUrl, moodleTestId, moodleDomain, gformsTestId }) => {
+        ipcMain.handle('start-blocking-for-webview', (event, { guestId, allowedUrls }) => {
             const guest = webContents.fromId(Number(guestId));
             if (!guest || guest.isDestroyed?.()) return false;
-          
-            // Remove old listeners to prevent duplicate registrations
+
+            // Entferne alte Listener, um Doppel-Registrierungen zu vermeiden
             guest.removeAllListeners('will-navigate');
-            
-            // URL validation function - different logic based on mode
-            const isUrlAllowed = (targetUrl) => {
-                if (mode === "website") {
-                    // WEBSITE mode: check domain matching
-                    if (!targetUrl || targetUrl.includes(baseUrl)) return true;
-                    
-                    try {
-                        const urlObj = new URL(targetUrl);
-                        const domain = urlObj.hostname;
-                        
-                        if (domain === allowedDomain) return true;
-                        if (domain.endsWith('.' + allowedDomain)) {
-                            const prefix = domain.slice(0, -(allowedDomain.length + 1));
-                            if (prefix && !prefix.includes('.') && /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(prefix)) {
-                                return true;
-                            }
-                        }
-                    } catch (error) {
-                        return false;
-                    }
-                } else if (mode === "eduvidual") {
-                    // EDUVIDUAL/MOODLE mode: check moodleTestId
-                    if (targetUrl.includes(moodleTestId)) {
-                        return true;
-                    }
-                    
-                    // Moodle-specific exceptions
-                    if (targetUrl.includes("startattempt.php") && targetUrl.includes(moodleDomain)) {
-                        return true; // moodledomain ohne testid
-                    }
-                    if (targetUrl.includes("processattempt.php") && targetUrl.includes(moodleDomain)) {
-                        return true; // moodledomain ohne testid
-                    }
-                    if (targetUrl.includes("logout") && targetUrl.includes(moodleDomain)) {
-                        return true;
-                    }
-                    if (targetUrl.includes("login") && targetUrl.includes("eduvidual")) {
-                        return true;
-                    }
-                    if (targetUrl.includes("login") && targetUrl.includes(moodleDomain)) {
-                        return true;
-                    }
-                    if (targetUrl.includes("policy") && targetUrl.includes(moodleDomain)) {
-                        return true;
-                    }
-                    if (targetUrl.includes("auth") && targetUrl.includes(moodleDomain)) {
-                        return true;
-                    }
-                    if (targetUrl.includes("SAML2") && targetUrl.includes("portal.tirol.gv.at")) {
-                        return true;
-                    }
-                    if (targetUrl.includes("login") && targetUrl.includes("portal.tirol.gv.at")) {
-                        return true;
-                    }
-                    if (targetUrl.includes("login") && targetUrl.includes("tirol.gv.at")) {
-                        return true;
-                    }
-                } else if (mode === "forms") {
-                    // FORMS mode: check gformsTestId
-                    if (targetUrl.includes(gformsTestId)) {
-                        return true;
-                    }
-                    
-                    // Google Forms-specific exceptions
-                    if (targetUrl.includes("docs.google.com") && targetUrl.includes("formResponse")) {
-                        return true;
-                    }
-                    if (targetUrl.includes("docs.google.com") && targetUrl.includes("viewscore")) {
-                        return true;
-                    }
-                } else if (mode === "rdp") {
-                    // RDP mode: allow all (or implement specific logic if needed)
-                    return true;
+
+            // Normalize allowedUrls to object format for webFilter compatibility
+            // Supports both legacy string format and new object format {url, blockSubdomains, blockSubfolders}
+            const normalizedUrls = allowedUrls.map(entry => {
+                if (typeof entry === 'object' && entry.url) {
+                    return entry;
                 }
-                
-                // Common exception URLs (used by all modes)
-                return checkCommonExceptions(targetUrl);
+                // Legacy string format - default to not blocking subdomains/subfolders
+                return { url: String(entry), blockSubdomains: false, blockSubfolders: false };
+            });
+
+            // Helper: is target in allowed list? Only the entry whose domain matches the target applies; use only that entry's reason
+            const getAllowResult = (targetUrl) => {
+                if (!targetUrl) return { allowed: false, reason: 'no target URL' };
+                if (checkCommonExceptions(String(targetUrl).toLowerCase())) return { allowed: true };
+
+                let reasonFromMatchingEntry = null;
+                for (const entry of normalizedUrls) {
+                    const result = webFilter.getUrlAllowResult(targetUrl, entry.url, entry.blockSubdomains, entry.blockSubfolders);
+                    if (result.allowed) return { allowed: true };
+                    if (result.domainMatched) {
+                        reasonFromMatchingEntry = result.reason;
+                        break; // this entry applies (domain matches); use its reason only
+                    }
+                }
+                return { allowed: false, reason: reasonFromMatchingEntry || 'domain not in allowed URLs' };
             };
-            
+
             // Handle target="_blank" links and window.open - block BEFORE navigation
             guest.setWindowOpenHandler(({ url }) => {
-                if (isUrlAllowed(url)) {
-                    log.info(`ipchandler @ start-blocking-for-website-webview [${mode}]: allowed window.open to`, url);
+                const { allowed, reason } = getAllowResult(url);
+                if (allowed) {
+                    log.info("ipchandler @ start-blocking-for-webview: allowed window.open to", url);
                     guest.loadURL(url); // Open in same webview
                     return { action: 'deny' }; // Prevent new window
                 } else {
-                    log.warn(`ipchandler @ start-blocking-for-website-webview [${mode}]: blocked window.open to`, url);
+                    log.warn("ipchandler @ start-blocking-for-webview: blocked window.open to", url, "-", reason);
                     return { action: 'deny' };
                 }
             });
-            
-            // Handle will-navigate on webContents level - this fires BEFORE navigation happens
+
+            // Handle will-navigate on webContents level - fires BEFORE navigation happens
             guest.on('will-navigate', (e, url) => {
-                if (!isUrlAllowed(url)) {
-                    log.warn(`ipchandler @ start-blocking-for-website-webview [${mode}]: blocked navigation to`, url);
-                    e.preventDefault(); // Block navigation completely - this happens BEFORE page loads
+                const { allowed, reason } = getAllowResult(url);
+                if (!allowed) {
+                    log.warn("ipchandler @ start-blocking-for-webview: blocked navigation to", url, "-", reason);
+                    e.preventDefault(); // Block navigation completely
                     guest.stop(); // Stop any loading immediately
+                } else {
+                    log.info("ipchandler @ start-blocking-for-webview: allowed navigation to", url);
+                }
+            });
+
+            return true;
+        });
+
+        // IPC handler for mode-specific webview blocking - supports eduvidual, forms, rdp modes
+        // For website mode, prefer using start-blocking-for-webview with webFilter.js instead
+        ipcMain.handle('start-blocking-for-website-webview', (event, { guestId, mode, allowedDomain, baseUrl, blockSubdomains, blockSubfolders, moodleTestId, moodleDomain, gformsTestId }) => {
+            const guest = webContents.fromId(Number(guestId));
+            if (!guest || guest.isDestroyed?.()) return false;
+
+            // Remove old listeners to prevent duplicate registrations
+            guest.removeAllListeners('will-navigate');
+
+            // URL validation function - different logic based on mode; returns { allowed, reason? } for website mode
+            const getAllowResult = (targetUrl) => {
+                if (mode === "website") {
+                    if (!targetUrl) return { allowed: true };
+                    if (checkCommonExceptions(String(targetUrl).toLowerCase())) return { allowed: true };
+
+                    const result = webFilter.getUrlAllowResult(targetUrl, baseUrl || allowedDomain, !!blockSubdomains, !!blockSubfolders);
+                    return result;
+                } else if (mode === "eduvidual") {
+                    if (targetUrl.includes(moodleTestId)) return { allowed: true };
+                    if (targetUrl.includes("startattempt.php") && targetUrl.includes(moodleDomain)) return { allowed: true };
+                    if (targetUrl.includes("processattempt.php") && targetUrl.includes(moodleDomain)) return { allowed: true };
+                    if (targetUrl.includes("logout") && targetUrl.includes(moodleDomain)) return { allowed: true };
+                    if (targetUrl.includes("login") && targetUrl.includes("eduvidual")) return { allowed: true };
+                    if (targetUrl.includes("login") && targetUrl.includes(moodleDomain)) return { allowed: true };
+                    if (targetUrl.includes("policy") && targetUrl.includes(moodleDomain)) return { allowed: true };
+                    if (targetUrl.includes("auth") && targetUrl.includes(moodleDomain)) return { allowed: true };
+                    if (targetUrl.includes("SAML2") && targetUrl.includes("portal.tirol.gv.at")) return { allowed: true };
+                    if (targetUrl.includes("login") && targetUrl.includes("portal.tirol.gv.at")) return { allowed: true };
+                    if (targetUrl.includes("login") && targetUrl.includes("tirol.gv.at")) return { allowed: true };
+                    return { allowed: false, reason: 'not in eduvidual allow list' };
+                } else if (mode === "forms") {
+                    if (targetUrl.includes(gformsTestId)) return { allowed: true };
+                    if (targetUrl.includes("docs.google.com") && targetUrl.includes("formResponse")) return { allowed: true };
+                    if (targetUrl.includes("docs.google.com") && targetUrl.includes("viewscore")) return { allowed: true };
+                    return { allowed: false, reason: 'not in forms allow list' };
+                } else if (mode === "rdp") {
+                    return { allowed: true };
+                }
+
+                const allowed = checkCommonExceptions(targetUrl);
+                return allowed ? { allowed: true } : { allowed: false, reason: 'not in common exceptions' };
+            };
+
+            guest.setWindowOpenHandler(({ url }) => {
+                const { allowed, reason } = getAllowResult(url);
+                if (allowed) {
+                    log.info(`ipchandler @ start-blocking-for-website-webview [${mode}]: allowed window.open to`, url);
+                    guest.loadURL(url); // Open in same webview
+                    return { action: 'deny' };
+                } else {
+                    log.warn(`ipchandler @ start-blocking-for-website-webview [${mode}]: blocked window.open to`, url, "-", reason);
+                    return { action: 'deny' };
+                }
+            });
+
+            guest.on('will-navigate', (e, url) => {
+                const { allowed, reason } = getAllowResult(url);
+                if (!allowed) {
+                    log.warn(`ipchandler @ start-blocking-for-website-webview [${mode}]: blocked navigation to`, url, "-", reason);
+                    e.preventDefault();
+                    guest.stop();
                 } else {
                     log.info(`ipchandler @ start-blocking-for-website-webview [${mode}]: allowed navigation to`, url);
                 }
@@ -575,7 +574,6 @@ class IpcHandler {
             
             if (filename){
                 htmlfilename = `${filename}.bak`
-                log.info(`ipchandler: storeHTML: creating manual backup as ${htmlfilename}`)
             }
 
             const htmlfile = path.join(this.config.examdirectory, htmlfilename);
@@ -658,7 +656,7 @@ class IpcHandler {
                 let pdffilename = `${this.multicastClient.clientinfo.name}.pdf`  // default filename = clientname.pdf
                 if (args.filename){  // in case of manual backup the user can set a custom filename
                     pdffilename = `${args.filename}.pdf`
-                    log.info(`ipchandler @ printpdf: creating manual backup as ${pdffilename}`)
+                    
                 }
                 const pdffilepath = path.join(this.config.examdirectory, pdffilename);  // path points to the current exam directory
                 const alternatefilename = `${pdffilename}-aux.pdf`    //thomas.pdf-aux.pdf 
@@ -689,8 +687,14 @@ class IpcHandler {
 
                 this.isPrintingPdf = true
 
-                // print the exam window to pdf
-                webContents.printToPDF(options).then(data => {
+                // set the title of the exam window and therefore the document title for PDF metadata
+                const pdfTitle = args.filename ? args.filename : `${this.multicastClient.clientinfo.name} - ${args.servername || this.multicastClient.clientinfo.servername || ''}`
+                // escape quotes and special characters for JavaScript string
+                const escapedTitle = pdfTitle.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "\\'")
+                webContents.executeJavaScript(`document.title = "${escapedTitle}"`).then(() => {
+                    // print the exam window to pdf
+                    return webContents.printToPDF(options)
+                }).then(data => {
                     // delete the old pdf file if it exists
                     try { if (fs.existsSync(pdffilepath)) { fs.unlinkSync(pdffilepath); }}
                     catch(err) { log.error(`ipchandler @ printpdf: ${err.message}`);  }
@@ -760,7 +764,7 @@ class IpcHandler {
             // alle weiteren updates über das serverstatus object werden im communication handler gelesen und ggf. auf das clientinfo object gelegt
             // dieser kommunikationsfluss muss in 2.0 gestreamlined werden #FIXME
             
-            if (this.WindowHandler.examwindow) { serverstatus = this.WindowHandler.examwindow.serverstatus }
+            if (this.WindowHandler.examwindow) { serverstatus = this.multicastClient.serverstatus }
 
             //count number of files in exam directory
             if (!this.multicastClient.clientinfo.exammode){
@@ -785,6 +789,14 @@ class IpcHandler {
             }   
         })
 
+        // Student-initiated section switch when allowSectionSwitch is true; always uses current serverstatus and section number
+        ipcMain.handle('switch-exam-section', async (event, sectionNumber) => {
+            const serverstatus = this.WindowHandler.examwindow?.serverstatus;
+            if (!serverstatus?.useExamSections || !serverstatus?.allowSectionSwitch) return;
+            if (this.multicastClient.clientinfo.lockedSection === sectionNumber) return;
+            log.info(`ipchandler @ switch-exam-section: switching to section ${sectionNumber}`)
+            await switchExamSection(this.CommunicationHandler, serverstatus, sectionNumber);
+        })
 
         /**
          * because of microsoft 365 we need to work with "BrowserView" 
@@ -1007,7 +1019,8 @@ class IpcHandler {
             }
         
             if (filename && publicdir) {
-                let filepath = path.join(__dirname, "../../public",filename);
+                const publicBase = platformDispatcher.publicBase;
+                let filepath = path.join(publicBase, filename);
                 const audioData = fs.readFileSync(filepath);
                 return audioData.toString('base64');
             }
@@ -1148,12 +1161,7 @@ class IpcHandler {
                 const __dirname = import.meta.dirname;
                 
                 let pdfPath;
-                if (app.isPackaged) {
-                    pdfPath = path.join(process.resourcesPath, 'app.asar.unpacked', 'public', pdfFilename);
-                } else {
-                    // From scripts/ go up 3 levels to reach student/ then public/
-                    pdfPath = path.join(__dirname, '../../public', pdfFilename);
-                }
+                pdfPath = path.join(platformDispatcher.publicBase, pdfFilename);
                 
                 if (!fs.existsSync(pdfPath)) {
                     log.warn(`ipchandler @ getPdfFromPublic: PDF not found at: ${pdfPath}`);
@@ -1203,20 +1211,6 @@ class IpcHandler {
             return warnAndReturn('systemd-detect-virt meldet Virtualisierung')
           } catch {}
 
-          // Zusätzliche QEMU-spezifische Erkennung
-          try {
-            // Prüfe auf QEMU-spezifische Geräte
-            const qemuDevices = [
-              '/dev/vhost-vsock'
-            ]
-            for (const device of qemuDevices) {
-              try {
-                if (require('fs').existsSync(device)) {
-                  return warnAndReturn(`QEMU-Gerät gefunden: ${device}`)
-                }
-              } catch {}
-            }
-          } catch {}
 
           // Prüfe auf QEMU-Prozesse
           try {

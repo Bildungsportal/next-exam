@@ -33,9 +33,11 @@ class MulticastClient {
         this.client = null
         this.beaconsLost = 0
         this.examServerList = []
+        this.serverstatus = {}
         this.clientinfo = {
             name: "DemoUser",
             token: false,
+            lockedSection: 1,
             ip: false,  // ip address wird vom multicastserver teacher mit geschickt
             hostname: false,
             serverip: false,   // wird lokal gesetzt (ist aber logischerweise gleich der ip des multicastservers)

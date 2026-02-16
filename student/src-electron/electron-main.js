@@ -36,6 +36,8 @@ import IpcHandler from './main/scripts/ipchandler.js'
 import { updateSystemTray } from './main/scripts/traymenu.js'
 import JreHandler from './main/scripts/jre-handler.js';
 import { checkParentProcess } from './main/scripts/checkparent.js';
+
+import { toggleMacOSLockdown } from './main/scripts/platformrestrictions.js'
 JreHandler.init()
 
 
@@ -121,8 +123,6 @@ app.on('second-instance', () => {
 
 const __dirname = import.meta.dirname;
 
-config.electron = true
-
 config.homedirectory = platformDispatcher.homedirectory;
 config.workdirectory = platformDispatcher.workdirectory;
 config.tempdirectory = platformDispatcher.tempdirectory;
@@ -166,6 +166,42 @@ fsExtra.emptyDirSync(config.tempdirectory)  // clean temp directory
  * EPIPE errors typically happen when trying to write to a closed pipe, which can occur if the stdout stream is unexpectedly closed.
  */
 process.stdout.on('error', (err) => { if (err.code === 'EPIPE') { log.transports.console.level = false } });
+
+// Filter GUEST_VIEW_MANAGER_CALL errors and WebContents subframe errors from stderr/stdout
+const originalStderrWrite = process.stderr.write;
+const originalStdoutWrite = process.stdout.write;
+
+process.stderr.write = function(chunk, encoding, fd) {
+    const chunkStr = chunk?.toString() || '';
+    // Suppress GUEST_VIEW_MANAGER_CALL errors (ERR_ABORTED from webview navigation blocking)
+    if (chunkStr.includes('GUEST_VIEW_MANAGER_CALL') && (chunkStr.includes('ERR_ABORTED') || chunkStr.includes('(-3)'))) {
+        return true; // Drop this error
+    }
+    // Suppress WebContents subframe errors
+    if (chunkStr.includes('WebContents#did-fail-load') || chunkStr.includes('WebContents#did-fail-provisional-load')) {
+        const suppressCodes = [-3, -100, -101, -105];
+        if (chunkStr.includes('isMainFrame: false') || suppressCodes.some(code => chunkStr.includes(`errorCode: ${code}`))) {
+            return true; // Drop this error
+        }
+    }
+    return originalStderrWrite.apply(this, arguments);
+};
+
+process.stdout.write = function(chunk, encoding, fd) {
+    const chunkStr = chunk?.toString() || '';
+    // Suppress GUEST_VIEW_MANAGER_CALL errors (ERR_ABORTED from webview navigation blocking)
+    if (chunkStr.includes('GUEST_VIEW_MANAGER_CALL') && (chunkStr.includes('ERR_ABORTED') || chunkStr.includes('(-3)'))) {
+        return true; // Drop this error
+    }
+    // Suppress WebContents subframe errors
+    if (chunkStr.includes('WebContents#did-fail-load') || chunkStr.includes('WebContents#did-fail-provisional-load')) {
+        const suppressCodes = [-3, -100, -101, -105];
+        if (chunkStr.includes('isMainFrame: false') || suppressCodes.some(code => chunkStr.includes(`errorCode: ${code}`))) {
+            return true; // Drop this error
+        }
+    }
+    return originalStdoutWrite.apply(this, arguments);
+};
 
 process.on('uncaughtException', (err) => {
     if (err.code === 'EPIPE') {
@@ -249,11 +285,43 @@ app.on('certificate-error', (event, webContents, url, error, certificate, callba
 
 // Handle WebContents load failures to prevent app crashes
 app.on('web-contents-created', (event, webContents) => {
-    webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame, frameProcessId, frameRoutingId) => {
-        // Log the error but don't crash the app
-        log.warn(`main @ did-fail-load: Error ${errorCode} - ${errorDescription} for URL: ${validatedURL}`);
+    const suppressCodes = [-3, -100, -101, -105];
 
-    });
+    // Store if we've already set up listeners to avoid duplicates
+    if (webContents._errorSuppressionSetup) return;
+    webContents._errorSuppressionSetup = true;
+
+    // Set up listeners that persist across navigation
+    const setupErrorSuppression = () => {
+        // Remove old listeners first to avoid duplicates
+        webContents.removeAllListeners('did-fail-provisional-load');
+        webContents.removeAllListeners('did-fail-load');
+        
+        webContents.on('did-fail-provisional-load', (event, errorCode, errorDescription, validatedURL, isMainFrame, frameProcessId, frameRoutingId) => {
+            // Silently suppress subframe errors and common error codes
+            if (!isMainFrame || suppressCodes.includes(errorCode)) {
+                event.preventDefault();
+                return;
+            }
+            log.warn(`main @ did-fail-provisional-load: Error ${errorCode} - ${errorDescription} for URL: ${validatedURL}`);
+        });
+
+        webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame, frameProcessId, frameRoutingId) => {
+            // Silently suppress subframe errors and common error codes
+            if (!isMainFrame || suppressCodes.includes(errorCode)) {
+                event.preventDefault();
+                return;
+            }
+            log.warn(`main @ did-fail-load: Error ${errorCode} - ${errorDescription} for URL: ${validatedURL}`);
+        });
+    };
+
+    // Set up immediately
+    setupErrorSuppression();
+
+    // Re-setup on navigation to ensure listeners persist
+    webContents.on('did-start-navigation', setupErrorSuppression);
+    webContents.on('did-frame-navigate', setupErrorSuppression);
     
     // Handle renderer process crashes for specific webContents (V8 fatal errors, etc.)
     webContents.on('render-process-gone', (event, details) => {
@@ -289,20 +357,25 @@ app.on('web-contents-created', (event, webContents) => {
     });
 });
 
-app.on('window-all-closed', () => {  // if window is closed
+app.on('window-all-closed', async () => {  // last window closed – clear storage here to avoid Linux segfault in before-quit
     clearInterval( CommHandler.updateStudentIntervall )
+    if (WindowHandler.checkWindowInterval?.stop) WindowHandler.checkWindowInterval.stop()
+    if (CommHandler.updateScheduler?.stop) CommHandler.updateScheduler.stop()
+    if (CommHandler.screenshotScheduler?.stop) CommHandler.screenshotScheduler.stop()
+    if (multicastClient.refreshExamsScheduler?.stop) multicastClient.refreshExamsScheduler.stop()
     WindowHandler.mainwindow = null
-    // if (process.platform !== 'darwin'){ app.quit() }
-    app.quit()   
-})
 
-app.on('before-quit', async () => {
     try {
-        await session.defaultSession.clearStorageData({}); // clear cookies, cache, localStorage etc.
+        await session.defaultSession.clearStorageData({}); // clear cookies, cache, localStorage etc. while session still valid
     } catch (err) {
-        log.error('main @ before-quit: Error clearing cache:', err);
+        log.error('main @ window-all-closed: Error clearing storage:', err);
     }
-  });
+    app.quit();
+});
+
+app.on('will-quit', () => {  // if window is closed
+    toggleMacOSLockdown(false)
+})
 
 app.on('activate', () => {
     const allWindows = BrowserWindow.getAllWindows()
@@ -345,7 +418,8 @@ app.whenReady()
     nativeTheme.themeSource = 'light'  // prevent theme settings from being adopted from windows
     session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
-
+    
+    toggleMacOSLockdown(true);
    
     /******* Create main window *******/
     WindowHandler.createMainWindow()

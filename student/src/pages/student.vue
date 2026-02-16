@@ -54,8 +54,8 @@
                     <img id="biplogo"
                          style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; "
                          src="/src/assets/img/login_students.jpg">
-                    <span v-if="bipUsername" id="biploginbuttonlabel">{{ bipUsername }}</span><span v-else
-                                                                                                    id="biploginbuttonlabel">Login</span>
+                    <span v-if="bipUsername" id="biploginbuttonlabel">{{ bipUsername }}</span>
+                    <span v-else id="biploginbuttonlabel">Logout</span>
                 </div>
                 <div v-else id="biploginbutton" title="login" @click="loginBiP()" class="btn btn-info m-1 "
                      style="padding:0;" :class="(token)? 'disabledexam':''">
@@ -217,16 +217,26 @@
 import validator from 'validator'
 import log from 'electron-log/renderer'
 import {SchedulerService} from '../utils/schedulerservice.js'
-import {isElectronWindow} from "../types/electron.ts";
+import {isElectronWindow} from "../types/platform.ts";
 import config from '../../src-electron/main/config.js'
+import {SignalBridge} from '../utils/signalBridge.js'
 
 
 // Capture unhandled promise rejections
 window.addEventListener('unhandledrejection', event => {
-    log.error('Unhandled promise rejection:', event.reason); // Log the error
+  const reason = event?.reason;
+  const msg = typeof reason === 'string' ? reason : reason && reason.message;
+  if (msg && ( msg.includes('GUEST_VIEW_MANAGER_CALL') || msg.includes('ERR_FAILED'))) {
+    event.preventDefault(); // swallow guest view clone errors and ERR_FAILED
+    return;
+  }
+  log.error('Unhandled promise rejection:', reason); // log all other errors
 });
 
 Object.assign(console, log.functions);  // Replace all console logs with logger
+
+// signalBridge instance centralizes ipc send calls with platform checks
+const signalBridge = new SignalBridge(window);
 
 
 export default {
@@ -235,7 +245,7 @@ export default {
             version: this.$route.params.version,
             token: "",
             username: this.$route.params.config.development ? "Thomas" : "",
-            pincode: this.$route.params.config.development ? "5404" : "",
+            pincode: this.$route.params.config.development ? "1111" : "",
             clientinfo: {},
             serverlist: [],
             serverlistAdvanced: [],
@@ -278,28 +288,27 @@ export default {
 
     methods: {
         toggleLocale() {
-            if (isElectronWindow(window)) {
-                // Switch between 'de' and 'en'
-                this.$i18n.locale = this.$i18n.locale === 'de' ? 'en' : 'de';
-                window.ipcRenderer.send('set-new-locale', this.$i18n.locale);
-            }
+            // Switch between 'de' and 'en'
+            this.$i18n.locale = this.$i18n.locale === 'de' ? 'en' : 'de';
+            signalBridge.send('set-new-locale', this.$i18n.locale);
         },
 
         async loginBiP() {
             if (this.config.bipDemo) {   // skip bip logon and fake bip info
-                this.bipUsername = "Robert Schrenk"
-                this.bipuserID = 123456
-                this.bipToken = "4hedh443gc34lm34wb43moeinlz0082droeib45beio"
+                this.bipUsername = "Marie Curie"
+                this.bipuserID = 8
+                this.bipToken = "3bb55e2ae29dc744e74dcbdca7722615"
                 this.username = this.bipUsername
 
                 await this.fetchBipExams()
                 this.bipAutoconnect()
                 return  //skip real login
             }
-            if (isElectronWindow(window)) {
-                let IPCresponse = window.ipcRenderer.sendSync('loginBiP', this.biptest)
-                console.log(IPCresponse)
+            let IPCresponse = signalBridge.sendSync('loginBiP', this.biptest)
+            if (IPCresponse && IPCresponse.status === "success") {
+                
             }
+            console.log(IPCresponse)
         },
 
         logoutBiP() {
@@ -351,9 +360,7 @@ export default {
             if (this.clickCount > 6) {
                 this.clickCount = 0
                 console.log("Easter Egg");
-                if (isElectronWindow(window)) {
-                    window.ipcRenderer.send('reload-url');
-                }
+                signalBridge.send('reload-url');
             }
         },
 
@@ -363,25 +370,29 @@ export default {
         async fetchBipExams() {
             if (!this.bipToken) return;  // cannot fetch from bip api without valid token
 
-            // if (this.config.development){
-            let url = "http://10.0.0.100:3000/student"
+          //  return // disable bip api call for now - this must connect to the real bip api server
+            //probably the path needs to be set in .env and config.js
 
+
+            // if (this.config.development){
+            let url = this.config.bipApiUrl + "/webservice/rest/server.php?wstoken="+this.bipToken+"&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json"
+           
             await fetch(url, {
                 method: "GET",
-                headers: {"Content-Type": "application/json"}
+                headers: {"Content-Type": "application/x-www-form-urlencoded"}            })
+            .then(response => {
+                return response.json();
             })
-                .then(response => {
-                    return response.json();
-                })
-                .then(data => {
-                    // console.log("Data from API:", data);
-                    this.bipData = data   // Store all of the information in data
-                    this.onlineExams = data.exams
-                    return
-                })
-                .catch(error => {
-                    console.error("Error during API call:", error);
-                });
+            .then(data => {
+                // console.log("Data from API:", data);
+                this.bipData = data   // Store all of the information in data
+                this.onlineExams = data.exams
+                console.log(data)
+                return
+            })
+            .catch(error => {
+                console.error("Error during API call:", error);
+            });
             return
             // }
             // else {
@@ -425,6 +436,7 @@ export default {
                     if (response.fullname) {
                         this.username = response.fullname
                         this.bipuserID = response.userid
+                        this.bipUsername = response.fullname
                     }
                 })
                 .catch(err => {
@@ -490,16 +502,39 @@ export default {
                 cancelButtonText: this.$t("editor.cancel"),
                 focusConfirm: false,
                 icon: false,
-                didOpen: () => {
-                    document.getElementById("localuser").addEventListener("keypress", function (e) {
-                        // var lettersOnly = /^[a-zA-Z ]+$/;
+                didOpen:() => {
+                    const localUserElement = document.getElementById("localuser");
+                    const localPasswordElement = document.getElementById("localpassword");
+                    
+                    localUserElement.addEventListener("keypress", function(e) {
+                         // var lettersOnly = /^[a-zA-Z ]+$/;
                         var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
                         var key = e.key || String.fromCharCode(e.which);
-                        if (!lettersOnly.test(key)) {
-                            e.preventDefault();
-                        }
+                        // Allow Enter key to pass through
+                        if (e.key === 'Enter') { return; }
+                        if (!lettersOnly.test(key)) { e.preventDefault(); }
                     });
-
+                    
+                    // Add Enter key listener to confirm dialog - attach to both input fields and document
+                    const swalInstance = this.$swal;
+                    const handleEnterKey = (e) => {
+                        if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+                            e.preventDefault();
+                            swalInstance.clickConfirm();
+                        }
+                    };
+                    
+                    // Add listener to document for general Enter key handling
+                    document.addEventListener('keydown', handleEnterKey);
+                    // Add listener directly to input fields to catch Enter when focused
+                    localUserElement.addEventListener('keydown', handleEnterKey);
+                    localPasswordElement.addEventListener('keydown', handleEnterKey);
+                    
+                    // Store handler reference for cleanup (will be cleaned up when dialog closes)
+                    this._enterKeyHandler = handleEnterKey;
+                    this._enterKeyHandlerUser = handleEnterKey;
+                    this._enterKeyHandlerPassword = handleEnterKey;
+                    
                     const checkboxLT = document.getElementById('checkboxLT');
                     const checkboxSuggestions = document.getElementById('checkboxsuggestions');
                     const spellcheckSection = document.getElementById('spellcheckSection');
@@ -552,6 +587,24 @@ export default {
                         }, 100);
                     }
                 },
+                didClose: () => {
+                    // Remove Enter key listener when dialog closes
+                    if (this._enterKeyHandler) {
+                        document.removeEventListener('keydown', this._enterKeyHandler);
+                        this._enterKeyHandler = null;
+                    }
+                    // Remove listeners from input fields if they still exist
+                    const localUserElement = document.getElementById("localuser");
+                    const localPasswordElement = document.getElementById("localpassword");
+                    if (localUserElement && this._enterKeyHandlerUser) {
+                        localUserElement.removeEventListener('keydown', this._enterKeyHandlerUser);
+                        this._enterKeyHandlerUser = null;
+                    }
+                    if (localPasswordElement && this._enterKeyHandlerPassword) {
+                        localPasswordElement.removeEventListener('keydown', this._enterKeyHandlerPassword);
+                        this._enterKeyHandlerPassword = null;
+                    }
+                },
                 preConfirm: () => {
                     // Save all input values before dialog closes (Electron 39 compatibility)
                     const localUserElement = document.getElementById('localuser');
@@ -559,8 +612,8 @@ export default {
                     const checkboxLTElement = document.getElementById('checkboxLT');
                     const checkboxSuggestionsElement = document.getElementById('checkboxsuggestions');
                     const radioButtons = document.querySelectorAll('input[name="etesttype"]');
-
-                    savedUsername = localUserElement ? localUserElement.value : '';
+                    
+                    savedUsername = localUserElement ? localUserElement.value.trim() : '';
                     savedPassword = localPasswordElement ? localPasswordElement.value : '';
                     savedLanguagetool = checkboxLTElement ? checkboxLTElement.checked : false;
                     savedSuggestions = checkboxSuggestionsElement ? checkboxSuggestionsElement.checked : false;
@@ -570,6 +623,16 @@ export default {
                             savedExammode = radio.value;
                         }
                     });
+                    
+                    // Validate mandatory fields
+                    if (!savedUsername || savedUsername === '') {
+                        this.$swal.showValidationMessage(this.$t("student.nouser") || 'Username is required');
+                        return false;
+                    }
+                    if (!savedPassword || savedPassword === '') {
+                        this.$swal.showValidationMessage(this.$t("student.nopin") || 'Password is required');
+                        return false;
+                    }
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
@@ -595,16 +658,14 @@ export default {
                     }
 
                     this.localLockdown = true
-                    if (isElectronWindow(window)) {
-                        window.ipcRenderer.send('locallockdown', {
-                            password: password,
-                            exammode: exammode,
-                            clientname: username,
-                            languagetool: languagetool,
-                            spellchecklang: spellchecklang,
-                            suggestions: suggestions
-                        })
-                    }
+                    signalBridge.send('locallockdown', {
+                        password: password,
+                        exammode: exammode,
+                        clientname: username,
+                        languagetool: languagetool,
+                        spellchecklang: spellchecklang,
+                        suggestions: suggestions
+                    })
                 } else {
                     this.localLockdown = false
                     return;
@@ -714,254 +775,253 @@ export default {
 
 
         async fetchInfo() {
-            if (isElectronWindow(window) || true) {
-                let getinfo = await window.ipcRenderer.invoke('getinfoasync')  // gets serverlist and clientinfo from multicastclient
+            let getinfo = await signalBridge.invoke('getinfoasync')  // gets serverlist and clientinfo from multicastclient
 
 
-                if (getinfo.clientinfo.exammode) {
-                    return;
-                }  // do not stress ui updates if exammode is active
+            if (getinfo.clientinfo.exammode) {
+                return;
+            }  // do not stress ui updates if exammode is active
 
-                // Only update if clientinfo has actually changed
-                const clientInfoStr = JSON.stringify(getinfo.clientinfo);
-                const currentClientInfoStr = JSON.stringify(this.clientinfo);
-                if (clientInfoStr !== currentClientInfoStr) {
-                    this.clientinfo = getinfo.clientinfo;
+            // Only update if clientinfo has actually changed
+            const clientInfoStr = JSON.stringify(getinfo.clientinfo);
+            const currentClientInfoStr = JSON.stringify(this.clientinfo);
+            if (clientInfoStr !== currentClientInfoStr) {
+                this.clientinfo = getinfo.clientinfo;
+            }
+
+            // Only set token if changed
+            const newToken = this.clientinfo.token;
+            if (this.token !== newToken) {
+                this.token = newToken;
+            }
+
+            // Only set localLockdown if necessary
+            if ((this.token && this.token != "0000") || !this.token) {
+                if (this.localLockdown) {
+                    this.localLockdown = false;
                 }
+            }
 
-                // Only set token if changed
-                const newToken = this.clientinfo.token;
-                if (this.token !== newToken) {
-                    this.token = newToken;
-                }
+            // Only set advanced if necessary
+            if (this.servertimeout > 2 && !this.advanced) {
+                this.advanced = true;
+            }
 
-                // Only set localLockdown if necessary
-                if ((this.token && this.token != "0000") || !this.token) {
-                    if (this.localLockdown) {
-                        this.localLockdown = false;
-                    }
-                }
-
-                // Only set advanced if necessary
-                if (this.servertimeout > 2 && !this.advanced) {
-                    this.advanced = true;
-                }
-
-                /**
-                 * Fetch serverlist from server via direct ip polling
-                 * advanced search for exams in local network
-                 */
-                if (this.advanced && !this.token) {
-                    if (this.serverip !== "") {
-                        if (validator.isIP(this.serverip) || validator.isFQDN(this.serverip)) {
-                            this.safeAssign('validip', true);
-                            // Give some user feedback here
-                            if (this.serverlistAdvanced.length == 0) {
-                                this.status("Suche nach Prüfungen...")
-                            }
-                            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/serverlist`)
-                                .then(response => response.json()) // Parse JSON response
-                                .then(data => {
-                                    if (data && data.status === "success") {
-                                        // Only update if the list has changed
-                                        const newListStr = JSON.stringify(data.serverlist);
-                                        const currentListStr = JSON.stringify(this.serverlistAdvanced);
-                                        if (newListStr !== currentListStr) {
-                                            this.serverlistAdvanced = data.serverlist;
-                                        }
-                                        this.safeAssign('networkerror', false);
-                                    }
-                                }).catch(err => {
-                                log.error(`student.vue @ fetchInfo (advanced): ${err.message}`);
-                                this.safeAssign('networkerror', true);
-                            });
-                        } else {
-                            this.safeAssign('validip', false);
-                        }
-                    } else {
-                        this.safeAssign('networkerror', false);
+            /**
+             * Fetch serverlist from server via direct ip polling
+             * advanced search for exams in local network
+             */
+            if (this.advanced && !this.token) {
+                if (this.serverip !== "") {
+                    if (validator.isIP(this.serverip) || validator.isFQDN(this.serverip)) {
                         this.safeAssign('validip', true);
+                        // Give some user feedback here
+                        if (this.serverlistAdvanced.length == 0) {
+                            this.status("Suche nach Prüfungen...")
+                        }
+                        fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/serverlist`)
+                            .then(response => response.json()) // Parse JSON response
+                            .then(data => {
+                                if (data && data.status === "success") {
+                                    // Only update if the list has changed
+                                    const newListStr = JSON.stringify(data.serverlist);
+                                    const currentListStr = JSON.stringify(this.serverlistAdvanced);
+                                    if (newListStr !== currentListStr) {
+                                        this.serverlistAdvanced = data.serverlist;
+                                    }
+                                    this.safeAssign('networkerror', false);
+                                }
+                            }).catch(err => {
+                            log.error(`student.vue @ fetchInfo (advanced): ${err.message}`);
+                            this.safeAssign('networkerror', true);
+                        });
+                    } else {
+                        this.safeAssign('validip', false);
                     }
                 } else {
                     this.safeAssign('networkerror', false);
                     this.safeAssign('validip', true);
                 }
+            } else {
+                this.safeAssign('networkerror', false);
+                this.safeAssign('validip', true);
+            }
 
 
-                /**
-                 * Fetch serverlist from server via multicast
-                 * if no serverlist is found via multicast we use the serverlist coming from direct ip polling
-                 * otherwise we add all found servers to the serverlist and combine multicasted servers with direct ip polled servers
-                 */
-                if (getinfo.serverlist.length !== 0) {
-                    let newServerlist = getinfo.serverlist;
+            /**
+             * Fetch serverlist from server via multicast
+             * if no serverlist is found via multicast we use the serverlist coming from direct ip polling
+             * otherwise we add all found servers to the serverlist and combine multicasted servers with direct ip polled servers
+             */
+            if (getinfo.serverlist.length !== 0) {
+                let newServerlist = getinfo.serverlist;
 
-                    this.safeAssign('servertimeout', 0); // Reset servertimeout (if more than 2 requests return without servers we display serveraddress field - probably multicast blocked)
-                    if (this.serverlistAdvanced.length !== 0) {  // Add servers coming from direct ip polling
-                        newServerlist = [...newServerlist, ...this.serverlistAdvanced];
+                this.safeAssign('servertimeout', 0); // Reset servertimeout (if more than 2 requests return without servers we display serveraddress field - probably multicast blocked)
+                if (this.serverlistAdvanced.length !== 0) {  // Add servers coming from direct ip polling
+                    newServerlist = [...newServerlist, ...this.serverlistAdvanced];
 
-                    }
-                    // add bip servers to newServerlist
-                    if (this.onlineExams.length > 0) {
-                        this.onlineExams.forEach(exam => {
-                            // Optimized: Check if server already exists in newServerlist or current serverlist
-                            const examId = exam.id || exam.examName;
-                            const existingInNewList = newServerlist.find(s => (s.id || s.servername) === examId);
-                            const existingInCurrentList = this.serverlist.find(s => (s.id || s.servername) === examId);
+                }
+                // add bip servers to newServerlist
+                if (this.onlineExams.length > 0) {
+                    this.onlineExams.forEach(exam => {
+                        // Optimized: Check if server already exists in newServerlist or current serverlist
+                        const examId = exam.id || exam.examName;
+                        const existingInNewList = newServerlist.find(s => (s.id || s.servername) === examId);
+                        const existingInCurrentList = this.serverlist.find(s => (s.id || s.servername) === examId);
 
-                            if (existingInNewList) {
-                                // Server already exists in newServerlist, only update examStatus
-                                if (existingInNewList.examStatus !== exam.examStatus) {
-                                    existingInNewList.examStatus = exam.examStatus;
-                                }
-                            } else if (existingInCurrentList) {
-                                // Server exists in current list, but not in newServerlist
-                                // Use existing server and update only relevant properties
-                                const updatedServer = {
-                                    ...existingInCurrentList,
-                                    examStatus: exam.examStatus,
-                                    // Timestamp remains unchanged
-                                };
-                                newServerlist.push(updatedServer);
-                            } else {
-                                // Create new server entry in serverlist format (only for new servers)
-                                const newServer = {
-                                    id: exam.id,
-                                    servername: exam.examName,
-                                    reachable: true,
-                                    serverport: this.serverApiPort,
-                                    timestamp: Date.now(), // Only for new servers
-                                    bip: true,
-                                    examStatus: exam.examStatus,
-                                    version: exam.version
-                                };
-                                newServerlist.push(newServer);
+                        if (existingInNewList) {
+                            // Server already exists in newServerlist, only update examStatus
+                            if (existingInNewList.examStatus !== exam.examStatus) {
+                                existingInNewList.examStatus = exam.examStatus;
                             }
-                        })
-                    }
-
-                    // Remove duplicate servers from newServerlist
-                    newServerlist = newServerlist.reduce((unique, server) => {
-                        if (!unique.some(u => u.id === server.id)) {  // Check if server already exists in array based on serverip and servername
-                            unique.push(server); // Add server if it doesn't exist
+                        } else if (existingInCurrentList) {
+                            // Server exists in current list, but not in newServerlist
+                            // Use existing server and update only relevant properties
+                            const updatedServer = {
+                                ...existingInCurrentList,
+                                examStatus: exam.examStatus,
+                                // Timestamp remains unchanged
+                            };
+                            newServerlist.push(updatedServer);
+                        } else {
+                            // Create new server entry in serverlist format (only for new servers)
+                            const newServer = {
+                                id: exam.id,
+                                servername: exam.examName,
+                                reachable: true,
+                                serverport: this.serverApiPort,
+                                timestamp: Date.now(), // Only for new servers
+                                bip: true,
+                                examStatus: exam.examStatus,
+                                version: exam.version
+                            };
+                            newServerlist.push(newServer);
                         }
-                        return unique;
-                    }, []);
+                    })
+                }
 
-
-                    // Optimized: Update serverlist only if relevant data has changed
-                    if (!this.isServerlistEqual(this.serverlist, newServerlist)) {
-                        console.log("student.vue @ fetchInfo: updating serverlist with new servers")
-                        this.serverlist = newServerlist // update serverlist - but only if there are new servers or relevant changes
+                // Remove duplicate servers from newServerlist
+                newServerlist = newServerlist.reduce((unique, server) => {
+                    if (!unique.some(u => u.id === server.id)) {  // Check if server already exists in array based on serverip and servername
+                        unique.push(server); // Add server if it doesn't exist
                     }
+                    return unique;
+                }, []);
 
-                    // Optimized: Update exam status only if status has actually changed
-                    if (this.onlineExams.length > 0) {
-                        let hasChanges = false;
-                        this.onlineExams.forEach(exam => {
-                            // Only exams that were also created for the student are updated via the API and their exam status is set - other exams that are also bip-exams therefore have no exam status
-                            const existingServer = this.serverlist.find(server => server.id === exam.id);// Check if server already exists in currentserverlist
-                            if (existingServer) {
-                                if (existingServer.examStatus !== exam.examStatus) {
-                                    console.log("student.vue @ fetchInfo: updating exam status for existing server")
-                                    existingServer.examStatus = exam.examStatus;
-                                    hasChanges = true;
-                                }
+
+                // Optimized: Update serverlist only if relevant data has changed
+                if (!this.isServerlistEqual(this.serverlist, newServerlist)) {
+                    console.log("student.vue @ fetchInfo: updating serverlist with new servers")
+                    this.serverlist = newServerlist // update serverlist - but only if there are new servers or relevant changes
+                }
+
+                // Optimized: Update exam status only if status has actually changed
+                if (this.onlineExams.length > 0) {
+                    let hasChanges = false;
+                    this.onlineExams.forEach(exam => {
+                        // Only exams that were also created for the student are updated via the API and their exam status is set - other exams that are also bip-exams therefore have no exam status
+                        const existingServer = this.serverlist.find(server => server.id === exam.id);// Check if server already exists in currentserverlist
+                        if (existingServer) {
+                            if (existingServer.examStatus !== exam.examStatus) {
+                                console.log("student.vue @ fetchInfo: updating exam status for existing server")
+                                existingServer.examStatus = exam.examStatus;
+                                hasChanges = true;
                             }
-                        });
-                        // Only trigger re-render if something has changed
-                        if (hasChanges) {
-                            // Vue automatically detects the change through direct mutation
-                            // but we still set a new reference to be safe
-                            this.serverlist = [...this.serverlist];
                         }
-                    }
-
-
-                } else {  // Sometimes explicit is easier to read (no servers incoming via multicast)
-                    if (this.serverlistAdvanced.length !== 0) {  // One server coming via direct ip polling
-                        // Optimized: Compare with isServerlistEqual instead of only server names
-                        if (!this.isServerlistEqual(this.serverlist, this.serverlistAdvanced)) {
-                            this.serverlist = this.serverlistAdvanced;
-                        }
-                    } else {
-                        // Optimized: Only set if list is not already empty
-                        if (this.serverlist.length !== 0) {
-                            this.serverlist = [];
-                        }
-                        // Optimized: Only increment servertimeout if not already high enough
-                        if (this.servertimeout <= 2) {
-                            this.servertimeout++;
-                        }
+                    });
+                    // Only trigger re-render if something has changed
+                    if (hasChanges) {
+                        // Vue automatically detects the change through direct mutation
+                        // but we still set a new reference to be safe
+                        this.serverlist = [...this.serverlist];
                     }
                 }
 
 
-                /**
-                 * Check if network connection is still alive or if we are already connected and received a token
-                 * If not we exit here
-                 */
-                const newHostip = await window.ipcRenderer.invoke('checkhostip');
-                // console.log(newHostip);
-                this.safeAssign('hostip', newHostip); // Optimized: Only set if changed
-                if (!this.hostip) return;
-                if (this.clientinfo.token) return;   // stop spamming the api if already connected
-
-
-                /**
-                 * Optimized: Check if server is still alive otherwise mark with attention sign
-                 * This is done by pinging the server with a timeout of 2 seconds
-                 * Only set server.reachable if the value actually changes
-                 * For manually added servers: remove after more than 2 failures
-                 */
-                for (let server of this.serverlist) {
-                    //log.info(`student.vue @ fetchinfo: checking server ${server.servername} (${server.serverip})`)
-                    if (!server.serverip) continue;
-                    const serverIdentifier = this.getServerIdentifier(server);
-                    const isManual = this.isManuallyAddedServer(server);
-                    const signal = AbortSignal.timeout(4000); // 4000 milliseconds = 4 seconds
-                    fetch(`https://${server.serverip}:${this.serverApiPort}/server/control/pong`, {
-                        method: 'GET',
-                        signal
-                    })
-                        .then(response => {
-                            if (!response.ok) throw new Error('Response not OK');
-                            // Optimized: Only set if value changes
-                            if (server.reachable !== true) {
-                                server.reachable = true;
-                            }
-                            // Reset failure count if server is reachable again
-                            if (isManual && this.serverFailureCount[serverIdentifier] !== undefined) {
-                                this.serverFailureCount[serverIdentifier] = 0;
-                            }
-                        })
-                        .catch(err => {
-                            if (err.name === 'AbortError') {
-                                console.warn('student.vue @ fetchinfo (ping): Fetch request was aborted due to timeout');
-                            } else {
-                                console.warn(`student.vue @ fetchinfo: ${err.message} - Server unavailable `);
-                            }
-                            // Optimized: Only set if value changes
-                            if (server.reachable !== false) {
-                                server.reachable = false;
-                            }
-                            // Track failures for manually added servers
-                            if (isManual) {
-                                // Initialize counter if not exists
-                                if (this.serverFailureCount[serverIdentifier] === undefined) {
-                                    this.serverFailureCount[serverIdentifier] = 0;
-                                }
-                                // Increment failure count
-                                this.serverFailureCount[serverIdentifier]++;
-                                // Remove server if more than 2 failures
-                                if (this.serverFailureCount[serverIdentifier] > 2) {
-                                    console.log(`student.vue @ fetchinfo: Removing manually added server ${serverIdentifier} after ${this.serverFailureCount[serverIdentifier]} failures`);
-                                    this.removeFailedManualServer(serverIdentifier);
-                                }
-                            }
-                        });
+            } 
+            else {  // Sometimes explicit is easier to read (no servers incoming via multicast)
+                if (this.serverlistAdvanced.length !== 0) {  // One server coming via direct ip polling
+                    // Optimized: Compare with isServerlistEqual instead of only server names
+                    if (!this.isServerlistEqual(this.serverlist, this.serverlistAdvanced)) {
+                        this.serverlist = this.serverlistAdvanced;
+                    }
+                } else {
+                    // Optimized: Only set if list is not already empty
+                    if (this.serverlist.length !== 0) {
+                        this.serverlist = [];
+                    }
+                    // Optimized: Only increment servertimeout if not already high enough
+                    if (this.servertimeout <= 2) {
+                        this.servertimeout++;
+                    }
                 }
             }
+
+
+            /**
+             * Check if network connection is still alive or if we are already connected and received a token
+             * If not we exit here
+             */
+            const newHostip = await signalBridge.invoke('checkhostip');
+            // console.log(newHostip);
+            this.safeAssign('hostip', newHostip); // Optimized: Only set if changed
+            if (!this.hostip) return;
+            if (this.clientinfo.token) return;   // stop spamming the api if already connected
+
+
+            /**
+             * Optimized: Check if server is still alive otherwise mark with attention sign
+             * This is done by pinging the server with a timeout of 2 seconds
+             * Only set server.reachable if the value actually changes
+             * For manually added servers: remove after more than 2 failures
+             */
+            for (let server of this.serverlist) {
+                //log.info(`student.vue @ fetchinfo: checking server ${server.servername} (${server.serverip})`)
+                if (!server.serverip) continue;
+                const serverIdentifier = this.getServerIdentifier(server);
+                const isManual = this.isManuallyAddedServer(server);
+                const signal = AbortSignal.timeout(4000); // 4000 milliseconds = 4 seconds
+                fetch(`https://${server.serverip}:${this.serverApiPort}/server/control/pong`, {
+                    method: 'GET',
+                    signal
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Response not OK');
+                    // Optimized: Only set if value changes
+                    if (server.reachable !== true) {
+                        server.reachable = true;
+                    }
+                    // Reset failure count if server is reachable again
+                    if (isManual && this.serverFailureCount[serverIdentifier] !== undefined) {
+                        this.serverFailureCount[serverIdentifier] = 0;
+                    }
+                })
+                .catch(err => {
+                    if (err.name === 'AbortError') {
+                        console.warn('student.vue @ fetchinfo (ping): Fetch request was aborted due to timeout');
+                    } else {
+                        console.warn(`student.vue @ fetchinfo: ${err.message} - Server unavailable `);
+                    }
+                    // Optimized: Only set if value changes
+                    if (server.reachable !== false) {
+                        server.reachable = false;
+                    }
+                    // Track failures for manually added servers
+                    if (isManual) {
+                        // Initialize counter if not exists
+                        if (this.serverFailureCount[serverIdentifier] === undefined) {
+                            this.serverFailureCount[serverIdentifier] = 0;
+                        }
+                        // Increment failure count
+                        this.serverFailureCount[serverIdentifier]++;
+                        // Remove server if more than 2 failures
+                        if (this.serverFailureCount[serverIdentifier] > 2) {
+                            console.log(`student.vue @ fetchinfo: Removing manually added server ${serverIdentifier} after ${this.serverFailureCount[serverIdentifier]} failures`);
+                            this.removeFailedManualServer(serverIdentifier);
+                        }
+                    }
+                });
+            }   
         },
 
 
@@ -1004,14 +1064,16 @@ export default {
                     icon: 'error',
                     showCancelButton: false,
                 })
-            } else if (this.pincode === "") {
+            } 
+            else if (this.pincode === "") {
                 this.$swal.fire({
                     title: "Error",
                     text: this.$t("student.nopin"),
                     icon: 'error',
                     showCancelButton: false,
                 })
-            } else {
+            } 
+            else {
 
                 const charMap = {
                     'ć': 'c',
@@ -1030,22 +1092,22 @@ export default {
 
 
                 //  console.log({clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode, bipuserID:this.bipuserID })
-                if (isElectronWindow(window)) {
-                    let IPCresponse = window.ipcRenderer.sendSync('register', {
-                        clientname: this.username,
-                        servername: servername,
-                        serverip,
-                        serverip,
-                        pin: this.pincode,
-                        bipuserID: this.bipuserID
-                    })
+                let IPCresponse = signalBridge.sendSync('register', {
+                    clientname: this.username,
+                    servername: servername,
+                    serverip,
+                    serverip,
+                    pin: this.pincode,
+                    bipuserID: this.bipuserID
+                })
+                if (IPCresponse) {
                     console.log(`student @ registerClient: ${IPCresponse.message}`)
-                    if (IPCresponse && IPCresponse.token) {
+                    if (IPCresponse.token) {
                         this.token = IPCresponse.token  // set token (used to determine server connection status)
                     }
                 }
 
-                if (IPCresponse.status === "success") {
+                if (IPCresponse && IPCresponse.status === "success") {
                     this.$swal.fire({
                         title: "OK",
                         html: `<div style="white-space: pre-line;">${this.$t("student.registeredinfo")}</div>`,
@@ -1059,7 +1121,7 @@ export default {
 
 
                 }
-                if (IPCresponse.status === "error") {
+                if (IPCresponse && IPCresponse.status === "error") {
                     this.$swal.fire({
                         title: "Error",
                         text: IPCresponse.message,
@@ -1130,6 +1192,37 @@ export default {
     },
     async mounted() {
         document.querySelector("#statusdiv").style.visibility = "hidden";
+        
+
+
+// this.lastFrameTime = performance.now(); // Initialize timing
+
+// const checkFrameGap = () => {
+//   const currentTime = performance.now(); // Get high-res timestamp
+//   const delta = currentTime - this.lastFrameTime; // Calculate time since last frame
+
+
+
+//   if (delta > 200) { // Threshold for macOS occlusion/suspension
+   
+//     this.$swal({
+//       title: 'Ausbruch erkannt!',
+//       text: `Die App wurde für ${Math.round(delta)}ms unterbrochen.`,
+//       icon: 'warning',
+//       confirmButtonText: 'Verstanden'
+//     });
+//   }
+
+//   this.lastFrameTime = currentTime; // Update last frame reference
+//   requestAnimationFrame(checkFrameGap); // Schedule next frame check
+// };
+
+// requestAnimationFrame(checkFrameGap); // Start the loop
+
+
+
+
+
 
         this.isLoading = false;
 
@@ -1162,13 +1255,11 @@ export default {
             }
         });
 
-        if (isElectronWindow(window)) {
-            window.ipcRenderer.on('bipToken', (event, token) => {
-                console.log("token received: ", token)
-                this.bipToken = token
-                this.fetchBiPData(token)
-            });
-        }
+        signalBridge.on('bipToken', (event, token) => {
+            console.log("token received: ", token)
+            this.bipToken = token
+            this.fetchBiPData(token)
+        });
 
 
         // Set locale to system locale or fallback to 'en'

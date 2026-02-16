@@ -9,11 +9,8 @@
     <meta name="msapplication-tap-highlight" content="no">
     <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width<% if (ctx.mode.cordova || ctx.mode.capacitor) { %>, viewport-fit=cover<% } %>">
 
-    <link rel="icon" type="image/png" sizes="128x128" href="icons/favicon-128x128.png">
-    <link rel="icon" type="image/png" sizes="96x96" href="icons/favicon-96x96.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
-    <link rel="icon" type="image/ico" href="favicon.ico">
+    <link rel="icon" type="image/png" sizes="256x256" href="public/icons/256x256.png">
+    <link rel="icon" type="image/ico" href="public/icons/icon.ico">
 
     <!-- <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';"> -->
 
@@ -162,9 +159,6 @@
 
     </style>
 
-    <!-- Custom CSS  -->
-    <link href="/css/style-main.css" rel="stylesheet"/>
-
     <script>
         function showTextElements() {
             const loadingText = document.getElementById('initial-loading-text');
@@ -204,7 +198,7 @@
         <div id="initial-loading-overlay" >
             <div id="initial-loading-spinner">
                 <div class="loader">Loading</div>
-                <img id="initial-loading-icon" src="/src/assets/img/icon.png" alt="Next-Exam" />
+                <img id="initial-loading-icon" src="./icons/icon-checkmark.png" alt="Next-Exam" />
             </div>
             <div id="initial-loading-text">Next-Exam </div>
             <div id="initial-loading-version"></div>
@@ -212,7 +206,7 @@
         </div>
 
        <!-- quasar:entry-point -->
-        <div id="app"></div>
+       
 
   
     </body>

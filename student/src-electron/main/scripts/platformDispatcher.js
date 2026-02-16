@@ -22,6 +22,7 @@
 
 
 import { execSync } from 'child_process';
+import fs from 'fs';
 import { join } from 'path';
 import { app } from 'electron';
 import log from 'electron-log';
@@ -30,23 +31,21 @@ import { pathToFileURL } from 'url';
 import os from 'os';
 import path from 'path';
 import dotenv from 'dotenv';
-import fs from 'fs';
-dotenv.config({ path: 'electron-builder.env' });
+dotenv.config();
 const __dirname = import.meta.dirname;
-
-
 
 class PlatformDispatcher {
   constructor() {
 
-    this._platform = process.platform;
+    this.platform = process.platform;
     this._arch = process.arch;
     this._env = process.env;
-    
-  
+
     this.messages = []
     this.arch = this._normalizeArch();
     this.displayServer = this._getDisplayServer();
+    this.isKDE = this._isKDE();
+    this.isGNOME = this._isGNOME();
     this.flameshot = this._getVersion('flameshot');
     this.imagemagick = this._getVersion('convert');
     this.imVersion = this._getImageMagickVersion();
@@ -54,6 +53,7 @@ class PlatformDispatcher {
     this.useWorker = this._getUseWorker();
     this.screenshotAbility = this._getScreenshotAbility();
     this.jre = this._detectJREId();
+    this.publicBase = this._getPublicBase();
     this.jreDir = this._resolveJREDir();
     this.javaBin = this._resolveJavaBin();
     this.jreInfo = this._getJRE();
@@ -65,6 +65,15 @@ class PlatformDispatcher {
     this.workdirectory = this._getWorkdirectory();
     this.logfile = this._getLogfile();
 
+  }
+
+  _getPublicBase() {
+    if (app.isPackaged) {
+      const unpacked = join(process.resourcesPath, 'app.asar.unpacked');
+      const withPublic = join(unpacked, 'public');
+      return fs.existsSync(withPublic) ? withPublic : unpacked;
+    }
+    return join(__dirname, '../../public');
   }
 
   _getWorkdirectory() {
@@ -87,9 +96,9 @@ class PlatformDispatcher {
   }
 
   _detectJREId() {
-    if (this._platform === 'linux') return 'minimal-jre-11-lin';
-    if (this._platform === 'win32') return 'minimal-jre-11-win';
-    if (this._platform === 'darwin') {
+    if (this.platform === 'linux') return 'minimal-jre-11-lin';
+    if (this.platform === 'win32') return 'minimal-jre-11-win';
+    if (this.platform === 'darwin') {
       return this._arch === 'arm64' ? 'minimal-jre-11-mac-arm64' : 'minimal-jre-11-mac';
     }
   }
@@ -114,21 +123,21 @@ class PlatformDispatcher {
 
   _resolveJREDir() {
     // use bundled jre because its smaller and provides only the needed java modules
-    if (process.env.useBundledJRE) {
+    if (config.useBundledJRE) {
       if (app.isPackaged) {
-        this.messages.push("platformDispatcher @ _resolveJREDir: app.isPackaged: " + join(process.resourcesPath, 'app.asar.unpacked', 'public', this.jre));
-        return join(process.resourcesPath, 'app.asar.unpacked', 'public', this.jre);
+        this.messages.push("platformDispatcher @ _resolveJREDir: app.isPackaged: " + join(this.publicBase, this.jre));
+        return join(this.publicBase, this.jre);
       } else {
         this.messages.push("platformDispatcher @ _resolveJREDir: !app.isPackaged: " + join(__dirname, '../../public', this.jre));
         return join(__dirname, '../../public', this.jre);
       }
-    }
+    } 
     else {  // use system jre
       // Try to find Java installation using which/where command
       try {
-        const javaCommand = this._platform === 'win32' ? 'where java' : 'which java';
+        const javaCommand = this.platform === 'win32' ? 'where java' : 'which java';
         const javaPath = execSync(javaCommand, { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
-
+        
         if (javaPath) {
           // Get the directory containing the java executable
           const javaDir = path.dirname(javaPath);
@@ -139,11 +148,11 @@ class PlatformDispatcher {
       } catch (err) {
         // Java not found in PATH
       }
-
+      
       // If no Java found, fall back to bundled JRE
       log.warn("platformDispatcher @ _resolveJREDir: No system Java found, falling back to bundled JRE");
       if (app.isPackaged) {
-        return join(process.resourcesPath, 'app.asar.unpacked', 'public', this.jre);
+        return join(this.publicBase, this.jre);
       } else {
         return join(__dirname, '../../public', this.jre);
       }
@@ -151,16 +160,16 @@ class PlatformDispatcher {
   }
 
   _resolveJavaBin() {
-    switch (this._platform) {
+    switch (this.platform) {
       case 'darwin': return ['bin', 'java'];
       case 'win32': return ['bin', 'javaw.exe'];
       case 'linux': return ['bin', 'java'];
-      default: this._fail(`unsupported platform: ${this._platform}`);
+      default: this._fail(`unsupported platform: ${this.platform}`);
     }
   }
 
   _getDisplayServer() {
-    if (this._platform !== 'linux') return 'n/a';
+    if (this.platform !== 'linux') return 'n/a';
     if (this._env.XDG_SESSION_TYPE === 'wayland') return 'wayland';
     if (this._env.XDG_SESSION_TYPE === 'x11' || this._env.DISPLAY) return 'x11';
     return 'unknown';
@@ -188,16 +197,11 @@ class PlatformDispatcher {
   }
 
   _getWorkerFileName() {
-    return this._platform === 'linux' ? 'imageWorkerLinux.mjs' : 'imageWorkerSharp.mjs';
+    return this.platform === 'linux' ? 'imageWorkerLinux.mjs' : 'imageWorkerSharp.mjs';
   }
 
   _getWorkerURL() {
-    // Worker-Logik direkt anschließen
-    const baseDir = app.isPackaged ? process.resourcesPath : import.meta.dirname;
-    const workerPath = app.isPackaged
-      ? join(baseDir, 'app.asar.unpacked', 'public', this.workerFileName)
-      : join(baseDir, '../../public', this.workerFileName);
-
+    const workerPath = join(this.publicBase, this.workerFileName);
     return pathToFileURL(workerPath);
   }
 
@@ -267,7 +271,7 @@ class PlatformDispatcher {
   }
 
   _getDesktopPath() {
-    if (this._platform === 'win32') {
+    if (this.platform === 'win32') {
       return path.join(process.env['USERPROFILE'], 'Desktop');
     } else {
       return path.join(os.homedir(), 'Desktop');
@@ -296,7 +300,7 @@ class PlatformDispatcher {
   }
 
   _getUseWorker() {
-    if (this._platform === 'linux') {
+    if (this.platform === 'linux') {
       return this._imagemagickAvailable();
     } else {
       return true;
@@ -304,7 +308,7 @@ class PlatformDispatcher {
   }
 
   _getScreenshotAbility() {
-    if (this._platform === 'linux') {
+    if (this.platform === 'linux') {
       if ((this._isGNOME() || this._isUNITY()) && this.isWayland()) {
         this.messages.push("platformDispatcher @ _getScreenshotAbility: GNOME/Unity + Wayland – ScreenshotAbility set to false");
         return false;
@@ -322,6 +326,7 @@ class PlatformDispatcher {
       return true;
     }
   }
+
 }
 
 const platformDispatcher = new PlatformDispatcher();

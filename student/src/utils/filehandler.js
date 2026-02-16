@@ -1,6 +1,10 @@
 import { Buffer } from 'buffer';
 import DOMPurify from 'dompurify';
 import mammoth from 'mammoth';
+import {SignalBridge} from './signalBridge.js'
+
+// signalBridge instance centralizes ipc calls with platform checks
+const signalBridge = new SignalBridge(window);
 
 
 // fetch file from disc - show preview
@@ -8,7 +12,7 @@ export async function loadPDF(file, base64 = false, zoom=180, submission=false, 
 
     
     if (this.examtype == 'microsoft365'){
-        window.ipcRenderer.send('collapse-browserview')
+        signalBridge.send('collapse-browserview')
     }
 
     
@@ -31,7 +35,7 @@ export async function loadPDF(file, base64 = false, zoom=180, submission=false, 
         this.currentpreviewBase64 = file.filecontent.split(',')[1];  // we only need the base64 data not the complete url
     }
     else {   //fetch file from filesystem
-        let data = await window.ipcRenderer.invoke('getpdfasync', file )
+        let data = await signalBridge.invoke('getpdfasync', file )
         let isvalid = isValidPdf(data)
         if (!isvalid){
             this.$swal.fire({
@@ -182,7 +186,7 @@ function processNode(node) {
 
 // get file from local examdirectory and replace editor content with it
 export async function loadHTML(file){
-    let data = await window.ipcRenderer.invoke('getfilesasync', file )
+    let data = await signalBridge.invoke('getfilesasync', file )
     this.LTdisable()
     this.$swal.fire({
         title: this.$t("editor.replace"),
@@ -197,6 +201,9 @@ export async function loadHTML(file){
             
             this.editor.commands.clearContent(true)
             this.editor.commands.insertContent(data)  
+            //set currentFile to the loaded filename remove extension .bak from filename
+            let filename = file.replace(/\.bak$/, '')  //remove extension .bak from filename
+            this.currentFile = filename
         } 
     }); 
 }
@@ -238,7 +245,7 @@ export async function loadDOCX(file, base64=false){
 
             }
             else{
-                let data = await window.ipcRenderer.invoke('getfilesasync', file, false, true )   //signal, filename, audiofile, docxfile // converts the file to html in case of docx with mammoth
+                let data = await signalBridge.invoke('getfilesasync', file, false, true )   // signal, filename, audiofile, docxfile // converts the file to html in case of docx with mammoth
                 this.editor.commands.clearContent(true)
             
                 const cleanHtml = DOMPurify.sanitize(data.value);
@@ -257,7 +264,7 @@ export async function loadDOCX(file, base64=false){
 // fetch file from disc - show preview
 export async function loadImage(file, base64=false){
     if (this.examtype == 'microsoft365'){
-        ipcRenderer.send('collapse-browserview')
+        signalBridge.send('collapse-browserview')
     }
 
 
@@ -274,7 +281,7 @@ export async function loadImage(file, base64=false){
         this.currentpreviewBase64 = file.filecontent.split(',')[1];  // we only need the base64 data not the complete url
     }
     else {
-        let data = await window.ipcRenderer.invoke('getpdfasync', file )
+        let data = await signalBridge.invoke('getpdfasync', file )
         this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "image/jpeg"})) 
         this.currentpreviewBase64 = Buffer.from(data).toString('base64');
     }
@@ -375,7 +382,7 @@ export async function playAudio(file, base64=false) {
                 if (audioFile.playbacks > 0){
                     try {
                         
-                        const base64Data = !base64 ? await window.ipcRenderer.invoke('getfilesasync', file, true) : file.filecontent.split(',')[1];
+                        const base64Data = !base64 ? await signalBridge.invoke('getfilesasync', file, true) : file.filecontent.split(',')[1];
                         
                         if (base64Data) {
                             this.audioSource = `data:audio/mp3;base64,${base64Data}`;
@@ -394,7 +401,7 @@ export async function playAudio(file, base64=false) {
         document.querySelector("#aplayer").style.display = 'block';
         try {
             
-            const base64Data = !base64 ? await window.ipcRenderer.invoke('getfilesasync', file, true) : file.filecontent.split(',')[1];
+            const base64Data = !base64 ? await signalBridge.invoke('getfilesasync', file, true) : file.filecontent.split(',')[1];
             
 
             if (base64Data) {
@@ -407,7 +414,7 @@ export async function playAudio(file, base64=false) {
 
 async function soundtest(context){
     try {
-        const base64Data = await window.ipcRenderer.invoke('getAudioFile', 'attention.wav', true);
+        const base64Data = await signalBridge.invoke('getAudioFile', 'attention.wav', true);
         if (base64Data) {
             let soundtest = document.getElementById('soundtest')
 
@@ -448,22 +455,28 @@ export async function loadGGB(file, base64=false){
     .then(async (result) => {
         if (result.isConfirmed) {
 
+            const geogebraWebview = document.getElementById('geogebraframe');
+            if (!geogebraWebview) {
+                console.error('filehandler @ loadGGB: geogebra webview not found'); // one line comment
+                return;
+            }
+
             if (!base64){
-                const result = await window.ipcRenderer.invoke('loadGGB', file);
+                const result = await signalBridge.invoke('loadGGB', file);
                 if (result.status === "success") {
                     const base64GgbFile = result.content;
-                    const ggbIframe = document.getElementById('geogebraframe');
-                    const ggbApplet = ggbIframe.contentWindow.ggbApplet;
-                    ggbApplet.setBase64(base64GgbFile);
+                    const safeBase64 = JSON.stringify(base64GgbFile);
+                    geogebraWebview.executeJavaScript(`window.loadBase64FromHost(${safeBase64})`);
+                    this.currentFile = filename
                 } else {
                     console.error('filehandler @ loadGGB: Error loading file');
                 }
             }
             else {
                 const base64GgbFile = file.filecontent.split(',')[1];
-                const ggbIframe = document.getElementById('geogebraframe');
-                const ggbApplet = ggbIframe.contentWindow.ggbApplet;
-                ggbApplet.setBase64(base64GgbFile);
+                const safeBase64 = JSON.stringify(base64GgbFile);
+                geogebraWebview.executeJavaScript(`window.loadBase64FromHost(${safeBase64})`);
+                this.currentFile = filename
             }
         } 
     }); 
@@ -475,42 +488,44 @@ export async function loadGGB(file, base64=false){
  * fetch exam materials in base64 from teacher
  */
 export async function getExamMaterials(){
-    let examMaterials = await window.ipcRenderer.invoke('getExamMaterials')
+    let examMaterials = await signalBridge.invoke('getExamMaterials')
     
     if (examMaterials){
         this.examMaterials = examMaterials.materials
         let allowedUrls = examMaterials.allowedUrls || [];                                         // ensure array
+        let currentUrls = this.allowedUrls || [];
+        
+        // check if allowedUrls are identical to avoid re-setting blocking
+        if (JSON.stringify([...allowedUrls].sort()) === JSON.stringify([...currentUrls].sort())) {
+            console.log("filehandler @ getExamMaterials: allowedUrls are identical - skipping webview blocking setup");
+            return;
+        }
+
+        
+        console.log("filehandler @ getExamMaterials: received new examMaterials")
         this.allowedUrls = allowedUrls
-        // send webview id + allowlist to main process
-        console.log("filehandler @ getExamMaterials: received examMaterials")
-    
 
 
         // set up webview blocking for the webviewpane
         const webviewPane = document.getElementById('safebrowser');
         if (webviewPane) {
             console.log('filehandler @ getExamMaterials: setting WebviewPane dom-ready event to block websites');
-            // track if blocking was successfully started (store on element to persist across calls)
-            if (!webviewPane._blockingStarted) {
-                webviewPane._blockingStarted = false;
-            }
+ 
             // remove existing listener if present to prevent accumulation
             if (webviewPane._blockingDomReadyHandler) {
                 webviewPane.removeEventListener('dom-ready', webviewPane._blockingDomReadyHandler);
             }
             // create named handler function and store reference
-            webviewPane._blockingDomReadyHandler = async () => {  // content id can only be accessed after dom-ready event
-                if (webviewPane._blockingStarted) return; // prevent multiple attempts
-                
+            webviewPane._blockingDomReadyHandler = async () => {  // content id can only be accessed after dom-ready event                
                 // try to get webContentsId with retry logic
                 const tryStartBlocking = async (retries = 10, delay = 100) => {
                     for (let i = 0; i < retries; i++) {
                         if (webviewPane.getWebContentsId) {
                             const guestId = webviewPane.getWebContentsId();
                             if (guestId) {
-                                await window.ipcRenderer.invoke('start-blocking-for-webview', { guestId, allowedUrls });
+                                // send webview id + allowlist to main process to block navigation before it happens
+                                await signalBridge.invoke('start-blocking-for-webview', { guestId, allowedUrls });
                                 console.log(`filehandler @ getExamMaterials: started blocking for WebviewPane ${guestId}`);
-                                webviewPane._blockingStarted = true;
                                 return;
                             }
                         }

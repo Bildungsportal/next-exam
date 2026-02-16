@@ -34,6 +34,16 @@ class JreHandler {
         this.jTest()
     }
 
+
+    jTest(){
+        let javapath = this.driver(); // '/pfad/zur/java'
+        const proc = spawn(javapath, ['-version']);
+    
+        proc.stderr.on('data', data => {
+            const lines = data.toString().split('\n'); // in Zeilen splitten
+            log.debug(`jre-handler @ jTest: ${lines[0]}`); // nur die erste Zeile loggen
+        });
+    }
     fail(reason) {
         log.error(reason);
         process.exit(1);
@@ -71,15 +81,6 @@ class JreHandler {
         log.info(`jre-handler @ jSpawn: spawning java process: ${javacmdline}`)
         return spawn(javapath, javaargs, {shell:false});
        // return spawn(javacmdline);
-    }
-    jTest(){
-        let javapath = this.driver(); // '/pfad/zur/java'
-        const proc = spawn(javapath, ['-version']);
-    
-        proc.stderr.on('data', data => {
-            const lines = data.toString().split('\n'); // in Zeilen splitten
-            log.debug(`jre-handler @ jTest: ${lines[0]}`); // nur die erste Zeile loggen
-        });
     }
 }
 

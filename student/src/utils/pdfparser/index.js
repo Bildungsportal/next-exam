@@ -94,6 +94,7 @@ class PdfParser {
 
     setupWorker() {
         if (pdfjsLib.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+            // Resolved at runtime in Electron renderer; alias in quasar.config provides build-time path
             pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
                 'pdfjs-dist/legacy/build/pdf.worker.mjs',
                 import.meta.url

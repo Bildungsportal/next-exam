@@ -1,9 +1,13 @@
 // gracefullyExit.js
 // ES module: import { gracefullyExit } from 'commonMethods.js'
+import {SignalBridge} from './signalBridge.js'
+
+// signalBridge instance centralizes ipc calls with platform checks
+const signalBridge = new SignalBridge(window);
 
 export function gracefullyExit() {
     if (this.examtype == 'microsoft365'){
-        ipcRenderer.send('collapse-browserview')
+        signalBridge.send('collapse-browserview')
     }
     console.log("commonMethods.js @ gracefullyExit: gracefully exiting")
 
@@ -43,14 +47,14 @@ export function gracefullyExit() {
           });
       },
       preConfirm: () => {
-        if (!needsPw) { ipcRenderer.send('gracefullyexit'); return; }    // no password needed
+        if (!needsPw) { signalBridge.send('gracefullyexit'); return; }    // no password needed
         const value = document.getElementById('localpassword')?.value || ""; // entered password
-        if (value === expected) { ipcRenderer.send('gracefullyexit'); return; } // correct
+        if (value === expected) { signalBridge.send('gracefullyexit'); return; } // correct
         this.$swal.showValidationMessage(this.$t("general.wrongpassword"));          // warning
       }
     }).then(() => {
         if (this.examtype == 'microsoft365'){
-            ipcRenderer.send('restore-browserview')
+            signalBridge.send('restore-browserview')
         }
     });
   }
@@ -60,7 +64,7 @@ export function gracefullyExit() {
 
  export function reconnect() {
     if (this.examtype == 'microsoft365'){
-        ipcRenderer.send('collapse-browserview')
+        signalBridge.send('collapse-browserview')
     }
 
 
@@ -95,7 +99,7 @@ export function gracefullyExit() {
         this.serverip = result.value.ip; // Set new IP
         this.pincode = result.value.pin; // Set new PIN
 
-        let IPCresponse = ipcRenderer.sendSync('register', {clientname:this.clientname, servername:this.servername, serverip: this.serverip, pin:this.pincode }); // Send IPC message
+        let IPCresponse = signalBridge.sendSync('register', {clientname:this.clientname, servername:this.servername, serverip: this.serverip, pin:this.pincode }); // Send IPC message
 
         this.token = IPCresponse.token; // set token (used to determine server connection status)
 
@@ -107,40 +111,48 @@ export function gracefullyExit() {
             showCancelButton: false, // No cancel button
         });
         if (this.examtype == 'microsoft365'){
-            ipcRenderer.send('restore-browserview')
+            signalBridge.send('restore-browserview')
         }
     });
 }
 
 
 export function showUrl(url){
-    this.webviewVisible = true
+    this.webviewVisible = true;
     this.urlForWebview = url;
 
-    if (this.examtype == 'microsoft365'){
-        ipcRenderer.send('collapse-browserview')
+    if (this.examtype === 'microsoft365'){
+        signalBridge.send('collapse-browserview');
     }
 
+    const applyDomChanges = () => {
+        const webview = document.querySelector("#webview");
+        if (webview) {
+            if (!this.splitview){
+                webview.style.height = "80vh";
+                webview.style.width = "80vw";
+                webview.style.position = "relative";
+                webview.style.top = "10%";
+            } else {
+                webview.style.height = "100%";
+                webview.style.width = "100%";
+                webview.style.position = "relative";
+                webview.style.top = "0%";
+            }
+        }
 
-    const webview = document.querySelector("#webview");
-    //console.log(webview)
-    if (!this.splitview){
-        webview.style.height = "80vh";
-        webview.style.width = "80vw";
-        webview.style.position = "relative";
-        webview.style.top = "10%";
-    }
-    else {
-        webview.style.height = "100%";
-        webview.style.width = "100%";
-        webview.style.position = "relative";
-        webview.style.top = "0%";
-    }
+        const embedcontainer = document.querySelector(".embed-container");
+        if (embedcontainer) {
+            embedcontainer.style.display = 'none';
+        }
 
+        const preview = document.querySelector("#preview");
+        if (preview) {
+            preview.style.display = 'block';
+        }
+    };
 
-
-    const embedcontainer = document.querySelector(".embed-container");
-    embedcontainer.style.display = 'none';
-    document.querySelector("#preview").style.display = 'block'; 
+    this.$nextTick(() => applyDomChanges());
+ 
 }
   

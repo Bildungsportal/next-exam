@@ -1,6 +1,6 @@
 @import '../../node_modules/bootstrap/scss/bootstrap';
 @import '../../node_modules/sweetalert2/dist/sweetalert2.css';
-@import '../../public/css/style-main.css';
+@import './style-main.css';
 
 // Here we override bootstrap color variables globally
 
@@ -30,6 +30,9 @@ $theme-colors: (
   "light":      $light,
   "dark":       $dark
 );
+
+.teal { color: $teal-600;}
+
 
 .btn-teal       { background-color: $teal-600;}
 .btn-teal:hover { background-color: $teal-700;}
@@ -72,14 +75,11 @@ $theme-colors: (
   color: $white;
 }
 
-html, body, #q-app {
+html, body {
   height: 100%;
 }
 
-#q-app {
-  height: 100%;
-  overflow: hidden;
-}
+
 
 // SweetAlert2 overrides - must be after Bootstrap to override conflicts
 .swal2-container {

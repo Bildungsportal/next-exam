@@ -11,7 +11,7 @@
  
  
  <template> 
-    <div class="column" style="height: 100%">
+   
 
     <!-- HEADER START -->
     <exam-header
@@ -63,8 +63,8 @@
             <div v-if="(file.filetype == 'image')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
         </div>       
         
-        <div v-if="allowedUrls.length !== 0"  v-for="allowedUrl in allowedUrls  " class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button" :title="allowedUrl" @click="showUrl(allowedUrl)">
-            <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{allowedUrl}} 
+        <div v-if="allowedUrls.length !== 0"  v-for="allowedUrl in allowedUrls  " class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button" :title="getUrlDisplay(allowedUrl)" @click="showUrl(getUrlDisplay(allowedUrl))">
+            <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{getUrlDisplay(allowedUrl)}}
         </div>
         <!-- exam materials end -->
 
@@ -75,8 +75,8 @@
         <!-- local files start -->
         <div class="white text-muted me-2 ms-2 small d-inline-block mb-0" style="vertical-align: middle;">{{ $t('editor.localfiles') }} </div>
         <div v-for="file in localfiles" class="d-inline mb-0">
-            <div v-if="(file.type == 'pdf')"   class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
-            <div v-if="(file.type == 'ggb')"   class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadGGB(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
+            <div v-if="(file.type == 'pdf')"   :class="{'bg-warning': file.name == currentFile}" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
+            <div v-if="(file.type == 'ggb')"   :class="{'bg-warning': file.name == currentFile}" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadGGB(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
             <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
         </div>
         <!-- local files end -->
@@ -121,7 +121,7 @@
             </div>
         </div>
         <!-- focuswarning end  -->
-        <iframe id="geogebraframe" src="/geogebra/classic.html"></iframe>
+        <webview id="geogebraframe" src="./geogebra/suite.html"></webview>
     </div>
 
 
@@ -130,7 +130,7 @@
         <img src="/src/assets/img/svg/edit-paste-style.svg" class="white" width="16" height="16" >{{ item }}
       </button>
     </div>
-  </div>
+ 
 
 </template>
 
@@ -145,7 +145,11 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 
 import { getExamMaterials, loadPDF, loadImage, loadGGB} from '../utils/filehandler.js'
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
-import {isElectronWindow} from "../types/electron.ts";
+import {isElectronWindow} from "../types/platform.ts";
+import {SignalBridge} from '../utils/signalBridge.js'
+
+// signalBridge instance centralizes ipc calls with platform checks
+const signalBridge = new SignalBridge(window);
 
 
 
@@ -194,7 +198,11 @@ export default {
             
             // Event listener references for cleanup
             _onPreviewClick: null,
-            internetCheckCounter:0
+            _onWebviewConsoleMessage: null,
+            _onUnhandledRejection: null,
+            _onDomReady: null,
+            internetCheckCounter:0,
+            ggbReady:false
         }
     }, 
     components: { ExamHeader, WebviewPane, PdfviewPane  },  
@@ -203,70 +211,83 @@ export default {
     },
     async mounted() {
 
-        this.redefineConsole()  // overwrite console log to grep specific outputs and store as clipboard entry
-
-        this.currentFile = this.clientname
+        this.currentFile = `${this.clientname}.ggb`
         this.entrytime = new Date().getTime()  
          
-        if (isElectronWindow(window)) {
-            window.ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
-                console.log("editor @ save: Teacher saverequest received")
-                this.saveContent(true, why)
-            });
+        this._onUnhandledRejection = (event) => {
+            const reason = event?.reason;
+            const message = typeof reason === 'string' ? reason : reason && reason.message;
+            if (message && message.includes('GUEST_VIEW_MANAGER_CALL')) {
+                event.preventDefault(); // one line comment
+                return;
+            }
+        };
+        window.addEventListener('unhandledrejection', this._onUnhandledRejection);
 
 
-            window.ipcRenderer.on('fileerror', (event, msg) => {
-                console.log('geogebra @ fileerror: writing/deleting file error received');
-                this.$swal.fire({
-                    title: "Error",
-                    text: msg.message,
-                    icon: "error",
-                    //timer: 30000,
-                    showCancelButton: false,
-                    didOpen: () => {
-                        this.$swal.showLoading();
-                    },
-                })
-            });
+        signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            console.log("editor @ save: Teacher saverequest received")
+            this.saveContent(true, why)
+        });
 
-            window.ipcRenderer.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
-                console.log("geogebra @ getmaterials: get materials request received")
-                this.getExamMaterials()
-            });
-
-            this.$nextTick(function () { // Code that will run only after the entire view has been rendered
-
-                // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
-                this.fetchinfointerval = new SchedulerService(5000);
-                this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
-                this.fetchinfointerval.start();
-
-                this.clockinterval = new SchedulerService(1000);
-                this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
-                this.clockinterval.start();
-
-                this.saveinterval = new SchedulerService(20000);
-                this.saveinterval.addEventListener('action', this.saveContent);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
-                this.saveinterval.start();
-
-                document.body.addEventListener('mouseleave', this.sendFocuslost);
-
-                this.loadFilelist()
-                this.getExamMaterials()
-
-                // add some eventlisteners once
-                this._onPreviewClick = function () {
-                    this.style.display = 'none';
-                    this.setAttribute("src", "about:blank");
-                    URL.revokeObjectURL(this.currentpreview);
-                };
-                document.querySelector("#preview").addEventListener("click", this._onPreviewClick);
+        signalBridge.on('fileerror', (event, msg) => {
+            console.log('geogebra @ fileerror: writing/deleting file error received');
+            this.$swal.fire({
+                title: "Error",
+                text: msg.message,
+                icon: "error",
+                //timer: 30000,
+                showCancelButton: false,
+                didOpen: () => {
+                    this.$swal.showLoading();
+                },
             })
-            this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-            this.hostip = await window.ipcRenderer.invoke('checkhostip')
-        }
+        });
+
+        signalBridge.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            console.log("geogebra @ getmaterials: get materials request received")
+            this.getExamMaterials()
+        });
+
+        this.$nextTick(async function () { // Code that will run only after the entire view has been rendered
+
+            // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
+            this.fetchinfointerval = new SchedulerService(5000);
+            this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.fetchinfointerval.start();
+            await this.fetchInfo(); // initial sync for clientinfo, serverstatus and lockedSection
+
+            this.clockinterval = new SchedulerService(1000);
+            this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.clockinterval.start();
+
+            this.saveinterval = new SchedulerService(20000);
+            this.saveinterval.addEventListener('action', this.saveContent);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.saveinterval.start();
+
+            document.body.addEventListener('mouseleave', this.sendFocuslost);
+
+            this.loadFilelist()
+            this.getExamMaterials()
+
+            // add some eventlisteners once
+            this._onPreviewClick = function () {
+                this.style.display = 'none';
+                this.setAttribute("src", "about:blank");
+                URL.revokeObjectURL(this.currentpreview);
+            };
+            document.querySelector("#preview").addEventListener("click", this._onPreviewClick);
+
+            const geogebraWebview = document.getElementById('geogebraframe');
+            if (geogebraWebview) {
+                this.setupWebviewListeners(geogebraWebview);
+            }
+            
+            this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+            this.hostip = await signalBridge.invoke('checkhostip')
+        });
     },
-    methods: { 
+    methods: {
 
         // from filehandler.js
         getExamMaterials:getExamMaterials,
@@ -278,7 +299,10 @@ export default {
         gracefullyExit:gracefullyExit,
         showUrl:showUrl,
         reconnect:reconnect,
-        
+        getUrlDisplay(allowedUrl) {
+            return typeof allowedUrl === 'object' ? allowedUrl.url : allowedUrl;
+        },
+
         hidepreview(){
             let preview = document.querySelector("#preview")
             preview.style.display = 'none';
@@ -335,41 +359,48 @@ export default {
                     validPart.test(part)
                 );
 
-            } catch (e) {
-                return false;
-            }
+            } catch (e) {  return false;  }
         },
 
 
         redefineConsole(){
-            const ggbIframe = document.getElementById('geogebraframe');
-            const iframeWindow = ggbIframe.contentWindow;  // Zugriff auf den Kontext des iframe
-            const originalIframeConsoleLog = iframeWindow.console.log;  // Speichern der originalen console.log Funktion des iframe
-           
-       
-            
-            iframeWindow.console.log = (message) => {
-                // Prüfen, ob die Nachricht ein GeoGebra-spezifisches Muster enthält
-               
-                if (typeof message === "string" && message.includes("existing")) {
-                    const partAfterExistingGeo = message.split("existing geo:")[1].trim();
-                    const extractedText = partAfterExistingGeo.split("=")[1].trim();
-                    this.customClipboard.push( extractedText )
-                    if (this.customClipboard.length > 10) {    this.customClipboard.shift();     }   //customclipboard länge begrenzen
-                } 
-                else {
-                    // geogebra spammed jede aktion in die console daher unterdrücken wir das erstmal
-                    //originalIframeConsoleLog.apply(iframeWindow.console, arguments);      // Aufrufen der ursprünglichen Funktion für alle anderen Nachrichten
+            const geogebraWebview = document.getElementById('geogebraframe');
+            if (!geogebraWebview) {
+                return;
+            }
+
+            if (!this._onWebviewConsoleMessage) {
+                this._onWebviewConsoleMessage = (event) => {
+                    const message = event && typeof event.message === "string" ? event.message : "";
+                    if (typeof message === "string" && message.includes("existing")) {
+                        const splitMessage = message.split("existing geo:");
+                        if (splitMessage.length > 1) {
+                            const partAfterExistingGeo = splitMessage[1].trim();
+                            const parts = partAfterExistingGeo.split("=");
+                            if (parts.length > 1) {
+                                const extractedText = parts[1].trim();
+                                if (!this.customClipboard.includes(extractedText)) {
+                                    this.customClipboard.push(extractedText);
+                                    if (this.customClipboard.length > 10) {
+                                        this.customClipboard.shift();
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-            };
+            }
+
+            if (this._onWebviewConsoleMessage) {
+                geogebraWebview.removeEventListener('console-message', this._onWebviewConsoleMessage);
+            }
+            geogebraWebview.addEventListener('console-message', this._onWebviewConsoleMessage);
         },
         
         async sendFocuslost(ctrlalt = false){
-            if (isElectronWindow(window)) {
-                let response = await window.ipcRenderer.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
-                if (!this.config.development && !response.focus) {  //immediately block frontend
-                    this.focus = false
-                }
+            let response = await signalBridge.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
+            if (response && !this.config.development && !response.focus) {  //immediately block frontend
+                this.focus = false
             }
         },
 
@@ -385,77 +416,206 @@ export default {
 
 
         async loadFilelist(){
-            if (isElectronWindow(window)) {
-                let filelist = await window.ipcRenderer.invoke('getfilesasync', null)
-                this.localfiles = filelist;
-            }
+            let filelist = await signalBridge.invoke('getfilesasync', null)
+            this.localfiles = filelist;
         },
+
+        setupWebviewListeners(geogebraWebview){
+            if (!geogebraWebview) {
+                return;
+            }
+            // remove existing listener if any
+            if (this._onDomReady) {
+                geogebraWebview.removeEventListener('dom-ready', this._onDomReady);
+            }
+            // create new dom-ready handler
+            this._onDomReady = () => {
+                this.ggbReady = true; // webview is ready for JS calls
+
+                // im Devmode DevTools für das GeoGebra-Webview öffnen (attention: open devtools kill application on window close)
+            //    if (this.config && this.config.development && typeof geogebraWebview.openDevTools === 'function') {
+            //        geogebraWebview.openDevTools(); // one line comment
+            //    }
+
+                geogebraWebview.executeJavaScript(`
+                    (function() {
+                        try {
+                            window.evalFromHost = (cmd) => {
+                                try {
+                                    if (window.ggbApplet) {
+                                        window.ggbApplet.evalCommand(cmd); // one line comment
+                                    }
+                                } catch (e) {
+                                    console.log('evalFromHost error:', e && e.message); // one line comment
+                                }
+                            };
+                            window.clearAllFromHost = () => {
+                                try {
+                                    if (window.ggbApplet) {
+                                        window.ggbApplet.reset(); // one line comment
+                                        if (typeof window.ggbApplet.newConstruction === 'function') {
+                                            window.ggbApplet.newConstruction(); // one line comment
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.log('clearAllFromHost error:', e && e.message); // one line comment
+                                }
+                            };
+                            window.loadBase64FromHost = (base64) => {
+                                try {
+                                    if (window.ggbApplet && window.ggbApplet.setBase64) {
+                                        window.ggbApplet.setBase64(base64); // one line comment
+                                    }
+                                } catch (e) {
+                                    console.log('loadBase64FromHost error:', e && e.message); // one line comment
+                                }
+                            };
+                            window.exportBase64FromHost = () => {
+                                return new Promise((resolve) => {
+                                    try {
+                                        if (!window.ggbApplet || !window.ggbApplet.getBase64) {
+                                            resolve(null); // one line comment
+                                            return;
+                                        }
+                                        window.ggbApplet.getBase64((data) => resolve(data)); // one line comment
+                                    } catch (e) {
+                                        console.log('exportBase64FromHost error:', e && e.message); // one line comment
+                                        resolve(null); // one line comment
+                                    }
+                                });
+                            };
+                        } catch (e) {
+                            console.log('geogebra API init error:', e && e.message); // one line comment
+                        }
+                    })();
+                `).catch(() => {}); // swallow any rejection from executeJavaScript itself
+                this.redefineConsole(); // setup console listener after each dom-ready
+            };
+            // register dom-ready listener
+            geogebraWebview.addEventListener('dom-ready', this._onDomReady);
+        },
+
+
+
+       
+
+
+
+
         setsource(source){
-            let iFrame = document.getElementById('geogebraframe')
-            if (source === "suite")   { iFrame.src = `/geogebra/suite.html`  }
-            if (source === "classic") { iFrame.src = `/geogebra/classic.html`}
-            iFrame.parentNode.replaceChild(iFrame.cloneNode(), iFrame);
-            this.redefineConsole()
+            const geogebraWebview = document.getElementById('geogebraframe');
+            if (!geogebraWebview) {
+                return;
+            }
+            
+            const parentElement = geogebraWebview.parentElement;
+            if (!parentElement) {
+                return;
+            }
+            
+            this.ggbReady = false; // new content will be loaded
+            
+            // remove old webview from DOM (listeners are automatically removed when element is removed)
+            try {
+                geogebraWebview.remove();
+            } catch (e) {
+                // force remove if normal remove fails
+                parentElement.removeChild(geogebraWebview);
+            }
+            
+            // create new webview element
+            const newWebview = document.createElement('webview');
+            newWebview.id = 'geogebraframe';
+            newWebview.setAttribute('allowpopups', 'true');
+            newWebview.setAttribute('webpreferences', 'contextIsolation=no,nodeIntegration=no');
+            
+            // set source based on parameter
+            if (source === "suite") {
+                newWebview.src = `./geogebra/suite.html`;
+            } else if (source === "classic") {
+                newWebview.src = `./geogebra/classic.html`;
+            }
+            
+            // insert new webview into DOM and setup event listeners
+            parentElement.appendChild(newWebview);
+            this.setupWebviewListeners(newWebview);
         },  
         clock(){
             this.now = new Date().getTime()
             this.timesinceentry =  new Date(this.now - this.entrytime).toISOString().substr(11, 8)
             this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
-        },  
-        async fetchInfo() {
-            if (isElectronWindow(window)) {
-                let getinfo = await window.ipcRenderer.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
-
-                this.clientinfo = getinfo.clientinfo;
-                this.token = this.clientinfo.token
-                this.focus = this.clientinfo.focus
-                this.clientname = this.clientinfo.name
-                this.exammode = this.clientinfo.exammode
-                this.pincode = this.clientinfo.pin
-
-                if (this.pincode !== "0000") {
-                    this.localLockdown = false
-                }
-
-                if (!this.focus) {
-                    this.entrytime = new Date().getTime()
-                }
-                if (this.clientinfo && this.clientinfo.token) {
-                    this.online = true
-                } else {
-                    this.online = false
-                }
-
-
-                this.battery = await navigator.getBattery().then(battery => {
-                    return battery
-                })
-                    .catch(error => {
-                        console.error("Error accessing the Battery API:", error);
-                    });
-
-                this.internetCheckCounter++
-                if (this.internetCheckCounter % 5 === 0) {
-                    this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-                    this.hostip = await window.ipcRenderer.invoke('checkhostip')
-                    this.internetCheckCounter = 0
-                }
-            }
         }, 
+
+
+
+
+
+        async fetchInfo() {
+            let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+
+            this.clientinfo = getinfo.clientinfo;
+            this.token = this.clientinfo.token
+            this.focus = this.clientinfo.focus
+            this.clientname = this.clientinfo.name
+            this.exammode = this.clientinfo.exammode
+            this.pincode = this.clientinfo.pin
+            
+            this.serverstatus = getinfo.serverstatus
+
+            // decide which locked section index is authoritative (client vs server)
+            const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
+                ? this.clientinfo.lockedSection
+                : this.serverstatus.lockedSection
+
+            this.lockedSection = sectionIndex
+
+            if (this.pincode !== "0000") {
+                this.localLockdown = false
+            }
+
+            if (!this.focus) {
+                this.entrytime = new Date().getTime()
+            }
+            if (this.clientinfo && this.clientinfo.token) {
+                this.online = true
+            } else {
+                this.online = false
+            }
+
+
+            this.battery = await navigator.getBattery().then(battery => {
+                return battery
+            })
+            .catch(error => {
+                console.error("Error accessing the Battery API:", error);
+            });
+
+            this.internetCheckCounter++
+            if (this.internetCheckCounter % 5 === 0) {
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+                this.hostip = await signalBridge.invoke('checkhostip')
+                this.internetCheckCounter = 0
+            }
+        },
+
         showClipboard() {
             this.isClipboardVisible = this.isClipboardVisible ? false: true;
         },
         insertFromClipboar(value){
-            const ggbIframe = document.getElementById('geogebraframe');
-            const ggbApplet = ggbIframe.contentWindow.ggbApplet;   // get the geogebra applet and all of its methods
-            
-            ggbApplet.evalCommand(value);
+            const geogebraWebview = document.getElementById('geogebraframe');
+            if (!geogebraWebview) {
+                return;
+            }
+            const safeValue = JSON.stringify(value);
+            geogebraWebview.executeJavaScript(`window.evalFromHost(${safeValue})`);
             this.showClipboard()
         },
 
         clearAll(){
-            const ggbIframe = document.getElementById('geogebraframe');
-            const ggbApplet = ggbIframe.contentWindow.ggbApplet;   // get the geogebra applet and all of its methods
+            const geogebraWebview = document.getElementById('geogebraframe');
+            if (!geogebraWebview) {
+                return;
+            }
             this.$swal({
                 title: "",
                 text: this.$t("math.clear") ,
@@ -469,8 +629,7 @@ export default {
              })
             .then((result) => {
                 if (result.isConfirmed) { 
-                    ggbApplet.reset()
-                    ggbApplet.newConstruction(); // start a new empty construction (if supported)
+                    geogebraWebview.executeJavaScript('window.clearAllFromHost()');
                 }
                 else {return; }
             });
@@ -478,9 +637,41 @@ export default {
 
          /** Saves Content as GGB */
         async saveContent(event=false, reason=false) { 
-            const ggbIframe = document.getElementById('geogebraframe');
-            const ggbApplet = ggbIframe.contentWindow.ggbApplet;   // get the geogebra applet and all of its methods
-            let filename = `${this.clientname}.ggb`
+            const geogebraWebview = document.getElementById('geogebraframe');
+            if (!geogebraWebview) {
+                console.log("geogebra @ saveContent: webview not found"); // one line comment
+                return;
+            }
+
+            if (!this.ggbReady) {
+                console.log("geogebra @ saveContent: webview not ready"); // one line comment
+                return;
+            }
+
+            const getBase64FromWebview = async () => {
+                const currentWebview = document.getElementById('geogebraframe');
+                if (!currentWebview || currentWebview !== geogebraWebview || !this.ggbReady) {
+                    return null; // webview was replaced or not ready
+                }
+                try {
+                    const result = await currentWebview.executeJavaScript(`
+                        (async () => {
+                            try {
+                                const data = await window.exportBase64FromHost();
+                                return data;
+                            } catch (e) {
+                                return null;
+                            }
+                        })()
+                    `);
+                    return result;
+                } catch (error) {
+                    console.log("geogebra @ saveContent: error getting base64 from webview"); // one line comment
+                    return null;
+                }
+            };
+
+            let filename = this.currentFile
             if (reason == "manual" ){ 
                 await this.$swal({
                     title: this.$t("math.filename") ,
@@ -498,56 +689,52 @@ export default {
                             return  this.$t("math.nospecial") ;
                         }                   
                      },
-                 }).then((result) => {
-                    if (result.isConfirmed) { 
-                        filename = `${result.value}-bak.ggb`
-                        ggbApplet.getBase64( async (base64GgbFile) => {
-                            if(isElectronWindow(window)) {
-                                let response = await window.ipcRenderer.invoke('saveGGB', {
-                                    filename: filename,
-                                    content: base64GgbFile
-                                })   // send base64 string to backend for saving
-                                if (response.status === "success" && reason == "manual") {  // we wait for a response - only show feed back if manually saved
-                                    this.loadFilelist()
-                                    this.$swal.fire({
-                                        title: this.$t("editor.saved"),
-                                        text: filename,
-                                        icon: "info"
-                                    })
-                                }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        filename = `${result.value}-bak.ggb`;
+                        this.currentFile = filename
+                        getBase64FromWebview().then(async (base64GgbFile) => {
+                            if (!base64GgbFile) {
+                                console.log("geogebra @ saveContent: no base64 content returned"); // one line comment
+                                return;
                             }
-                        })
+                            let response = await signalBridge.invoke('saveGGB', {filename: filename, content: base64GgbFile});   // send base64 string to backend for saving
+                            if (response && response.status === "success" && reason == "manual" ){  // we wait for a response - only show feed back if manually saved
+                                this.loadFilelist();
+                                this.$swal.fire({
+                                    title: this.$t("editor.saved"),
+                                    text: filename,
+                                    icon: "info"
+                                });
+                            }
+                        });
                     }
                     else {return; }
                 });
             }
             else {
-                ggbApplet.getBase64( async (base64GgbFile) => {
-                    if(isElectronWindow(window)) {
-                        let response = await window.ipcRenderer.invoke('saveGGB', {
-                            filename: filename,
-                            content: base64GgbFile,
-                            reason: reason
-                        })   // send base64 string to backend for saving
-                        if (response.status === "success" && reason == "manual") {  // we wait for a response - only show feed back if manually saved
-                            this.loadFilelist()
-                            this.$swal.fire({
-                                title: this.$t("editor.saved"),
-                                text: filename,
-                                icon: "info"
-                            })
-                        }
+                const base64GgbFile = await getBase64FromWebview();
+                if (!base64GgbFile) {
+                    console.log("geogebra @ saveContent: no base64 content returned"); // one line comment
+                } 
+                else {
+                    let response = await signalBridge.invoke('saveGGB', {filename: filename, content: base64GgbFile, reason: reason });   // send base64 string to backend for saving
+                    if (response && response.status === "success" && reason == "manual" ){  // we wait for a response - only show feed back if manually saved
+                        this.loadFilelist();
+                        this.$swal.fire({
+                            title: this.$t("editor.saved"),
+                            text: filename,
+                            icon: "info"
+                        });
                     }
-                })
+                }
             }
  
             this.loadFilelist()
-
-        },
-
-
-
+ 
+        }
     },
+ 
     beforeUnmount() {
         this.saveinterval.removeEventListener('action', this.saveContent);
         this.saveinterval.stop() 
@@ -559,17 +746,32 @@ export default {
         this.clockinterval.stop() 
         
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
-        if (isElectronWindow(window)) {
-            window.ipcRenderer.removeAllListeners('getmaterials')
-            window.ipcRenderer.removeAllListeners('fileerror')
-            window.ipcRenderer.removeAllListeners('save')
+
+        const geogebraWebview = document.getElementById('geogebraframe');
+        if (geogebraWebview) {
+            if (this._onWebviewConsoleMessage) {
+                geogebraWebview.removeEventListener('console-message', this._onWebviewConsoleMessage);
+            }
+            if (this._onDomReady) {
+                geogebraWebview.removeEventListener('dom-ready', this._onDomReady);
+            }
         }
+
+        if (this._onUnhandledRejection) {
+            window.removeEventListener('unhandledrejection', this._onUnhandledRejection);
+        }
+
+        signalBridge.removeAllListeners('getmaterials')
+        signalBridge.removeAllListeners('fileerror')
+        signalBridge.removeAllListeners('save')
+        
+        
         // Clean up preview click listener
         const preview = document.querySelector("#preview");
         if (preview && this._onPreviewClick) {
             preview.removeEventListener("click", this._onPreviewClick);
         }
-    },
+    }
 }
 
 </script>
@@ -611,7 +813,7 @@ export default {
         height: 100% !important;
         width: 100% !important;
     }
-    #app {
+    #q-app {
         display:block !important;
         height: 100% !important;
        
