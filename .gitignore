@@ -22,3 +22,6 @@ release
 logs
 *.log
 npm-debug.log*
+
+# Capacitor build artifacts (recreated on each build:ios)
+/student/src-capacitor/www/
