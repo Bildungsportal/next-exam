@@ -1,22 +1,39 @@
 <template>
-    <!-- Header START -->
-    <div :key="0" class="w-100 p-3 text-white bg-dark text-left " style="min-width: 1180px; height: 63px; z-index: 100;">
-        <span class="text-white m-1">
-            <img src="/src/assets/img/svg/speedometer.svg" class="white me-2  " width="32" height="32" >
-            <span style="font-size:23px;" class="align-middle me-1 ">Next-Exam</span>
-        </span>
-        <span class="align-middle ms-3" style="float: right; font-size:23px;">Dashboard</span>
-        <div v-if="serverstatus.useExamSections" style="position: absolute; left:257px; top:38px; min-width: 550px; z-index: 0;">
-            <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 1 && !serverstatus.examSections[1].locked, 'sectionbuttonactivered': serverstatus.activeSection == 1 && serverstatus.examSections[1].locked, 'btn-secondary': serverstatus.activeSection != 1,'btn-danger': serverstatus.examSections[1].locked}">{{ serverstatus.examSections[1].sectionname }}</div>
-            <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 2 && !serverstatus.examSections[2].locked, 'sectionbuttonactivered': serverstatus.activeSection == 2 && serverstatus.examSections[2].locked, 'btn-secondary': serverstatus.activeSection != 2,'btn-danger': serverstatus.examSections[2].locked}">{{ serverstatus.examSections[2].sectionname }}</div>
-            <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 3 && !serverstatus.examSections[3].locked, 'sectionbuttonactivered': serverstatus.activeSection == 3 && serverstatus.examSections[3].locked, 'btn-secondary': serverstatus.activeSection != 3,'btn-danger': serverstatus.examSections[3].locked}">{{ serverstatus.examSections[3].sectionname }}</div>
-            <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 4 && !serverstatus.examSections[4].locked, 'sectionbuttonactivered': serverstatus.activeSection == 4 && serverstatus.examSections[4].locked, 'btn-secondary': serverstatus.activeSection != 4,'btn-danger': serverstatus.examSections[4].locked}">{{ serverstatus.examSections[4].sectionname }}</div>
-        </div>
-        <div class="btn btn-sm btn-cyan m-0 me-1 mt-0" style="float: right; padding:3px; height:32px; width:32px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22" > </div>
-        <div class="btn btn-sm btn-danger m-0 me-1 mt-0" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style="float: right; height:32px;"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" >&nbsp; {{$t('dashboard.stopserver')}}&nbsp; </div>
-        <div v-if="!hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 me-1 " style="cursor: unset; float: right">{{ $t("general.offline") }}</div>
+
+
+<!-- Header START -->
+<div :key="0" class="w-100 p-3 text-white bg-dark text-left " style="position: relative; display: flex; align-items: center; justify-content: space-between; min-width: 1180px; height: 62px; z-index: 100;">
+    <span class="text-white m-1" style="flex-shrink: 0;">
+        <img src="/src/assets/img/svg/speedometer.svg" class="white me-2  " width="32" height="32" >
+        <span style="font-size:23px;" class="align-middle me-1 ">Next-Exam</span>
+    </span>
+
+    <div style="flex-shrink: 0; text-align: right;">
+        <div class="btn btn-sm btn-cyan m-0 me-1 mt-0" style=" padding:3px; height:32px; width:32px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22" > </div>
+        <div class="btn btn-sm btn-danger m-0 me-1 mt-0" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style=" height:32px;"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" >&nbsp; {{$t('dashboard.stopserver')}}&nbsp; </div>
+        <div v-if="!hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 me-1 " style="cursor: unset;">{{ $t("general.offline") }}</div>
+        <span class="align-middle ms-3" style="font-size:23px;">Dashboard</span>
     </div>
-    <!-- Header END -->
+    
+    <div v-if="serverstatus.useExamSections && !serverstatus.allowSectionSwitch" style="position: absolute; left:257px; bottom: 0; min-width: 550px; z-index: 0;">
+        <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 1 && !serverstatus.examSections[1].locked, 'sectionbuttonactivered': serverstatus.activeSection == 1 && serverstatus.examSections[1].locked, 'btn-secondary': serverstatus.activeSection != 1,'btn-danger': serverstatus.examSections[1].locked}">{{ serverstatus.examSections[1].sectionname }}</div>
+        <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 2 && !serverstatus.examSections[2].locked, 'sectionbuttonactivered': serverstatus.activeSection == 2 && serverstatus.examSections[2].locked, 'btn-secondary': serverstatus.activeSection != 2,'btn-danger': serverstatus.examSections[2].locked}">{{ serverstatus.examSections[2].sectionname }}</div>
+        <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 3 && !serverstatus.examSections[3].locked, 'sectionbuttonactivered': serverstatus.activeSection == 3 && serverstatus.examSections[3].locked, 'btn-secondary': serverstatus.activeSection != 3,'btn-danger': serverstatus.examSections[3].locked}">{{ serverstatus.examSections[3].sectionname }}</div>
+        <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 4 && !serverstatus.examSections[4].locked, 'sectionbuttonactivered': serverstatus.activeSection == 4 && serverstatus.examSections[4].locked, 'btn-secondary': serverstatus.activeSection != 4,'btn-danger': serverstatus.examSections[4].locked}">{{ serverstatus.examSections[4].sectionname }}</div>
+    </div>
+    <!-- allowSectionSwitch: active tab white (sectionbuttonactive), no red border; tabs only switch dashboard view -->
+    <div v-if="serverstatus.useExamSections && serverstatus.allowSectionSwitch" style="position: absolute; left:257px; bottom: 0; min-width: 550px; z-index: 0;">
+        <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 1 ? 'sectionbuttonactive' : 'btn-secondary'">{{ serverstatus.examSections[1].sectionname }}</div>
+        <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 2 ? 'sectionbuttonactive' : 'btn-secondary'">{{ serverstatus.examSections[2].sectionname }}</div>
+        <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 3 ? 'sectionbuttonactive' : 'btn-secondary'">{{ serverstatus.examSections[3].sectionname }}</div>
+        <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 4 ? 'sectionbuttonactive' : 'btn-secondary'">{{ serverstatus.examSections[4].sectionname }}</div>
+    </div>
+
+
+    
+
+</div>
+<!-- Header END -->
 
 
 <div id="wrapper" class="w-100 h-100 d-flex"  style="z-index: 100;">
@@ -327,8 +344,12 @@
                 <label for="screenshotOcr" class="form-check-label">{{$t('dashboard.ocr')}}</label>
             </div>
             <div class="form-check form-switch  m-1 mb-2">
-                <input v-model=serverstatus.useExamSections @click="" :title="$t('dashboard.activatesections')" checked=false class="form-check-input" type="checkbox" id="activatesections">
-                <label class="form-check-label">{{$t('dashboard.activatesections')}}   </label><br>
+                <input v-model=serverstatus.useExamSections @change="onToggleExamSections" :disabled="sectionsLocked" :title="sectionsLocked ? $t('dashboard.sectionslocked') : $t('dashboard.activatesections')" checked=false class="form-check-input" type="checkbox" id="activatesections">
+                <label class="form-check-label" :class="{'text-muted': sectionsLocked}">{{$t('dashboard.activatesections')}}   </label><br>
+            </div>
+            <div v-if="serverstatus.useExamSections" class="form-check form-switch  m-1 mb-2 ms-3">
+                <input v-model=serverstatus.allowSectionSwitch @click="" :title="$t('dashboard.allowsectionswitch')" checked=false class="form-check-input" type="checkbox" id="allowsectionswitch">
+                <label class="form-check-label">{{$t('dashboard.allowsectionswitchshort')}}   </label><br>
             </div>
             <div class="form-check form-switch  m-1 mb-2">
                 <input v-model=serverstatus.examSections[serverstatus.activeSection].groups @click="setupGroups()" :title="$t('dashboard.groupinfo')" checked=false class="form-check-input" type="checkbox" id="activategroups">
@@ -698,6 +719,7 @@ export default {
                 examTeachers: [],
                 examSecurityKey: "oI9xGzHkUFe7Lg2iTXHkYp4pDab3Nvj4kFEOqA93cZE=",
                 useExamSections: false, //if false exam section 1 is used and no tabs are displayed
+                allowSectionSwitch: false, //allow students to switch between exam sections
                 activeSection: 1,
                 lockedSection: 1,
                 examSections: {
@@ -722,6 +744,8 @@ export default {
                         fontsize: '12pt',
                         audioRepeat: 0,
                         domainname: false,
+                        blockSubdomains: false,
+                        blockSubfolders: false,
                         rdpConfig: null,
 
                         groups: false, 
@@ -749,6 +773,8 @@ export default {
                         fontsize: '12pt',
                         audioRepeat: 0,
                         domainname: false,
+                        blockSubdomains: false,
+                        blockSubfolders: false,
                         rdpConfig: null,
 
                         groups: false, 
@@ -816,12 +842,25 @@ export default {
 
 computed: {
     lockInExammode() {
+        //if sections are disabled, return true if exammode is active
         if (!this.serverstatus.useExamSections) {
             return this.serverstatus.exammode;
         }
-        return this.serverstatus.exammode && this.serverstatus.examSections[this.serverstatus.activeSection].locked;
+
+
+        if (this.serverstatus.allowSectionSwitch) {  //students decide which section to use - do not change them anymore once locked
+            return this.serverstatus.exammode 
+        }
+        else { // allow reconfiguration of sections that are noch active yet
+            return this.serverstatus.exammode && this.serverstatus.examSections[this.serverstatus.activeSection].locked;
+        }
     },
-    
+
+    // disable sections toggle when exammode is active and any section is locked
+    sectionsLocked() {
+        return this.serverstatus.exammode && Object.values(this.serverstatus.examSections).some(s => s.locked)
+    },
+
     lockDownload() {
         const examType = this.serverstatus.examSections[this.serverstatus.activeSection].examtype;
         const section = this.serverstatus.examSections[this.serverstatus.activeSection];
@@ -1162,7 +1201,14 @@ computed: {
             }
         },
 
-        // activate section and check if we need to lock the section (start exam section for all students)
+        // when exam sections are toggled off, reset activeSection to 1
+        onToggleExamSections(){
+            if (!this.serverstatus.useExamSections && this.serverstatus.activeSection > 1) {
+                this.serverstatus.activeSection = 1
+            }
+        },
+
+        // activate section: when allowSectionSwitch only switch view; else optionally lock section for all students (confirm dialog)
         activateSection(section){
             this.serverstatus.activeSection = section
             this.setServerStatus()
@@ -1170,6 +1216,7 @@ computed: {
             // Zeige die für diese Section konfigurierten Gruppen an (ohne Schüler zu informieren)
             this.restoreGroupAssignments(false)
 
+            if (this.serverstatus.allowSectionSwitch) return
             if (this.serverstatus.exammode && !this.serverstatus.examSections[this.serverstatus.activeSection].locked) {
                 this.$swal.fire({
                     customClass: {
@@ -1345,20 +1392,19 @@ computed: {
         showinfo(){
             let info = `<span> IP: <strong>${this.serverip}</strong> \nName: ${this.servername}  \nPin: ${this.serverstatus.pin} </span>`
             this.$swal.fire({ 
-                title: `<div style="display: flex; margin-top:0; justify-content: center">
-                            <div style="text-align: right; margin-right: 10px; font-weight:normal; font-size: 0.8em;">${this.$t("dashboard.name")}:
-                            ${this.$t("dashboard.server")}:
-                            ${this.$t("dashboard.pin")}:
-                            </div>
-                            <div style="text-align: left;font-size: 0.8em;">${this.servername}
-                            ${this.serverip}
-                            ${this.serverstatus.pin} 
+                title: `<div style="justify-content: center;""><div style="display:inline-block; text-align: right; margin-right: 10px; font-weight:normal; font-size: 1.1em;">${this.$t("dashboard.name")}:
+                                ${this.$t("dashboard.server")}:
+                                ${this.$t("dashboard.pin")}:
+                                
+                            </div><div style="display:inline-block; text-align: left;font-size: 1.1em;">${this.servername}
+                                ${this.serverip}
+                                ${this.serverstatus.pin} 
 
                             </div>
                         </div>`,
                 icon: "info",
                 customClass: {
-                    popup: 'custom-swal2-popup',
+                    popup: 'custom-swal2-popup-info',
                 },
             })
         },
@@ -2841,7 +2887,9 @@ hr {
 }
 
 
-
+.custom-swal2-popup-info {
+    width: 700px !important;
+}
 
 
 

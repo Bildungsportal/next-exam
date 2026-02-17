@@ -33,13 +33,12 @@
 
         <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
             <div v-if="(file.filetype == 'bak')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
-            <div v-if="(file.filetype == 'docx')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
             <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
             <div v-if="(file.filetype == 'audio')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
             <div v-if="(file.filetype == 'image')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
         </div>
-        <div v-if="allowedUrls.length !== 0"  v-for="allowedUrl in allowedUrls  " class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button" :title="allowedUrl" @click="showUrl(allowedUrl)">
-            <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{allowedUrl}} 
+        <div v-if="allowedUrls.length !== 0"  v-for="allowedUrl in allowedUrls  " class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button" :title="getUrlDisplay(allowedUrl)" @click="showUrl(getUrlDisplay(allowedUrl))">
+            <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{getUrlDisplay(allowedUrl)}}
         </div>
         <!-- exam materials end -->
 
@@ -109,6 +108,10 @@ import { getExamMaterials, loadPDF, loadImage} from '../utils/filehandler.js'
 import PdfviewPane from '../components/PdfviewPane.vue'
 import WebviewPane from '../components/WebviewPane.vue';
 import PdfOverlay from '../components/PdfRenderer.vue';
+import {SignalBridge} from '../utils/signalBridge.js'
+
+// signalBridge instance centralizes ipc calls with platform checks
+const signalBridge = new SignalBridge(window);
 
 export default {
     data() {
@@ -136,8 +139,9 @@ export default {
             config: this.$route.params.config,
             localLockdown: this.$route.params.localLockdown,
 
-            lockedSection: this.$route.params.serverstatus.lockedSection,
-            url: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.lockedSection].domainname,
+            // section and url will be resolved on first fetchInfo based on allowSectionSwitch
+            lockedSection: null,
+            url: null,
             domain: null,
 
             clientinfo: null,
@@ -183,6 +187,9 @@ export default {
         gracefullyExit:gracefullyExit,
         showUrl:showUrl,
         reconnect:reconnect,
+        getUrlDisplay(allowedUrl) {
+            return typeof allowedUrl === 'object' ? allowedUrl.url : allowedUrl;
+        },
         hidepreview(){
             let preview = document.querySelector("#preview")
             preview.style.display = 'none';
@@ -202,7 +209,7 @@ export default {
         },
        
         async sendFocuslost(){
-            let response = await window.ipcRenderer.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
+            let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
             if (!this.config.development && !response.focus){  //immediately block frontend
                 this.focus = false 
             }  
@@ -213,7 +220,7 @@ export default {
 
 
         async loadFilelist(){
-            let filelist = await window.ipcRenderer.invoke('getfilesasync', null)
+            let filelist = await signalBridge.invoke('getfilesasync', null)
             this.localfiles = filelist;
         },
         
@@ -223,7 +230,7 @@ export default {
             let backupfileName = filename ? filename : this.clientname + ".bak"
             console.log(`activesheets @ loadBackupFile: Checking for backup file: ${backupfileName}`)
             try {
-                let backupfileContent = await window.ipcRenderer.invoke('getbackupfile', backupfileName )
+                let backupfileContent = await signalBridge.invoke('getbackupfile', backupfileName )
                
                 if (backupfileContent){
                     // Validate that the content is JSON-parseable before offering to load it
@@ -304,7 +311,7 @@ export default {
                 }
                 
                 // Read the .bak file via IPC
-                const bakContent = await window.ipcRenderer.invoke('getbackupfile', filename);
+                const bakContent = await signalBridge.invoke('getbackupfile', filename);
                 
                 if (!bakContent) {
                     console.warn('activesheets @ loadBAK: No content found in .bak file');
@@ -372,7 +379,7 @@ export default {
             this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
         },  
         async fetchInfo() {
-            let getinfo = await window.ipcRenderer.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+            let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
             
             this.clientinfo = getinfo.clientinfo;
             this.token = this.clientinfo.token
@@ -380,8 +387,15 @@ export default {
             this.clientname = this.clientinfo.name
             this.exammode = this.clientinfo.exammode
             this.pincode = this.clientinfo.pin
+            
             this.serverstatus = getinfo.serverstatus
-            this.lockedSection = this.clientinfo.lockedSection
+
+            // decide which locked section index is authoritative (client vs server)
+            const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
+                ? this.clientinfo.lockedSection
+                : this.serverstatus.lockedSection
+
+            this.lockedSection = sectionIndex
 
             if (!this.focus){  this.entrytime = new Date().getTime()}
             if (this.clientinfo && this.clientinfo.token){  this.online = true  }
@@ -392,8 +406,8 @@ export default {
             
             this.internetCheckCounter++
             if (this.internetCheckCounter % 5 === 0){
-                this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-                this.hostip = await window.ipcRenderer.invoke('checkhostip')
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+                this.hostip = await signalBridge.invoke('checkhostip')
                 this.internetCheckCounter = 0
             }
 
@@ -474,7 +488,7 @@ export default {
             }
             if (why === "exitexam") { 
                 // stop clipboard clear interval
-                ipcRenderer.send('restrictions')
+                signalBridge.send('restrictions')
 
                 this.$swal.fire({
                     title: this.$t("editor.leaving"),
@@ -517,7 +531,7 @@ export default {
             });
             
             // Save form data to .bak file via IPC
-            ipcRenderer.send('saveActivesheetsBak', {
+            signalBridge.send('saveActivesheetsBak', {
                 filename: filename || this.clientname,
                 formData: formData
             });
@@ -527,12 +541,12 @@ export default {
             // We'll use getPDFbase64 to render the current view
             if (this.currentpreviewBase64) {
                 // If we have a preview PDF, use it
-                ipcRenderer.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: this.currentpreviewBase64 })  
+                signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: this.currentpreviewBase64 })  
             } else {
                 // Otherwise generate from current view
-                let response = await window.ipcRenderer.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true})
+                let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true})
                 if (response?.status == "success") {
-                    ipcRenderer.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })  
+                    signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })  
                 }
             }
             this.loadFilelist()
@@ -589,7 +603,7 @@ export default {
                 console.error('activesheets @ sendExamToTeacher: Invalid section data');
                 return;
             }
-            let response = await window.ipcRenderer.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true})
+            let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true})
 
             if (response?.status == "success"){
                 let base64pdf = response.base64pdf
@@ -658,10 +672,14 @@ export default {
         }
     },
     mounted() {
+        console.log("activesheets @ mounted")
         this.currentFile = this.clientname
         this.entrytime = new Date().getTime()  
     
         this.$nextTick(async () => { 
+
+            await this.fetchInfo()  // Initial fetch for clientinfo, serverstatus and lockedSection
+
             this.fetchinfointerval = new SchedulerService(5000);
             this.fetchinfointerval.addEventListener('action',  this.fetchInfo);
             this.fetchinfointerval.start();
@@ -684,28 +702,31 @@ export default {
 
             document.body.addEventListener('mouseleave', this.sendFocuslost);
             
-            ipcRenderer.on('getmaterials', (event) => {   this.getExamMaterials()  });
+            signalBridge.on('getmaterials', (event) => {   this.getExamMaterials()  });
             
-            ipcRenderer.on('finalsubmit', (event) => {  // triggered on exit exam mode - send exam to teacher
+            signalBridge.on('finalsubmit', (event) => {  // triggered on exit exam mode - send exam to teacher
                 console.log("activesheets @ finalsubmit: submit exam request received")
                 this.sendExamToTeacher(true) 
             }); 
 
-            ipcRenderer.on('submitexam', (event, why) => {  //send current work as base64 to teacher
+            signalBridge.on('submitexam', (event, why) => {  //send current work as base64 to teacher
                 console.log("activesheets @ submitexam: submit exam request received")
                 this.printBase64() 
             }); 
             
-            ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
                 console.log("activesheets @ save: Teacher saverequest received")
                 this.saveContent(true, why) 
             }); 
             
-            ipcRenderer.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
+            signalBridge.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
                 this.printdenied(why)
             });
 
-            
+            signalBridge.on('backup', (event, filename) => {
+                console.log("activesheets @ backup: Replace event received ")
+                this.loadBAK(filename)
+            });
 
             // add some eventlisteners once
             this._onPreviewClick = function() {  
@@ -716,14 +737,13 @@ export default {
             document.querySelector("#preview").addEventListener("click", this._onPreviewClick);
 
 
-            this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-            this.hostip = await window.ipcRenderer.invoke('checkhostip')
+            this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+            this.hostip = await signalBridge.invoke('checkhostip')
 
-
+           
             this.hidepreview()
             this.loadFilelist()
             await this.getExamMaterials()
-            this.fetchInfo()  // Initial fetch
 
             this.loadPdfParserHtml()
 
@@ -759,13 +779,11 @@ export default {
         }
 
         // Clean up IPC listeners
-        if (typeof ipcRenderer !== 'undefined' && ipcRenderer) {
-            ipcRenderer.removeAllListeners('getmaterials');
-            ipcRenderer.removeAllListeners('finalsubmit');
-            ipcRenderer.removeAllListeners('submitexam');
-            ipcRenderer.removeAllListeners('save');
-            ipcRenderer.removeAllListeners('denied');
-        }
+        signalBridge.removeAllListeners('getmaterials');
+        signalBridge.removeAllListeners('finalsubmit');
+        signalBridge.removeAllListeners('submitexam');
+        signalBridge.removeAllListeners('save');
+        signalBridge.removeAllListeners('denied');
     },
     
 }

@@ -6,6 +6,7 @@ import de from './de.json'
 const i18n = createI18n({
     locale: 'de',
     fallbackLocale: 'en',
+    legacy: false,
     messages: {
         en,
         de

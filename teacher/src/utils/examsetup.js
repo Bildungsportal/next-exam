@@ -5,6 +5,10 @@ import CryptoJS from 'crypto-js';
  * Website
  */
 function getTestURL(){
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    let savedBlockSubdomains = false;
+    let savedBlockSubfolders = false;
+
     this.$swal.fire({
         customClass: {
             popup: 'my-popup',
@@ -20,26 +24,41 @@ function getTestURL(){
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
         html: `
-            <div class="my-content">                   
+            <div class="my-content">
                 zB.: https://www.classtime.com
             </div>
-            `,  
+            <div class="my-content" style="margin-top: 10px; text-align: left; display: inline-block;">
+                <label style="display: block; margin-bottom: 4px; font-size: 0.85em; cursor: pointer;" title="${this.$t("dashboard.blockSubdomainsInfo")}">
+                    <input type="checkbox" id="websiteBlockSubdomains" style="margin-right: 6px;"${section.blockSubdomains ? ' checked' : ''}> ${this.$t("dashboard.blockSubdomains")}
+                </label>
+                <label style="display: block; font-size: 0.85em; cursor: pointer;" title="${this.$t("dashboard.blockSubfoldersInfo")}">
+                    <input type="checkbox" id="websiteBlockSubfolders" style="margin-right: 6px;"${section.blockSubfolders ? ' checked' : ''}> ${this.$t("dashboard.blockSubfolders")}
+                </label>
+            </div>
+            `,
         didOpen: () => {
-            document.getElementsByClassName('my-custom-input')[0].value = this.serverstatus.examSections[this.serverstatus.activeSection].domainname || ''
+            document.getElementsByClassName('my-custom-input')[0].value = section.domainname || ''
         },
         inputValidator: (value) => {
             if (!isValidFullDomainName(value)) {return 'Ungültige Domain!'}
-        }  
+        },
+        preConfirm: () => {
+            const blockSubdomainsEl = document.getElementById('websiteBlockSubdomains');
+            const blockSubfoldersEl = document.getElementById('websiteBlockSubfolders');
+            savedBlockSubdomains = blockSubdomainsEl ? blockSubdomainsEl.checked : false;
+            savedBlockSubfolders = blockSubfoldersEl ? blockSubfoldersEl.checked : false;
+        }
     })
     .then((input) => {
         let domainname = input.value
-        this.serverstatus.examSections[this.serverstatus.activeSection].domainname = isValidFullDomainName(  domainname ) ? domainname : null
+        section.domainname = isValidFullDomainName(domainname) ? domainname : null
+        section.blockSubdomains = savedBlockSubdomains
+        section.blockSubfolders = savedBlockSubfolders
 
-        if (!this.serverstatus.examSections[this.serverstatus.activeSection].domainname) { this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math"}
+        if (!section.domainname) { section.examtype = "math"}
         else { this.backupinterval.stop(); this.autobackup = false;}  // no auto backup in this exam mode
-        //console.log( this.serverstatus.domainname )
         this.setServerStatus()
-    })  
+    })
 }
 
 
@@ -767,10 +786,20 @@ function defineMaterials(who) {
     htmlcontent += `<div class="my-content" style="margin-top: 10px;">
         <h6>${this.$t("dashboard.allowedURL")}</h6>
         <input type="text" id="allowedURL" class="form-control my-custom-input" style="width: 60%!important; margin:4px!important;" placeholder="https://www.example.com">
-    </div>` 
+        <div style="margin-left: 6px; margin-top: 6px; text-align: left; display: inline-block;">
+            <label style="display: block; margin-bottom: 4px; font-size: 0.85em; cursor: pointer;" title="${this.$t("dashboard.blockSubdomainsInfo")}">
+                <input type="checkbox" id="blockSubdomains" style="margin-right: 6px;"> ${this.$t("dashboard.blockSubdomains")}
+            </label>
+            <label style="display: block; font-size: 0.85em; cursor: pointer;" title="${this.$t("dashboard.blockSubfoldersInfo")}">
+                <input type="checkbox" id="blockSubfolders" style="margin-right: 6px;"> ${this.$t("dashboard.blockSubfolders")}
+            </label>
+        </div>
+    </div>`
          
     let activeGroup = "a"  // prinzipiell ist jeder user automatisch in der gruppe a
     let savedAllowedUrl = ''; // Store allowedURL value before dialog closes (Electron 39 compatibility)
+    let savedBlockSubdomains = false;
+    let savedBlockSubfolders = false;
 
     this.$swal.fire({
         customClass: {
@@ -839,24 +868,28 @@ function defineMaterials(who) {
             // Save allowedURL value before dialog closes (Electron 39 compatibility)
             const allowedURLElement = document.getElementById('allowedURL');
             savedAllowedUrl = allowedURLElement ? allowedURLElement.value : '';
+            const blockSubdomainsEl = document.getElementById('blockSubdomains');
+            const blockSubfoldersEl = document.getElementById('blockSubfolders');
+            savedBlockSubdomains = blockSubdomainsEl ? blockSubdomainsEl.checked : false;
+            savedBlockSubfolders = blockSubfoldersEl ? blockSubfoldersEl.checked : false;
         },
     })
     .then(async (input) => {
 
         const allowedUrl = savedAllowedUrl; // Use saved value instead of reading from DOM
         if (allowedUrl) {
-            //this.serverstatus.examSections[this.serverstatus.activeSection].allowedUrls.push(allowedUrl);
+            const urlEntry = {
+                url: allowedUrl,
+                blockSubdomains: savedBlockSubdomains,
+                blockSubfolders: savedBlockSubfolders
+            };
 
             if (activeGroup === "a" || activeGroup === "all") {
-                //TODO:  check if site already exists and do not add if it does
-                this.serverstatus.examSections[this.serverstatus.activeSection].groupA.allowedUrls.push(allowedUrl);
+                this.serverstatus.examSections[this.serverstatus.activeSection].groupA.allowedUrls.push(urlEntry);
             }
             if (activeGroup === "b" || activeGroup === "all") {
-                //TODO:  check if site already exists and do not add if it does
-                this.serverstatus.examSections[this.serverstatus.activeSection].groupB.allowedUrls.push(allowedUrl);
+                this.serverstatus.examSections[this.serverstatus.activeSection].groupB.allowedUrls.push(urlEntry);
             }
-
-           
         }
       
         if (!input.value) { 
@@ -1104,8 +1137,9 @@ function handleAllowedUrlRemove(group, index){
 }
 
 function openAllowedUrl(allowedUrl){
-    
-    this.urlForWebview = allowedUrl;        // this is used to open the allowed url in the webview pane
+    // Support both object format {url, blockSubdomains, blockSubfolders} and legacy string format
+    const url = typeof allowedUrl === 'object' ? allowedUrl.url : allowedUrl;
+    this.urlForWebview = url;        // this is used to open the allowed url in the webview pane
     this.webviewVisible = true;             // this is used to show the webview pane
 
     document.querySelector("#pdfpreview").style.display = 'block';

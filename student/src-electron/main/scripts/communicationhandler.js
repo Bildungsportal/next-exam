@@ -36,11 +36,10 @@ import { Worker } from 'worker_threads';
 import platformDispatcher from './platformDispatcher.js';
 import { runRemoteCheck } from './remoteCheck.js'
 import languageToolServer from './lt-server.js';
-
 const shell = (cmd) => {   return execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }); };  // stderr unterdrückt 
 const agent = new https.Agent({ rejectUnauthorized: false });
 const __dirname = import.meta.dirname; 
-
+import { switchExamSection } from './switchExamSection.js';
  /**
   * Handles information fetching from the server and acts on status updates
   */
@@ -257,7 +256,7 @@ const __dirname = import.meta.dirname;
             /**
              * MACOS WORKAROUND - switch to pagecapture if no permissons are granted
              */
-            if (process.platform !== "darwin" && this.firstCheckScreenshot && imgBuffer !== null){  //this is for macOS because it delivers a blank background screenshot without permissions. we catch that case with a workaround
+            if (process.platform === "darwin" && this.firstCheckScreenshot && imgBuffer !== null){  //this is for macOS because it delivers a blank background screenshot without permissions. we catch that case with a workaround
                 this.firstCheckScreenshot = false   //never do this again
                 const publicPath = platformDispatcher.publicBase;
                 try{
@@ -372,7 +371,10 @@ const __dirname = import.meta.dirname;
      * could also handle kick, focusrestore, and even trigger file requests
      */
     async processUpdatedServerstatus(serverstatus, studentstatus){
-       
+        // update serverstatus in multicastclient so getinfoasync (and thus the frontend) returns current serverstatus on next fetch
+        this.multicastClient.serverstatus = serverstatus;
+        
+        
         ///////////////////////////////
         // individual status updates
 
@@ -491,151 +493,30 @@ const __dirname = import.meta.dirname;
          * if handled by student the teacher stttus is ignored and the swich section function is called directly (probably move to ipchandler.js)
          */
 
+        if (WindowHandler.examwindow){
+            if (serverstatus.allowSectionSwitch !== WindowHandler.examwindow.serverstatus.allowSectionSwitch){
+                // update serverstatus in examwindow so it is available for the frontend
+                log.info("communicationhandler @ processUpdatedServerstatus: permission to switch exam section changed")
+                WindowHandler.examwindow.serverstatus.allowSectionSwitch = serverstatus.allowSectionSwitch
+            }
+        }
+
         // if student is in locked state in exam mode
         if (serverstatus.exammode && this.multicastClient.clientinfo.exammode){
-           
-
-            //check if the current active section is the same as the one in the serverstatus - if not change to the new section
-            if (serverstatus.lockedSection !== this.multicastClient.clientinfo.lockedSection){
-                log.warn(`communicationhandler @ processUpdatedServerstatus: changing section to ${serverstatus.lockedSection} ${serverstatus.examSections[serverstatus.lockedSection].sectionname} , Examtype: ${serverstatus.examSections[serverstatus.lockedSection].examtype}` )
-
-           
-                const currentLockedSection = this.multicastClient.clientinfo.lockedSection; // Current section number (source for saving)
-                const newLockedSection = serverstatus.lockedSection; // New section number (source for loading)
-                const examDir = this.config.examdirectory;
-
-
-                //save all files from the old section (if exam mode is "editor") and send to teacher - trigger sendToTeacher()
-                if (this.multicastClient.clientinfo.examtype === "editor"){
-                    log.info("communicationhandler @ processUpdatedServerstatus: sending exam to teacher (final submit)")
-
-                    // send current work as base64 to teacher (stores pdf in ABGABE folder with submission number)
-                    let pdf = await this.getBase64PDF(this.multicastClient.clientinfo.submissionnumber, serverstatus.examSections[currentLockedSection].sectionname)  // local function to get base64 pdf from editor
-                    if (pdf.status === "success"){
-                        this.sendBase64PDFtoTeacher(pdf.base64pdf, currentLockedSection)
+            if (serverstatus.useExamSections){  // exam sections are enabled
+                if (!serverstatus.allowSectionSwitch){  // server handles section switch
+                    //check if the current active section is the same as the one in the serverstatus - if not change to the new section and send to teacher
+                    if (serverstatus.lockedSection !== this.multicastClient.clientinfo.lockedSection){
+                        // call switchExamSection function to switch to the new section
+                        switchExamSection(this, serverstatus, serverstatus.lockedSection)
                     }
-                }
-                this.sendToTeacher() //backup local files and send to teacher (archive with timestamp)
-
-
-             
-
-                //wait 1 second and cleanup NEXT-EXAM-STUDENT-WORKDIR
-                await this.sleep(2000)
-         
-                
-                // update examtype in clientinfo
-                this.multicastClient.clientinfo.examtype = serverstatus.examSections[serverstatus.lockedSection].examtype
-                // Update the locked section AFTER saving the old state
-                this.multicastClient.clientinfo.lockedSection = newLockedSection;
-
-
-
-                // MOVE Section Files to a subdirectory named by the CURRENT locked section
-                try {
-                    // PART 1: SAVE CURRENT EXAMDIR FILES to a subdirectory named by the CURRENT locked section
-                                    
-                    if (fs.existsSync(examDir) && currentLockedSection != null && currentLockedSection !== undefined) { // Check if main dir exists and a section is currently active
-                        
-                        log.debug(`communicationhandler @ processUpdatedServerstatus: Saving content from examDir to section ${currentLockedSection}`);
-                
-                        const savePath = `${examDir}/${currentLockedSection}`;
-                        if (!fs.existsSync(savePath)) {
-                            fs.mkdirSync(savePath, { recursive: true }); // Create save directory if it doesn't exist
-                        }
-                
-                        const files = fs.readdirSync(examDir);
-                        log.info(`communicationhandler @ processUpdatedServerstatus: Found ${files.length} items in examDir to save`);
-                        
-                        let filesSaved = 0;
-                        for (const file of files) {
-                            const oldPath = `${examDir}/${file}`;
-                            const stat = fs.statSync(oldPath); // Get file stats
-                            
-                            // Only process actual FILES, not directories (like the section folders themselves)
-                            if (stat.isFile()) {
-                                const newPath = `${savePath}/${file}`;
-                                fs.copyFileSync(oldPath, newPath); // Copy file
-                                fs.unlinkSync(oldPath); // Delete original file from examDir
-                                filesSaved++;
-                                log.info(`communicationhandler @ processUpdatedServerstatus: Saved file ${file} to section ${currentLockedSection}`);
-                            } else {
-                                log.info(`communicationhandler @ processUpdatedServerstatus: Skipping non-file (folder) item ${file} in examDir`);
-                            }
-                        }
-                        log.info(`communicationhandler @ processUpdatedServerstatus: Successfully saved ${filesSaved} files to section ${currentLockedSection}`);
-                    } else {
-                        log.warn(`communicationhandler @ processUpdatedServerstatus: Skipping save - examDir exists: ${fs.existsSync(examDir)}, currentLockedSection: ${currentLockedSection}`);
-                    }
-                
-                    // PART 2: LOAD FILES from the subdirectory named by the NEW locked section to examDir
-                    if (newLockedSection != null && newLockedSection !== undefined) {
-                        log.debug(`communicationhandler @ processUpdatedServerstatus: Loading content from section ${newLockedSection} to examDir`);
-                
-                        const loadPath = `${examDir}/${newLockedSection}`;
-                        if (fs.existsSync(loadPath)) { // Check if the new section folder exists
-                            const filesToLoad = fs.readdirSync(loadPath);
-                            log.info(`communicationhandler @ processUpdatedServerstatus: Found ${filesToLoad.length} items in section ${newLockedSection} directory`);
-                            
-                            let filesCopied = 0;
-                            for (const file of filesToLoad) {
-                                const sourcePath = `${loadPath}/${file}`;
-                                const destPath = `${examDir}/${file}`;
-                                const stat = fs.statSync(sourcePath);
-                                
-                                if (stat.isFile()) { // Ensure only files are copied back
-                                    fs.copyFileSync(sourcePath, destPath); // Copy file to examDir
-                                    filesCopied++;
-                                    log.info(`communicationhandler @ processUpdatedServerstatus: Copied file ${file} from section ${newLockedSection} to examDir`);
-                                } else {
-                                    log.warn(`communicationhandler @ processUpdatedServerstatus: Skipping non-file item ${file} in section ${newLockedSection} directory`);
-                                }
-                            }
-                            log.info(`communicationhandler @ processUpdatedServerstatus: Successfully copied ${filesCopied} files from section ${newLockedSection} to examDir`);
-                        } else {
-                             log.info(`communicationhandler @ processUpdatedServerstatus: New locked section directory ${newLockedSection} does not exist. Starting with a clean state.`);
-                        }
-                    } else {
-                        log.warn(`communicationhandler @ processUpdatedServerstatus: newLockedSection is falsy (${newLockedSection}), skipping file load`);
-                    }
-                } catch (error) {
-                    log.error(`communicationhandler @ processUpdatedServerstatus: Error during folder operation - ${error}`);
-                    log.error(`communicationhandler @ processUpdatedServerstatus: Error stack: ${error.stack}`);
-                    log.error(`communicationhandler @ processUpdatedServerstatus: currentLockedSection: ${currentLockedSection}, newLockedSection: ${newLockedSection}, examDir: ${examDir}`);
-                }
-
-                /**
-                 *  Actually SWITCH EXAM SECTION
-                 */
-                //close exam window or relead the new exam section in the same window
-                if (WindowHandler.examwindow){
-
-
-                            // destroy devtools window - if you don't next-exam will crash silently on reload and section switch
-                        if (this.config.development){
-                            webContents.getAllWebContents().forEach(wc => {                        // alle WebViews des Childs
-                                if (wc.hostWebContents?.id === WindowHandler.examwindow.webContents.id && wc.isDevToolsOpened?.()){
-                                    log.info("communicationhandler @ switchExamSection: destroying devtools window")
-                                    wc.closeDevTools()                                                 // DT des WebViews schließen (auch detached)
-                                }
-                            })
-                        } 
-                        //close exam window and reopen it with the new exam section
-                        WindowHandler.examwindow.once('closed', () => {
-                            WindowHandler.examwindow = null;
-                            this.startExam(serverstatus);
-                        });
-                        WindowHandler.examwindow.close();
-                        WindowHandler.examwindow.destroy();
-
                 }
             }
         }
-        /**
-         * SWITCH EXAM SECTION  END
-         ************************************/
+   
       
 
+        
 
         if (serverstatus.screenslocked && !this.multicastClient.clientinfo.screenlock) {  this.activateScreenlock() }
         else if (!serverstatus.screenslocked ) { this.killScreenlock() }
@@ -644,9 +525,24 @@ const __dirname = import.meta.dirname;
         if (serverstatus.screenshotocr) { this.multicastClient.clientinfo.screenshotocr = true  }
         else { this.multicastClient.clientinfo.screenshotocr = false   }
 
-        // Groups handling
-        if (serverstatus.examSections[serverstatus.lockedSection].groups){ this.multicastClient.clientinfo.groups = true}
-        else { this.multicastClient.clientinfo.groups = false}
+        // Groups handling: use client's section when allowSectionSwitch, else server's; group membership from that section's groupA/groupB.users
+        const sectionForSync = serverstatus.allowSectionSwitch ? this.multicastClient.clientinfo.lockedSection : serverstatus.lockedSection;
+        const section = serverstatus.examSections[sectionForSync];
+        if (section?.groups) {
+            this.multicastClient.clientinfo.groups = true;
+            const clientname = this.multicastClient.clientinfo.name;
+            const groupA = section.groupA?.users ?? [];
+            const groupB = section.groupB?.users ?? [];
+            const prevGroup = this.multicastClient.clientinfo.group;
+            if (groupB.includes(clientname)) this.multicastClient.clientinfo.group = 'b';
+            else if (groupA.includes(clientname)) this.multicastClient.clientinfo.group = 'a';
+            else this.multicastClient.clientinfo.group = 'a';
+            if (this.multicastClient.clientinfo.group !== prevGroup && WindowHandler.examwindow) {
+                WindowHandler.examwindow.webContents.send('getmaterials');
+            }
+        } else {
+            this.multicastClient.clientinfo.groups = false;
+        }
 
         //update screenshotinterval
         if (serverstatus.screenshotinterval || serverstatus.screenshotinterval === 0) { //0 is the same as false or undefined but should be treated as number
@@ -823,15 +719,19 @@ const __dirname = import.meta.dirname;
         if (!primary || primary === "" || !primary.id){ primary = displays[0] }       
 
         this.multicastClient.clientinfo.exammode = true
-        this.multicastClient.clientinfo.lockedSection = serverstatus.lockedSection
-        this.multicastClient.clientinfo.cmargin = serverstatus.examSections[serverstatus.lockedSection].cmargin  // this is used to configure margin settings for the editor
-        this.multicastClient.clientinfo.linespacing = serverstatus.examSections[serverstatus.lockedSection].linespacing // we try to double linespacing on demand in pdf creation
-        this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[serverstatus.lockedSection].audioRepeat // restrict repetition of audio files (for listening comprehension)
+        // when allowSectionSwitch: client chooses section, clientinfo.lockedSection is authoritative; do not overwrite with server
+        if (!serverstatus.allowSectionSwitch || !this.multicastClient.clientinfo.lockedSection) {
+            this.multicastClient.clientinfo.lockedSection = serverstatus.lockedSection;
+        }
+        const effectiveSection = this.multicastClient.clientinfo.lockedSection;
+        this.multicastClient.clientinfo.cmargin = serverstatus.examSections[effectiveSection].cmargin  // this is used to configure margin settings for the editor
+        this.multicastClient.clientinfo.linespacing = serverstatus.examSections[effectiveSection].linespacing // we try to double linespacing on demand in pdf creation
+        this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[effectiveSection].audioRepeat // restrict repetition of audio files (for listening comprehension)
 
         if (!WindowHandler.examwindow){  // why do we check? because exammode is left if the server connection gets lost but students could reconnect while the exam window is still open and we don't want to create a second one
             log.info("communicationhandler @ startExam: creating exam window")
-            this.multicastClient.clientinfo.examtype = serverstatus.examSections[serverstatus.lockedSection].examtype
-            WindowHandler.createExamWindow(serverstatus.examSections[serverstatus.lockedSection].examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+            this.multicastClient.clientinfo.examtype = serverstatus.examSections[effectiveSection].examtype
+            WindowHandler.createExamWindow(serverstatus.examSections[effectiveSection].examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
         }
         else if (WindowHandler.examwindow){  //reconnect into active exam session with exam window already open
             log.error("communicationhandler @ startExam: found existing Examwindow..")

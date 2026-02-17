@@ -8,7 +8,7 @@
             <span class="fs-5 align-middle me-1" style="float: left;">{{clientname}} @ {{servername}} | {{pincode}}</span>
 
 
-            <span class="fs-5 align-middle me-4 green" style="float: left;" >| {{$t('student.connected')}}</span> 
+            <span class="fs-5 align-middle me-4 teal" style="float: left;" >| {{$t('student.connected')}}</span> 
         </div>
         <div v-if="!online && !localLockdown" class="header-item">
             <img src="/src/assets/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style=" float: left;" />
@@ -29,7 +29,16 @@
         
      
 
-      
+        <!-- Exam sections: show all 4 section buttons and current section; if allowSectionSwitch, buttons trigger switch-exam-section IPC -->
+        <div v-if="serverstatus?.useExamSections" class="header-item me-2">
+            <div v-for="n in 4" :key="n"
+                class="header-item btn btn-sm ms-1 p-0 pe-1 ps-1"
+                :class="(clientinfo?.lockedSection === n ? 'btn-teal' : 'btn-outline-secondary') + (!serverstatus?.allowSectionSwitch ? ' disabledbtn' : '') "
+                @click="switchExamSection(n)">
+                {{ serverstatus?.examSections?.[n]?.sectionname || n }}
+            </div>
+        </div>
+
         <div class="header-item">
 
             <!-- Show WLAN SSID -->
@@ -46,6 +55,10 @@
             <!-- WLAN SSID and quality not available (happens on windows without location services) -->
             <div v-if="wlanInfo && !wlanInfo.ssid && !wlanInfo.quality && hostip" class="me-2">
               <img :title="'WiFi Information not available \nIP: '+hostip" :alt="'WiFi Information not available'" src="/src/assets/img/svg/network-wireless-connected-20.svg" width="24" height="24" style="vertical-align: bottom;" />
+            </div>
+            <!-- WLAN permission not available -->
+            <div v-else-if="wlanInfo && wlanInfo?.message == 'nopermissions'" class="me-2">
+                <img :title="$t('student.wlanNopermissionsText')" :alt="$t('student.wlanNopermissionsText')" src="/src/assets/img/svg/network-wireless-disconnected.svg" width="24" height="24" >
             </div>
 
 
@@ -64,7 +77,7 @@
             <div v-if="wlanInfo && wlanInfo?.message == 'nointerface'" class="me-2">
                 <img title="WLAN disconnected" alt="WLAN disconnected" src="/src/assets/img/svg/network-wireless-disconnected.svg" width="24" height="24" >
             </div>
-
+   
 
             <!-- Show LAN connected if IP is available and no WLAN info available -->
             <div v-if="hostip && wlanInfo?.message == 'nointerface'" class="me-2">
@@ -102,6 +115,12 @@
 </template>
   
 <script>
+  import {SignalBridge} from '../utils/signalBridge.js'
+
+  // signalBridge instance centralizes ipc calls with platform checks
+  const signalBridge = new SignalBridge(window);
+  
+
   export default {
     name: 'ExamHeader',
     props: ['serverstatus','clientinfo','online', 'clientname', 'exammode', 'servername', 'pincode', 'battery', 'currenttime','timesinceentry','componentName','localLockdown','wlanInfo','hostip'],
@@ -110,10 +129,14 @@
         lastShownMessage: null
       };
     },
+    computed: {
+      warning() {
+        return this.wlanInfo?.message === 'nopermissions' ? this.$t('student.wlanNopermissionsText') : null;
+      }
+    },
     watch: {
       'wlanInfo.message'(newMessage) {
         if (newMessage && newMessage !== this.lastShownMessage) {
-          this.showWlanMessage(newMessage);
           this.lastShownMessage = newMessage;
         } else if (!newMessage) {
           this.lastShownMessage = null;
@@ -122,53 +145,36 @@
     },
     methods: {
       reconnect() {
-        // Methode zur Wiederherstellung der Verbindung
+        // Restore connection
         this.$emit('reconnect');
       },
       gracefullyExit() {
-   
-        // Methode zum sauberen Beenden des abgesicherten Modus
+        // Clean exit from safe exam mode
         this.$emit('gracefullyExit');
       },
-      showWlanMessage(message) {
-        let title = '';
-        let text = '';
-        let icon = 'warning';
+      async switchExamSection(sectionNumber) {
+        if (!this.serverstatus?.allowSectionSwitch || this.clientinfo?.lockedSection === sectionNumber) return;
         
-        // additional messages: 'nointerface', 'givingup'  - not handled here for now - just silently ignore them
-
-        switch (message) {
-
-          case 'nopermissions':
-            title = 'Standortberechtigung erforderlich';
-            text = 'Windows benötigt Standortberechtigungen, um WLAN-Informationen abzurufen. Bitte aktivieren Sie die Positionsdienste in den Datenschutz- und Sicherheitseinstellungen.';
-            icon = 'warning';
-            break;
-          default:
-            return;
+        if (this.serverstatus.examSections[this.clientinfo.lockedSection].examtype == 'microsoft365'){
+          signalBridge.send('collapse-browserview');
         }
-        
+        //  ask if the user wants to switch to the new section via swal2dialog
         this.$swal.fire({
-          title: title,
-          text: text,
-          icon: icon,
-          confirmButtonText: 'OK',
-          allowEscapeKey: true,
-          didOpen: (popup) => {
-            // Transitions deaktivieren (wie im globalen Hook)
-            const elementsToControl = [
-              popup,
-              document.querySelector('.swal2-container'),
-            ];
-            
-            elementsToControl
-              .filter(el => el)
-              .forEach(el => {
-                el.style.transition = 'none';
-                el.style.animation = 'none';
-                el.style.webkitAnimation = 'none';
-                el.style.webkitTransition = 'none';
-              });
+          title: this.$t('editor.sectionSwitchTitle'),
+          text: this.$t('editor.sectionSwitchText'),
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Ok',
+          cancelButtonText: this.$t('editor.cancel'),
+        }).then( (result) => {
+          if (result.isConfirmed) {
+            console.log(`switchExamSection: calling switch-exam-section`)
+            signalBridge.invoke('switch-exam-section', sectionNumber);
+          }
+          else {
+            if (this.serverstatus.examSections[this.clientinfo.lockedSection].examtype == 'microsoft365'){
+              signalBridge.send('restore-browserview');
+            }
           }
         });
       }
@@ -200,6 +206,12 @@
     align-self: auto;
     order: 0;
     align-items: center;
+}
+
+.disabledbtn {
+    cursor: not-allowed;
+    opacity: 0.5;
+    pointer-events: none;
 }
 
 

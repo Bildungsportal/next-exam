@@ -15,6 +15,11 @@
  * If not, see <http://www.gnu.org/licenses/>
  */
 
+import {SignalBridge} from './signalBridge.js'
+
+// signalBridge centralizes ipc calls with platform checks
+const signalBridge = new SignalBridge(window);
+
 
 
 function LTdisable(){
@@ -84,23 +89,11 @@ async function LTcheckAllWords(closeLT = true){
     //request LanguageTool API
     this.LTinfo = "searching..."
 
-    if (typeof ipcRenderer !== "undefined" && ipcRenderer?.invoke) {
-        try {
-            const ltStatus = await ipcRenderer.invoke('isLanguageToolRunning')
-            if (!ltStatus?.running) {
-                this.LTinfo = "Der LT-Server ist nicht erreichbar"
-                console.warn('languagetool.js @ LTcheckAllwords (status check): LT-Server ist nicht erreichbar')
-                this.spellcheckFallback = true
-                this.ltRunning = false
-                this.misspelledWords = []
-                if (this.ctx && this.canvas) {
-                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
-                }
-                return
-            }
-        } catch (statusError) {
-            console.warn('languagetool.js @ LTcheckAllwords (status check):', statusError.message)
+    try {
+        const ltStatus = await signalBridge.invoke('isLanguageToolRunning')
+        if (!ltStatus?.running) {
             this.LTinfo = "Der LT-Server ist nicht erreichbar"
+            console.warn('languagetool.js @ LTcheckAllwords (status check): LT-Server ist nicht erreichbar')
             this.spellcheckFallback = true
             this.ltRunning = false
             this.misspelledWords = []
@@ -109,7 +102,18 @@ async function LTcheckAllWords(closeLT = true){
             }
             return
         }
+    } catch (statusError) {
+        console.warn('languagetool.js @ LTcheckAllwords (status check):', statusError.message)
+        this.LTinfo = "Der LT-Server ist nicht erreichbar"
+        this.spellcheckFallback = true
+        this.ltRunning = false
+        this.misspelledWords = []
+        if (this.ctx && this.canvas) {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+        }
+        return
     }
+    
 
     try {
         const response = await fetch(`${this.LThost}:8088/v2/check`, {

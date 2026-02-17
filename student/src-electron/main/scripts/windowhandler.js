@@ -667,7 +667,8 @@ class WindowHandler {
         /***************************
          *  Microsoft Excel/Word
          ***************************/
-        if ( serverstatus.examSections[serverstatus.lockedSection].examtype === "microsoft365"){  // do not under any circumstances allow navigation away from the current exam url
+        let effectiveSection = serverstatus.allowSectionSwitch ? this.multicastClient.clientinfo.lockedSection : serverstatus.lockedSection;
+        if ( serverstatus.examSections[effectiveSection].examtype === "microsoft365"){  // do not under any circumstances allow navigation away from the current exam url
             const browserView = this.examwindow.getBrowserView(0);
 
             // if the user wants to navigate away from this page
@@ -825,7 +826,7 @@ class WindowHandler {
         }
 
         this.mainwindow = new BrowserWindow({
-            title: 'Main window',
+            title: 'Next-Exam-Student',
             icon: join(platformDispatcher.publicBase, 'icons', 'icon.png'),
             x: x,
             y: y,

@@ -98,7 +98,7 @@ export default defineConfig(( ctx: any ) => {
         viteConf.css = viteConf.css || {};
         viteConf.css.preprocessorOptions = viteConf.css.preprocessorOptions || {};
         viteConf.css.preprocessorOptions.scss = viteConf.css.preprocessorOptions.scss || {};
-        viteConf.css.preprocessorOptions.scss.silenceDeprecations = ['color-functions'];
+        viteConf.css.preprocessorOptions.scss.silenceDeprecations = ['color-functions', 'if-function'];
         // Resolve pdfjs-dist legacy build (package has no exports for legacy subpath)
         viteConf.resolve = viteConf.resolve || {};
         viteConf.resolve.alias = {

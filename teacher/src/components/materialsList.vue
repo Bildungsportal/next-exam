@@ -24,15 +24,17 @@
 
               <div v-for="(allowedUrl, index) in examSection.groupA.allowedUrls" :key="'allowedUrl' + index" class="input-group" style="">
                   <div class="btn btn-sm btn-secondary mt-1" @click="removeAllowedUrl('A', index)" style="padding:4px 8px;">x</div>
-                  <div class="btn btn-sm btn-cyan mt-1 filename-button" :title="allowedUrl" @click="openAllowedUrl(allowedUrl)"> {{ allowedUrl }} </div>
-                  <div class="btn btn-sm btn-teal mt-1 extension-button"> 
+                  <div class="btn btn-sm btn-cyan mt-1 filename-button url-display-button" :title="getUrlTooltip(allowedUrl)" @click="openAllowedUrl(allowedUrl)"> {{ getUrlDisplay(allowedUrl) }} </div>
+                  <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">S<br>D</span></div>
+                  <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">S<br>F</span></div>
+                  <div class="btn btn-sm btn-teal mt-1 extension-button">
                       <div class="vertical-text">URL</div>
                   </div>
               </div>
 
 
             </div>
-    
+
             <!-- Gruppe B -->
             <div class="group-section">
               <div class="group-label">{{$t('dashboard.groupB')}}</div>
@@ -55,8 +57,10 @@
 
               <div v-for="(allowedUrl, index) in examSection.groupB.allowedUrls" :key="'allowedUrl' + index" class="input-group" style="">
                   <div class="btn btn-sm btn-secondary mt-1" @click="removeAllowedUrl('B', index)" style="padding:4px 8px;">x</div>
-                  <div class="btn btn-sm btn-cyan mt-1 filename-button" :title="allowedUrl" @click="openAllowedUrl(allowedUrl)"> {{ allowedUrl }} </div>
-                  <div class="btn btn-sm btn-teal mt-1 extension-button"> 
+                  <div class="btn btn-sm btn-cyan mt-1 filename-button url-display-button" :title="getUrlTooltip(allowedUrl)" @click="openAllowedUrl(allowedUrl)"> {{ getUrlDisplay(allowedUrl) }} </div>
+                  <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">S<br>D</span></div>
+                  <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">S<br>F</span></div>
+                  <div class="btn btn-sm btn-teal mt-1 extension-button">
                       <div class="vertical-text">URL</div>
                   </div>
               </div>
@@ -88,8 +92,10 @@
 
             <div v-for="(allowedUrl, index) in examSection.groupA.allowedUrls" :key="'allowedUrl' + index" class="input-group" style="">
                 <div class="btn btn-sm btn-secondary mt-1" @click="removeAllowedUrl('A', index)" style="padding:4px 8px;">x</div>
-                <div class="btn btn-sm btn-cyan mt-1 filename-button" :title="allowedUrl" @click="openAllowedUrl(allowedUrl)"> {{ allowedUrl }} </div>
-                <div class="btn btn-sm btn-teal mt-1 extension-button"> 
+                <div class="btn btn-sm btn-cyan mt-1 filename-button url-display-button" :title="getUrlTooltip(allowedUrl)" @click="openAllowedUrl(allowedUrl)"> {{ getUrlDisplay(allowedUrl) }} </div>
+                <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">S<br>D</span></div>
+                <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">S<br>F</span></div>
+                <div class="btn btn-sm btn-teal mt-1 extension-button">
                     <div class="vertical-text">URL</div>
                 </div>
             </div>
@@ -162,8 +168,24 @@
         this.$emit('open-allowed-url', allowedUrl);
       },
 
-      removeAllowedUrl(index){
-        this.$emit('remove-allowed-url', index);
+      removeAllowedUrl(group, index){
+        this.$emit('remove-allowed-url', group, index);
+      },
+
+      getUrlDisplay(allowedUrl) {
+        return typeof allowedUrl === 'object' ? allowedUrl.url : allowedUrl;
+      },
+
+      getUrlTooltip(allowedUrl) {
+        if (typeof allowedUrl !== 'object') return allowedUrl;
+        let tip = allowedUrl.url;
+        if (allowedUrl.blockSubdomains) tip += ' [SD]';
+        if (allowedUrl.blockSubfolders) tip += ' [SF]';
+        return tip;
+      },
+
+      getUrlFlag(allowedUrl, flag) {
+        return typeof allowedUrl === 'object' && allowedUrl[flag];
       }
 
     }
@@ -207,6 +229,41 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+
+  .url-display-button {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 280px;
+    text-align: left;
+  }
+
+  .sd-sf-btn {
+    width: 18px;
+    padding: 2px 0;
+    font-size: 0.65em;
+    min-height: 31px;
+    line-height: 1;
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sd-sf-btn:hover {
+    background-color: #e0a800;
+    border-color: #d39e00;
+    color: #212529;
+  }
+
+  .sd-sf-stack {
+    display: block;
+    width: 100%;
+    line-height: 0.95;
+    text-align: center;
+    font-size: 1em;
+  }
   
   .group-section {
     margin-bottom: 15px;
@@ -219,6 +276,9 @@
   
   .input-group {
     margin-right: 10px;
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
   }
   
   .btn-danger {

@@ -453,6 +453,7 @@ router.post('/getexammaterials/:servername/:token', async (req, res, next) => {
     const servername = req.params.servername
     const mcServer = config.examServerList[servername] // get the multicastserver object
     const group = req.body.group
+    const clientLockedSection = req.body.lockedSection
 
     if ( token !== mcServer.serverinfo.servertoken && !checkToken(token, mcServer )) { return res.json({ status: t("data.tokennotvalid") }) }
    
@@ -461,7 +462,8 @@ router.post('/getexammaterials/:servername/:token', async (req, res, next) => {
     if (student) {  
 
         let serverstatus = mcServer.serverstatus
-        let examSection = serverstatus.examSections[serverstatus.activeSection]
+        const sectionIndex = serverstatus.allowSectionSwitch && clientLockedSection != null ? clientLockedSection : serverstatus.activeSection
+        let examSection = serverstatus.examSections[sectionIndex]
         let groupA = examSection.groupA
         let groupB = examSection.groupB
     

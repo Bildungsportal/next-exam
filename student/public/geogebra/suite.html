@@ -537,20 +537,9 @@ function isEmbed() {
 
 /* hauptmenue button ausblenden */
 button.landscapeMenuBtn[aria-label="Hauptmenü"] {	display: none !important;}
- 
- .menu.landscapeMenuBtn {	display: none !important;}
+.menu.landscapeMenuBtn {	display: none !important;}
 
-.GeoGebraFrame.GeoGebraHeader.suiteHeader {
-	height: 50px;
-}
-.GeoGebraFrame.GeoGebraHeader.suiteHeader .upperHeader {
-	height: 40px;
-	padding:4px;
-}
 
-.GeoGebraFrame.GeoGebraHeader.suiteHeader .upperHeader .suiteAppPickerButton {
-	margin: 0px;
-}
 
 
 
@@ -568,15 +557,13 @@ if (appID == "scientific") {
 	defaultParams.marginTop = 112;
 }
 
-window.addEventListener("load", function() {
 
-});
 </script>
 <nav class="GeoGebraFrame GeoGebraHeader suiteHeader">
 <div class="upperHeader">&nbsp;&nbsp;&nbsp;&nbsp;
-<div id="suiteAppPicker" ></div>
-
+	<div id="suiteAppPicker" ></div>
 </div>
+
 <div id="undoRedoSettingsPanel" class="undoRedoSettingsPanelScientific">
     <div id="settingsButton"
          tabindex="0"

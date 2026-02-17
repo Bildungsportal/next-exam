@@ -19,6 +19,7 @@
         :hostip="hostip"
         @reconnect="reconnect"
         @gracefullyExit="gracefullyExit"
+        @sectionSwitched="fetchInfo"
     ></exam-header>
     <!-- HEADER END -->
 
@@ -275,9 +276,9 @@
 
                 <div v-if="allowedUrls.length !== 0" v-for="allowedUrl in allowedUrls  "
                      class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button"
-                     :title="allowedUrl" @click="showUrl(allowedUrl)">
+                     :title="getUrlDisplay(allowedUrl)" @click="showUrl(getUrlDisplay(allowedUrl))">
                     <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22"
-                         style="vertical-align: top;"> {{ allowedUrl }}
+                         style="vertical-align: top;"> {{ getUrlDisplay(allowedUrl) }}
                 </div>
 
 
@@ -480,7 +481,7 @@
 
     <!-- LANGUAGE TOOL START -->
     <div id="languagetool"
-         v-if="serverstatus.examSections[serverstatus.activeSection].languagetool || privateSpellcheck.activated">
+         v-if="privateSpellcheck.activated || (serverstatus.allowSectionSwitch ? serverstatus.examSections[clientinfo?.lockedSection ?? lockedSection]?.languagetool : serverstatus.examSections[serverstatus.lockedSection]?.languagetool)">
         <div id="ltcheck" @click="LTcheckAllWords();">
             <div id="eye" class="darkgreen eyeopen"></div> &nbsp;LanguageTool
         </div>
@@ -609,9 +610,13 @@ import {
 } from '../utils/languagetool.js'
 import {getExamMaterials, loadDOCX, loadHTML, loadImage, loadPDF, playAudio} from '../utils/filehandler.js'
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
-import {isElectronWindow} from "../types/electron.ts";
+
+import {SignalBridge} from '../utils/signalBridge.js'
 
 const lowlight = createLowlight(common)
+
+// signalBridge instance centralizes ipc calls with platform checks
+const signalBridge = new SignalBridge(window);
 
 
 
@@ -728,6 +733,10 @@ export default {
         showUrl: showUrl,
         reconnect: reconnect,
 
+        getUrlDisplay(allowedUrl) {
+            return typeof allowedUrl === 'object' ? allowedUrl.url : allowedUrl;
+        },
+
         // from languagetool.js
         LTcheckAllWords: LTcheckAllWords,
         LTfindWordPositions: LTfindWordPositions,
@@ -830,9 +839,7 @@ export default {
             }
         },
 
-
         handleColorInput(event) {
-
             const color = event.target.value;
             const clampedColor = this.clampColor(color);
             this.editor.chain().focus().setColor(clampedColor).run();
@@ -858,51 +865,55 @@ export default {
 
 
         async fetchInfo() {
-            if (isElectronWindow(window)) {
-                let getinfo = await window.ipcRenderer.invoke('getinfoasync')  // we need to fetch the updated version of the systemconfig from express api (server.js)
-                this.clientinfo = getinfo.clientinfo;
-                this.token = this.clientinfo.token
-                this.focus = this.clientinfo.focus
-                this.clientname = this.clientinfo.name
-                this.exammode = this.clientinfo.exammode
-                this.pincode = this.clientinfo.pin
-                this.privateSpellcheck = this.clientinfo.privateSpellcheck
-                this.serverstatus = getinfo.serverstatus
-                this.lockedSection = this.clientinfo.lockedSection
+            let getinfo = await signalBridge.invoke('getinfoasync')  // we need to fetch the updated version of the systemconfig from express api (server.js)
+            this.clientinfo = getinfo.clientinfo;
+            this.token = this.clientinfo.token
+            this.focus = this.clientinfo.focus
+            this.clientname = this.clientinfo.name
+            this.exammode = this.clientinfo.exammode
+            this.pincode = this.clientinfo.pin
+            this.privateSpellcheck = this.clientinfo.privateSpellcheck
+            
+            this.serverstatus = getinfo.serverstatus
 
-                // console.log(this.serverstatus)
-                if (this.pincode !== "0000") {
-                    this.localLockdown = false
-                }  // pingcode is 0000 only in localmode
+            // decide which section index is authoritative (client vs server)
+            const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
+                ? this.clientinfo.lockedSection
+                : this.serverstatus.lockedSection
 
-                if (this.clientinfo && this.clientinfo.token) {
-                    this.online = true
-                } else {
-                    this.online = false
-                }
+            this.lockedSection = sectionIndex
 
-                this.battery = await navigator.getBattery().then(battery => {
-                    return battery
-                }).catch(error => {
-                    console.error("Error accessing the Battery API:", error);
-                });
+            // console.log(this.serverstatus)
+            if (this.pincode !== "0000") {
+                this.localLockdown = false
+            }  // pingcode is 0000 only in localmode
 
-                //handle individual spellcheck (only if not globally activated anyways)
-                if (this.serverstatus.examSections[this.serverstatus.activeSection].languagetool === false) {
-                    if (this.privateSpellcheck.activate == false && this.LTactive) {
-                        this.LTdisable()
-                        this.privateSpellcheck.activated = false   // das wird eigentlich eh im communication handler für clientinfo bereits auf false gesetzt und bei fetchinfo() übernommen
-                    }
-                }
+            if (this.clientinfo && this.clientinfo.token) {
+                this.online = true
+            } else {
+                this.online = false
+            }
 
-                this.internetCheckCounter++
-                if (this.internetCheckCounter % 5 === 0) {
-                        this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-                        this.hostip = await window.ipcRenderer.invoke('checkhostip')
-                        this.internetCheckCounter = 0
+            this.battery = await navigator.getBattery().then(battery => {
+                return battery
+            }).catch(error => {
+                console.error("Error accessing the Battery API:", error);
+            });
+
+            //handle individual spellcheck (only if not globally activated anyways)
+            if (this.serverstatus.examSections[this.lockedSection].languagetool === false) {
+                if (this.privateSpellcheck.activate == false && this.LTactive) {
+                    this.LTdisable()
+                    this.privateSpellcheck.activated = false   // das wird eigentlich eh im communication handler für clientinfo bereits auf false gesetzt und bei fetchinfo() übernommen
                 }
             }
 
+            this.internetCheckCounter++
+            if (this.internetCheckCounter % 5 === 0) {
+                    this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+                    this.hostip = await signalBridge.invoke('checkhostip')
+                    this.internetCheckCounter = 0
+            }
         },
 
 
@@ -1003,8 +1014,6 @@ export default {
             const [r, g, b] = rgb.match(/\d+/g).map(Number);
             return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
         },
-
-
         clock() {
             // this.charcount = this.editor.storage.characterCount.characters()   //this also counts blank spaces
             this.charcount = this.editor.getText().replace(/<[^>]*>/g, '').replace(/\s/g, '').length
@@ -1015,26 +1024,23 @@ export default {
             this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
         },
 
-
         //get all files in user directory
         async loadFilelist() {
-            if (isElectronWindow(window)) {
-                let filelist = await window.ipcRenderer.invoke('getfilesasync', null)
-                this.localfiles = filelist;
+            let filelist = await signalBridge.invoke('getfilesasync', null)
+            this.localfiles = filelist;
 
-                // handle audio file objects (playback limitations)
-                this.localfiles.forEach(file => {
-                    if (file.type == "audio") {
-                        const existingaudiofile = this.audiofiles.find(obj => obj.name === file.name);
-                        if (!existingaudiofile) {
-                            this.audiofiles.push({
-                                name: file.name,
-                                playbacks: this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat
-                            })
-                        }
+            // handle audio file objects (playback limitations)
+            this.localfiles.forEach(file => {
+                if (file.type == "audio") {
+                    const existingaudiofile = this.audiofiles.find(obj => obj.name === file.name);
+                    if (!existingaudiofile) {
+                        this.audiofiles.push({
+                            name: file.name,
+                            playbacks: this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat
+                        })
                     }
-                })
-            }
+                }
+            })
         },
 
 
@@ -1107,65 +1113,57 @@ export default {
                     else {return; }
                 });
             }
-            if (isElectronWindow(window)) {
-                if (why === "exitexam") {
-                    // stop clipboard clear interval
-                    ipcRenderer.send('restrictions')
+            if (why === "exitexam") {
+                // stop clipboard clear interval
+                signalBridge.send('restrictions')
 
-                    this.$swal.fire({
-                        title: this.$t("editor.leaving"),
-                        text: this.$t("editor.savedclip"),
-                        icon: "info",
-                        timer: 3000,
-                        showCancelButton: false,
-                        didOpen: () => {
-                            this.$swal.showLoading();
-                        },
-                    })
-
-                    let text = this.editor.getText();
-                    ipcRenderer.send('clipboard', text)
-
-
-                    navigator.clipboard.writeText(text).then(function () {
-                        console.log('editor @ savecontent: Text erfolgreich kopiert');
-                    }).catch(function (err) {
-                        console.log('editor @ savecontent: Fehler beim Kopieren des Textes: ', err.message);
-                    });
-                }
-
-
-                // Klasse entfernen: Verhindert, dass die Keyframe-Animation beim printToPDF neu startet
-                const previewElement = document.querySelector("#preview");
-                if (previewElement && previewElement.classList.contains('fadeinfast')) {
-                    previewElement.classList.remove('fadeinfast');
-                }
-
-            
-                // SAVE AS HTML (bak) - also save editorcontent as *html file - used to re-populate the editor window in case something went completely wrong
-                let editorcontent = this.editor.getHTML(); 
-                ipcRenderer.send('storeHTML', {filename: filename, editorcontent: editorcontent })
-                
-
-                // SAVE AS PDF - inform mainprocess to save webcontent as pdf (see @media css query for adjustments for pdf)
-                // printPDF will trigger a reload of the filelist if finished and send files to teacher if reason (why) is "teacherrequest"
-                ipcRenderer.send('printpdf', {
-                    filename: filename,
-                    landscape: false,
-                    servername: this.servername,
-                    clientname: this.clientname,
-                    reason: why
+                this.$swal.fire({
+                    title: this.$t("editor.leaving"),
+                    text: this.$t("editor.savedclip"),
+                    icon: "info",
+                    timer: 3000,
+                    showCancelButton: false,
+                    didOpen: () => {
+                        this.$swal.showLoading();
+                    },
                 })
 
+                let text = this.editor.getText();
+                signalBridge.send('clipboard', text)
 
+                navigator.clipboard.writeText(text).then(function () {
+                    console.log('editor @ savecontent: Text erfolgreich kopiert');
+                }).catch(function (err) {
+                    console.log('editor @ savecontent: Fehler beim Kopieren des Textes: ', err.message);
+                });
+            } 
+
+            // Klasse entfernen: Verhindert, dass die Keyframe-Animation beim printToPDF neu startet
+            const previewElement = document.querySelector("#preview");
+            if (previewElement && previewElement.classList.contains('fadeinfast')) {
+                previewElement.classList.remove('fadeinfast');
             }
+
+            // SAVE AS HTML (bak) - also save editorcontent as *html file - used to re-populate the editor window in case something went completely wrong
+            let editorcontent = this.editor.getHTML(); 
+            signalBridge.send('storeHTML', {filename: filename, editorcontent: editorcontent })
+            
+            // SAVE AS PDF - inform mainprocess to save webcontent as pdf (see @media css query for adjustments for pdf)
+            // printPDF will trigger a reload of the filelist if finished and send files to teacher if reason (why) is "teacherrequest"
+            signalBridge.send('printpdf', {
+                filename: filename,
+                landscape: false,
+                servername: this.servername,
+                clientname: this.clientname,
+                reason: why
+            })
+            
         },
 
 
         // send direct print request to teacher and append current document as base64
         printBase64(printrequest = false) {
             //get current exam sectioninfo
-
 
             // this currentpreviewBase64 contains the current visible pdf as base64 string
             const url = `https://${this.serverip}:${this.serverApiPort}/server/control/printrequest/${this.servername}/${this.token}`;
@@ -1182,70 +1180,67 @@ export default {
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload),
             })
-                .then(response => {
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.message == "success") {
-                        this.submissionnumber++   // successful submission -> increment number
-                        let message = this.$t("editor.saved")
-                        if (printrequest) {
-                            message = this.$t("editor.requestsent")
-                        }
-
-                        this.$swal.fire({
-                            title: message,
-                            icon: "info",
-                            // timer: 1500,
-                            // timerProgressBar: true,
-                            // didOpen: () => { this.$swal.showLoading() }
-                        })
-                    } else {
-                        this.$swal.fire({
-                            title: data.message,
-                            icon: "error",
-                            // timer: 1500,
-                            // timerProgressBar: true,
-                            // didOpen: () => { this.$swal.showLoading() }
-                        })
+            .then(response => {
+                return response.json();
+            })
+            .then(data => {
+                if (data.message == "success") {
+                    this.submissionnumber++   // successful submission -> increment number
+                    let message = this.$t("editor.saved")
+                    if (printrequest) {
+                        message = this.$t("editor.requestsent")
                     }
-                })
-                .catch(error => {
-                    console.log("editor @ printbase64:", error.message)
-                });
+
+                    this.$swal.fire({
+                        title: message,
+                        icon: "info",
+                        // timer: 1500,
+                        // timerProgressBar: true,
+                        // didOpen: () => { this.$swal.showLoading() }
+                    })
+                } 
+                else {
+                    this.$swal.fire({
+                        title: data.message,
+                        icon: "error",
+                    })
+                }
+            })
+            .catch(error => {
+                console.log("editor @ printbase64:", error.message)
+            });
 
         },
 
 
         async sendExamToTeacher(directsend = false, type = "send") {
-            if (isElectronWindow(window)) {
-                let response = await window.ipcRenderer.invoke('getPDFbase64', {
-                    landscape: false,
-                    servername: this.servername,
-                    clientname: this.clientname,
-                    submissionnumber: this.submissionnumber,
-                    sectionname: this.serverstatus.examSections[this.lockedSection].sectionname
-                })
+            let response = await signalBridge.invoke('getPDFbase64', {
+                landscape: false,
+                servername: this.servername,
+                clientname: this.clientname,
+                submissionnumber: this.submissionnumber,
+                sectionname: this.serverstatus.examSections[this.lockedSection].sectionname
+            })
 
-                if (response?.status == "success") {
-                    let base64pdf = response.base64pdf
-                    let dataUrl = response.dataUrl
+            if (response?.status == "success") {
+                let base64pdf = response.base64pdf
+                let dataUrl = response.dataUrl
 
-                    if (directsend) {   //direct send to teacher without displaying the print preview
-                        this.currentpreviewBase64 = base64pdf
-                        this.printBase64()
-                        return
-                    }
-
-                    let file = {
-                        filename: `${this.clientname}.pdf`,
-                        filetype: "pdf",
-                        filecontent: dataUrl
-                    }
-                    this.loadPDF(file, true, 100, true, type)  //this opens the pdf file in the print preview and populates base64 preview
-                } else {
-
+                if (directsend) {   //direct send to teacher without displaying the print preview
+                    this.currentpreviewBase64 = base64pdf
+                    this.printBase64()
+                    return
                 }
+
+                let file = {
+                    filename: `${this.clientname}.pdf`,
+                    filetype: "pdf",
+                    filecontent: dataUrl
+                }
+                this.loadPDF(file, true, 100, true, type)  //this opens the pdf file in the print preview and populates base64 preview
+            } 
+            else {
+                console.log("editor @ sendExamToTeacher: Error sending exam to teacher")
             }
         },
 
@@ -1390,36 +1385,33 @@ export default {
                     savedKeepcontent = keepcontentElement ? keepcontentElement.checked : false;
                 }
             })
-                .then((result) => {
-                    if (result.isConfirmed) {
-                        let keepcontent = savedKeepcontent; // Use saved value instead of reading from DOM
-                        console.log("Reinitializing Editor Component")
-                        let content = ""
-                        if (keepcontent) {
-                            console.log("-> keeping content")
-                            content = this.editor.getHTML() //get edtior data and store it
-                        }
-                        this.editor.destroy();  // Destroy the current instance
-                        this.createEditor();  // Reinitialize
-                        //paste editor data
-                        if (keepcontent) {
-                            this.editor.commands.clearContent(true)  //clear edtior
-                            this.editor.commands.insertContent(content)
-                        }
+            .then((result) => {
+                if (result.isConfirmed) {
+                    let keepcontent = savedKeepcontent; // Use saved value instead of reading from DOM
+                    console.log("Reinitializing Editor Component")
+                    let content = ""
+                    if (keepcontent) {
+                        console.log("-> keeping content")
+                        content = this.editor.getHTML() //get edtior data and store it
                     }
-                });
-
+                    this.editor.destroy();  // Destroy the current instance
+                    this.createEditor();  // Reinitialize
+                    //paste editor data
+                    if (keepcontent) {
+                        this.editor.commands.clearContent(true)  //clear edtior
+                        this.editor.commands.insertContent(content)
+                    }
+                }
+            });
         },
         async sendFocuslost(ctrlalt = false) {
-            if (isElectronWindow(window)) {
-                let response = await window.ipcRenderer.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
-                if (!this.config.development && !response.focus) {  //immediately block frontend
-                    this.focus = false
-                    const editorcontentcontainer = document.getElementById('editorcontent');
-                    if (!editorcontentcontainer) return;
-                    const editableDiv = editorcontentcontainer.firstElementChild;
-                    if (editableDiv) editableDiv.blur()  // remove text cursor (carret)
-                }
+            let response = await signalBridge.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
+            if (response && !this.config.development && !response.focus) {  //immediately block frontend
+                this.focus = false
+                const editorcontentcontainer = document.getElementById('editorcontent');
+                if (!editorcontentcontainer) return;
+                const editableDiv = editorcontentcontainer.firstElementChild;
+                if (editableDiv) editableDiv.blur()  // remove text cursor (carret)
             }
         },
         handleCtrlAlt(event) {
@@ -1451,9 +1443,8 @@ export default {
                 return true;
             }
             try {
-                if (isElectronWindow(window)) {
-                    const response = await window.ipcRenderer.invoke("startLanguageTool");
-                    if (response) {
+                const response = await signalBridge.invoke("startLanguageTool");
+                if (response) {
                         if (!silent) {
                             this.$swal.fire({
                                 text: "LanguageTool started!",
@@ -1467,7 +1458,6 @@ export default {
                         this.ltRunning = true;
                         return true;
                     }
-                }
                 if (!silent) {
                     this.$swal.fire({
                         text: "LanguageTool Error!",
@@ -1480,7 +1470,8 @@ export default {
                 }
                 this.ltRunning = false;
                 return false;
-            } catch (error) {
+            } 
+            catch (error) {
                 console.error('editor @ startLanguageTool:', error);
                 if (!silent) {
                     this.$swal.fire({
@@ -1592,56 +1583,56 @@ export default {
             let backupfileName = filename ? filename : this.clientname + ".bak"
             console.log(`editor @ loadBackupFile: Checking for backup file: ${backupfileName}`)
             try {
-                if (isElectronWindow(window)) {
-                    let backupfileContent = await window.ipcRenderer.invoke('getbackupfile', backupfileName)
+                let backupfileContent = await signalBridge.invoke('getbackupfile', backupfileName)
 
-                    if (backupfileContent) {
-                        console.log(`editor @ loadBackupFile: Backup file found, waiting for editor to be ready before showing dialog`)
-                        // Wait for editor to be fully initialized before showing dialog
-                        const waitForEditor = async () => {
-                            let attempts = 0
-                            const maxAttempts = 50 // 5 seconds max wait
+                if (backupfileContent) {
+                    console.log(`editor @ loadBackupFile: Backup file found, waiting for editor to be ready before showing dialog`)
+                    // Wait for editor to be fully initialized before showing dialog
+                    const waitForEditor = async () => {
+                        let attempts = 0
+                        const maxAttempts = 50 // 5 seconds max wait
 
-                            while (attempts < maxAttempts) {
-                                if (this.editor && this.editor.isEditable !== undefined && this.editor.commands) {
-                                    console.log(`editor @ loadBackupFile: Editor ready, showing dialog`)
-                                    // Wait one more frame to ensure DOM is ready
-                                    await this.sleep(100)
-                                    this.$swal.fire({
-                                        title: this.$t("editor.backupfound"),
-                                        html: `${this.$t("editor.replacecontent1")} <b>${backupfileName}</b> ${this.$t("editor.replacecontent2")}`,
-                                        icon: "question",
-                                        showCancelButton: true,
-                                        cancelButtonText: this.$t("editor.cancel"),
-                                        reverseButtons: true,
-                                        allowOutsideClick: false,
-                                        allowEscapeKey: true
-                                    })
-                                        .then(async (result) => {
-                                            if (result.isConfirmed) {
-                                                console.log(`editor @ loadBackupFile: User confirmed, loading backup file`)
-                                                this.editor.commands.clearContent(true)
-                                                this.editor.commands.insertContent(backupfileContent)
-                                            } else {
-                                                console.log(`editor @ loadBackupFile: User cancelled loading backup file`)
-                                            }
-                                        })
-                                        .catch((error) => {
-                                            console.error(`editor @ loadBackupFile: Error showing dialog: ${error}`)
-                                        })
-                                    return
-                                }
-                                attempts++
+                        while (attempts < maxAttempts) {
+                            if (this.editor && this.editor.isEditable !== undefined && this.editor.commands) {
+                                console.log(`editor @ loadBackupFile: Editor ready, showing dialog`)
+                                // Wait one more frame to ensure DOM is ready
                                 await this.sleep(100)
+                                this.$swal.fire({
+                                    title: this.$t("editor.backupfound"),
+                                    html: `${this.$t("editor.replacecontent1")} <b>${backupfileName}</b> ${this.$t("editor.replacecontent2")}`,
+                                    icon: "question",
+                                    showCancelButton: true,
+                                    cancelButtonText: this.$t("editor.cancel"),
+                                    reverseButtons: true,
+                                    allowOutsideClick: false,
+                                    allowEscapeKey: true
+                                })
+                                .then(async (result) => {
+                                    if (result.isConfirmed) {
+                                        console.log(`editor @ loadBackupFile: User confirmed, loading backup file`)
+                                        this.editor.commands.clearContent(true)
+                                        this.editor.commands.insertContent(backupfileContent)
+                                    } else {
+                                        console.log(`editor @ loadBackupFile: User cancelled loading backup file`)
+                                    }
+                                })
+                                .catch((error) => {
+                                    console.error(`editor @ loadBackupFile: Error showing dialog: ${error}`)
+                                })
+                                return
                             }
-                            console.error(`editor @ loadBackupFile: Editor not ready after ${maxAttempts} attempts`)
+                            attempts++
+                            await this.sleep(100)
                         }
-                        waitForEditor()
-                    } else {
-                        console.log(`editor @ loadBackupFile: No backup file found or content is empty`)
+                        console.error(`editor @ loadBackupFile: Editor not ready after ${maxAttempts} attempts`)
                     }
+                    waitForEditor()
+                } 
+                else {
+                    console.log(`editor @ loadBackupFile: No backup file found or content is empty`)
                 }
-            } catch (error) {
+            }
+            catch (error) {
                 console.error(`editor @ loadBackupFile: Error loading backup file: ${error}`)
             }
         },
@@ -1717,71 +1708,67 @@ export default {
         this.zoomin()
         this.getExamMaterials()
 
-        console.log(`editor @ mounted: Calling loadBackupFile`)
-        this.loadBackupFile()
+      
 
-        if (isElectronWindow(window)) {
-            ipcRenderer.on('getmaterials', (event) => {  // get exam materials from teacher
-                console.log("editor @ getmaterials: get materials request received")
-                this.getExamMaterials()
-            });
+        signalBridge.on('getmaterials', (event) => {  // get exam materials from teacher
+            console.log("editor @ getmaterials: get materials request received")
+            this.getExamMaterials()
+        });
 
+        signalBridge.on('finalsubmit', (event) => {  // triggered on exit exam mode - send exam to teacher
+            console.log("editor @ finalsubmit: submit exam request received")
+            this.sendExamToTeacher(true)
+        });
 
-            ipcRenderer.on('finalsubmit', (event) => {  // triggered on exit exam mode - send exam to teacher
-                console.log("editor @ finalsubmit: submit exam request received")
-                this.sendExamToTeacher(true)
-            });
+        signalBridge.on('submitexam', (event, why) => {  //send current work as base64 to teacher
+            console.log("editor @ submitexam: submit exam request received")
+            this.printBase64()
+        });
 
+        signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            console.log("editor @ save: Teacher saverequest received")
+            this.saveContent(true, why)
+        });
+        signalBridge.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
+            this.printdenied(why)
+        });
+        signalBridge.on('backup', (event, filename) => {
+            console.log("editor @ backup: Replace event received ")
+            this.loadHTML(filename)
+        });
+        signalBridge.on('loadfilelist', () => {
+            //console.log("editor @ loadfilelist: Reload Files event received ")
+            this.loadFilelist()
+        });
+        signalBridge.on('fileerror', (event, msg) => {
+            console.log('editor @ fileerror: ', msg.message);
 
-            ipcRenderer.on('submitexam', (event, why) => {  //send current work as base64 to teacher
-                console.log("editor @ submitexam: submit exam request received")
-                this.printBase64()
-            });
-
-            ipcRenderer.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
-                console.log("editor @ save: Teacher saverequest received")
-                this.saveContent(true, why)
-            });
-            ipcRenderer.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
-                this.printdenied(why)
-            });
-            ipcRenderer.on('backup', (event, filename) => {
-                console.log("editor @ backup: Replace event received ")
-                this.loadHTML(filename)
-            });
-            ipcRenderer.on('loadfilelist', () => {
-                //console.log("editor @ loadfilelist: Reload Files event received ")
-                this.loadFilelist()
-            });
-            ipcRenderer.on('fileerror', (event, msg) => {
-                console.log('editor @ fileerror: ', msg.message);
-
-                if (this.showfileerror) {
-                    this.$swal.fire({
-                        title: this.$t("data.fileerror"),
-                        html: `${this.$t("data.fileerrorinfo2")}
-                        <br><br>
-                        <span class="small" style="font-style:italic;">${this.$t("data.fileerrorinfo")}</span>
-                        <br><br>
-                        <span class="small" style="color:darkred; font-style:italic;">${msg.message}</span>
-                        <label>
-                        <input type="checkbox" id="dontShowCheckbox"> ${this.$t("data.dontshow")}
-                        </label>`,
-                        icon: "error",
-                        showCancelButton: false,
-                        preConfirm: () => {
-                            // Falls der Benutzer die Checkbox aktiviert hat, aktualisieren wir die Variable:
-                            const dontShowCheckboxElement = document.getElementById('dontShowCheckbox');
-                            const dontShow = dontShowCheckboxElement ? dontShowCheckboxElement.checked : false;
-                            if (dontShow) {
-                                this.showfileerror = false;
-                            }
+            if (this.showfileerror) {
+                this.$swal.fire({
+                    title: this.$t("data.fileerror"),
+                    html: `${this.$t("data.fileerrorinfo2")}
+                    <br><br>
+                    <span class="small" style="font-style:italic;">${this.$t("data.fileerrorinfo")}</span>
+                    <br><br>
+                    <span class="small" style="color:darkred; font-style:italic;">${msg.message}</span>
+                    <label>
+                    <input type="checkbox" id="dontShowCheckbox"> ${this.$t("data.dontshow")}
+                    </label>`,
+                    icon: "error",
+                    showCancelButton: false,
+                    preConfirm: () => {
+                        // Falls der Benutzer die Checkbox aktiviert hat, aktualisieren wir die Variable:
+                        const dontShowCheckboxElement = document.getElementById('dontShowCheckbox');
+                        const dontShow = dontShowCheckboxElement ? dontShowCheckboxElement.checked : false;
+                        if (dontShow) {
+                            this.showfileerror = false;
                         }
-                    });
-                }
+                    }
+                });
+            }
 
-            });
-        }
+        });
+        
 
 
         // add some eventlisteners once
@@ -1839,6 +1826,10 @@ export default {
                 this.editorcontentcontainer.addEventListener('mouseup', this.getSelectedTextInfo);   // show amount of words and characters
                 this.editorcontentcontainer.addEventListener('keydown', this.insertSpaceInsteadOfTab)   //this changes the tab behaviour and allows tabstops
             }
+
+            // start language tool locally (if allowed)
+            this.startLanguageTool()
+
         });
 
 
@@ -1851,14 +1842,10 @@ export default {
         window.addEventListener('visibilitychange', this.handleVisibilityChange);
 
 
-        // start language tool locally (if allowed)
-        this.startLanguageTool()
-
+      
         // get wlan info and host ip for internet check
-        if (isElectronWindow(window)) {
-            this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-            this.hostip = await window.ipcRenderer.invoke('checkhostip')
-        }
+        this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+        this.hostip = await signalBridge.invoke('checkhostip')
         // prevent paste in editor - need to wait for editor to be initialized
         this.sleep(1000).then(() => {
             this.editorContent = this.editorcontentcontainer.querySelector('.ProseMirror');
@@ -1866,12 +1853,15 @@ export default {
                 this.editorContent.addEventListener('paste', this.handlePaste, true);
                 this.editorContent.addEventListener('drop', this.handleDrop, true);
             }
+            console.log(`editor @ mounted: Calling loadBackupFile`)
+            this.loadBackupFile()
         })
 
 
     },
 
     beforeMount() {
+
     },
 
     beforeUnmount() {
@@ -1931,16 +1921,14 @@ export default {
         this.clockinterval.removeEventListener('action', this.clock);
         this.clockinterval.stop()
 
-        if (isElectronWindow(window)) {
-            ipcRenderer.removeAllListeners('getmaterials')
-            ipcRenderer.removeAllListeners('finalsubmit')
-            ipcRenderer.removeAllListeners('submitexam')
-            ipcRenderer.removeAllListeners('fileerror')
-            ipcRenderer.removeAllListeners('save')
-            ipcRenderer.removeAllListeners('denied')
-            ipcRenderer.removeAllListeners('backup')
-            ipcRenderer.removeAllListeners('loadfilelist')
-        }
+        signalBridge.removeAllListeners('getmaterials')
+        signalBridge.removeAllListeners('finalsubmit')
+        signalBridge.removeAllListeners('submitexam')
+        signalBridge.removeAllListeners('fileerror')
+        signalBridge.removeAllListeners('save')
+        signalBridge.removeAllListeners('denied')
+        signalBridge.removeAllListeners('backup')
+        signalBridge.removeAllListeners('loadfilelist')
         this.editor.destroy()
     },
 }
@@ -1956,8 +1944,10 @@ export default {
     #editortoolbar, #webview, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer, span.NXTEhighlight::after, #highlight-layer, #languagetool, .split-view-container, #preview, #pdfembed {
         display: none !important;
     }
-    body {
+    body, #vuexambody {
         position: relative !important;
+        height: auto !important;
+        overflow: visible !important;
     }
     //body ist "fixed" um beim autoscrollen nicht zu verscheben - mehrseitiger print wird dadurch aber auf 1seite beschränkt
 
@@ -1989,7 +1979,8 @@ export default {
     }
 
     #editormaincontainer {
-        overflow: hidden !important;
+        height: auto !important;
+        overflow: visible !important;
         margin: 0 !important;
         border-radius: 0px !important;
         background-color: white !important;
@@ -2001,11 +1992,7 @@ export default {
 
     }
 
-    #app {
-        display: block !important;
-        height: 100% !important;
-        overflow: hidden !important;
-    }
+
 
     .ProseMirror {
         padding: 5mm 1mm 5mm 8mm !important;

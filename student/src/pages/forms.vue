@@ -66,10 +66,10 @@
         </div>
 
         <div v-if="allowedUrls.length !== 0" v-for="allowedUrl in allowedUrls  "
-             class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button" :title="allowedUrl"
-             @click="showUrl(allowedUrl)">
+             class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button" :title="getUrlDisplay(allowedUrl)"
+             @click="showUrl(getUrlDisplay(allowedUrl))">
             <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22"
-                 style="vertical-align: top;"> {{ allowedUrl }}
+                 style="vertical-align: top;"> {{ getUrlDisplay(allowedUrl) }}
         </div>
 
         <!-- exam materials end -->
@@ -139,7 +139,11 @@ import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 import PdfviewPane from '../components/PdfviewPane.vue'
 import WebviewPane from '../components/WebviewPane.vue'
 import {getExamMaterials, loadImage, loadPDF} from '../utils/filehandler.js'
-import {isElectronWindow} from "../types/electron.ts";
+import {isElectronWindow} from "../types/platform.ts";
+import {SignalBridge} from '../utils/signalBridge.js'
+
+// signalBridge instance centralizes ipc calls with platform checks
+const signalBridge = new SignalBridge(window);
 
 export default {
     data() {
@@ -166,7 +170,9 @@ export default {
             serverstatus: this.$route.params.serverstatus,
             localLockdown: this.$route.params.localLockdown,
 
-            gformsTestId: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.lockedSection].gformsTestId,
+            // section and forms id will be resolved on first fetchInfo based on allowSectionSwitch
+            lockedSection: null,
+            gformsTestId: null,
 
             config: this.$route.params.config,
             clientinfo: null,
@@ -203,6 +209,7 @@ export default {
             this.fetchinfointerval = new SchedulerService(5000);
             this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
             this.fetchinfointerval.start();
+            await this.fetchInfo(); // initial sync for clientinfo, serverstatus and gforms id
 
             this.clockinterval = new SchedulerService(1000);
             this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
@@ -233,7 +240,7 @@ export default {
                         if (guestId) {
                             try {
                                 if (isElectronWindow(window)) {
-                                    await window.ipcRenderer.invoke('start-blocking-for-website-webview', {
+                                    await signalBridge.invoke('start-blocking-for-website-webview', {
                                         guestId,
                                         mode: 'forms',
                                         gformsTestId: this.gformsTestId
@@ -292,8 +299,8 @@ export default {
 
         });
         if (isElectronWindow(window)) {
-            this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-            this.hostip = await window.ipcRenderer.invoke('checkhostip')
+            this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+            this.hostip = await signalBridge.invoke('checkhostip')
         }
 
     },
@@ -302,6 +309,9 @@ export default {
         gracefullyExit: gracefullyExit,
         showUrl: showUrl,
         reconnect: reconnect,
+        getUrlDisplay(allowedUrl) {
+            return typeof allowedUrl === 'object' ? allowedUrl.url : allowedUrl;
+        },
 
         // from filehandler.js
         getExamMaterials: getExamMaterials,
@@ -334,7 +344,7 @@ export default {
 
         async sendFocuslost() {
             if (isElectronWindow(window)) {
-                let response = await window.ipcRenderer.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
+                let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
                 if (!this.config.development && !response.focus) {  //immediately block frontend
                     this.focus = false
                 }
@@ -356,7 +366,7 @@ export default {
 
         async loadFilelist() {
             if (isElectronWindow(window)) {
-                let filelist = await window.ipcRenderer.invoke('getfilesasync', null)
+                let filelist = await signalBridge.invoke('getfilesasync', null)
                 this.localfiles = filelist;
             }
         },
@@ -373,7 +383,7 @@ export default {
 
         async fetchInfo() {
             if (isElectronWindow(window)) {
-                let getinfo = await window.ipcRenderer.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+                let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
 
                 this.clientinfo = getinfo.clientinfo;
                 this.token = this.clientinfo.token
@@ -381,6 +391,20 @@ export default {
                 this.clientname = this.clientinfo.name
                 this.exammode = this.clientinfo.exammode
                 this.pincode = this.clientinfo.pin
+                
+                this.serverstatus = getinfo.serverstatus
+
+                // decide which locked section index is authoritative (client vs server)
+                const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
+                    ? this.clientinfo.lockedSection
+                    : this.serverstatus.lockedSection
+
+                this.lockedSection = sectionIndex
+
+                const section = this.serverstatus.examSections?.[sectionIndex]
+                if (section && section.gformsTestId) {
+                    this.gformsTestId = section.gformsTestId
+                }
 
                 if (!this.focus) {
                     this.entrytime = new Date().getTime()
@@ -400,8 +424,8 @@ export default {
 
                 this.internetCheckCounter++
                 if (this.internetCheckCounter % 5 === 0) {
-                    this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-                    this.hostip = await window.ipcRenderer.invoke('checkhostip')
+                    this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+                    this.hostip = await signalBridge.invoke('checkhostip')
                     this.internetCheckCounter = 0
                 }
             }

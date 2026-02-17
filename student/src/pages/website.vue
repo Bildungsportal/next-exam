@@ -37,8 +37,8 @@
             <div v-if="(file.filetype == 'audio')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
             <div v-if="(file.filetype == 'image')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
         </div>
-        <div v-if="allowedUrls.length !== 0"  v-for="allowedUrl in allowedUrls  " class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button" :title="allowedUrl" @click="showUrl(allowedUrl)">
-            <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{allowedUrl}} 
+        <div v-if="allowedUrls.length !== 0"  v-for="allowedUrl in allowedUrls  " class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button" :title="getUrlDisplay(allowedUrl)" @click="showUrl(getUrlDisplay(allowedUrl))">
+            <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{getUrlDisplay(allowedUrl)}}
         </div>
         <!-- exam materials end -->
 
@@ -112,6 +112,11 @@ import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import { getExamMaterials, loadPDF, loadImage} from '../utils/filehandler.js'
 import PdfviewPane from '../components/PdfviewPane.vue'
 import WebviewPane from '../components/WebviewPane.vue';
+import {SignalBridge} from '../utils/signalBridge.js'
+
+// signalBridge instance centralizes ipc calls with platform checks
+const signalBridge = new SignalBridge(window);
+
 
 export default {
     data() {
@@ -134,13 +139,13 @@ export default {
             clientApiPort: this.$route.params.clientApiPort,
             electron: this.$route.params.electron,
             pincode : this.$route.params.pincode,
-            serverstatus: this.$route.params.serverstatus,
             config: this.$route.params.config,
             localLockdown: this.$route.params.localLockdown,
 
-            lockedSection: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.lockedSection],
-            serverstatus: this.$route.params.serverstatus[this.$route.params.serverstatus.lockedSection],
-            url: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.lockedSection].domainname,
+            // section and url will be resolved on first fetchInfo based on allowSectionSwitch
+            lockedSection: null,
+            serverstatus: this.$route.params.serverstatus,
+            url: null,
             domain: null,
 
             clientinfo: null,
@@ -161,7 +166,9 @@ export default {
             allowedUrls: [],
             webviewVisible: false,
             allowedDomain: null, // Extracted domain for navigation validation
-            
+            blockSubdomains: false, // Block subdomains setting from teacher
+            blockSubfolders: false, // Block subfolders setting from teacher
+
             // Event listener references for cleanup
             _onDidStartLoading: null,
             _onDidStopLoading: null,
@@ -182,6 +189,10 @@ export default {
         gracefullyExit:gracefullyExit,
         showUrl:showUrl,
         reconnect:reconnect,
+
+        getUrlDisplay(allowedUrl) {
+            return typeof allowedUrl === 'object' ? allowedUrl.url : allowedUrl;
+        },
         
         hidepreview(){
             let preview = document.querySelector("#preview")
@@ -208,18 +219,13 @@ export default {
         },
        
         async sendFocuslost(){
-            let response = await window.ipcRenderer.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
+            let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
             if (!this.config.development && !response.focus){  //immediately block frontend
                 this.focus = false 
             }  
         },
-
-
-
-
-
         async loadFilelist(){
-            let filelist = await window.ipcRenderer.invoke('getfilesasync', null)
+            let filelist = await signalBridge.invoke('getfilesasync', null)
             this.localfiles = filelist;
         },
         formatTime(unixTime) {
@@ -232,7 +238,7 @@ export default {
             this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
         },  
         async fetchInfo() {
-            let getinfo = await window.ipcRenderer.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+            let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
             
             this.clientinfo = getinfo.clientinfo;
             this.token = this.clientinfo.token
@@ -240,8 +246,35 @@ export default {
             this.clientname = this.clientinfo.name
             this.exammode = this.clientinfo.exammode
             this.pincode = this.clientinfo.pin
+            this.serverstatus = getinfo.serverstatus
 
-            if (!this.focus){  this.entrytime = new Date().getTime()}
+            // decide which locked section index is authoritative (client vs server)
+            const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
+                ? this.clientinfo.lockedSection
+                : this.serverstatus.lockedSection
+
+            this.lockedSection = sectionIndex
+
+            // update url/domain based on current locked section (respect allowSectionSwitch)
+            const section = this.serverstatus?.examSections?.[sectionIndex]
+            if (section && typeof section.domainname === 'string') {
+                this.url = section.domainname
+                this.domain = section.domainname
+                this.blockSubdomains = !!section.blockSubdomains
+                this.blockSubfolders = !!section.blockSubfolders
+                try {
+                    const urlObj = new URL(this.url);
+                    this.allowedDomain = urlObj.hostname;
+                } catch (error) {
+                    if (typeof this.url === 'string') {
+                        this.allowedDomain = this.url.replace(/https?:\/\//, '').split('/')[0].split(':')[0];
+                    } else {
+                        this.allowedDomain = null;
+                    }
+                }
+            }
+
+            if (!this.focus){  this.entrytime = new Date().getTime() }
             if (this.clientinfo && this.clientinfo.token){  this.online = true  }
             else { this.online = false  }
 
@@ -250,13 +283,11 @@ export default {
             
             this.internetCheckCounter++
             if (this.internetCheckCounter % 5 === 0){
-                this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-                this.hostip = await window.ipcRenderer.invoke('checkhostip')
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+                this.hostip = await signalBridge.invoke('checkhostip')
                 this.internetCheckCounter = 0
             }
-
         }, 
-       
     },
     mounted() {
         
@@ -267,22 +298,11 @@ export default {
     
         this.$nextTick(async () => { // Code that will run only after the entire view has been rendered
             
-            this.domain = this.url
-            // Extract domain for navigation validation (remove protocol, path, and port) using URL API for robustness
-            try {
-                const urlObj = new URL(this.url);
-                this.allowedDomain = urlObj.hostname; // This gives us just the domain without port
-                console.log(`website @ mounted: extracted allowedDomain="${this.allowedDomain}" from url="${this.url}"`);
-            } catch (error) {
-                // Fallback to regex extraction if URL parsing fails
-                this.allowedDomain = this.url.replace(/https?:\/\//, '').split('/')[0].split(':')[0];
-                console.log(`website @ mounted: fallback extraction, allowedDomain="${this.allowedDomain}"`);
-            }
-  
             // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
             this.fetchinfointerval = new SchedulerService(5000);
             this.fetchinfointerval.addEventListener('action',  this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
             this.fetchinfointerval.start();
+            await this.fetchInfo(); // initial sync for clientinfo, serverstatus and url
                 
             this.loadfilelistinterval = new SchedulerService(20000);
             this.loadfilelistinterval.addEventListener('action',  this.loadFilelist);
@@ -294,7 +314,7 @@ export default {
                 
             document.body.addEventListener('mouseleave', this.sendFocuslost);
             
-            ipcRenderer.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
+            signalBridge.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
                 console.log("website @ getmaterials: get materials request received")
                 this.getExamMaterials() 
             });
@@ -309,20 +329,23 @@ export default {
                 const iframe = shadowRoot.querySelector('iframe');
                 if (iframe) { iframe.style.height = '100%'; } 
                 
-                // Setup blocking in backend via IPC - this ensures events are caught early
+                // Setup blocking in backend via IPC - uses unified start-blocking-for-webview with webFilter
                 const setupBackendBlocking = async () => {
                     if (webview.getWebContentsId) {
                         const guestId = webview.getWebContentsId();
                         if (guestId) {
                             try {
-                                await window.ipcRenderer.invoke('start-blocking-for-website-webview', {
-                                    guestId, 
-                                    mode: 'website',
-                                    allowedDomain: this.allowedDomain,
-                                    baseUrl: this.url
+                                await signalBridge.invoke('start-blocking-for-webview', {
+                                    guestId,
+                                    allowedUrls: [{
+                                        url: this.url,
+                                        blockSubdomains: this.blockSubdomains,
+                                        blockSubfolders: this.blockSubfolders
+                                    }]
                                 });
                                 console.log(`website @ mounted: backend blocking setup for webview ${guestId}`);
-                            } catch (error) {
+                            }
+                            catch (error) {
                                 console.error('website @ mounted: failed to setup backend blocking', error);
                             }
                         }
@@ -367,29 +390,13 @@ export default {
                 `);
             };
             webview.addEventListener('dom-ready', this._onDomReady);
-            
-
-                         
-            // Fallback: Use did-navigate to check and navigate back if URL is not allowed
-            // This catches navigation that will-navigate might miss
-            // this._onDidNavigate = (event) => {
-            //     const currentUrl = event.url || webview.getURL();
-            //     if (currentUrl && !this._isUrlAllowed(currentUrl)) {
-            //         console.log("webview @ did-navigate: blocked navigation to", currentUrl);
-            //         // Navigate back to allowed URL
-            //         webview.loadURL(this.url);
-            //     }
-            // };
-            // webview.addEventListener('did-navigate', this._onDidNavigate);
-
+              
             // loading events to hide css manipulation
-           // this._onDidStartLoading = () => { this.isLoading = true;   }; // Zeige das Overlay während des Ladens
             this._onDidStopLoading = () => {   this.isLoading = false;  };           // Verberge das Overlay, wenn das Laden gestoppt ist
-           // webview.addEventListener('did-start-loading', this._onDidStartLoading);
             webview.addEventListener('did-stop-loading', this._onDidStopLoading);
 
-            this.wlanInfo = await window.ipcRenderer.invoke('get-wlan-info')
-            this.hostip = await window.ipcRenderer.invoke('checkhostip')
+            this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+            this.hostip = await signalBridge.invoke('checkhostip')
 
             
         });
