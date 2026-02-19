@@ -1255,6 +1255,7 @@ export default {
             }
         });
 
+        // TODO: Modify windowhandling and token saving
         signalBridge.on('bipToken', (event, token) => {
             console.log("token received: ", token)
             this.bipToken = token
