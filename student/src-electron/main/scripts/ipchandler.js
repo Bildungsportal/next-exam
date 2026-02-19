@@ -1,15 +1,15 @@
 /**
  * @license GPL LICENSE
  * Copyright (c) 2021 Thomas Michael Weissel
- * 
- * This program is free software: you can redistribute it and/or modify it 
+ *
+ * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
  * You should have received a copy of the GNU General Public License along with this program.
  * If not, see <http://www.gnu.org/licenses/>
@@ -21,9 +21,10 @@ import fs from 'fs'
 import ip from 'ip'
 import net from 'net'
 import i18n from '../../../src/locales/locales.js'
+
 const {t} = i18n.global
-import{ipcMain, clipboard,app, webContents} from 'electron'
-import { gateway4sync } from 'default-gateway';
+import {ipcMain, clipboard, app, webContents} from 'electron'
+import {gateway4sync} from 'default-gateway';
 import os from 'os'
 import log from 'electron-log';
 import {disableRestrictions} from './platformrestrictions.js';
@@ -32,10 +33,10 @@ import mammoth from 'mammoth';
 
 import languageToolServer from './lt-server';
 import platformDispatcher from './platformDispatcher.js';
-import { updateSystemTray } from './traymenu.js';
-import { ensureNetworkOrReset } from './testpermissionsMac.js';
-import { getWlanInfo } from './getwlaninfo.js';
-import { switchExamSection } from './switchExamSection.js';
+import {updateSystemTray} from './traymenu.js';
+import {ensureNetworkOrReset} from './testpermissionsMac.js';
+import {getWlanInfo} from './getwlaninfo.js';
+import {switchExamSection} from './switchExamSection.js';
 
 const __dirname = import.meta.dirname;
 
@@ -44,7 +45,7 @@ const checkPortOpen = (port, host = '127.0.0.1', timeout = 1500) => {
         const socket = new net.Socket();
         const finish = (running, error = null) => {
             socket.destroy();
-            resolve({ running, port, host, error });
+            resolve({running, port, host, error});
         };
         socket.setTimeout(timeout);
         socket.once('connect', () => finish(true));
@@ -58,23 +59,24 @@ const checkPortOpen = (port, host = '127.0.0.1', timeout = 1500) => {
     });
 };
 
-  ////////////////////////////////
- // IPC handling (Backend) START
+////////////////////////////////
+// IPC handling (Backend) START
 ////////////////////////////////
 
 class IpcHandler {
-    constructor () {
+    constructor() {
         this.multicastClient = null
         this.config = null
         this.WindowHandler = null
         this.isPrintingPdf = false // flag to prevent closing window while printing
     }
-    init (mc, config, wh, ch) {
+
+    init(mc, config, wh, ch) {
         this.multicastClient = mc
         this.config = config
-        this.WindowHandler = wh  
+        this.WindowHandler = wh
         this.CommunicationHandler = ch
-        
+
 
         ipcMain.on('set-new-locale', (event, locale) => {
             log.info(`ipchandler @ set-new-locale: setting new locale to ${locale}`)
@@ -83,41 +85,39 @@ class IpcHandler {
         })
 
 
-        ipcMain.handle('getExamMaterials', async (event) => { 
-      
+        ipcMain.handle('getExamMaterials', async (event) => {
+
             let clientinfo = this.multicastClient.clientinfo
             let servername = clientinfo.servername
             let serverip = clientinfo.serverip
             let token = clientinfo.token
-           
+
             let payload = {
                 group: clientinfo.group,
                 lockedSection: clientinfo.lockedSection,
             }
 
             let examMaterials = false
-            if (this.multicastClient.clientinfo.localLockdown){
+            if (this.multicastClient.clientinfo.localLockdown) {
                 return false
-            }
-            else{
+            } else {
                 // Fetch-Request mit den entsprechenden Optionen
                 examMaterials = await fetch(`https://${serverip}:${this.config.serverApiPort}/server/data/getexammaterials/${servername}/${token}`, {
                     method: "POST",
                     body: JSON.stringify(payload),
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {'Content-Type': 'application/json'},
                 })
-                .then(response => response.json()) // Antwort als ArrayBuffer erhalten
-                .then(data => {
-                    // log.info("ipchandler @ getExamMaterials: received data", data)
-                    return data
-                })
-                .catch(err => log.error(`ipchandler @ getExamMaterials: ${err}`));
+                    .then(response => response.json()) // Antwort als ArrayBuffer erhalten
+                    .then(data => {
+                        // log.info("ipchandler @ getExamMaterials: received data", data)
+                        return data
+                    })
+                    .catch(err => log.error(`ipchandler @ getExamMaterials: ${err}`));
                 return examMaterials
             }
 
 
-           
-        }) 
+        })
 
         // Helper function for common exception URLs (used by all exam modes)
         const checkCommonExceptions = (targetUrl) => {
@@ -131,20 +131,20 @@ class IpcHandler {
             if (targetUrl.includes("bildung.gv.at") && targetUrl.includes("SAML2")) return true;
             if (targetUrl.includes("Shibboleth") && targetUrl.includes("SAML2")) return true;
             if (targetUrl.includes("id-austria.gv.at") && targetUrl.includes("authHandler")) return true;
-            
+
             if (targetUrl.includes("eu-mobile.events.data") && targetUrl.includes("microsoft")) return true;   // LMS
             if (targetUrl.includes("gstatic.com")) return true;   // LMS
             if (targetUrl.includes("aadcdn") && targetUrl.includes("microsoftonline")) return true;   // LMS
             if (targetUrl.includes("login") && targetUrl.includes("live.com")) return true;   // LMS
             if (targetUrl.includes("login") && targetUrl.includes("msftauth.net")) return true;   // LMS
             if (targetUrl.includes("aadcdn") && targetUrl.includes("msftauth.net")) return true;   // LMS
-            if (targetUrl.includes("googlesyndication.com")) return true; 
+            if (targetUrl.includes("googlesyndication.com")) return true;
 
 
             return false;
         };
 
-        ipcMain.handle('start-blocking-for-webview', (event, { guestId, allowedUrls }) => {
+        ipcMain.handle('start-blocking-for-webview', (event, {guestId, allowedUrls}) => {
             const guest = webContents.fromId(Number(guestId));
             if (!guest || guest.isDestroyed?.()) return false;
 
@@ -158,42 +158,42 @@ class IpcHandler {
                     return entry;
                 }
                 // Legacy string format - default to not blocking subdomains/subfolders
-                return { url: String(entry), blockSubdomains: false, blockSubfolders: false };
+                return {url: String(entry), blockSubdomains: false, blockSubfolders: false};
             });
 
             // Helper: is target in allowed list? Only the entry whose domain matches the target applies; use only that entry's reason
             const getAllowResult = (targetUrl) => {
-                if (!targetUrl) return { allowed: false, reason: 'no target URL' };
-                if (checkCommonExceptions(String(targetUrl).toLowerCase())) return { allowed: true };
+                if (!targetUrl) return {allowed: false, reason: 'no target URL'};
+                if (checkCommonExceptions(String(targetUrl).toLowerCase())) return {allowed: true};
 
                 let reasonFromMatchingEntry = null;
                 for (const entry of normalizedUrls) {
                     const result = webFilter.getUrlAllowResult(targetUrl, entry.url, entry.blockSubdomains, entry.blockSubfolders);
-                    if (result.allowed) return { allowed: true };
+                    if (result.allowed) return {allowed: true};
                     if (result.domainMatched) {
                         reasonFromMatchingEntry = result.reason;
                         break; // this entry applies (domain matches); use its reason only
                     }
                 }
-                return { allowed: false, reason: reasonFromMatchingEntry || 'domain not in allowed URLs' };
+                return {allowed: false, reason: reasonFromMatchingEntry || 'domain not in allowed URLs'};
             };
 
             // Handle target="_blank" links and window.open - block BEFORE navigation
-            guest.setWindowOpenHandler(({ url }) => {
-                const { allowed, reason } = getAllowResult(url);
+            guest.setWindowOpenHandler(({url}) => {
+                const {allowed, reason} = getAllowResult(url);
                 if (allowed) {
                     log.info("ipchandler @ start-blocking-for-webview: allowed window.open to", url);
                     guest.loadURL(url); // Open in same webview
-                    return { action: 'deny' }; // Prevent new window
+                    return {action: 'deny'}; // Prevent new window
                 } else {
                     log.warn("ipchandler @ start-blocking-for-webview: blocked window.open to", url, "-", reason);
-                    return { action: 'deny' };
+                    return {action: 'deny'};
                 }
             });
 
             // Handle will-navigate on webContents level - fires BEFORE navigation happens
             guest.on('will-navigate', (e, url) => {
-                const { allowed, reason } = getAllowResult(url);
+                const {allowed, reason} = getAllowResult(url);
                 if (!allowed) {
                     log.warn("ipchandler @ start-blocking-for-webview: blocked navigation to", url, "-", reason);
                     e.preventDefault(); // Block navigation completely
@@ -208,7 +208,17 @@ class IpcHandler {
 
         // IPC handler for mode-specific webview blocking - supports eduvidual, forms, rdp modes
         // For website mode, prefer using start-blocking-for-webview with webFilter.js instead
-        ipcMain.handle('start-blocking-for-website-webview', (event, { guestId, mode, allowedDomain, baseUrl, blockSubdomains, blockSubfolders, moodleTestId, moodleDomain, gformsTestId }) => {
+        ipcMain.handle('start-blocking-for-website-webview', (event, {
+            guestId,
+            mode,
+            allowedDomain,
+            baseUrl,
+            blockSubdomains,
+            blockSubfolders,
+            moodleTestId,
+            moodleDomain,
+            gformsTestId
+        }) => {
             const guest = webContents.fromId(Number(guestId));
             if (!guest || guest.isDestroyed?.()) return false;
 
@@ -218,51 +228,51 @@ class IpcHandler {
             // URL validation function - different logic based on mode; returns { allowed, reason? } for website mode
             const getAllowResult = (targetUrl) => {
                 if (mode === "website") {
-                    if (!targetUrl) return { allowed: true };
-                    if (checkCommonExceptions(String(targetUrl).toLowerCase())) return { allowed: true };
+                    if (!targetUrl) return {allowed: true};
+                    if (checkCommonExceptions(String(targetUrl).toLowerCase())) return {allowed: true};
 
                     const result = webFilter.getUrlAllowResult(targetUrl, baseUrl || allowedDomain, !!blockSubdomains, !!blockSubfolders);
                     return result;
                 } else if (mode === "eduvidual") {
-                    if (targetUrl.includes(moodleTestId)) return { allowed: true };
-                    if (targetUrl.includes("startattempt.php") && targetUrl.includes(moodleDomain)) return { allowed: true };
-                    if (targetUrl.includes("processattempt.php") && targetUrl.includes(moodleDomain)) return { allowed: true };
-                    if (targetUrl.includes("logout") && targetUrl.includes(moodleDomain)) return { allowed: true };
-                    if (targetUrl.includes("login") && targetUrl.includes("eduvidual")) return { allowed: true };
-                    if (targetUrl.includes("login") && targetUrl.includes(moodleDomain)) return { allowed: true };
-                    if (targetUrl.includes("policy") && targetUrl.includes(moodleDomain)) return { allowed: true };
-                    if (targetUrl.includes("auth") && targetUrl.includes(moodleDomain)) return { allowed: true };
-                    if (targetUrl.includes("SAML2") && targetUrl.includes("portal.tirol.gv.at")) return { allowed: true };
-                    if (targetUrl.includes("login") && targetUrl.includes("portal.tirol.gv.at")) return { allowed: true };
-                    if (targetUrl.includes("login") && targetUrl.includes("tirol.gv.at")) return { allowed: true };
-                    return { allowed: false, reason: 'not in eduvidual allow list' };
+                    if (targetUrl.includes(moodleTestId)) return {allowed: true};
+                    if (targetUrl.includes("startattempt.php") && targetUrl.includes(moodleDomain)) return {allowed: true};
+                    if (targetUrl.includes("processattempt.php") && targetUrl.includes(moodleDomain)) return {allowed: true};
+                    if (targetUrl.includes("logout") && targetUrl.includes(moodleDomain)) return {allowed: true};
+                    if (targetUrl.includes("login") && targetUrl.includes("eduvidual")) return {allowed: true};
+                    if (targetUrl.includes("login") && targetUrl.includes(moodleDomain)) return {allowed: true};
+                    if (targetUrl.includes("policy") && targetUrl.includes(moodleDomain)) return {allowed: true};
+                    if (targetUrl.includes("auth") && targetUrl.includes(moodleDomain)) return {allowed: true};
+                    if (targetUrl.includes("SAML2") && targetUrl.includes("portal.tirol.gv.at")) return {allowed: true};
+                    if (targetUrl.includes("login") && targetUrl.includes("portal.tirol.gv.at")) return {allowed: true};
+                    if (targetUrl.includes("login") && targetUrl.includes("tirol.gv.at")) return {allowed: true};
+                    return {allowed: false, reason: 'not in eduvidual allow list'};
                 } else if (mode === "forms") {
-                    if (targetUrl.includes(gformsTestId)) return { allowed: true };
-                    if (targetUrl.includes("docs.google.com") && targetUrl.includes("formResponse")) return { allowed: true };
-                    if (targetUrl.includes("docs.google.com") && targetUrl.includes("viewscore")) return { allowed: true };
-                    return { allowed: false, reason: 'not in forms allow list' };
+                    if (targetUrl.includes(gformsTestId)) return {allowed: true};
+                    if (targetUrl.includes("docs.google.com") && targetUrl.includes("formResponse")) return {allowed: true};
+                    if (targetUrl.includes("docs.google.com") && targetUrl.includes("viewscore")) return {allowed: true};
+                    return {allowed: false, reason: 'not in forms allow list'};
                 } else if (mode === "rdp") {
-                    return { allowed: true };
+                    return {allowed: true};
                 }
 
                 const allowed = checkCommonExceptions(targetUrl);
-                return allowed ? { allowed: true } : { allowed: false, reason: 'not in common exceptions' };
+                return allowed ? {allowed: true} : {allowed: false, reason: 'not in common exceptions'};
             };
 
-            guest.setWindowOpenHandler(({ url }) => {
-                const { allowed, reason } = getAllowResult(url);
+            guest.setWindowOpenHandler(({url}) => {
+                const {allowed, reason} = getAllowResult(url);
                 if (allowed) {
                     log.info(`ipchandler @ start-blocking-for-website-webview [${mode}]: allowed window.open to`, url);
                     guest.loadURL(url); // Open in same webview
-                    return { action: 'deny' };
+                    return {action: 'deny'};
                 } else {
                     log.warn(`ipchandler @ start-blocking-for-website-webview [${mode}]: blocked window.open to`, url, "-", reason);
-                    return { action: 'deny' };
+                    return {action: 'deny'};
                 }
             });
 
             guest.on('will-navigate', (e, url) => {
-                const { allowed, reason } = getAllowResult(url);
+                const {allowed, reason} = getAllowResult(url);
                 if (!allowed) {
                     log.warn(`ipchandler @ start-blocking-for-website-webview [${mode}]: blocked navigation to`, url, "-", reason);
                     e.preventDefault();
@@ -271,20 +281,20 @@ class IpcHandler {
                     log.info(`ipchandler @ start-blocking-for-website-webview [${mode}]: allowed navigation to`, url);
                 }
             });
-              
+
             return true;
         });
 
         // Alias for eduvidual mode - redirects to unified handler
-        ipcMain.handle('start-blocking-for-eduvidual-webview', (event, { guestId, moodleTestId, moodleDomain }) => {
+        ipcMain.handle('start-blocking-for-eduvidual-webview', (event, {guestId, moodleTestId, moodleDomain}) => {
             // Call the unified handler with eduvidual mode
             const unifiedHandler = ipcMain.listeners('start-blocking-for-website-webview')[0];
             if (unifiedHandler) {
-                return unifiedHandler(event, { guestId, mode: 'eduvidual', moodleTestId, moodleDomain });
+                return unifiedHandler(event, {guestId, mode: 'eduvidual', moodleTestId, moodleDomain});
             }
             return false;
         });
-          
+
 
         /**
          * Reload the browser view
@@ -295,51 +305,27 @@ class IpcHandler {
         });
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         /**
          * Start languageTool API Server (with Java JRE)
          * Runs at localhost 8088
-        */ 
-        ipcMain.handle('startLanguageTool', (event) => { 
-            try{
+         */
+        ipcMain.handle('startLanguageTool', (event) => {
+            try {
                 languageToolServer.startServer();
-            }
-            catch(err){
+            } catch (err) {
                 return false
             }
             return true
-        }) 
+        })
 
 
         /**
          * activate spellcheck on demand for specific student
-         */ 
-        ipcMain.on('startLanguageTool', (event) => {  
-            try{
+         */
+        ipcMain.on('startLanguageTool', (event) => {
+            try {
                 languageToolServer.startServer();
-            }
-            catch(err){
+            } catch (err) {
                 return false
             }
             return true
@@ -347,8 +333,8 @@ class IpcHandler {
 
         /**
          * Check if LanguageTool server responds on configured port
-         */ 
-        ipcMain.handle('isLanguageToolRunning', async () => { 
+         */
+        ipcMain.handle('isLanguageToolRunning', async () => {
             const port = languageToolServer.port || 8088;
             const hosts = ['127.0.0.1', '::1', 'localhost'];
             // Run all checks in parallel for better performance, use longer timeout for server startup detection
@@ -359,42 +345,40 @@ class IpcHandler {
         })
 
 
-
-
         /**
          *  Start LOCAL Lockdown
          */
         ipcMain.on('locallockdown', (event, args) => {
             log.info("ipchandler @ locallockdown: locking down client without teacher connection")
-            
+
             let serverstatus = {
                 exammode: true,
-               
+
                 delfolderonexit: false,
                 spellcheck: true,
                 spellchecklang: 'de-DE',
                 suggestions: false,
                 moodleTestType: '',
                 moodleDomain: '',
- 
+
                 screenshotinterval: 0,
                 msOfficeFile: false,
                 screenslocked: false,
                 pin: '0000',
-               
+
                 unlockonexit: false,
                 fontfamily: 'sans-serif',
                 moodleTestId: '',
                 languagetool: false,
                 password: args.password,
-         
+
                 useExamSections: false, //if false exam section 1 is used and no tabs are displayed
                 activeSection: 1,
                 lockedSection: 1,
                 examSections: {
                     1: {
                         examtype: args.exammode,
-                        cmargin: { side: 'right', size: 3 },
+                        cmargin: {side: 'right', size: 3},
                         linespacing: '2',
                         audioRepeat: 3,
                         languagetool: args.languagetool || false,
@@ -403,7 +387,7 @@ class IpcHandler {
                     }
                 }
             }
-            
+
             this.multicastClient.clientinfo.name = args.clientname;
             this.multicastClient.clientinfo.serverip = "127.0.0.1";
             this.multicastClient.clientinfo.servername = "localhost";
@@ -413,10 +397,9 @@ class IpcHandler {
             this.multicastClient.clientinfo.localLockdown = true; // this must be set to true in order to stop typical next-exam client/teacher actions
 
             this.CommunicationHandler.startExam(serverstatus)
-            
+
             event.returnValue = "hello from locallockdown"
         })
-
 
 
         /**
@@ -430,233 +413,231 @@ class IpcHandler {
         })
 
 
-
         /**
          * Registers virtualized status
-         */ 
-        ipcMain.on('virtualized', () => {  this.multicastClient.clientinfo.virtualized = true; } )
+         */
+        ipcMain.on('virtualized', () => {
+            this.multicastClient.clientinfo.virtualized = true;
+        })
 
 
         /**
          * Set FOCUS state to false (mouse left exam window)
-         */ 
-        ipcMain.handle('focuslost', (event, ctrlalt=false) => { 
-            let answer = false 
-            if (this.config.development || !this.multicastClient.exammode) { 
-                answer = { sender: "client", focus: true}
-                
-            }
-            else if (this.WindowHandler.screenlockwindows.length > 0) { 
-                answer = { sender: "client", focus: true }
-                
-            }
-            else if (this.WindowHandler.focusTargetAllowed && ctrlalt == false){ 
+         */
+        ipcMain.handle('focuslost', (event, ctrlalt = false) => {
+            let answer = false
+            if (this.config.development || !this.multicastClient.exammode) {
+                answer = {sender: "client", focus: true}
+
+            } else if (this.WindowHandler.screenlockwindows.length > 0) {
+                answer = {sender: "client", focus: true}
+
+            } else if (this.WindowHandler.focusTargetAllowed && ctrlalt == false) {
                 log.warn(`ipchandler @ focuslost: mouseleave event was triggered but target is allowed`)
-                answer = { sender: "client", focus: true }
-                
-            } 
-            else {
+                answer = {sender: "client", focus: true}
+
+            } else {
                 this.WindowHandler.examwindow.moveTop();
                 this.WindowHandler.examwindow.setKiosk(true);
-                this.WindowHandler.examwindow.show();  
+                this.WindowHandler.examwindow.show();
                 this.WindowHandler.examwindow.focus();    // we keep focus on the window.. no matter what
-    
-                this.multicastClient.clientinfo.focus = false; // block everything and inform teacher  (probably an overkill on mouseleave - needs testing)
-                answer = { sender: "client", focus: false }
-            }
-           
-            return answer
-        } )
 
+                this.multicastClient.clientinfo.focus = false; // block everything and inform teacher  (probably an overkill on mouseleave - needs testing)
+                answer = {sender: "client", focus: false}
+            }
+
+            return answer
+        })
 
 
         /**
          * Returns the main config object
-         */ 
-        ipcMain.on('getconfig', (event) => {   event.returnValue = this.config   })
+         */
+        ipcMain.on('getconfig', (event) => {
+            event.returnValue = this.config
+        })
 
 
         /**
-        * Unlock Computer
-        */ 
-        ipcMain.on('gracefullyexit', () => {  
+         * Unlock Computer
+         */
+        ipcMain.on('gracefullyexit', () => {
             log.info(`ipchandler @ gracefullyexit: gracefully leaving locked exam mode`)
 
-            this.CommunicationHandler.gracefullyEndExam() 
-            this.CommunicationHandler.resetConnection() 
-        } )
+            this.CommunicationHandler.gracefullyEndExam()
+            this.CommunicationHandler.resetConnection()
+        })
 
         /**
-        * stop restrictions
-        */ 
-        ipcMain.on('restrictions', () => {  
+         * stop restrictions
+         */
+        ipcMain.on('restrictions', () => {
             //this also stops the clearClipboard interval
-            disableRestrictions(this.WindowHandler.examwindow) 
-        } )
+            disableRestrictions(this.WindowHandler.examwindow)
+        })
 
 
         /**
-        * copy to global clipboard
-        */ 
-        ipcMain.on('clipboard', (event, text) => {  
+         * copy to global clipboard
+         */
+        ipcMain.on('clipboard', (event, text) => {
             clipboard.writeText(text)
-        } )
-
+        })
 
 
         /**
          * re-check hostip and enable multicast client
-         */ 
-        ipcMain.handle('checkhostip', async (event) => { 
+         */
+        ipcMain.handle('checkhostip', async (event) => {
             let address = false;
-            try {    address = this.multicastClient.client.address();            }
-            catch (e) {   log.error("ipcHandler @ checkhostip: multicastclient not running");            }
-            
+            try {
+                address = this.multicastClient.client.address();
+            } catch (e) {
+                log.error("ipcHandler @ checkhostip: multicastclient not running");
+            }
+
             // Falls bereits eine Adresse vorhanden ist, liefern wir sie zurück.
-            if (address) {  return this.config.hostip;  }
-            
+            if (address) {
+                return this.config.hostip;
+            }
+
             // Versuche, an die korrekte Schnittstelle zu binden
             try {
                 // Falls gateway4sync() blockierend ist, kannst du diesen Aufruf in ein Promise packen:
-                const { gateway, interface: iface } = await new Promise((resolve, reject) => {
+                const {gateway, interface: iface} = await new Promise((resolve, reject) => {
                     try {
                         const res = gateway4sync();
                         resolve(res);
-                    } catch(err) {  reject(err);   }
+                    } catch (err) {
+                        reject(err);
+                    }
                 });
                 this.config.hostip = ip.address(iface); // Liefert die IP der Schnittstelle, welche das Default Gateway hat
                 this.config.gateway = true;
-            }
-            catch (e) {
+            } catch (e) {
                 this.config.hostip = false;
                 this.config.gateway = false;
             }
-            
+
             // Falls keine IP (mit Gateway) verfügbar ist, hole eine alternative Adresse
             if (!this.config.hostip) {
                 try {
                     this.config.hostip = ip.address(); // Liefert auch eine IP, wenn kein Gateway verfügbar ist
-                }
-                catch (e) {
+                } catch (e) {
                     log.error("ipcHandler @ checkhostip: Unable to determine ip address", e);
                     this.config.hostip = false;
                     this.config.gateway = false;
                 }
             }
-            
+
             // Verfälschte Adressen (z. B. localhost) ignorieren
-            if (this.config.hostip === "127.0.0.1") {    this.config.hostip = false;   }
-            
+            if (this.config.hostip === "127.0.0.1") {
+                this.config.hostip = false;
+            }
+
             // Wenn die Multicast-Client nicht läuft, initialisieren
             if (this.config.hostip && !address) {
                 try {
                     // Falls init() asynchron umgesetzt werden kann, warten wir hier darauf.
                     await this.multicastClient.init(this.config.gateway);
+                } catch (err) {
+                    log.error("ipcHandler @ checkhostip: Error initializing multicast client", err);
                 }
-                catch(err) {  log.error("ipcHandler @ checkhostip: Error initializing multicast client", err); }
             }
-        
+
             return this.config.hostip;
         });
-
-
-
 
 
         /**
          * Store content from editor as html file - as backup - only triggered by the teacher for now (allow manual backup !!)
          * @param args contains an object with  {clientname:this.clientname, filename:`${filename}.html`, editorcontent: editorcontent }
          */
-        ipcMain.on('storeHTML', (event, args) => {   
+        ipcMain.on('storeHTML', (event, args) => {
             const htmlContent = args.editorcontent
             const filename = args.filename
             let htmlfilename = `${this.multicastClient.clientinfo.name}.bak`
-            
-            if (filename){
+
+            if (filename) {
                 htmlfilename = `${filename}.bak`
             }
 
             const htmlfile = path.join(this.config.examdirectory, htmlfilename);
 
-            if (htmlContent) { 
+            if (htmlContent) {
                 // log.info("ipchandler: storeHTML: saving students work to disk...")
                 try {
-                    fs.writeFile(htmlfile, htmlContent, (err) => { 
+                    fs.writeFile(htmlfile, htmlContent, (err) => {
                         if (err) {
-                            log.error(`ipchandler @ storeHTML: ${err.message}`); 
-                        
+                            log.error(`ipchandler @ storeHTML: ${err.message}`);
+
                             let alternatepath = `${htmlfile}-${this.multicastClient.clientinfo.token}.bak`
-                            log.warn("ipchandler @ storeHTML: trying to write file as:", alternatepath )
-                            fs.writeFile(alternatepath, htmlContent, function (err) { 
+                            log.warn("ipchandler @ storeHTML: trying to write file as:", alternatepath)
+                            fs.writeFile(alternatepath, htmlContent, function (err) {
                                 if (err) {
                                     log.error(err.message);
-                                    log.error("ipchandler @ storeHTML: giving up"); 
-                                    event.reply("fileerror", { sender: "client", message:err , status:"error" } )
-                                }
-                                else {
+                                    log.error("ipchandler @ storeHTML: giving up");
+                                    event.reply("fileerror", {sender: "client", message: err, status: "error"})
+                                } else {
                                     log.info("ipchandler @ storeHTML: success!");
                                     event.reply("loadfilelist")
                                 }
-                            }); 
+                            });
                         }
                         event.reply("loadfilelist")
-                    } ); 
-                }
-                catch(err){
+                    });
+                } catch (err) {
                     log.error(err)
-                    event.returnValue = { sender: "client", message:err , status:"error" }
+                    event.returnValue = {sender: "client", message: err, status: "error"}
                 }
             }
         })
 
 
-
         /**
          * get base64 encoded pdf from editor
-         */ 
+         */
         ipcMain.handle('getPDFbase64', async (event, args) => {
             log.info("ipchandler @ getPDFbase64: getting base64 encoded pdf")
-            this.multicastClient.clientinfo.submissionnumber = args.submissionnumber+1 // clientinfo keeps track of submissions for automated submissionnumbers at section change - but this obviously happens after manual submit
+            this.multicastClient.clientinfo.submissionnumber = args.submissionnumber + 1 // clientinfo keeps track of submissions for automated submissionnumbers at section change - but this obviously happens after manual submit
             let result = await this.CommunicationHandler.getBase64PDF(args.submissionnumber, args.sectionname, args.printBackground)   // why the hell is this function located in communicationhandler.js and not in ipchandler.js ? FIXME !
             return result
         })
 
 
-
-
         /**
          * Stores the ExamWindow content as PDF
          * ATTENTION there is a similar method in communicationhandler.js that also generates a pdf but retuns a base64 version of the pdf
-         */ 
-        ipcMain.on('printpdf', (event, args) => { 
+         */
+        ipcMain.on('printpdf', (event, args) => {
             // do not print if exam mode is not active anymore
-            if (!this.multicastClient?.clientinfo?.exammode){
+            if (!this.multicastClient?.clientinfo?.exammode) {
                 log.warn("ipchandler @ printpdf: exammode is false - skipping print")
                 return
             }
 
-            if (this.isPrintingPdf){
+            if (this.isPrintingPdf) {
                 log.warn("ipchandler @ printpdf: print already in progress - skipping new request")
                 return
             }
 
-            if (this.WindowHandler.examwindow){
+            if (this.WindowHandler.examwindow) {
                 const options = { // define print options
-                    margins: {top:0.5, right:0, bottom:0.5, left:0 },
+                    margins: {top: 0.5, right: 0, bottom: 0.5, left: 0},
                     pageSize: 'A4',
                     printBackground: false,
                     printSelectionOnly: false,
                     landscape: args.landscape,
-                    displayHeaderFooter:true,
+                    displayHeaderFooter: true,
                     footerTemplate: "<div style='height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-bottom:10px;'><span class=pageNumber></span>|<span class=totalPages></span></div>",
                     headerTemplate: `<div style='display: inline-block; height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-left: 30px; margin-top:10px;'><span style="float:left;">${args.servername}</span><span style="float:left;">&nbsp;|&nbsp; </span><span class=date style="float:left;"></span><span style="float:right;">${args.clientname}</span></div>`,
                     preferCSSPageSize: false
                 }
 
                 let pdffilename = `${this.multicastClient.clientinfo.name}.pdf`  // default filename = clientname.pdf
-                if (args.filename){  // in case of manual backup the user can set a custom filename
+                if (args.filename) {  // in case of manual backup the user can set a custom filename
                     pdffilename = `${args.filename}.pdf`
-                    
+
                 }
                 const pdffilepath = path.join(this.config.examdirectory, pdffilename);  // path points to the current exam directory
                 const alternatefilename = `${pdffilename}-aux.pdf`    //thomas.pdf-aux.pdf 
@@ -673,15 +654,20 @@ class IpcHandler {
                             fs.renameSync(alternatepath, newPath);
                         }
                     });
-                } 
-                catch(err) { log.error(`ipchandler @ printpdf: ${err.message}`);  }
+                } catch (err) {
+                    log.error(`ipchandler @ printpdf: ${err.message}`);
+                }
 
                 const examWindow = this.WindowHandler.examwindow
                 const webContents = examWindow?.webContents
 
-                if (!webContents){
+                if (!webContents) {
                     log.error("ipchandler @ printpdf: no webContents found for examwindow")
-                    event.reply("fileerror", { sender: "client", message:"no webContents found for examwindow" , status:"error" } )
+                    event.reply("fileerror", {
+                        sender: "client",
+                        message: "no webContents found for examwindow",
+                        status: "error"
+                    })
                     return
                 }
 
@@ -696,36 +682,48 @@ class IpcHandler {
                     return webContents.printToPDF(options)
                 }).then(data => {
                     // delete the old pdf file if it exists
-                    try { if (fs.existsSync(pdffilepath)) { fs.unlinkSync(pdffilepath); }}
-                    catch(err) { log.error(`ipchandler @ printpdf: ${err.message}`);  }
+                    try {
+                        if (fs.existsSync(pdffilepath)) {
+                            fs.unlinkSync(pdffilepath);
+                        }
+                    } catch (err) {
+                        log.error(`ipchandler @ printpdf: ${err.message}`);
+                    }
                     // write the pdf to the exam directory
-                    fs.writeFile(pdffilepath, data, (err) => { 
+                    fs.writeFile(pdffilepath, data, (err) => {
                         if (err) {
-                            log.warn(`ipchandler @ printpdf: ${err.message} - writing file as: ${alternatepath} `); 
+                            log.warn(`ipchandler @ printpdf: ${err.message} - writing file as: ${alternatepath} `);
                             // delete the old aux file if it exists
-                            try { if (fs.existsSync(alternatepath)) { fs.unlinkSync(alternatepath); } }
-                            catch (err) { log.error(`ipchandler @ printpdf (alternativer Pfad): ${err.message}`); }
+                            try {
+                                if (fs.existsSync(alternatepath)) {
+                                    fs.unlinkSync(alternatepath);
+                                }
+                            } catch (err) {
+                                log.error(`ipchandler @ printpdf (alternativer Pfad): ${err.message}`);
+                            }
                             // write the pdf to the alternate path
-                            fs.writeFile(alternatepath, data, (err) => { 
+                            fs.writeFile(alternatepath, data, (err) => {
                                 if (err) {
                                     log.error(err.message);
-                                    log.error("ipchandler @ printpdf: giving up"); 
-                                    event.reply("fileerror", { sender: "client", message:err.message , status:"error" } )
-                                }
-                                else { // log.info("ipchandler @ printpdf: success!");
-                                    if (args.reason === "teacherrequest") { this.CommunicationHandler.sendToTeacher() }
+                                    log.error("ipchandler @ printpdf: giving up");
+                                    event.reply("fileerror", {sender: "client", message: err.message, status: "error"})
+                                } else { // log.info("ipchandler @ printpdf: success!");
+                                    if (args.reason === "teacherrequest") {
+                                        this.CommunicationHandler.sendToTeacher()
+                                    }
                                     event.reply("loadfilelist")
                                 }
-                            }); 
-                        }
-                        else { // log.info("ipchandler @ printpdf: success!");
-                            if (args.reason === "teacherrequest") { this.CommunicationHandler.sendToTeacher() }
+                            });
+                        } else { // log.info("ipchandler @ printpdf: success!");
+                            if (args.reason === "teacherrequest") {
+                                this.CommunicationHandler.sendToTeacher()
+                            }
                             event.reply("loadfilelist")   //make sure students see the new file immediately
                         }
-                    } ); 
-                }).catch(error => { 
+                    });
+                }).catch(error => {
                     log.error(`ipchandler @ printpdf: ${error.message}`)
-                    event.reply("fileerror", { sender: "client", message:error.message , status:"error" } )
+                    event.reply("fileerror", {sender: "client", message: error.message, status: "error"})
                 }).finally(() => {
                     this.isPrintingPdf = false
                 });
@@ -739,39 +737,39 @@ class IpcHandler {
             try {
                 const bakFilename = args.filename ? `${args.filename}.bak` : `${this.multicastClient.clientinfo.name}.bak`;
                 const bakFilePath = path.join(this.config.examdirectory, bakFilename);
-                
+
                 // Convert formData to JSON string
                 const jsonData = JSON.stringify(args.formData, null, 2);
-                
+
                 // Write to .bak file
                 fs.writeFileSync(bakFilePath, jsonData, 'utf8');
                 log.info(`ipchandler @ saveActivesheetsBak: saved form data to ${bakFilename}`);
             } catch (error) {
                 log.error(`ipchandler @ saveActivesheetsBak: ${error.message}`);
-                event.reply("fileerror", { sender: "client", message: error.message, status: "error" });
+                event.reply("fileerror", {sender: "client", message: error.message, status: "error"});
             }
         })
 
 
-
-
         /**
          * Returns all found Servers and the information about this client
-         */ 
-        ipcMain.handle('getinfoasync', async (event) => {   
-            let serverstatus = false   
+         */
+        ipcMain.handle('getinfoasync', async (event) => {
+            let serverstatus = false
             // serverstatus objekt wird nur bei beginn des exams an das exam window durchgereicht für basis einstellungen
             // alle weiteren updates über das serverstatus object werden im communication handler gelesen und ggf. auf das clientinfo object gelegt
             // dieser kommunikationsfluss muss in 2.0 gestreamlined werden #FIXME
-            
-            if (this.WindowHandler.examwindow) { serverstatus = this.multicastClient.serverstatus }
+
+            if (this.WindowHandler.examwindow) {
+                serverstatus = this.multicastClient.serverstatus
+            }
 
             //count number of files in exam directory
-            if (!this.multicastClient.clientinfo.exammode){
+            if (!this.multicastClient.clientinfo.exammode) {
                 const workdir = path.join(config.examdirectory, "/")
                 try {
-                    await fs.promises.mkdir(workdir, { recursive: true })  // erstellt falls nötig
-                    const filelist = (await fs.promises.readdir(workdir, { withFileTypes: true }))
+                    await fs.promises.mkdir(workdir, {recursive: true})  // erstellt falls nötig
+                    const filelist = (await fs.promises.readdir(workdir, {withFileTypes: true}))
                         .filter(dirent => dirent.isFile())
                         .map(dirent => dirent.name)
                     this.multicastClient.clientinfo.numberOfFiles = filelist.length
@@ -779,14 +777,13 @@ class IpcHandler {
                     this.multicastClient.clientinfo.numberOfFiles = 0
                 }
             }
-            
 
 
-            return {   
+            return {
                 serverlist: this.multicastClient.examServerList,
                 clientinfo: this.multicastClient.clientinfo,
                 serverstatus: serverstatus
-            }   
+            }
         })
 
         // Student-initiated section switch when allowSectionSwitch is true; always uses current serverstatus and section number
@@ -799,20 +796,24 @@ class IpcHandler {
         })
 
         /**
-         * because of microsoft 365 we need to work with "BrowserView" 
+         * because of microsoft 365 we need to work with "BrowserView"
          * in order to be able to dislay fullscreen information from the Exam header we temporarily collapse the BrowserView for Office
          * and restore it afterwards - not perfect but looks ok
-         */ 
+         */
         ipcMain.on('collapse-browserview', (event) => {
             const mainWindow = this.WindowHandler.examwindow
-            if (!mainWindow){ return }
+            if (!mainWindow) {
+                return
+            }
             const contentView = mainWindow.getBrowserView(0); // assuming it's the 1st added view
-            contentView.setBounds({ x: 0, y: 0, width: 0, height: 0 });
-            
+            contentView.setBounds({x: 0, y: 0, width: 0, height: 0});
+
         });
         ipcMain.on('restore-browserview', (event) => {
             const mainWindow = this.WindowHandler.examwindow
-            if (!mainWindow){ return }
+            if (!mainWindow) {
+                return
+            }
             const menuHeight = mainWindow.menuHeight;
             const newBounds = mainWindow.getBounds(); // Get the current bounds of the mainWindow
             const contentView = mainWindow.getBrowserView(0); // assuming it's the 1st added view
@@ -833,7 +834,7 @@ class IpcHandler {
             if (mainWindow && height > 0) {
                 // Update the stored menu height
                 mainWindow.menuHeight = height;
-                
+
                 // Reposition the browser view with new height
                 const newBounds = mainWindow.getBounds();
                 const contentView = mainWindow.getBrowserView(0);
@@ -849,12 +850,11 @@ class IpcHandler {
         });
 
 
-
         /**
          * Sends a register request to the given server ip
-         * @param args contains an object with  clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode 
+         * @param args contains an object with  clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode
          */
-        ipcMain.on('register', (event, args) => {   
+        ipcMain.on('register', (event, args) => {
             const clientname = args.clientname
             const pin = args.pin
             const serverip = args.serverip
@@ -864,267 +864,285 @@ class IpcHandler {
             const version = this.config.version
             const bipuserID = args.bipuserID
 
-            if (this.multicastClient.clientinfo.token){ //#FIXME das sollte eigentlich vom server kommen 
-                event.returnValue = { sender: "client", message: t("control.alreadyregistered"), status:"error" }
+            if (this.multicastClient.clientinfo.token) { //#FIXME das sollte eigentlich vom server kommen
+                event.returnValue = {sender: "client", message: t("control.alreadyregistered"), status: "error"}
             }
 
 
-         
             const url = `https://${serverip}:${this.config.serverApiPort}/server/control/registerclient/${servername}/${pin}/${clientname}/${clientip}/${hostname}/${version}/${bipuserID}`;
             const signal = AbortSignal.timeout(8000); // 8000 Millisekunden = 8 Sekunden AbortSignal mit einem Timeout
 
 
-            fetch(url, { method: 'GET', signal })
-            .then(response => response.json()) 
-            .then(data => {
-                if (data && data.status == "success") {  // registration successfull otherwise data would be "false"
-                    // Erfolgreiche Registrierung
-                    this.multicastClient.clientinfo.name = clientname;
-                    this.multicastClient.clientinfo.serverip = serverip;
-                    this.multicastClient.clientinfo.servername = servername;
-                    this.multicastClient.clientinfo.ip = clientip;
-                    this.multicastClient.clientinfo.hostname = hostname;
-                    this.multicastClient.clientinfo.token = data.token; // we need to store the client token in order to check against it before processing critical api calls
-                    this.multicastClient.clientinfo.focus = true;
-                    this.multicastClient.clientinfo.pin = pin;
-                   
-                    log.info(`ipchandler @ register: successfully registered at ${servername} @ ${serverip} as ${clientname}`);
-                    event.returnValue = data;
+            fetch(url, {method: 'GET', signal})
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.status == "success") {  // registration successfull otherwise data would be "false"
+                        // Erfolgreiche Registrierung
+                        this.multicastClient.clientinfo.name = clientname;
+                        this.multicastClient.clientinfo.serverip = serverip;
+                        this.multicastClient.clientinfo.servername = servername;
+                        this.multicastClient.clientinfo.ip = clientip;
+                        this.multicastClient.clientinfo.hostname = hostname;
+                        this.multicastClient.clientinfo.token = data.token; // we need to store the client token in order to check against it before processing critical api calls
+                        this.multicastClient.clientinfo.focus = true;
+                        this.multicastClient.clientinfo.pin = pin;
 
-                    //create exam folder in workfolder
-                    let uniqueexamName = `${servername}-${pin}`
-                    config.examdirectory = path.join(config.workdirectory, uniqueexamName)
-                    if (!fs.existsSync(config.examdirectory)){ fs.mkdirSync(config.examdirectory, { recursive: true }); }
-                } 
-                else {
-                    if (data.version){
-                        // compare versions and display message (teacher needs upgrade.. client needs upgrade)
-                        const comparisonResult = this.compareSoftware(config.version, config.info , data.version, data.versioninfo ) //serverVersion, serverStatus, localVersion, localStatus
-                        if (comparisonResult > 0) {       event.returnValue = { status: "error", message: "Ihre Version von Next-Exam ist neuer als die der Lehrperson!" };   } 
-                        else if (comparisonResult < 0) {  event.returnValue = { status: "error", message: "Ihre Version von Next-Exam ist zu alt. Laden sie sich eine aktuelle Version herunter!" };   } 
-                        else {                            event.returnValue = { status: "error", message: "Unbekannter Fehler beim Verbindungsaufbau." };    }
+                        log.info(`ipchandler @ register: successfully registered at ${servername} @ ${serverip} as ${clientname}`);
+                        event.returnValue = data;
+
+                        //create exam folder in workfolder
+                        let uniqueexamName = `${servername}-${pin}`
+                        config.examdirectory = path.join(config.workdirectory, uniqueexamName)
+                        if (!fs.existsSync(config.examdirectory)) {
+                            fs.mkdirSync(config.examdirectory, {recursive: true});
+                        }
+                    } else {
+                        if (data.version) {
+                            // compare versions and display message (teacher needs upgrade.. client needs upgrade)
+                            const comparisonResult = this.compareSoftware(config.version, config.info, data.version, data.versioninfo) //serverVersion, serverStatus, localVersion, localStatus
+                            if (comparisonResult > 0) {
+                                event.returnValue = {
+                                    status: "error",
+                                    message: "Ihre Version von Next-Exam ist neuer als die der Lehrperson!"
+                                };
+                            } else if (comparisonResult < 0) {
+                                event.returnValue = {
+                                    status: "error",
+                                    message: "Ihre Version von Next-Exam ist zu alt. Laden sie sich eine aktuelle Version herunter!"
+                                };
+                            } else {
+                                event.returnValue = {
+                                    status: "error",
+                                    message: "Unbekannter Fehler beim Verbindungsaufbau."
+                                };
+                            }
+                        }
+                        event.returnValue = {status: "error", message: data.message};
                     }
-                    event.returnValue = { status: "error", message: data.message };
-                }
-            })
-            .catch(async error => {
-                // Fehlerbehandlung
-                let errorMessage = error.message;
-                if (error.name === 'AbortError') { errorMessage = "The request timed out";   } // Timeout-Nachricht anpassen 
-                log.error(`ipchandler @ register: ${errorMessage}`);
-             
-                // on macos the permission settings in rare cases mess up the ability to fetch the teacher api 
-                // check for network permissions on macOS and reset them if needed
-                if (process.platform === "darwin"){    
-                    let response = await ensureNetworkOrReset(serverip, this.config.serverApiPort); 
-                    if (response && response === "reset") {   // quit the app if the user wants to reset the permissions
-                        app.quit();
-                        return
+                })
+                .catch(async error => {
+                    // Fehlerbehandlung
+                    let errorMessage = error.message;
+                    if (error.name === 'AbortError') {
+                        errorMessage = "The request timed out";
+                    } // Timeout-Nachricht anpassen
+                    log.error(`ipchandler @ register: ${errorMessage}`);
+
+                    // on macos the permission settings in rare cases mess up the ability to fetch the teacher api
+                    // check for network permissions on macOS and reset them if needed
+                    if (process.platform === "darwin") {
+                        let response = await ensureNetworkOrReset(serverip, this.config.serverApiPort);
+                        if (response && response === "reset") {   // quit the app if the user wants to reset the permissions
+                            app.quit();
+                            return
+                        }
                     }
-                }
-                
-                // show warning message if the user does not want to reset the permissions
-                event.returnValue = { sender: "client", message: "Es gibt ein Problem mit dem Netzwerk, den Firewallregeln oder den Netzwerkberechtigungen! Bitte beheben sie dieses Problem und starten Sie Next-Exam neu!", status: "error" };
-                return;  
-                    
-                
-            });
+
+                    // show warning message if the user does not want to reset the permissions
+                    event.returnValue = {
+                        sender: "client",
+                        message: "Es gibt ein Problem mit dem Netzwerk, den Firewallregeln oder den Netzwerkberechtigungen! Bitte beheben sie dieses Problem und starten Sie Next-Exam neu!",
+                        status: "error"
+                    };
+                    return;
+
+
+                });
         })
 
 
-
-
-
-
         /**
-         * Store content from Geogebra as ggb file - as backup 
+         * Store content from Geogebra as ggb file - as backup
          * @param args contains an object with  { filename:`${this.clientname}.ggb`, content: base64 }
          */
-        ipcMain.handle('saveGGB', (event, args) => {   
+        ipcMain.handle('saveGGB', (event, args) => {
             const content = args.content
             const filename = args.filename
             const reason = args.reason
             const ggbFilePath = path.join(this.config.examdirectory, filename);
-            if (content) { 
+            if (content) {
                 //log.info("ipchandler @ saveGGB: saving students work to disk...")
                 const fileData = Buffer.from(content, 'base64');
 
                 try {
                     fs.writeFileSync(ggbFilePath, fileData);
-                    if (reason === "teacherrequest") { this.CommunicationHandler.sendToTeacher() }
-                    return  { sender: "client", message:t("data.filestored") , status:"success" }
-                }
-                catch(err){
-                    this.WindowHandler.examwindow.webContents.send('fileerror', err)  
-                 
+                    if (reason === "teacherrequest") {
+                        this.CommunicationHandler.sendToTeacher()
+                    }
+                    return {sender: "client", message: t("data.filestored"), status: "success"}
+                } catch (err) {
+                    this.WindowHandler.examwindow.webContents.send('fileerror', err)
+
                     log.error(`ipchandler @ saveGGB: ${err}`)
-                    return { sender: "client", message:err , status:"error" }
+                    return {sender: "client", message: err, status: "error"}
                 }
             }
         })
 
 
-
         /**
-         * load content from ggb file and send it to the frontend 
+         * load content from ggb file and send it to the frontend
          * @param args contains an object { filename:`${this.clientname}.ggb` }
          */
-        ipcMain.handle('loadGGB', (event, filename) => {   
+        ipcMain.handle('loadGGB', (event, filename) => {
             const ggbFilePath = path.join(this.config.examdirectory, filename);
             try {
                 // Read the file and convert it to base64
                 const fileData = fs.readFileSync(ggbFilePath);
                 const base64GgbFile = fileData.toString('base64');
-                return { sender: "client", content:base64GgbFile, status:"success" }
-            } 
-            catch (error) {
-                return { sender: "client", content: false , status:"error" }
-            }     
+                return {sender: "client", content: base64GgbFile, status: "success"}
+            } catch (error) {
+                return {sender: "client", content: false, status: "error"}
+            }
         })
-
-
-
 
 
         /**
          * GET PDF or IMAGE from EXAM directory
          * @param filename if set the content of the file is returned
-         */ 
-        ipcMain.handle('getpdfasync', (event, filename, image = false) => {   
-            const workdir = path.join(config.examdirectory,"/")
+         */
+        ipcMain.handle('getpdfasync', (event, filename, image = false) => {
+            const workdir = path.join(config.examdirectory, "/")
             if (filename) { //return content of specific file
-                let filepath = path.join(workdir,filename)
+                let filepath = path.join(workdir, filename)
                 try {
                     let data = fs.readFileSync(filepath)
-                   
-                    if (image){ return data.toString('base64');  }
+
+                    if (image) {
+                        return data.toString('base64');
+                    }
                     return data
-                } 
-                catch (error) {
-                    return { sender: "client", content: false , status:"error" }
-                }    
+                } catch (error) {
+                    return {sender: "client", content: false, status: "error"}
+                }
             }
         })
 
         /**
          * returns base64 string of audiofile from workdirectory or public directory
          */
-        ipcMain.handle('getAudioFile', async (event, filename, publicdir=false) => {   
+        ipcMain.handle('getAudioFile', async (event, filename, publicdir = false) => {
             const workdir = path.join(config.examdirectory, "/");
-        
+
             if (filename && !publicdir) { // Return content of specific file as string (html) to replace in editor
                 let filepath = path.join(workdir, filename);
                 const audioData = fs.readFileSync(filepath);
                 return audioData.toString('base64');
             }
-        
+
             if (filename && publicdir) {
                 const publicBase = platformDispatcher.publicBase;
                 let filepath = path.join(publicBase, filename);
                 const audioData = fs.readFileSync(filepath);
                 return audioData.toString('base64');
             }
-        
+
             return false;
         });
- 
+
 
         /**
          * ASYNC GET FILE-LIST from examdirectory
          * @param filename if set the content of the file is returned
-         */ 
-        ipcMain.handle('getfilesasync', async (event, filename, audio=false, docx=false) => {   
-            const workdir = path.join(config.examdirectory,"/")
+         */
+        ipcMain.handle('getfilesasync', async (event, filename, audio = false, docx = false) => {
+            const workdir = path.join(config.examdirectory, "/")
 
             if (filename) { //return content of specific file as string (html) to replace in editor)
                 // console.log("Received arguments:", filename, audio, docx);
 
-                let filepath = path.join(workdir,filename)
+                let filepath = path.join(workdir, filename)
 
-                if (audio == true){ // audio file
+                if (audio == true) { // audio file
                     const audioData = fs.readFileSync(filepath);
                     return audioData.toString('base64');
-                }
-                else if (docx){  //office open xml file
+                } else if (docx) {  //office open xml file
                     let result = await mammoth.convertToHtml({path: filepath})
-                    .then((data) => {
-                        return data
-                    })
-                    .catch(function(error) {
-                        console.error(error);
-                    });
+                        .then((data) => {
+                            return data
+                        })
+                        .catch(function (error) {
+                            console.error(error);
+                        });
                     return result
-                }
-                else {   //bak file
+                } else {   //bak file
                     try {
                         let data = fs.readFileSync(filepath, 'utf8')
                         return data
-                    }
-                    catch (err) {
-                        log.error(`ipchandler @ getfilesasync: ${err}`); 
+                    } catch (err) {
+                        log.error(`ipchandler @ getfilesasync: ${err}`);
                         return false
                     }
                 }
-            }
-            else {  // return file list of exam directory
+            } else {  // return file list of exam directory
                 try {
-                    if (!fs.existsSync(workdir)){ fs.mkdirSync(workdir, { recursive: true });  } //do not crash if the directory is deleted after the app is started ^^
-                    let filelist =  fs.readdirSync(workdir, { withFileTypes: true })
+                    if (!fs.existsSync(workdir)) {
+                        fs.mkdirSync(workdir, {recursive: true});
+                    } //do not crash if the directory is deleted after the app is started ^^
+                    let filelist = fs.readdirSync(workdir, {withFileTypes: true})
                         .filter(dirent => dirent.isFile())
                         .map(dirent => dirent.name)
-                     
-                    
+
+
                     let files = []
-                    filelist.forEach( file => {
-                        let modified = fs.statSync(   path.join(workdir,file)  ).mtime
+                    filelist.forEach(file => {
+                        let modified = fs.statSync(path.join(workdir, file)).mtime
                         let mod = modified.getTime()
-                        if  (path.extname(file).toLowerCase() === ".pdf"){ files.push( {name: file, type: "pdf", mod: mod})   }         //pdf
-                        else if  (path.extname(file).toLowerCase() === ".bak"){ files.push( {name: file, type: "bak", mod: mod})   }   // editor| backup file to replace editor content
-                        else if  (path.extname(file).toLowerCase() === ".docx"){ files.push( {name: file, type: "docx", mod: mod})   }   // editor| content file (from teacher) to replace content and continue writing
-                        else if  (path.extname(file).toLowerCase() === ".ggb"){ files.push( {name: file, type: "ggb", mod: mod})   }  // geogebra
-                        else if  (path.extname(file).toLowerCase() === ".mp3" || path.extname(file).toLowerCase() === ".ogg" || path.extname(file).toLowerCase() === ".wav" ){ files.push( {name: file, type: "audio", mod: mod})   }  // audio
-                        else if  (path.extname(file).toLowerCase() === ".jpg" || path.extname(file).toLowerCase() === ".png" || path.extname(file).toLowerCase() === ".gif" ){ files.push( {name: file, type: "image", mod: mod})   }  // images
+                        if (path.extname(file).toLowerCase() === ".pdf") {
+                            files.push({name: file, type: "pdf", mod: mod})
+                        }         //pdf
+                        else if (path.extname(file).toLowerCase() === ".bak") {
+                            files.push({name: file, type: "bak", mod: mod})
+                        }   // editor| backup file to replace editor content
+                        else if (path.extname(file).toLowerCase() === ".docx") {
+                            files.push({name: file, type: "docx", mod: mod})
+                        }   // editor| content file (from teacher) to replace content and continue writing
+                        else if (path.extname(file).toLowerCase() === ".ggb") {
+                            files.push({name: file, type: "ggb", mod: mod})
+                        }  // geogebra
+                        else if (path.extname(file).toLowerCase() === ".mp3" || path.extname(file).toLowerCase() === ".ogg" || path.extname(file).toLowerCase() === ".wav") {
+                            files.push({name: file, type: "audio", mod: mod})
+                        }  // audio
+                        else if (path.extname(file).toLowerCase() === ".jpg" || path.extname(file).toLowerCase() === ".png" || path.extname(file).toLowerCase() === ".gif") {
+                            files.push({name: file, type: "image", mod: mod})
+                        }  // images
                     })
                     this.multicastClient.clientinfo.numberOfFiles = filelist.length
                     return files
-                }
-                catch (err) { 
-                    log.error(`ipchandler @ getfilesasync: ${err}`); 
-                    return false; 
+                } catch (err) {
+                    log.error(`ipchandler @ getfilesasync: ${err}`);
+                    return false;
                 }
             }
         })
 
 
-
         /**
          * ASYNC GET BACKUP FILE from examdirectory
          * @param filename filename without
-         */ 
-        ipcMain.handle('getbackupfile', async (event, filename) => {   
+         */
+        ipcMain.handle('getbackupfile', async (event, filename) => {
             log.info(`ipchandler @ getbackupfile: Request received for filename: ${filename}`)
-            const workdir = path.join(config.examdirectory,"/")
+            const workdir = path.join(config.examdirectory, "/")
             if (filename) { //return content of specific file as string (html) to replace in editor)
-                let filepath = path.join(workdir,filename)
+                let filepath = path.join(workdir, filename)
                 log.info(`ipchandler @ getbackupfile: Full file path: ${filepath}`)
                 try {
-                    if (!fs.existsSync(filepath)){
-                        log.warn(`ipchandler @ getbackupfile: backup file not found: ${filepath}`); 
+                    if (!fs.existsSync(filepath)) {
+                        log.warn(`ipchandler @ getbackupfile: backup file not found: ${filepath}`);
                         return false;
                     }
                     log.info(`ipchandler @ getbackupfile: backup file exists, reading content`)
                     let data = fs.readFileSync(filepath, 'utf8')
                     log.info(`ipchandler @ getbackupfile: Successfully read backup file, content length: ${data.length}`)
                     return data
-                }
-                catch (err) {
-                    log.error(`ipchandler @ getbackupfile: Error reading backup file: ${err}`); 
+                } catch (err) {
+                    log.error(`ipchandler @ getbackupfile: Error reading backup file: ${err}`);
                     log.error(`ipchandler @ getbackupfile: Error stack: ${err.stack}`)
                     return false
                 }
-            }
-            else {
-                log.warn(`ipchandler @ getbackupfile: no filename provided`); 
+            } else {
+                log.warn(`ipchandler @ getbackupfile: no filename provided`);
                 return false;
             }
         })
@@ -1133,18 +1151,17 @@ class IpcHandler {
             this.WindowHandler.createEasterWin()
         });
 
-         /**
-         * Append PrintRequest to clientinfo  
-         */ 
-        ipcMain.on('sendPrintRequest', (event) => {   
+        /**
+         * Append PrintRequest to clientinfo
+         */
+        ipcMain.on('sendPrintRequest', (event) => {
             this.multicastClient.clientinfo.printrequest = true  //set this to false after the request left the client to prevent double triggering
             event.returnValue = true
         })
-     
+
         ipcMain.on('get-cpu-info', (event) => {
             event.returnValue = this.isVirtualMachine()
         });
-
 
 
         ipcMain.handle('get-wlan-info', async (event) => {
@@ -1153,21 +1170,20 @@ class IpcHandler {
         });
 
 
-        
         // New handler to get PDF from public directory for frontend parsing
-        ipcMain.handle('getPdfFromPublic', async (event, pdfFilename ) => {
+        ipcMain.handle('getPdfFromPublic', async (event, pdfFilename) => {
             try {
                 // Get directory name in ESM
                 const __dirname = import.meta.dirname;
-                
+
                 let pdfPath;
                 pdfPath = path.join(platformDispatcher.publicBase, pdfFilename);
-                
+
                 if (!fs.existsSync(pdfPath)) {
                     log.warn(`ipchandler @ getPdfFromPublic: PDF not found at: ${pdfPath}`);
                     return null;
                 }
-                
+
                 const buffer = fs.readFileSync(pdfPath);
                 return buffer.toString('base64');
             } catch (error) {
@@ -1188,102 +1204,117 @@ class IpcHandler {
 
         // ---------- Linux ----------
         if (process.platform === 'linux') {
-          try {
-            const cpuinfo = readFileSync('/proc/cpuinfo', 'utf8')      // CPU flags
-            if (/^flags.*\bhypervisor\b/m.test(cpuinfo)) return warnAndReturn('hypervisor flag in /proc/cpuinfo')
-          } catch {}
-      
-          try {
-            const files = [
-              '/sys/class/dmi/id/sys_vendor',
-              '/sys/class/dmi/id/product_name',
-              '/sys/class/dmi/id/product_version',
-              '/sys/class/dmi/id/board_vendor',
-              '/sys/class/dmi/id/bios_vendor',
-              '/sys/class/dmi/id/chassis_vendor'
-            ]
-            const dmi = files.map(p => { try { return readFileSync(p, 'utf8') } catch { return '' } }).join(' ')
-            if (VENDORS.test(dmi)) return warnAndReturn('DMI-Vendor-Match')
-          } catch {}
-      
-          try {
-            execSync('systemd-detect-virt -q', { stdio: 'ignore' })    // exit 0 => VM
-            return warnAndReturn('systemd-detect-virt meldet Virtualisierung')
-          } catch {}
-
-
-          // Prüfe auf QEMU-Prozesse
-          try {
-            const ps = execSync('ps aux | grep -i qemu', { encoding: 'utf8' })
-            if (ps.includes('qemu') && !ps.includes('grep')) {
-              return warnAndReturn('QEMU-Prozess läuft')
+            try {
+                const cpuinfo = readFileSync('/proc/cpuinfo', 'utf8')      // CPU flags
+                if (/^flags.*\bhypervisor\b/m.test(cpuinfo)) return warnAndReturn('hypervisor flag in /proc/cpuinfo')
+            } catch {
             }
-          } catch {}
+
+            try {
+                const files = [
+                    '/sys/class/dmi/id/sys_vendor',
+                    '/sys/class/dmi/id/product_name',
+                    '/sys/class/dmi/id/product_version',
+                    '/sys/class/dmi/id/board_vendor',
+                    '/sys/class/dmi/id/bios_vendor',
+                    '/sys/class/dmi/id/chassis_vendor'
+                ]
+                const dmi = files.map(p => {
+                    try {
+                        return readFileSync(p, 'utf8')
+                    } catch {
+                        return ''
+                    }
+                }).join(' ')
+                if (VENDORS.test(dmi)) return warnAndReturn('DMI-Vendor-Match')
+            } catch {
+            }
+
+            try {
+                execSync('systemd-detect-virt -q', {stdio: 'ignore'})    // exit 0 => VM
+                return warnAndReturn('systemd-detect-virt meldet Virtualisierung')
+            } catch {
+            }
+
+
+            // Prüfe auf QEMU-Prozesse
+            try {
+                const ps = execSync('ps aux | grep -i qemu', {encoding: 'utf8'})
+                if (ps.includes('qemu') && !ps.includes('grep')) {
+                    return warnAndReturn('QEMU-Prozess läuft')
+                }
+            } catch {
+            }
         }
 
         // ---------- Windows ----------
         if (process.platform === 'win32') {
             try {
-            const ps =
-                'powershell -NoProfile -Command "(Get-CimInstance Win32_ComputerSystem | ForEach-Object { $_.Manufacturer, $_.Model }) -join \' \'"'
-            const basic = execSync(ps, { encoding: 'utf8' }).trim()    // manufacturer + model
-            if (VENDORS.test(basic)) return warnAndReturn('Windows Hersteller/Modell passt zu VM')
-            } catch {}
+                const ps =
+                    'powershell -NoProfile -Command "(Get-CimInstance Win32_ComputerSystem | ForEach-Object { $_.Manufacturer, $_.Model }) -join \' \'"'
+                const basic = execSync(ps, {encoding: 'utf8'}).trim()    // manufacturer + model
+                if (VENDORS.test(basic)) return warnAndReturn('Windows Hersteller/Modell passt zu VM')
+            } catch {
+            }
 
             try {
-            const psRobust =
-                'powershell -NoProfile -Command "$o=@();' +
-                'try{$cs=Get-CimInstance Win32_ComputerSystem;$o+=@($cs.Manufacturer,$cs.Model)}catch{};' +
-                'try{$bb=Get-CimInstance Win32_BaseBoard;$o+=@($bb.Manufacturer,$bb.Product)}catch{};' +
-                'try{$bios=Get-CimInstance Win32_BIOS;$o+=@($bios.SMBIOSBIOSVersion)}catch{};' +
-                'try{$csp=Get-CimInstance Win32_ComputerSystemProduct;$o+=@($csp.Name)}catch{};' +
-                'Write-Output (($o -join \' \').Trim())"'
-            const robust = execSync(psRobust, { encoding: 'utf8' }).trim()
-            if (VENDORS.test(robust)) return warnAndReturn('Windows Hersteller/BIOS-Infos passen zu VM')
-            } catch {}
+                const psRobust =
+                    'powershell -NoProfile -Command "$o=@();' +
+                    'try{$cs=Get-CimInstance Win32_ComputerSystem;$o+=@($cs.Manufacturer,$cs.Model)}catch{};' +
+                    'try{$bb=Get-CimInstance Win32_BaseBoard;$o+=@($bb.Manufacturer,$bb.Product)}catch{};' +
+                    'try{$bios=Get-CimInstance Win32_BIOS;$o+=@($bios.SMBIOSBIOSVersion)}catch{};' +
+                    'try{$csp=Get-CimInstance Win32_ComputerSystemProduct;$o+=@($csp.Name)}catch{};' +
+                    'Write-Output (($o -join \' \').Trim())"'
+                const robust = execSync(psRobust, {encoding: 'utf8'}).trim()
+                if (VENDORS.test(robust)) return warnAndReturn('Windows Hersteller/BIOS-Infos passen zu VM')
+            } catch {
+            }
 
             // Zusätzliche QEMU-Erkennung für Windows
             try {
-                const qemuProcesses = execSync('tasklist /FI "IMAGENAME eq qemu*"', { encoding: 'utf8' })
+                const qemuProcesses = execSync('tasklist /FI "IMAGENAME eq qemu*"', {encoding: 'utf8'})
                 if (qemuProcesses.includes('qemu')) return warnAndReturn('QEMU-Prozess unter Windows')
-            } catch {}
+            } catch {
+            }
         }
 
 
-         // ---------- macOS ----------
+        // ---------- macOS ----------
         if (process.platform === 'darwin') {
             try {
-            const hwModel = execSync('sysctl -n hw.model', { encoding: 'utf8' })
-            if (/^virtual/i.test(hwModel) || VENDORS.test(hwModel)) return warnAndReturn('macOS Hardwaremodell deutet auf VM')
-            } catch {}
+                const hwModel = execSync('sysctl -n hw.model', {encoding: 'utf8'})
+                if (/^virtual/i.test(hwModel) || VENDORS.test(hwModel)) return warnAndReturn('macOS Hardwaremodell deutet auf VM')
+            } catch {
+            }
 
             try {
-            const sp = execSync('system_profiler SPHardwareDataType', { encoding: 'utf8' })
-            if (VENDORS.test(sp)) return warnAndReturn('macOS system_profiler meldet VM-Vendor')
-            } catch {}
+                const sp = execSync('system_profiler SPHardwareDataType', {encoding: 'utf8'})
+                if (VENDORS.test(sp)) return warnAndReturn('macOS system_profiler meldet VM-Vendor')
+            } catch {
+            }
         }
 
-        return false       
+        return false
     }
 
     compareVersions(versionA, versionB) {
         const partsA = versionA.split('.').map(Number);
         const partsB = versionB.split('.').map(Number);
-    
+
         for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
             const numA = partsA[i] || 0; // Fallback auf 0, falls kein Wert vorhanden
             const numB = partsB[i] || 0;
-    
+
             if (numA < numB) return -1;
             if (numA > numB) return 1;
         }
         return 0;
     }
-    
+
     compareReleaseNumbers(statusA, statusB) {
         const numberA = parseInt(statusA.match(/\d+/), 10) || 0;
         const numberB = parseInt(statusB.match(/\d+/), 10) || 0;
-    
+
         if (numberA < numberB) return -1;
         if (numberA > numberB) return 1;
         return 0;
@@ -1292,11 +1323,11 @@ class IpcHandler {
     compareSoftware(versionA, statusA, versionB, statusB) {
         const versionComparison = this.compareVersions(versionA, versionB);
         if (versionComparison !== 0) return versionComparison;
-    
+
         return this.compareReleaseNumbers(statusA, statusB);
     }
 
 
 }
- 
+
 export default new IpcHandler()

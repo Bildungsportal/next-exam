@@ -23,7 +23,9 @@
     "build:mac:x64": "npm run prebuild && npm run clean && quasar build --verbose -m electron -m --arch x64",
     "build:mac:arm64": "npm run prebuild && npm run clean && quasar build --verbose -m electron -m --arch arm64",
     "build:win:portable": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -w portable:x64",
-    "build:win:msi": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -w msi:x64"
+    "build:win:msi": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -w msi:x64",
+    "build:ios": "quasar build -m capacitor -T ios",
+    "dev:ios": "quasar dev -m capacitor -T ios"
   },
   "env": {
     "//": "Used in build scripts",
@@ -36,7 +38,9 @@
     "rollup"
   ],
   "dependencies": {
+    "@capacitor/clipboard": "^8.0.1",
     "@capacitor/device": "^8.0.0",
+    "@capacitor/filesystem": "^8.1.2",
     "@jimp/jpeg": "^0.22.12",
     "@quasar/extras": "^1.16.4",
     "@squoosh/lib": "^0.3.1",
