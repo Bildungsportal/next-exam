@@ -71,8 +71,8 @@ class IosTaskDispatcher {
             case 'get-wlan-info':
                 return this.getwlaninfo()
             case 'set-new-locale':
-                this.setnewlocale(payload);
-                break;
+                return this.setnewlocale(payload);
+
             case 'submitexam':
                 return
             case 'getPDFbase64':
@@ -88,22 +88,19 @@ class IosTaskDispatcher {
             case 'checkhostip':
                 return this.checkhostip(payload);
             case 'loginBiP':
-                this.loginbip(payload);
-                break;
+                return this.loginbip(payload);
             case 'reload-url':
                 this.reloadurl()
-                break;
+                return;
             case 'locallockdown':
-                this.locallockdown(payload);
-                break;
+                return this.locallockdown(payload);
             case 'register':
-                this.register(payload);
-                break;
-            case 'collapse-browserview':
-                this.collapsebrowserview();
-                break;
+                return this.register(payload);
             case 'gracefullyexit':
-                this.gracefullyexit();
+                return this.gracefullyexit();
+            case 'collapse-browserview':
+            case 'restore-browserview':
+                return; // Ignore since no BrowserViews in Capacitor
             default:
                 throw new Error(`Signal ${signal} nicht für iOS implementiert.`);
         }
@@ -368,13 +365,6 @@ class IosTaskDispatcher {
                     status: "error"
                 };
             });
-    }
-
-    collapsebrowserview() {
-        const mainWindow = this.WindowHandler.examwindow
-        if (!mainWindow){ return }
-        const contentView = mainWindow.getBrowserView(0); // assuming it's the 1st added view
-        contentView.setBounds({ x: 0, y: 0, width: 0, height: 0 });
     }
 
     gracefullyexit() {
