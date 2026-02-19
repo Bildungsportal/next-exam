@@ -21,15 +21,12 @@
  */
 
 import {Device} from '@capacitor/device';
-import log from "electron-log";
 import i18n from "../../locales/locales.js";
-import path from "path";
-import fs from "fs";
+import {Directory, Encoding, Filesystem as fs} from "@capacitor/filesystem";
 import {gateway4sync} from "default-gateway";
-import ip from "ip";
-import os from "os";
 import {ensureNetworkOrReset} from "../../../src-electron/main/scripts/testpermissionsMac.js";
-import {app} from "electron";
+import {disableRestrictions} from "../../../src-electron/main/scripts/platformrestrictions.js";
+import {Clipboard} from "@capacitor/clipboard";
 
 //import { MyCustomNativePlugin } from './plugins/MyCustomNativePlugin';
 
@@ -52,39 +49,22 @@ class IosTaskDispatcher {
 
             case 'getinfoasync':
                 return this.getinfoasync(payload);
-
             /**
              * fetches exam materials from the teacher and returns them as an object
              * @returns {Object} {exammaterials: Object}
              */
             case 'getmaterials':
                 return
-
             /**
              * submits the exam to the teacher and returns a boolean
              * @returns {Boolean} true if the exam was submitted successfully, false otherwise
              */
             case 'finalsubmit':
                 return
-
-
             case 'get-wlan-info':
                 return this.getwlaninfo()
             case 'set-new-locale':
                 return this.setnewlocale(payload);
-
-            case 'submitexam':
-                return
-            case 'getPDFbase64':
-                return
-            case 'getbackupfile':
-                return
-            case 'getfilesasync':
-                return
-            case 'storeHTML':
-                return
-            case 'printpdf':
-                return
             case 'checkhostip':
                 return this.checkhostip(payload);
             case 'loginBiP':
@@ -98,6 +78,14 @@ class IosTaskDispatcher {
                 return this.register(payload);
             case 'gracefullyexit':
                 return this.gracefullyexit();
+            case 'restrictions':
+                return disableRestrictions();
+            case 'clipboard':
+                return this.clipboard(payload);
+            case 'storeHTML':
+                return this.storehtml(payload);
+            case 'printpdf':
+                return this.printpdf(payload);
             case 'collapse-browserview':
             case 'restore-browserview':
                 return; // Ignore since no BrowserViews in Capacitor
@@ -372,5 +360,173 @@ class IosTaskDispatcher {
 
         this.communicationHandler.gracefullyEndExam()
         this.communicationHandler.resetConnection()
+    }
+
+    async clipboard(text) {
+        await Clipboard.write(text);
+    }
+
+    storehtml(args) {
+        const htmlContent = args.editorcontent
+        const filename = args.filename
+        let htmlfilename = `${this.multicastClient.clientinfo.name}.bak`
+
+        if (filename) {
+            htmlfilename = `${filename}.bak`
+        }
+
+        const htmlfile = path.join(this.config.examdirectory, htmlfilename);
+
+        if (htmlContent) {
+            // log.info("IosTaskDispatcher: storeHTML: saving students work to disk...")
+            try {
+                fs.writeFile({
+                    path: htmlfile,
+                    data: htmlContent,
+                    directory: Directory.Documents,
+                    encoding: Encoding.UTF8
+                });
+            } catch (err) {
+                log.error(`IosTaskDispatcher @ storeHTML: ${err.message}`);
+                let alternatepath = `${htmlfile}-${this.multicastClient.clientinfo.token}.bak`
+                log.warn("IosTaskDispatcher @ storeHTML: trying to write file as:", alternatepath)
+                try {
+                    fs.writeFile({
+                        path: alternatepath,
+                        data: htmlContent,
+                        directory: Directory.Documents,
+                        encoding: Encoding.UTF8
+                    })
+                    log.info("IosTaskDispatcher @ storeHTML: success!");
+                    event.reply("loadfilelist")
+                } catch (err) {
+                    log.error(err.message);
+                    log.error("IosTaskDispatcher @ storeHTML: giving up");
+                    event.reply("fileerror", {sender: "client", message: err, status: "error"})
+                }
+                event.reply("loadfilelist")
+            }
+        }
+    }
+
+    printpdf(args) {
+        // do not print if exam mode is not active anymore
+        if (!this.multicastClient?.clientinfo?.exammode) {
+            log.warn("ipchandler @ printpdf: exammode is false - skipping print")
+            return
+        }
+
+        if (this.isPrintingPdf) {
+            log.warn("ipchandler @ printpdf: print already in progress - skipping new request")
+            return
+        }
+
+        if (this.WindowHandler.examwindow) {
+            const options = { // define print options
+                margins: {top: 0.5, right: 0, bottom: 0.5, left: 0},
+                pageSize: 'A4',
+                printBackground: false,
+                printSelectionOnly: false,
+                landscape: args.landscape,
+                displayHeaderFooter: true,
+                footerTemplate: "<div style='height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-bottom:10px;'><span class=pageNumber></span>|<span class=totalPages></span></div>",
+                headerTemplate: `<div style='display: inline-block; height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-left: 30px; margin-top:10px;'><span style="float:left;">${args.servername}</span><span style="float:left;">&nbsp;|&nbsp; </span><span class=date style="float:left;"></span><span style="float:right;">${args.clientname}</span></div>`,
+                preferCSSPageSize: false
+            }
+
+            let pdffilename = `${this.multicastClient.clientinfo.name}.pdf`  // default filename = clientname.pdf
+            if (args.filename) {  // in case of manual backup the user can set a custom filename
+                pdffilename = `${args.filename}.pdf`
+
+            }
+            const pdffilepath = path.join(this.config.examdirectory, pdffilename);  // path points to the current exam directory
+            const alternatefilename = `${pdffilename}-aux.pdf`    //thomas.pdf-aux.pdf
+            const alternatebackupfilename = `${pdffilename}-old.pdf`;   //thomas.pdf-old.pdf
+            const alternatepath = path.join(this.config.examdirectory, alternatefilename);  // if something goes wrong we try to write a different file
+
+
+            // aux files are files created if the main pdffilepath is not writeable (opened on windows)
+            try {  // always check for old aux files and rename them
+                const files = fs.readdirSync(this.config.examdirectory);
+                files.forEach(file => {
+                    if (file === alternatefilename) {
+                        const newPath = path.join(this.config.examdirectory, alternatebackupfilename);
+                        fs.renameSync(alternatepath, newPath);
+                    }
+                });
+            } catch (err) {
+                log.error(`ipchandler @ printpdf: ${err.message}`);
+            }
+
+            const examWindow = this.WindowHandler.examwindow
+            const webContents = examWindow?.webContents
+
+            if (!webContents) {
+                log.error("ipchandler @ printpdf: no webContents found for examwindow")
+                event.reply("fileerror", {
+                    sender: "client",
+                    message: "no webContents found for examwindow",
+                    status: "error"
+                })
+                return
+            }
+
+            this.isPrintingPdf = true
+
+            // set the title of the exam window and therefore the document title for PDF metadata
+            const pdfTitle = args.filename ? args.filename : `${this.multicastClient.clientinfo.name} - ${args.servername || this.multicastClient.clientinfo.servername || ''}`
+            // escape quotes and special characters for JavaScript string
+            const escapedTitle = pdfTitle.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "\\'")
+            webContents.executeJavaScript(`document.title = "${escapedTitle}"`).then(() => {
+                // print the exam window to pdf
+                return webContents.printToPDF(options)
+            }).then(data => {
+                // delete the old pdf file if it exists
+                try {
+                    if (fs.existsSync(pdffilepath)) {
+                        fs.unlinkSync(pdffilepath);
+                    }
+                } catch (err) {
+                    log.error(`ipchandler @ printpdf: ${err.message}`);
+                }
+                // write the pdf to the exam directory
+                fs.writeFile(pdffilepath, data, (err) => {
+                    if (err) {
+                        log.warn(`ipchandler @ printpdf: ${err.message} - writing file as: ${alternatepath} `);
+                        // delete the old aux file if it exists
+                        try {
+                            if (fs.existsSync(alternatepath)) {
+                                fs.unlinkSync(alternatepath);
+                            }
+                        } catch (err) {
+                            log.error(`ipchandler @ printpdf (alternativer Pfad): ${err.message}`);
+                        }
+                        // write the pdf to the alternate path
+                        fs.writeFile(alternatepath, data, (err) => {
+                            if (err) {
+                                log.error(err.message);
+                                log.error("ipchandler @ printpdf: giving up");
+                                event.reply("fileerror", {sender: "client", message: err.message, status: "error"})
+                            } else { // log.info("ipchandler @ printpdf: success!");
+                                if (args.reason === "teacherrequest") {
+                                    this.CommunicationHandler.sendToTeacher()
+                                }
+                                event.reply("loadfilelist")
+                            }
+                        });
+                    } else { // log.info("ipchandler @ printpdf: success!");
+                        if (args.reason === "teacherrequest") {
+                            this.CommunicationHandler.sendToTeacher()
+                        }
+                        event.reply("loadfilelist")   //make sure students see the new file immediately
+                    }
+                });
+            }).catch(error => {
+                log.error(`ipchandler @ printpdf: ${error.message}`)
+                event.reply("fileerror", {sender: "client", message: error.message, status: "error"})
+            }).finally(() => {
+                this.isPrintingPdf = false
+            });
+        }
     }
 }
