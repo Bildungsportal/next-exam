@@ -23,14 +23,11 @@
 import {Device} from '@capacitor/device';
 import i18n from "../../locales/locales.js";
 import {Directory, Encoding, Filesystem as fs} from "@capacitor/filesystem";
-import {gateway4sync} from "default-gateway";
-import {ensureNetworkOrReset} from "../../../src-electron/main/scripts/testpermissionsMac.js";
-import {disableRestrictions} from "../../../src-electron/main/scripts/platformrestrictions.js";
 import {Clipboard} from "@capacitor/clipboard";
 
 //import { MyCustomNativePlugin } from './plugins/MyCustomNativePlugin';
 
-class IosTaskDispatcher {
+export class IosTaskDispatcher {
 
     constructor() {
         this.multicastClient = null;
@@ -79,7 +76,7 @@ class IosTaskDispatcher {
             case 'gracefullyexit':
                 return this.gracefullyexit();
             case 'restrictions':
-                return disableRestrictions();
+                return disableIOSRestrictions();
             case 'clipboard':
                 return this.clipboard(payload);
             case 'storeHTML':
@@ -144,8 +141,8 @@ class IosTaskDispatcher {
             // Falls gateway4sync() blockierend ist, kannst du diesen Aufruf in ein Promise packen:
             const {gateway, interface: iface} = await new Promise((resolve, reject) => {
                 try {
-                    const res = gateway4sync();
-                    resolve(res);
+                    //const res = gateway4sync();
+                    //resolve(res);
                 } catch (err) {
                     reject(err);
                 }
@@ -335,16 +332,6 @@ class IosTaskDispatcher {
                     errorMessage = "The request timed out";
                 } // Timeout-Nachricht anpassen
                 log.error(`IosTaskDispatcher @ register: ${errorMessage}`);
-
-                // on macos the permission settings in rare cases mess up the ability to fetch the teacher api
-                // check for network permissions on macOS and reset them if needed
-                if (process.platform === "darwin") {
-                    let response = await ensureNetworkOrReset(serverip, this.config.serverApiPort);
-                    if (response && response === "reset") {   // quit the app if the user wants to reset the permissions
-                        app.quit();
-                        return
-                    }
-                }
 
                 // show warning message if the user does not want to reset the permissions
                 event.returnValue = {

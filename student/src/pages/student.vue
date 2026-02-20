@@ -217,8 +217,6 @@
 import validator from 'validator'
 import log from 'electron-log/renderer'
 import {SchedulerService} from '../utils/schedulerservice.js'
-import {isElectronWindow} from "../types/platform.ts";
-import config from '../../src-electron/main/config.js'
 import {SignalBridge} from '../utils/signalBridge.js'
 
 

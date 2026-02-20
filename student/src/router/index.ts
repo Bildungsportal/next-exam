@@ -37,7 +37,7 @@ const activesheets = () => import('/src/pages/activesheets.vue')
 const rdpview = () => import('/src/pages/rdpview.vue')
 
 
-import config from '../../src-electron/main/config.js';
+
 import {isElectronWindow} from '../types/platform.js';
 import {SignalBridge} from '../utils/signalBridge.js';
 
@@ -72,11 +72,14 @@ const routes = [ // to load a specific view just replace the component at path: 
 
 // TODO Search fitting type that allows non-string params
 function addParams(to: any) {
-  to.params.version = config.version
-  to.params.serverApiPort = config.serverApiPort
-  //to.params.clientApiPort = config.clientApiPort
-  to.params.electron = electron
-  to.params.config = config
+    if (isElectronWindow()) {
+        const config = require('../../src-electron/main/config.js');
+        to.params.version = config.version
+        to.params.serverApiPort = config.serverApiPort
+        //to.params.clientApiPort = config.clientApiPort
+        to.params.electron = electron
+        to.params.config = config
+    }
 }
 
 
