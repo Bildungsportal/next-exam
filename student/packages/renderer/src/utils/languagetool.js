@@ -112,10 +112,19 @@ async function LTcheckAllWords(closeLT = true){
     }
 
     try {
+        const headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+        };
+        // Optional custom headers for logging/proxy; only set when available (editor context)
+        if (this.servername != null) headers['X-Exam-Name'] = String(this.servername);
+        if (this.clientname != null) headers['X-Student-Name'] = String(this.clientname);
+        if (this.pincode != null && this.pincode !== '') headers['X-Exam-Pin'] = String(this.pincode);
+
         const response = await fetch(`${this.LThost}:8088/v2/check`, {
             method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
-            body: new URLSearchParams({ text: this.text, language: this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang}).toString() 
+            headers,
+            body: new URLSearchParams({ text: this.text, language: this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang}).toString()
         });
         if (!response.ok) { throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);   }
         const data = await response.json();      

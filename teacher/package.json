@@ -1,6 +1,6 @@
 {
   "name": "next-exam-teacher",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "private": true,
   "main": "dist/main/main.mjs",
   "author": {
@@ -129,5 +129,5 @@
     "signal-exit": "3.0.7"
   },
   "buildNumber": "1",
-  "buildVersion": "1.1.1.1"
+  "buildVersion": "1.1.2.1"
 }
