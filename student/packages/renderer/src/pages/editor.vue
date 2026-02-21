@@ -485,9 +485,10 @@ export default {
     },
 
     watch: {
-        focus(hasFocus) {
-            if (!hasFocus) {
-                this.$nextTick(() => this.$refs.focusWarningOverlay?.focus());
+        // Vue calls this when the component's data property "focus" changes; newValue is the new value of this.focus
+        focus(newValue) {
+            if (!newValue) {
+                this.$nextTick(() => this.$refs.focusWarningOverlay?.focus()); // DOM .focus() steals focus from editor
             }
         },
     },
