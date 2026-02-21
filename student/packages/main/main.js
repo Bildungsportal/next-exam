@@ -420,7 +420,7 @@ app.whenReady()
     session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
     
-    //toggleMacOSLockdown(true);
+    toggleMacOSLockdown(true);
    
     /******* Create main window *******/
     WindowHandler.createMainWindow()
