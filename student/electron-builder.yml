@@ -20,13 +20,13 @@ asarUnpack:
   - node_modules/simple-swizzle/**/*
   - node_modules/is-arrayish/**/*
 directories:
-  output: ../release/1.1.0.18_20251212
+  output: ../release/1.1.0.18_20260221
 compression: normal
 linux:
   target: AppImage
   category: Utility
   icon: public/icons/256x256.png
-  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20251212_${arch}.${ext}
+  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20260221_${arch}.${ext}
   files:
     - dist
     - public
@@ -34,8 +34,8 @@ linux:
     - "!public/minimal-jre-11-mac/**/*"
     - "!public/minimal-jre-11-mac-arm64/**/*"
 mac:
-  icon: public/icons/icon.png
-  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20251212_${arch}.${ext}
+  icon: public/icons/Liquid-Glass.icon
+  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20260221_${arch}.${ext}
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: scripts/entitlements.mac.plist
@@ -72,7 +72,7 @@ win:
     - target: msi
       arch:
         - x64
-  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20251212_${arch}.${ext}
+  artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20260221_${arch}.${ext}
   files:
     - dist
     - public

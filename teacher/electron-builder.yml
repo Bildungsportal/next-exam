@@ -21,7 +21,7 @@ linux:
     - dist
     - public
 mac:
-  icon: public/icons/icon.png
+  icon: public/icons/Liquid-Glass.icon
   artifactName: ${productName}_${env.VERSION}.${env.BUILD_NUMBER}_20251212_${arch}.${ext}
   hardenedRuntime: true
   gatekeeperAssess: false
