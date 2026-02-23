@@ -362,7 +362,7 @@
 
 
     <!-- focus warning start -->
-    <div v-if="!focus" class="focus-container">
+    <div v-if="!focus" ref="focusWarningOverlay" tabindex="-1"  class="focus-container">
         <div id="focuswarning" class="infodiv p-4 d-block focuswarning">
             <div class="mb-3 row">
                 <div class="mb-3 "> {{ $t('editor.leftkiosk') }} <br> {{ $t('editor.tellsomeone') }}</div>
@@ -715,6 +715,16 @@ export default {
         getHexColor() {
             const rgbColor = this.editor?.getAttributes('textStyle')?.color || '';
             return rgbColor.startsWith('rgb') ? this.rgbToHex(rgbColor) : rgbColor;
+        },
+    },
+
+
+    watch: {
+        // Vue calls this when the component's data property "focus" changes; newValue is the new value of this.focus
+        focus(newValue) {
+            if (!newValue) {
+                this.$nextTick(() => this.$refs.focusWarningOverlay?.focus()); // DOM .focus() steals focus from editor
+            }
         },
     },
 
