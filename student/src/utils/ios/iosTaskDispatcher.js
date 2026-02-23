@@ -24,6 +24,10 @@ import {Device} from '@capacitor/device';
 import i18n from "../../locales/locales.js";
 import {Directory, Encoding, Filesystem as fs} from "@capacitor/filesystem";
 import {Clipboard} from "@capacitor/clipboard";
+import path from "path";
+import mammoth from "mammoth";
+import log from "electron-log";
+import {config} from "dotenv";
 
 //import { MyCustomNativePlugin } from './plugins/MyCustomNativePlugin';
 
@@ -33,6 +37,7 @@ export class IosTaskDispatcher {
         this.multicastClient = null;
         this.config = null;
         this.communicationHandler = null;
+        this.isPrintingPdf = false;
     }
 
     init(mc, config, ch) {
@@ -67,8 +72,7 @@ export class IosTaskDispatcher {
             case 'loginBiP':
                 return this.loginbip(payload);
             case 'reload-url':
-                this.reloadurl()
-                return;
+                return this.reloadurl();
             case 'locallockdown':
                 return this.locallockdown(payload);
             case 'register':
@@ -83,6 +87,10 @@ export class IosTaskDispatcher {
                 return this.storehtml(payload);
             case 'printpdf':
                 return this.printpdf(payload);
+            case 'getfileasync':
+                return this.getfileasync(payload);
+            case 'getPDFbase64':
+                return this.getpdfbase64();
             case 'collapse-browserview':
             case 'restore-browserview':
                 return; // Ignore since no BrowserViews in Capacitor
@@ -298,8 +306,9 @@ export class IosTaskDispatcher {
                     //create exam folder in workfolder
                     let uniqueexamName = `${servername}-${pin}`
                     config.examdirectory = path.join(config.workdirectory, uniqueexamName)
-                    if (!fs.existsSync(config.examdirectory)) {
-                        fs.mkdirSync(config.examdirectory, {recursive: true});
+
+                    if (!this.fileExists(config.examdirectory)) {
+                        fs.mkdir(config.examdirectory, {recursive: true});
                     }
                 } else {
                     if (data.version) {
@@ -515,5 +524,94 @@ export class IosTaskDispatcher {
                 this.isPrintingPdf = false
             });
         }
+    }
+
+    async getfileasync(args) {
+        const workdir = path.join(config.examdirectory, "/")
+
+        if (args.filename) { //return content of specific file as string (html) to replace in editor)
+            // console.log("Received arguments:", filename, audio, docx);
+
+            let filepath = path.join(workdir, args.filename)
+
+            if (args.audio == true) { // audio file
+                const audioData = fs.readFile(filepath);
+                return audioData.toString('base64');
+            } else if (args.docx) {  //office open xml file
+                let result = await mammoth.convertToHtml({path: filepath})
+                    .then((data) => {
+                        return data
+                    })
+                    .catch(function (error) {
+                        console.error(error);
+                    });
+                return result
+            } else {   //bak file
+                try {
+                    let data = fs.readFile(filepath, 'utf8')
+                    return data
+                } catch (err) {
+                    log.error(`IosTaskDispatcher @ getfilesasync: ${err}`);
+                    return false
+                }
+            }
+        } else {  // return file list of exam directory
+            try {
+                if (!this.fileExists(workdir)) {
+                    fs.mkdir(workdir, {recursive: true});
+                } //do not crash if the directory is deleted after the app is started ^^
+                let filelist = fs.readdir(workdir, {withFileTypes: true})
+                    .filter(dirent => dirent.isFile())
+                    .map(dirent => dirent.name)
+
+
+                let files = []
+                filelist.forEach(file => {
+                    let mod = fs.stat(path.join(workdir, file)).mtime
+                    if (path.extname(file).toLowerCase() === ".pdf") {
+                        files.push({name: file, type: "pdf", mod: mod})
+                    }         //pdf
+                    else if (path.extname(file).toLowerCase() === ".bak") {
+                        files.push({name: file, type: "bak", mod: mod})
+                    }   // editor| backup file to replace editor content
+                    else if (path.extname(file).toLowerCase() === ".docx") {
+                        files.push({name: file, type: "docx", mod: mod})
+                    }   // editor| content file (from teacher) to replace content and continue writing
+                    else if (path.extname(file).toLowerCase() === ".ggb") {
+                        files.push({name: file, type: "ggb", mod: mod})
+                    }  // geogebra
+                    else if (path.extname(file).toLowerCase() === ".mp3" || path.extname(file).toLowerCase() === ".ogg" || path.extname(file).toLowerCase() === ".wav") {
+                        files.push({name: file, type: "audio", mod: mod})
+                    }  // audio
+                    else if (path.extname(file).toLowerCase() === ".jpg" || path.extname(file).toLowerCase() === ".png" || path.extname(file).toLowerCase() === ".gif") {
+                        files.push({name: file, type: "image", mod: mod})
+                    }  // images
+                })
+                this.multicastClient.clientinfo.numberOfFiles = filelist.length
+                return files
+            } catch (err) {
+                log.error(`IosTaskDispatcher @ getfilesasync: ${err}`);
+                return false;
+            }
+        }
+    }
+
+    async fileExists(path) {
+        try {
+            await fs.stat({
+                path,
+                directory: Directory.Documents
+            });
+            return true
+        } catch (err) {
+            return false;
+        }
+    }
+
+    getpdfbase64() {
+        log.info("IosTaskDispatcher @ getPDFbase64: getting base64 encoded pdf")
+        this.multicastClient.clientinfo.submissionnumber = args.submissionnumber + 1 // clientinfo keeps track of submissions for automated submissionnumbers at section change - but this obviously happens after manual submit
+        let result = await this.CommunicationHandler.getBase64PDF(args.submissionnumber, args.sectionname, args.printBackground)   // why the hell is this function located in communicationhandler.js and not in ipchandler.js ? FIXME !
+        return result
     }
 }
