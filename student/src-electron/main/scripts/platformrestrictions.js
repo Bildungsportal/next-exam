@@ -43,6 +43,7 @@ import platformDispatcher from './platformDispatcher.js';
 import { enableLinuxRestrictions, disableLinuxRestrictions } from './restrictions/lin.js';
 import { enableWindowsRestrictions, disableWindowsRestrictions } from './restrictions/win.js';
 import { enableMacRestrictions, disableMacRestrictions, toggleMacOSLockdown as toggleMacOSLockdownImpl } from './restrictions/mac.js';
+import {isElectronWindow, isIOS} from "../../../src/types/platform.ts";
 
 let clipboardInterval;
 let configStore = {
@@ -88,12 +89,20 @@ function disableRestrictions() {
     if (clipboardInterval) {
         clipboardInterval.stop();
     }
-
-    globalShortcut.unregister('CommandOrControl+V', () => { console.log('activate clipboard'); });
-    globalShortcut.unregister('CommandOrControl+Shift+V', () => { console.log('activate clipboard'); });
-    globalShortcut.unregister('CommandOrControl+C', () => { console.log('activate clipboard'); });
-    globalShortcut.unregister('CommandOrControl+X', () => { console.log('activate clipboard'); });
-
+    if (isElectronWindow(window)) {
+        globalShortcut.unregister('CommandOrControl+V', () => {
+            console.log('activate clipboard');
+        });
+        globalShortcut.unregister('CommandOrControl+Shift+V', () => {
+            console.log('activate clipboard');
+        });
+        globalShortcut.unregister('CommandOrControl+C', () => {
+            console.log('activate clipboard');
+        });
+        globalShortcut.unregister('CommandOrControl+X', () => {
+            console.log('activate clipboard');
+        });
+    }
     if (platformDispatcher.platform === 'linux') {
         disableLinuxRestrictions(configStore);
     }
@@ -104,6 +113,9 @@ function disableRestrictions() {
 
     if (platformDispatcher.platform === 'darwin') {
         disableMacRestrictions();
+    }
+    if (isIOS(window)) {
+        disableIOSRestrictions();
     }
 }
 
