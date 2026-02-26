@@ -37,7 +37,7 @@ const config = {
     multicastClientPort: ${process.env.MULTICAST_CLIENT_PORT},  // only needed for exam autodiscovery
     multicastServerClientPort: ${process.env.MULTICAST_SERVER_CLIENT_PORT},   // needed to find other exams in the network with the same name and prevent using the same exam name twice (confusion alert)
 
-    multicastServerAdrr: '239.255.255.250',
+    multicastServerAdrr: '239.1.1.1',
     hostip: "0.0.0.0",       // server.js
     gateway: true,
     examServerList: {},

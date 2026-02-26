@@ -4,7 +4,7 @@
  */
 
 const config = {
-    development: true,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
+    development: false,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
     showdevtools: false,
     useBundledJRE: true,
     bipIntegration: false,
@@ -19,7 +19,7 @@ const config = {
     serverApiPort: 22422,  // this is needed to be reachable on the teachers pc for basic functionality
     multicastClientPort: 6024,  // only needed for exam autodiscovery
 
-    multicastServerAdrr: '239.255.255.250',
+    multicastServerAdrr: '239.1.1.1',
     hostip: "",       // server.js
     gateway: true,
     electron: false,
@@ -27,7 +27,7 @@ const config = {
     isPuavo: false,
     
     version: '1.1.2.1',
-    buildDate: '20260221',
+    buildDate: '20260226',
     buildNumber: '1',
     info: 'Release'
 }

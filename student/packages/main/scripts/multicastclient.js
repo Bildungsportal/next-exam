@@ -71,10 +71,10 @@ class MulticastClient {
         });
 
         try {
-            this.client.bind(this.PORT, '0.0.0.0',  () => { 
+            this.client.bind(this.PORT, config.hostip,  () => { 
                 this.client.setBroadcast(true)
                 this.client.setMulticastTTL(128); 
-                if (this.gateway) {this.client.addMembership(this.MULTICAST_ADDR)} // es ist für ein verlässliches multicast sinnvoll der gruppe beizutreten
+                if (this.gateway) { this.client.addMembership(this.MULTICAST_ADDR, config.hostip) }
                 if (!this.gateway) {log.warn("mcclient: No Gateway! Starting MulticastClient without adding group membership")}
                 log.info(`multicastclient @ init: UDP MC Client listening on http://${config.hostip}:${this.client.address().port}`)
             })
