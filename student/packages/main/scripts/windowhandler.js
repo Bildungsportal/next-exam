@@ -275,6 +275,7 @@ class WindowHandler {
         //log.info(`windowhandler @ initBlockWindows: found ${displays.length} displays`)
         
         if (!this.config.development) {  // lock all screens
+            if (displays.length <= 1) return
             // Wait for exam window to be visible and positioned; never create block windows before that
             let examReady = false
             if (this.examwindow && !this.examwindow.isDestroyed()) {
