@@ -102,9 +102,9 @@
                 <div v-for="server in serverlist" :key="server.id || server.servername" class="row p-3 m-0 mb-2 border bg-light" style="border-radius: 4px; margin-right: 10px !important; min-height:100px; max-height:100px;  min-width:234px; max-width: 234px;">
                     
                     <div style="display:flex; flex-direction: row; justify-content: space-between; padding:0px;">
-                        <div style="width:130px; display:inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> {{server.servername}}  </div>  
+                        <div style="width:130px; display:inline-block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> {{server.servername}}</div>  
                         
-                        <div v-if="server.version !== version" class="badge btn-danger " style="width:170px; height:20px; vertical-align: text-bottom; margin-top: 2px; display: inline;" :title="$t('student.outdatedinfo')"> {{$t('student.outdated')}} {{ server.version }} </div>
+                        <div v-if="server.version == version" class="badge btn-warning" style="width:170px; height:20px; vertical-align: text-bottom; margin-top: 2px; display: inline;" :title="$t('student.outdatedinfo')"> {{$t('student.outdated')}} {{ server.version }} </div>
                         <div v-else-if="server.bip" class="badge btn-teal" style="width:70px; height:20px; vertical-align: text-bottom; margin-top: 2px; display: inline;"> BiP Exam</div>
                         <div v-else  style="width:70px; height:20px; vertical-align: text-bottom; margin-top: 2px; display: inline;"> </div>
                     </div>
