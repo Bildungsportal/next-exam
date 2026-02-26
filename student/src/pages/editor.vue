@@ -333,19 +333,8 @@
                 <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
                  
 
-   	<div v-if="(file.type == 'bak' && !file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
-        <div v-if="(file.type == 'bak' && file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
-
-
-
-
-
-
-
-
-
-
-
+                    <div v-if="(file.type == 'bak' && !file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
+                    <div v-if="(file.type == 'bak' && file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
 
 
                     <div v-if="(file.type == 'docx')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
