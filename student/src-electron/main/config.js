@@ -20,7 +20,7 @@ const config = {
     serverApiPort: 22422,  // this is needed to be reachable on the teachers pc for basic functionality
     multicastClientPort: 6024,  // only needed for exam autodiscovery
 
-    multicastServerAdrr: '239.255.255.250',
+    multicastServerAdrr: '239.1.1.1',
     hostip: "",       // server.js
     gateway: true,
     virtualized: false,

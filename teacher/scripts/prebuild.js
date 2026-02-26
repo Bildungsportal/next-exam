@@ -30,7 +30,7 @@ const config = {
     multicastClientPort: ${process.env.MULTICAST_CLIENT_PORT},
     multicastServerClientPort: ${process.env.MULTICAST_SERVER_CLIENT_PORT},
 
-    multicastServerAdrr: '239.255.255.250',
+    multicastServerAdrr: '239.1.1.1',
     hostip: "0.0.0.0",
     gateway: true,
     examServerList: {},

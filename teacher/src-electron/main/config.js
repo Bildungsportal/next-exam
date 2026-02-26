@@ -17,7 +17,7 @@ const config = {
     multicastClientPort: 6024,
     multicastServerClientPort: 6025,
 
-    multicastServerAdrr: '239.255.255.250',
+    multicastServerAdrr: '239.1.1.1',
     hostip: "0.0.0.0",
     gateway: true,
     examServerList: {},

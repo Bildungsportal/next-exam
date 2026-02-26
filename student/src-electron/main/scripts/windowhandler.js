@@ -278,7 +278,9 @@ class WindowHandler {
         //log.info(`windowhandler @ initBlockWindows: found ${displays.length} displays`)
         
         if (!this.config.development) {  // lock all screens
-            // Wait for exam window to be visible and positioned (important for Wayland/KWin)
+            if (displays.length <= 1) return
+            // Wait for exam window to be visible and positioned; never create block windows before that
+            let examReady = false
             if (this.examwindow && !this.examwindow.isDestroyed()) {
                 let retries = 0
                 const maxRetries = 10
@@ -286,8 +288,16 @@ class WindowHandler {
                     await this.sleep(100)
                     retries++
                 }
-                // Additional wait to ensure positioning is complete on Wayland
-                await this.sleep(200)
+                if (this.examwindow.isVisible()) {
+                    examReady = true
+                    // Additional wait to ensure positioning is complete on Wayland
+                    await this.sleep(200)
+                }
+            }
+            
+            if (!examReady) {
+                log.info("windowhandler @ initBlockWindows: exam window not ready, skipping block window creation")
+                return
             }
             
             // Clean up destroyed block windows from array
@@ -298,14 +308,8 @@ class WindowHandler {
             
             // First, use the reserved exam display ID (set immediately when exam window was created)
             // This ensures the screen is reserved even if the window isn't fully initialized yet
-            if (this.examDisplayId) {
+            if (this.examDisplayId !== undefined && this.examDisplayId !== null) {
                 usedDisplayIds.add(this.examDisplayId)
-            }
-            
-            // Always exclude primary display (exam window location)
-            const primaryDisplay = screen.getPrimaryDisplay()
-            if (primaryDisplay && primaryDisplay.id) {
-                usedDisplayIds.add(primaryDisplay.id)
             }
             
             // Check exam window display (as fallback/verification, but reserved ID takes priority)
@@ -313,8 +317,10 @@ class WindowHandler {
                 try {
                     const bounds = this.examwindow.getBounds()
                     const display = screen.getDisplayMatching(bounds)
-                    usedDisplayIds.add(display.id)
-                    log.info(`windowhandler @ initBlockWindows: exam window is on display ${display.id}`)
+                    if (display && display.id !== undefined && display.id !== null) {
+                        usedDisplayIds.add(display.id)
+                        log.info(`windowhandler @ initBlockWindows: exam window is on display ${display.id}`)
+                    }
                 } catch (err) {
                     log.error(`windowhandler @ initBlockWindows: error getting exam window display: ${err}`)
                 }
@@ -325,8 +331,10 @@ class WindowHandler {
                 try {
                     const bounds = blockwin.getBounds()
                     const display = screen.getDisplayMatching(bounds)
-                    usedDisplayIds.add(display.id)
-                    log.info(`windowhandler @ initBlockWindows: block window found on display ${display.id}`)
+                    if (display && display.id !== undefined && display.id !== null) {
+                        usedDisplayIds.add(display.id)
+                        log.info(`windowhandler @ initBlockWindows: block window found on display ${display.id}`)
+                    }
                 } catch (err) {
                     log.error(`windowhandler @ initBlockWindows: error getting block window display: ${err}`)
                 }
@@ -351,7 +359,6 @@ class WindowHandler {
             })
         }
     }
-
 
 
 
