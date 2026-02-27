@@ -145,7 +145,7 @@
                                 {{ server.servername }}
                             </div>
 
-                            <div v-if="server.version !== version" class="badge btn-danger "
+                            <div v-if="server.version !== version" class="badge btn-warning "
                                  style="width:170px; height:20px; vertical-align: text-bottom; margin-top: 2px; display: inline;"
                                  :title="$t('student.outdatedinfo')"> {{ $t('student.outdated') }} {{ server.version }}
                             </div>

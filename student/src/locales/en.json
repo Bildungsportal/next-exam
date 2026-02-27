@@ -130,6 +130,7 @@
         "left":"left",
         "center":"center",
         "right":"right",
+        "justify":"justify",
         "textcolor":"textcolor",
         "linebreak":"linebreak",
         "more":"more",

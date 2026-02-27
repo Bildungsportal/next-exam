@@ -133,10 +133,22 @@
                     :class="{ 'is-active': editor.isActive({ textAlign: 'right' }) }"
                     class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img
                 src="/src/assets/img/svg/format-justify-right.svg" class="white" width="22" height="22"></button>
+            <button :title="$t('editor.justify')" @click="editor.chain().focus().setTextAlign('justify').run()" 
+                    :class="{ 'is-active': editor.isActive({ textAlign: 'justify' }) }" 
+                    class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img 
+                src="/src/assets/img/svg/format-justify-fill.svg" class="white" width="22" height="22" ></button>
+
+
+
+
+
             <input v-if="!isMac" :title="$t('editor.textcolor')" type="color" @input="handleColorInput"
                    :value="getHexColor || '#000000'" class="invisible-button btn btn-outline-info p-2 me-2 mb-1 btn-sm"
                    style="height: 33.25px; width:32px">
 
+
+
+                   
 
             <button :title="$t('editor.specialchar')" @click="showInsertSpecial();this.LTdisable()"
                     class="invisible-button btn btn-outline-warning p-1 me-0 mb-1 btn-sm"><img
@@ -196,28 +208,54 @@
             </div>
 
             <div id="specialcharsdiv" style="display:none">
-                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('¿')"
-                     style="width:28px; ">¿
-                </div>
-                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('ñ')"
-                     style="width:28px; ">ñ
-                </div>
-                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('ç')"
-                     style="width:28px; ">ç
-                </div>
-                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('©')"
-                     style="width:28px; ">©
-                </div>
-                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('™')"
-                     style="width:28px; ">™
-                </div>
-                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('¡')"
-                     style="width:28px; ">¡
-                </div>
-                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('µ')"
-                     style="width:28px; ">µ
-                </div>
+                <!-- Spanish / French / Italian basics -->
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('¿')" style="width:28px; ">¿</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('¡')" style="width:28px; ">¡</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('ñ')" style="width:28px; ">ñ</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('ç')" style="width:28px; ">ç</div>
+
+                <!-- Common symbols -->
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('–')" style="width:28px; ">–</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('…')" style="width:28px; ">…</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('^')" style="width:28px; ">^</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('€')" style="width:28px; ">€</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('$')" style="width:28px; ">$</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('°')" style="width:28px; ">°</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('§')" style="width:28px; ">§</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('©')" style="width:28px; ">©</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('™')" style="width:28px; ">™</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('µ')" style="width:28px; ">µ</div>
+
+                <!-- Quotes -->
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('„')" style="width:28px; ">„</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('“')" style="width:28px; ">“</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('‚')" style="width:28px; ">‚</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('‘')" style="width:28px; ">‘</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('«')" style="width:28px; ">«</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('»')" style="width:28px; ">»</div>
+
+                <!-- Accented vowels (Spanish / Italian / French) -->
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('á')" style="width:28px; ">á</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('é')" style="width:28px; ">é</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('í')" style="width:28px; ">í</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('ó')" style="width:28px; ">ó</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('ú')" style="width:28px; ">ú</div>
+
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('à')" style="width:28px; ">à</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('è')" style="width:28px; ">è</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('ì')" style="width:28px; ">ì</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('ò')" style="width:28px; ">ò</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('ù')" style="width:28px; ">ù</div>
+
+                <!-- French circonflexe vowels -->
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('â')" style="width:28px; ">â</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('ê')" style="width:28px; ">ê</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('î')" style="width:28px; ">î</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('ô')" style="width:28px; ">ô</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('û')" style="width:28px; ">û</div>
             </div>
+
+
             <div>
 
                 <div :title="$t('editor.splitview')" @click="toggleSplitview()"
@@ -295,19 +333,8 @@
                 <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
                  
 
-   	<div v-if="(file.type == 'bak' && !file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
-        <div v-if="(file.type == 'bak' && file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
-
-
-
-
-
-
-
-
-
-
-
+                    <div v-if="(file.type == 'bak' && !file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
+                    <div v-if="(file.type == 'bak' && file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
 
 
                     <div v-if="(file.type == 'docx')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
@@ -993,32 +1020,75 @@ export default {
                         if (parentCodeBlock || codemode) return true;
                     };
 
-                    if (isInCodeBlock()) {
-                        return;
-                    }  // Text bleibt unverändert
+                    if (isInCodeBlock()) { return; } // keep code unchanged
 
                     e.preventDefault();
                     const textNode = range.startContainer;
                     const offset = range.startOffset;
 
-                    // Text vor und nach der aktuellen Position
+                    // text before and after current position
                     const before = textNode.textContent.slice(0, offset);
                     const after = textNode.textContent.slice(offset);
 
-                    // Entscheiden, ob ein unteres oder oberes Anführungszeichen verwendet wird
+                    // decide between lower or upper double quote
                     const newQuote = before.endsWith(" ") || before === "" || /[\(\[{<]/.test(before.slice(-1)) ? "„" : "“";
 
-                    // Zeichen aktualisieren
+                    // update text with new quote
                     const newText = before + newQuote + after;
                     textNode.textContent = newText;
 
-                    // Cursor hinter das eingefügte Zeichen setzen
+                    // move cursor behind inserted quote
+                    range.setStart(textNode, before.length + 1);
+                    range.setEnd(textNode, before.length + 1);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                } 
+                else if (e.key === "'") {
+                    const selection = window.getSelection();
+                    const range = selection.getRangeAt(0);
+                    const currentNode = range.startContainer;
+
+                    const isInCodeBlock = () => {
+                        const parentCodeBlock = currentNode.nodeType === 3
+                            ? currentNode.parentElement.closest("code")
+                            : currentNode.closest("code");
+                        const codemode = this.editor.isActive('code');
+                        if (parentCodeBlock || codemode) return true;
+                    };
+
+                    if (isInCodeBlock()) { return; } // keep code unchanged
+
+                    const textNode = range.startContainer;
+                    const offset = range.startOffset;
+
+                    const before = textNode.textContent.slice(0, offset);
+                    const after = textNode.textContent.slice(offset);
+
+                    const lastChar = before.slice(-1);
+                    const isWordStart = before === "" || /\s|[\(\[{<]/.test(lastChar);
+                    if (!isWordStart) { return; } // let browser insert plain '
+
+                    e.preventDefault();
+
+                    const newQuote = "‚"; // lower single German quote
+
+                    const newText = before + newQuote + after;
+                    textNode.textContent = newText;
+
                     range.setStart(textNode, before.length + 1);
                     range.setEnd(textNode, before.length + 1);
                     selection.removeAllRanges();
                     selection.addRange(range);
                 }
             }
+
+
+
+
+
+
+
+
         },
         rgbToHex(rgb) {
             const [r, g, b] = rgb.match(/\d+/g).map(Number);
