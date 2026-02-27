@@ -213,13 +213,14 @@
 </template>
 
 
-<script>
+<script lang="ts">
 import validator from 'validator'
 import log from 'electron-log/renderer'
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {isElectronWindow} from "../types/platform.ts";
 import config from '../../src-electron/main/config.js'
 import {SignalBridge} from '../utils/signalBridge.js'
+import type Exam from '../types/api.d.ts'
 
 
 // Capture unhandled promise rejections
@@ -244,8 +245,8 @@ export default {
         return {
             version: this.$route.params.version,
             token: "",
-            username: this.$route.params.config.development ? "Thomas" : "",
-            pincode: this.$route.params.config.development ? "1111" : "",
+            username: this.$route.params.config.development ? "Thomas" : "" as string | boolean,
+            pincode: this.$route.params.config.development ? "1111" : "" as string,
             clientinfo: {},
             serverlist: [],
             serverlistAdvanced: [],
@@ -259,7 +260,7 @@ export default {
             buildDate: this.$route.params.config.buildDate,
             startExamEvent: null,
             advanced: false,
-            serverip: "",
+            serverip: "" as string,
             servername: "",
             hostip: this.$route.params.config.hostip,
             clickCount: 0,
@@ -273,7 +274,7 @@ export default {
             bipuserID: false,
             servertimeout: false,
             bipData: null,
-            onlineExams: [],
+            onlineExams: [] as Exam[],
             validip: true,
             serverFailureCount: {}, // Track failed ping attempts for manually added servers
 
@@ -338,14 +339,14 @@ export default {
          */
         bipAutoconnect() {
             if (this.onlineExams.length > 0) {
-                this.onlineExams.forEach(exam => {
+                this.onlineExams.forEach((exam: Exam) => {
                     if (exam.examStatus == "open") {
                         exam.examTeachers.forEach(teacher => {
                             if (teacher.teacherIP) {
                                 //console.log(exam)
                                 this.serverip = teacher.teacherIP
                                 this.username = this.bipUsername
-                                this.pincode = parseInt(exam.examPin)     // Set the pin to the exam pin for auto connect TODO parseInt not necessary, is already an int in BIP
+                                this.pincode = exam.examPin.toString()     // Set the pin to the exam pin for auto connect
                                 console.log(`connecting to exam: ${exam.examName} with teacher: ${teacher.teacherID} and pin: ${exam.examPin}`)
                                 this.registerClient(teacher.teacherIP, exam.examName)
                             }

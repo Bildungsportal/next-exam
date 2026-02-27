@@ -174,9 +174,10 @@
 
 
 
-<script>
+<script lang="ts">
 import log from 'electron-log/renderer';
 import {SchedulerService} from '../utils/schedulerservice.js'
+import type Exam from '../types/api.d.ts'
 
 
 // Erfassen von unhandled promise rejections
@@ -210,7 +211,7 @@ export default {
             backupdir: '',
             freeDiscspace: 100,
             previousExams: [],
-            onlineExams: [],
+            onlineExams: [] as Exam[],
             biptest:false,   //switches between production and q
             selectedExam: null,
 
@@ -379,7 +380,7 @@ export default {
                     //console.log("Daten von der API:", data);
                     this.bipData = data   // store all of the information in data
 
-                    data.exams.forEach( exam => {
+                    data.exams.forEach((exam: Exam) => {
                         this.onlineExams.push(exam)
                     })
 

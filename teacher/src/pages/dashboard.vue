@@ -602,7 +602,7 @@
 
 
 
-<script >
+<script lang="ts">
 import { VueDraggableNext } from 'vue-draggable-next'
 import { v4 as uuidv4 } from 'uuid'
 import {SchedulerService} from '../utils/schedulerservice.js'
@@ -616,6 +616,7 @@ import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStuden
 import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer } from '../utils/filemanager'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore } from '../utils/exammanagement.js'
 import { getTestURL, getTestID, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
+import type Exam from '../types/api.d.ts'
 
 class EmptyWidget {
     constructor() {
@@ -836,7 +837,7 @@ export default {
                         groupB: { users: [], examInstructionFiles: [], allowedUrls: [] }
                     }
                 },                
-            }
+            } as Exam
         };
     },
 
