@@ -91,6 +91,16 @@ export class IosTaskDispatcher {
                 return this.getfileasync(payload);
             case 'getPDFbase64':
                 return this.getpdfbase64();
+            case 'focuslost':
+                return this.focuslost(payload);
+            case 'startLanguageTool':
+                return this.startlanguagetool();
+            case 'getbackupfile':
+                return this.getbackupfile(payload);
+            case 'saveGGB':
+                return this.saveggb(payload);
+            case 'virtualized':
+                return this.virtualized();
             case 'collapse-browserview':
             case 'restore-browserview':
                 return; // Ignore since no BrowserViews in Capacitor
@@ -408,12 +418,12 @@ export class IosTaskDispatcher {
     printpdf(args) {
         // do not print if exam mode is not active anymore
         if (!this.multicastClient?.clientinfo?.exammode) {
-            log.warn("ipchandler @ printpdf: exammode is false - skipping print")
+            log.warn("IosTaskDispatcher @ printpdf: exammode is false - skipping print")
             return
         }
 
         if (this.isPrintingPdf) {
-            log.warn("ipchandler @ printpdf: print already in progress - skipping new request")
+            log.warn("IosTaskDispatcher @ printpdf: print already in progress - skipping new request")
             return
         }
 
@@ -443,22 +453,22 @@ export class IosTaskDispatcher {
 
             // aux files are files created if the main pdffilepath is not writeable (opened on windows)
             try {  // always check for old aux files and rename them
-                const files = fs.readdirSync(this.config.examdirectory);
+                const files = fs.readdir(this.config.examdirectory);
                 files.forEach(file => {
                     if (file === alternatefilename) {
                         const newPath = path.join(this.config.examdirectory, alternatebackupfilename);
-                        fs.renameSync(alternatepath, newPath);
+                        fs.rename({from: alternatepath, to: newPath});
                     }
                 });
             } catch (err) {
-                log.error(`ipchandler @ printpdf: ${err.message}`);
+                log.error(`IosTaskDispatcher @ printpdf: ${err.message}`);
             }
 
             const examWindow = this.WindowHandler.examwindow
             const webContents = examWindow?.webContents
 
             if (!webContents) {
-                log.error("ipchandler @ printpdf: no webContents found for examwindow")
+                log.error("IosTaskDispatcher @ printpdf: no webContents found for examwindow")
                 event.reply("fileerror", {
                     sender: "client",
                     message: "no webContents found for examwindow",
@@ -483,42 +493,50 @@ export class IosTaskDispatcher {
                         fs.unlinkSync(pdffilepath);
                     }
                 } catch (err) {
-                    log.error(`ipchandler @ printpdf: ${err.message}`);
+                    log.error(`IosTaskDispatcher @ printpdf: ${err.message}`);
                 }
                 // write the pdf to the exam directory
-                fs.writeFile(pdffilepath, data, (err) => {
-                    if (err) {
-                        log.warn(`ipchandler @ printpdf: ${err.message} - writing file as: ${alternatepath} `);
-                        // delete the old aux file if it exists
-                        try {
-                            if (fs.existsSync(alternatepath)) {
-                                fs.unlinkSync(alternatepath);
-                            }
-                        } catch (err) {
-                            log.error(`ipchandler @ printpdf (alternativer Pfad): ${err.message}`);
+                try {
+                    fs.writeFile({
+                        path: pdffilepath,
+                        data: data,
+                        directory: Directory.Documents,
+                        encoding: Encoding.UTF8
+                    })
+                    if (args.reason === "teacherrequest") {
+                        this.CommunicationHandler.sendToTeacher()
+                    }
+                    event.reply("loadfilelist")   //make sure students see the new file immediately
+                } catch (err) {
+                    log.warn(`IosTaskDispatcher @ printpdf: ${err.message} - writing file as: ${alternatepath} `);
+                    // delete the old aux file if it exists
+                    try {
+                        if (fs.existsSync(alternatepath)) {
+                            fs.unlinkSync(alternatepath);
                         }
-                        // write the pdf to the alternate path
-                        fs.writeFile(alternatepath, data, (err) => {
-                            if (err) {
-                                log.error(err.message);
-                                log.error("ipchandler @ printpdf: giving up");
-                                event.reply("fileerror", {sender: "client", message: err.message, status: "error"})
-                            } else { // log.info("ipchandler @ printpdf: success!");
-                                if (args.reason === "teacherrequest") {
-                                    this.CommunicationHandler.sendToTeacher()
-                                }
-                                event.reply("loadfilelist")
-                            }
-                        });
-                    } else { // log.info("ipchandler @ printpdf: success!");
+                    } catch (err) {
+                        log.error(`IosTaskDispatcher @ printpdf (alternativer Pfad): ${err.message}`);
+                    }
+                    // write the pdf to the alternate path
+                    try {
+                        fs.writeFile({
+                            path: alternatepath,
+                            data: data,
+                            directory: Directory.Documents,
+                            encoding: Encoding.UTF8
+                        })
                         if (args.reason === "teacherrequest") {
                             this.CommunicationHandler.sendToTeacher()
                         }
                         event.reply("loadfilelist")   //make sure students see the new file immediately
+                    } catch (err) {
+                            log.error(err.message);
+                            log.error("IosTaskDispatcher @ printpdf: giving up");
+                            event.reply("fileerror", {sender: "client", message: err.message, status: "error"})
                     }
-                });
+                }
             }).catch(error => {
-                log.error(`ipchandler @ printpdf: ${error.message}`)
+                log.error(`IosTaskDispatcher @ printpdf: ${error.message}`)
                 event.reply("fileerror", {sender: "client", message: error.message, status: "error"})
             }).finally(() => {
                 this.isPrintingPdf = false
@@ -535,7 +553,11 @@ export class IosTaskDispatcher {
             let filepath = path.join(workdir, args.filename)
 
             if (args.audio == true) { // audio file
-                const audioData = fs.readFile(filepath);
+                const audioData = fs.readFile({
+                    path: filepath,
+                    directory: Directory.Documents,
+                    encoding: Encoding.UTF8
+                    }).then((audioData) => audioData);
                 return audioData.toString('base64');
             } else if (args.docx) {  //office open xml file
                 let result = await mammoth.convertToHtml({path: filepath})
@@ -548,7 +570,11 @@ export class IosTaskDispatcher {
                 return result
             } else {   //bak file
                 try {
-                    let data = fs.readFile(filepath, 'utf8')
+                    let data = fs.readFile({
+                        path: filepath,
+                        directory: Directory.Documents,
+                        encoding: Encoding.UTF8
+                    }).then(data => data);
                     return data
                 } catch (err) {
                     log.error(`IosTaskDispatcher @ getfilesasync: ${err}`);
@@ -608,10 +634,104 @@ export class IosTaskDispatcher {
         }
     }
 
-    getpdfbase64() {
+    async getpdfbase64() {
         log.info("IosTaskDispatcher @ getPDFbase64: getting base64 encoded pdf")
         this.multicastClient.clientinfo.submissionnumber = args.submissionnumber + 1 // clientinfo keeps track of submissions for automated submissionnumbers at section change - but this obviously happens after manual submit
         let result = await this.CommunicationHandler.getBase64PDF(args.submissionnumber, args.sectionname, args.printBackground)   // why the hell is this function located in communicationhandler.js and not in ipchandler.js ? FIXME !
         return result
+    }
+
+    focuslost(ctrlalt) {
+        //Todo Window Handler should be removed
+        let answer = false
+        if (this.config.development || !this.multicastClient.exammode) {
+            answer = {sender: "client", focus: true}
+
+        } else if (this.WindowHandler.screenlockwindows.length > 0) {
+            answer = {sender: "client", focus: true}
+
+        } else if (this.WindowHandler.focusTargetAllowed && ctrlalt == false) {
+            log.warn(`IosTaskDispatcher @ focuslost: mouseleave event was triggered but target is allowed`)
+            answer = {sender: "client", focus: true}
+
+        } else {
+            this.WindowHandler.examwindow.moveTop();
+            this.WindowHandler.examwindow.setKiosk(true);
+            this.WindowHandler.examwindow.show();
+            this.WindowHandler.examwindow.focus();    // we keep focus on the window.. no matter what
+
+            this.multicastClient.clientinfo.focus = false; // block everything and inform teacher  (probably an overkill on mouseleave - needs testing)
+            answer = {sender: "client", focus: false}
+        }
+
+        return answer
+    }
+
+    startlanguagetool() {
+        try {
+            //TODO fix languagetool server
+            //languageToolServer.startServer();
+        } catch (err) {
+            return false
+        }
+        return true
+    }
+
+    getbackupfile(filename) {
+        log.info(`IosTaskDispatcher @ getbackupfile: Request received for filename: ${filename}`)
+        const workdir = path.join(config.examdirectory, "/")
+        if (filename) { //return content of specific file as string (html) to replace in editor)
+            let filepath = path.join(workdir, filename)
+            log.info(`IosTaskDispatcher @ getbackupfile: Full file path: ${filepath}`)
+            try {
+                if (!this.fileExists(filepath)) {
+                    log.warn(`IosTaskDispatcher @ getbackupfile: backup file not found: ${filepath}`);
+                    return false;
+                }
+                log.info(`IosTaskDispatcher @ getbackupfile: backup file exists, reading content`)
+                let data = fs.readFile({
+                    path: filepath,
+                    directory: Directory.Documents,
+                    encoding: Encoding.UTF8
+                }).then(data => data);
+                log.info(`IosTaskDispatcher @ getbackupfile: Successfully read backup file, content length: ${data.length}`)
+                return data
+            } catch (err) {
+                log.error(`IosTaskDispatcher @ getbackupfile: Error reading backup file: ${err}`);
+                log.error(`IosTaskDispatcher @ getbackupfile: Error stack: ${err.stack}`)
+                return false
+            }
+        } else {
+            log.warn(`IosTaskDispatcher @ getbackupfile: no filename provided`);
+            return false;
+        }
+    }
+
+    saveggb(args) {
+        const content = args.content
+        const filename = args.filename
+        const reason = args.reason
+        const ggbFilePath = path.join(this.config.examdirectory, filename);
+        if (content) {
+            //log.info("ipchandler @ saveGGB: saving students work to disk...")
+            const fileData = Buffer.from(content, 'base64');
+
+            try {
+                fs.writeFile(ggbFilePath, fileData);
+                if (reason === "teacherrequest") {
+                    this.CommunicationHandler.sendToTeacher()
+                }
+                return {sender: "client", message: t("data.filestored"), status: "success"}
+            } catch (err) { //Todo Window Handling
+                this.WindowHandler.examwindow.webContents.send('fileerror', err)
+
+                log.error(`IosTaskDispatcher @ saveGGB: ${err}`)
+                return {sender: "client", message: err, status: "error"}
+            }
+    }
+}
+
+    virtualized() {
+        this.multicastClient.clientinfo.virtualized = true;
     }
 }
