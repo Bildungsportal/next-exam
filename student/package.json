@@ -38,6 +38,7 @@
   "dependencies": {
     "@capacitor/device": "^8.0.0",
     "@jimp/jpeg": "^0.22.12",
+    "@novnc/novnc": "^1.6.0",
     "@quasar/extras": "^1.16.4",
     "@squoosh/lib": "^0.3.1",
     "@tiptap/extension-blockquote": "^2.10.3",
@@ -116,6 +117,7 @@
     "vue-i18n": "^11.2.8",
     "vue-router": "^4.4.5",
     "vue-sweetalert2": "^5.0.11",
+    "ws": "^8.19.0",
     "yaml": "^2.7.0"
   },
   "devDependencies": {

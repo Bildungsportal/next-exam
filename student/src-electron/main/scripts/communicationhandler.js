@@ -99,6 +99,95 @@ import { switchExamSection } from './switchExamSection.js';
         });
     }
 
+    // start local VirtualBox VM and update clientinfo.localVMHost/localVMState
+    async startLocalVMAndResolveHost(vmName){
+        this.multicastClient.clientinfo.localVMHost = null;
+        this.multicastClient.clientinfo.localVMState = null;
+
+        try {
+            const listOutput = shell('VBoxManage list vms');
+            const vmExists = listOutput.split('\n').some(line => line.includes(`"${vmName}"`));
+            if (!vmExists) {
+                log.error(`communicationhandler @ startLocalVMAndResolveHost: VM '${vmName}' not found on client`);
+                throw new Error('VM not installed on client');
+            }
+        } catch (err) {
+            log.error('communicationhandler @ startLocalVMAndResolveHost: list vms failed', err);
+            throw err;
+        }
+
+        try {
+            shell(`VBoxManage startvm "${vmName}" --type headless`);
+            this.multicastClient.clientinfo.localVMState = 'starting';
+        } catch (err) {
+            // VM might already be running; log at info level and continue
+            const msg = err && err.message ? String(err.message) : '';
+            if (/already running|VBOX_E_INVALID_VM_STATE/i.test(msg)) {
+                log.info('communicationhandler @ startLocalVMAndResolveHost: VM already running, continuing');
+            } else {
+                log.warn('communicationhandler @ startLocalVMAndResolveHost: startvm failed (continuing anyway)', err?.message || err);
+            }
+        }
+
+        // try to resolve IP several times
+        let ipAddress = null;
+        for (let attempt = 0; attempt < 10; attempt++){
+            try {
+                ipAddress = await this.resolveVmIp(vmName);
+                if (ipAddress) {
+                    this.multicastClient.clientinfo.localVMHost = ipAddress;
+                    this.multicastClient.clientinfo.localVMState = 'running';
+                    log.info(`communicationhandler @ startLocalVMAndResolveHost: VM IP resolved to ${ipAddress}`);
+                    return;
+                }
+            } catch (err) {
+                log.error('communicationhandler @ startLocalVMAndResolveHost: resolveVmIp attempt failed', err);
+            }
+            await this.sleep(2000);
+        }
+
+        log.error('communicationhandler @ startLocalVMAndResolveHost: could not resolve VM IP');
+        throw new Error('Could not resolve VM IP');
+    }
+
+    async resolveVmIp(vmName){
+        try {
+            const guestProp = shell(`VBoxManage guestproperty get "${vmName}" "/VirtualBox/GuestInfo/Net/0/V4/IP"`).trim();
+            const parts = guestProp.split(' ');
+            const last = parts[parts.length - 1];
+            if (last && last !== 'value' && last !== 'No' && last !== 'None') {
+                return last;
+            }
+        } catch (err) {
+            log.error('communicationhandler @ resolveVmIp: guestproperty failed', err);
+        }
+
+        try {
+            const info = shell(`VBoxManage showvminfo "${vmName}"`);
+            const nicLine = info.split('\n').find(line => line.includes('NIC 1'));
+            if (!nicLine) {
+                return null;
+            }
+            const macMatch = nicLine.match(/MAC address: ([0-9A-Fa-f]+)/);
+            if (!macMatch || !macMatch[1]) {
+                return null;
+            }
+            const mac = macMatch[1].toLowerCase();
+            const arpOutput = shell('arp -an');
+            const arpLine = arpOutput.split('\n').find(line => line.toLowerCase().includes(mac));
+            if (!arpLine) {
+                return null;
+            }
+            const ipMatch = arpLine.match(/\(([^)]+)\)/);
+            if (ipMatch && ipMatch[1]) {
+                return ipMatch[1];
+            }
+        } catch (err) {
+            log.error('communicationhandler @ resolveVmIp: fallback resolution failed', err);
+        }
+        return null;
+    }
+
 
 
     /**
@@ -728,10 +817,30 @@ import { switchExamSection } from './switchExamSection.js';
         this.multicastClient.clientinfo.linespacing = serverstatus.examSections[effectiveSection].linespacing // we try to double linespacing on demand in pdf creation
         this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[effectiveSection].audioRepeat // restrict repetition of audio files (for listening comprehension)
 
+        const examtype = serverstatus.examSections[effectiveSection].examtype;
+
         if (!WindowHandler.examwindow){  // why do we check? because exammode is left if the server connection gets lost but students could reconnect while the exam window is still open and we don't want to create a second one
             log.info("communicationhandler @ startExam: creating exam window")
-            this.multicastClient.clientinfo.examtype = serverstatus.examSections[effectiveSection].examtype
-            WindowHandler.createExamWindow(serverstatus.examSections[effectiveSection].examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+            this.multicastClient.clientinfo.examtype = examtype
+
+            if (examtype === 'localvm') {
+                try {
+                    const vmConfig = serverstatus.examSections[effectiveSection].localVMConfig || {};
+                    const vmName = vmConfig.vmName;
+                    if (!vmName) {
+                        log.error("communicationhandler @ startExam: no vmName configured for localvm examtype");
+                        this.multicastClient.clientinfo.exammode = false;
+                        return;
+                    }
+                    await this.startLocalVMAndResolveHost(vmName);
+                } catch (err) {
+                    log.error("communicationhandler @ startExam: LocalVM start failed", err);
+                    this.multicastClient.clientinfo.exammode = false;
+                    return;
+                }
+            }
+
+            WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
         }
         else if (WindowHandler.examwindow){  //reconnect into active exam session with exam window already open
             log.error("communicationhandler @ startExam: found existing Examwindow..")

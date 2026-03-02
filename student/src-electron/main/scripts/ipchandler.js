@@ -36,6 +36,7 @@ import { updateSystemTray } from './traymenu.js';
 import { ensureNetworkOrReset } from './testpermissionsMac.js';
 import { getWlanInfo } from './getwlaninfo.js';
 import { switchExamSection } from './switchExamSection.js';
+import { startProxy, stopProxy } from './vncproxy.js';
 
 const __dirname = import.meta.dirname;
 
@@ -114,10 +115,21 @@ class IpcHandler {
                 .catch(err => log.error(`ipchandler @ getExamMaterials: ${err}`));
                 return examMaterials
             }
-
-
-           
         }) 
+
+        ipcMain.handle('start-proxy', async (event, payload) => {
+            try {
+                const { host, port } = payload || {};
+                if (!host || !port) {
+                    throw new Error('Invalid proxy target');
+                }
+                const result = await startProxy({ host, port });
+                return { port: result };
+            } catch (err) {
+                log.error('ipchandler @ start-proxy:', err);
+                return { port: null, error: err.message };
+            }
+        });
 
         // Helper function for common exception URLs (used by all exam modes)
         const checkCommonExceptions = (targetUrl) => {

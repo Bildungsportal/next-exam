@@ -4,7 +4,7 @@
 
 const config = {
     development: true,
-    showdevtools: true,
+    showdevtools: false,
     bipIntegration: true,
     bipApiUrl: 'https://www.bildung.gv.at/webservice/rest/next-exam/teacher',
 
@@ -33,11 +33,12 @@ const config = {
         editor: true,
         math: true,
         microsoft365: true,
-        activesheets: true
+        activesheets: true,
+        localVM: true
     },
 
     version: '2.0.0.1',
-    buildDate: '20260216',
+    buildDate: '20260302',
     buildNumber: '1',
     info: 'Release'
 }

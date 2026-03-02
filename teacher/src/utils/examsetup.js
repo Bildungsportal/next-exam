@@ -400,6 +400,81 @@ async function configureRDP(){
 
 
 /**
+ * LocalVM (VirtualBox VM selection)
+ */
+async function configureLocalVM(){
+    const ipc = window.ipcRenderer;
+    if (!ipc) {
+        this.$swal.fire({
+            icon: 'error',
+            title: 'LocalVM',
+            text: 'Local VirtualBox integration is not available in this environment.'
+        });
+        return;
+    }
+
+    let vmNames = [];
+    try {
+        vmNames = await ipc.invoke('get-vm-list');
+    } catch (error) {
+        console.error('examsetup @ configureLocalVM: get-vm-list failed', error);
+        vmNames = [];
+    }
+
+    if (!Array.isArray(vmNames) || vmNames.length === 0) {
+        this.$swal.fire({
+            icon: 'warning',
+            title: 'LocalVM',
+            text: 'Keine VirtualBox-VMs gefunden. Bitte prüfen Sie die VBoxManage-Installation.'
+        });
+        return;
+    }
+
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    const currentVmName = section.localVMConfig && section.localVMConfig.vmName ? section.localVMConfig.vmName : '';
+
+    const inputOptions = vmNames.reduce((acc, name) => {
+        acc[name] = name;
+        return acc;
+    }, {});
+
+    let selectedVmName = currentVmName || vmNames[0];
+
+    await this.$swal.fire({
+        customClass: {
+            popup: 'my-popup',
+            title: 'my-title',
+            content: 'my-content',
+            input: 'my-custom-input-select',
+            actions: 'my-swal2-actions'
+        },
+        title: 'LocalVM',
+        icon: 'question',
+        input: 'select',
+        inputOptions,
+        inputValue: selectedVmName,
+        showCancelButton: true,
+        cancelButtonText: this.$t('dashboard.cancel'),
+        preConfirm: (value) => {
+            selectedVmName = value || '';
+            if (!selectedVmName) {
+                return 'Bitte wählen Sie eine VM aus.';
+            }
+            return true;
+        }
+    }).then((result) => {
+        if (!result.isConfirmed) {
+            return;
+        }
+        section.localVMConfig = {
+            vmName: selectedVmName
+        };
+        this.setServerStatus();
+    });
+}
+
+
+/**
 * Text Editor
 */
 async function configureEditor(){
@@ -1166,4 +1241,4 @@ function openAllowedUrl(allowedUrl){
 
 
 
-export { getTestURL, getTestID, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }
+export { getTestURL, getTestID, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }

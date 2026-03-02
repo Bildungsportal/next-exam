@@ -192,5 +192,8 @@
         "understood": "Verstanden",
         "page": "Seite",
         "pages": "Seiten"
+    },
+    "dashboard": {
+        "retry": "Erneut versuchen"
     }
 }

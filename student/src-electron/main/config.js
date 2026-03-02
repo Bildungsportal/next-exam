@@ -5,11 +5,11 @@
 
 const config = {
     development: true,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
-    showdevtools: true,
+    showdevtools: false,
     useBundledJRE: true,
     bipIntegration: true,
     bipDemo: true,
-    bipApiUrl: 'https://localhost:8443',
+    bipApiUrl: 'https://localhost:8444',
 
     workdirectory : "",   // (desktop path + examdir)
     tempdirectory : "",   // (desktop path + 'tmp')
@@ -26,19 +26,9 @@ const config = {
     virtualized: false,
     isPuavo: false,
     
-<<<<<<< HEAD
-    version: '1.1.0.18',
-<<<<<<< HEAD:student/packages/main/config.js
-    buildDate: '20251212',
-=======
-    buildDate: '20260119',
->>>>>>> 91bccce18460f62abc119b1408e74334412cc8fa:student/src-electron/main/config.js
-    buildNumber: '18',
-=======
     version: '2.0.0.1',
-    buildDate: '20260213',
+    buildDate: '20260302',
     buildNumber: '1',
->>>>>>> e4c5fb6fd76bc1d6e4d1c6599be2d5d290d31c5e
     info: 'Release'
 }
 export default config;
