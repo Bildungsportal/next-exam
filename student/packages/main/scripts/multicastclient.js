@@ -71,12 +71,21 @@ class MulticastClient {
         });
 
         try {
-            this.client.bind(this.PORT, config.hostip,  () => { 
+            // Bind auf 0.0.0.0, damit wir auf allen Interfaces lauschen; Interface-Auswahl erfolgt über addMembership()
+            this.client.bind(this.PORT, '0.0.0.0',  () => { 
                 this.client.setBroadcast(true)
                 this.client.setMulticastTTL(128); 
-                if (this.gateway) { this.client.addMembership(this.MULTICAST_ADDR, config.hostip) }
-                if (!this.gateway) {log.warn("mcclient: No Gateway! Starting MulticastClient without adding group membership")}
-                log.info(`multicastclient @ init: UDP MC Client listening on http://${config.hostip}:${this.client.address().port}`)
+                try {
+                    // join multicast group auf der tatsächlich ermittelten Interface-IP
+                    this.client.addMembership(this.MULTICAST_ADDR, config.hostip);
+                    log.info(`multicastclient @ init: joined ${this.MULTICAST_ADDR} on iface ${config.hostip}`);
+                } catch (e) {
+                    log.error(`multicastclient @ init: addMembership failed for ${this.MULTICAST_ADDR} on ${config.hostip}`, e);
+                }
+                if (!this.gateway) {
+                    log.warn("multicastclient @ init: No default gateway detected – joined multicast group on local interface");
+                }
+                log.info(`multicastclient @ init: UDP MC Client listening on 0.0.0.0:${this.client.address().port} (hostip=${config.hostip})`)
             })
         }
         catch (e){ 

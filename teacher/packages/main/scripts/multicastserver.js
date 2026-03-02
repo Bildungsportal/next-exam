@@ -58,7 +58,8 @@ class MulticastServer {
             version: config.version
         }
         
-        this.server.bind(this.SRC_PORT, config.hostip, () => {
+        // Bind auf 0.0.0.0, damit der Server auf allen lokalen Interfaces senden kann; tatsächliche Multicast-Route über setMulticastInterface()
+        this.server.bind(this.SRC_PORT, '0.0.0.0', () => {
             this.server.setBroadcast(true)
             this.server.setMulticastTTL(128)
             this.server.setTTL(128)
