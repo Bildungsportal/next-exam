@@ -133,55 +133,78 @@
                 <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('î')" style="width:28px; ">î</div>
                 <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('ô')" style="width:28px; ">ô</div>
                 <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('û')" style="width:28px; ">û</div>
+
+                <!-- French special chars & ligatures (lowercase) -->
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('æ')" style="width:28px; ">æ</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('ë')" style="width:28px; ">ë</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('ï')" style="width:28px; ">ï</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('œ')" style="width:28px; ">œ</div>
+
+                <!-- Accented vowels and specials (uppercase) -->
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('À')" style="width:28px; ">À</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Â')" style="width:28px; ">Â</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Æ')" style="width:28px; ">Æ</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Ç')" style="width:28px; ">Ç</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('É')" style="width:28px; ">É</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('È')" style="width:28px; ">È</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Ê')" style="width:28px; ">Ê</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Ë')" style="width:28px; ">Ë</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Î')" style="width:28px; ">Î</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Ï')" style="width:28px; ">Ï</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Ô')" style="width:28px; ">Ô</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Ò')" style="width:28px; ">Ò</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Œ')" style="width:28px; ">Œ</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Ù')" style="width:28px; ">Ù</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Û')" style="width:28px; ">Û</div>
             </div>
+            
             <div>   
-
-            <div :title="$t('editor.splitview')"  @click="toggleSplitview()" class="invisible-button btn btn-outline-warning p-0 ms-1 me-1 mb-0 btn-sm"><img src="/src/assets/img/svg/view-split-left-right.svg" class="white" width="22" height="22" ></div>
-           
-            <div v-if="!localLockdown" id="printfinalexam" class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm" @click="sendExamToTeacher(false, 'print')" :title="$t('editor.print')"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="22" ></div>
-            <div v-if="!localLockdown" id="sendfinalexam"  class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm pe-2 ps-1 " @click="sendExamToTeacher(false, 'send')" :title="$t('editor.sendfinalexam')"><img src="/src/assets/img/svg/document-send.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.finalsubmit') }}</div>
-           
-
-
-
-
-            <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
-            <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/src/assets/img/svg/games-solve.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
-
-            <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
-                <div v-if="(file.filetype == 'bak')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
-                <div v-if="(file.filetype == 'docx')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
-                <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
-                <div v-if="(file.filetype == 'audio')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
-                <div v-if="(file.filetype == 'image')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
-            </div>
-            <!-- exam materials end -->
-
-
+                <div :title="$t('editor.splitview')"  @click="toggleSplitview()" class="invisible-button btn btn-outline-warning p-0 ms-1 me-1 mb-0 btn-sm"><img src="/src/assets/img/svg/view-split-left-right.svg" class="white" width="22" height="22" ></div>
             
-            <div v-if="allowedUrls.length !== 0"  v-for="allowedUrl in allowedUrls  " class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button" :title="allowedUrl" @click="showUrl(allowedUrl)">
-                <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{allowedUrl}} 
-            </div>
-           
+                <div v-if="!localLockdown" id="printfinalexam" class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm" @click="sendExamToTeacher(false, 'print')" :title="$t('editor.print')"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="22" ></div>
+                <div v-if="!localLockdown" id="sendfinalexam"  class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm pe-2 ps-1 " @click="sendExamToTeacher(false, 'send')" :title="$t('editor.sendfinalexam')"><img src="/src/assets/img/svg/document-send.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.finalsubmit') }}</div>
+            
 
 
 
 
-            <div class="disabled-btn invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm text-muted"><img src="/src/assets/img/svg/edit-copy.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.localfiles') }} </div>
-           
-           
-            <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
-                <div v-if="(file.type == 'bak' && !file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
-                <div v-if="(file.type == 'bak' && file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
+                <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
+                <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/src/assets/img/svg/games-solve.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
 
-                <div v-if="(file.type == 'docx')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadDOCX(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
+                <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
+                    <div v-if="(file.filetype == 'bak')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+                    <div v-if="(file.filetype == 'docx')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+                    <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+                    <div v-if="(file.filetype == 'audio')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+                    <div v-if="(file.filetype == 'image')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+                </div>
+                <!-- exam materials end -->
+
+
                 
-                <div v-if="(file.type == 'pdf')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
-                <div v-if="(file.type == 'audio')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="playAudio(file.name)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
-                <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
-            </div>   
+                <div v-if="allowedUrls.length !== 0"  v-for="allowedUrl in allowedUrls  " class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button" :title="allowedUrl" @click="showUrl(allowedUrl)">
+                    <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{allowedUrl}} 
+                </div>
             
-        </div>
+
+
+
+
+                <div class="disabled-btn invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm text-muted"><img src="/src/assets/img/svg/edit-copy.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.localfiles') }} </div>
+            
+            
+                <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
+                    <div v-if="(file.type == 'bak' && !file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
+                    <div v-if="(file.type == 'bak' && file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
+
+                    <div v-if="(file.type == 'docx')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadDOCX(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
+                    
+                    <div v-if="(file.type == 'pdf')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
+                    <div v-if="(file.type == 'audio')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="playAudio(file.name)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
+                    <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
+                </div>   
+                
+            </div>
 
         </div>
         <!-- toolbar end -->
