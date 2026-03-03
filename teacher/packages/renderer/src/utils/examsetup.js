@@ -387,6 +387,7 @@ async function configureEditor(){
     const inputOptions = {
         'de-DE': this.$t("dashboard.de"),
         'en-GB': this.$t("dashboard.en"),
+        'en-US': this.$t("dashboard.en_us"),
         'fr-FR': this.$t("dashboard.fr"),
         'es-ES': this.$t("dashboard.es"),
         'it-IT': this.$t("dashboard.it"),
