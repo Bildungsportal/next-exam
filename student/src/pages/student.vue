@@ -228,10 +228,10 @@ window.addEventListener('unhandledrejection', event => {
     event.preventDefault(); // swallow guest view clone errors and ERR_FAILED
     return;
   }
-  log.error('Unhandled promise rejection:', reason); // log all other errors
+  //log.error('Unhandled promise rejection:', reason); // log all other errors
 });
 
-Object.assign(console, log.functions);  // Replace all console logs with logger
+//Object.assign(console, log.functions);  // Replace all console logs with logger
 
 // signalBridge instance centralizes ipc send calls with platform checks
 const signalBridge = new SignalBridge(window);
