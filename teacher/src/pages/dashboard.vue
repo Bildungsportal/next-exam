@@ -1062,7 +1062,7 @@ computed: {
                             if (student.token == this.studentwidgets[i].token){ 
                                 //now update the entry in the original widgets object and check if the student is online
                                 if (this.now - 20000 > student.timestamp){
-                                    if (this.studentwidgets[i].online && !this.muteAudio){ //play short soundfile on the first time the student timestamp is older than 20 seconds
+                                    if (this.studentwidgets[i].online && !this.muteAudio){ // play short soundfile on the first time the student timestamp is older than 20 seconds
                                         console.log(`dashboard @ fetchInfo: student ${student.clientname} just went offline`)
                                         const audio = new Audio('dialog-warning.oga');
                                         audio.play();
@@ -1070,7 +1070,14 @@ computed: {
                                     else { student.online = false }  // set online status on student object
                                 }
                                 else {student.online = true }  // set online status on student object
-                                
+
+                                // play sound once when student loses focus for the first time
+                                if (!student.focus && this.studentwidgets[i].focus && !this.muteAudio) {
+                                    console.log(`dashboard @ fetchInfo: student ${student.clientname} lost focus`)
+                                    const focusAudio = new Audio('dialog-warning.oga');
+                                    focusAudio.play();
+                                }
+
                                 // Überschreibe das studentwidget, aber korrigiere die Gruppenzugehörigkeit basierend auf der aktuellen Section
                                 this.studentwidgets[i] = student;
                                 
