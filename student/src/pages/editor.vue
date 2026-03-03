@@ -253,6 +253,32 @@
                 <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('î')" style="width:28px; ">î</div>
                 <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('ô')" style="width:28px; ">ô</div>
                 <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('û')" style="width:28px; ">û</div>
+
+
+                <!-- French special chars & ligatures (lowercase) -->
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('æ')" style="width:28px; ">æ</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('ë')" style="width:28px; ">ë</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('ï')" style="width:28px; ">ï</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('œ')" style="width:28px; ">œ</div>
+
+                <!-- Accented vowels and specials (uppercase) -->
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('À')" style="width:28px; ">À</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Â')" style="width:28px; ">Â</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Æ')" style="width:28px; ">Æ</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Ç')" style="width:28px; ">Ç</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('É')" style="width:28px; ">É</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('È')" style="width:28px; ">È</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Ê')" style="width:28px; ">Ê</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Ë')" style="width:28px; ">Ë</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Î')" style="width:28px; ">Î</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Ï')" style="width:28px; ">Ï</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Ô')" style="width:28px; ">Ô</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Ò')" style="width:28px; ">Ò</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Œ')" style="width:28px; ">Œ</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Ù')" style="width:28px; ">Ù</div>
+                <div class="btn btn-outline-secondary btn-sm invisible-button" @click="insertSpecialchar('Û')" style="width:28px; ">Û</div>
+
+
             </div>
 
 
