@@ -377,7 +377,7 @@ class IpcHandler {
          *  Start LOCAL Lockdown
          */
         ipcMain.on('locallockdown', (event, args) => {
-            log.info("ipchandler @ locallockdown: locking down client without teacher connection")
+            log.info("ipchandler @ locallockdown: locking down client without teacher connection", args)
             
             let serverstatus = {
                 exammode: true,
@@ -416,6 +416,9 @@ class IpcHandler {
                 }
             }
             
+            // make serverstatus available for getinfoasync() so the renderer (editor) sees password and examSections
+            this.multicastClient.serverstatus = serverstatus;
+
             this.multicastClient.clientinfo.name = args.clientname;
             this.multicastClient.clientinfo.serverip = "127.0.0.1";
             this.multicastClient.clientinfo.servername = "localhost";

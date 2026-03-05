@@ -534,7 +534,7 @@
 
     <!-- LANGUAGE TOOL START -->
     <div id="languagetool"
-         v-if="privateSpellcheck.activated || (serverstatus.allowSectionSwitch ? serverstatus.examSections[clientinfo?.lockedSection ?? lockedSection]?.languagetool : serverstatus.examSections[serverstatus.lockedSection]?.languagetool)">
+         v-if="showLanguageToolSidebar">
         <div id="ltcheck" @click="LTcheckAllWords();">
             <div id="eye" class="darkgreen eyeopen"></div> &nbsp;LanguageTool
         </div>
@@ -689,6 +689,19 @@ export default {
         PdfviewPane
     },
     data() {
+        const status = this.$route.params.serverstatus;
+        let activeSection = {};
+        if (status?.examSections) {
+            // localLockdown: useExamSections === false → section 1 wird verwendet
+            if (status.useExamSections === false && status.examSections[1]) {
+                activeSection = status.examSections[1];
+            } else {
+                const examSections = status.examSections;
+                const activeSectionIndex = status.activeSection ?? 0;
+                activeSection = examSections[activeSectionIndex] || {};
+            }
+        }
+
         return {
             index: 0,
             componentName: 'Writer',
@@ -732,10 +745,10 @@ export default {
             currentRange: 0,
             word: "",
             editorcontentcontainer: null,
-            serverstatus: this.$route.params.serverstatus,
-            linespacing: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].linespacing ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].linespacing : '2',
-            fontfamily: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontfamily ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontfamily : "sans",
-            fontsize: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontsize ? this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].fontsize : '12pt',
+            serverstatus: status,
+            linespacing: activeSection.linespacing || '2',
+            fontfamily: activeSection.fontfamily || "sans",
+            fontsize: activeSection.fontsize || '12pt',
             privateSpellcheck: {activate: false, activated: false, suggestions: false}, // this is a per student override (for students with legasthenie)
             individualSpellcheckActivated: false,
             audioSource: null,
@@ -769,8 +782,8 @@ export default {
             allowedUrls: [],
             lockedSection: 1,
             internetCheckCounter:0,
-            LThost: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].languagetoolhost || "http://127.0.0.1",
-            ltLanguage: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].spellchecklang
+            LThost: activeSection.languagetoolhost || "http://127.0.0.1",
+            ltLanguage: activeSection.spellchecklang || "de-DE"
         }
     },
     computed: {
@@ -788,6 +801,20 @@ export default {
                 'it-IT': this.$t("editor.lang_it"),
                 'sl-SI': this.$t("editor.lang_sl"),
             };
+        },
+        showLanguageToolSidebar() {
+            // returns true if LanguageTool sidebar should be visible
+            if (this.privateSpellcheck?.activated) return true;
+            const status = this.serverstatus;
+            if (!status || !status.examSections) return false;
+            const allowSwitch = !!status.allowSectionSwitch;
+            const sectionIndex = status.useExamSections === false
+                ? 1
+                : (allowSwitch
+                    ? (this.clientinfo?.lockedSection ?? this.lockedSection ?? status.activeSection ?? 0)
+                    : (status.lockedSection ?? status.activeSection ?? 0));
+            const section = status.examSections[sectionIndex] || status.examSections[1] || {};
+            return !!section.languagetool;
         },
     },
 
@@ -957,7 +984,9 @@ export default {
             this.pincode = this.clientinfo.pin
             this.privateSpellcheck = this.clientinfo.privateSpellcheck
             
-            this.serverstatus = getinfo.serverstatus
+            if (getinfo.serverstatus) {
+                this.serverstatus = getinfo.serverstatus
+            }
 
             // decide which section index is authoritative (client vs server)
             const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
@@ -984,7 +1013,12 @@ export default {
             });
 
             //handle individual spellcheck (only if not globally activated anyways)
-            if (this.serverstatus.examSections[this.lockedSection].languagetool === false) {
+            if (
+                this.serverstatus &&
+                this.serverstatus.examSections &&
+                this.serverstatus.examSections[this.lockedSection] &&
+                this.serverstatus.examSections[this.lockedSection].languagetool === false
+            ) {
                 if (this.privateSpellcheck.activate == false && this.LTactive) {
                     this.LTdisable()
                     this.privateSpellcheck.activated = false   // das wird eigentlich eh im communication handler für clientinfo bereits auf false gesetzt und bei fetchinfo() übernommen
@@ -1562,7 +1596,18 @@ export default {
 
         async startLanguageTool(options = {}) {
             const {silent = false, force = false} = options;
-            if (!this.serverstatus.examSections[this.serverstatus.activeSection].languagetool) {
+            if (!this.serverstatus || !this.serverstatus.examSections) {
+                return false;
+            }
+            const status = this.serverstatus;
+            const allowSwitch = !!status.allowSectionSwitch;
+            const sectionIndex = status.useExamSections === false
+                ? 1
+                : (allowSwitch
+                    ? (this.clientinfo?.lockedSection ?? this.lockedSection ?? status.activeSection ?? 0)
+                    : (status.lockedSection ?? status.activeSection ?? 0));
+            const section = status.examSections[sectionIndex] || status.examSections[1];
+            if (!section || !section.languagetool) {
                 return false;
             }
             if (this.ltRunning && !force) {
