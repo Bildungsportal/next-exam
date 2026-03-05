@@ -1,7 +1,7 @@
 import log from 'electron-log';
 import fs from 'fs';
 import WindowHandler from './windowhandler.js';
-import config from '../config.js';
+import config from '../../../src/utils/config.js';
 import multicastClient from './multicastclient.js';
 import { webContents } from 'electron';
 

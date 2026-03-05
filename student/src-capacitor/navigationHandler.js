@@ -28,29 +28,29 @@ class NavigationHandler {
         });
 
         this.bipwindow.webContents.on('did-navigate', (event, url) => {    // a pdf could contain a link ^^
-            log.info("did-navigate")
-            log.info(url)
+            console.info("did-navigate")
+            console.info(url)
         })
         this.bipwindow.webContents.on('will-navigate', (event, url) => {    // a pdf could contain a link ^^
-            log.info("will-navigate")
-            log.info(url)
+            console.info("will-navigate")
+            console.info(url)
         })
 
         this.bipwindow.webContents.on('new-window', (event, url) => {  // if a new window should open triggered by window.open()
-            log.info("new-window")
-            log.info(url)
+            console.info("new-window")
+            console.info(url)
             event.preventDefault();    // Prevent the new window from opening
         });
 
 
         this.bipwindow.webContents.setWindowOpenHandler(({ url }) => { // if a new window should open triggered by target="_blank"
-            log.info("target: _blank")
-            log.info(url)
+            console.info("target: _blank")
+            console.info(url)
             return { action: 'deny' };   // Prevent the new window from opening
         });
 
         this.bipwindow.webContents.on('will-redirect', (event, url) => {
-            log.info('Redirecting to:', url);
+            console.info('Redirecting to:', url);
             // Prüfen, ob die URL das gewünschte Format hat
             if (url.startsWith('bildungsportal://')) {
                 event.preventDefault(); // Verhindert den Standard-Redirect
@@ -59,8 +59,8 @@ class NavigationHandler {
                 const token = url.substring(prefix.length);
 
 
-                log.info('Captured Token:');
-                log.info(token);
+                console.info('Captured Token:');
+                console.info(token);
                 this.mainwindow.webContents.send('bipToken', token);
                 this.bipwindow.close();
             }

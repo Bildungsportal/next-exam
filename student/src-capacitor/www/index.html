@@ -137,7 +137,9 @@
         @keyframes round {
             0% { transform: rotate(0deg) }
             100% { transform: rotate(360deg) }
-        }</style><script>function showTextElements() {
+        }</style><script>//import config from "./src/utils/config.js";
+
+        function showTextElements() {
             const loadingText = document.getElementById('initial-loading-text');
             const loadingVersion = document.getElementById('initial-loading-version');
             if (loadingText) {
@@ -148,25 +150,25 @@
             }
         }
 
-        // Try to update version text and show text elements when config.version is available
-        let loadingVersion = document.getElementById('initial-loading-version');
-        if (loadingVersion && config && config.version) {
-            loadingVersion.textContent = config.version;
-            showTextElements();
-        } else {
-            let attempts = 0;
-            const checkConfig = setInterval(function() {
-                loadingVersion = document.getElementById('initial-loading-version');
-                if (loadingVersion && config && config.version) {
-                    loadingVersion.textContent = config.version;
-                    showTextElements();
-                    clearInterval(checkConfig);
-                }
-                attempts++;
-                if (attempts > 50) { // Stop after 5 seconds
-                    clearInterval(checkConfig);
-                }
-            }, 100);
-        }</script>  <script type="module" crossorigin src="./assets/index-BQ2ZZwVN.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-D-M-aisl.css">
+        // // Try to update version text and show text elements when config.version is available
+        // let loadingVersion = document.getElementById('initial-loading-version');
+        // if (loadingVersion && config && config.version) {
+        //     loadingVersion.textContent = config.version;
+        //     showTextElements();
+        // } else {
+        //     let attempts = 0;
+        //     const checkConfig = setInterval(function() {
+        //         loadingVersion = document.getElementById('initial-loading-version');
+        //         if (loadingVersion && config && config.version) {
+        //             loadingVersion.textContent = config.version;
+        //             showTextElements();
+        //             clearInterval(checkConfig);
+        //         }
+        //         attempts++;
+        //         if (attempts > 50) { // Stop after 5 seconds
+        //             clearInterval(checkConfig);
+        //         }
+        //     }, 100);
+        // }</script>  <script type="module" crossorigin src="./assets/index-QwSsCC4P.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-CP5E9rwq.css">
 </head><body id=vuexambody style="position: fixed; background-color: #ffffff;"><div id=initial-loading-overlay><div id=initial-loading-spinner><div class=loader>Loading</div><img id=initial-loading-icon src=./icons/icon-checkmark.png alt=Next-Exam></div><div id=initial-loading-text>Next-Exam</div><div id=initial-loading-version></div></div><div id=q-app></div></body></html>

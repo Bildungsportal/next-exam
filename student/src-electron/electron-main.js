@@ -23,7 +23,7 @@ import platformDispatcher from './main/scripts/platformDispatcher.js';
 import chalk from 'chalk';
 import log from 'electron-log';
 import { app, BrowserWindow, powerSaveBlocker, nativeTheme, globalShortcut, Tray, Menu, dialog, session} from 'electron'
-import config from './main/config.js';
+import config from '../src/utils/config.js';
 import multicastClient from './main/scripts/multicastclient.js'
 import path from 'path'
 import fs from 'fs'

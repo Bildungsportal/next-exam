@@ -146,7 +146,7 @@ export class IosTaskDispatcher {
         try {
             address = this.multicastClient.client.address();
         } catch (e) {
-            //log.error("IosTaskDispatcher @ checkhostip: multicastclient not running");
+            loggingBridge.error("IosTaskDispatcher @ checkhostip: multicastclient not running");
         }
 
         // Falls bereits eine Adresse vorhanden ist, liefern wir sie zurück.
@@ -177,7 +177,7 @@ export class IosTaskDispatcher {
             try {
                 this.config.hostip = ip.address(); // Liefert auch eine IP, wenn kein Gateway verfügbar ist
             } catch (e) {
-                //log.error("IosTaskDispatcher @ checkhostip: Unable to determine ip address", e);
+                loggingBridge.error("IosTaskDispatcher @ checkhostip: Unable to determine ip address", e);
                 this.config.hostip = false;
                 this.config.gateway = false;
             }
@@ -194,7 +194,7 @@ export class IosTaskDispatcher {
                 // Falls init() asynchron umgesetzt werden kann, warten wir hier darauf.
                 await this.multicastClient.init(this.config.gateway);
             } catch (err) {
-                //log.error("IosTaskDispatcher @ checkhostip: Error initializing multicast client", err);
+                loggingBridge.error("IosTaskDispatcher @ checkhostip: Error initializing multicast client", err);
             }
         }
 
@@ -205,7 +205,7 @@ export class IosTaskDispatcher {
      * updates the language of the application
      */
     setnewlocale(payload) {
-        //log.info(`IosTaskDispatcher @ set-new-locale: setting new locale to ${payload}`)
+        loggingBridge.info(`IosTaskDispatcher @ set-new-locale: setting new locale to ${payload}`)
         i18n.locale = payload
     }
 
@@ -218,7 +218,7 @@ export class IosTaskDispatcher {
     }
 
     loginbip(biptest) {
-        //log.info("IosTaskDispatcher @ loginBiP: opening bip window. testenvironment:", biptest)
+        loggingBridge.info("IosTaskDispatcher @ loginBiP: opening bip window. testenvironment:", biptest)
         this.WindowHandler.createBiPLoginWin(biptest) //Todo replace with navigate see #386
     }
 
@@ -227,7 +227,7 @@ export class IosTaskDispatcher {
     }
 
     locallockdown(args) {
-        //log.info("IosTaskDispatcher @ locallockdown: locking down client without teacher connection")
+        loggingBridge.info("IosTaskDispatcher @ locallockdown: locking down client without teacher connection")
 
         let serverstatus = {
             exammode: true,
@@ -310,7 +310,7 @@ export class IosTaskDispatcher {
                     this.multicastClient.clientinfo.focus = true;
                     this.multicastClient.clientinfo.pin = pin;
 
-                    //log.info(`IosTaskDispatcher @ register: successfully registered at ${servername} @ ${serverip} as ${clientname}`);
+                    loggingBridge.info(`IosTaskDispatcher @ register: successfully registered at ${servername} @ ${serverip} as ${clientname}`);
                     event.returnValue = data;
 
                     //create exam folder in workfolder
@@ -350,7 +350,7 @@ export class IosTaskDispatcher {
                 if (error.name === 'AbortError') {
                     errorMessage = "The request timed out";
                 } // Timeout-Nachricht anpassen
-                //log.error(`IosTaskDispatcher @ register: ${errorMessage}`);
+                loggingBridge.error(`IosTaskDispatcher @ register: ${errorMessage}`);
 
                 // show warning message if the user does not want to reset the permissions
                 event.returnValue = {
@@ -362,7 +362,7 @@ export class IosTaskDispatcher {
     }
 
     gracefullyexit() {
-        //log.info(`IosTaskDispatcher @ gracefullyexit: gracefully leaving locked exam mode`)
+        //loggingBridge.info(`IosTaskDispatcher @ gracefullyexit: gracefully leaving locked exam mode`)
 
         this.communicationHandler.gracefullyEndExam()
         this.communicationHandler.resetConnection()
@@ -384,7 +384,7 @@ export class IosTaskDispatcher {
         const htmlfile = path.join(this.config.examdirectory, htmlfilename);
 
         if (htmlContent) {
-            //log.info("IosTaskDispatcher: storeHTML: saving students work to disk...")
+            //loggingBridge.info("IosTaskDispatcher: storeHTML: saving students work to disk...")
             try {
                 fs.writeFile({
                     path: htmlfile,
@@ -393,9 +393,9 @@ export class IosTaskDispatcher {
                     encoding: Encoding.UTF8
                 });
             } catch (err) {
-                //log.error(`IosTaskDispatcher @ storeHTML: ${err.message}`);
+                //loggingBridge.error(`IosTaskDispatcher @ storeHTML: ${err.message}`);
                 let alternatepath = `${htmlfile}-${this.multicastClient.clientinfo.token}.bak`
-                //log.warn("IosTaskDispatcher @ storeHTML: trying to write file as:", alternatepath)
+                //loggingBridge.warn("IosTaskDispatcher @ storeHTML: trying to write file as:", alternatepath)
                 try {
                     fs.writeFile({
                         path: alternatepath,
@@ -403,11 +403,11 @@ export class IosTaskDispatcher {
                         directory: Directory.Documents,
                         encoding: Encoding.UTF8
                     })
-                    //log.info("IosTaskDispatcher @ storeHTML: success!");
+                    //loggingBridge.info("IosTaskDispatcher @ storeHTML: success!");
                     event.reply("loadfilelist")
                 } catch (err) {
-                    //log.error(err.message);
-                    //log.error("IosTaskDispatcher @ storeHTML: giving up");
+                    //loggingBridge.error(err.message);
+                    //loggingBridge.error("IosTaskDispatcher @ storeHTML: giving up");
                     event.reply("fileerror", {sender: "client", message: err, status: "error"})
                 }
                 event.reply("loadfilelist")
@@ -418,12 +418,12 @@ export class IosTaskDispatcher {
     printpdf(args) {
         // do not print if exam mode is not active anymore
         if (!this.multicastClient?.clientinfo?.exammode) {
-            //log.warn("IosTaskDispatcher @ printpdf: exammode is false - skipping print")
+            //loggingBridge.warn("IosTaskDispatcher @ printpdf: exammode is false - skipping print")
             return
         }
 
         if (this.isPrintingPdf) {
-            //log.warn("IosTaskDispatcher @ printpdf: print already in progress - skipping new request")
+            //loggingBridge.warn("IosTaskDispatcher @ printpdf: print already in progress - skipping new request")
             return
         }
 
@@ -461,14 +461,14 @@ export class IosTaskDispatcher {
                     }
                 });
             } catch (err) {
-                //log.error(`IosTaskDispatcher @ printpdf: ${err.message}`);
+                //loggingBridge.error(`IosTaskDispatcher @ printpdf: ${err.message}`);
             }
 
             const examWindow = this.WindowHandler.examwindow
             const webContents = examWindow?.webContents
 
             if (!webContents) {
-                //log.error("IosTaskDispatcher @ printpdf: no webContents found for examwindow")
+                //loggingBridge.error("IosTaskDispatcher @ printpdf: no webContents found for examwindow")
                 event.reply("fileerror", {
                     sender: "client",
                     message: "no webContents found for examwindow",
@@ -493,7 +493,7 @@ export class IosTaskDispatcher {
                         fs.unlinkSync(pdffilepath);
                     }
                 } catch (err) {
-                    //log.error(`IosTaskDispatcher @ printpdf: ${err.message}`);
+                    loggingBridge.error(`IosTaskDispatcher @ printpdf: ${err.message}`);
                 }
                 // write the pdf to the exam directory
                 try {
@@ -508,14 +508,14 @@ export class IosTaskDispatcher {
                     }
                     event.reply("loadfilelist")   //make sure students see the new file immediately
                 } catch (err) {
-                    //log.warn(`IosTaskDispatcher @ printpdf: ${err.message} - writing file as: ${alternatepath} `);
+                    //loggingBridge.warn(`IosTaskDispatcher @ printpdf: ${err.message} - writing file as: ${alternatepath} `);
                     // delete the old aux file if it exists
                     try {
                         if (fs.existsSync(alternatepath)) {
                             fs.unlinkSync(alternatepath);
                         }
                     } catch (err) {
-                        //log.error(`IosTaskDispatcher @ printpdf (alternativer Pfad): ${err.message}`);
+                        //loggingBridge.error(`IosTaskDispatcher @ printpdf (alternativer Pfad): ${err.message}`);
                     }
                     // write the pdf to the alternate path
                     try {
@@ -530,13 +530,13 @@ export class IosTaskDispatcher {
                         }
                         event.reply("loadfilelist")   //make sure students see the new file immediately
                     } catch (err) {
-                            //log.error(err.message);
-                            //log.error("IosTaskDispatcher @ printpdf: giving up");
+                            //loggingBridge.error(err.message);
+                            //loggingBridge.error("IosTaskDispatcher @ printpdf: giving up");
                             event.reply("fileerror", {sender: "client", message: err.message, status: "error"})
                     }
                 }
             }).catch(error => {
-                //log.error(`IosTaskDispatcher @ printpdf: ${error.message}`)
+                //loggingBridge.error(`IosTaskDispatcher @ printpdf: ${error.message}`)
                 event.reply("fileerror", {sender: "client", message: error.message, status: "error"})
             }).finally(() => {
                 this.isPrintingPdf = false
@@ -577,7 +577,7 @@ export class IosTaskDispatcher {
                     }).then(data => data);
                     return data
                 } catch (err) {
-                    //log.error(`IosTaskDispatcher @ getfilesasync: ${err}`);
+                    //loggingBridge.error(`IosTaskDispatcher @ getfilesasync: ${err}`);
                     return false
                 }
             }
@@ -616,7 +616,7 @@ export class IosTaskDispatcher {
                 this.multicastClient.clientinfo.numberOfFiles = filelist.length
                 return files
             } catch (err) {
-                //log.error(`IosTaskDispatcher @ getfilesasync: ${err}`);
+                //loggingBridge.error(`IosTaskDispatcher @ getfilesasync: ${err}`);
                 return false;
             }
         }
@@ -635,7 +635,7 @@ export class IosTaskDispatcher {
     }
 
     async getpdfbase64() {
-        //log.info("IosTaskDispatcher @ getPDFbase64: getting base64 encoded pdf")
+        //loggingBridge.info("IosTaskDispatcher @ getPDFbase64: getting base64 encoded pdf")
         this.multicastClient.clientinfo.submissionnumber = args.submissionnumber + 1 // clientinfo keeps track of submissions for automated submissionnumbers at section change - but this obviously happens after manual submit
         let result = await this.CommunicationHandler.getBase64PDF(args.submissionnumber, args.sectionname, args.printBackground)   // why the hell is this function located in communicationhandler.js and not in ipchandler.js ? FIXME !
         return result
@@ -651,7 +651,7 @@ export class IosTaskDispatcher {
             answer = {sender: "client", focus: true}
 
         } else if (this.WindowHandler.focusTargetAllowed && ctrlalt == false) {
-            //log.warn(`IosTaskDispatcher @ focuslost: mouseleave event was triggered but target is allowed`)
+            //loggingBridge.warn(`IosTaskDispatcher @ focuslost: mouseleave event was triggered but target is allowed`)
             answer = {sender: "client", focus: true}
 
         } else {
@@ -678,31 +678,31 @@ export class IosTaskDispatcher {
     }
 
     getbackupfile(filename) {
-        //log.info(`IosTaskDispatcher @ getbackupfile: Request received for filename: ${filename}`)
+        //loggingBridge.info(`IosTaskDispatcher @ getbackupfile: Request received for filename: ${filename}`)
         const workdir = path.join(config.examdirectory, "/")
         if (filename) { //return content of specific file as string (html) to replace in editor)
             let filepath = path.join(workdir, filename)
-            //log.info(`IosTaskDispatcher @ getbackupfile: Full file path: ${filepath}`)
+            //loggingBridge.info(`IosTaskDispatcher @ getbackupfile: Full file path: ${filepath}`)
             try {
                 if (!this.fileExists(filepath)) {
-                    //log.warn(`IosTaskDispatcher @ getbackupfile: backup file not found: ${filepath}`);
+                    //loggingBridge.warn(`IosTaskDispatcher @ getbackupfile: backup file not found: ${filepath}`);
                     return false;
                 }
-                //log.info(`IosTaskDispatcher @ getbackupfile: backup file exists, reading content`)
+                //loggingBridge.info(`IosTaskDispatcher @ getbackupfile: backup file exists, reading content`)
                 let data = fs.readFile({
                     path: filepath,
                     directory: Directory.Documents,
                     encoding: Encoding.UTF8
                 }).then(data => data);
-                //log.info(`IosTaskDispatcher @ getbackupfile: Successfully read backup file, content length: ${data.length}`)
+                //loggingBridge.info(`IosTaskDispatcher @ getbackupfile: Successfully read backup file, content length: ${data.length}`)
                 return data
             } catch (err) {
-                //log.error(`IosTaskDispatcher @ getbackupfile: Error reading backup file: ${err}`);
-                //log.error(`IosTaskDispatcher @ getbackupfile: Error stack: ${err.stack}`)
+                //loggingBridge.error(`IosTaskDispatcher @ getbackupfile: Error reading backup file: ${err}`);
+                //loggingBridge.error(`IosTaskDispatcher @ getbackupfile: Error stack: ${err.stack}`)
                 return false
             }
         } else {
-            //log.warn(`IosTaskDispatcher @ getbackupfile: no filename provided`);
+            //loggingBridge.warn(`IosTaskDispatcher @ getbackupfile: no filename provided`);
             return false;
         }
     }
@@ -713,7 +713,7 @@ export class IosTaskDispatcher {
         const reason = args.reason
         const ggbFilePath = path.join(this.config.examdirectory, filename);
         if (content) {
-            //log.info("ipchandler @ saveGGB: saving students work to disk...")
+            //loggingBridge.info("ipchandler @ saveGGB: saving students work to disk...")
             const fileData = Buffer.from(content, 'base64');
 
             try {
@@ -725,7 +725,7 @@ export class IosTaskDispatcher {
             } catch (err) { //Todo Window Handling
                 this.WindowHandler.examwindow.webContents.send('fileerror', err)
 
-                //log.error(`IosTaskDispatcher @ saveGGB: ${err}`)
+                //loggingBridge.error(`IosTaskDispatcher @ saveGGB: ${err}`)
                 return {sender: "client", message: err, status: "error"}
             }
     }

@@ -228,10 +228,10 @@ window.addEventListener('unhandledrejection', event => {
     event.preventDefault(); // swallow guest view clone errors and ERR_FAILED
     return;
   }
-  //log.error('Unhandled promise rejection:', reason); // log all other errors
+  //loggingBridge.error('Unhandled promise rejection:', reason); // log all other errors
 });
 
-//Object.assign(console, log.functions);  // Replace all console logs with logger
+//Object.assign(console, loggingBridge.functions);  // Replace all console logs with logger
 
 // signalBridge instance centralizes ipc send calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -830,7 +830,7 @@ export default {
                                     this.safeAssign('networkerror', false);
                                 }
                             }).catch(err => {
-                            log.error(`student.vue @ fetchInfo (advanced): ${err.message}`);
+                            loggingBridge.error(`student.vue @ fetchInfo (advanced): ${err.message}`);
                             this.safeAssign('networkerror', true);
                         });
                     } else {
@@ -974,7 +974,7 @@ export default {
              * For manually added servers: remove after more than 2 failures
              */
             for (let server of this.serverlist) {
-                //log.info(`student.vue @ fetchinfo: checking server ${server.servername} (${server.serverip})`)
+                //loggingBridge.info(`student.vue @ fetchinfo: checking server ${server.servername} (${server.serverip})`)
                 if (!server.serverip) continue;
                 const serverIdentifier = this.getServerIdentifier(server);
                 const isManual = this.isManuallyAddedServer(server);

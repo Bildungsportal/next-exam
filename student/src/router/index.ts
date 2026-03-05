@@ -73,7 +73,7 @@ const routes = [ // to load a specific view just replace the component at path: 
 // TODO Search fitting type that allows non-string params
 function addParams(to: any) {
     if (isElectronWindow()) {
-        const config = require('../../src-electron/main/config.js');
+        const config = require('../utils/config.js');
         to.params.version = config.version
         to.params.serverApiPort = config.serverApiPort
         //to.params.clientApiPort = config.clientApiPort

@@ -36,7 +36,7 @@
 
 import childProcess from 'child_process';
 import { clipboard, globalShortcut } from 'electron';
-import config from '../config.js';
+import config from '../../../src/utils/config.js';
 import log from 'electron-log';
 import { SchedulerService } from './schedulerservice.ts';
 import platformDispatcher from './platformDispatcher.js';

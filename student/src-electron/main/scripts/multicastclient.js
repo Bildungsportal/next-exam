@@ -17,7 +17,7 @@
 
 
 import dgram from 'dgram';
-import config from '../config.js';  // node not vue (relative path needed)
+import config from '../../../src/utils/config.js';  // node not vue (relative path needed)
 import log from 'electron-log';
 import {SchedulerService} from './schedulerservice.ts'
 

@@ -26,7 +26,7 @@ import fs from 'fs';
 import { join } from 'path';
 import { app } from 'electron';
 import log from 'electron-log';
-import config from '../config.js';
+import config from '../../../src/utils/config.js';
 import { pathToFileURL } from 'url';
 import os from 'os';
 import path from 'path';
