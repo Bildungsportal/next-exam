@@ -83,7 +83,7 @@ class MulticastClient {
                     log.error(`multicastclient @ init: addMembership failed for ${this.MULTICAST_ADDR} on ${config.hostip}`, e);
                 }
                 if (!this.gateway) {
-                    log.warn("multicastclient @ init: No default gateway detected – joined multicast group on local interface");
+                    log.warn("multicastclient @ init: No default gateway detected - joined multicast group on local interface");
                 }
                 log.info(`multicastclient @ init: UDP MC Client listening on 0.0.0.0:${this.client.address().port} (hostip=${config.hostip})`)
             })

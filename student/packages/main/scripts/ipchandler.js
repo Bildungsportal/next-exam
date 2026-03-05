@@ -18,6 +18,8 @@
 
 import path from 'path'
 import fs from 'fs'
+import { readFileSync } from 'fs'
+import { execSync } from 'child_process'
 import ip from 'ip'
 import net from 'net'
 import i18n from '../../renderer/src/locales/locales.js'
@@ -1311,6 +1313,67 @@ class IpcHandler {
                 const qemuProcesses = execSync('tasklist /FI "IMAGENAME eq qemu*"', { encoding: 'utf8' })
                 if (qemuProcesses.includes('qemu')) return warnAndReturn('QEMU-Prozess unter Windows')
             } catch {}
+
+            // Windows Sandbox detection - only checks that exist INSIDE sandbox (no false positives)
+            // Combined approach: at least 2 indicators required for higher security
+            const sandboxIndicators = []
+            
+            try {
+                // Check 1: Registry SandboxId (only exists in running sandbox, not on host)
+                const sandboxIdCheck = 'powershell -NoProfile -Command "try { $val = Get-ItemProperty -Path \'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\CI\\Config\' -Name \'SandboxId\' -ErrorAction SilentlyContinue; if ($val -and $val.SandboxId) { Write-Output $val.SandboxId } } catch {}"'
+                const sandboxId = execSync(sandboxIdCheck, { encoding: 'utf8' }).trim()
+                if (sandboxId && sandboxId.length > 0) {
+                    sandboxIndicators.push('SandboxId')
+                }
+            } catch {}
+
+            try {
+                // Check 2: Username is WDAGUtilityAccount (default sandbox user, only exists in sandbox)
+                const username = os.userInfo().username
+                if (username === 'WDAGUtilityAccount') {
+                    sandboxIndicators.push('WDAGUtilityAccount')
+                }
+            } catch {}
+
+            try {
+                // Check 3: MAC address pattern 00:15:5d:* (standard for sandbox network adapter)
+                const macCheck = 'powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq \'Up\'} | Select-Object -ExpandProperty MacAddress | ForEach-Object { if ($_ -match \'00-15-5d\') { Write-Output \'match\' } }"'
+                const macResult = execSync(macCheck, { encoding: 'utf8' }).trim()
+                if (macResult === 'match') {
+                    sandboxIndicators.push('MAC_Address')
+                }
+            } catch {}
+
+            try {
+                // Check 4: ComputerName pattern (often DESKTOP-* in sandbox, only combined with other checks)
+                const computerName = execSync('powershell -NoProfile -Command "$env:COMPUTERNAME"', { encoding: 'utf8' }).trim()
+                if (computerName && computerName.startsWith('DESKTOP-')) {
+                    sandboxIndicators.push('ComputerName')
+                }
+            } catch {}
+
+            try {
+                // Check 5: Disk info (Windows Sandbox uses "Virtual Disk" as disk model)
+                const diskCheck = 'powershell -NoProfile -Command "$disks = Get-CimInstance Win32_DiskDrive; foreach ($disk in $disks) { $model = $disk.Model; $serial = $disk.SerialNumber; if ($model -match \'Virtual Disk|WDAG|Sandbox|VHD\' -or $serial -match \'WDAG|Sandbox\') { Write-Output \'match\'; break } }"'
+                const diskResult = execSync(diskCheck, { encoding: 'utf8' }).trim()
+                if (diskResult === 'match') {
+                    sandboxIndicators.push('Disk')
+                }
+            } catch {}
+
+            try {
+                // Check 6: Volume label (Windows Sandbox often uses specific volume labels)
+                const volumeCheck = 'powershell -NoProfile -Command "$volumes = Get-CimInstance Win32_LogicalDisk; foreach ($vol in $volumes) { if ($vol.DriveType -eq 3) { $label = $vol.VolumeName; if ($label -and ($label -match \'WDAG|Sandbox|Windows Sandbox\')) { Write-Output \'match\'; break } } }"'
+                const volumeResult = execSync(volumeCheck, { encoding: 'utf8' }).trim()
+                if (volumeResult === 'match') {
+                    sandboxIndicators.push('Volume')
+                }
+            } catch {}
+
+            // Only if at least 2 indicators found (reduces false positives significantly)
+            if (sandboxIndicators.length >= 2) {
+                return warnAndReturn(`Windows Sandbox detected (${sandboxIndicators.join(', ')})`)
+            }
         }
 
 
