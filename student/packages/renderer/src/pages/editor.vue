@@ -349,6 +349,14 @@
                 </div>
             </div>
 
+            <div style="margin: 0 10px 10px 10px; font-size: 0.8em;">
+                <select v-model="ltLanguage" class="form-select form-select-sm">
+                    <option v-for="(label, code) in ltLanguageOptions" :key="code" :value="code">
+                        {{ label }}
+                    </option>
+                </select>
+            </div>
+
       
             
             <div v-if="misspelledWords.length == 0"  style="text-align: left; font-size: 0.8em; margin-left:10px;"> {{this.LTinfo}}</div> 
@@ -536,13 +544,25 @@ export default {
             allowedUrls: [],
             lockedSection: 1,
             internetCheckCounter:0,
-            LThost: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].languagetoolhost || "http://127.0.0.1"
+            LThost: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].languagetoolhost || "http://127.0.0.1",
+            ltLanguage: this.$route.params.serverstatus.examSections[this.$route.params.serverstatus.activeSection].spellchecklang
         }
     },
     computed: {
         getHexColor() {
             const rgbColor = this.editor?.getAttributes('textStyle')?.color || '';
             return rgbColor.startsWith('rgb') ? this.rgbToHex(rgbColor) : rgbColor;
+        },
+        ltLanguageOptions() {
+            return {
+                'de-DE': this.$t("editor.lang_de"),
+                'en-GB': this.$t("editor.lang_en_gb"),
+                'en-US': this.$t("editor.lang_en_us"),
+                'fr-FR': this.$t("editor.lang_fr"),
+                'es-ES': this.$t("editor.lang_es"),
+                'it-IT': this.$t("editor.lang_it"),
+                'sl-SI': this.$t("editor.lang_sl"),
+            };
         },
     },
 

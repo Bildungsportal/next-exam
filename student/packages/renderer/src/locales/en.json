@@ -163,7 +163,14 @@
         "send":"Send work to teacher",
         "zoomIn":"Zoom in",
         "zoomOut":"Zoom out",
-        "close":"Close"
+        "close":"Close",
+        "lang_de": "German",
+        "lang_en_gb": "English (UK)",
+        "lang_en_us": "English (US)",
+        "lang_fr": "French",
+        "lang_es": "Spanish",
+        "lang_it": "Italian",
+        "lang_sl": "Slovenian"
     },
     "math": {
         "exit":"Exit safe exam mode",

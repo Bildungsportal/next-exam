@@ -124,7 +124,10 @@ async function LTcheckAllWords(closeLT = true){
         const response = await fetch(`${this.LThost}:8088/v2/check`, {
             method: 'POST',
             headers,
-            body: new URLSearchParams({ text: this.text, language: this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang}).toString()
+            body: new URLSearchParams({
+                text: this.text,
+                language: this.ltLanguage || this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang
+            }).toString()
         });
         if (!response.ok) { throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);   }
         const data = await response.json();      
