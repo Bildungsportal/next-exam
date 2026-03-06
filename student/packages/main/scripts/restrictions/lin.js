@@ -135,8 +135,8 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
         }, 2000);
     }
 
-    if (platformDispatcher.isGNOME) {
-        log.info("platformrestrictions @ enableRestrictions: enabling GNOME restrictions");
+    if (platformDispatcher.isGNOME || platformDispatcher.isUnity) {
+        log.info("platformrestrictions @ enableRestrictions: enabling GNOME/Unity restrictions");
         try {
             const wmKeys = [...gnomeShortcutConfig.wm.critical, ...gnomeShortcutConfig.wm.niceToHave];
             for (let binding of wmKeys) {
