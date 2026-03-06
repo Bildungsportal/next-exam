@@ -69,7 +69,7 @@ async function enableRestrictions(winhandler) {
     clipboardInterval.start();
 
     if (platformDispatcher.platform === 'linux') {
-        enableLinuxRestrictions(configStore, appsToClose, platformDispatcher.isKDE, platformDispatcher.isGNOME);
+        enableLinuxRestrictions(configStore, appsToClose);
     }
 
     if (platformDispatcher.platform === 'win32') {
