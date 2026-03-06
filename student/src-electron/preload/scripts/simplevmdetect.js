@@ -1,3 +1,4 @@
+// Detects likely virtualized/remote environments via WebGL GPU vendor/renderer on the client, and lives in the preload so it runs in the renderer context where WebGL is available instead of the backend.
 const canvas = document.createElement('canvas');
 const gl = canvas.getContext('webgl');
 let virtual = false;

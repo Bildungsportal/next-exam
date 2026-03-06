@@ -416,7 +416,7 @@ for (let i = 0; i<16; i++ ){
                 }
 
                 mcServer.studentList.push(client)
-                return res.json({sender: "server", message:t("control.registered"), status: "success", token: token})  // on success return client token (auth needed for server api)
+                return res.json({sender: "server", message:"Student successfully registered", status: "success", token: token})  // on success return client token (auth needed for server api)
             }
             else {
 
@@ -427,20 +427,20 @@ for (let i = 0; i<16; i++ ){
 
                     //inform frontend about re-connection
                     WindowHandler.mainwindow.webContents.send("reconnected", registeredClient)
-                    return res.json({sender: "server", message:t("control.registered"), status: "success", token: registeredClient.token})  //send back old token
+                    return res.json({sender: "server", message:"Student successfully reconnected", status: "success", token: registeredClient.token})  //send back old token
                 }
                 else {
-                    return res.json({sender: "server", message:t("control.alreadyregistered"), status: "error"})
+                    return res.json({sender: "server", message:"Student already registered", status: "error"})
                 }  
             }
         }
         else {
-            return res.json({sender: "server", message:t("control.wrongpin"), status: "error"})
+            return res.json({sender: "server", message:"Wrong PIN", status: "error"})
         }
     }
     catch (err){
         log.error(`control @ registerclient: ${err}`);
-        return res.json({sender: "server", message:"an unknown error occured", status: "error"})
+        return res.json({sender: "server", message:"An unknown error occurred", status: "error"})
     }
 })
 
