@@ -218,8 +218,8 @@ export function disableLinuxRestrictions(configStore) {
         child.unref();
     }
 
-    if (platformDispatcher.isGNOME) {
-        log.info("platformrestrictions @ disableRestrictions (linux): GNOME detected");
+    if (platformDispatcher.isGNOME || platformDispatcher.isUnity) {
+        log.info("platformrestrictions @ disableRestrictions (linux): GNOME/Unity detected");
         try {
             const wmKeys = [...gnomeShortcutConfig.wm.critical, ...gnomeShortcutConfig.wm.niceToHave];
             for (let binding of wmKeys) {
