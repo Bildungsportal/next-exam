@@ -89,10 +89,8 @@ function logGsettingsValue(schema, key, phase) {
  * Enable Linux-specific restrictions (KDE/GNOME, close apps, clipboard).
  * @param {object} configStore - shared store (configStore.linux.numberOfDesktops)
  * @param {string[]} appsToClose - app names to kill
- * @param {boolean} isKDE
- * @param {boolean} isGNOME
  */
-export function enableLinuxRestrictions(configStore, appsToClose, isKDE, isGNOME) {
+export function enableLinuxRestrictions(configStore, appsToClose) {
     try {
         appsToClose.forEach(app => {
             childProcess.exec(`pgrep -i "${app}"`, (pgrepError, stdout) => {
@@ -107,7 +105,7 @@ export function enableLinuxRestrictions(configStore, appsToClose, isKDE, isGNOME
         // silently ignore errors
     }
 
-    if (isKDE) {
+    if (platformDispatcher.isKDE) {
         log.info("platformrestrictions @ enableRestrictions: enabling KDE restrictions");
         childProcess.execFile('kreadconfig5', ['--file', 'kwinrc', '--group', 'Desktops', '--key', 'Number'], (error, stdout, stderr) => {
             if (error) {
@@ -137,7 +135,7 @@ export function enableLinuxRestrictions(configStore, appsToClose, isKDE, isGNOME
         }, 2000);
     }
 
-    if (isGNOME) {
+    if (platformDispatcher.isGNOME) {
         log.info("platformrestrictions @ enableRestrictions: enabling GNOME restrictions");
         try {
             const wmKeys = [...gnomeShortcutConfig.wm.critical, ...gnomeShortcutConfig.wm.niceToHave];
@@ -205,62 +203,55 @@ export function disableLinuxRestrictions(configStore) {
     childProcess.exec('xclip -selection clipboard');
     childProcess.exec('xsel -bc');
 
-    childProcess.exec('echo $XDG_CURRENT_DESKTOP', (error, stdout, stderr) => {
-        if (error) {
-            log.error(`platformrestrictions @ disableRestrictions (linux): exec error: ${error}`);
-            return;
-        }
-        const desktop = stdout.trim();
-        if (desktop === 'KDE') {
-            log.info("platformrestrictions @ disableRestrictions (linux): KDE detected");
-            childProcess.execFile('qdbus', ['org.kde.klipper' ,'/klipper', 'org.kde.klipper.klipper.clearClipboardHistory']);
-            childProcess.execFile('qdbus', ['org.kde.kglobalaccel' ,'/kglobalaccel', 'blockGlobalShortcuts', 'false']);
-            childProcess.execFile('qdbus', ['org.kde.KWin' ,'/Compositor', 'org.kde.kwin.Compositing.resume']);
-            childProcess.exec('kstart5 kglobalaccel5&');
-            childProcess.execFile('kwriteconfig5', ['--file',`${platformDispatcher.homedirectory}/.config/kwinrc`,'--group','ModifierOnlyShortcuts','--key','Meta','--delete']);
-            childProcess.execFile('kwriteconfig5', ['--file','kwinrc','--group','Desktops','--key','Number', configStore.linux.numberOfDesktops]);
-            childProcess.execFile('kwriteconfig5', ['--file', 'kxkbrc', '--group', 'Layout', '--key', 'Options', '']);
-            childProcess.execFile('dbus-send', ['--session', '--type=signal', '--dest=org.kde.keyboard', '/Layouts', 'org.kde.keyboard.reloadConfig']);
-            childProcess.execFile('qdbus', ['org.kde.KWin','/KWin','reconfigure']);
-            const child = childProcess.exec('kstart5 plasmashell &', { detached: true, stdio: 'ignore' });
-            child.unref();
-        }
+    if (platformDispatcher.isKDE) {
+        log.info("platformrestrictions @ disableRestrictions (linux): KDE detected");
+        childProcess.execFile('qdbus', ['org.kde.klipper' ,'/klipper', 'org.kde.klipper.klipper.clearClipboardHistory']);
+        childProcess.execFile('qdbus', ['org.kde.kglobalaccel' ,'/kglobalaccel', 'blockGlobalShortcuts', 'false']);
+        childProcess.execFile('qdbus', ['org.kde.KWin' ,'/Compositor', 'org.kde.kwin.Compositing.resume']);
+        childProcess.exec('kstart5 kglobalaccel5&');
+        childProcess.execFile('kwriteconfig5', ['--file',`${platformDispatcher.homedirectory}/.config/kwinrc`,'--group','ModifierOnlyShortcuts','--key','Meta','--delete']);
+        childProcess.execFile('kwriteconfig5', ['--file','kwinrc','--group','Desktops','--key','Number', configStore.linux.numberOfDesktops]);
+        childProcess.execFile('kwriteconfig5', ['--file', 'kxkbrc', '--group', 'Layout', '--key', 'Options', '']);
+        childProcess.execFile('dbus-send', ['--session', '--type=signal', '--dest=org.kde.keyboard', '/Layouts', 'org.kde.keyboard.reloadConfig']);
+        childProcess.execFile('qdbus', ['org.kde.KWin','/KWin','reconfigure']);
+        const child = childProcess.exec('kstart5 plasmashell &', { detached: true, stdio: 'ignore' });
+        child.unref();
+    }
 
-        if (desktop.includes('GNOME')) {
-            log.info("platformrestrictions @ disableRestrictions (linux): GNOME detected");
-            try {
-                const wmKeys = [...gnomeShortcutConfig.wm.critical, ...gnomeShortcutConfig.wm.niceToHave];
-                for (let binding of wmKeys) {
-                    childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.wm.schema, `${binding}`]);
-                }
-                const waylandKeys = [...gnomeShortcutConfig.mutterWayland.critical, ...gnomeShortcutConfig.mutterWayland.niceToHave];
-                for (let binding of waylandKeys) {
-                    childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.mutterWayland.schema, binding]);
-                    childProcess.execFile('dconf', ['reset', `/org/gnome/mutter/wayland/keybindings/${binding}`]);
-                }
-                const shellKeys = [...gnomeShortcutConfig.shell.critical, ...gnomeShortcutConfig.shell.niceToHave];
-                for (let binding of shellKeys) {
-                    childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.shell.schema, `${binding}`]);
-                }
-                const mutterKeys = [...gnomeShortcutConfig.mutter.critical, ...gnomeShortcutConfig.mutter.niceToHave];
-                for (let binding of mutterKeys) {
-                    childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.mutter.schema, `${binding}`]);
-                }
-                const dockKeys = [...gnomeShortcutConfig.dashToDock.critical, ...gnomeShortcutConfig.dashToDock.niceToHave];
-                for (let binding of dockKeys) {
-                    childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.dashToDock.schema, `${binding}`]);
-                }
-                childProcess.execFile('gsettings', ['reset', 'org.gnome.mutter', 'overlay-key']);
-                // restore TTY switch if we had disabled it via setxkbmap (GNOME X11)
-                if (configStore.linux.srvrkeysNoneSet) {
-                    childProcess.exec("setxkbmap -option ''", (err) => {
-                        if (err) log.warn('platformrestrictions @ disableRestrictions: setxkbmap restore failed', err.message);
-                    });
-                    configStore.linux.srvrkeysNoneSet = false;
-                }
-            } catch (err) {
-                log.error(`platformrestrictions @ disableRestrictions (GNOME): ${err}`);
+    if (platformDispatcher.isGNOME) {
+        log.info("platformrestrictions @ disableRestrictions (linux): GNOME detected");
+        try {
+            const wmKeys = [...gnomeShortcutConfig.wm.critical, ...gnomeShortcutConfig.wm.niceToHave];
+            for (let binding of wmKeys) {
+                childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.wm.schema, `${binding}`]);
             }
+            const waylandKeys = [...gnomeShortcutConfig.mutterWayland.critical, ...gnomeShortcutConfig.mutterWayland.niceToHave];
+            for (let binding of waylandKeys) {
+                childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.mutterWayland.schema, binding]);
+                childProcess.execFile('dconf', ['reset', `/org/gnome/mutter/wayland/keybindings/${binding}`]);
+            }
+            const shellKeys = [...gnomeShortcutConfig.shell.critical, ...gnomeShortcutConfig.shell.niceToHave];
+            for (let binding of shellKeys) {
+                childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.shell.schema, `${binding}`]);
+            }
+            const mutterKeys = [...gnomeShortcutConfig.mutter.critical, ...gnomeShortcutConfig.mutter.niceToHave];
+            for (let binding of mutterKeys) {
+                childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.mutter.schema, `${binding}`]);
+            }
+            const dockKeys = [...gnomeShortcutConfig.dashToDock.critical, ...gnomeShortcutConfig.dashToDock.niceToHave];
+            for (let binding of dockKeys) {
+                childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.dashToDock.schema, `${binding}`]);
+            }
+            childProcess.execFile('gsettings', ['reset', 'org.gnome.mutter', 'overlay-key']);
+            // restore TTY switch if we had disabled it via setxkbmap (GNOME X11)
+            if (configStore.linux.srvrkeysNoneSet) {
+                childProcess.exec("setxkbmap -option ''", (err) => {
+                    if (err) log.warn('platformrestrictions @ disableRestrictions: setxkbmap restore failed', err.message);
+                });
+                configStore.linux.srvrkeysNoneSet = false;
+            }
+        } catch (err) {
+            log.error(`platformrestrictions @ disableRestrictions (GNOME): ${err}`);
         }
-    });
+    }
 }
