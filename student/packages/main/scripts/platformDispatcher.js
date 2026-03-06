@@ -48,7 +48,7 @@ class PlatformDispatcher {
     this.displayServer = this._getDisplayServer();
     this.isKDE = this._isKDE();
     this.isGNOME = this._isGNOME();
-    this.isUnity = this._isUnity();
+    this.isUnity = this._isUNITY();
     this.flameshot = this._getVersion('flameshot');
     this.imagemagick = this._getVersion('convert');
     this.imVersion = this._getImageMagickVersion();
