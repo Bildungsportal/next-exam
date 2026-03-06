@@ -35,6 +35,7 @@ import languageToolServer from './lt-server';
 import { updateSystemTray } from './traymenu.js';
 import { ensureNetworkOrReset } from './testpermissionsMac.js';
 import { getWlanInfo } from './getwlaninfo.js';
+import { isVirtualMachine } from './vmDetection.js';
 
 const __dirname = import.meta.dirname;
 
@@ -1203,7 +1204,7 @@ class IpcHandler {
         })
      
         ipcMain.on('get-cpu-info', (event) => {
-            event.returnValue = this.isVirtualMachine()
+            event.returnValue = isVirtualMachine();
         });
 
 
@@ -1243,154 +1244,6 @@ class IpcHandler {
         });
 
 
-    }
-
-    isVirtualMachine() {
-        const VENDORS = /(oracle|virtualbox|vmware|kvm|qemu|xen|innotek|parallels|microsoft|hyper-v|bhyve|red hat|redhat|bochs|bhyve|openstack|cloud|amazon|google|azure)/i // common VM ids
-        const warnAndReturn = reason => {
-            log.warn(`ipchandler @ isVirtualMachine: Verdacht auf VM - ${reason}`)
-            return true
-        }
-
-        // ---------- Linux ----------
-        if (process.platform === 'linux') {
-          try {
-            const cpuinfo = readFileSync('/proc/cpuinfo', 'utf8')      // CPU flags
-            if (/^flags.*\bhypervisor\b/m.test(cpuinfo)) return warnAndReturn('hypervisor flag in /proc/cpuinfo')
-          } catch {}
-      
-          try {
-            const files = [
-              '/sys/class/dmi/id/sys_vendor',
-              '/sys/class/dmi/id/product_name',
-              '/sys/class/dmi/id/product_version',
-              '/sys/class/dmi/id/board_vendor',
-              '/sys/class/dmi/id/bios_vendor',
-              '/sys/class/dmi/id/chassis_vendor'
-            ]
-            const dmi = files.map(p => { try { return readFileSync(p, 'utf8') } catch { return '' } }).join(' ')
-            if (VENDORS.test(dmi)) return warnAndReturn('DMI-Vendor-Match')
-          } catch {}
-      
-          try {
-            execSync('systemd-detect-virt -q', { stdio: 'ignore' })    // exit 0 => VM
-            return warnAndReturn('systemd-detect-virt meldet Virtualisierung')
-          } catch {}
-
-
-          // Prüfe auf QEMU-Prozesse
-          try {
-            const ps = execSync('ps aux | grep -i qemu', { encoding: 'utf8' })
-            if (ps.includes('qemu') && !ps.includes('grep')) {
-              return warnAndReturn('QEMU-Prozess läuft')
-            }
-          } catch {}
-        }
-
-        // ---------- Windows ----------
-        if (process.platform === 'win32') {
-            try {
-            const ps =
-                'powershell -NoProfile -Command "(Get-CimInstance Win32_ComputerSystem | ForEach-Object { $_.Manufacturer, $_.Model }) -join \' \'"'
-            const basic = execSync(ps, { encoding: 'utf8' }).trim()    // manufacturer + model
-            if (VENDORS.test(basic)) return warnAndReturn('Windows Hersteller/Modell passt zu VM')
-            } catch {}
-
-            try {
-            const psRobust =
-                'powershell -NoProfile -Command "$o=@();' +
-                'try{$cs=Get-CimInstance Win32_ComputerSystem;$o+=@($cs.Manufacturer,$cs.Model)}catch{};' +
-                'try{$bb=Get-CimInstance Win32_BaseBoard;$o+=@($bb.Manufacturer,$bb.Product)}catch{};' +
-                'try{$bios=Get-CimInstance Win32_BIOS;$o+=@($bios.SMBIOSBIOSVersion)}catch{};' +
-                'try{$csp=Get-CimInstance Win32_ComputerSystemProduct;$o+=@($csp.Name)}catch{};' +
-                'Write-Output (($o -join \' \').Trim())"'
-            const robust = execSync(psRobust, { encoding: 'utf8' }).trim()
-            if (VENDORS.test(robust)) return warnAndReturn('Windows Hersteller/BIOS-Infos passen zu VM')
-            } catch {}
-
-            // Zusätzliche QEMU-Erkennung für Windows
-            try {
-                const qemuProcesses = execSync('tasklist /FI "IMAGENAME eq qemu*"', { encoding: 'utf8' })
-                if (qemuProcesses.includes('qemu')) return warnAndReturn('QEMU-Prozess unter Windows')
-            } catch {}
-
-            // Windows Sandbox detection - only checks that exist INSIDE sandbox (no false positives)
-            // Combined approach: at least 2 indicators required for higher security
-            const sandboxIndicators = []
-            
-            try {
-                // Check 1: Registry SandboxId (only exists in running sandbox, not on host)
-                const sandboxIdCheck = 'powershell -NoProfile -Command "try { $val = Get-ItemProperty -Path \'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\CI\\Config\' -Name \'SandboxId\' -ErrorAction SilentlyContinue; if ($val -and $val.SandboxId) { Write-Output $val.SandboxId } } catch {}"'
-                const sandboxId = execSync(sandboxIdCheck, { encoding: 'utf8' }).trim()
-                if (sandboxId && sandboxId.length > 0) {
-                    sandboxIndicators.push('SandboxId')
-                }
-            } catch {}
-
-            try {
-                // Check 2: Username is WDAGUtilityAccount (default sandbox user, only exists in sandbox)
-                const username = os.userInfo().username
-                if (username === 'WDAGUtilityAccount') {
-                    sandboxIndicators.push('WDAGUtilityAccount')
-                }
-            } catch {}
-
-            try {
-                // Check 3: MAC address pattern 00:15:5d:* (standard for sandbox network adapter)
-                const macCheck = 'powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq \'Up\'} | Select-Object -ExpandProperty MacAddress | ForEach-Object { if ($_ -match \'00-15-5d\') { Write-Output \'match\' } }"'
-                const macResult = execSync(macCheck, { encoding: 'utf8' }).trim()
-                if (macResult === 'match') {
-                    sandboxIndicators.push('MAC_Address')
-                }
-            } catch {}
-
-            try {
-                // Check 4: ComputerName pattern (often DESKTOP-* in sandbox, only combined with other checks)
-                const computerName = execSync('powershell -NoProfile -Command "$env:COMPUTERNAME"', { encoding: 'utf8' }).trim()
-                if (computerName && computerName.startsWith('DESKTOP-')) {
-                    sandboxIndicators.push('ComputerName')
-                }
-            } catch {}
-
-            try {
-                // Check 5: Disk info (Windows Sandbox uses "Virtual Disk" as disk model)
-                const diskCheck = 'powershell -NoProfile -Command "$disks = Get-CimInstance Win32_DiskDrive; foreach ($disk in $disks) { $model = $disk.Model; $serial = $disk.SerialNumber; if ($model -match \'Virtual Disk|WDAG|Sandbox|VHD\' -or $serial -match \'WDAG|Sandbox\') { Write-Output \'match\'; break } }"'
-                const diskResult = execSync(diskCheck, { encoding: 'utf8' }).trim()
-                if (diskResult === 'match') {
-                    sandboxIndicators.push('Disk')
-                }
-            } catch {}
-
-            try {
-                // Check 6: Volume label (Windows Sandbox often uses specific volume labels)
-                const volumeCheck = 'powershell -NoProfile -Command "$volumes = Get-CimInstance Win32_LogicalDisk; foreach ($vol in $volumes) { if ($vol.DriveType -eq 3) { $label = $vol.VolumeName; if ($label -and ($label -match \'WDAG|Sandbox|Windows Sandbox\')) { Write-Output \'match\'; break } } }"'
-                const volumeResult = execSync(volumeCheck, { encoding: 'utf8' }).trim()
-                if (volumeResult === 'match') {
-                    sandboxIndicators.push('Volume')
-                }
-            } catch {}
-
-            // Only if at least 2 indicators found (reduces false positives significantly)
-            if (sandboxIndicators.length >= 2) {
-                return warnAndReturn(`Windows Sandbox detected (${sandboxIndicators.join(', ')})`)
-            }
-        }
-
-
-         // ---------- macOS ----------
-        if (process.platform === 'darwin') {
-            try {
-            const hwModel = execSync('sysctl -n hw.model', { encoding: 'utf8' })
-            if (/^virtual/i.test(hwModel) || VENDORS.test(hwModel)) return warnAndReturn('macOS Hardwaremodell deutet auf VM')
-            } catch {}
-
-            try {
-            const sp = execSync('system_profiler SPHardwareDataType', { encoding: 'utf8' })
-            if (VENDORS.test(sp)) return warnAndReturn('macOS system_profiler meldet VM-Vendor')
-            } catch {}
-        }
-
-        return false       
     }
 
     compareVersions(versionA, versionB) {
