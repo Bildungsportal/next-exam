@@ -896,31 +896,47 @@ router.post('/updatescreenshot', async function (req, res, next) {
 
             // only scan screenshot in exam mode and NOT if a restoring/unlocking operation is already in process (otherwise it will lock the unlocked again)
             if (mcServer.serverstatus.exammode && mcServer.serverstatus.screenshotocr && !student.status.restorefocusstate && student.focus){
-                try{
-                    const header = req.body.header.split(';base64,').pop();
-                    const headerimageBuffer = Buffer.from(header, 'base64');
-
-
-                    const publicPath = app.isPackaged
-                    ? path.join(process.resourcesPath,'app.asar.unpacked', 'public')
-                    : path.resolve(__dirname, '../../public');
-                    
-                    if (!TesseractWorker){
-                        TesseractWorker = await Tesseract.createWorker('eng',1,{
-                            langPath: publicPath , 
-                        });
-                    }
-                     
-                    const { data: { text } }  = await TesseractWorker.recognize(headerimageBuffer);
-                    let pincodeVisible = text.includes(mcServer.serverinfo.pin)
-
-                    if (!pincodeVisible){
-                        student.focus = pincodeVisible  // this is the local student object for the frontend
-                        student.status.focus = pincodeVisible  // this sets the studentstatus object which is fetched on every update - the students react on this
-                        log.info("control @ updatescreenshot (ocr): Student Screenshot does not include Exam PIN");
-                    }
+                //put a new distinct timestamp on multicastserver once to track how long ocr and exam mode is activated and only run ocr if the timestamp is older than 10 seconds
+                if (!mcServer.serverinfo.ocrTimestamp){
+                    mcServer.serverinfo.ocrTimestamp = new Date().getTime()
                 }
-                catch(err){ log.info(`control @ updatescreenshot (ocr): ${err}`); }
+
+                if (mcServer.serverinfo.ocrTimestamp + 20000 > new Date().getTime()){
+                    // do nothing  -  give the clients enough time to switch into kiosk mode first (this prevents false positives on exam start)
+                    console.log("control @ updatescreenshot (ocr): OCR run skipped - waiting for clients to switch into kiosk mode");
+                }
+                else {
+                    // run ocr
+                    try{
+                        const header = req.body.header.split(';base64,').pop();
+                        const headerimageBuffer = Buffer.from(header, 'base64');
+
+
+                        const publicPath = app.isPackaged
+                        ? path.join(process.resourcesPath,'app.asar.unpacked', 'public')
+                        : path.resolve(__dirname, '../../public');
+                        
+                        if (!TesseractWorker){
+                            TesseractWorker = await Tesseract.createWorker('eng',1,{
+                                langPath: publicPath , 
+                            });
+                        }
+                        
+                        const { data: { text } }  = await TesseractWorker.recognize(headerimageBuffer);
+                        let pincodeVisible = text.includes(mcServer.serverinfo.pin)
+
+                        console.log("control @ updatescreenshot (ocr): pincodeVisible:", pincodeVisible, text);
+                        if (!pincodeVisible){
+                            student.focus = pincodeVisible  // this is the local student object for the frontend
+                            student.status.focus = pincodeVisible  // this sets the studentstatus object which is fetched on every update - the students react on this
+                            log.info("control @ updatescreenshot (ocr): Student Screenshot does not include Exam PIN");
+                        }
+                    }
+                    catch(err){ log.info(`control @ updatescreenshot (ocr): ${err}`); }
+                }
+
+
+
             }
 
             if (!student.focus) { // Archiviere Screenshot, wenn Student nicht fokussiert ist
