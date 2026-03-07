@@ -135,8 +135,8 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
         }, 2000);
     }
 
-    if (platformDispatcher.isGNOME) {
-        log.info("platformrestrictions @ enableRestrictions: enabling GNOME restrictions");
+    if (platformDispatcher.isGNOME || platformDispatcher.isUnity) {
+        log.info("platformrestrictions @ enableRestrictions: enabling GNOME/Unity restrictions");
         try {
             const wmKeys = [...gnomeShortcutConfig.wm.critical, ...gnomeShortcutConfig.wm.niceToHave];
             for (let binding of wmKeys) {
@@ -174,7 +174,7 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
             childProcess.exec('gsettings set org.gnome.mutter dynamic-workspaces false');
             childProcess.exec('gsettings set org.gnome.desktop.wm.preferences num-workspaces 1');
             // X11 only: disable TTY switch via setxkbmap (on Wayland we rely on mutter wayland keybindings above)
-            if (!platformDispatcher.isWayland()) {
+            if (!platformDispatcher.isWayland) {
                 configStore.linux.srvrkeysNoneSet = true;
                 childProcess.exec('setxkbmap -option srvrkeys:none', (err) => {
                     if (err) log.warn('platformrestrictions @ enableRestrictions (GNOME): setxkbmap srvrkeys:none failed', err.message);
@@ -218,8 +218,8 @@ export function disableLinuxRestrictions(configStore) {
         child.unref();
     }
 
-    if (platformDispatcher.isGNOME) {
-        log.info("platformrestrictions @ disableRestrictions (linux): GNOME detected");
+    if (platformDispatcher.isGNOME || platformDispatcher.isUnity) {
+        log.info("platformrestrictions @ disableRestrictions (linux): GNOME/Unity detected");
         try {
             const wmKeys = [...gnomeShortcutConfig.wm.critical, ...gnomeShortcutConfig.wm.niceToHave];
             for (let binding of wmKeys) {
