@@ -68,6 +68,26 @@ const gnomeShortcutConfig = {
             'app-shift-hotkey-6','app-shift-hotkey-7','app-shift-hotkey-8','app-shift-hotkey-9','shortcut'
         ],
         niceToHave: []
+    },
+    // Ubuntu Tiling Assistant extension (Super+Arrow etc.); has its own keybindings, overrides mutter
+    tilingAssistant: {
+        schema: 'org.gnome.shell.extensions.tiling-assistant',
+        critical: [
+            'tile-left-half', 'tile-right-half', 'tile-top-half', 'tile-bottom-half',
+            'tile-topleft-quarter', 'tile-topright-quarter', 'tile-bottomleft-quarter', 'tile-bottomright-quarter',
+            'tile-maximize', 'tile-maximize-horizontally', 'tile-maximize-vertically',
+            'tile-edit-mode', 'restore-window', 'center-window',
+            'toggle-always-on-top', 'toggle-maximize-tophalf-timer', 'toggle-tiling-popup',
+            'tile-left-half-ignore-ta', 'tile-right-half-ignore-ta', 'tile-top-half-ignore-ta', 'tile-bottom-half-ignore-ta',
+            'tile-topleft-quarter-ignore-ta', 'tile-topright-quarter-ignore-ta', 'tile-bottomleft-quarter-ignore-ta', 'tile-bottomright-quarter-ignore-ta',
+            'tile-maximize-ignore-ta', 'restore-window-ignore-ta', 'center-window-ignore-ta'
+        ],
+        niceToHave: [
+            'activate-layout0', 'activate-layout1', 'activate-layout2', 'activate-layout3', 'activate-layout4',
+            'activate-layout5', 'activate-layout6', 'activate-layout7', 'activate-layout8', 'activate-layout9',
+            'activate-layout10', 'activate-layout11', 'activate-layout12', 'activate-layout13', 'activate-layout14',
+            'activate-layout15', 'activate-layout16', 'activate-layout17', 'activate-layout18', 'activate-layout19'
+        ]
     }
 };
 
@@ -196,6 +216,11 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
                     childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.dashToDock.schema, binding, `['']`]);
                     logGsettingsValue(gnomeShortcutConfig.dashToDock.schema, binding, 'enable-gnome-dock-after-set');
                 }
+                // Ubuntu Tiling Assistant (Super+Arrow) – overrides mutter when present
+                const tilingKeys = [...gnomeShortcutConfig.tilingAssistant.critical, ...gnomeShortcutConfig.tilingAssistant.niceToHave];
+                for (const binding of tilingKeys) {
+                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.tilingAssistant.schema, binding, `['']`], () => {});
+                }
                 childProcess.execFile('gsettings', ['set', 'org.gnome.mutter', 'overlay-key', `''`]);
                 childProcess.exec('gsettings set org.gnome.mutter dynamic-workspaces false');
             } catch (err) {
@@ -295,6 +320,10 @@ export function disableLinuxRestrictions(configStore) {
                 const dockKeys = [...gnomeShortcutConfig.dashToDock.critical, ...gnomeShortcutConfig.dashToDock.niceToHave];
                 for (const binding of dockKeys) {
                     childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.dashToDock.schema, `${binding}`]);
+                }
+                const tilingKeys = [...gnomeShortcutConfig.tilingAssistant.critical, ...gnomeShortcutConfig.tilingAssistant.niceToHave];
+                for (const binding of tilingKeys) {
+                    childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.tilingAssistant.schema, `${binding}`], () => {});
                 }
                 childProcess.execFile('gsettings', ['reset', 'org.gnome.mutter', 'overlay-key']);
             } catch (err) {
