@@ -1,8 +1,8 @@
-# Install script for directory: C:/Users/admin/Documents/next-exam/student/disable-shortcuts/app
+# Install script for directory: C:/Users/vboxuser/Next-Exam-Dev/next-exam/student/disable-shortcuts/app
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "C:/Users/admin/Documents/next-exam/student/disable-shortcuts/out/install/x64-Debug")
+  set(CMAKE_INSTALL_PREFIX "C:/Users/vboxuser/Next-Exam-Dev/next-exam/student/disable-shortcuts/out/install/x64-Debug")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
