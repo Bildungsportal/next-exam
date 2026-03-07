@@ -1065,12 +1065,12 @@ const __dirname = import.meta.dirname;
         }catch (e){ log.error(e)}
 
         //  this is the logfile path try to copy the logfile to the examdirectory before making the zip file
-        let logfilepath = platformDispatcher.logfile;
-        if (fs.existsSync(logfilepath)){
-            try {
-                fs.copyFileSync(logfilepath, join(this.config.examdirectory, 'next-exam-student.log'));
-            } catch (e){ log.error('communicationhandler @ sendToTeacher: could not copy logfile to examdirectory'); }
-        }
+        // let logfilepath = platformDispatcher.logfile;
+        // if (fs.existsSync(logfilepath)){
+        //     try {
+        //         fs.copyFileSync(logfilepath, join(this.config.examdirectory, 'next-exam-student.log'));
+        //     } catch (e){ log.error('communicationhandler @ sendToTeacher: could not copy logfile to examdirectory'); }
+        // }
 
         let zipfilename = this.multicastClient.clientinfo.name.concat('.zip')
         let servername = this.multicastClient.clientinfo.servername
