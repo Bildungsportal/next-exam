@@ -20,8 +20,8 @@
 
             <!-- send button -->
             <li class="nav-item" v-if="!localLockdown">
-                <div class="nav-link btn btn-light btn-sm unstyled" id="send-button" style="display: inline-flex" @click="printBase64()" :title="$t('editor.send')">
-                    <img src="/src/assets/img/svg/document-send.svg" class="white">
+                <div class="nav-link btn btn-warning btn-sm unstyled unstyled-send" id="send-button" @click="printBase64()" :title="$t('editor.send')">
+                    <img src="/src/assets/img/svg/document-send.svg" class="white"> <span class="ms-2 send-label">{{ $t('editor.send') }}</span>
                  </div>
             </li>
             
@@ -75,6 +75,15 @@
   </script>
 
   <style scoped>
+    .nav.nav-tabs .nav-item {
+        margin: 0;
+    }
+    .nav-item.ms-auto .nav-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+    }
     .unstyled{
         box-shadow: none !important;
         padding: 10px !important;
@@ -86,6 +95,16 @@
         height: 40px !important;
         text-align: center !important;
        
+    }
+    .unstyled.unstyled-send {
+        width: auto !important;
+        min-width: 120px !important;
+        display: inline-flex !important;
+        justify-content: center !important;
+        color: #000 !important;
+    }
+    .unstyled-send .send-label {
+        color: #000 !important;
     }
     .unstyled img{
         width: 20px !important;
@@ -113,6 +132,9 @@
   transform: translate(-50%, -50%);
   display: flex;
   align-items: flex-start;
+  margin:0px !important;
+  padding:0px !important;
+
 }
 
 
