@@ -20,8 +20,9 @@
 
             <!-- send button -->
             <li class="nav-item" v-if="!localLockdown">
-                <div class="nav-link btn btn-light btn-sm unstyled" id="send-button" style="display: inline-flex" @click="printBase64()" :title="$t('editor.send')">
+                <div class="nav-link btn btn-warning btn-sm unstyled unstyled-send" id="send-button" @click="printBase64()" :title="$t('editor.send')">
                     <img src="/src/assets/img/svg/document-send.svg" class="white">
+                    <span class="ms-2 send-label">{{ $t('editor.send') }}</span>
                  </div>
             </li>
             
@@ -86,6 +87,16 @@
         height: 40px !important;
         text-align: center !important;
        
+    }
+    .unstyled.unstyled-send {
+        width: auto !important;
+        min-width: 120px !important;
+        display: inline-flex !important;
+        justify-content: center !important;
+        color: #000 !important;
+    }
+    .unstyled-send .send-label {
+        color: #000 !important;
     }
     .unstyled img{
         width: 20px !important;
