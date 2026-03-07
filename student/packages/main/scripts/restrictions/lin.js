@@ -168,7 +168,8 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
             log.error(`platformrestrictions @ enableRestrictions (gsettings/wm): ${err}`);
         }
 
-        if (platformDispatcher.isGNOME) {
+        // GNOME and "Unity" (mutter+gnome-shell) use the same stack; run full GNOME restrictions for both
+        if (platformDispatcher.isGNOME || platformDispatcher.isUnity) {
             try {
                 const waylandKeys = [...gnomeShortcutConfig.mutterWayland.critical, ...gnomeShortcutConfig.mutterWayland.niceToHave];
                 for (const binding of waylandKeys) {
@@ -203,16 +204,8 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
         }
 
         if (platformDispatcher.isUnity) {
-            log.info("platformrestrictions @ enableRestrictions: enabling Unity/Compiz restrictions");
-            // Unity also uses org.gnome.mutter.keybindings for Super+Arrow tiling; clear them
-            try {
-                const mutterKeys = [...gnomeShortcutConfig.mutter.critical, ...gnomeShortcutConfig.mutter.niceToHave];
-                for (const binding of mutterKeys) {
-                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.mutter.schema, binding, `['']`]);
-                }
-            } catch (err) {
-                log.debug(`platformrestrictions @ enableRestrictions (Unity mutter): ${err?.message ?? err}`);
-            }
+            log.info("platformrestrictions @ enableRestrictions: enabling Unity (optional Compiz backup)");
+            // Classic Unity/Compiz: backup and clear dconf keybindings; no-op if no Compiz (mutter+gnome-shell Unity)
             const compizBase = '/org/compiz/profiles/unity/plugins';
             childProcess.exec('dconf dump /org/compiz/profiles/unity/', (dumpErr, stdout) => {
                 if (!dumpErr && stdout && stdout.trim()) {
@@ -228,11 +221,6 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
                         });
                     }
                 }
-                // Compiz only re-reads dconf on start; restart so empty keybindings take effect (Scale/Expose, Super+Arrow, etc.)
-                setTimeout(() => {
-                    const compiz = childProcess.spawn('compiz', ['--replace'], { detached: true, stdio: 'ignore' });
-                    compiz.unref();
-                }, 2500);
             });
         }
     }
@@ -288,7 +276,8 @@ export function disableLinuxRestrictions(configStore) {
             log.error(`platformrestrictions @ disableRestrictions (wm/setxkbmap): ${err}`);
         }
 
-        if (platformDispatcher.isGNOME) {
+        // GNOME and Unity (mutter+gnome-shell) share the same reset
+        if (platformDispatcher.isGNOME || platformDispatcher.isUnity) {
             try {
                 const waylandKeys = [...gnomeShortcutConfig.mutterWayland.critical, ...gnomeShortcutConfig.mutterWayland.niceToHave];
                 for (const binding of waylandKeys) {
@@ -321,27 +310,10 @@ export function disableLinuxRestrictions(configStore) {
                     child.stdin.end();
                 });
                 child.on('error', (err) => log.warn('platformrestrictions @ disableRestrictions (Unity): dconf load failed', err.message));
-                child.on('close', (code) => {
-                    if (code === 0) {
-                        const compiz = childProcess.spawn('compiz', ['--replace'], { detached: true, stdio: 'ignore' });
-                        compiz.unref();
-                    }
-                });
             } catch (err) {
                 log.warn('platformrestrictions @ disableRestrictions (Unity): restore compiz failed', err.message);
             }
             configStore.linux.compizDconfBackup = null;
-        }
-
-        if (platformDispatcher.isUnity) {
-            try {
-                const mutterKeys = [...gnomeShortcutConfig.mutter.critical, ...gnomeShortcutConfig.mutter.niceToHave];
-                for (const binding of mutterKeys) {
-                    childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.mutter.schema, binding]);
-                }
-            } catch (err) {
-                log.debug(`platformrestrictions @ disableRestrictions (Unity mutter): ${err?.message ?? err}`);
-            }
         }
     }
 }
