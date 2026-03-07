@@ -676,6 +676,12 @@ const __dirname = import.meta.dirname;
             this.killScreenlock() 
             this.endExam(serverstatus)
         }
+        else if (serverstatus.exammode && this.multicastClient.clientinfo.exammode){
+            log.info("communicationhandler @ processUpdatedServerstatus:everything is in exam mode")
+        }
+        else if (!serverstatus.exammode && !this.multicastClient.clientinfo.exammode){
+            log.info("communicationhandler @ processUpdatedServerstatus: everything is not in exam mode")
+        }
 
     }
 
