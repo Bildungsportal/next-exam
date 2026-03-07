@@ -37,6 +37,7 @@ import { ensureNetworkOrReset } from './testpermissionsMac.js';
 import { getWlanInfo } from './getwlaninfo.js';
 import { switchExamSection } from './switchExamSection.js';
 import { startProxy, stopProxy } from './vncproxy.js';
+import { isVirtualMachine } from './vmDetection.js';
 
 const __dirname = import.meta.dirname;
 
@@ -1157,7 +1158,7 @@ class IpcHandler {
         })
      
         ipcMain.on('get-cpu-info', (event) => {
-            event.returnValue = this.isVirtualMachine()
+            event.returnValue = isVirtualMachine()
         });
 
 
@@ -1192,93 +1193,6 @@ class IpcHandler {
         });
 
 
-    }
-
-    isVirtualMachine() {
-        const VENDORS = /(oracle|virtualbox|vmware|kvm|qemu|xen|innotek|parallels|microsoft|hyper-v|bhyve|red hat|redhat|bochs|bhyve|openstack|cloud|amazon|google|azure)/i // common VM ids
-        const warnAndReturn = reason => {
-            log.warn(`ipchandler @ isVirtualMachine: Verdacht auf VM - ${reason}`)
-            return true
-        }
-
-        // ---------- Linux ----------
-        if (process.platform === 'linux') {
-          try {
-            const cpuinfo = readFileSync('/proc/cpuinfo', 'utf8')      // CPU flags
-            if (/^flags.*\bhypervisor\b/m.test(cpuinfo)) return warnAndReturn('hypervisor flag in /proc/cpuinfo')
-          } catch {}
-      
-          try {
-            const files = [
-              '/sys/class/dmi/id/sys_vendor',
-              '/sys/class/dmi/id/product_name',
-              '/sys/class/dmi/id/product_version',
-              '/sys/class/dmi/id/board_vendor',
-              '/sys/class/dmi/id/bios_vendor',
-              '/sys/class/dmi/id/chassis_vendor'
-            ]
-            const dmi = files.map(p => { try { return readFileSync(p, 'utf8') } catch { return '' } }).join(' ')
-            if (VENDORS.test(dmi)) return warnAndReturn('DMI-Vendor-Match')
-          } catch {}
-      
-          try {
-            execSync('systemd-detect-virt -q', { stdio: 'ignore' })    // exit 0 => VM
-            return warnAndReturn('systemd-detect-virt meldet Virtualisierung')
-          } catch {}
-
-
-          // Prüfe auf QEMU-Prozesse
-          try {
-            const ps = execSync('ps aux | grep -i qemu', { encoding: 'utf8' })
-            if (ps.includes('qemu') && !ps.includes('grep')) {
-              return warnAndReturn('QEMU-Prozess läuft')
-            }
-          } catch {}
-        }
-
-        // ---------- Windows ----------
-        if (process.platform === 'win32') {
-            try {
-            const ps =
-                'powershell -NoProfile -Command "(Get-CimInstance Win32_ComputerSystem | ForEach-Object { $_.Manufacturer, $_.Model }) -join \' \'"'
-            const basic = execSync(ps, { encoding: 'utf8' }).trim()    // manufacturer + model
-            if (VENDORS.test(basic)) return warnAndReturn('Windows Hersteller/Modell passt zu VM')
-            } catch {}
-
-            try {
-            const psRobust =
-                'powershell -NoProfile -Command "$o=@();' +
-                'try{$cs=Get-CimInstance Win32_ComputerSystem;$o+=@($cs.Manufacturer,$cs.Model)}catch{};' +
-                'try{$bb=Get-CimInstance Win32_BaseBoard;$o+=@($bb.Manufacturer,$bb.Product)}catch{};' +
-                'try{$bios=Get-CimInstance Win32_BIOS;$o+=@($bios.SMBIOSBIOSVersion)}catch{};' +
-                'try{$csp=Get-CimInstance Win32_ComputerSystemProduct;$o+=@($csp.Name)}catch{};' +
-                'Write-Output (($o -join \' \').Trim())"'
-            const robust = execSync(psRobust, { encoding: 'utf8' }).trim()
-            if (VENDORS.test(robust)) return warnAndReturn('Windows Hersteller/BIOS-Infos passen zu VM')
-            } catch {}
-
-            // Zusätzliche QEMU-Erkennung für Windows
-            try {
-                const qemuProcesses = execSync('tasklist /FI "IMAGENAME eq qemu*"', { encoding: 'utf8' })
-                if (qemuProcesses.includes('qemu')) return warnAndReturn('QEMU-Prozess unter Windows')
-            } catch {}
-        }
-
-
-         // ---------- macOS ----------
-        if (process.platform === 'darwin') {
-            try {
-            const hwModel = execSync('sysctl -n hw.model', { encoding: 'utf8' })
-            if (/^virtual/i.test(hwModel) || VENDORS.test(hwModel)) return warnAndReturn('macOS Hardwaremodell deutet auf VM')
-            } catch {}
-
-            try {
-            const sp = execSync('system_profiler SPHardwareDataType', { encoding: 'utf8' })
-            if (VENDORS.test(sp)) return warnAndReturn('macOS system_profiler meldet VM-Vendor')
-            } catch {}
-        }
-
-        return false       
     }
 
     compareVersions(versionA, versionB) {
