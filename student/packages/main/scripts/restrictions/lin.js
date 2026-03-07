@@ -228,6 +228,11 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
                         });
                     }
                 }
+                // Compiz only re-reads dconf on start; restart so empty keybindings take effect (Scale/Expose, Super+Arrow, etc.)
+                setTimeout(() => {
+                    const compiz = childProcess.spawn('compiz', ['--replace'], { detached: true, stdio: 'ignore' });
+                    compiz.unref();
+                }, 2500);
             });
         }
     }
@@ -316,6 +321,12 @@ export function disableLinuxRestrictions(configStore) {
                     child.stdin.end();
                 });
                 child.on('error', (err) => log.warn('platformrestrictions @ disableRestrictions (Unity): dconf load failed', err.message));
+                child.on('close', (code) => {
+                    if (code === 0) {
+                        const compiz = childProcess.spawn('compiz', ['--replace'], { detached: true, stdio: 'ignore' });
+                        compiz.unref();
+                    }
+                });
             } catch (err) {
                 log.warn('platformrestrictions @ disableRestrictions (Unity): restore compiz failed', err.message);
             }
