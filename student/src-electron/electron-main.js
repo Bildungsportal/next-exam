@@ -89,6 +89,7 @@ log.debug(`main: Node version: ${process.versions.node}`)
 log.debug(`main: V8 version: ${process.versions.v8}`)
 log.debug(`main: OS: ${process.platform} ${process.arch}`)
 log.debug(`main: Arch: ${process.arch}`)
+log.debug(`main: Desktop: ${platformDispatcher.desktopName}`)
 
 
 WindowHandler.init(multicastClient, config)  // mainwindow, examwindow, blockwindow

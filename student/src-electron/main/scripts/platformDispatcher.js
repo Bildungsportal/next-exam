@@ -66,7 +66,38 @@ class PlatformDispatcher {
     this.tempdirectory = this._getTempdirectory();
     this.workdirectory = this._getWorkdirectory();
     this.logfile = this._getLogfile();
+    this.desktopName = this._whichDesktopName();
+  }
 
+  _isIOS() {
+    return process.ios === true || process.env.IOS === 'true';
+  }
+
+  _whichDesktopName() {
+    if (this.platform === 'win32') {
+      return "explorer.exe";
+    } 
+    
+    else if (this.platform === 'linux') {
+      if (this._isGNOME()) {
+        return "gnome-shell";
+      } else if (this._isKDE()) {
+        return "plasma-shell";
+      } else if (this._isUNITY()) {
+        return "unity-shell";
+      } else {
+        return "unknown-desktop";
+      }
+    }
+    else if (this.platform === 'darwin') {
+      if (this._isIOS()) {
+        return "UIKit";
+      }
+      return "Aqua";
+    }
+    else {
+      return "unknown-desktop";
+    }
   }
 
   _getPublicBase() {
