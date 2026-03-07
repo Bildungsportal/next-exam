@@ -520,13 +520,18 @@ class WindowHandler {
         // Electron 39: ready-to-show fires AFTER show() is called, so use did-finish-load instead
         this.examwindow.webContents.once('did-finish-load', async () => {
             if (!this.examwindow) return;
-            
+           
+                    
             if (this.config.showdevtools) { this.examwindow.webContents.openDevTools()  }
             
             if (!this.config.development) {
                 try {
                     this.examwindow.removeMenu()                 
                     this.examwindow.setAlwaysOnTop(true, "screen-saver", 1) 
+                    // Unity (and some WMs) don't give new windows focus until user click; kiosk only takes effect with focus. Force focus first.
+                    this.examwindow.moveTop()
+                    this.examwindow.focus()
+                    if (platformDispatcher.platform === 'linux') { await this.sleep(300) }
                     this.examwindow.setKiosk(true);
                 
                     await this.sleep(500)
