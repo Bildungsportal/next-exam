@@ -19,15 +19,11 @@
 
 import { app, BrowserWindow, BrowserView, dialog, screen} from 'electron'
 import { join } from 'path'
-import childProcess from 'child_process' 
 import {disableRestrictions, enableRestrictions} from './platformrestrictions.js';
-
 import log from 'electron-log'
 import {SchedulerService} from './schedulerservice.ts'
 import { activeWindow } from 'get-windows';
-import languageToolServer from './lt-server.js';
 import platformDispatcher from './platformDispatcher.js';
-
 
 const __dirname = import.meta.dirname;
 
@@ -541,7 +537,7 @@ class WindowHandler {
                     // probably not needed because we disable missioncontrol anyways - seems to interfere with kiosk mode on macos (again)
                     // this.examwindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
-                    if (!this.isWayland){ this.checkWindowInterval.start() } // constantly check if the active window is the examwindow - if not, bring it to front
+                    if (!platformDispatcher.isWayland){ this.checkWindowInterval.start() } // constantly check if the active window is the examwindow - if not, bring it to front
                     await enableRestrictions(this)  // disable keyboard shortcuts etc.
                     
                     await this.sleep(1000)  // do not set blur listener too early

@@ -174,7 +174,7 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
             childProcess.exec('gsettings set org.gnome.mutter dynamic-workspaces false');
             childProcess.exec('gsettings set org.gnome.desktop.wm.preferences num-workspaces 1');
             // X11 only: disable TTY switch via setxkbmap (on Wayland we rely on mutter wayland keybindings above)
-            if (!platformDispatcher.isWayland()) {
+            if (!platformDispatcher.isWayland) {
                 configStore.linux.srvrkeysNoneSet = true;
                 childProcess.exec('setxkbmap -option srvrkeys:none', (err) => {
                     if (err) log.warn('platformrestrictions @ enableRestrictions (GNOME): setxkbmap srvrkeys:none failed', err.message);

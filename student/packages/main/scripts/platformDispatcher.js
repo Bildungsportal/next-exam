@@ -49,6 +49,7 @@ class PlatformDispatcher {
     this.isKDE = this._isKDE();
     this.isGNOME = this._isGNOME();
     this.isUnity = this._isUNITY();
+    this.isWayland = this._isWayland();
     this.flameshot = this._getVersion('flameshot');
     this.imagemagick = this._getVersion('convert');
     this.imVersion = this._getImageMagickVersion();
@@ -203,7 +204,7 @@ class PlatformDispatcher {
     return pathToFileURL(workerPath);
   }
 
-  isWayland() {
+  _isWayland() {
     return this._env.XDG_SESSION_TYPE === 'wayland';
   }
 
@@ -307,13 +308,13 @@ class PlatformDispatcher {
 
   _getScreenshotAbility() {
     if (this.platform === 'linux') {
-      if ((this._isGNOME() || this._isUNITY()) && this.isWayland()) {
+      if ((this._isGNOME() || this._isUNITY()) && this._isWayland()) {
         this.messages.push("platformDispatcher @ _getScreenshotAbility: GNOME/Unity + Wayland – ScreenshotAbility set to false");
         return false;
-      } else if (this._isKDE() && this.isWayland() && this._flameshotAvailable()) {
+      } else if (this._isKDE() && this._isWayland() && this._flameshotAvailable()) {
         this.messages.push("platformDispatcher @ _getScreenshotAbility: KDE/Wayland + Flameshot – ScreenshotAbility set to true");
         return true;
-      } else if (!this.isWayland() && this.useWorker) {
+      } else if (!this._isWayland() && this.useWorker) {
         this.messages.push("platformDispatcher @ _getScreenshotAbility: X11 + ImageMagick – ScreenshotAbility set to true");
         return true;
       } else {
