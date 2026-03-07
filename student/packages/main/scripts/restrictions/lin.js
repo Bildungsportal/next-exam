@@ -76,7 +76,7 @@ const compizShortcutConfig = {
     unityshell: ['show-launcher'],
     scale: ['initiate_key', 'initiate_all_key', 'initiate_group_key', 'initiate_output_key', 'initiate_pointer_key'],
     expo: ['expo_key'],
-    grid: ['put_left_key', 'put_right_key', 'put_top_key', 'put_bottom_key', 'put_center_key', 'put_top_left_key', 'put_top_right_key', 'put_bottom_left_key', 'put_bottom_right_key', 'put_maximize_key', 'put_restore_key', 'put_undershadow_key'],
+    grid: ['put_left_key', 'put_right_key', 'put_top_key', 'put_bottom_key', 'put_center_key', 'put_top_left_key', 'put_top_right_key', 'put_bottom_left_key', 'put_bottom_right_key', 'put_maximize_key', 'put_restore_key', 'put_undershadow_key', 'put_left_maximize_key', 'put_right_maximize_key', 'put_top_maximize_key', 'put_bottom_maximize_key'],
     commands: ['run_command_0_key', 'run_command_1_key', 'run_command_2_key', 'run_command_3_key', 'run_command_4_key', 'run_command_5_key', 'run_command_6_key', 'run_command_7_key', 'run_command_8_key', 'run_command_9_key', 'run_command_10_key', 'run_command_11_key'],
     move: ['move_key'],
     resize: ['resize_key'],
@@ -204,6 +204,15 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
 
         if (platformDispatcher.isUnity) {
             log.info("platformrestrictions @ enableRestrictions: enabling Unity/Compiz restrictions");
+            // Unity also uses org.gnome.mutter.keybindings for Super+Arrow tiling; clear them
+            try {
+                const mutterKeys = [...gnomeShortcutConfig.mutter.critical, ...gnomeShortcutConfig.mutter.niceToHave];
+                for (const binding of mutterKeys) {
+                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.mutter.schema, binding, `['']`]);
+                }
+            } catch (err) {
+                log.debug(`platformrestrictions @ enableRestrictions (Unity mutter): ${err?.message ?? err}`);
+            }
             const compizBase = '/org/compiz/profiles/unity/plugins';
             childProcess.exec('dconf dump /org/compiz/profiles/unity/', (dumpErr, stdout) => {
                 if (!dumpErr && stdout && stdout.trim()) {
@@ -311,6 +320,17 @@ export function disableLinuxRestrictions(configStore) {
                 log.warn('platformrestrictions @ disableRestrictions (Unity): restore compiz failed', err.message);
             }
             configStore.linux.compizDconfBackup = null;
+        }
+
+        if (platformDispatcher.isUnity) {
+            try {
+                const mutterKeys = [...gnomeShortcutConfig.mutter.critical, ...gnomeShortcutConfig.mutter.niceToHave];
+                for (const binding of mutterKeys) {
+                    childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.mutter.schema, binding]);
+                }
+            } catch (err) {
+                log.debug(`platformrestrictions @ disableRestrictions (Unity mutter): ${err?.message ?? err}`);
+            }
         }
     }
 }
