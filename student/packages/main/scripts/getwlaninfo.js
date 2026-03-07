@@ -55,11 +55,11 @@ export async function getWlanInfo() {
             return { ssid: null, bssid: null, quality: null, message: 'error' };
         }
         
-        // Reset counter on successful result (has data)
-        if (result.ssid || result.bssid || result.quality !== null) {
+        // Reset counter on successful result (has data) or on explicit no-interface (valid state, not a failure)
+        if (result.ssid || result.bssid || result.quality !== null || result.message === 'nointerface') {
             failureCounter = 0;
         } else {
-            // Increment counter on failure
+            // Increment counter on failure (error, nopermissions retry, etc.)
             failureCounter++;
         }
         

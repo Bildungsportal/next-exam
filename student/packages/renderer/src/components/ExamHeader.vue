@@ -32,48 +32,35 @@
       
         <div class="header-item">
 
-            <!-- Show WLAN SSID -->
-            <div v-if="wlanInfo && wlanInfo?.ssid && !wlanInfo.ssid.includes('redacted') && !wlanInfo.ssid.includes('<') " style="font-size: 0.8rem;" class="me-1"> {{ wlanInfo.ssid }}  </div>
+            <!-- WLAN: SSID text (when not redacted) -->
+            <div v-if="showWlanSsid" style="font-size: 0.8rem;" class="me-1"> {{ wlanInfo.ssid }}  </div>
 
+            <!-- WLAN: quality bars (when we have signal strength) -->
+            <div v-if="wlanInfo && wlanInfo?.quality != null" class="me-2">
+                <img v-if="wlanInfo.quality > 80" src="/src/assets/img/svg/network-wireless-connected-100.svg"  :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostip" class="" width="24" height="24" style="vertical-align: bottom;" />
+                <img v-else-if="wlanInfo.quality > 50" src="/src/assets/img/svg/network-wireless-connected-80.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostip" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
+                <img v-else-if="wlanInfo.quality > 30" src="/src/assets/img/svg/network-wireless-connected-60.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostip" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
+                <img v-else-if="wlanInfo.quality > 10" src="/src/assets/img/svg/network-wireless-connected-40.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostip" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
+                <img v-else-if="wlanInfo.quality > 5" src="/src/assets/img/svg/network-wireless-connected-20.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostip" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
+                <img v-else :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostip" :alt="wlanInfo.quality+'%'" src="/src/assets/img/svg/network-wireless-connected-00.svg" width="24" height="24" style="vertical-align: bottom;" />
+            </div>
 
-            <!-- Shows WIFI ICON if IP is available and no WLAN info available-->
-
-            <!-- WLAN quality not available and SSID set to <redacted>  (happens on MacOS >= sequoia) -->
-            <div v-if="wlanInfo && wlanInfo.ssid && !wlanInfo.quality && hostip" class="me-2">
+            <!-- WLAN: "info not available" (WLAN exists but SSID/quality missing, e.g. macOS redacted, Windows without location) – only when we have WLAN context, never when no interface -->
+            <div v-if="showWlanInfoNotAvailable" class="me-2">
               <img :title="'WiFi Information not available \nIP: '+hostip" :alt="'WiFi Information not available'" src="/src/assets/img/svg/network-wireless-connected-20.svg" width="24" height="24" style="vertical-align: bottom;" />
             </div>
 
-            <!-- WLAN SSID and quality not available (happens on windows without location services) -->
-            <div v-if="wlanInfo && !wlanInfo.ssid && !wlanInfo.quality && hostip" class="me-2">
-              <img :title="'WiFi Information not available \nIP: '+hostip" :alt="'WiFi Information not available'" src="/src/assets/img/svg/network-wireless-connected-20.svg" width="24" height="24" style="vertical-align: bottom;" />
-            </div>
-
-
-
-            <!-- Show WLAN quality -->
-            <div v-if="wlanInfo && wlanInfo?.quality" class="me-2">
-                <img v-if="wlanInfo && wlanInfo.quality > 80" src="/src/assets/img/svg/network-wireless-connected-100.svg"  :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostip" class="" width="24" height="24" style="vertical-align: bottom;" />
-                <img v-if="wlanInfo && wlanInfo.quality > 50 && wlanInfo.quality <= 80" src="/src/assets/img/svg/network-wireless-connected-80.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostip" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
-                <img v-if="wlanInfo && wlanInfo.quality > 30 && wlanInfo.quality <= 50" src="/src/assets/img/svg/network-wireless-connected-60.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostip" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
-                <img v-if="wlanInfo && wlanInfo.quality > 10 && wlanInfo.quality <= 30" src="/src/assets/img/svg/network-wireless-connected-40.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostip" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
-                <img v-if="wlanInfo && wlanInfo.quality > 5  && wlanInfo.quality <= 10" src="/src/assets/img/svg/network-wireless-connected-20.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostip" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
-                <img v-if="wlanInfo && wlanInfo.quality <= 5" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostip" :alt="wlanInfo.quality+'%'" src="/src/assets/img/svg/network-wireless-connected-00.svg" width="24" height="24" style="vertical-align: bottom;" />
-            </div>
-
-            <!-- WLAN disconnected - no interface available -->
-            <div v-if="wlanInfo && wlanInfo?.message == 'nointerface'" class="me-2">
+            <!-- WLAN disconnected (no WLAN interface / giving up) -->
+            <div v-if="noWlanInterface" class="me-2">
                 <img title="WLAN disconnected" alt="WLAN disconnected" src="/src/assets/img/svg/network-wireless-disconnected.svg" width="24" height="24" >
             </div>
 
-
-            <!-- Show LAN connected if IP is available and no WLAN info available -->
-            <div v-if="hostip && wlanInfo?.message == 'nointerface'" class="me-2">
-                <img :title="'Connected: '+hostip" alt="Connected" src="/src/assets/img/svg/network-wired-available.svg" width="24" height="24" >
+            <!-- LAN: show when no WLAN data (no interface, or wlanInfo not loaded, or error). Connected if hostip, disconnected otherwise. -->
+            <div v-if="showLanConnected" class="me-2">
+                <img :title="'Connected: '+hostip" alt="LAN connected" src="/src/assets/img/svg/network-wired-available.svg" width="24" height="24" >
             </div>
-
-            <!-- Show LAN disconnected if IP is not available and no WLAN info available -->
-            <div v-if="!hostip && (!wlanInfo?.ssid && !wlanInfo?.quality)" class="me-2">
-                <img title="Disconnected" alt="Disconnected" src="/src/assets/img/svg/network-wired-unavailable.svg" width="24" height="24" >
+            <div v-if="showLanDisconnected" class="me-2">
+                <img title="Disconnected" alt="LAN disconnected" src="/src/assets/img/svg/network-wired-unavailable.svg" width="24" height="24" >
             </div>
 
 
@@ -109,6 +96,38 @@
       return {
         lastShownMessage: null
       };
+    },
+    computed: {
+      // No WLAN interface (LAN-only or giving up after repeated no-interface)
+      noWlanInterface() {
+        return this.wlanInfo && (this.wlanInfo.message === 'nointerface' || this.wlanInfo.message === 'givingup');
+      },
+      // We have WLAN data to show (SSID or quality or "info not available" context) – then we do not show LAN icons
+      hasWlanData() {
+        if (!this.wlanInfo) return false;
+        const hasSsid = this.wlanInfo.ssid && !this.wlanInfo.ssid.includes('redacted') && !this.wlanInfo.ssid.includes('<');
+        const hasQuality = this.wlanInfo.quality != null;
+        const infoNotAvailableContext = !this.noWlanInterface && !this.wlanInfo.ssid && (this.wlanInfo.quality === null || this.wlanInfo.quality === undefined);
+        return hasSsid || hasQuality || (infoNotAvailableContext && this.hostip);
+      },
+      showWlanSsid() {
+        return this.wlanInfo && this.wlanInfo.ssid && !this.wlanInfo.ssid.includes('redacted') && !this.wlanInfo.ssid.includes('<');
+      },
+      // WLAN exists but SSID/quality missing (macOS redacted, Windows without location) – never when no interface
+      showWlanInfoNotAvailable() {
+        if (!this.wlanInfo || this.noWlanInterface) return false;
+        const ssidUsable = this.wlanInfo.ssid && !this.wlanInfo.ssid.includes('redacted') && !this.wlanInfo.ssid.includes('<');
+        const hasSsidNoQuality = ssidUsable && (this.wlanInfo.quality === null || this.wlanInfo.quality === undefined);
+        const noSsidNoQuality = !this.wlanInfo.ssid && (this.wlanInfo.quality === null || this.wlanInfo.quality === undefined);
+        return (hasSsidNoQuality || (noSsidNoQuality && this.hostip));
+      },
+      // Show LAN icon when we do not have WLAN data (so LAN state is relevant)
+      showLanConnected() {
+        return this.hostip && !this.hasWlanData;
+      },
+      showLanDisconnected() {
+        return !this.hostip && !this.hasWlanData;
+      }
     },
     watch: {
       'wlanInfo.message'(newMessage) {
