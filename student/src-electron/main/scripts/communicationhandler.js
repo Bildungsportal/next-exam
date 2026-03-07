@@ -654,10 +654,12 @@ import { switchExamSection } from './switchExamSection.js';
         }
         
         if (serverstatus.exammode && !this.multicastClient.clientinfo.exammode){
+            log.info("communicationhandler @ processUpdatedServerstatus: exammode activated")
             this.killScreenlock() // remove lockscreen immediately - don't wait for server info
             this.startExam(serverstatus)
         }
         else if (!serverstatus.exammode && this.multicastClient.clientinfo.exammode){
+            log.info("communicationhandler @ processUpdatedServerstatus: exammode deactivated")
             this.killScreenlock() 
             this.endExam(serverstatus)
         }

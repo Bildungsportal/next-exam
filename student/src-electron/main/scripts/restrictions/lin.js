@@ -68,7 +68,39 @@ const gnomeShortcutConfig = {
             'app-shift-hotkey-6','app-shift-hotkey-7','app-shift-hotkey-8','app-shift-hotkey-9','shortcut'
         ],
         niceToHave: []
+    },
+    // Ubuntu Tiling Assistant extension (Super+Arrow etc.); has its own keybindings, overrides mutter
+    tilingAssistant: {
+        schema: 'org.gnome.shell.extensions.tiling-assistant',
+        critical: [
+            'tile-left-half', 'tile-right-half', 'tile-top-half', 'tile-bottom-half',
+            'tile-topleft-quarter', 'tile-topright-quarter', 'tile-bottomleft-quarter', 'tile-bottomright-quarter',
+            'tile-maximize', 'tile-maximize-horizontally', 'tile-maximize-vertically',
+            'tile-edit-mode', 'restore-window', 'center-window',
+            'toggle-always-on-top', 'toggle-maximize-tophalf-timer', 'toggle-tiling-popup',
+            'tile-left-half-ignore-ta', 'tile-right-half-ignore-ta', 'tile-top-half-ignore-ta', 'tile-bottom-half-ignore-ta',
+            'tile-topleft-quarter-ignore-ta', 'tile-topright-quarter-ignore-ta', 'tile-bottomleft-quarter-ignore-ta', 'tile-bottomright-quarter-ignore-ta',
+            'tile-maximize-ignore-ta', 'restore-window-ignore-ta', 'center-window-ignore-ta'
+        ],
+        niceToHave: [
+            'activate-layout0', 'activate-layout1', 'activate-layout2', 'activate-layout3', 'activate-layout4',
+            'activate-layout5', 'activate-layout6', 'activate-layout7', 'activate-layout8', 'activate-layout9',
+            'activate-layout10', 'activate-layout11', 'activate-layout12', 'activate-layout13', 'activate-layout14',
+            'activate-layout15', 'activate-layout16', 'activate-layout17', 'activate-layout18', 'activate-layout19'
+        ]
     }
+};
+
+// Compiz (Unity) keybinding keys per plugin; dconf path prefix: /org/compiz/profiles/unity/plugins/<plugin>/
+const compizShortcutConfig = {
+    unityshell: ['show-launcher'],
+    scale: ['initiate_key', 'initiate_all_key', 'initiate_group_key', 'initiate_output_key', 'initiate_pointer_key'],
+    expo: ['expo_key'],
+    grid: ['put_left_key', 'put_right_key', 'put_top_key', 'put_bottom_key', 'put_center_key', 'put_top_left_key', 'put_top_right_key', 'put_bottom_left_key', 'put_bottom_right_key', 'put_maximize_key', 'put_restore_key', 'put_undershadow_key', 'put_left_maximize_key', 'put_right_maximize_key', 'put_top_maximize_key', 'put_bottom_maximize_key'],
+    commands: ['run_command_0_key', 'run_command_1_key', 'run_command_2_key', 'run_command_3_key', 'run_command_4_key', 'run_command_5_key', 'run_command_6_key', 'run_command_7_key', 'run_command_8_key', 'run_command_9_key', 'run_command_10_key', 'run_command_11_key'],
+    move: ['move_key'],
+    resize: ['resize_key'],
+    vpswitch: ['next_key', 'prev_key']
 };
 
 // optional diagnostics for reading current gsettings values when debugging GNOME restrictions
@@ -138,50 +170,83 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
     if (platformDispatcher.isGNOME || platformDispatcher.isUnity) {
         log.info("platformrestrictions @ enableRestrictions: enabling GNOME/Unity restrictions");
         try {
+            // shared by GNOME and Unity: WM keybindings, workspaces, X11 TTY disable
             const wmKeys = [...gnomeShortcutConfig.wm.critical, ...gnomeShortcutConfig.wm.niceToHave];
-            for (let binding of wmKeys) {
+            for (const binding of wmKeys) {
                 logGsettingsValue(gnomeShortcutConfig.wm.schema, binding, 'enable-gnome-wm-before-set');
                 childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.wm.schema, binding, `['']`]);
                 logGsettingsValue(gnomeShortcutConfig.wm.schema, binding, 'enable-gnome-wm-after-set');
             }
-            // Wayland: disable VT/TTY switch (Ctrl+Alt+F1..F12) via mutter keybindings
-            const waylandKeys = [...gnomeShortcutConfig.mutterWayland.critical, ...gnomeShortcutConfig.mutterWayland.niceToHave];
-            for (let binding of waylandKeys) {
-                logGsettingsValue(gnomeShortcutConfig.mutterWayland.schema, binding, 'enable-gnome-wayland-before-set');
-                childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.mutterWayland.schema, binding, `['']`]);
-                childProcess.execFile('dconf', ['write', `/org/gnome/mutter/wayland/keybindings/${binding}`, `['']`]);
-                logGsettingsValue(gnomeShortcutConfig.mutterWayland.schema, binding, 'enable-gnome-wayland-after-set');
-            }
-            const shellKeys = [...gnomeShortcutConfig.shell.critical, ...gnomeShortcutConfig.shell.niceToHave];
-            for (let binding of shellKeys) {
-                logGsettingsValue(gnomeShortcutConfig.shell.schema, binding, 'enable-gnome-shell-before-set');
-                childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.shell.schema, binding, `['']`]);
-                logGsettingsValue(gnomeShortcutConfig.shell.schema, binding, 'enable-gnome-shell-after-set');
-            }
-            const mutterKeys = [...gnomeShortcutConfig.mutter.critical, ...gnomeShortcutConfig.mutter.niceToHave];
-            for (let binding of mutterKeys) {
-                logGsettingsValue(gnomeShortcutConfig.mutter.schema, binding, 'enable-gnome-mutter-before-set');
-                childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.mutter.schema, binding, `['']`]);
-                logGsettingsValue(gnomeShortcutConfig.mutter.schema, binding, 'enable-gnome-mutter-after-set');
-            }
-            const dockKeys = [...gnomeShortcutConfig.dashToDock.critical, ...gnomeShortcutConfig.dashToDock.niceToHave];
-            for (let binding of dockKeys) {
-                logGsettingsValue(gnomeShortcutConfig.dashToDock.schema, binding, 'enable-gnome-dock-before-set');
-                childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.dashToDock.schema, binding, `['']`]);
-                logGsettingsValue(gnomeShortcutConfig.dashToDock.schema, binding, 'enable-gnome-dock-after-set');
-            }
-            childProcess.execFile('gsettings', ['set', 'org.gnome.mutter', 'overlay-key', `''`]);
-            childProcess.exec('gsettings set org.gnome.mutter dynamic-workspaces false');
             childProcess.exec('gsettings set org.gnome.desktop.wm.preferences num-workspaces 1');
-            // X11 only: disable TTY switch via setxkbmap (on Wayland we rely on mutter wayland keybindings above)
             if (!platformDispatcher.isWayland) {
                 configStore.linux.srvrkeysNoneSet = true;
                 childProcess.exec('setxkbmap -option srvrkeys:none', (err) => {
-                    if (err) log.warn('platformrestrictions @ enableRestrictions (GNOME): setxkbmap srvrkeys:none failed', err.message);
+                    if (err) log.warn('platformrestrictions @ enableRestrictions (GNOME/Unity): setxkbmap srvrkeys:none failed', err.message);
                 });
             }
         } catch (err) {
-            log.error(`platformrestrictions @ enableRestrictions (gsettings): ${err}`);
+            log.error(`platformrestrictions @ enableRestrictions (gsettings/wm): ${err}`);
+        }
+
+        // GNOME and "Unity" (mutter+gnome-shell) use the same stack; run full GNOME restrictions for both
+        if (platformDispatcher.isGNOME || platformDispatcher.isUnity) {
+            try {
+                const waylandKeys = [...gnomeShortcutConfig.mutterWayland.critical, ...gnomeShortcutConfig.mutterWayland.niceToHave];
+                for (const binding of waylandKeys) {
+                    logGsettingsValue(gnomeShortcutConfig.mutterWayland.schema, binding, 'enable-gnome-wayland-before-set');
+                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.mutterWayland.schema, binding, `['']`]);
+                    childProcess.execFile('dconf', ['write', `/org/gnome/mutter/wayland/keybindings/${binding}`, `['']`]);
+                    logGsettingsValue(gnomeShortcutConfig.mutterWayland.schema, binding, 'enable-gnome-wayland-after-set');
+                }
+                const shellKeys = [...gnomeShortcutConfig.shell.critical, ...gnomeShortcutConfig.shell.niceToHave];
+                for (const binding of shellKeys) {
+                    logGsettingsValue(gnomeShortcutConfig.shell.schema, binding, 'enable-gnome-shell-before-set');
+                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.shell.schema, binding, `['']`]);
+                    logGsettingsValue(gnomeShortcutConfig.shell.schema, binding, 'enable-gnome-shell-after-set');
+                }
+                const mutterKeys = [...gnomeShortcutConfig.mutter.critical, ...gnomeShortcutConfig.mutter.niceToHave];
+                for (const binding of mutterKeys) {
+                    logGsettingsValue(gnomeShortcutConfig.mutter.schema, binding, 'enable-gnome-mutter-before-set');
+                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.mutter.schema, binding, `['']`]);
+                    logGsettingsValue(gnomeShortcutConfig.mutter.schema, binding, 'enable-gnome-mutter-after-set');
+                }
+                const dockKeys = [...gnomeShortcutConfig.dashToDock.critical, ...gnomeShortcutConfig.dashToDock.niceToHave];
+                for (const binding of dockKeys) {
+                    logGsettingsValue(gnomeShortcutConfig.dashToDock.schema, binding, 'enable-gnome-dock-before-set');
+                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.dashToDock.schema, binding, `['']`]);
+                    logGsettingsValue(gnomeShortcutConfig.dashToDock.schema, binding, 'enable-gnome-dock-after-set');
+                }
+                // Ubuntu Tiling Assistant (Super+Arrow) – overrides mutter when present
+                const tilingKeys = [...gnomeShortcutConfig.tilingAssistant.critical, ...gnomeShortcutConfig.tilingAssistant.niceToHave];
+                for (const binding of tilingKeys) {
+                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.tilingAssistant.schema, binding, `['']`], () => {});
+                }
+                childProcess.execFile('gsettings', ['set', 'org.gnome.mutter', 'overlay-key', `''`]);
+                childProcess.exec('gsettings set org.gnome.mutter dynamic-workspaces false');
+            } catch (err) {
+                log.error(`platformrestrictions @ enableRestrictions (GNOME shell/mutter/dock): ${err}`);
+            }
+        }
+
+        if (platformDispatcher.isUnity) {
+            log.info("platformrestrictions @ enableRestrictions: enabling Unity (optional Compiz backup)");
+            // Classic Unity/Compiz: backup and clear dconf keybindings; no-op if no Compiz (mutter+gnome-shell Unity)
+            const compizBase = '/org/compiz/profiles/unity/plugins';
+            childProcess.exec('dconf dump /org/compiz/profiles/unity/', (dumpErr, stdout) => {
+                if (!dumpErr && stdout && stdout.trim()) {
+                    configStore.linux.compizDconfBackup = stdout;
+                } else if (dumpErr) {
+                    log.warn('platformrestrictions @ enableRestrictions (Unity): dconf dump compiz failed', dumpErr.message);
+                }
+                for (const [plugin, keys] of Object.entries(compizShortcutConfig)) {
+                    for (const key of keys) {
+                        const path = `${compizBase}/${plugin}/${key}`;
+                        childProcess.execFile('dconf', ['write', path, "''"], (writeErr) => {
+                            if (writeErr) log.debug(`platformrestrictions @ enableRestrictions (Unity): dconf write ${path} failed (key may not exist): ${writeErr.message}`);
+                        });
+                    }
+                }
+            });
         }
     }
 
@@ -221,29 +286,11 @@ export function disableLinuxRestrictions(configStore) {
     if (platformDispatcher.isGNOME || platformDispatcher.isUnity) {
         log.info("platformrestrictions @ disableRestrictions (linux): GNOME/Unity detected");
         try {
+            // shared: restore WM keybindings and TTY switch
             const wmKeys = [...gnomeShortcutConfig.wm.critical, ...gnomeShortcutConfig.wm.niceToHave];
-            for (let binding of wmKeys) {
+            for (const binding of wmKeys) {
                 childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.wm.schema, `${binding}`]);
             }
-            const waylandKeys = [...gnomeShortcutConfig.mutterWayland.critical, ...gnomeShortcutConfig.mutterWayland.niceToHave];
-            for (let binding of waylandKeys) {
-                childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.mutterWayland.schema, binding]);
-                childProcess.execFile('dconf', ['reset', `/org/gnome/mutter/wayland/keybindings/${binding}`]);
-            }
-            const shellKeys = [...gnomeShortcutConfig.shell.critical, ...gnomeShortcutConfig.shell.niceToHave];
-            for (let binding of shellKeys) {
-                childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.shell.schema, `${binding}`]);
-            }
-            const mutterKeys = [...gnomeShortcutConfig.mutter.critical, ...gnomeShortcutConfig.mutter.niceToHave];
-            for (let binding of mutterKeys) {
-                childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.mutter.schema, `${binding}`]);
-            }
-            const dockKeys = [...gnomeShortcutConfig.dashToDock.critical, ...gnomeShortcutConfig.dashToDock.niceToHave];
-            for (let binding of dockKeys) {
-                childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.dashToDock.schema, `${binding}`]);
-            }
-            childProcess.execFile('gsettings', ['reset', 'org.gnome.mutter', 'overlay-key']);
-            // restore TTY switch if we had disabled it via setxkbmap (GNOME X11)
             if (configStore.linux.srvrkeysNoneSet) {
                 childProcess.exec("setxkbmap -option ''", (err) => {
                     if (err) log.warn('platformrestrictions @ disableRestrictions: setxkbmap restore failed', err.message);
@@ -251,7 +298,51 @@ export function disableLinuxRestrictions(configStore) {
                 configStore.linux.srvrkeysNoneSet = false;
             }
         } catch (err) {
-            log.error(`platformrestrictions @ disableRestrictions (GNOME): ${err}`);
+            log.error(`platformrestrictions @ disableRestrictions (wm/setxkbmap): ${err}`);
+        }
+
+        // GNOME and Unity (mutter+gnome-shell) share the same reset
+        if (platformDispatcher.isGNOME || platformDispatcher.isUnity) {
+            try {
+                const waylandKeys = [...gnomeShortcutConfig.mutterWayland.critical, ...gnomeShortcutConfig.mutterWayland.niceToHave];
+                for (const binding of waylandKeys) {
+                    childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.mutterWayland.schema, binding]);
+                    childProcess.execFile('dconf', ['reset', `/org/gnome/mutter/wayland/keybindings/${binding}`]);
+                }
+                const shellKeys = [...gnomeShortcutConfig.shell.critical, ...gnomeShortcutConfig.shell.niceToHave];
+                for (const binding of shellKeys) {
+                    childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.shell.schema, `${binding}`]);
+                }
+                const mutterKeys = [...gnomeShortcutConfig.mutter.critical, ...gnomeShortcutConfig.mutter.niceToHave];
+                for (const binding of mutterKeys) {
+                    childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.mutter.schema, `${binding}`]);
+                }
+                const dockKeys = [...gnomeShortcutConfig.dashToDock.critical, ...gnomeShortcutConfig.dashToDock.niceToHave];
+                for (const binding of dockKeys) {
+                    childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.dashToDock.schema, `${binding}`]);
+                }
+                const tilingKeys = [...gnomeShortcutConfig.tilingAssistant.critical, ...gnomeShortcutConfig.tilingAssistant.niceToHave];
+                for (const binding of tilingKeys) {
+                    childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.tilingAssistant.schema, `${binding}`], () => {});
+                }
+                childProcess.execFile('gsettings', ['reset', 'org.gnome.mutter', 'overlay-key']);
+            } catch (err) {
+                log.error(`platformrestrictions @ disableRestrictions (GNOME): ${err}`);
+            }
+        }
+
+        if (platformDispatcher.isUnity && configStore.linux.compizDconfBackup) {
+            log.info("platformrestrictions @ disableRestrictions (linux): restoring Unity/Compiz keybindings");
+            try {
+                const child = childProcess.spawn('dconf', ['load', '/org/compiz/profiles/unity/'], { stdio: ['pipe', 'ignore', 'ignore'] });
+                child.stdin.write(configStore.linux.compizDconfBackup, () => {
+                    child.stdin.end();
+                });
+                child.on('error', (err) => log.warn('platformrestrictions @ disableRestrictions (Unity): dconf load failed', err.message));
+            } catch (err) {
+                log.warn('platformrestrictions @ disableRestrictions (Unity): restore compiz failed', err.message);
+            }
+            configStore.linux.compizDconfBackup = null;
         }
     }
 }
