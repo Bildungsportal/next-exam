@@ -669,18 +669,14 @@ const __dirname = import.meta.dirname;
         }
         
         if (serverstatus.exammode && !this.multicastClient.clientinfo.exammode){
+            log.info("communicationhandler @ processUpdatedServerstatus: exammode activated")
             this.killScreenlock() // remove lockscreen immediately - don't wait for server info
             this.startExam(serverstatus)
         }
         else if (!serverstatus.exammode && this.multicastClient.clientinfo.exammode){
+            log.info("communicationhandler @ processUpdatedServerstatus: exammode deactivated")
             this.killScreenlock() 
             this.endExam(serverstatus)
-        }
-        else if (serverstatus.exammode && this.multicastClient.clientinfo.exammode){
-            log.info("communicationhandler @ processUpdatedServerstatus:everything is in exam mode")
-        }
-        else if (!serverstatus.exammode && !this.multicastClient.clientinfo.exammode){
-            log.info("communicationhandler @ processUpdatedServerstatus: everything is not in exam mode")
         }
 
     }
