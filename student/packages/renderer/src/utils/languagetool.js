@@ -205,12 +205,18 @@ async function LTfindWordPositions() {
     const textForValidation = this.text; // Text that was used for API call
     const currentEditorText = this.editor.getText();
 
-    // Set colors based on issue type
+    // Set colors based on issue type (LanguageTool API: typographical, whitespace, misspelling, grammar, style, punctuation, semantics, redundancy, etc.)
     this.misspelledWords.forEach(word => {
-        if (word.rule.issueType === "typographical") { word.color = "rgba(146, 43, 33 , 0.3)"; }
-        else if (word.rule.issueType === "whitespace") { word.color = "rgba(243, 190, 41, 0.5)"; word.whitespace = true; }
-        else if (word.rule.issueType === "misspelling") { word.color = "rgba(211, 84, 0, 0.3)"; }
-        else { word.color = "rgba(108, 52, 131, 0.3)"; }
+        const t = word.rule?.issueType ?? '';
+        if (t === 'typographical') { word.color = 'rgba(146, 43, 33, 0.3)'; }
+        else if (t === 'whitespace') { word.color = 'rgba(243, 190, 41, 0.5)'; word.whitespace = true; }
+        else if (t === 'misspelling') { word.color = 'rgba(211, 84, 0, 0.3)'; }
+        else if (t === 'grammar') { word.color = 'rgba(26, 115, 232, 0.35)'; }
+        else if (t === 'style') { word.color = 'rgba(0, 128, 128, 0.35)'; }
+        else if (t === 'punctuation') { word.color = 'rgba(136, 84, 208, 0.35)'; }
+        else if (t === 'semantics') { word.color = 'rgba(180, 80, 180, 0.35)'; }
+        else if (t === 'redundancy') { word.color = 'rgba(200, 100, 50, 0.35)'; }
+        else { word.color = 'rgba(108, 52, 131, 0.3)'; }
     });
 
     // First: Validate existing positions - check if words still exist at their positions
