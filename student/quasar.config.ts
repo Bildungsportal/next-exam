@@ -297,7 +297,6 @@ export default defineConfig(( ctx: any ) => {
         afterPack: 'scripts/afterpack.js',
         asarUnpack: [
           'public/**/*',
-          'node_modules/screenshot-desktop-wayland/lib/win32',
           'node_modules/get-windows/**/*',
           'node_modules/@img/**/*',
           'node_modules/sharp/**/*',

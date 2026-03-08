@@ -805,6 +805,17 @@ class IpcHandler {
             }   
         })
 
+        // Screenshot config for frontend scheduler (serverip, port, clientinfo, interval)
+        ipcMain.handle('getScreenshotConfig', async () => {
+            const ci = this.multicastClient.clientinfo;
+            return {
+                serverip: ci.serverip,
+                serverApiPort: this.config.serverApiPort,
+                clientinfo: { ...ci },
+                screenshotinterval: ci.screenshotinterval
+            };
+        })
+
         // Student-initiated section switch when allowSectionSwitch is true; always uses current serverstatus and section number
         ipcMain.handle('switch-exam-section', async (event, sectionNumber) => {
             const serverstatus = this.WindowHandler.examwindow?.serverstatus;

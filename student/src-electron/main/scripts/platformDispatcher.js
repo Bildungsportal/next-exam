@@ -27,7 +27,6 @@ import { join } from 'path';
 import { app } from 'electron';
 import log from 'electron-log';
 import config from '../config.js';
-import { pathToFileURL } from 'url';
 import os from 'os';
 import path from 'path';
 import dotenv from 'dotenv';
@@ -51,9 +50,6 @@ class PlatformDispatcher {
     this.flameshot = this._getVersion('flameshot');
     this.imagemagick = this._getVersion('convert');
     this.imVersion = this._getImageMagickVersion();
-    this.workerFileName = this._getWorkerFileName();
-    this.useWorker = this._getUseWorker();
-    this.screenshotAbility = this._getScreenshotAbility();
     this.jre = this._detectJREId();
     this.publicBase = this._getPublicBase();
     this.jreDir = this._resolveJREDir();
@@ -62,7 +58,6 @@ class PlatformDispatcher {
     
     this.homedirectory = os.homedir();
     this.desktopPath = this._getDesktopPath();
-    this.workerURL = this._getWorkerURL();
     this.tempdirectory = this._getTempdirectory();
     this.workdirectory = this._getWorkdirectory();
     this.logfile = this._getLogfile();
@@ -229,15 +224,6 @@ class PlatformDispatcher {
     }
   }
 
-  _getWorkerFileName() {
-    return this.platform === 'linux' ? 'imageWorkerLinux.mjs' : 'imageWorkerSharp.mjs';
-  }
-
-  _getWorkerURL() {
-    const workerPath = join(this.publicBase, this.workerFileName);
-    return pathToFileURL(workerPath);
-  }
-
   _isWayland() {
     return this._env.XDG_SESSION_TYPE === 'wayland';
   }
@@ -329,34 +315,6 @@ class PlatformDispatcher {
         this.messages.push("platformDispatcher @ _getImageMagickVersion: ImageMagick not found");
         return null;
       }
-    }
-  }
-
-  _getUseWorker() {
-    if (this.platform === 'linux') {
-      return this._imagemagickAvailable();
-    } else {
-      return true;
-    }
-  }
-
-  _getScreenshotAbility() {
-    if (this.platform === 'linux') {
-      if ((this._isGNOME() || this._isUNITY()) && this.isWayland) {
-        this.messages.push("platformDispatcher @ _getScreenshotAbility: GNOME/Unity + Wayland – ScreenshotAbility set to false");
-        return false;
-      } else if (this._isKDE() && this.isWayland && this._flameshotAvailable()) {
-        this.messages.push("platformDispatcher @ _getScreenshotAbility: KDE/Wayland + Flameshot – ScreenshotAbility set to true");
-        return true;
-      } else if (!this.isWayland && this.useWorker) {
-        this.messages.push("platformDispatcher @ _getScreenshotAbility: X11 + ImageMagick – ScreenshotAbility set to true");
-        return true;
-      } else {
-        this.messages.push("platformDispatcher @ _getScreenshotAbility: ScreenshotAbility set to false – fallback to pagecapture");
-        return false;
-      }
-    } else {
-      return true;
     }
   }
 

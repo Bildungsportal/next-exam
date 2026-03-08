@@ -27,17 +27,12 @@ import IpcHandler from './ipchandler.js'
 import { execSync } from 'child_process';
 import log from 'electron-log';
 import {SchedulerService} from './schedulerservice.ts'
-import Tesseract from 'tesseract.js';
 import crypto from 'crypto';
 import path from 'path';
-import https from 'https';
-import screenshot from 'screenshot-desktop-wayland';
-import { Worker } from 'worker_threads';
 import platformDispatcher from './platformDispatcher.js';
 import { runRemoteCheck } from './remoteCheck.js'
 import languageToolServer from './lt-server.js';
 const shell = (cmd) => {   return execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }); };  // stderr unterdrückt 
-const agent = new https.Agent({ rejectUnauthorized: false });
 const __dirname = import.meta.dirname; 
 import { switchExamSection } from './switchExamSection.js';
  /**
@@ -50,13 +45,7 @@ import { switchExamSection } from './switchExamSection.js';
         this.config = null
         this.updateStudentIntervall = null
         this.WindowHandler = null
-        this.screenshotAbility = false
-        this.screenshotFails = 0 // we count fails and deactivate on 4 consequent fails
-        this.firstCheckScreenshot = true
         this.timer = 0
-        this.worker = null
-        this.useWorker = true
-        this.workerFails = 0
     }
  
     init (mc, config) {
@@ -64,39 +53,6 @@ import { switchExamSection } from './switchExamSection.js';
         this.config = config
         this.updateScheduler = new SchedulerService(this.requestUpdate.bind(this), 5000)
         this.updateScheduler.start()
-        this.screenshotScheduler = new SchedulerService(this.sendScreenshot.bind(this), this.multicastClient.clientinfo.screenshotinterval)
-        this.screenshotScheduler.start()
-        if (!this.worker && platformDispatcher.useWorker){  this.setupImageWorker()  }
-    }
- 
-
-    /**
-     * Setup the image worker
-     * uses fork to create a new child process
-     * uses the imageWorkerLinux.js or imageWorkerSharp.js file
-     * the worker is used to process the screenshot in a separate process
-     */
-    async setupImageWorker() {
-        const workerURL = platformDispatcher.workerURL;
-        
-        this.worker = new Worker(workerURL, { type: 'module', env: { ...process.env } });
-        log.debug("communicationhandler @ setupImageWorker: ImageWorker initialized. Using " + platformDispatcher.workerFileName)
-        
-
-        this.worker.on('error', error => {
-            log.error('communicationhandler @ setupImageWorker: Worker error:', error);
-        });
-        
-        this.worker.on('exit', code => {
-            if (code !== 0) {
-                this.workerFails += 1
-                if (this.workerFails > 4){
-                    this.useWorker = false
-                    log.error('communicationhandler @ setupImageWorker: Worker failed 5 times - switching to no processing')
-                }
-                else { this.setupImageWorker(); }
-            }
-        });
     }
 
     // start local VirtualBox VM and update clientinfo.localVMHost/localVMState
@@ -190,44 +146,10 @@ import { switchExamSection } from './switchExamSection.js';
 
 
 
-    /**
-     * Process the screenshot 
-     * if useWorker is true, the screenshot is processed in a separate process
-     * otherwise the screenshot is not processed and the original screenshot is returned
-     */
-    async processImage(imgBuffer) {
-        if (platformDispatcher.useWorker) {
-            if (!this.worker) { //triple check if worker is initialized
-                platformDispatcher.useWorker = false
-                throw new Error('Worker not initialized');
-            }
-            this.worker.postMessage({ imgBuffer: Array.from(imgBuffer), imVersion: platformDispatcher.imVersion });
-            const result = await new Promise(resolve => {
-                this.worker.once('message', (message) => {
-                    resolve(message);
-                });
-            });
-            
-            if (!result.success) throw new Error(result.error);
-            return result; 
-        } else {
-            // fallback to no processing   
-            const screenshotBase64 = Buffer.from(imgBuffer).toString('base64');
-            const headerBase64 = screenshotBase64
-            return { success: true, screenshotBase64: screenshotBase64, headerBase64: headerBase64, isblack: false, imgBuffer: imgBuffer };
-
-        }
-    }
+    
 
 
 
-
-
-
-
-    /** 
-     * Update current Serverstatus + Studenttstatus (every 5 seconds)
-     */
     async requestUpdate(){
 
         this.timer++   // we use timer to time loops with different intervals without introducing new unneccesary schedulers
@@ -304,137 +226,6 @@ import { switchExamSection } from './switchExamSection.js';
             this.multicastClient.clientinfo.focus = true  // if not connected but still in exam mode you could trigger a focus warning and nobody is able to unlock you
         }
     }
-
-
-
-    async sendScreenshot(){
-        if (this.multicastClient.clientinfo.localLockdown){return}
-        if (this.multicastClient.beaconsLost >= 5 ){return}  // connection lost reset triggered
-        if (this.multicastClient.clientinfo.serverip) {  //check if server connected - get ip
-            
-            let success, screenshotBase64, headerBase64, isblack; // Variablen außerhalb des if-Blocks definieren
-            let imgBuffer = null;
-
-            try {
-                if (platformDispatcher.screenshotAbility){  
-                    //grab screenshot from desktop via screenshot-desktop-wayland (flameshot, imagemagic, etc)
-                    imgBuffer = await screenshot({ format: 'png' });
-                    ({ success, screenshotBase64, headerBase64, isblack, imgBuffer } = await this.processImage(imgBuffer));  // kein imageBuffer mitgegeben bedeutet nutze screenshot-desktop im worker
-                    if (success) { this.screenshotFails = 0;}
-                    else { 
-                        throw new Error("Image processing failed");
-                    }
-                }
-                else {
-                    //grab "screenshot" from appwindow
-                    let currentFocusedMindow = WindowHandler.getCurrentFocusedWindow()  //returns exam window if nothing in focus or main window
-                    if (currentFocusedMindow) {
-                        let result = await currentFocusedMindow.webContents.capturePage()  // this should always work because it's onboard electron
-                        imgBuffer = result.toPNG()
-                    }
-                    ({ success, screenshotBase64, headerBase64, isblack } = await this.processImage(imgBuffer)); // attention processImage  converts buffer to uint8array
-                }
-            }
-            catch(err){
-                this.screenshotFails +=1;
-                log.error(`communicationhandler @ sendScreenshot: processImage failed: ${err}`)
-            }
-
-          
-            
-            /**
-             * MACOS WORKAROUND - switch to pagecapture if no permissons are granted
-             */
-            if (process.platform === "darwin" && this.firstCheckScreenshot && imgBuffer !== null){  //this is for macOS because it delivers a blank background screenshot without permissions. we catch that case with a workaround
-                this.firstCheckScreenshot = false   //never do this again
-                const publicPath = platformDispatcher.publicBase;
-                try{
-                    const { data: { text } }   = await Tesseract.recognize(imgBuffer , 'eng',{ langPath: publicPath, cachePath: this.config.tempdirectory } );
-                    let appWindowVisible = text.includes("Exam")   //check if the word "Exam" can be found in screenshot - otherwise it is most likely a blank desktop - macos quirk
-                    if (!appWindowVisible){
-                        platformDispatcher.screenshotAbility=false;
-                        log.warn("communicationhandler @ sendScreenshot (macos): Please check your screenshot permissions - Switching to PageCapture");
-                    }
-                    else { log.info("communicationhandler @ sendScreenshot (macos): MacOS screenshotpermissions check OK");}
-                }catch(err){  log.error(`communicationhandler @ sendScreenshot (macos): ${err}`); }
-            }
-
-
-            // if something went wrong we do not have a screenshot - so do not update the server
-            if (!screenshotBase64){
-                if(this.screenshotFails > 4 && platformDispatcher.screenshotAbility){ platformDispatcher.screenshotAbility=false; log.error(`communicationhandler @ sendScreenshot: Screenshot error -> Switching to PageCapture`) } 
-                else if (this.screenshotFails > 4 && !platformDispatcher.screenshotAbility){ platformDispatcher.useWorker = false; log.error(`communicationhandler @ sendScreenshot: PageCapture error -> Switching to No-Processing`) }   
-                else if (this.screenshotFails > 4 && !platformDispatcher.screenshotAbility && !platformDispatcher.useWorker){ log.error(`communicationhandler @ sendScreenshot: no screenshot available - please fix your setup`) }
-                return
-            }
-
-
-
-
-            //do not run colorcheck if already locked
-            if ( this.multicastClient.clientinfo.exammode && !this.config.development && this.multicastClient.clientinfo.focus){
-                if (isblack){
-                    this.multicastClient.clientinfo.focus = false
-                    log.info("communicationhandler @ sendScreenshot: Student Screenshot does not fit requirements (allblack)");
-                }   
-            }
-
-            // Berechnen des MD5-Hashs des Base64-Strings
-            let screenshothash = null
-            try { screenshothash = crypto.createHash('md5').update(Buffer.from(screenshotBase64, 'base64')).digest("hex");  }  // Berechnen des MD5-Hashs des Base64-Strings
-            catch(err){ log.error(`communicationhandler @ sendScreenshot: creating hash failed: ${err.message}`)  }
-            
-            const payload = {
-                clientinfo: this.multicastClient.clientinfo,
-                screenshot: screenshotBase64,
-                screenshothash: screenshothash,
-                header: headerBase64,
-                screenshotfilename: this.multicastClient.clientinfo.token + ".jpg",
-            };
-                
-            // send screenshot to server via email fetch request
-            let attempt = 0;
-            const maxRetries = 2;
-            const url = `https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/updatescreenshot`;
-            this.doScreenshotUpdate(url, payload, agent, attempt, maxRetries); // Erste Anfrage starten
-        }
-    }
-
-
-
-
-
-    doScreenshotUpdate(url, payload, agent, attempt = 0, maxRetries) {
-        fetch(url, {
-            method: "POST",
-            cache: "no-store",
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-            agent,
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('communicationhandler @ doScreenshotUpdate: Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data && data.status === "error") {
-                log.error("communicationhandler @ doScreenshotUpdate: Status Error:", data.message);
-            }
-        })
-        .catch(error => {
-            if (attempt < maxRetries - 1) {
-                this.doScreenshotUpdate(url, payload, agent, attempt + 1, maxRetries); // Retry
-            } else if (attempt === maxRetries - 1 && this.multicastClient.beaconsLost === 0) {
-                log.error(`communicationhandler @ doScreenshotUpdate (fetch): ${error.message}`);
-            }
-        });
-    }
-
-
 
 
 
@@ -633,22 +424,23 @@ import { switchExamSection } from './switchExamSection.js';
             this.multicastClient.clientinfo.groups = false;
         }
 
-        //update screenshotinterval
-        if (serverstatus.screenshotinterval || serverstatus.screenshotinterval === 0) { //0 is the same as false or undefined but should be treated as number
+        //update screenshotinterval and push to frontend for screenshot scheduler
+        if (serverstatus.screenshotinterval || serverstatus.screenshotinterval === 0) { //0 is same as false but should be treated as number
             
             if (this.multicastClient.clientinfo.screenshotinterval !== serverstatus.screenshotinterval*1000 ) {
                 log.info("communicationhandler @ processUpdatedServerstatus: ScreenshotInterval changed to", serverstatus.screenshotinterval*1000)
                 this.multicastClient.clientinfo.screenshotinterval = serverstatus.screenshotinterval*1000
-                  if ( serverstatus.screenshotinterval == 0) {
+                if ( serverstatus.screenshotinterval == 0) {
                     log.info("communicationhandler @ processUpdatedServerstatus: ScreenshotInterval disabled!")
                 }
-                // clear old interval and start new interval if set to something bigger than zero
-                this.screenshotScheduler.stop()
-                
-                if (this.multicastClient.clientinfo.screenshotinterval > 0){
-                    this.screenshotScheduler.interval = this.multicastClient.clientinfo.screenshotinterval
-                    this.screenshotScheduler.start()
-                   
+                // Notify frontend so it can start/stop or adjust its screenshot scheduler
+                try {
+                    WindowHandler.mainwindow?.webContents?.send('screenshot-config', {
+                        screenshotinterval: this.multicastClient.clientinfo.screenshotinterval,
+                        serverip: this.multicastClient.clientinfo.serverip
+                    });
+                } catch (e) {
+                    log.debug('communicationhandler @ processUpdatedServerstatus: screenshot-config send', e?.message);
                 }
             }
         }

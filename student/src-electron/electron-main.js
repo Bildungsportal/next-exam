@@ -22,7 +22,7 @@
 import platformDispatcher from './main/scripts/platformDispatcher.js';
 import chalk from 'chalk';
 import log from 'electron-log';
-import { app, BrowserWindow, powerSaveBlocker, nativeTheme, globalShortcut, Tray, Menu, dialog, session} from 'electron'
+import { app, BrowserWindow, powerSaveBlocker, nativeTheme, globalShortcut, Tray, Menu, dialog, session, desktopCapturer } from 'electron'
 import config from './main/config.js';
 import multicastClient from './main/scripts/multicastclient.js'
 import path from 'path'
@@ -362,7 +362,6 @@ app.on('window-all-closed', async () => {  // last window closed – clear stora
     clearInterval( CommHandler.updateStudentIntervall )
     if (WindowHandler.checkWindowInterval?.stop) WindowHandler.checkWindowInterval.stop()
     if (CommHandler.updateScheduler?.stop) CommHandler.updateScheduler.stop()
-    if (CommHandler.screenshotScheduler?.stop) CommHandler.screenshotScheduler.stop()
     if (multicastClient.refreshExamsScheduler?.stop) multicastClient.refreshExamsScheduler.stop()
     WindowHandler.mainwindow = null
 
@@ -419,6 +418,20 @@ app.whenReady()
     nativeTheme.themeSource = 'light'  // prevent theme settings from being adopted from windows
     session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
+    // Provide screen source for getDisplayMedia so frontend always gets full desktop without picker
+    session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+      desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+            try {
+                if (sources.length > 0) callback({ video: sources[0] });
+                else callback(new Error('No screen source available'));
+            } catch (e) {
+                callback(e);
+            }
+        }).catch((err) => {
+            log.warn('main @ setDisplayMediaRequestHandler:', err?.message || err);
+            callback(err);
+        });
+    });
     
     toggleMacOSLockdown(true);
    
