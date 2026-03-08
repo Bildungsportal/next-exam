@@ -223,6 +223,20 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
                 }
                 childProcess.execFile('gsettings', ['set', 'org.gnome.mutter', 'overlay-key', `''`]);
                 childProcess.exec('gsettings set org.gnome.mutter dynamic-workspaces false');
+                // Disable all user extensions so no extension shortcuts or overlays are active
+                childProcess.exec('gsettings set org.gnome.shell disable-user-extensions true');
+                // Backup and disable custom keybindings (user-defined shortcuts in Settings → Keyboard)
+                const customKeybindingsPath = '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings';
+                childProcess.exec(`dconf dump ${customKeybindingsPath}/`, (dumpErr, dumpStdout) => {
+                    if (!dumpErr && dumpStdout != null) configStore.linux.gnomeCustomKeybindingsDconfBackup = dumpStdout.trim();
+                    if (dumpErr) log.debug(`platformrestrictions @ enableRestrictions: dconf dump custom-keybindings failed: ${dumpErr.message}`);
+                    childProcess.execFile('dconf', ['read', `${customKeybindingsPath}`], (readErr, listStdout) => {
+                        if (!readErr && listStdout != null) configStore.linux.gnomeCustomKeybindingsListBackup = listStdout.trim();
+                        childProcess.execFile('dconf', ['write', customKeybindingsPath, '[]'], (writeErr) => {
+                            if (writeErr) log.debug(`platformrestrictions @ enableRestrictions: dconf write custom-keybindings [] failed: ${writeErr.message}`);
+                        });
+                    });
+                });
             } catch (err) {
                 log.error(`platformrestrictions @ enableRestrictions (GNOME shell/mutter/dock): ${err}`);
             }
@@ -326,6 +340,26 @@ export function disableLinuxRestrictions(configStore) {
                     childProcess.execFile('gsettings', ['reset', gnomeShortcutConfig.tilingAssistant.schema, `${binding}`], () => {});
                 }
                 childProcess.execFile('gsettings', ['reset', 'org.gnome.mutter', 'overlay-key']);
+                // Re-enable user extensions
+                childProcess.exec('gsettings set org.gnome.shell disable-user-extensions false');
+                // Restore custom keybindings from backup
+                if (configStore.linux.gnomeCustomKeybindingsDconfBackup != null) {
+                    const customKeybindingsPath = '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings';
+                    try {
+                        const child = childProcess.spawn('dconf', ['load', `${customKeybindingsPath}/`], { stdio: ['pipe', 'ignore', 'ignore'] });
+                        child.stdin.write(configStore.linux.gnomeCustomKeybindingsDconfBackup, () => child.stdin.end());
+                        child.on('error', (err) => log.warn('platformrestrictions @ disableRestrictions: dconf load custom-keybindings failed', err.message));
+                    } catch (err) {
+                        log.warn('platformrestrictions @ disableRestrictions: restore custom-keybindings failed', err.message);
+                    }
+                    if (configStore.linux.gnomeCustomKeybindingsListBackup != null) {
+                        childProcess.execFile('dconf', ['write', customKeybindingsPath, configStore.linux.gnomeCustomKeybindingsListBackup], (writeErr) => {
+                            if (writeErr) log.warn('platformrestrictions @ disableRestrictions: dconf write custom-keybindings list failed', writeErr.message);
+                        });
+                    }
+                    configStore.linux.gnomeCustomKeybindingsDconfBackup = null;
+                    configStore.linux.gnomeCustomKeybindingsListBackup = null;
+                }
             } catch (err) {
                 log.error(`platformrestrictions @ disableRestrictions (GNOME): ${err}`);
             }
