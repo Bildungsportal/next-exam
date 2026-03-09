@@ -309,19 +309,23 @@ for (let i = 0; i<16; i++ ){
 
 
 
- router.get('/registerclient/:servername/:pin/:clientname/:clientip/:hostname/:version/:bipuserid', async function (req, res, next) {
-    const clientname = req.params.clientname
-    const clientip = req.params.clientip
-    const pin = req.params.pin
-    const version = req.params.version
+ router.post('/registerclient/:servername', async function (req, res, next) {
+    const { packet } = req.body || {}
     const servername = req.params.servername
-    const token = `csrf-${crypto.randomUUID()}`
     const mcServer = config.examServerList[servername] // get the multicastserver object
-    const hostname = req.params.hostname
-    const bipuserID = req.params.bipuserid
+    const sessionRef = String(mcServer?.serverinfo?.pin || '')
+    let clientname, clientip, pin, version, hostname, bipuserID
+    try {
+        const payload = await processSecurePayload(packet, sessionRef)
+        ;({ clientname, clientip, pin, version, hostname, bipuserID } = payload || {})
+    } catch (err) {
+        return res.send({ sender: "server", message: "Wrong PIN", status: "error" })
+    }
+    const token = `csrf-${crypto.randomUUID()}`
 
     log.info("control @ registerclient: Client Version:",version)
-    // this needs to change once we reached v1.0 (featurefreeze for stable version)
+
+
     let vteacher = config.version.split('.').slice(0, 2),
     versionteacher = vteacher.join('.'); 
     let vstudent = version.split('.').slice(0, 2),
@@ -330,9 +334,10 @@ for (let i = 0; i<16; i++ ){
     //console.log(versionteacher, versionstudent)
   
     if (!mcServer) {  return res.send({sender: "server", message:t("control.notfound"), status: "error"} )  }
+    if (!pin || !clientname || !clientip || !hostname || !version) { return res.send({sender: "server", message:"Invalid registration payload", status: "error"} ) }
     if (`${versionteacher}` !== versionstudent ) {  return res.send({sender: "server", message:t("control.versionmismatch"), status: "error", version: config.version, versioninfo: config.info} )  }  
     
-    if (mcServer.serverstatus.requireBiP && bipuserID == 'false'){ // req.params come as string.. not nice but simple
+    if (mcServer.serverstatus.requireBiP && (bipuserID === false || bipuserID === 'false' || !bipuserID)){ // allow old string values and strict false
         return res.send({sender: "server", message:t("control.biprequired"), status: "error"} ) 
     }
     try {
@@ -1053,6 +1058,22 @@ function requestSourceAllowed(req,res){
     res.json('Request denied') 
     return false 
 }
+
+async function processSecurePayload(packet, sessionRef) {
+    const PAD = '0'; 
+    const enc = new TextEncoder(); // Initialize text encoder
+    
+    const raw = enc.encode((sessionRef + PAD).padEnd(32, '0').slice(0, 32));
+    const k = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']); // Import key for decryption
+    
+    const iv = new Uint8Array(atob(packet.v).split('').map(c => c.charCodeAt(0))); // Decode IV from Base64
+    const buf = new Uint8Array(atob(packet.d).split('').map(c => c.charCodeAt(0))); // Decode data from Base64
+  
+    const res = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, k, buf); // Decrypt the buffer
+    return JSON.parse(new TextDecoder().decode(res)); // Parse and return JSON
+  }
+
+
 //this is needed by the /oauth and /msauth routes 
 function generateCodeVerifier() {
     return crypto.randomBytes(32).toString('hex');

@@ -897,11 +897,13 @@ class IpcHandler {
 
 
          
-            const url = `https://${serverip}:${this.config.serverApiPort}/server/control/registerclient/${servername}/${pin}/${clientname}/${clientip}/${hostname}/${version}/${bipuserID}`;
+            // Encrypt the registration payload and derive sessionRef from the pin.
+            const payload = { pin, clientname, clientip, hostname, version, bipuserID }
+            const url = `https://${serverip}:${this.config.serverApiPort}/server/control/registerclient/${servername}`;
             const signal = AbortSignal.timeout(8000); // 8000 Millisekunden = 8 Sekunden AbortSignal mit einem Timeout
 
 
-            fetch(url, { method: 'GET', signal })
+            this.prepareSecurePayload(payload, pin).then(packet => fetch(url, { method: 'POST', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ packet }) }))
             .then(response => response.json()) 
             .then(data => {
                 if (data && data.status == "success") {  // registration successfull otherwise data would be "false"
@@ -917,6 +919,16 @@ class IpcHandler {
                    
                     log.info(`ipchandler @ register: successfully registered at ${servername} @ ${serverip} as ${clientname}`);
                     event.returnValue = data;
+
+                    // Notify renderer (main window) so screenshot scheduler can start immediately on successful connect
+                    try {
+                        this.WindowHandler.mainwindow?.webContents?.send('screenshot-config', {
+                            screenshotinterval: this.multicastClient.clientinfo.screenshotinterval,
+                            serverip: this.multicastClient.clientinfo.serverip
+                        });
+                    } catch (e) {
+                        log.debug('ipchandler @ register: screenshot-config send', e?.message);
+                    }
 
                     //create exam folder in workfolder
                     let uniqueexamName = `${servername}-${pin}`
@@ -1205,6 +1217,23 @@ class IpcHandler {
 
 
     }
+
+    async prepareSecurePayload(data, sessionRef) {
+        const PAD = '0'; 
+        const enc = new TextEncoder(); // Initialize text encoder
+        
+        const raw = enc.encode((sessionRef + PAD).padEnd(32, '0').slice(0, 32));
+        const k = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']); // Import key for AES-GCM
+        
+        const iv = crypto.getRandomValues(new Uint8Array(12)); // Generate 12-byte random IV
+        const buf = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, k, enc.encode(JSON.stringify(data))); 
+        
+        return {
+          v: btoa(String.fromCharCode(...iv)), 
+          d: btoa(String.fromCharCode(...new Uint8Array(buf))) 
+        };
+      }
+
 
     compareVersions(versionA, versionB) {
         const partsA = versionA.split('.').map(Number);

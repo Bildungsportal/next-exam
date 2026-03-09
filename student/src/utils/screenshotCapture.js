@@ -149,6 +149,7 @@ let intervalId = null;
 let sharedRef = { stream: null, video: null };
 let consecutiveFailures = 0;
 const MAX_CONSECUTIVE_FAILURES = 5;
+let applyInFlight = false;
 
 /**
  * Acquire display stream once and set up a long-lived video element for frame capture.
@@ -177,6 +178,8 @@ async function acquireDisplayStream() {
  * Stream is acquired once when interval starts and reused for every tick.
  */
 function applyConfig(signalBridge, config) {
+  if (applyInFlight) return;
+  applyInFlight = true;
   if (intervalId) {
     clearInterval(intervalId);
     intervalId = null;
@@ -186,6 +189,7 @@ function applyConfig(signalBridge, config) {
 
   if (!config?.serverip || !(config.screenshotinterval > 0)) {
     log.info('applyConfig: skip (no serverip or interval)', { serverip: config?.serverip, screenshotinterval: config?.screenshotinterval });
+    applyInFlight = false;
     return;
   }
 
@@ -195,6 +199,7 @@ function applyConfig(signalBridge, config) {
   acquireDisplayStream().then((acquired) => {
     if (!acquired) {
       log.warn('applyConfig: could not acquire stream, interval not started');
+      applyInFlight = false;
       return;
     }
     sharedRef.stream = acquired.stream;
@@ -229,6 +234,7 @@ function applyConfig(signalBridge, config) {
         });
       });
     }, ms);
+    applyInFlight = false;
   });
 }
 
