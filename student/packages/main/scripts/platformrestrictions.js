@@ -52,7 +52,35 @@ let configStore = {
 };
 
 // list of apps we do not want to run in background
-const appsToClose = ['whatsapp','Google Chrome', 'chrome', 'google-chrome', 'Microsoft Edge', 'msedge', 'firefox', 'safari', 'brave', 'opera', 'chatgpt', 'ChatGPT', 'NortonSecurity', 'NAV', 'Teams', 'ms-teams', 'zoom.us', 'Microsoft Teams', 'discord', 'zoom', 'teams', 'teamviewer', 'skypeforlinux', 'skype', 'anydesk'];
+const appsToClose = [
+    'Grammarly',
+    'GeoGebra',
+    'whatsapp',
+    'Google Chrome',
+    'chrome',
+    'google-chrome',
+    'Microsoft Edge',
+    'msedge',
+    'firefox',
+    'safari',
+    'brave',
+    'opera',
+    'chatgpt',
+    'ChatGPT',
+    'NortonSecurity',
+    'NAV',
+    'Teams',
+    'ms-teams',
+    'zoom.us',
+    'Microsoft Teams',
+    'discord',
+    'zoom',
+    'teams',
+    'teamviewer',
+    'skypeforlinux',
+    'skype',
+    'anydesk'
+];
 
 async function enableRestrictions(winhandler) {
     if (config.development) { return; }
