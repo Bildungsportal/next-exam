@@ -938,7 +938,8 @@ class IpcHandler {
             accessToken: conf.accessToken,
             version: conf.version,
             info: conf.info,
-            buildforWEB: conf.buildforWEB
+            buildforWEB: conf.buildforWEB,
+            exammodes: conf.exammodes
           };
         return configCopy
     }
