@@ -532,7 +532,7 @@ class WindowHandler {
                     await this.sleep(500)
                     await this.initBlockWindows()
                     this.examwindow.moveTop()
-                    //this.examwindow.focus()
+                    this.examwindow.focus()
 
                     // probably not needed because we disable missioncontrol anyways - seems to interfere with kiosk mode on macos (again)
                     // this.examwindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });

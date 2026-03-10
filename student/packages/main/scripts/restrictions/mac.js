@@ -25,6 +25,7 @@ function onMacRestrictionSignal(signalName) {
         currentWinhandler.examwindow.setKiosk(true);
         currentWinhandler.examwindow.show();
         currentWinhandler.examwindow.focus();
+        toggleMacOSLockdown(true) 
     }
 }
 
@@ -55,6 +56,7 @@ export function enableMacRestrictions(winhandler, appsToClose) {
         childProcess.exec(`pkill -9 -f "${app}"`, (error, stderr, stdout) => {});
     });
 
+    
     // workspace/space switch and lock/unlock monitoring (macOS only)
     try {
         workspaceNotificationId = systemPreferences.subscribeWorkspaceNotification('NSWorkspaceActiveSpaceDidChangeNotification', () => onMacRestrictionSignal('desktop/space switch'));
