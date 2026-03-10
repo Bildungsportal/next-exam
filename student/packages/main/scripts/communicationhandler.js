@@ -626,6 +626,7 @@ const __dirname = import.meta.dirname;
                                 disableRestrictions(WindowHandler.examwindow)
                                 await this.sleep(500)
                             }
+                            
                             WindowHandler.examwindow = null;
                             this.startExam(serverstatus);
                         });
