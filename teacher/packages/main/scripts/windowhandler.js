@@ -128,7 +128,7 @@ class WindowHandler {
 
     createWindow() {
         const primaryDisplay = screen.getPrimaryDisplay();
-        const { width, height } = { width: 800, height: 800 };
+        const { width, height } = { width: 1200, height: 800 };
 
         this.mainwindow = new BrowserWindow({
             title: 'Next-Exam-Teacher',
