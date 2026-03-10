@@ -320,14 +320,14 @@ for (let i = 0; i<16; i++ ){
     const hostname = req.params.hostname
     const bipuserID = req.params.bipuserid
 
-    log.info("control @ registerclient: Client Version:",version)
+    // log.info("control @ registerclient: Client Version:",version)
     // this needs to change once we reached v1.0 (featurefreeze for stable version)
     let vteacher = config.version.split('.').slice(0, 2),
     versionteacher = vteacher.join('.'); 
     let vstudent = version.split('.').slice(0, 2),
     versionstudent = vstudent.join('.'); 
 
-    console.log(versionteacher, versionstudent)
+    //console.log(versionteacher, versionstudent)
   
     if (!mcServer) {  return res.send({sender: "server", message:t("control.notfound"), status: "error"} )  }
     if (`${versionteacher}` !== versionstudent ) {  return res.send({sender: "server", message:t("control.versionmismatch"), status: "error", version: config.version, versioninfo: config.info} )  }  
