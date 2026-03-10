@@ -537,7 +537,7 @@ class WindowHandler {
                     // probably not needed because we disable missioncontrol anyways - seems to interfere with kiosk mode on macos (again)
                     // this.examwindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
-                    if (!platformDispatcher.isWayland){ this.checkWindowInterval.start() } // constantly check if the active window is the examwindow - if not, bring it to front
+                    if (process.platform == 'win32'){ this.checkWindowInterval.start() } // constantly check if the active window is the examwindow - if not, bring it to front
                     await enableRestrictions(this)  // disable keyboard shortcuts etc.
                     
                     await this.sleep(1000)  // do not set blur listener too early
