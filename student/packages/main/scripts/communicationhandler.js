@@ -621,7 +621,11 @@ const __dirname = import.meta.dirname;
                             })
                         } 
                         //close exam window and reopen it with the new exam section
-                        WindowHandler.examwindow.once('closed', () => {
+                        WindowHandler.examwindow.once('closed', async () => {
+                            if (process.platform == 'darwin'){
+                                disableRestrictions(WindowHandler.examwindow)
+                                await this.sleep(500)
+                            }
                             WindowHandler.examwindow = null;
                             this.startExam(serverstatus);
                         });

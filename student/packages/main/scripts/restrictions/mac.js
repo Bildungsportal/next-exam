@@ -83,12 +83,14 @@ export function disableMacRestrictions() {
     if (workspaceNotificationId != null) {
         try { systemPreferences.unsubscribeWorkspaceNotification(workspaceNotificationId); } catch (err) { log.error('platformrestrictions @ mac: unsubscribeWorkspaceNotification', err); }
         workspaceNotificationId = null;
+        log.info('platformrestrictions @ mac: workspaceNotificationId disabled');
     }
     powerMonitor.off('lock-screen', lockScreenHandler);
     powerMonitor.off('unlock-screen', unlockScreenHandler);
     if (logStreamProcess) {
         logStreamProcess.kill();
         logStreamProcess = null;
+        log.info('platformrestrictions @ mac: logStreamProcess disabled');
     }
 }
 
