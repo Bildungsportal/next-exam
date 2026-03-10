@@ -478,7 +478,7 @@ async function getWlanInfoMacOS() {
         } catch (airportError) {
             // Fallback to networksetup - only log if it's a real error (not just no permission)
             if (airportError.code !== 'ENOENT' && airportError.message && !airportError.message.includes('permission')) {
-                log.error('getWlanInfoMacOS: airport command failed:', airportError.message || airportError);
+                log.warn('getWlanInfoMacOS: airport command failed');
             }
         }
         
