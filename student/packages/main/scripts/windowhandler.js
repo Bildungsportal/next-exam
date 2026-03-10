@@ -532,7 +532,7 @@ class WindowHandler {
                     await this.sleep(500)
                     await this.initBlockWindows()
                     this.examwindow.moveTop()
-                    this.examwindow.focus()
+                    //this.examwindow.focus()
 
                     // probably not needed because we disable missioncontrol anyways - seems to interfere with kiosk mode on macos (again)
                     // this.examwindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
@@ -1032,7 +1032,7 @@ class WindowHandler {
 
         log.info("windowhandler @ blurevent: student tried to leave exam window")
 
-        if (process.platform !== 'linux'){
+        if (process.platform == 'win32'){
             await this.windowTracker()  //checks if new focus window is allowed
             log.info("windowtracker check done...")
         }
