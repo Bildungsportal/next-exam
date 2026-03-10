@@ -37,7 +37,7 @@ const unlockScreenHandler = () => onMacRestrictionSignal('unlock-screen');
  * @param {object} winhandler - must have winhandler.examwindow
  * @param {string[]} appsToClose - app names to kill
  */
-export function enableMacRestrictions(winhandler, appsToClose) {
+export async function enableMacRestrictions(winhandler, appsToClose) {
     const { TouchBarLabel, TouchBarSpacer } = TouchBar;
     const textlabel = new TouchBarLabel({ label: "Next-Exam" });
     const touchBar = new TouchBar({
@@ -52,11 +52,15 @@ export function enableMacRestrictions(winhandler, appsToClose) {
 
     childProcess.exec('pbcopy < /dev/null');
 
-    appsToClose.forEach(app => {
-        childProcess.exec(`pkill -9 -f "${app}"`, (error, stderr, stdout) => {});
-    });
+    const killPromises = appsToClose.map(app => new Promise((resolve) => {
+        childProcess.exec(`pkill -9 -f "${app}"`, () => {
+            resolve();
+        });
+    }));
 
-    
+    await Promise.all(killPromises);
+
+
     // workspace/space switch and lock/unlock monitoring (macOS only)
     try {
         workspaceNotificationId = systemPreferences.subscribeWorkspaceNotification('NSWorkspaceActiveSpaceDidChangeNotification', () => onMacRestrictionSignal('desktop/space switch'));

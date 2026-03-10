@@ -106,7 +106,7 @@ async function enableRestrictions(winhandler) {
     }
 
     if (platformDispatcher.platform === 'darwin') {
-        enableMacRestrictions(winhandler, appsToClose);
+        await enableMacRestrictions(winhandler, appsToClose);
     }
 }
 
