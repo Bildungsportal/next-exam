@@ -106,7 +106,8 @@ export function toggleMacOSLockdown(enable) {
         const gestureCommands = [
             `defaults write com.apple.dock showMissionControlGestureEnabled -bool false`,
             `defaults write com.apple.dock showAppExposeGestureEnabled -bool false`,
-            `defaults write com.apple.dock showDesktopGestureEnabled -bool false`
+            `defaults write com.apple.dock showDesktopGestureEnabled -bool false`,
+            `defaults write NSGlobalDomain AppleEnableSwipeNavigateWithScrolls -bool false`
         ].join('; ');
 
         const fullCommand = `
@@ -127,7 +128,8 @@ export function toggleMacOSLockdown(enable) {
         const gestureCommands = [
             `defaults write com.apple.dock showMissionControlGestureEnabled -bool true`,
             `defaults write com.apple.dock showAppExposeGestureEnabled -bool true`,
-            `defaults write com.apple.dock showDesktopGestureEnabled -bool true`
+            `defaults write com.apple.dock showDesktopGestureEnabled -bool true`,
+            `defaults write NSGlobalDomain AppleEnableSwipeNavigateWithScrolls -bool true`
         ].join('; ');
 
         const fullCommand = `

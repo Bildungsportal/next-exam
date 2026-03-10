@@ -20,7 +20,7 @@
 
             <!-- send button -->
             <li class="nav-item" v-if="!localLockdown">
-                <div class="nav-link btn btn-warning btn-sm unstyled unstyled-send" id="send-button" @click="printBase64()" :title="$t('editor.send')">
+                <div class="nav-link btn btn-success btn-sm unstyled unstyled-send" id="send-button" @click="printBase64()" :title="$t('editor.send')">
                     <img src="/src/assets/img/svg/document-send.svg" class="white"> <span class="ms-2 send-label">{{ $t('editor.send') }}</span>
                  </div>
             </li>

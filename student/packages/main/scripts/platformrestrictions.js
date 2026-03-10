@@ -79,7 +79,8 @@ const appsToClose = [
     'teamviewer',
     'skypeforlinux',
     'skype',
-    'anydesk'
+    'anydesk',
+    'claude'
 ];
 
 async function enableRestrictions(winhandler) {

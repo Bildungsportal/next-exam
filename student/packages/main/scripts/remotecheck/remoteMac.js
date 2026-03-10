@@ -6,7 +6,7 @@ const execAsync = promisify(exec)
 const suspiciousKeywords = [
   'teamviewer', 'anydesk', 'rustdesk', 'vnc', 'zoom', 'discord', 'skype','com.microsoft.teams',
   'chromeremotedesktop', 'splashtop', 'dwagent',
-  'logmein', 'screenconnect', 'zoho', 'parallels','chatgpt',
+  'logmein', 'screenconnect', 'zoho', 'parallels','chatgpt','claude',
   'remoteutilities', 'g2comm', 'pcvisit', 'pcvisit_support', 'pcvisit_customer', 'support 15'
 ]
 
