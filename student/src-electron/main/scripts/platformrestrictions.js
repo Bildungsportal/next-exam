@@ -79,7 +79,8 @@ const appsToClose = [
     'teamviewer',
     'skypeforlinux',
     'skype',
-    'anydesk'
+    'anydesk',
+    'claude'
 ];
 
 
@@ -87,7 +88,7 @@ const appsToClose = [
 
 
 
-async function enableRestrictions(winhandler) {
+export async function enableRestrictions(winhandler) {
     if (config.development) { return; }
 
     log.info("platformrestrictions @ enableRestrictions: enabling platform restrictions");
@@ -110,11 +111,11 @@ async function enableRestrictions(winhandler) {
     }
 
     if (platformDispatcher.platform === 'darwin') {
-        enableMacRestrictions(winhandler, appsToClose);
+        await enableMacRestrictions(winhandler, appsToClose);
     }
 }
 
-function disableRestrictions() {
+export async function disableRestrictions() {
     if (config.development) { return; }
     log.info("platformrestrictions @ disableRestrictions: removing restrictions...");
 

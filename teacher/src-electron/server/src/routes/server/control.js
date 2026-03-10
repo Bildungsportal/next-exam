@@ -323,7 +323,7 @@ for (let i = 0; i<16; i++ ){
     }
     const token = `csrf-${crypto.randomUUID()}`
 
-    log.info("control @ registerclient: Client Version:",version)
+    //log.info("control @ registerclient: Client Version:",version)
 
 
     let vteacher = config.version.split('.').slice(0, 2),
