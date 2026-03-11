@@ -253,7 +253,7 @@ class PlatformDispatcher {
       const out = execSync('echo $XDG_CURRENT_DESKTOP', { shell: '/bin/bash', encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim().toLowerCase();
       return out.includes('unity');
     } catch (err) {
-      log.warn("platformDispatcher @ _isUNITY: no data", err);
+      this.messages.push("platformDispatcher @ _isUNITY: no data");
       return false;
     }
   }
