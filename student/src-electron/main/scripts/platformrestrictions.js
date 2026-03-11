@@ -145,4 +145,4 @@ function toggleMacOSLockdown(enable) {
     toggleMacOSLockdownImpl(enable);
 }
 
-export { enableRestrictions, disableRestrictions, toggleMacOSLockdown };
+export {  toggleMacOSLockdown };
