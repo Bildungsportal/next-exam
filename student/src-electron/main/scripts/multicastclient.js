@@ -67,7 +67,8 @@ class MulticastClient {
      */
     init (gateway) {
         this.gateway = gateway
-        this.client = dgram.createSocket('udp4')  // moving this here will allow to respawn it if binding fails
+        this.client = dgram.createSocket({ type: 'udp4', reuseAddr: true }) // reuseAddr ist wichtig für Windows
+
 
         this.client.on('error', (err) => {
             log.error(`multicastclient @ init: UDP MC Client error:\n${err.stack}`);
@@ -75,22 +76,26 @@ class MulticastClient {
         });
 
         try {
-            // Bind auf 0.0.0.0, damit wir auf allen Interfaces lauschen; Interface-Auswahl erfolgt über addMembership()
-            this.client.bind(this.PORT, '0.0.0.0',  () => { 
-                this.client.setBroadcast(true)
-                this.client.setMulticastTTL(128); 
+
+            // Auf Windows binden wir direkt an die gewählte Host-IP statt an 0.0.0.0 //
+            const bindAddr = process.platform === 'win32' ? config.hostip : '0.0.0.0';
+
+            this.client.bind(this.PORT, bindAddr, () => {
                 try {
-                    // join multicast group auf der tatsächlich ermittelten Interface-IP
+                    this.client.setBroadcast(true);
+                    this.client.setMulticastTTL(128);
+                    
+                    // Explizites Joinen auf dem vom User gewählten Interface //
                     this.client.addMembership(this.MULTICAST_ADDR, config.hostip);
-                    log.info(`multicastclient @ init: joined ${this.MULTICAST_ADDR} on iface ${config.hostip}`);
+                    
+                    log.info(`UDP MC Client bound to ${bindAddr}:${this.PORT} and joined ${this.MULTICAST_ADDR}`);
                 } catch (e) {
-                    log.error(`multicastclient @ init: addMembership failed for ${this.MULTICAST_ADDR} on ${config.hostip}`, e);
+                    log.error(`Multicast Join failed: ${e.message}`);
                 }
-                if (!this.gateway) {
-                    log.warn("multicastclient @ init: No default gateway detected – joined multicast group on local interface");
-                }
-                log.info(`multicastclient @ init: UDP MC Client listening on 0.0.0.0:${this.client.address().port} (hostip=${config.hostip})`)
-            })
+            });
+
+
+
         }
         catch (e){ 
             log.error(`mulitcastclient @ init: ${e}`) 
