@@ -5,8 +5,7 @@
 
 import { isElectronWindow } from '../types/platform';
 
-const PREFIX = '[screenshotCapture]';
-const log = { info: (...a) => console.log(PREFIX, ...a), warn: (...a) => console.warn(PREFIX, ...a), error: (...a) => console.error(PREFIX, ...a) };
+const log = { info: (...a) => console.log(...a), warn: (...a) => console.warn(...a), error: (...a) => console.error(...a) };
 
 const SCREENSHOT_MAX_WIDTH = 1024;
 const HEADER_CROP_HEIGHT = 150;
@@ -35,16 +34,16 @@ async function hashArrayBuffer(buffer) {
  */
 async function requestCapturePermission() {
   if (!navigator.mediaDevices?.getDisplayMedia) {
-    log.warn('requestCapturePermission: getDisplayMedia not available');
+    log.warn('screenshotCapture @ requestCapturePermission: getDisplayMedia not available');
     return;
   }
   try {
-    log.info('requestCapturePermission: requesting…');
+    log.info('screenshotCapture @ requestCapturePermission: requesting…');
     const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
     stream.getTracks().forEach((t) => t.stop());
-    log.info('requestCapturePermission: OK (permission granted)');
+    log.info('screenshotCapture @ requestCapturePermission: OK (permission granted)');
   } catch (err) {
-    log.warn('requestCapturePermission: failed', err?.message);
+    log.warn('screenshotCapture @ requestCapturePermission: getDisplayMedia failed', err?.message);
   }
 }
 
@@ -102,7 +101,7 @@ async function captureAndUpload(signalBridge, config, sharedRef) {
   try {
     const result = captureFrameFromVideo(video);
     if (!result) {
-      log.warn('captureFrameFromVideo returned null');
+      log.warn('screenshotCapture @ captureAndUpload: captureFrameFromVideo returned null');
       return false;
     }
     const { screenshotBase64, headerBase64, isblack } = result;
@@ -126,12 +125,12 @@ async function captureAndUpload(signalBridge, config, sharedRef) {
       body: JSON.stringify(payload),
     });
     if (!res.ok) {
-      log.warn('upload response', res.status, res.statusText);
+      log.warn('screenshotCapture @ captureAndUpload: upload response', res.status, res.statusText);
       return false;
     }
     return true;
   } catch (err) {
-    log.error('capture/upload error', err?.message);
+    log.error('screenshotCapture @ captureAndUpload: capture/upload error', err?.message);
     return false;
   }
 }
@@ -168,7 +167,7 @@ async function acquireDisplayStream() {
     });
     return { stream, video };
   } catch (err) {
-    log.warn('getDisplayMedia failed', err?.message);
+    log.warn('screenshotCapture @ acquireDisplayStream: getDisplayMedia failed', err?.message);
     return null;
   }
 }
@@ -188,17 +187,17 @@ function applyConfig(signalBridge, config) {
   consecutiveFailures = 0;
 
   if (!config?.serverip || !(config.screenshotinterval > 0)) {
-    log.info('applyConfig: skip (no serverip or interval)', { serverip: config?.serverip, screenshotinterval: config?.screenshotinterval });
+    log.info('screenshotCapture @ applyConfig: skip (no serverip or interval)', { serverip: config?.serverip, screenshotinterval: config?.screenshotinterval });
     applyInFlight = false;
     return;
   }
 
   const ms = config.screenshotinterval;
-  log.info('applyConfig: acquiring stream once, then starting interval', ms, 'ms');
+  log.info('screenshotCapture @ applyConfig: acquiring stream once, then starting interval', ms, 'ms');
 
   acquireDisplayStream().then((acquired) => {
     if (!acquired) {
-      log.warn('applyConfig: could not acquire stream, interval not started');
+      log.warn('screenshotCapture @ applyConfig: could not acquire stream, interval not started');
       applyInFlight = false;
       return;
     }
@@ -228,7 +227,7 @@ function applyConfig(signalBridge, config) {
               if (intervalId) clearInterval(intervalId);
               intervalId = null;
               stopSharedStream(sharedRef);
-              log.warn('screenshot capture paused after', MAX_CONSECUTIVE_FAILURES, 'consecutive failures (will resume on next screenshot-config)');
+              log.warn('screenshotCapture @ applyConfig: screenshot capture paused after', MAX_CONSECUTIVE_FAILURES, 'consecutive failures (will resume on next screenshot-config)');
             }
           }
         });
@@ -243,16 +242,16 @@ function applyConfig(signalBridge, config) {
  */
 export function initScreenshotScheduler(signalBridge) {
   if (!isElectronWindow(window)) {
-    log.info('init: not Electron, skip');
+    log.info('screenshotCapture @ initScreenshotScheduler: not Electron, skip');
     return;
   }
-  log.info('init: registering screenshot-config listener and fetching getScreenshotConfig');
+  log.info('screenshotCapture @ initScreenshotScheduler: registering screenshot-config listener and fetching getScreenshotConfig');
 
   // Request capture permission once so it is already granted when interval starts after server connect
   requestCapturePermission();
 
   signalBridge.on('screenshot-config', (_event, config) => {
-    //log.info('screenshot-config event', config);
+    //log.info('screenshotCapture @ initScreenshotScheduler: screenshot-config event', config);
     applyConfig(signalBridge, config);
   });
 
@@ -260,9 +259,9 @@ export function initScreenshotScheduler(signalBridge) {
     if (config?.serverip && config.screenshotinterval > 0 && !config.clientinfo?.localLockdown) {
       applyConfig(signalBridge, config);
     } else {
-      log.info('init: not starting interval yet (need serverip, interval > 0, no localLockdown)');
+      log.info('screenshotCapture @ initScreenshotScheduler: not starting interval yet (need serverip, interval > 0, no localLockdown)');
     }
   }).catch((err) => {
-    log.error('getScreenshotConfig failed', err?.message);
+    log.error('screenshotCapture @ initScreenshotScheduler: getScreenshotConfig failed', err?.message);
   });
 }
