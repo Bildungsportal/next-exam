@@ -34,11 +34,12 @@ const config = {
         editor: true,
         math: true,
         microsoft365: true,
-        activesheets: true
+        activesheets: true,
+        localVM: true
     },
 
     version: '2.0.0.1',
-    buildDate: '20260312',
+    buildDate: '20260311',
     buildNumber: '1',
     info: 'Release'
 }

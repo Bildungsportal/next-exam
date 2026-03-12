@@ -163,7 +163,6 @@ export default defineConfig(( ctx: any ) => {
       rollupOptions: {
         external: [
           'electron',
-          'sharp',
           ...builtinModules,
           ...Object.keys(pkg.dependencies || {}),
         ],
@@ -297,18 +296,7 @@ export default defineConfig(( ctx: any ) => {
         afterPack: 'scripts/afterpack.js',
         asarUnpack: [
           'public/**/*',
-          'node_modules/screenshot-desktop-wayland/lib/win32',
           'node_modules/get-windows/**/*',
-          'node_modules/@img/**/*',
-          'node_modules/sharp/**/*',
-          'node_modules/detect-libc/**/*',
-          'node_modules/semver/**/*',
-          'node_modules/color/**/*',
-          'node_modules/color-name/**/*',
-          'node_modules/color-string/**/*',
-          'node_modules/color-convert/**/*',
-          'node_modules/simple-swizzle/**/*',
-          'node_modules/is-arrayish/**/*',
         ],
         directories: { output: `../release/${version}.${buildNumber}_${artifactDate}` },
         compression: 'normal',

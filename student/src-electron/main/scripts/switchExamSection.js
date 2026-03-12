@@ -129,7 +129,13 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
                 })
             } 
             //close exam window and reopen it with the new exam section
-            WindowHandler.examwindow.once('closed', () => {
+            WindowHandler.examwindow.once('closed', async () => {
+                if (process.platform == 'darwin'){
+                    await disableRestrictions()
+                    await CommunicationHandler.sleep(500)
+                }
+
+
                 WindowHandler.examwindow = null;
                 CommunicationHandler.startExam(serverstatus);
             });

@@ -220,6 +220,7 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 import {isElectronWindow} from "../types/platform.ts";
 import config from '../../src-electron/main/config.js'
 import {SignalBridge} from '../utils/signalBridge.js'
+import { initScreenshotScheduler } from '../utils/screenshotCapture.js'
 import type Exam from '../types/api.d.ts'
 
 
@@ -1264,6 +1265,8 @@ export default {
             this.fetchBiPData(token)
         });
 
+        // Screenshot scheduler only in main window (this page); exam window never loads student.vue
+        initScreenshotScheduler(signalBridge);
 
         // Set locale to system locale or fallback to 'en'
         const systemLocale = navigator.language.split('-')[0] // e.g. "de" from "de-DE"

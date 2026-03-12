@@ -36,6 +36,8 @@ import { updateSystemTray } from './traymenu.js';
 import { ensureNetworkOrReset } from './testpermissionsMac.js';
 import { getWlanInfo } from './getwlaninfo.js';
 import { switchExamSection } from './switchExamSection.js';
+import { startProxy, stopProxy } from './vncproxy.js';
+import { isVirtualMachine } from './vmDetection.js';
 
 const __dirname = import.meta.dirname;
 
@@ -114,10 +116,21 @@ class IpcHandler {
                 .catch(err => log.error(`ipchandler @ getExamMaterials: ${err}`));
                 return examMaterials
             }
-
-
-           
         }) 
+
+        ipcMain.handle('start-proxy', async (event, payload) => {
+            try {
+                const { host, port } = payload || {};
+                if (!host || !port) {
+                    throw new Error('Invalid proxy target');
+                }
+                const result = await startProxy({ host, port });
+                return { port: result };
+            } catch (err) {
+                log.error('ipchandler @ start-proxy:', err);
+                return { port: null, error: err.message };
+            }
+        });
 
         // Helper function for common exception URLs (used by all exam modes)
         const checkCommonExceptions = (targetUrl) => {
@@ -365,7 +378,7 @@ class IpcHandler {
          *  Start LOCAL Lockdown
          */
         ipcMain.on('locallockdown', (event, args) => {
-            log.info("ipchandler @ locallockdown: locking down client without teacher connection")
+            log.info("ipchandler @ locallockdown: locking down client without teacher connection", args)
             
             let serverstatus = {
                 exammode: true,
@@ -404,6 +417,9 @@ class IpcHandler {
                 }
             }
             
+            // make serverstatus available for getinfoasync() so the renderer (editor) sees password and examSections
+            this.multicastClient.serverstatus = serverstatus;
+
             this.multicastClient.clientinfo.name = args.clientname;
             this.multicastClient.clientinfo.serverip = "127.0.0.1";
             this.multicastClient.clientinfo.servername = "localhost";
@@ -789,6 +805,17 @@ class IpcHandler {
             }   
         })
 
+        // Screenshot config for frontend scheduler (serverip, port, clientinfo, interval)
+        ipcMain.handle('getScreenshotConfig', async () => {
+            const ci = this.multicastClient.clientinfo;
+            return {
+                serverip: ci.serverip,
+                serverApiPort: this.config.serverApiPort,
+                clientinfo: { ...ci },
+                screenshotinterval: ci.screenshotinterval
+            };
+        })
+
         // Student-initiated section switch when allowSectionSwitch is true; always uses current serverstatus and section number
         ipcMain.handle('switch-exam-section', async (event, sectionNumber) => {
             const serverstatus = this.WindowHandler.examwindow?.serverstatus;
@@ -870,11 +897,13 @@ class IpcHandler {
 
 
          
-            const url = `https://${serverip}:${this.config.serverApiPort}/server/control/registerclient/${servername}/${pin}/${clientname}/${clientip}/${hostname}/${version}/${bipuserID}`;
+            // Encrypt the registration payload and derive sessionRef from the pin.
+            const payload = { pin, clientname, clientip, hostname, version, bipuserID }
+            const url = `https://${serverip}:${this.config.serverApiPort}/server/control/registerclient/${servername}`;
             const signal = AbortSignal.timeout(8000); // 8000 Millisekunden = 8 Sekunden AbortSignal mit einem Timeout
 
 
-            fetch(url, { method: 'GET', signal })
+            this.prepareSecurePayload(payload, pin).then(packet => fetch(url, { method: 'POST', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ packet }) }))
             .then(response => response.json()) 
             .then(data => {
                 if (data && data.status == "success") {  // registration successfull otherwise data would be "false"
@@ -890,6 +919,16 @@ class IpcHandler {
                    
                     log.info(`ipchandler @ register: successfully registered at ${servername} @ ${serverip} as ${clientname}`);
                     event.returnValue = data;
+
+                    // Notify renderer (main window) so screenshot scheduler can start immediately on successful connect
+                    try {
+                        this.WindowHandler.mainwindow?.webContents?.send('screenshot-config', {
+                            screenshotinterval: this.multicastClient.clientinfo.screenshotinterval,
+                            serverip: this.multicastClient.clientinfo.serverip
+                        });
+                    } catch (e) {
+                        log.debug('ipchandler @ register: screenshot-config send', e?.message);
+                    }
 
                     //create exam folder in workfolder
                     let uniqueexamName = `${servername}-${pin}`
@@ -1142,7 +1181,7 @@ class IpcHandler {
         })
      
         ipcMain.on('get-cpu-info', (event) => {
-            event.returnValue = this.isVirtualMachine()
+            event.returnValue = isVirtualMachine()
         });
 
 
@@ -1179,92 +1218,22 @@ class IpcHandler {
 
     }
 
-    isVirtualMachine() {
-        const VENDORS = /(oracle|virtualbox|vmware|kvm|qemu|xen|innotek|parallels|microsoft|hyper-v|bhyve|red hat|redhat|bochs|bhyve|openstack|cloud|amazon|google|azure)/i // common VM ids
-        const warnAndReturn = reason => {
-            log.warn(`ipchandler @ isVirtualMachine: Verdacht auf VM - ${reason}`)
-            return true
-        }
+    async prepareSecurePayload(data, sessionRef) {
+        const PAD = '0'; 
+        const enc = new TextEncoder(); // Initialize text encoder
+        
+        const raw = enc.encode((sessionRef + PAD).padEnd(32, '0').slice(0, 32));
+        const k = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']); // Import key for AES-GCM
+        
+        const iv = crypto.getRandomValues(new Uint8Array(12)); // Generate 12-byte random IV
+        const buf = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, k, enc.encode(JSON.stringify(data))); 
+        
+        return {
+          v: btoa(String.fromCharCode(...iv)), 
+          d: btoa(String.fromCharCode(...new Uint8Array(buf))) 
+        };
+      }
 
-        // ---------- Linux ----------
-        if (process.platform === 'linux') {
-          try {
-            const cpuinfo = readFileSync('/proc/cpuinfo', 'utf8')      // CPU flags
-            if (/^flags.*\bhypervisor\b/m.test(cpuinfo)) return warnAndReturn('hypervisor flag in /proc/cpuinfo')
-          } catch {}
-      
-          try {
-            const files = [
-              '/sys/class/dmi/id/sys_vendor',
-              '/sys/class/dmi/id/product_name',
-              '/sys/class/dmi/id/product_version',
-              '/sys/class/dmi/id/board_vendor',
-              '/sys/class/dmi/id/bios_vendor',
-              '/sys/class/dmi/id/chassis_vendor'
-            ]
-            const dmi = files.map(p => { try { return readFileSync(p, 'utf8') } catch { return '' } }).join(' ')
-            if (VENDORS.test(dmi)) return warnAndReturn('DMI-Vendor-Match')
-          } catch {}
-      
-          try {
-            execSync('systemd-detect-virt -q', { stdio: 'ignore' })    // exit 0 => VM
-            return warnAndReturn('systemd-detect-virt meldet Virtualisierung')
-          } catch {}
-
-
-          // Prüfe auf QEMU-Prozesse
-          try {
-            const ps = execSync('ps aux | grep -i qemu', { encoding: 'utf8' })
-            if (ps.includes('qemu') && !ps.includes('grep')) {
-              return warnAndReturn('QEMU-Prozess läuft')
-            }
-          } catch {}
-        }
-
-        // ---------- Windows ----------
-        if (process.platform === 'win32') {
-            try {
-            const ps =
-                'powershell -NoProfile -Command "(Get-CimInstance Win32_ComputerSystem | ForEach-Object { $_.Manufacturer, $_.Model }) -join \' \'"'
-            const basic = execSync(ps, { encoding: 'utf8' }).trim()    // manufacturer + model
-            if (VENDORS.test(basic)) return warnAndReturn('Windows Hersteller/Modell passt zu VM')
-            } catch {}
-
-            try {
-            const psRobust =
-                'powershell -NoProfile -Command "$o=@();' +
-                'try{$cs=Get-CimInstance Win32_ComputerSystem;$o+=@($cs.Manufacturer,$cs.Model)}catch{};' +
-                'try{$bb=Get-CimInstance Win32_BaseBoard;$o+=@($bb.Manufacturer,$bb.Product)}catch{};' +
-                'try{$bios=Get-CimInstance Win32_BIOS;$o+=@($bios.SMBIOSBIOSVersion)}catch{};' +
-                'try{$csp=Get-CimInstance Win32_ComputerSystemProduct;$o+=@($csp.Name)}catch{};' +
-                'Write-Output (($o -join \' \').Trim())"'
-            const robust = execSync(psRobust, { encoding: 'utf8' }).trim()
-            if (VENDORS.test(robust)) return warnAndReturn('Windows Hersteller/BIOS-Infos passen zu VM')
-            } catch {}
-
-            // Zusätzliche QEMU-Erkennung für Windows
-            try {
-                const qemuProcesses = execSync('tasklist /FI "IMAGENAME eq qemu*"', { encoding: 'utf8' })
-                if (qemuProcesses.includes('qemu')) return warnAndReturn('QEMU-Prozess unter Windows')
-            } catch {}
-        }
-
-
-         // ---------- macOS ----------
-        if (process.platform === 'darwin') {
-            try {
-            const hwModel = execSync('sysctl -n hw.model', { encoding: 'utf8' })
-            if (/^virtual/i.test(hwModel) || VENDORS.test(hwModel)) return warnAndReturn('macOS Hardwaremodell deutet auf VM')
-            } catch {}
-
-            try {
-            const sp = execSync('system_profiler SPHardwareDataType', { encoding: 'utf8' })
-            if (VENDORS.test(sp)) return warnAndReturn('macOS system_profiler meldet VM-Vendor')
-            } catch {}
-        }
-
-        return false       
-    }
 
     compareVersions(versionA, versionB) {
         const partsA = versionA.split('.').map(Number);

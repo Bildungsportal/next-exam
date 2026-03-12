@@ -72,6 +72,8 @@ export const IosTaskDispatcher = {
             return 
         case 'checkhostip':
             return 
+        case 'getScreenshotConfig':
+            return { serverip: null, serverApiPort: null, clientinfo: {}, screenshotinterval: 0 }
         default:
             throw new Error(`Signal ${signal} nicht für iOS implementiert.`);
         }

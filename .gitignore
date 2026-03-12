@@ -22,3 +22,5 @@ release
 logs
 *.log
 npm-debug.log*
+
+.cursor/

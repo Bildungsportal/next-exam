@@ -55,7 +55,9 @@ class MulticastClient {
             privateSpellcheck: {activated: false},
             localLockdown: false,
             group: 'a',
-            submissionnumber: 0
+            submissionnumber: 0,
+            localVMHost: null,
+            localVMState: null
         }
     }
 
@@ -65,7 +67,8 @@ class MulticastClient {
      */
     init (gateway) {
         this.gateway = gateway
-        this.client = dgram.createSocket('udp4')  // moving this here will allow to respawn it if binding fails
+        this.client = dgram.createSocket({ type: 'udp4', reuseAddr: true }) // reuseAddr ist wichtig für Windows
+
 
         this.client.on('error', (err) => {
             log.error(`multicastclient @ init: UDP MC Client error:\n${err.stack}`);
@@ -73,13 +76,26 @@ class MulticastClient {
         });
 
         try {
-            this.client.bind(this.PORT, config.hostip,  () => { 
-                this.client.setBroadcast(true)
-                this.client.setMulticastTTL(128); 
-                if (this.gateway) { this.client.addMembership(this.MULTICAST_ADDR, config.hostip) }
-                if (!this.gateway) {log.warn("mcclient: No Gateway! Starting MulticastClient without adding group membership")}
-                log.info(`multicastclient @ init: UDP MC Client listening on http://${config.hostip}:${this.client.address().port}`)
-            })
+
+            // Auf Windows binden wir direkt an die gewählte Host-IP statt an 0.0.0.0 //
+            const bindAddr = process.platform === 'win32' ? config.hostip : '0.0.0.0';
+
+            this.client.bind(this.PORT, bindAddr, () => {
+                try {
+                    this.client.setBroadcast(true);
+                    this.client.setMulticastTTL(128);
+                    
+                    // Explizites Joinen auf dem vom User gewählten Interface //
+                    this.client.addMembership(this.MULTICAST_ADDR, config.hostip);
+                    
+                    log.info(`UDP MC Client bound to ${bindAddr}:${this.PORT} and joined ${this.MULTICAST_ADDR}`);
+                } catch (e) {
+                    log.error(`Multicast Join failed: ${e.message}`);
+                }
+            });
+
+
+
         }
         catch (e){ 
             log.error(`mulitcastclient @ init: ${e}`) 
@@ -96,7 +112,6 @@ class MulticastClient {
      * receives messages and stores new exam instances in this.examServerList[]
      */
      messageReceived (message, rinfo) {
-      
         const serverInfo = JSON.parse(String(message))
         serverInfo.serverip = rinfo.address
         serverInfo.serverport = rinfo.port

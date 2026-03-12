@@ -475,7 +475,7 @@ class WindowHandler {
      */
     async createExamWindow(examtype, token, serverstatus, primarydisplay) {
         // just to be sure we check some important vars here
-        if (examtype !== "rdp" && examtype !== "website" &&  examtype !== "gforms" && examtype !== "eduvidual" && examtype !== "editor" && examtype !== "math" && examtype !== "microsoft365" && examtype !== "activesheets" || !token){  // for now.. we probably should stop everything here
+        if (examtype !== "rdp" && examtype !== "website" &&  examtype !== "gforms" && examtype !== "eduvidual" && examtype !== "editor" && examtype !== "math" && examtype !== "microsoft365" && examtype !== "activesheets" && examtype !== "localvm" || !token){  // for now.. we probably should stop everything here
             log.warn("missing parameters for exam-mode or mode not in allowed list!")
             examtype = "editor" 
         } 
@@ -518,7 +518,7 @@ class WindowHandler {
             autoHideMenuBar: true,
             minimizable: false,
             visibleOnAllWorkspaces: true,
-            kiosk: this.config.development ? false : true,
+            // kiosk: this.config.development ? false : true,  // prevents kiosk mode on ubuntu gnome (Unity)
             show: true,
             transparent: false,
             icon: join(platformDispatcher.publicBase, 'icons', 'icon.png'),
@@ -550,7 +550,7 @@ class WindowHandler {
                     // probably not needed because we disable missioncontrol anyways - seems to interfere with kiosk mode on macos (again)
                     // this.examwindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
-                    if (!this.isWayland){ this.checkWindowInterval.start() } // constantly check if the active window is the examwindow - if not, bring it to front
+                    if (!platformDispatcher.isWayland){ this.checkWindowInterval.start() } // constantly check if the active window is the examwindow - if not, bring it to front
                     await enableRestrictions(this)  // disable keyboard shortcuts etc.
                     
                     await this.sleep(1000)  // do not set blur listener too early
@@ -636,7 +636,7 @@ class WindowHandler {
                 });
             });
         }
-        // this is the normal exam mode (editor, math, eduvidual, website, gforms)
+        // this is the normal exam mode (editor, math, eduvidual, website, gforms, activesheets, localvm)
         else { 
             let url = examtype   // editor || math || tbd.
             if (app.isPackaged) {
@@ -661,7 +661,7 @@ class WindowHandler {
         // Block navigation on examwindow.webContents level for all modes that can display PDFs in examheader
         // This prevents navigation when clicking links in PDFs displayed in the examheader
         // Webview/BrowserView blocking is handled separately via IPC in ipchandler.js or mode-specific handlers below
-        const examTypesWithPdfInHeader = ["gforms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math"];
+        const examTypesWithPdfInHeader = ["gforms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math", "localvm"];
         if (examTypesWithPdfInHeader.includes(serverstatus.examSections[serverstatus.lockedSection].examtype)) {
             this.examwindow.webContents.on('will-navigate', (event, url) => {
                 event.preventDefault(); // Prevent navigation away from the Vue app (e.g. from PDF links in examheader)

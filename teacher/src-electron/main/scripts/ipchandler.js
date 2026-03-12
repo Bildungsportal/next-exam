@@ -270,6 +270,29 @@ class IpcHandler {
         })  
 
 
+        // returns a list of available VirtualBox VMs on the teacher machine
+        ipcMain.handle('get-vm-list', async () => {
+            return await new Promise((resolve) => {
+                exec('VBoxManage list vms', { encoding: 'utf8' }, (error, stdout) => {
+                    if (error) {
+                        log.error('ipchandler @ get-vm-list: VBoxManage failed', error);
+                        resolve([]);
+                        return;
+                    }
+                    const lines = stdout.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+                    const names = [];
+                    for (const line of lines) {
+                        const match = line.match(/\"(.+?)\"/);
+                        if (match && match[1]) {
+                            names.push(match[1]);
+                        }
+                    }
+                    resolve(names);
+                });
+            });
+        })  
+
+
         // log out of microsoft 365
         ipcMain.handle('resetToken', async (event) => { 
             const win = this.WindowHandler.mainwindow; // Oder wie auch immer Sie auf Ihr BrowserWindow-Objekt zugreifen

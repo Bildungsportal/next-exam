@@ -556,15 +556,15 @@ router.post('/getexammaterials/:servername/:token', async (req, res, next) => {
                         log.error("data @ receive: ", err)
                     }
                 }
-                res.json({ status:"success", sender: "server", message:t("data.filereceived"), errors: errors  })
+                res.json({ status:"success", sender: "server", message:"Files received", errors: errors  })
             }
             else {
                 log.error("data @ receive: No ZIP file received")
-                res.json({ status:"error",  sender: "server", message:t("data.nofilereceived"), errors: errors })
+                res.json({ status:"error",  sender: "server", message:"No files received", errors: errors })
             }
         }
         else {
-            res.json({ status:"error",  sender: "server", message:t("data.nofilereceived"), errors: errors })
+            res.json({ status:"error",  sender: "server", message:"No files received", errors: errors })
         }
     }
 })
@@ -605,7 +605,7 @@ router.post('/upload/:servername/:servertoken/:studenttoken', async (req, res, n
             let filename = decodeURIComponent(file.name)  //encode to prevent non-ascii chars weirdness
             let absoluteFilepath = path.join(uploaddirectory, filename);
             await file.mv(absoluteFilepath, (err) => {  
-                if (err) { log.error( t("data.couldnotstore") ) }
+                if (err) { log.error( "Could not store file" ) }
             }); 
             files.push({ name:filename , path:absoluteFilepath });
         }
@@ -632,7 +632,7 @@ router.post('/upload/:servername/:servertoken/:studenttoken', async (req, res, n
                 }
             }
             else {
-                return res.json({ status:"error",  sender: "server", message:t("data.nofilereceived") })
+                return res.json({ status:"error",  sender: "server", message:"No students found" })
             }
          
         }
@@ -643,10 +643,10 @@ router.post('/upload/:servername/:servertoken/:studenttoken', async (req, res, n
                 student.status['files'] = files
             }   
         }
-        res.json({ status:"success", sender: "server", message:t("data.filereceived")  })
+        res.json({ status:"success", sender: "server", message:"Files uploaded"  })
     }
     else {
-        res.json({ status:"error",  sender: "server", message:t("data.nofilereceived") })
+        res.json({ status:"error",  sender: "server", message:"No files uploaded" })
     }
     
 })

@@ -52,9 +52,43 @@ let configStore = {
 };
 
 // list of apps we do not want to run in background
-const appsToClose = ['Google Chrome', 'chrome', 'google-chrome', 'Microsoft Edge', 'msedge', 'firefox', 'safari', 'brave', 'opera', 'chatgpt', 'ChatGPT', 'NortonSecurity', 'NAV', 'Teams', 'ms-teams', 'zoom.us', 'Microsoft Teams', 'discord', 'zoom', 'teams', 'teamviewer', 'skypeforlinux', 'skype', 'anydesk'];
+const appsToClose = [
+    'Grammarly',
+    'GeoGebra',
+    'whatsapp',
+    'Google Chrome',
+    'chrome',
+    'google-chrome',
+    'Microsoft Edge',
+    'msedge',
+    'firefox',
+    'safari',
+    'brave',
+    'opera',
+    'chatgpt',
+    'ChatGPT',
+    'NortonSecurity',
+    'NAV',
+    'Teams',
+    'ms-teams',
+    'zoom.us',
+    'Microsoft Teams',
+    'discord',
+    'zoom',
+    'teams',
+    'teamviewer',
+    'skypeforlinux',
+    'skype',
+    'anydesk',
+    'claude'
+];
 
-async function enableRestrictions(winhandler) {
+
+
+
+
+
+export async function enableRestrictions(winhandler) {
     if (config.development) { return; }
 
     log.info("platformrestrictions @ enableRestrictions: enabling platform restrictions");
@@ -69,7 +103,7 @@ async function enableRestrictions(winhandler) {
     clipboardInterval.start();
 
     if (platformDispatcher.platform === 'linux') {
-        enableLinuxRestrictions(configStore, appsToClose, platformDispatcher.isKDE, platformDispatcher.isGNOME);
+        enableLinuxRestrictions(configStore, appsToClose);
     }
 
     if (platformDispatcher.platform === 'win32') {
@@ -77,11 +111,11 @@ async function enableRestrictions(winhandler) {
     }
 
     if (platformDispatcher.platform === 'darwin') {
-        enableMacRestrictions(winhandler, appsToClose);
+        await enableMacRestrictions(winhandler, appsToClose);
     }
 }
 
-function disableRestrictions() {
+export async function disableRestrictions() {
     if (config.development) { return; }
     log.info("platformrestrictions @ disableRestrictions: removing restrictions...");
 
@@ -111,4 +145,4 @@ function toggleMacOSLockdown(enable) {
     toggleMacOSLockdownImpl(enable);
 }
 
-export { enableRestrictions, disableRestrictions, toggleMacOSLockdown };
+export {  toggleMacOSLockdown };

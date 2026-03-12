@@ -167,7 +167,14 @@
         "zoomOut":"Zoom out",
         "close":"Close",
         "sectionSwitchTitle": "Switch section",
-        "sectionSwitchText": "Are you sure you want to switch to the new section?"
+        "sectionSwitchText": "Are you sure you want to switch to the new section?",
+        "lang_de": "German",
+        "lang_en_gb": "English (UK)",
+        "lang_en_us": "English (US)",
+        "lang_fr": "French",
+        "lang_es": "Spanish",
+        "lang_it": "Italian",
+        "lang_sl": "Slovenian"
     },
     "math": {
         "exit":"Exit safe exam mode",
@@ -191,5 +198,8 @@
         "understood": "Understood",
         "page": "Page",
         "pages": "Pages"
+    },
+    "dashboard": {
+        "retry": "Retry"
     }
 }

@@ -25,6 +25,7 @@ function onMacRestrictionSignal(signalName) {
         currentWinhandler.examwindow.setKiosk(true);
         currentWinhandler.examwindow.show();
         currentWinhandler.examwindow.focus();
+        toggleMacOSLockdown(true);
     }
 }
 
@@ -36,7 +37,7 @@ const unlockScreenHandler = () => onMacRestrictionSignal('unlock-screen');
  * @param {object} winhandler - must have winhandler.examwindow
  * @param {string[]} appsToClose - app names to kill
  */
-export function enableMacRestrictions(winhandler, appsToClose) {
+export async function enableMacRestrictions(winhandler, appsToClose) {
     const { TouchBarLabel, TouchBarSpacer } = TouchBar;
     const textlabel = new TouchBarLabel({ label: "Next-Exam" });
     const touchBar = new TouchBar({
@@ -51,9 +52,16 @@ export function enableMacRestrictions(winhandler, appsToClose) {
 
     childProcess.exec('pbcopy < /dev/null');
 
-    appsToClose.forEach(app => {
-        childProcess.exec(`pkill -9 -f "${app}"`, (error, stderr, stdout) => {});
-    });
+ 
+    const killPromises = appsToClose.map(app => new Promise((resolve) => {
+        childProcess.exec(`pkill -9 -f "${app}"`, () => {
+            resolve();
+        });
+    }));
+
+    await Promise.all(killPromises);
+
+
 
     // workspace/space switch and lock/unlock monitoring (macOS only)
     try {
@@ -106,7 +114,8 @@ export function toggleMacOSLockdown(enable) {
         const gestureCommands = [
             `defaults write com.apple.dock showMissionControlGestureEnabled -bool false`,
             `defaults write com.apple.dock showAppExposeGestureEnabled -bool false`,
-            `defaults write com.apple.dock showDesktopGestureEnabled -bool false`
+            `defaults write com.apple.dock showDesktopGestureEnabled -bool false`,
+            `defaults write NSGlobalDomain AppleEnableSwipeNavigateWithScrolls -bool false`,
         ].join('; ');
 
         const fullCommand = `
@@ -127,7 +136,8 @@ export function toggleMacOSLockdown(enable) {
         const gestureCommands = [
             `defaults write com.apple.dock showMissionControlGestureEnabled -bool true`,
             `defaults write com.apple.dock showAppExposeGestureEnabled -bool true`,
-            `defaults write com.apple.dock showDesktopGestureEnabled -bool true`
+            `defaults write com.apple.dock showDesktopGestureEnabled -bool true`,
+            `defaults write NSGlobalDomain AppleEnableSwipeNavigateWithScrolls -bool true`,
         ].join('; ');
 
         const fullCommand = `

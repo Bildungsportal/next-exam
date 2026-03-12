@@ -615,7 +615,7 @@ import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile,
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
 import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer } from '../utils/filemanager'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore } from '../utils/exammanagement.js'
-import { getTestURL, getTestID, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
+import { getTestURL, getTestID, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
 import type Exam from '../types/api.d.ts'
 
 class EmptyWidget {
@@ -831,8 +831,8 @@ export default {
                         fontsize: '12pt',
                         audioRepeat: 0,
                         domainname: false,  
-                       
                         rdpConfig: null,
+                        localVMConfig: null,
                         groups: false, 
                         groupA: { users: [], examInstructionFiles: [], allowedUrls: [] }, 
                         groupB: { users: [], examInstructionFiles: [], allowedUrls: [] }
@@ -1199,6 +1199,7 @@ computed: {
             case 'activesheets': return 'Active Sheets';
             case 'microsoft365': return 'Microsoft365';
             case 'rdp': return 'RDP';
+            case 'localvm': return 'LocalVM';
             default: return 'Select Type';
             }
         },
