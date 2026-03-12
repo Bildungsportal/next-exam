@@ -88,7 +88,16 @@ class WindowHandler {
             else { return false }
         }
     }
-
+    
+    getBiPUrl(biptest) {
+        if (this.config.bipDemo) {
+            return this.config.bipApiUrl;
+        } else if (biptest) {
+            return `https://q.bildung.gv.at`;
+        } else {
+            return `https://bildung.gv.at`;
+        }
+    }
 
     createBiPLoginWin(biptest) {
         this.bipwindow = new BrowserWindow({
@@ -108,8 +117,7 @@ class WindowHandler {
            // transparent: true
         })
      
-        if (biptest){   this.bipwindow.loadURL(`https://q.bildung.gv.at/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)   }
-        else {          this.bipwindow.loadURL(`https://www.bildung.gv.at/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)   }
+        this.bipwindow.loadURL(this.getBiPUrl(biptest)+`/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)
 
         // Electron 39: ready-to-show fires AFTER show() is called, so use did-finish-load instead
         this.bipwindow.webContents.once('did-finish-load', () => {

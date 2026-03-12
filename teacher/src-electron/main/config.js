@@ -6,7 +6,7 @@ const config = {
     development: true,
     showdevtools: true,
     bipIntegration: true,
-    bipDemo: true,
+    bipDemo: false,
     bipApiUrl: 'https://localhost:8444',
 
     workdirectory : "",
@@ -38,7 +38,7 @@ const config = {
     },
 
     version: '2.0.0.1',
-    buildDate: '20260216',
+    buildDate: '20260312',
     buildNumber: '1',
     info: 'Release'
 }

@@ -700,6 +700,7 @@ export default {
             bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
             bipUsername:this.$route.params.bipUsername === 'false' ?  false : this.$route.params.bipUsername,
             bipStatus: "closed", // "open" or "closed" or "offline"
+            biptest:this.$route.params.biptest,
 
             serverstatus:{   // this object contains all neccessary information for students about the current exam settings
                 bip: false,
@@ -1728,13 +1729,44 @@ computed: {
             this.updateBiPServerInfo(newStatus);
         },
 
+        getBiPUrl(): string {
+            if (this.config.bipDemo) {
+                return this.config.bipApiUrl;
+            } else if (this.biptest) {
+                return `https://q.bildung.gv.at`;
+            } else {
+                return `https://bildung.gv.at`;
+            }
+        },
+
+        // Überprüfen, ob der String Base64-codiert ist
+        isBase64(str) {
+            try {
+                return btoa(atob(str)) === str;
+            } catch (err) {
+                return false;
+            }
+        },
+        
+        // Base64-String dekodieren und mögliche Tokens extrahieren
+        decodeBase64AndExtractTokens(base64Str) {
+            if (base64Str == null || !this.isBase64(base64Str)) {
+                return null;
+            }
+            const decodedStr = atob(base64Str);
+            const tokens = decodedStr.split(/[:\s,]+/); // Trennzeichen anpassen, falls nötig
+            return tokens;
+        },
 
          /** 
          * if this is a bip exam configured online that needs students to login into bip too
          * update exam info on server via api
          */
         async updateBiPServerInfo(status){
-            if (!this.bipToken || !this.serverstatus.bip) { return }
+            let token = this.decodeBase64AndExtractTokens(this.bipToken)?.[1];
+            if (!token || !this.serverstatus.bip) {
+                throw Error("cannot fetch from bip api without valid token")
+            }
 
             //console.log("bip exam - updating server info")
             let payload = {
@@ -1744,23 +1776,18 @@ computed: {
                 examID: this.serverstatus.id
             }
 
-            // if (this.config.development){  // call to demo api
-                let url= this.config.bipApiUrl+"/webservice/rest/server.php?wstoken="+this.bipToken+"&wsfunction=local_dpu_update_exam_status_teacher&moodlewsrestformat=json"
-           
-                fetch(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                    body: new URLSearchParams(payload).toString()
-                })
-                .then(response => { return response.json(); } )                  
-                .then(data => { 
-                   // console.log(data.message, data.data);
-                })
-                .catch(error => { console.error("Fehler beim API-Aufruf:", error.message);});
-            // }
-            // else{
-            //     //call to real bip api
-            // }
+            const url= this.getBiPUrl()+"/webservice/rest/server.php?wstoken="+token+"&wsfunction=local_dpu_update_exam_status_teacher&moodlewsrestformat=json"
+       
+            fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams(payload).toString()
+            })
+            .then(response => { return response.json(); } )                  
+            .then(data => { 
+               // console.log(data.message, data.data);
+            })
+            .catch(error => { console.error("Fehler beim API-Aufruf:", error.message);});
         },
 
         playAudioFile(filecontent, filename){
