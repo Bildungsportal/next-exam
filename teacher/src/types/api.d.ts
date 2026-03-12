@@ -56,6 +56,7 @@ export type Section = {
   audioRepeat: number | null,
   domainname: boolean | null, // Remove?
   rdpConfig: null, // Remove?
+  localVMConfig: any,
   groups: boolean,
   groupA: Group,
   groupB: Group,

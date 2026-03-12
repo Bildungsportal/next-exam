@@ -616,7 +616,7 @@ import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStuden
 import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer } from '../utils/filemanager'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore } from '../utils/exammanagement.js'
 import { getTestURL, getTestID, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
-import type Exam from '../types/api.d.ts'
+import { Exam } from '../types/api'
 
 class EmptyWidget {
     constructor() {
@@ -749,6 +749,7 @@ export default {
                         blockSubdomains: false,
                         blockSubfolders: false,
                         rdpConfig: null,
+                        localVMConfig: null,
 
                         groups: false, 
                         groupA: { users: [], examInstructionFiles: [], allowedUrls: [] }, 
@@ -778,6 +779,7 @@ export default {
                         blockSubdomains: false,
                         blockSubfolders: false,
                         rdpConfig: null,
+                        localVMConfig: null,
 
                         groups: false, 
                         groupA: { users: [], examInstructionFiles: [], allowedUrls: [] }, 
@@ -805,6 +807,7 @@ export default {
                         audioRepeat: 0,
                         domainname: false,  
                         rdpConfig: null,
+                        localVMConfig: null,
 
                         groups: false, 
                         groupA: { users: [], examInstructionFiles: [], allowedUrls: [] }, 
@@ -976,6 +979,7 @@ computed: {
         configureMath: configureMath,
         configureActivesheets: configureActivesheets,
         configureRDP: configureRDP,
+        configureLocalVM: configureLocalVM,
         defineMaterials: defineMaterials,             // define materials for exam
 
         handleAllowedUrlRemove: handleAllowedUrlRemove,
@@ -1059,7 +1063,7 @@ computed: {
                             if (student.token == this.studentwidgets[i].token){ 
                                 //now update the entry in the original widgets object and check if the student is online
                                 if (this.now - 20000 > student.timestamp){
-                                    if (this.studentwidgets[i].online && !this.muteAudio){ //play short soundfile on the first time the student timestamp is older than 20 seconds
+                                    if (this.studentwidgets[i].online && !this.muteAudio){ // play short soundfile on the first time the student timestamp is older than 20 seconds
                                         console.log(`dashboard @ fetchInfo: student ${student.clientname} just went offline`)
                                         const audio = new Audio('dialog-warning.oga');
                                         audio.play();
@@ -1067,7 +1071,14 @@ computed: {
                                     else { student.online = false }  // set online status on student object
                                 }
                                 else {student.online = true }  // set online status on student object
-                                
+
+                                // play sound once when student loses focus for the first time
+                                if (!student.focus && this.studentwidgets[i].focus && !this.muteAudio) {
+                                    console.log(`dashboard @ fetchInfo: student ${student.clientname} lost focus`)
+                                    const focusAudio = new Audio('dialog-warning.oga');
+                                    focusAudio.play();
+                                }
+
                                 // Überschreibe das studentwidget, aber korrigiere die Gruppenzugehörigkeit basierend auf der aktuellen Section
                                 this.studentwidgets[i] = student;
                                 
@@ -1185,6 +1196,7 @@ computed: {
             if (type === 'math') this.configureMath();
             if (type === 'activesheets') this.configureActivesheets();
             if (type === 'rdp') this.configureRDP();
+            if (type === 'localvm') this.configureLocalVM();
         },
 
         // get label for the current exam type
@@ -1772,6 +1784,7 @@ computed: {
             //console.log("bip exam - updating server info")
             let payload = {
                 teacherIP: this.serverip,
+                teacherID: this.bipuserID,   /// wird von student.vue nicht nach dashboard.vue übertragen.. ebenso token
                 pin: this.serverstatus.pin,
                 status: status,
                 examID: this.serverstatus.id

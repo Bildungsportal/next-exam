@@ -278,7 +278,7 @@ export default {
             //console.log("loginBiP", this.config)
             /*if (this.config.bipDemo){   // skip bip logon and fake bip info
                 // fake bip info
-                this.bipUsername = "Katherine Johnson Dev"
+                this.bipUsername = "Katherine Johnson"
                 this.bipuserID = 6
                 this.bipToken = btoa("Token:fddc0086a4db83e57f44fa40504452ad")
                 

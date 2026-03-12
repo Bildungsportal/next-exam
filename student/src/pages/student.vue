@@ -221,7 +221,7 @@ import {isElectronWindow} from "../types/platform.ts";
 import config from '../../src-electron/main/config.js'
 import {SignalBridge} from '../utils/signalBridge.js'
 import { initScreenshotScheduler } from '../utils/screenshotCapture.js'
-import type Exam from '../types/api.d.ts'
+import { Exam } from '../types/api'
 
 
 // Capture unhandled promise rejections
