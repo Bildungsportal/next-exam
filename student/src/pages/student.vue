@@ -4,12 +4,12 @@
     <!-- Header START -->
     <div v-show="!isLoading" class="w-100 p-3 text-white bg-dark text-left" style="height: 66px; z-index: 1000;">
     <span class="text-white m-1">
-        <img src='/src/assets/img/svg/speedometer.svg' class="white me-2  " width="32" height="32">
+        <img :src='speedometer_img' class="white me-2  " width="32" height="32">
         <span class="fs-4 align-middle me-4" @click="handleClick">Next-Exam</span>
     </span>
 
         <span class="fs-4 align-middle  ms-3" style="float: right">Student</span>
-        <div v-if="token && !localLockdown" id="adv" class="btn btn-success btn-sm m-0  mt-1 "
+        <div v-if="token && !localLockdown" id="adv" class="btn btn-success btn-sm m-0  mt-1"
              style="cursor: unset; float: right">{{ $t("student.connected") }}
         </div>
         <button v-if="clientinfo.groups && clientinfo.group == 'a' && token && !localLockdown" type="button"
@@ -33,7 +33,7 @@
         <!-- SIDEBAR START -->
         <div class="p-3 text-white bg-dark h-100" style="width: 240px; min-width: 240px;">
             <div class="btn btn-light ms-1 text-start infobutton nobutton">
-                <img src='/src/assets/img/svg/server.svg' class="me-2" width="16" height="16"> {{ $t('student.exams') }}
+                <img :src='server_img' class="me-2" width="16" height="16"> {{ $t('student.exams') }}
             </div>
             <br>
 
@@ -53,7 +53,7 @@
                      class="btn btn-success m-1 " :class="(token)? 'disabledexam':''" style="padding:0;">
                     <img id="biplogo"
                          style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; "
-                         src="/src/assets/img/login_students.jpg">
+                         :src="login_students_img">
                     <span v-if="bipUsername" id="biploginbuttonlabel">{{ bipUsername }}</span>
                     <span v-else id="biploginbuttonlabel">Logout</span>
                 </div>
@@ -61,7 +61,7 @@
                      style="padding:0;" :class="(token)? 'disabledexam':''">
                     <img id="biplogo"
                          style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; "
-                         src="/src/assets/img/login_students.jpg">
+                         :src="login_students_img">
                     <span v-if="bipUsername" id="biploginbuttonlabel">{{ bipUsername }}</span><span v-else
                                                                                                     id="biploginbuttonlabel">Login</span>
                 </div>
@@ -160,7 +160,7 @@
 
                         <div
                             style="display:flex; flex-direction: row; justify-content: space-between; padding:0px; margin:0px;">
-                            <img v-if="!server.reachable" src="/src/assets/img/svg/emblem-warning.svg"
+                            <img v-if="!server.reachable" :src="emblem_warning_img"
                                  :title="$t('student.unreachable')"
                                  style="width:20px;height:20px;vertical-align:top;cursor: help;position: absolute; margin-top:8px; margin-left:8px; ">
 
@@ -218,17 +218,21 @@ import validator from 'validator'
 import log from 'electron-log/renderer'
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {SignalBridge} from '../utils/signalBridge.js'
+import speedometer_img from 'src/assets/img/svg/speedometer.svg'
+import server_img from 'src/assets/img/svg/server.svg'
+import login_students_img from 'src/assets/img/login_students.jpg'
+import emblem_warning_img from '/src/assets/img/svg/emblem-warning.svg'
 
 
 // Capture unhandled promise rejections
 window.addEventListener('unhandledrejection', event => {
-  const reason = event?.reason;
-  const msg = typeof reason === 'string' ? reason : reason && reason.message;
-  if (msg && ( msg.includes('GUEST_VIEW_MANAGER_CALL') || msg.includes('ERR_FAILED'))) {
-    event.preventDefault(); // swallow guest view clone errors and ERR_FAILED
-    return;
-  }
-  //loggingBridge.error('Unhandled promise rejection:', reason); // log all other errors
+    const reason = event?.reason;
+    const msg = typeof reason === 'string' ? reason : reason && reason.message;
+    if (msg && (msg.includes('GUEST_VIEW_MANAGER_CALL') || msg.includes('ERR_FAILED'))) {
+        event.preventDefault(); // swallow guest view clone errors and ERR_FAILED
+        return;
+    }
+    //loggingBridge.error('Unhandled promise rejection:', reason); // log all other errors
 });
 
 //Object.assign(console, loggingBridge.functions);  // Replace all console logs with logger
@@ -274,7 +278,10 @@ export default {
             onlineExams: [],
             validip: true,
             serverFailureCount: {}, // Track failed ping attempts for manually added servers
-
+            speedometer_img,
+            server_img,
+            login_students_img,
+            emblem_warning_img
         };
     },
     computed: {
@@ -304,7 +311,7 @@ export default {
             }
             let IPCresponse = signalBridge.sendSync('loginBiP', this.biptest)
             if (IPCresponse && IPCresponse.status === "success") {
-                
+
             }
             console.log(IPCresponse)
         },
@@ -368,29 +375,30 @@ export default {
         async fetchBipExams() {
             if (!this.bipToken) return;  // cannot fetch from bip api without valid token
 
-          //  return // disable bip api call for now - this must connect to the real bip api server
+            //  return // disable bip api call for now - this must connect to the real bip api server
             //probably the path needs to be set in .env and config.js
 
 
             // if (this.config.development){
-            let url = this.config.bipApiUrl + "/webservice/rest/server.php?wstoken="+this.bipToken+"&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json"
-           
+            let url = this.config.bipApiUrl + "/webservice/rest/server.php?wstoken=" + this.bipToken + "&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json"
+
             await fetch(url, {
                 method: "GET",
-                headers: {"Content-Type": "application/x-www-form-urlencoded"}            })
-            .then(response => {
-                return response.json();
+                headers: {"Content-Type": "application/x-www-form-urlencoded"}
             })
-            .then(data => {
-                // console.log("Data from API:", data);
-                this.bipData = data   // Store all of the information in data
-                this.onlineExams = data.exams
-                console.log(data)
-                return
-            })
-            .catch(error => {
-                console.error("Error during API call:", error);
-            });
+                .then(response => {
+                    return response.json();
+                })
+                .then(data => {
+                    // console.log("Data from API:", data);
+                    this.bipData = data   // Store all of the information in data
+                    this.onlineExams = data.exams
+                    console.log(data)
+                    return
+                })
+                .catch(error => {
+                    console.error("Error during API call:", error);
+                });
             return
             // }
             // else {
@@ -500,19 +508,23 @@ export default {
                 cancelButtonText: this.$t("editor.cancel"),
                 focusConfirm: false,
                 icon: false,
-                didOpen:() => {
+                didOpen: () => {
                     const localUserElement = document.getElementById("localuser");
                     const localPasswordElement = document.getElementById("localpassword");
-                    
-                    localUserElement.addEventListener("keypress", function(e) {
-                         // var lettersOnly = /^[a-zA-Z ]+$/;
+
+                    localUserElement.addEventListener("keypress", function (e) {
+                        // var lettersOnly = /^[a-zA-Z ]+$/;
                         var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
                         var key = e.key || String.fromCharCode(e.which);
                         // Allow Enter key to pass through
-                        if (e.key === 'Enter') { return; }
-                        if (!lettersOnly.test(key)) { e.preventDefault(); }
+                        if (e.key === 'Enter') {
+                            return;
+                        }
+                        if (!lettersOnly.test(key)) {
+                            e.preventDefault();
+                        }
                     });
-                    
+
                     // Add Enter key listener to confirm dialog - attach to both input fields and document
                     const swalInstance = this.$swal;
                     const handleEnterKey = (e) => {
@@ -521,18 +533,18 @@ export default {
                             swalInstance.clickConfirm();
                         }
                     };
-                    
+
                     // Add listener to document for general Enter key handling
                     document.addEventListener('keydown', handleEnterKey);
                     // Add listener directly to input fields to catch Enter when focused
                     localUserElement.addEventListener('keydown', handleEnterKey);
                     localPasswordElement.addEventListener('keydown', handleEnterKey);
-                    
+
                     // Store handler reference for cleanup (will be cleaned up when dialog closes)
                     this._enterKeyHandler = handleEnterKey;
                     this._enterKeyHandlerUser = handleEnterKey;
                     this._enterKeyHandlerPassword = handleEnterKey;
-                    
+
                     const checkboxLT = document.getElementById('checkboxLT');
                     const checkboxSuggestions = document.getElementById('checkboxsuggestions');
                     const spellcheckSection = document.getElementById('spellcheckSection');
@@ -610,7 +622,7 @@ export default {
                     const checkboxLTElement = document.getElementById('checkboxLT');
                     const checkboxSuggestionsElement = document.getElementById('checkboxsuggestions');
                     const radioButtons = document.querySelectorAll('input[name="etesttype"]');
-                    
+
                     savedUsername = localUserElement ? localUserElement.value.trim() : '';
                     savedPassword = localPasswordElement ? localPasswordElement.value : '';
                     savedLanguagetool = checkboxLTElement ? checkboxLTElement.checked : false;
@@ -621,7 +633,7 @@ export default {
                             savedExammode = radio.value;
                         }
                     });
-                    
+
                     // Validate mandatory fields
                     if (!savedUsername || savedUsername === '') {
                         this.$swal.showValidationMessage(this.$t("student.nouser") || 'Username is required');
@@ -936,8 +948,7 @@ export default {
                 }
 
 
-            } 
-            else {  // Sometimes explicit is easier to read (no servers incoming via multicast)
+            } else {  // Sometimes explicit is easier to read (no servers incoming via multicast)
                 if (this.serverlistAdvanced.length !== 0) {  // One server coming via direct ip polling
                     // Optimized: Compare with isServerlistEqual instead of only server names
                     if (!this.isServerlistEqual(this.serverlist, this.serverlistAdvanced)) {
@@ -983,43 +994,43 @@ export default {
                     method: 'GET',
                     signal
                 })
-                .then(response => {
-                    if (!response.ok) throw new Error('Response not OK');
-                    // Optimized: Only set if value changes
-                    if (server.reachable !== true) {
-                        server.reachable = true;
-                    }
-                    // Reset failure count if server is reachable again
-                    if (isManual && this.serverFailureCount[serverIdentifier] !== undefined) {
-                        this.serverFailureCount[serverIdentifier] = 0;
-                    }
-                })
-                .catch(err => {
-                    if (err.name === 'AbortError') {
-                        console.warn('student.vue @ fetchinfo (ping): Fetch request was aborted due to timeout');
-                    } else {
-                        console.warn(`student.vue @ fetchinfo: ${err.message} - Server unavailable `);
-                    }
-                    // Optimized: Only set if value changes
-                    if (server.reachable !== false) {
-                        server.reachable = false;
-                    }
-                    // Track failures for manually added servers
-                    if (isManual) {
-                        // Initialize counter if not exists
-                        if (this.serverFailureCount[serverIdentifier] === undefined) {
+                    .then(response => {
+                        if (!response.ok) throw new Error('Response not OK');
+                        // Optimized: Only set if value changes
+                        if (server.reachable !== true) {
+                            server.reachable = true;
+                        }
+                        // Reset failure count if server is reachable again
+                        if (isManual && this.serverFailureCount[serverIdentifier] !== undefined) {
                             this.serverFailureCount[serverIdentifier] = 0;
                         }
-                        // Increment failure count
-                        this.serverFailureCount[serverIdentifier]++;
-                        // Remove server if more than 2 failures
-                        if (this.serverFailureCount[serverIdentifier] > 2) {
-                            console.log(`student.vue @ fetchinfo: Removing manually added server ${serverIdentifier} after ${this.serverFailureCount[serverIdentifier]} failures`);
-                            this.removeFailedManualServer(serverIdentifier);
+                    })
+                    .catch(err => {
+                        if (err.name === 'AbortError') {
+                            console.warn('student.vue @ fetchinfo (ping): Fetch request was aborted due to timeout');
+                        } else {
+                            console.warn(`student.vue @ fetchinfo: ${err.message} - Server unavailable `);
                         }
-                    }
-                });
-            }   
+                        // Optimized: Only set if value changes
+                        if (server.reachable !== false) {
+                            server.reachable = false;
+                        }
+                        // Track failures for manually added servers
+                        if (isManual) {
+                            // Initialize counter if not exists
+                            if (this.serverFailureCount[serverIdentifier] === undefined) {
+                                this.serverFailureCount[serverIdentifier] = 0;
+                            }
+                            // Increment failure count
+                            this.serverFailureCount[serverIdentifier]++;
+                            // Remove server if more than 2 failures
+                            if (this.serverFailureCount[serverIdentifier] > 2) {
+                                console.log(`student.vue @ fetchinfo: Removing manually added server ${serverIdentifier} after ${this.serverFailureCount[serverIdentifier]} failures`);
+                                this.removeFailedManualServer(serverIdentifier);
+                            }
+                        }
+                    });
+            }
         },
 
 
@@ -1062,16 +1073,14 @@ export default {
                     icon: 'error',
                     showCancelButton: false,
                 })
-            } 
-            else if (this.pincode === "") {
+            } else if (this.pincode === "") {
                 this.$swal.fire({
                     title: "Error",
                     text: this.$t("student.nopin"),
                     icon: 'error',
                     showCancelButton: false,
                 })
-            } 
-            else {
+            } else {
 
                 const charMap = {
                     'ć': 'c',
@@ -1190,7 +1199,6 @@ export default {
     },
     async mounted() {
         document.querySelector("#statusdiv").style.visibility = "hidden";
-        
 
 
 // this.lastFrameTime = performance.now(); // Initialize timing
@@ -1200,9 +1208,8 @@ export default {
 //   const delta = currentTime - this.lastFrameTime; // Calculate time since last frame
 
 
-
 //   if (delta > 200) { // Threshold for macOS occlusion/suspension
-   
+
 //     this.$swal({
 //       title: 'Ausbruch erkannt!',
 //       text: `Die App wurde für ${Math.round(delta)}ms unterbrochen.`,
@@ -1216,10 +1223,6 @@ export default {
 // };
 
 // requestAnimationFrame(checkFrameGap); // Start the loop
-
-
-
-
 
 
         this.isLoading = false;
@@ -1243,7 +1246,7 @@ export default {
         this.autoUpdateInterval.addEventListener('action', this.bipAutoUpdate);  // Add event listener that reacts to the 'action' event
         this.autoUpdateInterval.start();
 
-        // add event listener to user input field to supress all special chars 
+        // add event listener to user input field to supress all special chars
         document.getElementById("user").addEventListener("keypress", function (e) {
             // var lettersOnly = /^[a-zA-Z ]+$/;
             var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance

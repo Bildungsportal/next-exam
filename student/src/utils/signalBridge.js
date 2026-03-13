@@ -24,7 +24,9 @@
 
 import {isElectronWindow, isIOS} from '../types/platform.ts'
 import { IosTaskDispatcher } from './ios/iosTaskDispatcher.js'
-
+import multicastclient from "../../src-electron/main/scripts/multicastclient.js";
+//import communicationhandler from "../../src-electron/main/scripts/communicationhandler.js";
+import config from './config.js';
 
 
 // class wraps ipcRenderer methods with platform checks
@@ -32,6 +34,8 @@ export class SignalBridge {
     // constructor stores reference to target window
     constructor(targetWindow = window) {
         this.targetWindow = targetWindow
+        this.iosTaskDispatcher = new IosTaskDispatcher()
+        this.iosTaskDispatcher.init(config)
     }
 
     // send forwards all params to electron or leaves hook for ios
@@ -44,8 +48,7 @@ export class SignalBridge {
         }
 
         if (isIOS()) {
-            IosTaskDispatcher.dispatch(channel, ...args)
-            return
+            return this.iosTaskDispatcher.dispatch(channel, ...args)
         }
 
         // log unsupported platform information
@@ -61,7 +64,7 @@ export class SignalBridge {
         }
 
         if (isIOS()) {
-            return IosTaskDispatcher.dispatch(channel, ...args)
+            return this.iosTaskDispatcher.dispatch(channel, ...args)
         }
 
         // log unsupported platform information
@@ -78,7 +81,7 @@ export class SignalBridge {
         }
 
         if (isIOS()) {
-            return await IosTaskDispatcher.dispatch(channel, ...args)
+            return await this.iosTaskDispatcher.dispatch(channel, ...args)
         }
 
         // log unsupported platform information
@@ -98,8 +101,7 @@ export class SignalBridge {
         }
 
         if (isIOS()) {
-            IosTaskDispatcher.dispatch(channel, ...args)
-            return
+            return this.iosTaskDispatcher.dispatch(channel, ...args)
         }
 
         // log unsupported platform information

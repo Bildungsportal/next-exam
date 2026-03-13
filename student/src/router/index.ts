@@ -40,6 +40,7 @@ const rdpview = () => import('/src/pages/rdpview.vue')
 
 import {isElectronWindow} from '../types/platform.js';
 import {SignalBridge} from '../utils/signalBridge.js';
+import config from "../utils/config.js";
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -72,13 +73,12 @@ const routes = [ // to load a specific view just replace the component at path: 
 
 // TODO Search fitting type that allows non-string params
 function addParams(to: any) {
-    if (isElectronWindow()) {
-        const config = require('../utils/config.js');
-        to.params.version = config.version
-        to.params.serverApiPort = config.serverApiPort
-        //to.params.clientApiPort = config.clientApiPort
+    to.params.version = config.version
+    to.params.serverApiPort = config.serverApiPort
+    //to.params.clientApiPort = config.clientApiPort
+    to.params.config = config
+    if (isElectronWindow(window)) {
         to.params.electron = electron
-        to.params.config = config
     }
 }
 

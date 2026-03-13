@@ -27,23 +27,23 @@ import {Clipboard} from "@capacitor/clipboard";
 import path from "path";
 import mammoth from "mammoth";
 //import log from "electron-log";
-import {config} from "dotenv";
+import config from "../config.js"
+import {LoggingBridge} from "../loggingBridge.js";
+import multicastclient from "../../../src-electron/main/scripts/multicastclient.js";
 
 //import { MyCustomNativePlugin } from './plugins/MyCustomNativePlugin';
 
 export class IosTaskDispatcher {
 
     constructor() {
-        this.multicastClient = null;
-        this.config = null;
+        //TODO Add communicationHandler back with correct support for ios
         this.communicationHandler = null;
         this.isPrintingPdf = false;
+        this.loggingBridge = null;
     }
 
-    init(mc, config, ch) {
-        this.multicastClient = mc;
-        this.config = config;
-        this.communicationHandler = ch;
+    init(config) {
+        this.loggingBridge = new LoggingBridge(window)
     }
 
     async dispatch(signal, payload) {
@@ -119,24 +119,24 @@ export class IosTaskDispatcher {
         // alle weiteren updates über das serverstatus object werden im communication handler gelesen und ggf. auf das clientinfo object gelegt
         // dieser kommunikationsfluss muss in 2.0 gestreamlined werden #FIXME
 
-        serverstatus = this.multicastClient.serverstatus
+        serverstatus = multicastclient.serverstatus
 
         //count number of files in exam directory
-        if (!this.multicastClient.clientinfo.exammode) {
-            const workdir = path.join(this.config.examdirectory, "/")
+        if (!multicastclient.clientinfo.exammode) {
+            const workdir = config.examdirectory + "/";
             try {
                 await fs.promises.mkdir(workdir, {recursive: true})  // erstellt falls nötig
                 const filelist = (await fs.promises.readdir(workdir, {withFileTypes: true}))
                     .filter(dirent => dirent.isFile())
                     .map(dirent => dirent.name)
-                this.multicastClient.clientinfo.numberOfFiles = filelist.length
+                multicastclient.clientinfo.numberOfFiles = filelist.length
             } catch (err) {
-                this.multicastClient.clientinfo.numberOfFiles = 0
+                multicastclient.clientinfo.numberOfFiles = 0
             }
         }
         return {
-            serverlist: this.multicastClient.examServerList,
-            clientinfo: this.multicastClient.clientinfo,
+            serverlist: multicastclient.examServerList,
+            clientinfo: multicastclient.clientinfo,
             serverstatus: serverstatus
         }
     }
@@ -144,14 +144,15 @@ export class IosTaskDispatcher {
     async checkhostip(payload) {
         let address = false;
         try {
-            address = this.multicastClient.client.address();
+            address = multicastclient.client.address();
         } catch (e) {
-            loggingBridge.error("IosTaskDispatcher @ checkhostip: multicastclient not running");
+            this.loggingBridge.error("IosTaskDispatcher @ checkhostip: multicastclient not running");
+            this.loggingBridge.error(this);
         }
 
         // Falls bereits eine Adresse vorhanden ist, liefern wir sie zurück.
         if (address) {
-            return this.config.hostip;
+            return config.hostip;
         }
 
         // Versuche, an die korrekte Schnittstelle zu binden
@@ -165,47 +166,47 @@ export class IosTaskDispatcher {
                     reject(err);
                 }
             });
-            this.config.hostip = ip.address(iface); // Liefert die IP der Schnittstelle, welche das Default Gateway hat
-            this.config.gateway = true;
+            config.hostip = ip.address(iface); // Liefert die IP der Schnittstelle, welche das Default Gateway hat
+            config.gateway = true;
         } catch (e) {
-            this.config.hostip = false;
-            this.config.gateway = false;
+            config.hostip = false;
+            config.gateway = false;
         }
 
         // Falls keine IP (mit Gateway) verfügbar ist, hole eine alternative Adresse
-        if (!this.config.hostip) {
+        if (!config.hostip) {
             try {
-                this.config.hostip = ip.address(); // Liefert auch eine IP, wenn kein Gateway verfügbar ist
+                config.hostip = ip.address(); // Liefert auch eine IP, wenn kein Gateway verfügbar ist
             } catch (e) {
-                loggingBridge.error("IosTaskDispatcher @ checkhostip: Unable to determine ip address", e);
-                this.config.hostip = false;
-                this.config.gateway = false;
+                this.loggingBridge.error("IosTaskDispatcher @ checkhostip: Unable to determine ip address", e);
+                config.hostip = false;
+                config.gateway = false;
             }
         }
 
         // Verfälschte Adressen (z. B. localhost) ignorieren
-        if (this.config.hostip === "127.0.0.1") {
-            this.config.hostip = false;
+        if (config.hostip === "127.0.0.1") {
+            config.hostip = false;
         }
 
         // Wenn die Multicast-Client nicht läuft, initialisieren
-        if (this.config.hostip && !address) {
+        if (config.hostip && !address) {
             try {
                 // Falls init() asynchron umgesetzt werden kann, warten wir hier darauf.
-                await this.multicastClient.init(this.config.gateway);
+                await multicastclient.init(config.gateway);
             } catch (err) {
-                loggingBridge.error("IosTaskDispatcher @ checkhostip: Error initializing multicast client", err);
+                this.loggingBridge.error("IosTaskDispatcher @ checkhostip: Error initializing multicast client", err);
             }
         }
 
-        return this.config.hostip;
+        return config.hostip;
     }
 
     /**
      * updates the language of the application
      */
     setnewlocale(payload) {
-        loggingBridge.info(`IosTaskDispatcher @ set-new-locale: setting new locale to ${payload}`)
+        this.loggingBridge.info(`IosTaskDispatcher @ set-new-locale: setting new locale to ${payload}`)
         i18n.locale = payload
     }
 
@@ -218,7 +219,7 @@ export class IosTaskDispatcher {
     }
 
     loginbip(biptest) {
-        loggingBridge.info("IosTaskDispatcher @ loginBiP: opening bip window. testenvironment:", biptest)
+        this.loggingBridge.info("IosTaskDispatcher @ loginBiP: opening bip window. testenvironment:", biptest)
         this.WindowHandler.createBiPLoginWin(biptest) //Todo replace with navigate see #386
     }
 
@@ -227,7 +228,7 @@ export class IosTaskDispatcher {
     }
 
     locallockdown(args) {
-        loggingBridge.info("IosTaskDispatcher @ locallockdown: locking down client without teacher connection")
+        this.loggingBridge.info("IosTaskDispatcher @ locallockdown: locking down client without teacher connection")
 
         let serverstatus = {
             exammode: true,
@@ -266,15 +267,15 @@ export class IosTaskDispatcher {
             }
         }
 
-        this.multicastClient.clientinfo.name = args.clientname;
-        this.multicastClient.clientinfo.serverip = "127.0.0.1";
-        this.multicastClient.clientinfo.servername = "localhost";
-        this.multicastClient.clientinfo.pin = "0000";
-        this.multicastClient.clientinfo.token = "0000";
-        this.multicastClient.clientinfo.group = "a";
-        this.multicastClient.clientinfo.localLockdown = true; // this must be set to true in order to stop typical next-exam client/teacher actions
+        multicastclient.clientinfo.name = args.clientname;
+        multicastclient.clientinfo.serverip = "127.0.0.1";
+        multicastclient.clientinfo.servername = "localhost";
+        multicastclient.clientinfo.pin = "0000";
+        multicastclient.clientinfo.token = "0000";
+        multicastclient.clientinfo.group = "a";
+        multicastclient.clientinfo.localLockdown = true; // this must be set to true in order to stop typical next-exam client/teacher actions
 
-        this.communicationHandler.startExam(serverstatus)
+        //this.communicationHandler.startExam(serverstatus)
     }
 
     register(args) {
@@ -284,15 +285,15 @@ export class IosTaskDispatcher {
         const servername = args.servername
         const clientip = ip.address()
         const hostname = os.hostname()
-        const version = this.config.version
+        const version = config.version
         const bipuserID = args.bipuserID
 
-        if (this.multicastClient.clientinfo.token) { //#FIXME das sollte eigentlich vom server kommen
+        if (multicastclient.clientinfo.token) { //#FIXME das sollte eigentlich vom server kommen
             event.returnValue = {sender: "client", message: t("control.alreadyregistered"), status: "error"}
         }
 
 
-        const url = `https://${serverip}:${this.config.serverApiPort}/server/control/registerclient/${servername}/${pin}/${clientname}/${clientip}/${hostname}/${version}/${bipuserID}`;
+        const url = `https://${serverip}:${config.serverApiPort}/server/control/registerclient/${servername}/${pin}/${clientname}/${clientip}/${hostname}/${version}/${bipuserID}`;
         const signal = AbortSignal.timeout(8000); // 8000 Millisekunden = 8 Sekunden AbortSignal mit einem Timeout
 
 
@@ -301,21 +302,21 @@ export class IosTaskDispatcher {
             .then(data => {
                 if (data && data.status == "success") {  // registration successfull otherwise data would be "false"
                     // Erfolgreiche Registrierung
-                    this.multicastClient.clientinfo.name = clientname;
-                    this.multicastClient.clientinfo.serverip = serverip;
-                    this.multicastClient.clientinfo.servername = servername;
-                    this.multicastClient.clientinfo.ip = clientip;
-                    this.multicastClient.clientinfo.hostname = hostname;
-                    this.multicastClient.clientinfo.token = data.token; // we need to store the client token in order to check against it before processing critical api calls
-                    this.multicastClient.clientinfo.focus = true;
-                    this.multicastClient.clientinfo.pin = pin;
+                    multicastclient.clientinfo.name = clientname;
+                    multicastclient.clientinfo.serverip = serverip;
+                    multicastclient.clientinfo.servername = servername;
+                    multicastclient.clientinfo.ip = clientip;
+                    multicastclient.clientinfo.hostname = hostname;
+                    multicastclient.clientinfo.token = data.token; // we need to store the client token in order to check against it before processing critical api calls
+                    multicastclient.clientinfo.focus = true;
+                    multicastclient.clientinfo.pin = pin;
 
-                    loggingBridge.info(`IosTaskDispatcher @ register: successfully registered at ${servername} @ ${serverip} as ${clientname}`);
+                    this.loggingBridge.info(`IosTaskDispatcher @ register: successfully registered at ${servername} @ ${serverip} as ${clientname}`);
                     event.returnValue = data;
 
                     //create exam folder in workfolder
                     let uniqueexamName = `${servername}-${pin}`
-                    config.examdirectory = path.join(config.workdirectory, uniqueexamName)
+                    config.examdirectory = config.workdirectory + "/" + uniqueexamName
 
                     if (!this.fileExists(config.examdirectory)) {
                         fs.mkdir(config.examdirectory, {recursive: true});
@@ -350,7 +351,7 @@ export class IosTaskDispatcher {
                 if (error.name === 'AbortError') {
                     errorMessage = "The request timed out";
                 } // Timeout-Nachricht anpassen
-                loggingBridge.error(`IosTaskDispatcher @ register: ${errorMessage}`);
+                this.loggingBridge.error(`IosTaskDispatcher @ register: ${errorMessage}`);
 
                 // show warning message if the user does not want to reset the permissions
                 event.returnValue = {
@@ -364,8 +365,8 @@ export class IosTaskDispatcher {
     gracefullyexit() {
         //loggingBridge.info(`IosTaskDispatcher @ gracefullyexit: gracefully leaving locked exam mode`)
 
-        this.communicationHandler.gracefullyEndExam()
-        this.communicationHandler.resetConnection()
+        //this.communicationHandler.gracefullyEndExam()
+        //this.communicationHandler.resetConnection()
     }
 
     async clipboard(text) {
@@ -375,13 +376,13 @@ export class IosTaskDispatcher {
     storehtml(args) {
         const htmlContent = args.editorcontent
         const filename = args.filename
-        let htmlfilename = `${this.multicastClient.clientinfo.name}.bak`
+        let htmlfilename = `${multicastclient.clientinfo.name}.bak`
 
         if (filename) {
             htmlfilename = `${filename}.bak`
         }
 
-        const htmlfile = path.join(this.config.examdirectory, htmlfilename);
+        const htmlfile = config.examdirectory + "/" + htmlfilename;
 
         if (htmlContent) {
             //loggingBridge.info("IosTaskDispatcher: storeHTML: saving students work to disk...")
@@ -394,7 +395,7 @@ export class IosTaskDispatcher {
                 });
             } catch (err) {
                 //loggingBridge.error(`IosTaskDispatcher @ storeHTML: ${err.message}`);
-                let alternatepath = `${htmlfile}-${this.multicastClient.clientinfo.token}.bak`
+                let alternatepath = `${htmlfile}-${multicastclient.clientinfo.token}.bak`
                 //loggingBridge.warn("IosTaskDispatcher @ storeHTML: trying to write file as:", alternatepath)
                 try {
                     fs.writeFile({
@@ -417,7 +418,7 @@ export class IosTaskDispatcher {
 
     printpdf(args) {
         // do not print if exam mode is not active anymore
-        if (!this.multicastClient?.clientinfo?.exammode) {
+        if (!multicastclient?.clientinfo?.exammode) {
             //loggingBridge.warn("IosTaskDispatcher @ printpdf: exammode is false - skipping print")
             return
         }
@@ -440,23 +441,23 @@ export class IosTaskDispatcher {
                 preferCSSPageSize: false
             }
 
-            let pdffilename = `${this.multicastClient.clientinfo.name}.pdf`  // default filename = clientname.pdf
+            let pdffilename = `${multicastclient.clientinfo.name}.pdf`  // default filename = clientname.pdf
             if (args.filename) {  // in case of manual backup the user can set a custom filename
                 pdffilename = `${args.filename}.pdf`
 
             }
-            const pdffilepath = path.join(this.config.examdirectory, pdffilename);  // path points to the current exam directory
+            const pdffilepath = config.examdirectory + "/" + pdffilename;  // path points to the current exam directory
             const alternatefilename = `${pdffilename}-aux.pdf`    //thomas.pdf-aux.pdf
             const alternatebackupfilename = `${pdffilename}-old.pdf`;   //thomas.pdf-old.pdf
-            const alternatepath = path.join(this.config.examdirectory, alternatefilename);  // if something goes wrong we try to write a different file
+            const alternatepath = config.examdirectory  + "/" + alternatefilename;  // if something goes wrong we try to write a different file
 
 
             // aux files are files created if the main pdffilepath is not writeable (opened on windows)
             try {  // always check for old aux files and rename them
-                const files = fs.readdir(this.config.examdirectory);
+                const files = fs.readdir(config.examdirectory);
                 files.forEach(file => {
                     if (file === alternatefilename) {
-                        const newPath = path.join(this.config.examdirectory, alternatebackupfilename);
+                        const newPath = config.examdirectory + "/" + alternatebackupfilename;
                         fs.rename({from: alternatepath, to: newPath});
                     }
                 });
@@ -480,7 +481,7 @@ export class IosTaskDispatcher {
             this.isPrintingPdf = true
 
             // set the title of the exam window and therefore the document title for PDF metadata
-            const pdfTitle = args.filename ? args.filename : `${this.multicastClient.clientinfo.name} - ${args.servername || this.multicastClient.clientinfo.servername || ''}`
+            const pdfTitle = args.filename ? args.filename : `${multicastclient.clientinfo.name} - ${args.servername || multicastclient.clientinfo.servername || ''}`
             // escape quotes and special characters for JavaScript string
             const escapedTitle = pdfTitle.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "\\'")
             webContents.executeJavaScript(`document.title = "${escapedTitle}"`).then(() => {
@@ -493,7 +494,7 @@ export class IosTaskDispatcher {
                         fs.unlinkSync(pdffilepath);
                     }
                 } catch (err) {
-                    loggingBridge.error(`IosTaskDispatcher @ printpdf: ${err.message}`);
+                    this.loggingBridge.error(`IosTaskDispatcher @ printpdf: ${err.message}`);
                 }
                 // write the pdf to the exam directory
                 try {
@@ -504,7 +505,7 @@ export class IosTaskDispatcher {
                         encoding: Encoding.UTF8
                     })
                     if (args.reason === "teacherrequest") {
-                        this.CommunicationHandler.sendToTeacher()
+                        //this.CommunicationHandler.sendToTeacher()
                     }
                     event.reply("loadfilelist")   //make sure students see the new file immediately
                 } catch (err) {
@@ -526,7 +527,7 @@ export class IosTaskDispatcher {
                             encoding: Encoding.UTF8
                         })
                         if (args.reason === "teacherrequest") {
-                            this.CommunicationHandler.sendToTeacher()
+                            //this.CommunicationHandler.sendToTeacher()
                         }
                         event.reply("loadfilelist")   //make sure students see the new file immediately
                     } catch (err) {
@@ -545,12 +546,12 @@ export class IosTaskDispatcher {
     }
 
     async getfileasync(args) {
-        const workdir = path.join(config.examdirectory, "/")
+        const workdir = config.examdirectory + "/"
 
         if (args.filename) { //return content of specific file as string (html) to replace in editor)
             // console.log("Received arguments:", filename, audio, docx);
 
-            let filepath = path.join(workdir, args.filename)
+            let filepath = workdir + "/" + args.filename;
 
             if (args.audio == true) { // audio file
                 const audioData = fs.readFile({
@@ -593,7 +594,7 @@ export class IosTaskDispatcher {
 
                 let files = []
                 filelist.forEach(file => {
-                    let mod = fs.stat(path.join(workdir, file)).mtime
+                    let mod = fs.stat(workdir + "/" + file).mtime
                     if (path.extname(file).toLowerCase() === ".pdf") {
                         files.push({name: file, type: "pdf", mod: mod})
                     }         //pdf
@@ -613,7 +614,7 @@ export class IosTaskDispatcher {
                         files.push({name: file, type: "image", mod: mod})
                     }  // images
                 })
-                this.multicastClient.clientinfo.numberOfFiles = filelist.length
+                multicastclient.clientinfo.numberOfFiles = filelist.length
                 return files
             } catch (err) {
                 //loggingBridge.error(`IosTaskDispatcher @ getfilesasync: ${err}`);
@@ -636,15 +637,15 @@ export class IosTaskDispatcher {
 
     async getpdfbase64() {
         //loggingBridge.info("IosTaskDispatcher @ getPDFbase64: getting base64 encoded pdf")
-        this.multicastClient.clientinfo.submissionnumber = args.submissionnumber + 1 // clientinfo keeps track of submissions for automated submissionnumbers at section change - but this obviously happens after manual submit
-        let result = await this.CommunicationHandler.getBase64PDF(args.submissionnumber, args.sectionname, args.printBackground)   // why the hell is this function located in communicationhandler.js and not in ipchandler.js ? FIXME !
+        multicastclient.clientinfo.submissionnumber = args.submissionnumber + 1 // clientinfo keeps track of submissions for automated submissionnumbers at section change - but this obviously happens after manual submit
+        //let result = await this.CommunicationHandler.getBase64PDF(args.submissionnumber, args.sectionname, args.printBackground)   // why the hell is this function located in communicationhandler.js and not in ipchandler.js ? FIXME !
         return result
     }
 
     focuslost(ctrlalt) {
         //Todo Window Handler should be removed
         let answer = false
-        if (this.config.development || !this.multicastClient.exammode) {
+        if (config.development || !multicastclient.exammode) {
             answer = {sender: "client", focus: true}
 
         } else if (this.WindowHandler.screenlockwindows.length > 0) {
@@ -660,7 +661,7 @@ export class IosTaskDispatcher {
             this.WindowHandler.examwindow.show();
             this.WindowHandler.examwindow.focus();    // we keep focus on the window.. no matter what
 
-            this.multicastClient.clientinfo.focus = false; // block everything and inform teacher  (probably an overkill on mouseleave - needs testing)
+            multicastclient.clientinfo.focus = false; // block everything and inform teacher  (probably an overkill on mouseleave - needs testing)
             answer = {sender: "client", focus: false}
         }
 
@@ -679,9 +680,9 @@ export class IosTaskDispatcher {
 
     getbackupfile(filename) {
         //loggingBridge.info(`IosTaskDispatcher @ getbackupfile: Request received for filename: ${filename}`)
-        const workdir = path.join(config.examdirectory, "/")
+        const workdir = config.examdirectory + "/";
         if (filename) { //return content of specific file as string (html) to replace in editor)
-            let filepath = path.join(workdir, filename)
+            let filepath = workdir + "/" + filename;
             //loggingBridge.info(`IosTaskDispatcher @ getbackupfile: Full file path: ${filepath}`)
             try {
                 if (!this.fileExists(filepath)) {
@@ -711,7 +712,7 @@ export class IosTaskDispatcher {
         const content = args.content
         const filename = args.filename
         const reason = args.reason
-        const ggbFilePath = path.join(this.config.examdirectory, filename);
+        const ggbFilePath = config.examdirectory + "/" + filename;
         if (content) {
             //loggingBridge.info("ipchandler @ saveGGB: saving students work to disk...")
             const fileData = Buffer.from(content, 'base64');
@@ -719,7 +720,7 @@ export class IosTaskDispatcher {
             try {
                 fs.writeFile(ggbFilePath, fileData);
                 if (reason === "teacherrequest") {
-                    this.CommunicationHandler.sendToTeacher()
+                    //this.CommunicationHandler.sendToTeacher()
                 }
                 return {sender: "client", message: t("data.filestored"), status: "success"}
             } catch (err) { //Todo Window Handling
@@ -732,6 +733,6 @@ export class IosTaskDispatcher {
 }
 
     virtualized() {
-        this.multicastClient.clientinfo.virtualized = true;
+        multicastclient.clientinfo.virtualized = true;
     }
 }

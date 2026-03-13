@@ -38,7 +38,7 @@ export default defineConfig(( ctx: any ) => {
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
     boot: [
-      //'main'
+      'main'
     ],
 
     mode: process.env.NODE_ENV,
