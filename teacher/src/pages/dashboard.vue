@@ -1784,7 +1784,6 @@ computed: {
             //console.log("bip exam - updating server info")
             let payload = {
                 teacherIP: this.serverip,
-                teacherID: this.bipuserID,   /// wird von student.vue nicht nach dashboard.vue übertragen.. ebenso token
                 pin: this.serverstatus.pin,
                 status: status,
                 examID: this.serverstatus.id
