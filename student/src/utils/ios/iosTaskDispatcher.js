@@ -30,6 +30,7 @@ import mammoth from "mammoth";
 import config from "../config.js"
 import {LoggingBridge} from "../loggingBridge.js";
 import multicastclient from "../../../src-electron/main/scripts/multicastclient.js";
+import NavigationHandler from "../navigationHandler.js";
 
 //import { MyCustomNativePlugin } from './plugins/MyCustomNativePlugin';
 
@@ -40,10 +41,13 @@ export class IosTaskDispatcher {
         this.communicationHandler = null;
         this.isPrintingPdf = false;
         this.loggingBridge = null;
+        this.navigationHandler = null;
     }
 
     init(config) {
         this.loggingBridge = new LoggingBridge(window)
+        this.navigationHandler = new NavigationHandler()
+        this.navigationHandler.init(multicastclient, config);
     }
 
     async dispatch(signal, payload) {
@@ -275,7 +279,7 @@ export class IosTaskDispatcher {
         multicastclient.clientinfo.group = "a";
         multicastclient.clientinfo.localLockdown = true; // this must be set to true in order to stop typical next-exam client/teacher actions
 
-        //this.communicationHandler.startExam(serverstatus)
+        this.navigationHandler.startExam(serverstatus);
     }
 
     register(args) {
