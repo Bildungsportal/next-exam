@@ -181,7 +181,6 @@
                 <li v-if="config.exammodes && config.exammodes.activesheets"><a class="dropdown-item" @click="selectExamType('activesheets')" :class="{ active: isExamType('activesheets') }">Active Sheets</a></li>
                 <li v-if="config.exammodes && config.exammodes.microsoft365"><a class="dropdown-item" @click="selectExamType('microsoft365')" :class="{ active: isExamType('microsoft365') }">Microsoft365</a></li>
                 <li v-if="config.exammodes && config.exammodes.rdp"><a class="dropdown-item" @click="selectExamType('rdp')" :class="{ active: isExamType('rdp') }">RDP</a> </li>
-                <li v-if="config.exammodes && config.exammodes.localVM"><a class="dropdown-item" @click="selectExamType('localvm')" :class="{ active: isExamType('localvm') }">LocalVM</a> </li>
             </ul>
 
             <!-- Additional Info Section -->
@@ -603,7 +602,7 @@
 
 
 
-<script >
+<script lang="ts">
 import { VueDraggableNext } from 'vue-draggable-next'
 import { v4 as uuidv4 } from 'uuid'
 import {SchedulerService} from '../utils/schedulerservice.js'
@@ -617,6 +616,7 @@ import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStuden
 import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer } from '../utils/filemanager'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore } from '../utils/exammanagement.js'
 import { getTestURL, getTestID, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
+import { Exam } from '../types/api'
 
 class EmptyWidget {
     constructor() {
@@ -700,6 +700,7 @@ export default {
             bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
             bipUsername:this.$route.params.bipUsername === 'false' ?  false : this.$route.params.bipUsername,
             bipStatus: "closed", // "open" or "closed" or "offline"
+            biptest:this.$route.params.biptest,
 
             serverstatus:{   // this object contains all neccessary information for students about the current exam settings
                 bip: false,
@@ -840,7 +841,7 @@ export default {
                         groupB: { users: [], examInstructionFiles: [], allowedUrls: [] }
                     }
                 },                
-            }
+            } as Exam
         };
     },
 
@@ -1741,39 +1742,65 @@ computed: {
             this.updateBiPServerInfo(newStatus);
         },
 
+        getBiPUrl(): string {
+            if (this.config.bipDemo) {
+                return this.config.bipApiUrl;
+            } else if (this.biptest) {
+                return `https://q.bildung.gv.at`;
+            } else {
+                return `https://bildung.gv.at`;
+            }
+        },
+
+        // Überprüfen, ob der String Base64-codiert ist
+        isBase64(str) {
+            try {
+                return btoa(atob(str)) === str;
+            } catch (err) {
+                return false;
+            }
+        },
+        
+        // Base64-String dekodieren und mögliche Tokens extrahieren
+        decodeBase64AndExtractTokens(base64Str) {
+            if (base64Str == null || !this.isBase64(base64Str)) {
+                return null;
+            }
+            const decodedStr = atob(base64Str);
+            const tokens = decodedStr.split(/[:\s,]+/); // Trennzeichen anpassen, falls nötig
+            return tokens;
+        },
 
          /** 
          * if this is a bip exam configured online that needs students to login into bip too
          * update exam info on server via api
          */
         async updateBiPServerInfo(status){
-            if (!this.bipToken || !this.serverstatus.bip) { return }
+            let token = this.decodeBase64AndExtractTokens(this.bipToken)?.[1];
+            if (!token || !this.serverstatus.bip) {
+                throw Error("cannot fetch from bip api without valid token")
+            }
 
             //console.log("bip exam - updating server info")
             let payload = {
                 teacherIP: this.serverip,
-                teacherID: this.bipuserID,   /// wird von student.vue nicht nach dashboard.vue übertragen.. ebenso token
                 pin: this.serverstatus.pin,
                 status: status,
                 examID: this.serverstatus.id
             }
 
-            // if (this.config.development){  // call to demo api
-                let url= "http://localhost:3000/teacher"
-                fetch(url, {
-                    method: "POST",
-                    headers: {"Content-Type": "application/json" },
-                    body: JSON.stringify(payload) // Daten als JSON-String senden
-                })
-                .then(response => { return response.json(); } )                  
-                .then(data => { 
-                   // console.log(data.message, data.data);
-                })
-                .catch(error => { console.error("Fehler beim API-Aufruf:", error.message);});
-            // }
-            // else{
-            //     //call to real bip api
-            // }
+            const url= this.getBiPUrl()+"/webservice/rest/server.php?wstoken="+token+"&wsfunction=local_dpu_update_exam_status_teacher&moodlewsrestformat=json"
+       
+            fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams(payload).toString()
+            })
+            .then(response => { return response.json(); } )                  
+            .then(data => { 
+               // console.log(data.message, data.data);
+            })
+            .catch(error => { console.error("Fehler beim API-Aufruf:", error.message);});
         },
 
         playAudioFile(filecontent, filename){

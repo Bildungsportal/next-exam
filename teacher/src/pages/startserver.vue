@@ -174,9 +174,10 @@
 
 
 
-<script>
+<script lang="ts">
 import log from 'electron-log/renderer';
 import {SchedulerService} from '../utils/schedulerservice.js'
+import {Exam} from "../types/api";
 
 
 // Erfassen von unhandled promise rejections
@@ -210,7 +211,7 @@ export default {
             backupdir: '',
             freeDiscspace: 100,
             previousExams: [],
-            onlineExams: [],
+            onlineExams: [] as Exam[],
             biptest:false,   //switches between production and q
             selectedExam: null,
 
@@ -275,16 +276,15 @@ export default {
 
         loginBiP(){
             //console.log("loginBiP", this.config)
-            if (this.config.bipDemo){   // skip bip logon and fake bip info
+            /*if (this.config.bipDemo){   // skip bip logon and fake bip info
                 // fake bip info
-                this.bipUsername = "Weissel Thomas"
-                this.bipuserID = 92136
-                this.bipToken = "4hedh443gc34lm34wb43moeinlz0082droeib45beio"
+                this.bipUsername = "Katherine Johnson"
+                this.bipuserID = 6
+                this.bipToken = btoa("Token:fddc0086a4db83e57f44fa40504452ad")
                 
                 this.fetchBipExams()
                 return  //skip real login
-            }
-
+            }*/
 
             let IPCresponse = ipcRenderer.sendSync('loginBiP', this.biptest)
             console.log(IPCresponse)
@@ -310,24 +310,31 @@ export default {
             });
         },
 
+        getBiPUrl(): string {
+            if (this.config.bipDemo) {
+                return this.config.bipApiUrl;
+            } else if (this.biptest) {
+                return `https://q.bildung.gv.at`;
+            } else {
+                return `https://bildung.gv.at`;
+            }
+        },
 
         /**
          * holt userdaten sobald das login token erhalten wurde
          * @param base64String contains 2 base64 encoded tokens
          */
         fetchBiPData(base64String){
-            const tokens = this.decodeBase64AndExtractTokens(base64String);
-            console.log(tokens); // Zeigt die extrahierten Tokens, falls vorhanden
-            let token = tokens[1]
+            let token = this.decodeBase64AndExtractTokens(base64String)?.[1];
+            if (!token) {
+                throw Error("cannot fetch from bip api without valid token")
+            }
 
-            let url = `https://www.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json`
-            if (this.biptest){ url = `https://q.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json` }
+            const url = this.getBiPUrl() + '/webservice/rest/server.php?wstoken=' + token + '&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json';
 
             fetch(url, { method: 'POST'})
             .then( res => res.json() )
             .then( response => {
-                console.log(response)
- 
                 if (response.fullname){
                     this.$swal.fire({
                         title: "BiP Response",
@@ -365,49 +372,25 @@ export default {
          * lädt vorkonfigurierte exams vom bildungsportal via bip/api
          */
         fetchBipExams(){
-            if (!this.bipToken) return;  // cannot fetch from bip api without valid token
+            let token = this.decodeBase64AndExtractTokens(this.bipToken)?.[1];
+            if (!token) {
+                throw Error("cannot fetch from bip api without valid token")
+            }
+            
+            const url = this.getBiPUrl() + '/webservice/rest/server.php?wstoken=' + token + '&wsfunction=local_dpu_get_exams_teacher&moodlewsrestformat=json';
 
-            // if (this.config.development){
-                let url= "http://localhost:3000/teacher"
+            fetch(url, { method: "GET" })
+            .then(response => { return response.json(); } )                  
+            .then(data => {
+                //console.log("Daten von der API:", data);
+                this.bipData = data   // store all of the information in data
 
-                fetch(url, {
-                    method: "GET",
-                    headers: {"Content-Type": "application/json" }
+                data.exams.forEach((exam: Exam) => {
+                    this.onlineExams.push(exam)
                 })
-                .then(response => { return response.json(); } )                  
-                .then(data => {
-                    //console.log("Daten von der API:", data);
-                    this.bipData = data   // store all of the information in data
 
-                    data.exams.forEach( exam => {
-                        this.onlineExams.push(exam)
-                    })
-
-                })
-                .catch(error => { console.error("Fehler beim API-Aufruf:", error);});
-            // }
-            // else {
-                // Do actual BIP API Call
-
-                // let url= "https://www.bildung.gv.at/webservice/rest/next-exam/teacher"
-
-                // fetch(url, {
-                //     method: "GET",
-                //     headers: {"Content-Type": "application/json" }
-                // })
-                // .then(response => { return response.json(); } )                  
-                // .then(data => {
-                //     console.log("Daten von der API:", data);
-                //     this.bipData = data   // store all of the information in data
-
-                //     data.exams.forEach( exam => {
-                //         this.onlineExams.push(exam)
-                //     })
-
-                // })
-                // .catch(error => { console.error("Fehler beim API-Aufruf:", error);});
-
-            // }
+            })
+            .catch(error => { console.error("Fehler beim API-Aufruf:", error);});
         },
 
 
@@ -573,7 +556,7 @@ export default {
 
         // Base64-String dekodieren und mögliche Tokens extrahieren
         decodeBase64AndExtractTokens(base64Str) {
-            if (!this.isBase64(base64Str)) {
+            if (base64Str == null || !this.isBase64(base64Str)) {
                 return null;
             }
             const decodedStr = atob(base64Str);
@@ -823,7 +806,8 @@ export default {
                                 passwd: this.password,
                                 bipToken: this.bipToken,
                                 bipUsername: this.bipUsername,
-                                bipuserID:this.bipuserID
+                                bipuserID:this.bipuserID,
+                                biptest: this.biptest
                             }
                         })
                         
