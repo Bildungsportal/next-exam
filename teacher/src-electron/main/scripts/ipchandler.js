@@ -27,6 +27,7 @@ import { networkInterfaces } from 'os'
 import { exec } from 'child_process';
 import { gateway4sync} from 'default-gateway';
 import ip from 'ip'
+import dns from 'dns'
 
 import server from "../../server/src/server.js"
 import checkDiskSpace from 'check-disk-space';
@@ -858,6 +859,26 @@ class IpcHandler {
                 interface: this.config.interface,
                 availableInterfaces: this.availableInterfaces,
                 preferredInterface: this.preferredInterface 
+            }
+        })
+
+        /**
+         * Resolve a hostname to an IPv4 address for LanguageTool configuration (teacher app)
+         */ 
+        ipcMain.handle('resolveHostToIp', async (_event, host) => {
+            if (!host || typeof host !== 'string') {
+                return { ok: false, ip: null, error: 'invalid-host' };
+            }
+            try {
+                const lookupHost = host.trim().replace(/^https?:\/\//i, '').split('/')[0];
+                if (!lookupHost) {
+                    return { ok: false, ip: null, error: 'empty-host' };
+                }
+                const result = await dns.promises.lookup(lookupHost, { family: 4 });
+                return { ok: true, ip: result.address, error: null };
+            } catch (err) {
+                log.warn('teacher ipchandler @ resolveHostToIp: failed');
+                return { ok: false, ip: null, error: err?.message || 'lookup-failed' };
             }
         })
 

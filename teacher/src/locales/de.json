@@ -77,6 +77,8 @@
         "getfiles": "Sicherung holen",
         "stopexam": "Geräte freigeben",
         "stopexamsingle": "Gerät freigeben",
+        "host_ok": "Host erfolgreich aufgelöst",
+        "host_warn": "Host konnte nicht aufgelöst werden",
         "sure": "Sind Sie sicher?",
         "exitexamsure": "Prüfungsserver schließen?",
         "exitexam": "Dies beendet den Prüfungsserver.\nDie Schüler:innen können im abgesicherten Modus auch ohne Verbindung weiterarbeiten.",

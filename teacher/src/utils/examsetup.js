@@ -507,6 +507,9 @@ async function configureEditor(){
         'none':this.$t("dashboard.none"),
     }
 
+    // holds resolved IPv4 for custom LanguageTool host while dialog is open
+    let resolvedLtIp = null;
+
     const updateMarginValueDisplay = () => {
         const marginValueInput = document.getElementById('marginValue');
         const marginValueDisplay = document.getElementById('marginValueDisplay');
@@ -524,7 +527,7 @@ async function configureEditor(){
         },
         title: this.$t("dashboard.texteditor"),
         html: `
-        <div class="my-content" style="font-size: 0.8em !important; text-align:left; margin-left:6px;">
+        <div class="my-content" style="font-size: 0.8em !important; text-align:left; margin:0 12px;">
             <div>
                 <label >
                     <h6>${this.$t("dashboard.cmargin-value")}</h6>
@@ -553,9 +556,9 @@ async function configureEditor(){
                 <label><input type="radio" name="fontfamily" value="sans-serif" checked/> sans-serif</label> &nbsp;
             </div>
 
-            <div>
+            <div style="margin-top:8px;">
                 <h6>${this.$t("dashboard.fontsize")}</h6>
-                <select id="fontsize" class="my-select" value="12pt">
+                <select id="fontsize" class="my-select" value="12pt" style="width:100%;max-width:100%;">
                     <option value="8pt">8 pt</option>
                     <option value="10pt">10 pt</option>
                     <option value="12pt">12 pt</option>
@@ -567,9 +570,9 @@ async function configureEditor(){
             </div>
 
             <hr>
-            <div>
+            <div style="margin-top:8px;">
                 <h6>${this.$t("dashboard.audiorepeattitle")}</h6>
-                <select id="audiorepeat" class="my-select">
+                <select id="audiorepeat" class="my-select" style="width:100%;max-width:100%;">
                     <option value="0">${this.$t("dashboard.audioallow")}</option>
                     <option value="1">1${this.$t("dashboard.audiorepeat1")}</option>
                     <option value="2">2${this.$t("dashboard.audiorepeat2")}</option>
@@ -589,7 +592,14 @@ async function configureEditor(){
                 <input class="form-check-input" type="checkbox" id="checkboxCustomHost">
                 <label class="form-check-label" for="checkboxCustomHost"> ${this.$t("dashboard.customhost")} </label><br>
                 
-                <input type="text" id="languagetoolhost" class="form-control" style="margin-top:4px; width: 100%; display: block; color: #6c757d;" value="http://127.0.0.1" disabled><br><br>
+                <div style="display:flex; gap:8px; margin-top:4px; width:99%; align-items:center;">
+                    <div style="position:relative; flex:1;">
+                        <input type="text" id="languagetoolhost" class="form-control" style="width:100%; padding-right:24px; color: #6c757d;" value="https://languagetool" disabled>
+                        <span id="languagetoolhostStatus" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-weight:bold; cursor:help; z-index:2;"></span>
+                    </div>
+                    <input type="text" id="languagetoolport" class="form-control" style="width:90px; color: #6c757d;" value="8088" disabled>
+                </div>
+                <br><br>
                 <h6 style="margin-bottom:0px;">${this.$t("dashboard.spellcheckchoose")}</h6>
             </div>
              
@@ -638,7 +648,7 @@ async function configureEditor(){
             }
 
             const defaultFontSize = this.serverstatus.examSections[this.serverstatus.activeSection].fontsize || '12pt';
-            console.log("defaultFontSize:", defaultFontSize)
+            // console.log("defaultFontSize:", defaultFontSize)
             const selectElement2 = document.getElementById('fontsize');
             if (selectElement2) {
                 setTimeout(() => {
@@ -652,22 +662,52 @@ async function configureEditor(){
             const checkboxSuggestions = document.getElementById('checkboxsuggestions');
             const checkboxCustomHost = document.getElementById('checkboxCustomHost');
             const languagetoolhostInput = document.getElementById('languagetoolhost');
+            const languagetoolportInput = document.getElementById('languagetoolport');
+            const hostStatus = document.getElementById('languagetoolhostStatus');
             
-            // Initialize LanguageTool Host field
+            // Initialize LanguageTool host and port fields
             const savedHost = this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost;
+            const savedPort = this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolport;
             
-            // Set default value or saved value
+            // Set default values or saved values
             if (savedHost) {
                 languagetoolhostInput.value = savedHost;
                 checkboxCustomHost.checked = true;
                 languagetoolhostInput.disabled = false;
                 languagetoolhostInput.style.color = '#000000';
+                if (languagetoolportInput) {
+                    languagetoolportInput.value = savedPort || '8088';
+                    languagetoolportInput.disabled = false;
+                    languagetoolportInput.style.color = '#000000';
+                }
             } else {
-                languagetoolhostInput.value = 'http://127.0.0.1';
+                languagetoolhostInput.value = 'https://languagetool';
                 checkboxCustomHost.checked = false;
                 languagetoolhostInput.disabled = true;
                 languagetoolhostInput.style.color = '#6c757d';
+                if (languagetoolportInput) {
+                    languagetoolportInput.value = '8088';
+                    languagetoolportInput.disabled = true;
+                    languagetoolportInput.style.color = '#6c757d';
+                }
             }
+
+            // Helper to update status icon
+            const setHostStatus = (state) => {
+                if (!hostStatus) { return; }
+                if (state === 'ok') {
+                    hostStatus.textContent = '✓';
+                    hostStatus.style.color = '#28a745';
+                    hostStatus.title = this.$t('dashboard.host_ok') || 'Host erfolgreich aufgelöst';
+                } else if (state === 'warn') {
+                    hostStatus.textContent = '▲';
+                    hostStatus.style.color = '#ffc107';
+                    hostStatus.title = this.$t('dashboard.host_warn') || 'Host konnte nicht aufgelöst werden';
+                } else {
+                    hostStatus.textContent = '';
+                    hostStatus.removeAttribute('title');
+                }
+            };
             
             // Initial: suggestions and custom host checkboxes deaktivieren, falls LT nicht gecheckt ist
             checkboxSuggestions.disabled = !checkboxLT.checked;
@@ -676,6 +716,10 @@ async function configureEditor(){
             if (!checkboxLT.checked) {
                 languagetoolhostInput.disabled = true;
                 languagetoolhostInput.style.color = '#6c757d';
+                if (languagetoolportInput) {
+                    languagetoolportInput.disabled = true;
+                    languagetoolportInput.style.color = '#6c757d';
+                }
             }
             
             // Event Listener für checkboxLT, um den Status von checkboxsuggestions und checkboxCustomHost anzupassen
@@ -688,14 +732,70 @@ async function configureEditor(){
                     checkboxCustomHost.checked = false;
                     languagetoolhostInput.disabled = true;
                     languagetoolhostInput.style.color = '#6c757d';
+                    if (languagetoolportInput) {
+                        languagetoolportInput.disabled = true;
+                        languagetoolportInput.style.color = '#6c757d';
+                    }
                 }
             });
             
             // Event Listener für checkboxCustomHost, um das Textinput zu aktivieren/deaktivieren
             checkboxCustomHost.addEventListener('change', () => {
-                languagetoolhostInput.disabled = !checkboxCustomHost.checked;
-                languagetoolhostInput.style.color = checkboxCustomHost.checked ? '#000000' : '#6c757d';
+                const enabled = checkboxCustomHost.checked;
+                languagetoolhostInput.disabled = !enabled;
+                languagetoolhostInput.style.color = enabled ? '#000000' : '#6c757d';
+                if (languagetoolportInput) {
+                    languagetoolportInput.disabled = !enabled;
+                    languagetoolportInput.style.color = enabled ? '#000000' : '#6c757d';
+                }
+                if (!enabled) {
+                    setHostStatus('none');
+                    resolvedLtIp = null;
+                }
             });
+
+            // DNS-Check während der Dialog offen ist (debounced)
+            let ltResolveTimeout = null;
+            const scheduleResolve = () => {
+                if (!checkboxCustomHost.checked || languagetoolhostInput.disabled) {
+                    setHostStatus('none');
+                    resolvedLtIp = null;
+                    return;
+                }
+                const raw = languagetoolhostInput.value || '';
+                if (!raw.trim()) {
+                    setHostStatus('none');
+                    resolvedLtIp = null;
+                    return;
+                }
+                if (ltResolveTimeout) {
+                    clearTimeout(ltResolveTimeout);
+                }
+                ltResolveTimeout = setTimeout(async () => {
+                    try {
+                        const hostOnly = raw.trim().replace(/^https?:\/\//i, '').split('/')[0];
+                        const result = await window.ipcRenderer?.invoke?.('resolveHostToIp', hostOnly);
+                        if (!result || !result.ok || !result.ip) {
+                            setHostStatus('warn');
+                            resolvedLtIp = null;
+                            return;
+                        }
+                        setHostStatus('ok');
+                        resolvedLtIp = result.ip;
+                    } catch (e) {
+                        setHostStatus('warn');
+                        resolvedLtIp = null;
+                    }
+                }, 600);
+            };
+
+            if (languagetoolhostInput) {
+                languagetoolhostInput.addEventListener('input', scheduleResolve);
+                // Initialen Check für Default-Wert nur, wenn Custom Host aktiv ist
+                if (checkboxCustomHost.checked) {
+                    scheduleResolve();
+                }
+            }
 
             
         },
@@ -715,6 +815,7 @@ async function configureEditor(){
             const checkboxLTElement = document.getElementById('checkboxLT');
             const checkboxCustomHostElement = document.getElementById('checkboxCustomHost');
             const languagetoolhostElement = document.getElementById('languagetoolhost');
+            const languagetoolportElement = document.getElementById('languagetoolport');
             const marginValueElement = document.getElementById('marginValue');
             const audioRepeatElement = document.getElementById('audiorepeat');
             const fontSizeElement = document.getElementById('fontsize');
@@ -722,11 +823,21 @@ async function configureEditor(){
             this.serverstatus.examSections[this.serverstatus.activeSection].suggestions = checkboxSuggestionsElement ? checkboxSuggestionsElement.checked : false; 
             this.serverstatus.examSections[this.serverstatus.activeSection].languagetool = checkboxLTElement ? checkboxLTElement.checked : false;
             
-            // Save LanguageTool Host value if custom host checkbox is checked
+            // Save LanguageTool host (as resolved IP) and port values if custom host checkbox is checked
             if (checkboxCustomHostElement && checkboxCustomHostElement.checked && languagetoolhostElement) {
-                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost = languagetoolhostElement.value || 'http://127.0.0.1';
+                const rawHost = languagetoolhostElement.value || 'http://127.0.0.1';
+                const protocolMatch = rawHost.match(/^(https?:\/\/)/i);
+                const protocol = protocolMatch ? protocolMatch[1] : 'http://';
+                const hostForConfig = resolvedLtIp ? `${protocol}${resolvedLtIp}` : rawHost;
+                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost = hostForConfig;
+                if (languagetoolportElement && languagetoolportElement.value) {
+                    this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolport = languagetoolportElement.value;
+                } else {
+                    this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolport = '8088';
+                }
             } else {
                 this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost = null;
+                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolport = null;
             } 
 
             const radioButtons = document.querySelectorAll('input[name="correction_margin"]');

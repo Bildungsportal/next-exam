@@ -535,17 +535,17 @@
     <!-- LANGUAGE TOOL START -->
     <div id="languagetool"
          v-if="showLanguageToolSidebar">
-        <div id="ltcheck" @click="LTcheckAllWords();">
+        <div id="ltcheck" @click="LTcheckAllWordsAndHighlight();">
             <div id="eye" class="darkgreen eyeopen"></div> &nbsp;LanguageTool
         </div>
         <div class="ltscrollarea">
 
             <div style="display:flex;align-items: center; width:100%;  margin-bottom:20px;">
-                <div @click="LTcheckAllWords(false);" class="btn btn-sm btn-success center"
+                <div @click="LTcheckAllWordsAndHighlight(false);" class="btn btn-sm btn-success center"
                      style=" display: inline-block; text-align: center;  margin-left:10px;"> {{ $t('editor.update') }}
                 </div>
                 <div class="" style=" width:100%;display: inline-block; text-align:right;  "
-                     @click="LTresetIgnorelist();LTcheckAllWords(false);" title="IgnoreList löschen">
+                     @click="LTresetIgnorelist();LTcheckAllWordsAndHighlight(false);" title="IgnoreList löschen">
                     <span v-if="ignoreList.size > 0" class="text-mini"> ({{ ignoreList.size }}) ignored</span>
                     <img class="white" width=20 height=20 src="/src/assets/img/svg/edit-delete.svg"
                          style=" cursor: pointer; margin-left:3px; vertical-align: middle;">
@@ -581,7 +581,7 @@
                     <div class="error-word" style="flex:1">{{ entry.wrongWord }} <span v-if="entry.whitespace">' &nbsp;  '</span>
                     </div>
                     <div class="" style=" flex: 0; cursor: not-allowed;  text-align:right; "
-                         @click="LTignoreWord(entry);LTcheckAllWords(false);" title="ignore">
+                        @click="LTignoreWord(entry);LTcheckAllWordsAndHighlight(false);" title="ignore">
                         <img class="grey" width=18 height=18 src="/src/assets/img/svg/eye-slash-fill.svg">
                     </div>
                 </div>
@@ -864,6 +864,11 @@ export default {
             }
 
         },
+        async LTcheckAllWordsAndHighlight(closeLT = true) {
+            await this.LTcheckAllWords(closeLT)
+            await this.LTupdateHighlights()
+        },
+        
         async LTupdateHighlights() {
             if (!this.LTactive) {
                 return

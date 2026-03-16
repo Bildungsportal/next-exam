@@ -20,6 +20,7 @@ import path from 'path'
 import fs from 'fs'
 import ip from 'ip'
 import net from 'net'
+import dns from 'dns'
 import i18n from '../../../src/locales/locales.js'
 const {t} = i18n.global
 import{ipcMain, clipboard,app, webContents} from 'electron'
@@ -392,6 +393,26 @@ class IpcHandler {
             // Return first successful result, or last result if none succeeded
             const successResult = results.find(result => result.running);
             return successResult || results[results.length - 1];
+        })
+
+        /**
+         * Resolve a hostname to an IPv4 address for LanguageTool configuration
+         */ 
+        ipcMain.handle('resolveHostToIp', async (_event, host) => {
+            if (!host || typeof host !== 'string') {
+                return { ok: false, ip: null, error: 'invalid-host' };
+            }
+            try {
+                const lookupHost = host.trim().replace(/^https?:\/\//i, '').split('/')[0];
+                if (!lookupHost) {
+                    return { ok: false, ip: null, error: 'empty-host' };
+                }
+                const result = await dns.promises.lookup(lookupHost, { family: 4 });
+                return { ok: true, ip: result.address, error: null };
+            } catch (err) {
+                log.warn('ipchandler @ resolveHostToIp: failed', host, err?.message);
+                return { ok: false, ip: null, error: err?.message || 'lookup-failed' };
+            }
         })
 
 

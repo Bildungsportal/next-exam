@@ -2923,8 +2923,7 @@ hr {
 .my-custom-input-select {
     margin-top: 0px !important;
     width: -webkit-fill-available !important;
-    margin: 0px 2em 3px !important;
-    width: 343px !important;
+    margin: 0px 44px 0px 44px !important;
 }  
 .my-swal2-actions {
     margin-top: 10px !important;

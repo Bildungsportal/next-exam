@@ -78,6 +78,8 @@
         "getfiles": "Fetch Work",
         "stopexam": "Release devices",
         "stopexamsingle": "Release device",
+        "host_ok": "Host resolved successfully",
+        "host_warn": "Host could not be resolved",
         "sure": "Are you sure?",
         "exitexamsure": "Close Exam Server?",
         "exitexam": "This kills the connection to all students \nDid you backup everything?",
