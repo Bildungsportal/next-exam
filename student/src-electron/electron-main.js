@@ -40,7 +40,11 @@ import { checkParentProcess } from './main/scripts/checkparent.js';
 import { toggleMacOSLockdown } from './main/scripts/platformrestrictions.js'
 JreHandler.init()
 
-
+if (!config.development && process.argv.some(arg => arg.startsWith('--inspect') || arg.startsWith('--remote-debugging'))) {  // disable options to read v8 heap on production builds
+    log.info('main @ electron-main: Inspect mode detected, quitting...');
+    app.quit();
+    process.exit(0);
+}
 
 app.commandLine.appendSwitch('lang', 'de');
 app.commandLine.appendSwitch('enable-unsafe-swiftshader');

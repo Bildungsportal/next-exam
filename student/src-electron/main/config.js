@@ -5,10 +5,10 @@
 
 const config = {
     development: true,  // disable kiosk mode on exam mode and other stuff (autofill input fields)
-    showdevtools: true,
+    showdevtools: false,
     useBundledJRE: true,
     bipIntegration: true,
-    bipDemo: false,
+    bipDemo: true,
     bipApiUrl: 'https://localhost:8444',
 
     workdirectory : "",   // (desktop path + examdir)
@@ -27,7 +27,7 @@ const config = {
     isPuavo: false,
     
     version: '2.0.0.1',
-    buildDate: '20260312',
+    buildDate: '20260316',
     buildNumber: '1',
     info: 'Release'
 }

@@ -898,12 +898,16 @@ class IpcHandler {
 
          
             // Encrypt the registration payload and derive sessionRef from the pin.
-            const payload = { pin, clientname, clientip, hostname, version, bipuserID }
+            let payload = { pin, clientname, clientip, hostname, version, bipuserID }
             const url = `https://${serverip}:${this.config.serverApiPort}/server/control/registerclient/${servername}`;
             const signal = AbortSignal.timeout(8000); // 8000 Millisekunden = 8 Sekunden AbortSignal mit einem Timeout
 
 
-            this.prepareSecurePayload(payload, pin).then(packet => fetch(url, { method: 'POST', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ packet }) }))
+            this.prepareSecurePayload(payload, pin)
+            .then(packet => {
+                payload = null;
+                return fetch(url, { method: 'POST', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ packet }) });
+            })
             .then(response => response.json()) 
             .then(data => {
                 if (data && data.status == "success") {  // registration successfull otherwise data would be "false"
