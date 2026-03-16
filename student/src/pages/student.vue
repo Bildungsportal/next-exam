@@ -213,7 +213,7 @@
 </template>
 
 
-<script>
+<script lang="ts">
 import validator from 'validator'
 import log from 'electron-log/renderer'
 import {SchedulerService} from '../utils/schedulerservice.js'
@@ -221,6 +221,7 @@ import {isElectronWindow} from "../types/platform.ts";
 import config from '../../src-electron/main/config.js'
 import {SignalBridge} from '../utils/signalBridge.js'
 import { initScreenshotScheduler } from '../utils/screenshotCapture.js'
+import { Exam } from '../types/api'
 
 
 // Capture unhandled promise rejections
@@ -245,8 +246,8 @@ export default {
         return {
             version: this.$route.params.version,
             token: "",
-            username: this.$route.params.config.development ? "Thomas" : "",
-            pincode: this.$route.params.config.development ? "1111" : "",
+            username: this.$route.params.config.development ? "Thomas" : "" as string | boolean,
+            pincode: this.$route.params.config.development ? "1111" : "" as string,
             clientinfo: {},
             serverlist: [],
             serverlistAdvanced: [],
@@ -260,7 +261,7 @@ export default {
             buildDate: this.$route.params.config.buildDate,
             startExamEvent: null,
             advanced: false,
-            serverip: "",
+            serverip: "" as string,
             servername: "",
             hostip: this.$route.params.config.hostip,
             clickCount: 0,
@@ -268,13 +269,13 @@ export default {
             localLockdown: false,
             isLoading: true,
 
-            biptest: false,
+            biptest: true,
             bipToken: false,
             bipUsername: false,
             bipuserID: false,
             servertimeout: false,
             bipData: null,
-            onlineExams: [],
+            onlineExams: [] as Exam[],
             validip: true,
             serverFailureCount: {}, // Track failed ping attempts for manually added servers
 
@@ -295,16 +296,16 @@ export default {
         },
 
         async loginBiP() {
-            if (this.config.bipDemo) {   // skip bip logon and fake bip info
+            /*if (this.config.bipDemo) {   // skip bip logon and fake bip info
                 this.bipUsername = "Marie Curie"
                 this.bipuserID = 8
-                this.bipToken = "3bb55e2ae29dc744e74dcbdca7722615"
+                this.bipToken = btoa("Token:4fce5b97fe36cb42313621ebf3ff2a1a")
                 this.username = this.bipUsername
 
                 await this.fetchBipExams()
                 this.bipAutoconnect()
                 return  //skip real login
-            }
+            }*/
             let IPCresponse = signalBridge.sendSync('loginBiP', this.biptest)
             if (IPCresponse && IPCresponse.status === "success") {
                 
@@ -339,14 +340,14 @@ export default {
          */
         bipAutoconnect() {
             if (this.onlineExams.length > 0) {
-                this.onlineExams.forEach(exam => {
+                this.onlineExams.forEach((exam: Exam) => {
                     if (exam.examStatus == "open") {
                         exam.examTeachers.forEach(teacher => {
                             if (teacher.teacherIP) {
                                 //console.log(exam)
                                 this.serverip = teacher.teacherIP
                                 this.username = this.bipUsername
-                                this.pincode = parseInt(exam.examPin)     // Set the pin to the exam pin for auto connect
+                                this.pincode = exam.examPin.toString()     // Set the pin to the exam pin for auto connect
                                 console.log(`connecting to exam: ${exam.examName} with teacher: ${teacher.teacherID} and pin: ${exam.examPin}`)
                                 this.registerClient(teacher.teacherIP, exam.examName)
                             }
@@ -365,22 +366,28 @@ export default {
             }
         },
 
+        getBiPUrl(): string {
+            if (this.config.bipDemo) {
+                return this.config.bipApiUrl;
+            } else if (this.biptest) {
+                return `https://q.bildung.gv.at`;
+            } else {
+                return `https://bildung.gv.at`;
+            }
+        },
+
         /**
          * Loads pre-configured exams from the education portal via bip/api
          */
         async fetchBipExams() {
-            if (!this.bipToken) return;  // cannot fetch from bip api without valid token
-
-          //  return // disable bip api call for now - this must connect to the real bip api server
-            //probably the path needs to be set in .env and config.js
-
-
-            // if (this.config.development){
-            let url = this.config.bipApiUrl + "/webservice/rest/server.php?wstoken="+this.bipToken+"&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json"
+            let token = this.decodeBase64AndExtractTokens(this.bipToken)?.[1];
+            if (!token) {
+                throw Error("cannot fetch from bip api without valid token")
+            }
+            
+            const url = this.getBiPUrl() + '/webservice/rest/server.php?wstoken=' + token + '&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json';
            
-            await fetch(url, {
-                method: "GET",
-                headers: {"Content-Type": "application/x-www-form-urlencoded"}            })
+            await fetch(url, { method: "GET" })
             .then(response => {
                 return response.json();
             })
@@ -389,55 +396,51 @@ export default {
                 this.bipData = data   // Store all of the information in data
                 this.onlineExams = data.exams
                 console.log(data)
-                return
+                this.bipAutoconnect()
             })
             .catch(error => {
                 console.error("Error during API call:", error);
             });
-            return
-            // }
-            // else {
-            // Do actual BIP API Call
-            // let url= "https://www.bildung.gv.at/webservice/rest/next-exam/teacher"
-            // fetch(url, {
-            //     method: "GET",
-            //     headers: {"Content-Type": "application/json" }
-            // })
-            // .then(response => { return response.json(); } )
-            // .then(data => {
-            //     console.log("Data from API:", data);
-            //     this.bipData = data   // Store all of the information in data
-            //     data.exams.forEach( exam => {
-            //   this.onlineExams = this.data.exams
-            //     })
-            // })
-            // .catch(error => { console.error("Error during API call:", error);});
-            // }
         },
 
 
         fetchBiPData(base64String) {
             const tokens = this.decodeBase64AndExtractTokens(base64String);
             let token = tokens[1]
-            let url = `https://www.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json`
-            if (this.biptest) {
-                url = `https://q.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json`
-            }
+            console.log("token"+token);
+            let url = this.getBiPUrl()+'/webservice/rest/server.php?wstoken='+token+'&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json';
 
             fetch(url, {method: 'POST'})
                 .then(res => res.json())
                 .then(response => {
-                    console.log(response)
-                    this.$swal.fire({
-                        title: "BiP Response",
-                        text: "Connection established",
-                        icon: 'info',
-                        showCancelButton: false,
-                    })
-                    if (response.fullname) {
-                        this.username = response.fullname
-                        this.bipuserID = response.userid
+                    if (response.fullname){
+                        this.$swal.fire({
+                            title: "BiP Response",
+                            text: "Verbindung hergestellt",
+                            icon: 'info',
+                            showCancelButton: false,
+                        })
+
                         this.bipUsername = response.fullname
+                        this.bipuserID = response.userid
+
+
+                        document.querySelector("#biploginbutton").classList.remove('btn-info')
+                        document.querySelector("#biploginbutton").classList.add('btn-success')
+                        document.querySelector("#biplogo").style.filter = "hue-rotate(140deg)"
+                        document.getElementById("biploginbutton").classList.add("disabledbutton");
+
+
+                        this.fetchBipExams()
+                    }
+                    else {
+                        this.$swal.fire({
+                            title: "BiP Response",
+                            text: "Verbindung konnte nicht hergestellt werden",
+                            icon: 'info',
+                            showCancelButton: false,
+                        })
+
                     }
                 })
                 .catch(err => {
