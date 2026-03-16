@@ -424,16 +424,21 @@ app.whenReady()
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
     // Provide screen source for getDisplayMedia so frontend always gets full desktop without picker
     session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
-      desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+        desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
             try {
-                if (sources.length > 0) callback({ video: sources[0] });
-                else callback(new Error('No screen source available'));
+                if (sources.length > 0) {
+                    callback({ video: sources[0] });
+                } else {
+                    log.warn('main @ setDisplayMediaRequestHandler: no screen sources available');
+                    callback(null);
+                }
             } catch (e) {
-                callback(e);
+                log.warn('main @ setDisplayMediaRequestHandler: exception in handler', e?.message || e);
+                callback(null);
             }
         }).catch((err) => {
             log.warn('main @ setDisplayMediaRequestHandler:', err?.message || err);
-            callback(err);
+            callback(null);
         });
     });
     

@@ -28,24 +28,7 @@ async function hashArrayBuffer(buffer) {
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/**
- * Request screen-capture permission once up front (no server needed).
- * Triggers getDisplayMedia so OS/permission is granted; stream is stopped immediately.
- */
-async function requestCapturePermission() {
-  if (!navigator.mediaDevices?.getDisplayMedia) {
-    log.warn('screenshotCapture @ requestCapturePermission: getDisplayMedia not available');
-    return;
-  }
-  try {
-    log.info('screenshotCapture @ requestCapturePermission: requesting…');
-    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-    stream.getTracks().forEach((t) => t.stop());
-    log.info('screenshotCapture @ requestCapturePermission: OK (permission granted)');
-  } catch (err) {
-    log.warn('screenshotCapture @ requestCapturePermission: getDisplayMedia failed', err?.message);
-  }
-}
+// Screen capture permission is requested exactly once via acquireDisplayStream at app start.
 
 /**
  * Capture one frame from a live video element (stream already attached and playing).
@@ -149,6 +132,8 @@ let sharedRef = { stream: null, video: null };
 let consecutiveFailures = 0;
 const MAX_CONSECUTIVE_FAILURES = 5;
 let applyInFlight = false;
+let initAttempted = false;
+let fullDesktopLikely = true;
 
 /**
  * Acquire display stream once and set up a long-lived video element for frame capture.
@@ -162,7 +147,30 @@ async function acquireDisplayStream() {
     video.srcObject = stream;
     video.muted = true;
     await new Promise((resolve, reject) => {
-      video.onloadedmetadata = () => video.play().then(resolve).catch(reject);
+      video.onloadedmetadata = () => video.play().then(() => {
+        log.info('screenshotCapture @ acquireDisplayStream: video resolution', video.videoWidth + 'x' + video.videoHeight);
+        try {
+          const screenWidth = window.screen?.width;
+          const screenHeight = window.screen?.height;
+          if (screenWidth && screenHeight) {
+            log.info('screenshotCapture @ acquireDisplayStream: primary screen resolution', screenWidth + 'x' + screenHeight);
+            const widthDiff = Math.abs(video.videoWidth - screenWidth);
+            const heightDiff = Math.abs(video.videoHeight - screenHeight);
+            const widthRel = widthDiff / screenWidth;
+            const heightRel = heightDiff / screenHeight;
+            const threshold = 0.1;
+            if (widthRel > threshold || heightRel > threshold) {
+              fullDesktopLikely = false;
+              log.warn('screenshotCapture @ acquireDisplayStream: video vs screen resolution differ by more than 10% – likely not full desktop capture');
+            } else {
+              fullDesktopLikely = true;
+            }
+          }
+        } catch (e) {
+          // ignore screen resolution logging errors
+        }
+        resolve();
+      }).catch(reject);
       video.onerror = () => reject(new Error('video load failed'));
     });
     return { stream, video };
@@ -172,9 +180,35 @@ async function acquireDisplayStream() {
   }
 }
 
+/** Initialize global display stream once at app start */
+export async function initDisplayStreamOnce() {
+  if (!isElectronWindow(window)) return;
+  if (initAttempted) return;
+  initAttempted = true;
+  const acquired = await acquireDisplayStream();
+  if (acquired) {
+    sharedRef.stream = acquired.stream;
+    sharedRef.video = acquired.video;
+    log.info('screenshotCapture @ initDisplayStreamOnce: display stream initialized');
+  } else {
+    log.warn('screenshotCapture @ initDisplayStreamOnce: display stream not available');
+  }
+}
+
+/** Check if there is an active screenshot stream */
+export function hasActiveScreenshotStream() {
+  const track = sharedRef.stream?.getVideoTracks?.()[0];
+  return !!track && track.readyState === 'live';
+}
+
+/** Heuristic: did we likely capture the full desktop (based on resolution comparison)? */
+export function isFullDesktopCaptureLikely() {
+  return fullDesktopLikely;
+}
+
 /**
  * Apply config: start interval when serverip and screenshotinterval > 0, stop when 0 or no serverip.
- * Stream is acquired once when interval starts and reused for every tick.
+ * Stream is acquired once at app start and reused for every tick.
  */
 function applyConfig(signalBridge, config) {
   if (applyInFlight) return;
@@ -183,7 +217,6 @@ function applyConfig(signalBridge, config) {
     clearInterval(intervalId);
     intervalId = null;
   }
-  stopSharedStream(sharedRef);
   consecutiveFailures = 0;
 
   if (!config?.serverip || !(config.screenshotinterval > 0)) {
@@ -193,48 +226,40 @@ function applyConfig(signalBridge, config) {
   }
 
   const ms = config.screenshotinterval;
-  log.info('screenshotCapture @ applyConfig: acquiring stream once, then starting interval', ms, 'ms');
+  log.info('screenshotCapture @ applyConfig: starting interval using existing stream', ms, 'ms');
 
-  acquireDisplayStream().then((acquired) => {
-    if (!acquired) {
-      log.warn('screenshotCapture @ applyConfig: could not acquire stream, interval not started');
-      applyInFlight = false;
-      return;
-    }
-    sharedRef.stream = acquired.stream;
-    sharedRef.video = acquired.video;
-
-    intervalId = setInterval(() => {
-      signalBridge.invoke('getScreenshotConfig').then((cfg) => {
-        if (!cfg?.serverip || cfg.clientinfo?.localLockdown) return;
-        const track = sharedRef.stream?.getVideoTracks()?.[0];
-        if (track?.readyState === 'ended') {
-          stopSharedStream(sharedRef);
-          acquireDisplayStream().then((reacquired) => {
-            if (reacquired) {
-              sharedRef.stream = reacquired.stream;
-              sharedRef.video = reacquired.video;
-              consecutiveFailures = 0;
-            }
-          });
-          return;
-        }
-        captureAndUpload(signalBridge, cfg, sharedRef).then((ok) => {
-          if (ok) consecutiveFailures = 0;
-          else {
-            consecutiveFailures += 1;
-            if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-              if (intervalId) clearInterval(intervalId);
-              intervalId = null;
-              stopSharedStream(sharedRef);
-              log.warn('screenshotCapture @ applyConfig: screenshot capture paused after', MAX_CONSECUTIVE_FAILURES, 'consecutive failures (will resume on next screenshot-config)');
-            }
-          }
-        });
-      });
-    }, ms);
+  if (!hasActiveScreenshotStream()) {
+    log.warn('screenshotCapture @ applyConfig: no active stream, interval not started');
     applyInFlight = false;
-  });
+    return;
+  }
+
+  intervalId = setInterval(() => {
+    signalBridge.invoke('getScreenshotConfig').then((cfg) => {
+      if (!cfg?.serverip || cfg.clientinfo?.localLockdown) return;
+      const track = sharedRef.stream?.getVideoTracks?.()[0];
+      if (!track || track.readyState === 'ended') {
+        if (intervalId) clearInterval(intervalId);
+        intervalId = null;
+        stopSharedStream(sharedRef);
+        log.warn('screenshotCapture @ applyConfig: stream ended, screenshot capture disabled until restart');
+        return;
+      }
+      captureAndUpload(signalBridge, cfg, sharedRef).then((ok) => {
+        if (ok) consecutiveFailures = 0;
+        else {
+          consecutiveFailures += 1;
+          if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+            if (intervalId) clearInterval(intervalId);
+            intervalId = null;
+            stopSharedStream(sharedRef);
+            log.warn('screenshotCapture @ applyConfig: screenshot capture paused after', MAX_CONSECUTIVE_FAILURES, 'consecutive failures (will resume on next screenshot-config)');
+          }
+        }
+      });
+    });
+  }, ms);
+  applyInFlight = false;
 }
 
 /**
@@ -247,8 +272,8 @@ export function initScreenshotScheduler(signalBridge) {
   }
   log.info('screenshotCapture @ initScreenshotScheduler: registering screenshot-config listener and fetching getScreenshotConfig');
 
-  // Request capture permission once so it is already granted when interval starts after server connect
-  requestCapturePermission();
+  // Initialize display stream once so it is already available when interval starts after server connect
+  initDisplayStreamOnce();
 
   signalBridge.on('screenshot-config', (_event, config) => {
     //log.info('screenshotCapture @ initScreenshotScheduler: screenshot-config event', config);

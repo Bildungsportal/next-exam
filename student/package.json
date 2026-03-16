@@ -19,11 +19,11 @@
     "cleanwin": "if exist dist rmdir /s /q dist",
     "prebuild": "node scripts/prebuild.js",
     "protect:main": "node scripts/protect-main.mjs",
-    "build:linux": "npm run prebuild && npm run clean && quasar build --verbose -m electron -l",
-    "build:mac:x64": "npm run prebuild && npm run clean && quasar build --verbose -m electron -m --arch x64",
-    "build:mac:arm64": "npm run prebuild && npm run clean && quasar build --verbose -m electron -m --arch arm64",
-    "build:win:portable": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -w portable:x64",
-    "build:win:msi": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -w msi:x64"
+    "build:linux": "npm run prebuild && npm run clean && quasar build --verbose -m electron -l && npm run protect:main",
+    "build:mac:x64": "npm run prebuild && npm run clean && quasar build --verbose -m electron -m --arch x64 && npm run protect:main",
+    "build:mac:arm64": "npm run prebuild && npm run clean && quasar build --verbose -m electron -m --arch arm64 && npm run protect:main",
+    "build:win:portable": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -w portable:x64 && npm run protect:main",
+    "build:win:msi": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -w msi:x64 && npm run protect:main"
   },
   "env": {
     "//": "Used in build scripts",

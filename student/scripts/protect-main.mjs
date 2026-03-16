@@ -5,8 +5,17 @@ import { createRequire } from 'module';
 import JavaScriptObfuscator from 'javascript-obfuscator';
 import { transform } from 'esbuild';
 import bytenode from 'bytenode';
+import dotenv from 'dotenv';
 
 const require = createRequire(import.meta.url);
+
+dotenv.config();
+
+if (process.env.OBFUSCATE_MAIN === 'false') {
+  // obfuscation disabled via OBFUSCATE_MAIN env var
+  console.log('⚠️ Skipping main process obfuscation (OBFUSCATE_MAIN=false).');
+  process.exit(0);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const projectRoot = path.resolve(path.dirname(__filename), '..');

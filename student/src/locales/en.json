@@ -53,7 +53,9 @@
         "outdated": "Version",
         "outdatedinfo": "Please install the same version as the exam server!",
         "wlanNopermissionsTitle": "Location permission required",
-        "wlanNopermissionsText": "Windows requires location permissions to retrieve WLAN information. Please enable location services in Privacy & Security settings."
+        "wlanNopermissionsText": "Windows requires location permissions to retrieve WLAN information. Please enable location services in Privacy & Security settings.",
+        "screenshotpermission": "Screen capture permission for Next-Exam was not granted. Please allow screen recording in the system settings and restart Next-Exam.",
+        "screenshotarea": "It looks like the full screen was not shared. Please select the entire desktop in the sharing dialog and restart Next-Exam."
     },
     "control": {
         "tokennotvalid": "token is not valid",

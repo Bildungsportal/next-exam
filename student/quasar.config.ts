@@ -80,17 +80,16 @@ export default defineConfig(( ctx: any ) => {
       // vueRouterBase,
       // vueDevtools,
       // vueOptionsAPI: false,
-
       // rebuildCache: true, // rebuilds Vite/linter/etc cache on startup
-
       // publicPath: '/',
       // analyze: true,
       // env: {},
       // rawDefine: {}
       // ignorePublicFolder: true,
-      // minify: false,
       // polyfillModulePreload: true,
       // distDir
+
+      minify: true,
       showBuildSummary: false,
 
       extendViteConf (viteConf: any) {

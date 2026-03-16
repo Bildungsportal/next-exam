@@ -220,7 +220,7 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 import {isElectronWindow} from "../types/platform.ts";
 import config from '../../src-electron/main/config.js'
 import {SignalBridge} from '../utils/signalBridge.js'
-import { initScreenshotScheduler } from '../utils/screenshotCapture.js'
+import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely } from '../utils/screenshotCapture.js'
 import { Exam } from '../types/api'
 
 
@@ -1060,7 +1060,6 @@ export default {
 
         /** register client on the server **/
         registerClient(serverip, servername) {
-
             if (this.username === "") {
                 this.$swal.fire({
                     title: "Error",
@@ -1077,6 +1076,22 @@ export default {
                     showCancelButton: false,
                 })
             } 
+            else if (!hasActiveScreenshotStream()) {
+                this.$swal.fire({
+                    title: "Error",
+                    text: this.$t("student.screenshotpermission"),
+                    icon: 'error',
+                    showCancelButton: false,
+                })
+            } 
+            else if (!isFullDesktopCaptureLikely()) {
+                this.$swal.fire({
+                    title: "Error",
+                    text: this.$t("student.screenshotarea"),
+                    icon: 'error',
+                    showCancelButton: false,
+                })
+            }
             else {
 
                 const charMap = {

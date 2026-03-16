@@ -53,7 +53,9 @@
         "outdated": "Version",
         "outdatedinfo": "Bitte installieren sie die selbe Version wie am Prüfungsserver!",
         "wlanNopermissionsTitle": "Standortberechtigung erforderlich",
-        "wlanNopermissionsText": "Windows benötigt Standortberechtigungen, um WLAN-Informationen abzurufen. Bitte aktivieren Sie die Positionsdienste in den Datenschutz- und Sicherheitseinstellungen."
+        "wlanNopermissionsText": "Windows benötigt Standortberechtigungen, um WLAN-Informationen abzurufen. Bitte aktivieren Sie die Positionsdienste in den Datenschutz- und Sicherheitseinstellungen.",
+        "screenshotpermission": "Die Bildschirmfreigabe für Next-Exam wurde nicht erteilt. Bitte erlauben Sie die Bildschirmaufnahme in den Systemeinstellungen und starten Sie Next-Exam neu.",
+        "screenshotarea": "Es wurde vermutlich nicht der gesamte Bildschirm freigegeben. Bitte wählen Sie im Freigabedialog den kompletten Desktop aus und starten Sie Next-Exam neu."
     },
     "control": {
         "tokennotvalid": "das token ist ungültig",
