@@ -47,7 +47,7 @@ export type Section = {
   moodleDomain: null, // Remove?
   moodleURL: null, // Remove?
   cmargin: Margin[],
-  gformsTestId: null, // Remove?
+  formsUrl: string | null,
   msOfficeFile: boolean | null, // Remove?
   linespacing: number | null,
   languagetool: boolean | null,

@@ -738,7 +738,7 @@ export default {
                         moodleURL:null, 
                         cmargin: { side: 'right', size: 3 }, 
 
-                        gformsTestId: null,
+                        formsUrl: null,
                         msOfficeFile: null, 
                         linespacing: 2, 
                         languagetool: false,
@@ -768,7 +768,7 @@ export default {
                         moodleURL:null, 
                         cmargin: { side: 'right', size: 3 }, 
 
-                        gformsTestId: null,
+                        formsUrl: null,
                         msOfficeFile: null, 
                         linespacing: 2, 
                         languagetool: false,
@@ -798,7 +798,7 @@ export default {
                         moodleURL:null, 
                         cmargin: { side: 'right', size: 3 }, 
 
-                        gformsTestId: null,
+                        formsUrl: null,
                         msOfficeFile: null, 
                         linespacing: 2, 
                         languagetool: false,
@@ -826,7 +826,7 @@ export default {
                         moodleURL:null, 
                         cmargin: { side: 'right', size: 3 }, 
 
-                        gformsTestId: null,
+                        formsUrl: null,
                         msOfficeFile: null, 
                         linespacing: 2, 
                         languagetool: false,

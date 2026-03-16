@@ -201,5 +201,11 @@
     },
     "dashboard": {
         "retry": "Retry"
+    },
+    "forms": {
+        "reload_title": "Reload form?",
+        "reload_text": "If you reload the form, all answers you have entered so far will be lost.",
+        "reload_confirm": "OK",
+        "reload_cancel": "Cancel"
     }
 }

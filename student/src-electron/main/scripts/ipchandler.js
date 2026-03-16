@@ -221,12 +221,22 @@ class IpcHandler {
 
         // IPC handler for mode-specific webview blocking - supports eduvidual, forms, rdp modes
         // For website mode, prefer using start-blocking-for-webview with webFilter.js instead
-        ipcMain.handle('start-blocking-for-website-webview', (event, { guestId, mode, allowedDomain, baseUrl, blockSubdomains, blockSubfolders, moodleTestId, moodleDomain, gformsTestId }) => {
+        ipcMain.handle('start-blocking-for-website-webview', (event, { guestId, mode, allowedDomain, baseUrl, blockSubdomains, blockSubfolders, moodleTestId, moodleDomain, formsUrl }) => {
             const guest = webContents.fromId(Number(guestId));
             if (!guest || guest.isDestroyed?.()) return false;
 
             // Remove old listeners to prevent duplicate registrations
             guest.removeAllListeners('will-navigate');
+
+            // Precompute Forms URL info (formsUrl must be a full URL)
+            let formsUrlObj = null;
+            if (typeof formsUrl === 'string' && formsUrl) {
+                try {
+                    formsUrlObj = new URL(formsUrl);
+                } catch (e) {
+                    formsUrlObj = null;
+                }
+            }
 
             // URL validation function - different logic based on mode; returns { allowed, reason? } for website mode
             const getAllowResult = (targetUrl) => {
@@ -250,9 +260,22 @@ class IpcHandler {
                     if (targetUrl.includes("login") && targetUrl.includes("tirol.gv.at")) return { allowed: true };
                     return { allowed: false, reason: 'not in eduvidual allow list' };
                 } else if (mode === "forms") {
-                    if (targetUrl.includes(gformsTestId)) return { allowed: true };
-                    if (targetUrl.includes("docs.google.com") && targetUrl.includes("formResponse")) return { allowed: true };
-                    if (targetUrl.includes("docs.google.com") && targetUrl.includes("viewscore")) return { allowed: true };
+                    const lowerUrl = String(targetUrl).toLowerCase();
+                    if (checkCommonExceptions(lowerUrl)) return { allowed: true };
+
+                    // Lock to same origin of the configured forms URL
+                    if (formsUrlObj) {
+                        try {
+                            const currentObj = new URL(targetUrl);
+                            if (currentObj.origin === formsUrlObj.origin) {
+                                return { allowed: true };
+                            }
+                        } catch (e) {
+                            return { allowed: false, reason: 'invalid target URL for forms mode' };
+                        }
+                    }
+
+                    // If we have no valid base URL or URL is outside allowed scope, block
                     return { allowed: false, reason: 'not in forms allow list' };
                 } else if (mode === "rdp") {
                     return { allowed: true };

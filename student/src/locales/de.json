@@ -202,5 +202,11 @@
     },
     "dashboard": {
         "retry": "Erneut versuchen"
+    },
+    "forms": {
+        "reload_title": "Formular neu laden?",
+        "reload_text": "Wenn Sie das Formular neu laden, gehen alle bisherigen Eingaben verloren.",
+        "reload_confirm": "OK",
+        "reload_cancel": "Abbrechen"
     }
 }

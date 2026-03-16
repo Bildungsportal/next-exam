@@ -117,7 +117,7 @@ async function getTestID(){
 
 
 /**
- * Google Forms
+ * Forms (Google or Microsoft)
  */
 async function getFormsID(){
     this.$swal.fire({
@@ -131,22 +131,40 @@ async function getFormsID(){
         },
         title: this.$t("dashboard.gforms"),
         icon: 'question',
-        input: 'text',
+        input: 'url',
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
-        html: `<div class="m-1 my-content">
-        ${this.$t("dashboard.gformshint")} <br>
-        <span style="font-size:0.8em">
-            (https://docs.google.com/forms/d/e/<span style="background-color: lightblue; padding:0 3px 0 3px;">1FAIpQLScuTG7yldD0VRhFgOC_2fhbVdgXn95Kf_w2rUbJm79S1kJBnA</span>/viewform)
-        </span>
+        html: `
+        <div class="my-content" style="text-align:left; max-width: 520px; margin: 0 auto;">
+            <p style="margin-bottom:8px;">
+                ${this.$t("dashboard.gformshint")}
+            </p>
+            <div style="font-size:0.85em; line-height:1.4; margin-top:4px;">
+                <div style="margin-bottom:4px; font-weight:bold;">
+                    ${this.$t("dashboard.forms_google_title")}
+                </div>
+                <div style="margin-left:10px; margin-bottom:8px;">
+                    ${this.$t("dashboard.forms_google_hint")}
+                </div>
+                <div style="margin-bottom:4px; font-weight:bold;">
+                    ${this.$t("dashboard.forms_ms_title")}
+                </div>
+                <div style="margin-left:10px;">
+                    ${this.$t("dashboard.forms_ms_hint")}
+                </div>
+            </div>
         </div>`,
         inputValidator: (value) => {
             if (!value) {return this.$t("dashboard.moodleInvalidId")}
+            if (!isValidFullDomainName(value)) {return this.$t("dashboard.invalidDomain")}
         }
     }).then((input) => {
-        if (!input.value) { this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math"}
+        const val = input.value ? input.value.trim() : "";
+        if (!val) {
+            this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math"
+        }
         else {
-            this.serverstatus.examSections[this.serverstatus.activeSection].gformsTestId = input.value
+            this.serverstatus.examSections[this.serverstatus.activeSection].formsUrl = val
             this.backupinterval.stop();
             this.autobackup = false;
         }
