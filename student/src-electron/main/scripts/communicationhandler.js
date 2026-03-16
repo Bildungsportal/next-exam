@@ -24,7 +24,6 @@ import { join } from 'path'
 import { screen, ipcMain, app, BrowserWindow, webContents } from 'electron'
 import WindowHandler from './windowhandler.js'
 import IpcHandler from './ipchandler.js'
-import { execSync } from 'child_process';
 import log from 'electron-log';
 import {SchedulerService} from './schedulerservice.ts'
 import crypto from 'crypto';
@@ -32,7 +31,7 @@ import path from 'path';
 import platformDispatcher from './platformDispatcher.js';
 import { runRemoteCheck } from './remoteCheck.js'
 import languageToolServer from './lt-server.js';
-const shell = (cmd) => {   return execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }); };  // stderr unterdrückt 
+import virtualBoxService from './virtualBoxService.js';
 const __dirname = import.meta.dirname; 
 import { switchExamSection } from './switchExamSection.js';
  /**
@@ -54,97 +53,6 @@ import { switchExamSection } from './switchExamSection.js';
         this.updateScheduler = new SchedulerService(this.requestUpdate.bind(this), 5000)
         this.updateScheduler.start()
     }
-
-    // start local VirtualBox VM and update clientinfo.localVMHost/localVMState
-    async startLocalVMAndResolveHost(vmName){
-        this.multicastClient.clientinfo.localVMHost = null;
-        this.multicastClient.clientinfo.localVMState = null;
-
-        try {
-            const listOutput = shell('VBoxManage list vms');
-            const vmExists = listOutput.split('\n').some(line => line.includes(`"${vmName}"`));
-            if (!vmExists) {
-                log.error(`communicationhandler @ startLocalVMAndResolveHost: VM '${vmName}' not found on client`);
-                throw new Error('VM not installed on client');
-            }
-        } catch (err) {
-            log.error('communicationhandler @ startLocalVMAndResolveHost: list vms failed', err);
-            throw err;
-        }
-
-        try {
-            shell(`VBoxManage startvm "${vmName}" --type headless`);
-            this.multicastClient.clientinfo.localVMState = 'starting';
-        } catch (err) {
-            // VM might already be running; log at info level and continue
-            const msg = err && err.message ? String(err.message) : '';
-            if (/already running|VBOX_E_INVALID_VM_STATE/i.test(msg)) {
-                log.info('communicationhandler @ startLocalVMAndResolveHost: VM already running, continuing');
-            } else {
-                log.warn('communicationhandler @ startLocalVMAndResolveHost: startvm failed (continuing anyway)', err?.message || err);
-            }
-        }
-
-        // try to resolve IP several times
-        let ipAddress = null;
-        for (let attempt = 0; attempt < 10; attempt++){
-            try {
-                ipAddress = await this.resolveVmIp(vmName);
-                if (ipAddress) {
-                    this.multicastClient.clientinfo.localVMHost = ipAddress;
-                    this.multicastClient.clientinfo.localVMState = 'running';
-                    log.info(`communicationhandler @ startLocalVMAndResolveHost: VM IP resolved to ${ipAddress}`);
-                    return;
-                }
-            } catch (err) {
-                log.error('communicationhandler @ startLocalVMAndResolveHost: resolveVmIp attempt failed', err);
-            }
-            await this.sleep(2000);
-        }
-
-        log.error('communicationhandler @ startLocalVMAndResolveHost: could not resolve VM IP');
-        throw new Error('Could not resolve VM IP');
-    }
-
-    async resolveVmIp(vmName){
-        try {
-            const guestProp = shell(`VBoxManage guestproperty get "${vmName}" "/VirtualBox/GuestInfo/Net/0/V4/IP"`).trim();
-            const parts = guestProp.split(' ');
-            const last = parts[parts.length - 1];
-            if (last && last !== 'value' && last !== 'No' && last !== 'None') {
-                return last;
-            }
-        } catch (err) {
-            log.error('communicationhandler @ resolveVmIp: guestproperty failed', err);
-        }
-
-        try {
-            const info = shell(`VBoxManage showvminfo "${vmName}"`);
-            const nicLine = info.split('\n').find(line => line.includes('NIC 1'));
-            if (!nicLine) {
-                return null;
-            }
-            const macMatch = nicLine.match(/MAC address: ([0-9A-Fa-f]+)/);
-            if (!macMatch || !macMatch[1]) {
-                return null;
-            }
-            const mac = macMatch[1].toLowerCase();
-            const arpOutput = shell('arp -an');
-            const arpLine = arpOutput.split('\n').find(line => line.toLowerCase().includes(mac));
-            if (!arpLine) {
-                return null;
-            }
-            const ipMatch = arpLine.match(/\(([^)]+)\)/);
-            if (ipMatch && ipMatch[1]) {
-                return ipMatch[1];
-            }
-        } catch (err) {
-            log.error('communicationhandler @ resolveVmIp: fallback resolution failed', err);
-        }
-        return null;
-    }
-
-
 
     
 
@@ -251,161 +159,137 @@ import { switchExamSection } from './switchExamSection.js';
      * could also handle kick, focusrestore, and even trigger file requests
      */
     async processUpdatedServerstatus(serverstatus, studentstatus){
-        // update serverstatus in multicastclient so getinfoasync (and thus the frontend) returns current serverstatus on next fetch
         this.multicastClient.serverstatus = serverstatus;
-        
-        
-        ///////////////////////////////
-        // individual status updates
 
-        if ( studentstatus && Object.keys(studentstatus).length !== 0) {  // we have status updates (tasks) - do it!
-            if (studentstatus.printdenied) {
-                WindowHandler.examwindow.webContents.send('denied')   //trigger, why
-            }
-
-            if (studentstatus.kicked) {  // student got kicked by teacher
-                this.kickStudent(studentstatus)
-                return   //this ends here because we got kicked by the teacher
-            }
-
-            if (studentstatus.delfolder === true){
-                log.info("communicationhandler @ processUpdatedServerstatus: cleaning exam workfolder")
-                let delfolder = true
-                try {
-                    if (fs.existsSync(this.config.examdirectory)){   // set by server.js (desktop path + examdir)
-                        fs.rmSync(this.config.examdirectory, { recursive: true });
-                        fs.mkdirSync(this.config.examdirectory);
-                    }
-                } catch (error) { 
-                    delfolder = false
-                    WindowHandler.examwindow.webContents.send('fileerror', error)  
-                    log.error(`communicationhandler @ processUpdatedServerstatus: Can not delete directory - ${error} `)
-                }
-
-                if (delfolder == false){  //try deleting file by file (the one that causes the problem will stay in the folder)
-                    if (fs.existsSync(this.config.examdirectory)) {
-                        const files = fs.readdirSync(this.config.examdirectory);
-
-                        files.forEach(file => {
-                            const filePath = join(this.config.examdirectory, file);
-                            try {
-                                const stats = fs.statSync(filePath);
-                                if (stats.isDirectory()) { fs.rmSync(filePath, { recursive: true }); }  // Versuche, das Verzeichnis rekursiv zu löschen
-                                else { fs.unlinkSync(filePath);  }// Versuche, die Datei zu löschen 
-                            }
-                            catch (error) {
-                                log.error(`communicationhandler @ processUpdatedServerstatus: (delfolder) Fehler beim Löschen der Datei/Verzeichnis: ${filePath}`, error);
-                            }
-                        });
-                    }
-                }
-                if (WindowHandler.examwindow) {  WindowHandler.examwindow.webContents.send('loadfilelist');   }
-            }
-
-
-            if (studentstatus.focus == false){
-                this.multicastClient.clientinfo.focus = false
-            }
-
-            if (studentstatus.restorefocusstate === true){
-                log.info("communicationhandler @ processUpdatedServerstatus: restoring focus state for student")
-                this.multicastClient.clientinfo.focus = true
-                if (WindowHandler.examwindow && !this.config.development){ 
-                    WindowHandler.examwindow.setKiosk(true)
-                    WindowHandler.examwindow.focus()
-                }
-            }
-            if (studentstatus.activatePrivateSpellcheck == true && this.multicastClient.clientinfo.privateSpellcheck.activated == false  ){
-                log.info("communicationhandler @ processUpdatedServerstatus: activating spellcheck for student")
-                this.multicastClient.clientinfo.privateSpellcheck.activate = true  //clientinfo.privateSpellcheck will be put on this.privateSpellcheck in editor updated via fetchInfo()
-                this.multicastClient.clientinfo.privateSpellcheck.activated = true
-                ipcMain.emit("startLanguageTool")
-            }
-            if (studentstatus.activatePrivateSpellcheck == false && this.multicastClient.clientinfo.privateSpellcheck.activated == true ) {
-                log.info("communicationhandler @ processUpdatedServerstatus: de-activating spellcheck for student")
-                this.multicastClient.clientinfo.privateSpellcheck.activate = false
-                this.multicastClient.clientinfo.privateSpellcheck.activated = false 
-            }
-
-            this.multicastClient.clientinfo.privateSpellcheck.suggestions = studentstatus.activatePrivateSuggestions
-
-            if (studentstatus.sendexam === true){
-                this.sendExamToTeacher()
-            }
-            if (studentstatus.fetchfiles === true){
-                this.requestFileFromServer(studentstatus.files)
-            }
-            if (studentstatus.getmaterials === true){
-                if (WindowHandler.examwindow){  
-                    WindowHandler.examwindow.webContents.send('getmaterials')  // if we change group we need to get the materials again
-                }
-            }
-            
-            // this is an microsoft365 thing. check if exam mode is office, check if this is set - otherwise do not enter exammode - it will fail
-            //set or update sharing link - it will be used in "microsoft365" exam mode
-            this.multicastClient.clientinfo.msofficeshare = studentstatus.msofficeshare  
-            
-
-            if (studentstatus.group){
-                //set or update group 
-                if (this.multicastClient.clientinfo.group !== studentstatus.group){
-                    this.multicastClient.clientinfo.group = studentstatus.group  
-                    if (WindowHandler.examwindow){  
-                        WindowHandler.examwindow.webContents.send('getmaterials')  // if we change group we need to get the materials again
-                    }
-                }
-            }
-
-        
-
+        const kicked = await this.handleStudentStatusUpdates(studentstatus);
+        if (kicked) {
+            return;
         }
 
+        this.handleExamSections(serverstatus);
+        this.handleGlobalServerStatus(serverstatus);
+    }
 
-        ////////////////////////////////
-        // global status updates
-        ////////////////////////////////
+    async handleStudentStatusUpdates(studentstatus){
+        if (!studentstatus || Object.keys(studentstatus).length === 0) {
+            return false;
+        }
 
+        if (studentstatus.printdenied) {
+            WindowHandler.examwindow.webContents.send('denied');
+        }
+
+        if (studentstatus.kicked) {
+            await this.kickStudent(studentstatus);
+            return true;
+        }
+
+        if (studentstatus.delfolder === true){
+            log.info("communicationhandler @ processUpdatedServerstatus: cleaning exam workfolder");
+            let delfolder = true;
+            try {
+                if (fs.existsSync(this.config.examdirectory)){
+                    fs.rmSync(this.config.examdirectory, { recursive: true });
+                    fs.mkdirSync(this.config.examdirectory);
+                }
+            } catch (error) { 
+                delfolder = false;
+                WindowHandler.examwindow.webContents.send('fileerror', error);
+                log.error(`communicationhandler @ processUpdatedServerstatus: Can not delete directory - ${error} `);
+            }
+
+            if (delfolder === false){
+                if (fs.existsSync(this.config.examdirectory)) {
+                    const files = fs.readdirSync(this.config.examdirectory);
+
+                    files.forEach(file => {
+                        const filePath = join(this.config.examdirectory, file);
+                        try {
+                            const stats = fs.statSync(filePath);
+                            if (stats.isDirectory()) { fs.rmSync(filePath, { recursive: true }); }
+                            else { fs.unlinkSync(filePath); }
+                        }
+                        catch (error) {
+                            log.error(`communicationhandler @ processUpdatedServerstatus: (delfolder) Fehler beim Löschen der Datei/Verzeichnis: ${filePath}`, error);
+                        }
+                    });
+                }
+            }
+            if (WindowHandler.examwindow) {
+                WindowHandler.examwindow.webContents.send('loadfilelist');
+            }
+        }
+
+        if (studentstatus.focus === false){
+            this.multicastClient.clientinfo.focus = false;
+        }
+
+        if (studentstatus.restorefocusstate === true){
+            log.info("communicationhandler @ processUpdatedServerstatus: restoring focus state for student");
+            this.multicastClient.clientinfo.focus = true;
+            if (WindowHandler.examwindow && !this.config.development){ 
+                WindowHandler.examwindow.setKiosk(true);
+                WindowHandler.examwindow.focus();
+            }
+        }
+        if (studentstatus.activatePrivateSpellcheck === true && this.multicastClient.clientinfo.privateSpellcheck.activated === false){
+            log.info("communicationhandler @ processUpdatedServerstatus: activating spellcheck for student");
+            this.multicastClient.clientinfo.privateSpellcheck.activate = true;
+            this.multicastClient.clientinfo.privateSpellcheck.activated = true;
+            ipcMain.emit("startLanguageTool");
+        }
+        if (studentstatus.activatePrivateSpellcheck === false && this.multicastClient.clientinfo.privateSpellcheck.activated === true) {
+            log.info("communicationhandler @ processUpdatedServerstatus: de-activating spellcheck for student");
+            this.multicastClient.clientinfo.privateSpellcheck.activate = false;
+            this.multicastClient.clientinfo.privateSpellcheck.activated = false;
+        }
+
+        this.multicastClient.clientinfo.privateSpellcheck.suggestions = studentstatus.activatePrivateSuggestions;
+
+        if (studentstatus.sendexam === true){
+            this.sendExamToTeacher();
+        }
+        if (studentstatus.fetchfiles === true){
+            this.requestFileFromServer(studentstatus.files);
+        }
+        if (studentstatus.getmaterials === true){
+            if (WindowHandler.examwindow){  
+                WindowHandler.examwindow.webContents.send('getmaterials');
+            }
+        }
         
-        /***********************************
-         * SWITCH EXAM SECTION  START
-         * ATTENTION: move this to a separate function - it is too complex and should be split up
-         * in the future we well determine if section switch is handled by the teacher or by the student and act accordingly
-         * if handled by student the teacher stttus is ignored and the swich section function is called directly (probably move to ipchandler.js)
-         */
+        this.multicastClient.clientinfo.msofficeshare = studentstatus.msofficeshare;
+        
+        if (studentstatus.group){
+            if (this.multicastClient.clientinfo.group !== studentstatus.group){
+                this.multicastClient.clientinfo.group = studentstatus.group;
+                if (WindowHandler.examwindow){  
+                    WindowHandler.examwindow.webContents.send('getmaterials');
+                }
+            }
+        }
 
+        return false;
+    }
+
+    handleExamSections(serverstatus){
         if (WindowHandler.examwindow){
             if (serverstatus.allowSectionSwitch !== WindowHandler.examwindow.serverstatus.allowSectionSwitch){
-                // update serverstatus in examwindow so it is available for the frontend
-                log.info("communicationhandler @ processUpdatedServerstatus: permission to switch exam section changed")
-                WindowHandler.examwindow.serverstatus.allowSectionSwitch = serverstatus.allowSectionSwitch
+                log.info("communicationhandler @ processUpdatedServerstatus: permission to switch exam section changed");
+                WindowHandler.examwindow.serverstatus.allowSectionSwitch = serverstatus.allowSectionSwitch;
             }
         }
 
-        // if student is in locked state in exam mode
         if (serverstatus.exammode && this.multicastClient.clientinfo.exammode){
-            if (serverstatus.useExamSections){  // exam sections are enabled
-                if (!serverstatus.allowSectionSwitch){  // server handles section switch
-                    //check if the current active section is the same as the one in the serverstatus - if not change to the new section and send to teacher
+            if (serverstatus.useExamSections){
+                if (!serverstatus.allowSectionSwitch){
                     if (serverstatus.lockedSection !== this.multicastClient.clientinfo.lockedSection){
-                        // call switchExamSection function to switch to the new section
-                        switchExamSection(this, serverstatus, serverstatus.lockedSection)
+                        switchExamSection(this, serverstatus, serverstatus.lockedSection);
                     }
                 }
             }
         }
-   
-      
 
-        
-
-        if (serverstatus.screenslocked && !this.multicastClient.clientinfo.screenlock) {  this.activateScreenlock() }
-        else if (!serverstatus.screenslocked ) { this.killScreenlock() }
-
-        // screenshot safety (OCR searches for next-exam string)
-        if (serverstatus.screenshotocr) { this.multicastClient.clientinfo.screenshotocr = true  }
-        else { this.multicastClient.clientinfo.screenshotocr = false   }
-
-        // Groups handling: use client's section when allowSectionSwitch, else server's; group membership from that section's groupA/groupB.users
         const sectionForSync = serverstatus.allowSectionSwitch ? this.multicastClient.clientinfo.lockedSection : serverstatus.lockedSection;
         const section = serverstatus.examSections[sectionForSync];
         if (section?.groups) {
@@ -423,17 +307,28 @@ import { switchExamSection } from './switchExamSection.js';
         } else {
             this.multicastClient.clientinfo.groups = false;
         }
+    }
 
-        //update screenshotinterval and push to frontend for screenshot scheduler
-        if (serverstatus.screenshotinterval || serverstatus.screenshotinterval === 0) { //0 is same as false but should be treated as number
-            
+    handleGlobalServerStatus(serverstatus){
+        if (serverstatus.screenslocked && !this.multicastClient.clientinfo.screenlock) {
+            this.activateScreenlock();
+        } else if (!serverstatus.screenslocked ) {
+            this.killScreenlock();
+        }
+
+        if (serverstatus.screenshotocr) {
+            this.multicastClient.clientinfo.screenshotocr = true;
+        } else {
+            this.multicastClient.clientinfo.screenshotocr = false;
+        }
+
+        if (serverstatus.screenshotinterval || serverstatus.screenshotinterval === 0) {
             if (this.multicastClient.clientinfo.screenshotinterval !== serverstatus.screenshotinterval*1000 ) {
-                log.info("communicationhandler @ processUpdatedServerstatus: ScreenshotInterval changed to", serverstatus.screenshotinterval*1000)
-                this.multicastClient.clientinfo.screenshotinterval = serverstatus.screenshotinterval*1000
+                log.info("communicationhandler @ processUpdatedServerstatus: ScreenshotInterval changed to", serverstatus.screenshotinterval*1000);
+                this.multicastClient.clientinfo.screenshotinterval = serverstatus.screenshotinterval*1000;
                 if ( serverstatus.screenshotinterval == 0) {
-                    log.info("communicationhandler @ processUpdatedServerstatus: ScreenshotInterval disabled!")
+                    log.info("communicationhandler @ processUpdatedServerstatus: ScreenshotInterval disabled!");
                 }
-                // Notify frontend so it can start/stop or adjust its screenshot scheduler
                 try {
                     WindowHandler.mainwindow?.webContents?.send('screenshot-config', {
                         screenshotinterval: this.multicastClient.clientinfo.screenshotinterval,
@@ -446,17 +341,29 @@ import { switchExamSection } from './switchExamSection.js';
         }
         
         if (serverstatus.exammode && !this.multicastClient.clientinfo.exammode){
-            log.info("communicationhandler @ processUpdatedServerstatus: exammode activated")
-            this.killScreenlock() // remove lockscreen immediately - don't wait for server info
-            this.startExam(serverstatus)
+            log.info("communicationhandler @ processUpdatedServerstatus: exammode activated");
+            this.killScreenlock();
+            this.startExam(serverstatus);
         }
         else if (!serverstatus.exammode && this.multicastClient.clientinfo.exammode){
-            log.info("communicationhandler @ processUpdatedServerstatus: exammode deactivated")
-            this.killScreenlock() 
-            this.endExam(serverstatus)
+            log.info("communicationhandler @ processUpdatedServerstatus: exammode deactivated");
+            this.killScreenlock();
+            this.endExam(serverstatus);
         }
-
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // send base64 pdf to teacher
     sendBase64PDFtoTeacher(base64pdf, section=1){
@@ -626,7 +533,11 @@ import { switchExamSection } from './switchExamSection.js';
                         this.multicastClient.clientinfo.exammode = false;
                         return;
                     }
-                    await this.startLocalVMAndResolveHost(vmName);
+                    this.multicastClient.clientinfo.localVMHost = null;
+                    this.multicastClient.clientinfo.localVMState = null;
+                    const vmResult = await virtualBoxService.startVmAndResolveHost(vmName);
+                    this.multicastClient.clientinfo.localVMHost = vmResult.ip;
+                    this.multicastClient.clientinfo.localVMState = vmResult.state;
                 } catch (err) {
                     log.error("communicationhandler @ startExam: LocalVM start failed", err);
                     this.multicastClient.clientinfo.exammode = false;
@@ -742,6 +653,13 @@ import { switchExamSection } from './switchExamSection.js';
         await WindowHandler.showExitQuestion()
     }
 
+
+
+
+
+
+
+    
     /**
      * Closes examwindow only when no printToPDF operation is running
      */
@@ -765,7 +683,6 @@ import { switchExamSection } from './switchExamSection.js';
             WindowHandler.examwindow = null
         }
     }
-
 
     // this is manually triggered if connection is lost during exam - we allow the student to get out of the kiosk mode 
     // INFO: this is basically redundant 
