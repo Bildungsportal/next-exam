@@ -208,8 +208,16 @@ async function LTfindWordPositions() {
     // Set colors based on issue type (LanguageTool API: typographical, whitespace, misspelling, grammar, style, punctuation, semantics, redundancy, etc.)
     this.misspelledWords.forEach(word => {
         const t = word.rule?.issueType ?? '';
-        if (t === 'typographical') { word.color = 'rgba(146, 43, 33, 0.3)'; }
-        else if (t === 'whitespace') { word.color = 'rgba(243, 190, 41, 0.5)'; word.whitespace = true; }
+        const onlySpaces = word.wrongWord && word.wrongWord.trim() === '';
+
+        // Alle reinen Leerzeichenfehler (egal ob whitespace oder typographical) gleich behandeln
+        if (t === 'whitespace' || (t === 'typographical' && onlySpaces)) {
+            word.color = 'rgba(243, 190, 41, 0.5)'; // gelb
+            word.whitespace = true;
+        }
+        else if (t === 'typographical') {
+            word.color = 'rgba(146, 43, 33, 0.3)'; // rötlich, echte Typografiefehler
+        }
         else if (t === 'misspelling') { word.color = 'rgba(211, 84, 0, 0.3)'; }
         else if (t === 'grammar') { word.color = 'rgba(26, 115, 232, 0.35)'; }
         else if (t === 'style') { word.color = 'rgba(0, 128, 128, 0.35)'; }
@@ -273,9 +281,28 @@ async function LTfindWordPositions() {
             const nodeEndOffset = textOffset + text.length;
 
             wordsNeedingPosition.forEach(word => {
-                // Create regex pattern with word boundaries
+                // Create regex pattern with sicheren Wortgrenzen
                 const escapedWord = word.wrongWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                const pattern = word.wrongWord.trim() === '' ? '\\s\\s+' : `\\b${escapedWord}\\b`;
+                let pattern;
+
+                // reine Leerzeichen (z.B. doppelte Spaces)
+                if (word.wrongWord.trim() === '') {
+                    pattern = '\\s\\s+';
+                } else {
+                    const firstChar = word.wrongWord[0] || '';
+                    const lastChar = word.wrongWord[word.wrongWord.length - 1] || '';
+                    const startsWithWordChar = /\w/.test(firstChar);
+                    const endsWithWordChar = /\w/.test(lastChar);
+
+                    if (startsWithWordChar || endsWithWordChar) {
+                        // „normale“ Wörter → Wortgrenzen verwenden
+                        pattern = `\\b${escapedWord}\\b`;
+                    } else {
+                        // z.B. " ," → keine Wortgrenzen, nur die Sequenz
+                        pattern = escapedWord;
+                    }
+                }
+
                 const regex = new RegExp(pattern, 'g');
 
                 let match;
@@ -326,15 +353,6 @@ async function LTfindWordPositions() {
                 );
 
                 if (positionAlreadyUsed) continue;
-                
-                // Check if another word is closer to this match
-                const closerWord = this.misspelledWords.find(w => 
-                    w !== word && 
-                    !w.position &&
-                    Math.abs(w.offset - matchOffset) < Math.abs(word.offset - matchOffset)
-                );
-
-                if (closerWord) continue;
 
                 // Assign position
                 if (rects.length > 0) {

@@ -53,8 +53,29 @@ log.verbose(`main @ init: -------------------`)
 log.info(`main @ init: Logfilelocation at ${logfile}`)
 
 
-// Prevents Electron from creating the default menu
-Menu.setApplicationMenu(null);
+// Minimal macOS application menu to enable standard shortcuts like Cmd+C / Cmd+V / Cmd+Q
+if (process.platform === 'darwin') {
+    const template = [
+        {
+            label: app.name,
+            submenu: [
+                { role: 'quit' }
+            ]
+        },
+        {
+            label: 'Edit',
+            submenu: [
+                { role: 'copy' },
+                { role: 'paste' }
+            ]
+        }
+    ];
+    const menu = Menu.buildFromTemplate(template);
+    Menu.setApplicationMenu(menu);
+} else {
+    // Prevents Electron from creating the default menu on non-macOS platforms
+    Menu.setApplicationMenu(null);
+}
 app.commandLine.appendSwitch('enable-features', 'Metal,CanvasOopRasterization');
 // app.commandLine.appendSwitch('force-device-scale-factor', '1');
 app.commandLine.appendSwitch('lang', 'de');
