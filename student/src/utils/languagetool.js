@@ -126,7 +126,7 @@ async function LTcheckAllWords(closeLT = true){
         if (this.clientname != null) headers['X-Student-Name'] = String(this.clientname);
         if (this.pincode != null && this.pincode !== '') headers['X-Exam-Pin'] = String(this.pincode);
 
-        const response = await fetch(`${this.LThost}:8088/v2/check`, {
+        const response = await fetch(`${this.LThost}:${this.LTport ?? '8088'}/v2/check`, {
             method: 'POST',
             headers,
             body: new URLSearchParams({

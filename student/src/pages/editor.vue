@@ -783,6 +783,7 @@ export default {
             lockedSection: 1,
             internetCheckCounter:0,
             LThost: activeSection.languagetoolhost || "http://127.0.0.1",
+            LTport: activeSection.languagetoolport || "8088",
             ltLanguage: activeSection.spellchecklang || "de-DE"
         }
     },
