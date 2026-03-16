@@ -1005,9 +1005,11 @@ computed: {
             this.now = new Date().getTime()
 
             this.hostip = ipcRenderer.sendSync('checkhostip')
-            if (!this.hostip) return; 
+            if (!this.hostip) return;
 
-            this.updateBiPServerInfo(this.bipStatus);
+            if (this.bipToken && this.serverstatus.bip) {
+                this.updateBiPServerInfo(this.bipStatus);
+            }
             
             if (this.serverlogActive && this.serverlogReload){
                 this.serverlog = await ipcRenderer.invoke('getlog')
@@ -1725,7 +1727,9 @@ computed: {
                             btnA.textContent = newStatus;
 
                             //call api and update bip data
-                            this.updateBiPServerInfo(newStatus);
+                            if (this.bipToken && this.serverstatus.bip) {
+                                this.updateBiPServerInfo(newStatus);
+                            }
                             this.bipStatus = newStatus;
                         });
                         btnA.dataset.listenerAdded = 'true';
@@ -1737,9 +1741,10 @@ computed: {
 
         toggleBipStatus() {
             const newStatus = this.bipStatus === 'closed' ? 'open' : 'closed';
-            this.updateBiPServerInfo(newStatus);
+            if (this.bipToken && this.serverstatus.bip) {
+                this.updateBiPServerInfo(newStatus);
+            }
             this.bipStatus = newStatus;
-            this.updateBiPServerInfo(newStatus);
         },
 
         getBiPUrl(): string {
@@ -1952,7 +1957,9 @@ computed: {
             this.fetchInfo()
             this.initializeStudentwidgets()
 
-            this.updateBiPServerInfo(this.bipStatus);
+            if (this.bipToken && this.serverstatus.bip) {
+                this.updateBiPServerInfo(this.bipStatus);
+            }
 
             // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
             this.fetchinterval = new SchedulerService(4000);
