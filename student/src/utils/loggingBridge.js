@@ -23,16 +23,19 @@
 
 
 import {isElectronWindow, isIOS} from '../types/platform.ts'
-import { IosTaskDispatcher } from './ios/iosTaskDispatcher.js'
 import log from "electron-log";
 
 
 
 // class wraps logging for electron and capacitor
-export class LoggingBridge {
+class LoggingBridge {
     // constructor stores reference to target window
-    constructor(targetWindow = window) {
-        this.targetWindow = targetWindow
+    constructor() {
+        this.targetWindow = null;
+    }
+
+    init(window) {
+        this.targetWindow = window;
     }
 
     error(message) {
@@ -84,3 +87,4 @@ export class LoggingBridge {
     }
 }
 
+export default new LoggingBridge();

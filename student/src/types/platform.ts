@@ -4,7 +4,7 @@ export interface ElectronWindow extends Window {
 }
 
 export function isElectronWindow(window: Window | ElectronWindow): window is ElectronWindow {
-  return 'ipcRenderer' in window && !!window.ipcRenderer;
+  return typeof win !== 'undefined' && 'ipcRenderer' in win;
 }
 
 // isIOS does a simple user agent based detection

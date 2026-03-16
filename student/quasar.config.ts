@@ -88,7 +88,7 @@ export default defineConfig(( ctx: any ) => {
       // env: {},
       // rawDefine: {}
       // ignorePublicFolder: true,
-      // minify: false,
+      minify: false,
       // polyfillModulePreload: true,
       // distDir
       showBuildSummary: false,

@@ -26,15 +26,9 @@ import {Directory, Encoding, Filesystem as fs} from "@capacitor/filesystem";
 import {Clipboard} from "@capacitor/clipboard";
 import path from "path";
 import mammoth from "mammoth";
-//import log from "electron-log";
 import config from "../config.js"
-import {LoggingBridge} from "../loggingBridge.js";
-import multicastclient from "../../../src-electron/main/scripts/multicastclient.js";
-import NavigationHandler from "../navigationHandler.js";
 
-//import { MyCustomNativePlugin } from './plugins/MyCustomNativePlugin';
-
-export class IosTaskDispatcher {
+class IosTaskDispatcher {
 
     constructor() {
         //TODO Add communicationHandler back with correct support for ios
@@ -44,10 +38,10 @@ export class IosTaskDispatcher {
         this.navigationHandler = null;
     }
 
-    init(config) {
-        this.loggingBridge = new LoggingBridge(window)
-        this.navigationHandler = new NavigationHandler()
-        this.navigationHandler.init(multicastclient, config);
+    init(loggingBridge, mc, navigationHandler) {
+        this.loggingBridge = loggingBridge
+        this.navigationHandler = navigationHandler
+        this.multicastclient = mc
     }
 
     async dispatch(signal, payload) {
@@ -105,6 +99,8 @@ export class IosTaskDispatcher {
                 return this.saveggb(payload);
             case 'virtualized':
                 return this.virtualized();
+            case 'bipToken':
+                return this.biptoken();
             case 'collapse-browserview':
             case 'restore-browserview':
                 return; // Ignore since no BrowserViews in Capacitor
@@ -123,24 +119,24 @@ export class IosTaskDispatcher {
         // alle weiteren updates über das serverstatus object werden im communication handler gelesen und ggf. auf das clientinfo object gelegt
         // dieser kommunikationsfluss muss in 2.0 gestreamlined werden #FIXME
 
-        serverstatus = multicastclient.serverstatus
+        serverstatus = this.multicastclient.serverstatus
 
         //count number of files in exam directory
-        if (!multicastclient.clientinfo.exammode) {
+        if (!this.multicastclient.clientinfo.exammode) {
             const workdir = config.examdirectory + "/";
             try {
                 await fs.promises.mkdir(workdir, {recursive: true})  // erstellt falls nötig
                 const filelist = (await fs.promises.readdir(workdir, {withFileTypes: true}))
                     .filter(dirent => dirent.isFile())
                     .map(dirent => dirent.name)
-                multicastclient.clientinfo.numberOfFiles = filelist.length
+                this.multicastclient.clientinfo.numberOfFiles = filelist.length
             } catch (err) {
-                multicastclient.clientinfo.numberOfFiles = 0
+                this.multicastclient.clientinfo.numberOfFiles = 0
             }
         }
         return {
-            serverlist: multicastclient.examServerList,
-            clientinfo: multicastclient.clientinfo,
+            serverlist: this.multicastclient.examServerList,
+            clientinfo: this.multicastclient.clientinfo,
             serverstatus: serverstatus
         }
     }
@@ -148,7 +144,7 @@ export class IosTaskDispatcher {
     async checkhostip(payload) {
         let address = false;
         try {
-            address = multicastclient.client.address();
+            address = this.multicastclient.client.address();
         } catch (e) {
             this.loggingBridge.error("IosTaskDispatcher @ checkhostip: multicastclient not running");
             this.loggingBridge.error(this);
@@ -197,7 +193,7 @@ export class IosTaskDispatcher {
         if (config.hostip && !address) {
             try {
                 // Falls init() asynchron umgesetzt werden kann, warten wir hier darauf.
-                await multicastclient.init(config.gateway);
+                await this.multicastclient.init(config.gateway);
             } catch (err) {
                 this.loggingBridge.error("IosTaskDispatcher @ checkhostip: Error initializing multicast client", err);
             }
@@ -271,13 +267,13 @@ export class IosTaskDispatcher {
             }
         }
 
-        multicastclient.clientinfo.name = args.clientname;
-        multicastclient.clientinfo.serverip = "127.0.0.1";
-        multicastclient.clientinfo.servername = "localhost";
-        multicastclient.clientinfo.pin = "0000";
-        multicastclient.clientinfo.token = "0000";
-        multicastclient.clientinfo.group = "a";
-        multicastclient.clientinfo.localLockdown = true; // this must be set to true in order to stop typical next-exam client/teacher actions
+        this.multicastclient.clientinfo.name = args.clientname;
+        this.multicastclient.clientinfo.serverip = "127.0.0.1";
+        this.multicastclient.clientinfo.servername = "localhost";
+        this.multicastclient.clientinfo.pin = "0000";
+        this.multicastclient.clientinfo.token = "0000";
+        this.multicastclient.clientinfo.group = "a";
+        this.multicastclient.clientinfo.localLockdown = true; // this must be set to true in order to stop typical next-exam client/teacher actions
 
         this.navigationHandler.startExam(serverstatus);
     }
@@ -292,7 +288,7 @@ export class IosTaskDispatcher {
         const version = config.version
         const bipuserID = args.bipuserID
 
-        if (multicastclient.clientinfo.token) { //#FIXME das sollte eigentlich vom server kommen
+        if (this.multicastclient.clientinfo.token) { //#FIXME das sollte eigentlich vom server kommen
             event.returnValue = {sender: "client", message: t("control.alreadyregistered"), status: "error"}
         }
 
@@ -306,14 +302,14 @@ export class IosTaskDispatcher {
             .then(data => {
                 if (data && data.status == "success") {  // registration successfull otherwise data would be "false"
                     // Erfolgreiche Registrierung
-                    multicastclient.clientinfo.name = clientname;
-                    multicastclient.clientinfo.serverip = serverip;
-                    multicastclient.clientinfo.servername = servername;
-                    multicastclient.clientinfo.ip = clientip;
-                    multicastclient.clientinfo.hostname = hostname;
-                    multicastclient.clientinfo.token = data.token; // we need to store the client token in order to check against it before processing critical api calls
-                    multicastclient.clientinfo.focus = true;
-                    multicastclient.clientinfo.pin = pin;
+                    this.multicastclient.clientinfo.name = clientname;
+                    this.multicastclient.clientinfo.serverip = serverip;
+                    this.multicastclient.clientinfo.servername = servername;
+                    this.multicastclient.clientinfo.ip = clientip;
+                    this.multicastclient.clientinfo.hostname = hostname;
+                    this.multicastclient.clientinfo.token = data.token; // we need to store the client token in order to check against it before processing critical api calls
+                    this.multicastclient.clientinfo.focus = true;
+                    this.multicastclient.clientinfo.pin = pin;
 
                     this.loggingBridge.info(`IosTaskDispatcher @ register: successfully registered at ${servername} @ ${serverip} as ${clientname}`);
                     event.returnValue = data;
@@ -380,7 +376,7 @@ export class IosTaskDispatcher {
     storehtml(args) {
         const htmlContent = args.editorcontent
         const filename = args.filename
-        let htmlfilename = `${multicastclient.clientinfo.name}.bak`
+        let htmlfilename = `${this.multicastclient.clientinfo.name}.bak`
 
         if (filename) {
             htmlfilename = `${filename}.bak`
@@ -399,7 +395,7 @@ export class IosTaskDispatcher {
                 });
             } catch (err) {
                 //loggingBridge.error(`IosTaskDispatcher @ storeHTML: ${err.message}`);
-                let alternatepath = `${htmlfile}-${multicastclient.clientinfo.token}.bak`
+                let alternatepath = `${htmlfile}-${this.multicastclient.clientinfo.token}.bak`
                 //loggingBridge.warn("IosTaskDispatcher @ storeHTML: trying to write file as:", alternatepath)
                 try {
                     fs.writeFile({
@@ -422,7 +418,7 @@ export class IosTaskDispatcher {
 
     printpdf(args) {
         // do not print if exam mode is not active anymore
-        if (!multicastclient?.clientinfo?.exammode) {
+        if (!this.multicastclient?.clientinfo?.exammode) {
             //loggingBridge.warn("IosTaskDispatcher @ printpdf: exammode is false - skipping print")
             return
         }
@@ -445,7 +441,7 @@ export class IosTaskDispatcher {
                 preferCSSPageSize: false
             }
 
-            let pdffilename = `${multicastclient.clientinfo.name}.pdf`  // default filename = clientname.pdf
+            let pdffilename = `${this.multicastclient.clientinfo.name}.pdf`  // default filename = clientname.pdf
             if (args.filename) {  // in case of manual backup the user can set a custom filename
                 pdffilename = `${args.filename}.pdf`
 
@@ -485,7 +481,7 @@ export class IosTaskDispatcher {
             this.isPrintingPdf = true
 
             // set the title of the exam window and therefore the document title for PDF metadata
-            const pdfTitle = args.filename ? args.filename : `${multicastclient.clientinfo.name} - ${args.servername || multicastclient.clientinfo.servername || ''}`
+            const pdfTitle = args.filename ? args.filename : `${this.multicastclient.clientinfo.name} - ${args.servername || this.multicastclient.clientinfo.servername || ''}`
             // escape quotes and special characters for JavaScript string
             const escapedTitle = pdfTitle.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "\\'")
             webContents.executeJavaScript(`document.title = "${escapedTitle}"`).then(() => {
@@ -618,7 +614,7 @@ export class IosTaskDispatcher {
                         files.push({name: file, type: "image", mod: mod})
                     }  // images
                 })
-                multicastclient.clientinfo.numberOfFiles = filelist.length
+                this.multicastclient.clientinfo.numberOfFiles = filelist.length
                 return files
             } catch (err) {
                 //loggingBridge.error(`IosTaskDispatcher @ getfilesasync: ${err}`);
@@ -641,7 +637,7 @@ export class IosTaskDispatcher {
 
     async getpdfbase64() {
         //loggingBridge.info("IosTaskDispatcher @ getPDFbase64: getting base64 encoded pdf")
-        multicastclient.clientinfo.submissionnumber = args.submissionnumber + 1 // clientinfo keeps track of submissions for automated submissionnumbers at section change - but this obviously happens after manual submit
+        this.multicastclient.clientinfo.submissionnumber = args.submissionnumber + 1 // clientinfo keeps track of submissions for automated submissionnumbers at section change - but this obviously happens after manual submit
         //let result = await this.CommunicationHandler.getBase64PDF(args.submissionnumber, args.sectionname, args.printBackground)   // why the hell is this function located in communicationhandler.js and not in ipchandler.js ? FIXME !
         return result
     }
@@ -649,7 +645,7 @@ export class IosTaskDispatcher {
     focuslost(ctrlalt) {
         //Todo Window Handler should be removed
         let answer = false
-        if (config.development || !multicastclient.exammode) {
+        if (config.development || !this.multicastclient.exammode) {
             answer = {sender: "client", focus: true}
 
         } else if (this.WindowHandler.screenlockwindows.length > 0) {
@@ -665,7 +661,7 @@ export class IosTaskDispatcher {
             this.WindowHandler.examwindow.show();
             this.WindowHandler.examwindow.focus();    // we keep focus on the window.. no matter what
 
-            multicastclient.clientinfo.focus = false; // block everything and inform teacher  (probably an overkill on mouseleave - needs testing)
+            this.multicastclient.clientinfo.focus = false; // block everything and inform teacher  (probably an overkill on mouseleave - needs testing)
             answer = {sender: "client", focus: false}
         }
 
@@ -734,9 +730,13 @@ export class IosTaskDispatcher {
                 return {sender: "client", message: err, status: "error"}
             }
     }
+
+    biptoken()
 }
 
     virtualized() {
-        multicastclient.clientinfo.virtualized = true;
+        this.multicastclient.clientinfo.virtualized = true;
     }
 }
+
+export default new IosTaskDispatcher();

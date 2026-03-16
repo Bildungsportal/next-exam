@@ -2,6 +2,11 @@ import { defineBoot } from '#q-app/wrappers'
 import i18n from "../locales/locales.js";
 import VueSweetalert2 from "vue-sweetalert2";
 import config from '../utils/config.js';
+import NavigationHandler from "../utils/navigationHandler.js";
+import multicastclient from "../../src-electron/main/scripts/multicastclient.js";
+import LoggingBridge from "../utils/loggingBridge.js";
+import IosTaskDispatcher from "../utils/ios/iosTaskDispatcher.js";
+import multicastClient from "../../src-electron/main/scripts/multicastclient.js";
 
 // "async" is optional;
 // more info on params: https://v2.quasar.dev/quasar-cli-vite/boot-files
@@ -47,4 +52,8 @@ export default defineBoot(async ( { app, router } ) => {
             }, 300);
         }
     })
+    multicastClient.init(config.gateway)
+    LoggingBridge.init(window);
+    NavigationHandler.init(LoggingBridge, multicastclient, config, router);
+    IosTaskDispatcher.init(LoggingBridge, multicastclient, NavigationHandler);
 })

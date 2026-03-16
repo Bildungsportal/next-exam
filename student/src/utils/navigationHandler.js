@@ -1,8 +1,7 @@
 
 import {useRouter} from "vue-router";
-import {LoggingBridge} from "./loggingBridge.js";
 
-export default class NavigationHandler {
+class NavigationHandler {
     constructor() {
         this.mainwindow = null
         this.authwindow = null
@@ -13,15 +12,16 @@ export default class NavigationHandler {
         this.loggingBridge = null;
     }
 
-    init(mc, config) {
+    init(loggingBridge, mc, config, router) {
         this.multicastClient = mc
         this.config = config
-        this.router = useRouter();
-        this.loggingBridge = new LoggingBridge(window);
+        this.router = router;
+        this.loggingBridge = loggingBridge;
     }
 
     createBiPLoginWin(biptest) {
         //Show Swal2 dialog
+        // WebView
 
         if (biptest){   this.bipwindow.loadURL(`https://q.bildung.gv.at/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)   }
         else {          this.bipwindow.loadURL(`https://www.bildung.gv.at/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)   }
@@ -85,9 +85,8 @@ export default class NavigationHandler {
         this.multicastClient.clientinfo.linespacing = serverstatus.examSections[effectiveSection].linespacing // we try to double linespacing on demand in pdf creation
         this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[effectiveSection].audioRepeat // restrict repetition of audio files (for listening comprehension)
 
-        $router.push(`/${serverstatus.examSections[effectiveSection].examtype}/${this.multicastClient.clientinfo.token}/`)
-        this.$router.push(`/${serverstatus.examSections[effectiveSection].examtype}/${this.multicastClient.clientinfo.token}/`)
         this.router.push(`/${serverstatus.examSections[effectiveSection].examtype}/${this.multicastClient.clientinfo.token}/`)
+        this.loggingBridge.log("After route");
         //else if (WindowHandler.examwindow){  //reconnect into active exam session with exam window already open
         //    log.error("communicationhandler @ startExam: found existing Examwindow..")
         //    try {  // switch existing window back to exam mode
@@ -118,3 +117,5 @@ export default class NavigationHandler {
         //}
     }
 }
+
+export default new NavigationHandler();

@@ -23,9 +23,7 @@
 
 
 import {isElectronWindow, isIOS} from '../types/platform.ts'
-import { IosTaskDispatcher } from './ios/iosTaskDispatcher.js'
-import multicastclient from "../../src-electron/main/scripts/multicastclient.js";
-//import communicationhandler from "../../src-electron/main/scripts/communicationhandler.js";
+import IosTaskDispatcher from './ios/iosTaskDispatcher.js'
 import config from './config.js';
 
 
@@ -34,7 +32,7 @@ export class SignalBridge {
     // constructor stores reference to target window
     constructor(targetWindow = window) {
         this.targetWindow = targetWindow
-        this.iosTaskDispatcher = new IosTaskDispatcher()
+        this.iosTaskDispatcher = IosTaskDispatcher
         this.iosTaskDispatcher.init(config)
     }
 
@@ -101,7 +99,7 @@ export class SignalBridge {
         }
 
         if (isIOS()) {
-            return this.iosTaskDispatcher.dispatch(channel, ...args)
+            return this.iosTaskDispatcher.dispatch(channel, callback)
         }
 
         // log unsupported platform information
