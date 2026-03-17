@@ -1,5 +1,5 @@
 
-import {useRouter} from "vue-router";
+import { router } from '../router/index'
 
 class NavigationHandler {
     constructor() {
@@ -74,7 +74,17 @@ class NavigationHandler {
     }
 
     startExam(serverstatus) {
-        this.loggingBridge.log("NavigationHandler @ startExam: redirecting to exam page");
+        this.loggingBridge.info("NavigationHandler @ startExam: redirecting to exam page");
+        router.push({
+            name: 'math',
+            params:{
+                //servername: this.servername.toLowerCase(),
+                //passwd: this.password,
+                //bipUsername: this.bipUsername,
+                //bipuserID:this.bipuserID,
+                bipToken: this.bipToken
+            }
+        })
         this.multicastClient.clientinfo.exammode = true
         // when allowSectionSwitch: client chooses section, clientinfo.lockedSection is authoritative; do not overwrite with server
         if (!serverstatus.allowSectionSwitch || !this.multicastClient.clientinfo.lockedSection) {
@@ -85,8 +95,7 @@ class NavigationHandler {
         this.multicastClient.clientinfo.linespacing = serverstatus.examSections[effectiveSection].linespacing // we try to double linespacing on demand in pdf creation
         this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[effectiveSection].audioRepeat // restrict repetition of audio files (for listening comprehension)
 
-        this.router.push(`/${serverstatus.examSections[effectiveSection].examtype}/${this.multicastClient.clientinfo.token}/`)
-        this.loggingBridge.log("After route");
+        this.loggingBridge.info("After route");
         //else if (WindowHandler.examwindow){  //reconnect into active exam session with exam window already open
         //    log.error("communicationhandler @ startExam: found existing Examwindow..")
         //    try {  // switch existing window back to exam mode

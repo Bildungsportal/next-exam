@@ -105,7 +105,12 @@ async function fetchInfo(to: RouteLocationNormalized, from: RouteLocationNormali
   return true
 }
 
+let routerInstance = null;
 
 export default defineRouter(function (/* { store, ssrContext } */) {
-  return createRouter({history: createWebHashHistory(), routes})   // use appropriate history implementation for server/client // import.meta.env.SSR is injected by Vite.
+  const Router = createRouter({history: createWebHashHistory(), routes})   // use appropriate history implementation for server/client // import.meta.env.SSR is injected by Vite.
+  routerInstance = Router
+  return Router
 });
+
+export {routerInstance as router}

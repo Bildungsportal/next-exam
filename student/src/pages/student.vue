@@ -452,6 +452,16 @@ export default {
 
 
         setupLocalLockdown() {
+
+            signalBridge.send('locallockdown', {
+                password: "Test",
+                exammode: "ggb",
+                clientname: "username",
+                languagetool: false,
+                spellchecklang: "german",
+                suggestions: true
+            })
+            /*
             const inputOptions = {
                 'de-DE': this.$t("student.de"),
                 'en-GB': this.$t("student.en"),
@@ -681,6 +691,8 @@ export default {
                     return;
                 }
             });
+
+             */
         },
 
 
