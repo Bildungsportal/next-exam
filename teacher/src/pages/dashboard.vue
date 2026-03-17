@@ -1819,7 +1819,16 @@ computed: {
             .then(data => { 
                // console.log(data.message, data.data);
             })
-            .catch(error => { console.error("Fehler beim API-Aufruf:", error.message);});
+            .catch(error => {
+                console.error("Fehler beim API-Aufruf:", error.message);
+                if (this.bipPhase === 'completed') {
+                    this.$swal.fire({
+                        title: this.$t("dashboard.attention"),
+                        text: `Bildungsportal aktuell nicht erreichbar, bitte setzen Sie selbst zu einem späteren Zeitpunkt die Prüfungsphase im Bildungsportal auf Abgeschlossen!`,
+                        icon: "warn"
+                    })
+                }
+            });
         },
 
         playAudioFile(filecontent, filename){

@@ -124,7 +124,7 @@
         "filedelete": "Wollen Sie die Datei/den Ordner wirklich löschen?",
         "cannotDeleteActiveSheet": "Active Sheet kann während der Prüfung nicht gelöscht werden",
         "exitdelete": "Prüfungsdaten auf SchülerPCs löschen",
-        "exitbipcompleted": "Prüfung am Bildungsportal auf Abschlossen setzen",
+        "exitbipcompleted": "Prüfung am Bildungsportal auf Abgeschlossen setzen",
         "spellcheck": "Rechtschreibhilfe",
         "spellcheckactivate": "Rechtschreibhilfe aktivieren",
         "spellcheckchoose": "Bitte wählen Sie eine Sprache für die Prüfung",
