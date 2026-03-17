@@ -424,7 +424,7 @@ export default {
                 this.ggbReady = true; // webview is ready for JS calls
 
                 // im Devmode DevTools für das GeoGebra-Webview öffnen
-               if (this.config && this.config.development && typeof geogebraWebview.openDevTools === 'function') {
+               if (this.config && this.config.showdevtools && typeof geogebraWebview.openDevTools === 'function') {
                    geogebraWebview.openDevTools(); // one line comment
                }
 
