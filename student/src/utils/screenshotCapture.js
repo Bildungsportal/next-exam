@@ -191,8 +191,16 @@ export async function initDisplayStreamOnce() {
     sharedRef.video = acquired.video;
     log.info('screenshotCapture @ initDisplayStreamOnce: display stream initialized');
   } else {
+    initAttempted = false; // allow retry when user has gesture (e.g. Connect click)
     log.warn('screenshotCapture @ initDisplayStreamOnce: display stream not available');
   }
+}
+
+/** Acquire display stream when called with user gesture (e.g. Connect click). Returns true if stream is ready. */
+export async function ensureDisplayStreamAsync() {
+  if (hasActiveScreenshotStream()) return true;
+  await initDisplayStreamOnce();
+  return hasActiveScreenshotStream();
 }
 
 /** Check if there is an active screenshot stream */
@@ -276,7 +284,6 @@ export function initScreenshotScheduler(signalBridge) {
   initDisplayStreamOnce();
 
   signalBridge.on('screenshot-config', (_event, config) => {
-    //log.info('screenshotCapture @ initScreenshotScheduler: screenshot-config event', config);
     applyConfig(signalBridge, config);
   });
 

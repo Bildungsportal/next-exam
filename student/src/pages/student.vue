@@ -220,7 +220,7 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 import {isElectronWindow} from "../types/platform.ts";
 import config from '../../src-electron/main/config.js'
 import {SignalBridge} from '../utils/signalBridge.js'
-import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely } from '../utils/screenshotCapture.js'
+import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync } from '../utils/screenshotCapture.js'
 import { Exam } from '../types/api'
 
 
@@ -1057,44 +1057,29 @@ export default {
             return new Promise(resolve => setTimeout(resolve, ms));
         },
 
-
         /** register client on the server **/
-        registerClient(serverip, servername) {
+        async registerClient(serverip, servername) {
             if (this.username === "") {
-                this.$swal.fire({
-                    title: "Error",
-                    text: this.$t("student.nouser"),
-                    icon: 'error',
-                    showCancelButton: false,
-                })
-            } 
-            else if (this.pincode === "") {
-                this.$swal.fire({
-                    title: "Error",
-                    text: this.$t("student.nopin"),
-                    icon: 'error',
-                    showCancelButton: false,
-                })
-            } 
-            else if (!hasActiveScreenshotStream()) {
-                this.$swal.fire({
-                    title: "Error",
-                    text: this.$t("student.screenshotpermission"),
-                    icon: 'error',
-                    showCancelButton: false,
-                })
-            } 
-            else if (!isFullDesktopCaptureLikely()) {
-                this.$swal.fire({
-                    title: "Error",
-                    text: this.$t("student.screenshotarea"),
-                    icon: 'error',
-                    showCancelButton: false,
-                })
+                this.$swal.fire({ title: "Error", text: this.$t("student.nouser"), icon: 'error', showCancelButton: false });
+                return;
             }
-            else {
+            if (this.pincode === "") {
+                this.$swal.fire({ title: "Error", text: this.$t("student.nopin"), icon: 'error', showCancelButton: false });
+                return;
+            }
+            if (!hasActiveScreenshotStream()) {
+                const ok = await ensureDisplayStreamAsync();
+                if (!ok) {
+                    this.$swal.fire({ title: "Error", text: this.$t("student.screenshotpermission"), icon: 'error', showCancelButton: false });
+                    return;
+                }
+            }
+            if (!isFullDesktopCaptureLikely()) {
+                this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
+                return;
+            }
 
-                const charMap = {
+            const charMap = {
                     'ć': 'c',
                     'č': 'c',
                     'š': 's',
@@ -1148,7 +1133,6 @@ export default {
                         showCancelButton: false,
                     })
                 }
-            }
         },
         showCopyleft() {
             this.$swal.fire({
