@@ -1166,7 +1166,8 @@ export default {
             if (this.$refs.userInput && !this.bipToken) {
                 this.$refs.userInput.focus();
             }
-           
+           //set background color to default darkgrey (this is only needed because of the loading screen)
+           document.body.style.backgroundColor =  "rgb(33, 37, 41)"
         });
 
         // Fetch info asynchronously without blocking
