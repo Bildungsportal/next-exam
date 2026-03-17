@@ -700,6 +700,7 @@ export default {
             bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
             bipUsername:this.$route.params.bipUsername === 'false' ?  false : this.$route.params.bipUsername,
             bipStatus: "closed", // "open" or "closed" or "offline"
+            bipPhase: "ready",
             biptest:this.$route.params.biptest,
 
             serverstatus:{   // this object contains all neccessary information for students about the current exam settings
@@ -1803,7 +1804,8 @@ computed: {
                 teacherIP: this.serverip,
                 pin: this.serverstatus.pin,
                 status: status,
-                examID: this.serverstatus.id
+                examID: this.serverstatus.id,
+                phase: this.bipPhase
             }
 
             const url= this.getBiPUrl()+"/webservice/rest/server.php?wstoken="+token+"&wsfunction=local_dpu_update_exam_status_teacher&moodlewsrestformat=json"

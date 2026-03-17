@@ -75,8 +75,8 @@
                 <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
             </div> 
            
-            <div id="onlineexams" class="m-1 mt-4" v-if="onlineExams && onlineExams.length > 0">
-                <span class="small">{{$t("startserver.onlineexams")}}</span>
+            <div id="onlineexams" class="m-1 mt-4" v-if="bipToken && onlineExams">
+                <span class="small">{{$t("startserver.onlineexams")}} <img data-v-b68b84a7="" src="/src/assets/img/svg/gtk-convert.svg" class="printercheck" width="22" height="22" @click="fetchBipExams"></span>
                 <div v-for="exam of onlineExams">
                     <div class="input-group" style="display:inline;">
                         <div v-if="servername !== exam.examName" class="btn btn-sm btn-teal mt-1" :id="exam.examName" @click="setOnlineExam(exam)">{{exam.examName}}</div>
@@ -89,6 +89,7 @@
                     </div>
                     <img v-if="servername === exam.examName" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
                 </div>
+                <div v-if="onlineExams.length === 0" class="small mt-1">Noch keine vorhanden</div>
             </div>
 
         </div>
@@ -385,10 +386,7 @@ export default {
                 //console.log("Daten von der API:", data);
                 this.bipData = data   // store all of the information in data
 
-                data.exams.forEach((exam: Exam) => {
-                    this.onlineExams.push(exam)
-                })
-
+                this.onlineExams = data.exams;
             })
             .catch(error => { console.error("Fehler beim API-Aufruf:", error);});
         },
