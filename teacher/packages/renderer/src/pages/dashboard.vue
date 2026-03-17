@@ -264,7 +264,7 @@
         </div>
         <!-- BIP Section END -->
         
-        <div v-if="showDesc" id="description" class="btn m-1" style="white-space: pre-line;" >{{ currentDescription }}</div>
+        <div v-if="showDesc" id="description" class="btn m-1" style="white-space: pre-line;" v-html="currentDescription"></div>
         <div id="statusdiv" class="btn btn-warning m-1"> {{$t('dashboard.connected')}}  </div>
 
         <span @click="showCopyleft()" style="position: absolute; bottom:2px; left: 6px; font-size:0.8em;cursor: pointer;">
@@ -519,9 +519,13 @@
 
                         <!-- bottom buttons START-->
                         <div class="btn-group pt-0" role="group" style="">
-                            <button v-if="(now - 20000 < student.timestamp)" @click="showStudentview(student)" @mouseover="showDescription($t('dashboard.studentinfo'))" @mouseout="hideDescription" type="button" class="btn btn-cyan btn-sm " style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">
-                                <img src="/src/assets/img/svg/eye-fill.svg" class="white" width="18" height="18" >
+                            
+                            <button v-if="(now - 20000 < student.timestamp)" @click="showStudentview(student)" @mouseover="showDescription(getStudentInfoText(student), false, true)" @mouseout="hideDescription" type="button" :class="['btn btn-sm', isVersionMismatch(student) ? 'btn-warning' : 'btn-cyan']" style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">
+                                <img :src="isVersionMismatch(student) ? '/src/assets/img/svg/exclamation-triangle-fill.svg' : '/src/assets/img/svg/eye-fill.svg'" :class="isVersionMismatch(student) ? 'text-dark' : 'white'" width="18" height="18" >
                             </button>
+
+
+
                             <button v-if="(now - 20000 > student.timestamp)" type="button" class="btn btn-outline-danger btn-sm " style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">{{$t('dashboard.offline')}} </button>
                             <button v-if="(now - 20000 < student.timestamp) && student.exammode && student.focus" @mouseover="showDescription($t('dashboard.secureinfo'))" @mouseout="hideDescription"  @click='' type="button" 
                                 class="btn btn-danger btn-sm" style=" cursor:default; border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px; border-bottom-right-radius: 5px;" >
@@ -989,7 +993,7 @@ computed: {
 
             if (this.studentlist && this.studentlist.length > 0){
                 this.studentlist.forEach( student => { 
-                    
+
                     // update active student (for student-details) and student image
                     if (this.activestudent && student.token === this.activestudent.token) { this.activestudent = student}  // on studentlist-receive update active student (for student-details)
                     if (!student.imageurl){ student.imageurl = "user-black.svg"  }            
@@ -1252,24 +1256,20 @@ computed: {
             this.setServerStatus(); // Änderungen speichern
         },
       
-        async showDescription(description, info=false) {
-         
+        async showDescription(description, info=false, isHtml=false) {
             if (info) {
-                description += '\n'; 
+                description += '\n';
                 // if additional info is provided, add it to the description - in that case only remoteassistance is delivering additional info for now
                 if (info.keywords.length > 0) {
-                    description += '\n';  
+                    description += '\n';
                     description += `Keywords: ${info.keywords.join(', ')}`;
                 }
                 if (info.ports.length > 0) {
-                    description += '\n';  
+                    description += '\n';
                     description += `Ports: ${info.ports.join(', ')}`;
                 }
-                this.currentDescription = description;
             }
-            else {
-                this.currentDescription = description;
-            }
+            this.currentDescription = isHtml ? description : description.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
             this.showDesc = true;
         },
         hideDescription() {
@@ -1305,6 +1305,22 @@ computed: {
                 allowEscapeKey: false,
                 allowEnterKey: false,
             });
+        },
+        // compare teacher vs student version (major.minor.patch)
+        isVersionMismatch(student) {
+            if (!student?.version) return true;
+            const vteacher = (this.version || '').split('.').slice(0, 3).join('.');
+            const vstudent = String(student.version).split('.').slice(0, 3).join('.');
+            return vteacher !== vstudent;
+        },
+        getStudentInfoText(student) {
+            const escape = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const name = escape(student?.clientname ?? '?');
+            const v = escape(student?.version ?? '?');
+            const ip = escape(student?.clientip ?? '?');
+            const docs = student?.files ?? 0;
+            const versionSuffix = this.isVersionMismatch(student) ? ` (->${escape(this.version)})` : '';
+            return `<b>${name}</b><br>Version: ${v}${versionSuffix}<br>IP: ${ip}<br>Documents: ${docs}`;
         },
         //display student specific actions
         showStudentview(student) {

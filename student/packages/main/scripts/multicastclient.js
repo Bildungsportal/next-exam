@@ -53,7 +53,8 @@ class MulticastClient {
             privateSpellcheck: {activated: false},
             localLockdown: false,
             group: 'a',
-            submissionnumber: 0
+            submissionnumber: 0,
+            version: config.version
         }
     }
 
