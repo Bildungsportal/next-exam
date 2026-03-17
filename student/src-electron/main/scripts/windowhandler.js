@@ -25,6 +25,7 @@ import { activeWindow } from 'get-windows';
 import platformDispatcher from './platformDispatcher.js';
 import {fileURLToPath} from "node:url";
 import path from 'path';
+import * as devtoolsInstaller from 'electron-devtools-installer';
 
 const __dirname = import.meta.dirname;
 
@@ -96,6 +97,14 @@ class WindowHandler {
             return `https://q.bildung.gv.at`;
         } else {
             return `https://bildung.gv.at`;
+        }
+    }
+
+    installVueJsDevTools(win) {
+        if (!app.isPackaged) {
+            devtoolsInstaller.installExtension(devtoolsInstaller.VUEJS_DEVTOOLS)
+                .then((name) => console.log(`Added Extension: ${name.name}`))
+                .catch((err) => console.log('An error occurred: ', err));
         }
     }
 
@@ -776,6 +785,8 @@ class WindowHandler {
                 this.multicastClient.clientinfo.focus = true
             }  
         });
+        
+        this.installVueJsDevTools(this.examwindow);
     }
 
 
@@ -903,6 +914,8 @@ class WindowHandler {
             log.info(`windowhandler @ createMainWindow: Loading URL: ${url}`)
             this.mainwindow.loadURL(url)
         }
+        
+        this.installVueJsDevTools(this.mainwindow);
     }
 
 

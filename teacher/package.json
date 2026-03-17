@@ -45,6 +45,7 @@
     "concurrently": "^9.1.2",
     "electron": "38.1.2",
     "electron-builder": "^26.0.12",
+    "electron-devtools-installer": "^4.0.0",
     "esbuild": "^0.23.1",
     "javascript-obfuscator": "^4.1.1",
     "nodemon": "^3.1.5",

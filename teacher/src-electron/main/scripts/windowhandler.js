@@ -22,6 +22,7 @@ import { join } from 'path'
 import path from 'path'
 import { fileURLToPath } from 'node:url'
 import log from 'electron-log'
+import * as devtoolsInstaller from 'electron-devtools-installer';
 
 const __dirname = import.meta.dirname
 
@@ -155,6 +156,13 @@ class WindowHandler {
 
 
 
+    installVueJsDevTools(win) {
+        if (!app.isPackaged) {
+            devtoolsInstaller.installExtension(devtoolsInstaller.VUEJS_DEVTOOLS)
+                .then((name) => console.log(`Added Extension: ${name.name}`))
+                .catch((err) => console.log('An error occurred: ', err));
+        }
+    }
 
 
 
@@ -257,6 +265,8 @@ class WindowHandler {
                 process.exit(0);
             }
         });
+
+        this.installVueJsDevTools(this.mainwindow);
     }
 
 
