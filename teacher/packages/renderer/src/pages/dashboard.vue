@@ -521,7 +521,7 @@
                         <div class="btn-group pt-0" role="group" style="">
                             
                             <button v-if="(now - 20000 < student.timestamp)" @click="showStudentview(student)" @mouseover="showDescription(getStudentInfoText(student), false, true)" @mouseout="hideDescription" type="button" :class="['btn btn-sm', isVersionMismatch(student) ? 'btn-warning' : 'btn-cyan']" style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">
-                                <img :src="isVersionMismatch(student) ? '/src/assets/img/svg/exclamation-triangle-fill.svg' : '/src/assets/img/svg/eye-fill.svg'" :class="isVersionMismatch(student) ? 'text-dark' : 'white'" width="18" height="18" >
+                                <img :src="isVersionMismatch(student) ? exclamationTriangleIcon : eyeFillIcon" :class="isVersionMismatch(student) ? 'text-dark' : 'white'" width="18" height="18" >
                             </button>
 
 
@@ -586,6 +586,8 @@
 
 
 <script >
+import eyeFillIcon from '../assets/img/svg/eye-fill.svg'
+import exclamationTriangleIcon from '../assets/img/svg/exclamation-triangle-fill.svg'
 import { VueDraggableNext } from 'vue-draggable-next'
 import { v4 as uuidv4 } from 'uuid'
 import {SchedulerService} from '../utils/schedulerservice.js'
@@ -618,6 +620,8 @@ export default {
     },
     data() {
         return {
+            eyeFillIcon,
+            exclamationTriangleIcon,
             version: this.$route.params.version,
             info: config.info,
             title: document.title,
