@@ -43,7 +43,7 @@ function runDetection() {
         try {
             const virtType = execSync('systemd-detect-virt', { encoding: 'utf8' }).trim();
             if (virtType && virtType !== 'none') {
-                vendor = addFinding(reasons, `systemd-detect-virt: ${virtType}`, virtType) ?? vendor;
+                vendor = addFinding(reasons, `VMM erkannt`, virtType) ?? vendor;
             }
         } catch {}
     }
