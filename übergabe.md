@@ -8,6 +8,8 @@ Die iOS variante von next-exam kann einfach über npm gebaut werden, dafür den 
 
 ## Xcode und Simulator
 
+Xcode muss über das Company Portal installiert werden der App Store ist deaktiviert.
+
 Sobald xcode installiert ist und das Projekt ein erstes mal gebaut wurde kann in dem Folder 'student/src-capacitor/ios/App' die Datei 'App.xcworkspace' geöffnet werden, damit sollte sich Xcode öffnen.
 
 Aufpassen nicht 'App.xcodeproj', mit der öffnet sich auch das Projekt aber alle dependencies Fehlen.
