@@ -22,7 +22,7 @@
 import platformDispatcher from './main/scripts/platformDispatcher.js';
 import chalk from 'chalk';
 import log from 'electron-log';
-import { app, BrowserWindow, powerSaveBlocker, nativeTheme, globalShortcut, Tray, Menu, dialog, session, desktopCapturer } from 'electron'
+import { app, BrowserWindow, powerSaveBlocker, nativeTheme, globalShortcut, Menu, dialog, session, desktopCapturer } from 'electron'
 import config from './main/config.js';
 import multicastClient from './main/scripts/multicastclient.js'
 import path from 'path'
@@ -37,7 +37,8 @@ import { updateSystemTray } from './main/scripts/traymenu.js'
 import JreHandler from './main/scripts/jre-handler.js';
 import { checkParentProcess } from './main/scripts/checkparent.js';
 
-import { toggleMacOSLockdown } from './main/scripts/platformrestrictions.js'
+import { toggleMacOSLockdown } from './main/scripts/platformrestrictions.js';
+import { initErrorHandling } from './main/scripts/errorHandling.js';
 JreHandler.init()
 
 if (!config.development && process.argv.some(arg => arg.startsWith('--inspect') || arg.startsWith('--remote-debugging'))) {  // disable options to read v8 heap on production builds
@@ -101,6 +102,7 @@ log.debug(`main: Desktop: ${platformDispatcher.desktopName}`)
 WindowHandler.init(multicastClient, config)  // mainwindow, examwindow, blockwindow
 CommHandler.init(multicastClient, config)    // starts "beacon" intervall and fetches information from the teacher - acts on it (startexam, stopexam, sendfile, getfile)
 IpcHandler.init(multicastClient, config, WindowHandler, CommHandler)  //controll all Inter Process Communication
+initErrorHandling(log, WindowHandler);
 
 // Prevents Electron from creating the default menu
 Menu.setApplicationMenu(null);
@@ -168,201 +170,7 @@ fsExtra.emptyDirSync(config.tempdirectory)  // clean temp directory
 
 
 
-/**
- * This function specifically checks for EPIPE errors and disables the console transport for the ElectronLogger if such an error occurs.
- * EPIPE errors typically happen when trying to write to a closed pipe, which can occur if the stdout stream is unexpectedly closed.
- */
-process.stdout.on('error', (err) => { if (err.code === 'EPIPE') { log.transports.console.level = false } });
-
-// Filter GUEST_VIEW_MANAGER_CALL errors and WebContents subframe errors from stderr/stdout
-const originalStderrWrite = process.stderr.write;
-const originalStdoutWrite = process.stdout.write;
-
-process.stderr.write = function(chunk, encoding, fd) {
-    const chunkStr = chunk?.toString() || '';
-    // Suppress GUEST_VIEW_MANAGER_CALL errors (ERR_ABORTED from webview navigation blocking)
-    if (chunkStr.includes('GUEST_VIEW_MANAGER_CALL') && (chunkStr.includes('ERR_ABORTED') || chunkStr.includes('(-3)'))) {
-        return true; // Drop this error
-    }
-    // Suppress WebContents subframe errors
-    if (chunkStr.includes('WebContents#did-fail-load') || chunkStr.includes('WebContents#did-fail-provisional-load')) {
-        const suppressCodes = [-3, -100, -101, -105];
-        if (chunkStr.includes('isMainFrame: false') || suppressCodes.some(code => chunkStr.includes(`errorCode: ${code}`))) {
-            return true; // Drop this error
-        }
-    }
-    return originalStderrWrite.apply(this, arguments);
-};
-
-process.stdout.write = function(chunk, encoding, fd) {
-    const chunkStr = chunk?.toString() || '';
-    // Suppress GUEST_VIEW_MANAGER_CALL errors (ERR_ABORTED from webview navigation blocking)
-    if (chunkStr.includes('GUEST_VIEW_MANAGER_CALL') && (chunkStr.includes('ERR_ABORTED') || chunkStr.includes('(-3)'))) {
-        return true; // Drop this error
-    }
-    // Suppress WebContents subframe errors
-    if (chunkStr.includes('WebContents#did-fail-load') || chunkStr.includes('WebContents#did-fail-provisional-load')) {
-        const suppressCodes = [-3, -100, -101, -105];
-        if (chunkStr.includes('isMainFrame: false') || suppressCodes.some(code => chunkStr.includes(`errorCode: ${code}`))) {
-            return true; // Drop this error
-        }
-    }
-    return originalStdoutWrite.apply(this, arguments);
-};
-
-process.on('uncaughtException', (err) => {
-    if (err.code === 'EPIPE') {
-        log.transports.console.level = false;
-        log.warn('main @ uncaughtException: EPIPE Error: The stdout stream of the ElectronLogger will be disabled.');
-    } 
-    else if (err.message?.includes('Render frame was disposed')) return;
-    else {  log.error('main @ uncaughtException:', err.message); }  // Log or display other errors
-});
-
-// Handle unhandled promise rejections to prevent crashes
-process.on('unhandledRejection', (reason, promise) => {
-    log.error('main @ unhandledRejection: Unhandled promise rejection:', reason);
-    if (reason instanceof Error) {
-        log.error('main @ unhandledRejection: Stack:', reason.stack);
-    }
-});
-
-// Handle renderer process crashes (V8 fatal errors, etc.)
-app.on('render-process-gone', (event, webContents, details) => {
-    log.error('main @ render-process-gone: Renderer process crashed');
-    log.error('main @ render-process-gone: Reason:', details.reason);
-    log.error('main @ render-process-gone: Exit code:', details.exitCode);
-    
-    // Try to identify which window crashed
-    const allWindows = BrowserWindow.getAllWindows();
-    const crashedWindow = allWindows.find(win => win.webContents.id === webContents.id);
-    
-    if (crashedWindow) {
-        log.error(`main @ render-process-gone: Window title: ${crashedWindow.getTitle()}`);
-        
-        // For exam window crashes, try to close it gracefully
-        if (crashedWindow === WindowHandler.examwindow) {
-            log.warn('main @ render-process-gone: Exam window crashed, attempting to close gracefully');
-            try {
-                if (!crashedWindow.isDestroyed()) {
-                    crashedWindow.destroy();
-                }
-                WindowHandler.examwindow = null;
-                WindowHandler.examDisplayId = null;
-            } catch (err) {
-                log.error('main @ render-process-gone: Error closing exam window:', err);
-            }
-        }
-    }
-    
-    // Don't crash the main process - let it continue
-    event.preventDefault();
-});
-
-// Handle child process crashes (workers, etc.)
-app.on('child-process-gone', (event, details) => {
-    log.error('main @ child-process-gone: Child process crashed');
-    log.error('main @ child-process-gone: Type:', details.type);
-    log.error('main @ child-process-gone: Reason:', details.reason);
-    log.error('main @ child-process-gone: Exit code:', details.exitCode);
-    
-    // Don't crash the main process
-    event.preventDefault();
-});
-
-// Set application name for Windows 10+ notifications
-if (process.platform === 'win32') {  app.setAppUserModelId(app.getName())}
-//if (process.platform ==='darwin') {  app.dock.hide() }  // this bug states that it kinda messes up kiosk mode - https://github.com/electron/electron/issues/18207
-
-
-
-// hide certificate warnings in console.. we know we use a self signed cert and do not validate it
-process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-const originalEmitWarning = process.emitWarning
-process.emitWarning = (warning, options) => {
-    if (warning && warning.includes && warning.includes('NODE_TLS_REJECT_UNAUTHORIZED')) {  return }
-    return originalEmitWarning.call(process, warning, options)
-}
-
-app.on('certificate-error', (event, webContents, url, error, certificate, callback) => { // SSL/TLS: this is the self signed certificate support
-    event.preventDefault(); // On certificate error we disable default behaviour (stop loading the page)
-    callback(true);  // and we then say "it is all fine - true" to the callback
-});
-
-// Handle WebContents load failures to prevent app crashes
-app.on('web-contents-created', (event, webContents) => {
-    const suppressCodes = [-3, -100, -101, -105];
-
-    // Store if we've already set up listeners to avoid duplicates
-    if (webContents._errorSuppressionSetup) return;
-    webContents._errorSuppressionSetup = true;
-
-    // Set up listeners that persist across navigation
-    const setupErrorSuppression = () => {
-        // Remove old listeners first to avoid duplicates
-        webContents.removeAllListeners('did-fail-provisional-load');
-        webContents.removeAllListeners('did-fail-load');
-        
-        webContents.on('did-fail-provisional-load', (event, errorCode, errorDescription, validatedURL, isMainFrame, frameProcessId, frameRoutingId) => {
-            // Silently suppress subframe errors and common error codes
-            if (!isMainFrame || suppressCodes.includes(errorCode)) {
-                event.preventDefault();
-                return;
-            }
-            log.warn(`main @ did-fail-provisional-load: Error ${errorCode} - ${errorDescription} for URL: ${validatedURL}`);
-        });
-
-        webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL, isMainFrame, frameProcessId, frameRoutingId) => {
-            // Silently suppress subframe errors and common error codes
-            if (!isMainFrame || suppressCodes.includes(errorCode)) {
-                event.preventDefault();
-                return;
-            }
-            log.warn(`main @ did-fail-load: Error ${errorCode} - ${errorDescription} for URL: ${validatedURL}`);
-        });
-    };
-
-    // Set up immediately
-    setupErrorSuppression();
-
-    // Re-setup on navigation to ensure listeners persist
-    webContents.on('did-start-navigation', setupErrorSuppression);
-    webContents.on('did-frame-navigate', setupErrorSuppression);
-    
-    // Handle renderer process crashes for specific webContents (V8 fatal errors, etc.)
-    webContents.on('render-process-gone', (event, details) => {
-        log.error('main @ webContents render-process-gone: Renderer process crashed for specific webContents');
-        log.error('main @ webContents render-process-gone: Reason:', details.reason);
-        log.error('main @ webContents render-process-gone: Exit code:', details.exitCode);
-        
-        // Try to identify which window this webContents belongs to
-        const allWindows = BrowserWindow.getAllWindows();
-        const crashedWindow = allWindows.find(win => win.webContents.id === webContents.id);
-        
-        if (crashedWindow) {
-            log.error(`main @ webContents render-process-gone: Window title: ${crashedWindow.getTitle()}`);
-            log.error(`main @ webContents render-process-gone: Window URL: ${crashedWindow.webContents.getURL()}`);
-            
-            // For exam window crashes, try to close it gracefully
-            if (crashedWindow === WindowHandler.examwindow) {
-                log.warn('main @ webContents render-process-gone: Exam window crashed, attempting to close gracefully');
-                try {
-                    if (!crashedWindow.isDestroyed()) {
-                        crashedWindow.destroy();
-                    }
-                    WindowHandler.examwindow = null;
-                    WindowHandler.examDisplayId = null;
-                } catch (err) {
-                    log.error('main @ webContents render-process-gone: Error closing exam window:', err);
-                }
-            }
-        }
-        
-        // Don't crash the main process - let it continue
-        event.preventDefault();
-    });
-});
+if (process.platform === 'win32') app.setAppUserModelId(app.getName());
 
 app.on('window-all-closed', async () => {  // last window closed – clear storage here to avoid Linux segfault in before-quit
     clearInterval( CommHandler.updateStudentIntervall )
