@@ -521,7 +521,7 @@
                             </button> 
      
                             <div v-cloak :id="student.token" style="position: relative;background-size: cover; height: 132px;" v-bind:style="(student.imageurl && now - 20000 < student.timestamp)? `background-image: url('${student.imageurl}')`:'background-image: url(user-red.svg)'"></div>
-                            <div v-if="student.virtualized && now - 20000 < student.timestamp" class="virtualizedinfo" @mouseover="showDescription($t('dashboard.virtualizedinfo'))" @mouseout="hideDescription">{{$t("dashboard.virtualized")}}</div>
+                            <div v-if="student.virtualized && now - 20000 < student.timestamp" class="virtualizedinfo" @mouseover="showDescription($t('dashboard.virtualizedinfo'), { vmFindings: student.vmFindings, webglFindings: student.webglFindings })" @mouseout="hideDescription">{{$t("dashboard.virtualized")}}</div>
                             <div v-if="!student.focus && now - 20000 < student.timestamp" class="kioskwarning" @mouseover="showDescription($t('dashboard.leftkioskinfo'))" @mouseout="hideDescription">{{$t("dashboard.leftkiosk")}}</div>
                             <div v-if="student.status.sendexam && now - 20000 < student.timestamp" class="examrequest" @mouseover="showDescription($t('dashboard.examrequestinfo'))" @mouseout="hideDescription">{{$t("dashboard.examrequest")}}</div>
                             <div v-if="student.remoteassistant && now - 20000 < student.timestamp" class="remoteassistant" @mouseover="showDescription($t('dashboard.remoteassistantinfo'), student.remoteassistant)" @mouseout="hideDescription">{{$t("dashboard.remoteassistant")}}</div>
@@ -1319,14 +1319,27 @@ computed: {
         async showDescription(description, info=false, isHtml=false) {
             if (info) {
                 description += '\n';
-                // if additional info is provided, add it to the description - in that case only remoteassistance is delivering additional info for now
-                if (info.keywords.length > 0) {
+                // remoteassistant: keywords and ports
+                if (info.keywords?.length > 0) {
                     description += '\n';
                     description += `Keywords: ${info.keywords.join(', ')}`;
                 }
-                if (info.ports.length > 0) {
+                if (info.ports?.length > 0) {
                     description += '\n';
                     description += `Ports: ${info.ports.join(', ')}`;
+                }
+                // virtualized: vmFindings (backend) and webglFindings (frontend)
+                const vm = info.vmFindings;
+                const webgl = info.webglFindings;
+                if (vm?.isVM && vm?.reasons?.length > 0) {
+                    description += '\n\n' + this.$t('dashboard.vmFindingsBackend') + '\n';
+                    description += vm.reasons.map(r => '• ' + r).join('\n');
+                    if (vm.vendor) description += '\n' + this.$t('dashboard.vmFindingsVendor') + ': ' + vm.vendor;
+                }
+                if (webgl?.detected) {
+                    description += '\n\n' + this.$t('dashboard.vmFindingsWebgl');
+                    if (webgl.vendor) description += '\n• Vendor: ' + webgl.vendor;
+                    if (webgl.renderer) description += '\n• Renderer: ' + webgl.renderer;
                 }
             }
             this.currentDescription = isHtml ? description : description.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');

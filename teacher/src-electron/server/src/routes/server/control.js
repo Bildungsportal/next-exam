@@ -825,6 +825,8 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
     //update important student attributes
     student.focus = clientinfo.focus
     student.virtualized = clientinfo.virtualized
+    if (clientinfo.vmFindings) student.vmFindings = clientinfo.vmFindings
+    if (clientinfo.webglFindings) student.webglFindings = clientinfo.webglFindings
     student.timestamp = new Date().getTime()   //last seen  / this is like a heartbeat - update lastseen
     student.exammode = exammode  
     student.files = clientinfo.numberOfFiles

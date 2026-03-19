@@ -38,7 +38,7 @@ import { ensureNetworkOrReset } from './testpermissionsMac.js';
 import { getWlanInfo } from './getwlaninfo.js';
 import { switchExamSection } from './switchExamSection.js';
 import { startProxy, stopProxy } from './vncproxy.js';
-import { isVirtualMachine } from './vmDetection.js';
+import { getVMFindings } from './vmDetection.js';
 
 const __dirname = import.meta.dirname;
 
@@ -492,9 +492,13 @@ class IpcHandler {
 
 
         /**
-         * Registers virtualized status
-         */ 
-        ipcMain.on('virtualized', () => {  this.multicastClient.clientinfo.virtualized = true; } )
+         * Registers virtualized status from preload (WebGL + backend findings combined)
+         */
+        ipcMain.on('virtualized', (event, payload = {}) => {
+            this.multicastClient.clientinfo.virtualized = true;
+            this.multicastClient.clientinfo.vmFindings = payload.backend ?? getVMFindings();
+            this.multicastClient.clientinfo.webglFindings = payload.webgl ?? null;
+        })
 
 
         /**
@@ -1281,7 +1285,7 @@ class IpcHandler {
         })
      
         ipcMain.on('get-cpu-info', (event) => {
-            event.returnValue = isVirtualMachine()
+            event.returnValue = getVMFindings()
         });
 
 
