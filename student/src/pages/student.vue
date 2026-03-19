@@ -18,10 +18,10 @@
         <button v-if="clientinfo.groups && clientinfo.group == 'b' && token && !localLockdown" type="button"
                 class="btn btn-warning btn-sm m-1 mt-1" style="cursor: unset; width: 32px; float: right"> B
         </button>
-        <div v-if="!hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 " style="cursor: unset; float: right">
+        <div v-if="!hostipDisplay && !token" id="adv" class="btn btn-danger btn-sm m-0  mt-1 " style="cursor: unset; float: right">
             {{ $t("student.offline") }}
-            {{ hostip }}
         </div>
+        <div v-if="hostipDisplay && !token" id="adv" class="btn btn-sm btn-outline-success m-0 mt-1" :style="canSelectInterface ? 'cursor: pointer; float: right' : 'cursor: unset; float: right'" @click="canSelectInterface && reconfigurePreferredInterface()">{{ hostip?.interface ? hostip.interface + ' : ' + hostip.hostip : hostipDisplay }}</div>
         <div v-if="networkerror" id="adv" class="btn btn-danger btn-sm m-0  mt-1 " style="cursor: unset; float: right">
             {{ $t("student.noapi") }}
         </div>
@@ -278,12 +278,19 @@ export default {
             onlineExams: [] as Exam[],
             validip: true,
             serverFailureCount: {}, // Track failed ping attempts for manually added servers
+            activeDialog: false,
 
         };
     },
     computed: {
         inactivelocale() { // Display current language code
             return this.$i18n.locale === 'de' ? 'en' : 'de';
+        },
+        hostipDisplay() {
+            return this.hostip && (typeof this.hostip === 'object' ? this.hostip.hostip : this.hostip);
+        },
+        canSelectInterface() {
+            return !this.token && this.hostip?.availableInterfaces?.length > 1;
         }
     },
 
@@ -293,6 +300,49 @@ export default {
             // Switch between 'de' and 'en'
             this.$i18n.locale = this.$i18n.locale === 'de' ? 'en' : 'de';
             signalBridge.send('set-new-locale', this.$i18n.locale);
+        },
+
+        async selectPreferredInterface() {
+            if (this.activeDialog || !this.hostip?.availableInterfaces?.length) return;
+            this.activeDialog = true;
+            this.$swal.fire({
+                customClass: {
+                    popup: 'my-popup',
+                    title: 'my-title',
+                    content: 'my-content',
+                    input: 'my-custom-input',
+                    inputLabel: 'my-input-label',
+                    actions: 'my-swal2-actions'
+                },
+                title: this.$t("student.selectinterface"),
+                html: "<div class='my-content'>" + this.$t("student.selectinterfaceinfo") + "<br><br>" +
+                    this.hostip.availableInterfaces.map(netInterface =>
+                        `<div style="margin: 5px 0; padding: 5px; background-color: #f8f9fa; border-radius: 3px;">
+                            <strong>${netInterface.name}</strong>: ${netInterface.address}
+                        </div>`
+                    ).join('') + "</div>",
+                showCancelButton: true,
+                cancelButtonText: this.$t("dashboard.cancel"),
+                input: "select",
+                inputOptions: this.hostip.availableInterfaces.reduce((acc, curr) => {
+                    acc[curr.name] = curr.name;
+                    return acc;
+                }, {}),
+                inputPlaceholder: "",
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    await signalBridge.invoke('setPreferredInterface', result.value);
+                    const updated = await signalBridge.invoke('checkhostip');
+                    this.safeAssign('hostip', updated);
+                }
+                this.activeDialog = false;
+            });
+        },
+
+        reconfigurePreferredInterface() {
+            if (this.token) return;
+            this.activeDialog = false;
+            this.selectPreferredInterface();
         },
 
         async loginBiP() {
@@ -967,9 +1017,12 @@ export default {
              * If not we exit here
              */
             const newHostip = await signalBridge.invoke('checkhostip');
-            // console.log(newHostip);
-            this.safeAssign('hostip', newHostip); // Optimized: Only set if changed
-            if (!this.hostip) return;
+            this.safeAssign('hostip', newHostip);
+            const hasIp = this.hostip && (typeof this.hostip === 'object' ? this.hostip.hostip : this.hostip);
+            if (!hasIp) return;
+            if (this.hostip?.availableInterfaces?.length > 1 && !this.hostip?.preferredInterface) {
+                this.selectPreferredInterface();
+            }
             if (this.clientinfo.token) return;   // stop spamming the api if already connected
 
 

@@ -55,7 +55,9 @@
         "wlanNopermissionsTitle": "Standortberechtigung erforderlich",
         "wlanNopermissionsText": "Windows benötigt Standortberechtigungen, um WLAN-Informationen abzurufen. Bitte aktivieren Sie die Positionsdienste in den Datenschutz- und Sicherheitseinstellungen.",
         "screenshotpermission": "Die Bildschirmfreigabe für Next-Exam wurde nicht erteilt. Bitte erlauben Sie die Bildschirmaufnahme in den Systemeinstellungen und starten Sie Next-Exam neu.",
-        "screenshotarea": "Es wurde vermutlich nicht der gesamte Bildschirm freigegeben. Bitte wählen Sie im Freigabedialog den kompletten Desktop aus und starten Sie Next-Exam neu."
+        "screenshotarea": "Es wurde vermutlich nicht der gesamte Bildschirm freigegeben. Bitte wählen Sie im Freigabedialog den kompletten Desktop aus und starten Sie Next-Exam neu.",
+        "selectinterface": "Netzwerk-Schnittstelle wählen",
+        "selectinterfaceinfo": "Bitte wählen Sie eine bevorzugte Netzwerkschnittstelle aus!"
     },
     "control": {
         "tokennotvalid": "das token ist ungültig",
@@ -206,7 +208,8 @@
         "pages": "Seiten"
     },
     "dashboard": {
-        "retry": "Erneut versuchen"
+        "retry": "Erneut versuchen",
+        "cancel": "Abbrechen"
     },
     "forms": {
         "reload_title": "Formular neu laden?",
