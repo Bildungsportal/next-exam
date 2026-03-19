@@ -151,6 +151,7 @@
         "requestdenied":"Druckanfrage abgelehnt. Bitte warten und erneut senden.",
         "paste":"einfügen",
         "copy":"kopieren",
+        "cut":"ausschneiden",
         "spellcheck": "Rechtschreibprüfung aktivieren",
         "spellcheckdeactivate": "Rechtschreibprüfung deaktivieren",
         "reload": "Neu laden",

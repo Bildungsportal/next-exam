@@ -43,6 +43,9 @@
             <button :title="$t('editor.copy')" @click="copySelection()"
                     class="invisible-button btn btn-outline-success p-1 mb-1 btn-sm"><img
                 src="/src/assets/img/svg/edit-copy.svg" class="" width="22" height="22"></button>
+            <button :title="$t('editor.cut')" @click="cutSelection()"
+                    class="invisible-button btn btn-outline-success p-1 mb-1 btn-sm"><img
+                src="/src/assets/img/svg/document-replace.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.paste')" @click="pasteSelection()"
                     class="invisible-button btn btn-outline-success p-1 me-2 mb-1 btn-sm"><img
                 src="/src/assets/img/svg/edit-paste.svg" class="white" width="22" height="22"></button>
@@ -1456,16 +1459,18 @@ export default {
         },
         // manual copy and paste because we disabled clipboard
         copySelection() {
-            //this.selectedText = window.getSelection().toString();
-
             const selection = window.getSelection();
+            if (!selection.rangeCount) return;
             const range = selection.getRangeAt(0);
             const div = document.createElement('div');
-            div.appendChild(range.cloneContents()); // Fügt den ausgewählten Bereich zum Div-Element hinzu
-
-            this.selectedText = div.innerHTML
-            // this.selectedText = div.innerHTML.replace(/<\s*p[^>]*>/gi, '').replace(/<\/\s*p\s*>/gi, '<br>'); // Ersetzt <p> durch <br>
-
+            div.appendChild(range.cloneContents());
+            this.selectedText = div.innerHTML;
+        },
+        cutSelection() {
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            this.copySelection();
+            this.editor.chain().focus().deleteSelection().run();
         },
         pasteSelection() {
             if (!this.selectedText || this.selectedText == "") {

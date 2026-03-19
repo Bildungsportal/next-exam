@@ -150,6 +150,7 @@
         "requestdenied":"print request denied",
         "paste":"paste",
         "copy":"copy",
+        "cut":"cut",
         "spellcheck": "spellcheck",
         "spellcheckdeactivate": "deactivate spellcheck",
         "reload": "Reload",
