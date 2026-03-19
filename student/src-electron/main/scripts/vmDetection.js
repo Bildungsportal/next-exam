@@ -41,29 +41,9 @@ function runDetection() {
         } catch {}
 
         try {
-            const files = [
-                '/sys/class/dmi/id/sys_vendor',
-                '/sys/class/dmi/id/product_name',
-                '/sys/class/dmi/id/product_version',
-                '/sys/class/dmi/id/board_vendor',
-                '/sys/class/dmi/id/bios_vendor',
-                '/sys/class/dmi/id/chassis_vendor'
-            ];
-            const dmi = files.map(p => { try { return readFileSync(p, 'utf8'); } catch { return ''; } }).join(' ');
-            if (VENDORS.test(dmi)) {
-                vendor = addFinding(reasons, 'DMI-Vendor-Match', dmi) ?? vendor;
-            }
-        } catch {}
-
-        try {
-            execSync('systemd-detect-virt -q', { stdio: 'ignore' });
-            addFinding(reasons, 'systemd-detect-virt meldet Virtualisierung');
-        } catch {}
-
-        try {
-            const ps = execSync('ps aux | grep -i qemu', { encoding: 'utf8' });
-            if (ps.includes('qemu') && !ps.includes('grep')) {
-                vendor = addFinding(reasons, 'QEMU-Prozess läuft', 'qemu') ?? vendor;
+            const virtType = execSync('systemd-detect-virt', { encoding: 'utf8' }).trim();
+            if (virtType && virtType !== 'none') {
+                vendor = addFinding(reasons, `systemd-detect-virt: ${virtType}`, virtType) ?? vendor;
             }
         } catch {}
     }
