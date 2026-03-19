@@ -535,6 +535,31 @@
     <!-- SPLITVIEW END -->
 
 
+    <!-- CLIPBOARD SIDEBAR START -->
+    <div id="clipboard-sidebar" :class="{ visible: showClipboardSidebar }">
+        <div class="clipboard-header">
+            <span>{{ $t('editor.clipboard') }}</span>
+            <button type="button" class="btn-close btn-close-sm" @click="showClipboardSidebar = false" :title="$t('editor.close')"></button>
+        </div>
+        <div class="clipboard-list">
+            <div v-if="clipboardHistory.length === 0" class="clipboard-empty">{{ $t('editor.clipboardEmpty') }}</div>
+            <div v-for="(item, idx) in clipboardHistory" :key="idx" class="clipboard-item" @click="pasteFromClipboard(item)"
+                 @mouseenter="clipboardTooltipShow($event, clipboardPreviewFull(item))"
+                 @mouseleave="clipboardTooltipHide">
+                <span class="clipboard-item-text">{{ clipboardPreview(item) }}</span>
+            </div>
+        </div>
+    </div>
+    <!-- CLIPBOARD SIDEBAR END -->
+
+    <Teleport to="body">
+        <div v-if="clipboardTooltip.shown" class="clipboard-tooltip-fixed"
+             :style="{ left: clipboardTooltip.x + 'px', top: clipboardTooltip.y + 'px' }">
+            {{ clipboardTooltip.text }}
+        </div>
+    </Teleport>
+
+
     <!-- LANGUAGE TOOL START -->
     <div id="languagetool"
          v-if="showLanguageToolSidebar">
@@ -787,7 +812,10 @@ export default {
             internetCheckCounter:0,
             LThost: activeSection.languagetoolhost || "http://127.0.0.1",
             LTport: activeSection.languagetoolport || "8088",
-            ltLanguage: activeSection.spellchecklang || "de-DE"
+            ltLanguage: activeSection.spellchecklang || "de-DE",
+            clipboardHistory: [],
+            showClipboardSidebar: false,
+            clipboardTooltip: { text: '', shown: false, x: 0, y: 0 }
         }
     },
     computed: {
@@ -1458,13 +1486,19 @@ export default {
             return
         },
         // manual copy and paste because we disabled clipboard
+        addToClipboardHistory(html) {
+            if (!html || html.trim() === '') return;
+            this.clipboardHistory = [html, ...this.clipboardHistory.filter(item => item !== html)].slice(0, 10);
+        },
         copySelection() {
             const selection = window.getSelection();
             if (!selection.rangeCount) return;
             const range = selection.getRangeAt(0);
             const div = document.createElement('div');
             div.appendChild(range.cloneContents());
-            this.selectedText = div.innerHTML;
+            const html = div.innerHTML;
+            this.selectedText = html;
+            this.addToClipboardHistory(html);
         },
         cutSelection() {
             const selection = window.getSelection();
@@ -1472,17 +1506,40 @@ export default {
             this.copySelection();
             this.editor.chain().focus().deleteSelection().run();
         },
+        toggleClipboardSidebar() {
+            this.showClipboardSidebar = !this.showClipboardSidebar;
+        },
+        pasteFromClipboard(item) {
+            this.editor.chain().focus().insertContent(item, {parseOptions: {preserveWhitespace: 'full'}}).run();
+            this.showClipboardSidebar = false;
+        },
         pasteSelection() {
-            if (!this.selectedText || this.selectedText == "") {
-                return
-            }
-            console.log("[pasteSelection] pasted:", this.selectedText)
-
-            this.editor.commands.insertContent(this.selectedText, {parseOptions: {preserveWhitespace: 'full'}});
-            // FIXME:  einfügen in den editor (auch ohne tiptap command) verursacht ein <p> element das nicht
-            // als korrekte node erkannt wird und dann auch beim languagetool parsing irgendwie ignoriert wird
-            // wenn ich der bewussten textnode ein wort hinzufüge bzw. irgendwas veränder wird das wort auch indieser map
-            // aufgeführt
+            this.toggleClipboardSidebar();
+        },
+        clipboardPreview(html) {
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            const text = div.textContent || div.innerText || '';
+            return text.length > 60 ? text.slice(0, 60) + '…' : text;
+        },
+        clipboardPreviewFull(html) {
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            return div.textContent || div.innerText || '';
+        },
+        clipboardTooltipShow(e, text) {
+            const textEl = e.currentTarget.querySelector('.clipboard-item-text');
+            if (!textEl || textEl.scrollWidth <= textEl.clientWidth) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            this.clipboardTooltip = {
+                text,
+                shown: true,
+                x: rect.right + 8,
+                y: rect.top
+            };
+        },
+        clipboardTooltipHide() {
+            this.clipboardTooltip = { text: '', shown: false, x: 0, y: 0 };
         },
         // implementing a sleep (wait) function
         sleep(ms) {
@@ -2123,7 +2180,7 @@ export default {
 @media print { //this controls how the editor view is printed (to pdf)
 
 
-    #editortoolbar, #webview, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer, span.NXTEhighlight::after, #highlight-layer, #languagetool, .split-view-container, #preview, #pdfembed {
+    #editortoolbar, #webview, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer, span.NXTEhighlight::after, #highlight-layer, #languagetool, #clipboard-sidebar, .split-view-container, #preview, #pdfembed {
         display: none !important;
     }
     body, #vuexambody {
@@ -2670,6 +2727,76 @@ Other Styles
     cursor: col-resize;
 }
 
+
+/** CLIPBOARD SIDEBAR STYLES */
+#clipboard-sidebar {
+    position: fixed;
+    z-index: 99999;
+    width: 220px;
+    max-height: 50vh;
+    left: -224px;
+    top: 163px;
+    background-color: rgba(255, 255, 255, 0.9);
+    box-shadow: 2px 1px 15px rgba(0, 0, 0, 0.1);
+    transition: left 0.25s ease;
+    overflow: hidden;
+    border: 1px solid #c5c5c5;
+}
+#clipboard-sidebar.visible {
+    left: 0;
+}
+#clipboard-sidebar .clipboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--bs-secondary);
+    border-bottom: 1px solid var(--bs-border-color);
+}
+#clipboard-sidebar .clipboard-list {
+    max-height: calc(50vh - 44px);
+    overflow-y: auto;
+    padding: 6px;
+}
+#clipboard-sidebar .clipboard-empty {
+    padding: 12px;
+    font-size: 0.8rem;
+    color: var(--bs-secondary);
+}
+#clipboard-sidebar .clipboard-item {
+    position: relative;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border-radius: 4px;
+}
+#clipboard-sidebar .clipboard-item-text {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#clipboard-sidebar .clipboard-item:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.clipboard-tooltip-fixed {
+    position: fixed;
+    max-width: 280px;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    background: var(--bs-dark);
+    color: var(--bs-light);
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 100001;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    pointer-events: none;
+}
 
 /** LANGUAGE TOOL STYLES */
 #highlight-layer {
