@@ -54,7 +54,7 @@ if (process.platform === 'linux'){
     app.commandLine.appendSwitch('disable-features', 'VaapiVideoDecoder,OutOfProcessRasterization,CanvasOopRasterization'); // disable fragile GPU features
     app.commandLine.appendSwitch('disable-zero-copy');
     // Fallback when chrome-sandbox is not configured (e.g. Debian without unprivileged_userns_clone)
-    app.commandLine.appendSwitch('no-sandbox');
+    //app.commandLine.appendSwitch('no-sandbox');
 }
 else if (process.platform === 'darwin'){
     app.commandLine.appendSwitch('enable-features', 'Metal,CanvasOopRasterization');  // macos only
