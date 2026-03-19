@@ -370,6 +370,7 @@ for (let i = 0; i<16; i++ ){
                     exammode: false,
                     imageurl:false,
                     virtualized: false,
+                    version: version,  // set at registration so isVersionMismatch is correct before first /update
                     bipuserID: bipuserID,  // we can use this in the future to re-check if this user is in the pre-defined userlist for this specific BIP exam
                     status: { group: group || 'a'},    // we use this to store (per student) information about whats going on on the serverside (tasklist) and send it back on /update
                     // we allow two groups (this is just used for distribution of files by now)
