@@ -116,6 +116,9 @@ if (!app.requestSingleInstanceLock()) {
     process.exit(0)
 }
 
+ // Chromium stack for main-process fetch ignores NODE_TLS_REJECT_UNAUTHORIZED (Electron 38+).
+app.commandLine.appendSwitch('ignore-certificate-errors');
+
  // Optional additional control over console errors
 app.commandLine.appendSwitch('log-level', '3'); // 3 = WARN, 2 = ERROR, 1 = INFO
 

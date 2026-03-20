@@ -454,9 +454,9 @@
         />
 
         <PdfviewPane
-            :src="currentpreview"
             :localLockdown="localLockdown"
             :examtype="examtype"
+            :toolbar="pdfPreviewUi"
             @close="hidepreview"
             @printBase64="printBase64"
             @insertImage="insertImage"
@@ -495,19 +495,19 @@
                  style="position: relative !important; top: 0 !important; left: 0 !important; transform: none !important; display: block !important; height:100% !important; margin-top:0;">
                 <embed src="" id="pdfembed"
                        style="border-radius:0 !important; background-size:contain; width:100% !important; height: 100% !important; background-color:transparent !important;"></embed>
-                <div class="btn btn-secondary white splitinsert" id="insert-button" @click="insertImage(selectedFile)"
+                <div v-show="examtype === 'editor' && pdfPreviewUi.showInsert" class="btn btn-secondary white splitinsert d-flex" id="insert-button" @click="insertImage()"
                      :title="$t('editor.insert')"
-                     style="position: absolute; top: 60px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
+                     style="position: absolute; top: 60px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
 
-                <div class="btn  btn-secondary splitprint" id="print-button" @click="printBase64(true)"
+                <div v-show="!localLockdown && pdfPreviewUi.showPrint" class="btn  btn-secondary splitprint d-flex" id="print-button" @click="printBase64(true)"
                      :title="$t('editor.print')"
-                     style="position: absolute; top: 110px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
-                <div class="btn  btn-secondary splitsend" id="send-button" @click="printBase64()"
+                     style="position: absolute; top: 110px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
+                <div v-show="!localLockdown && pdfPreviewUi.showSend" class="btn  btn-secondary splitsend d-flex" id="send-button" @click="printBase64()"
                      :title="$t('editor.send')"
-                     style="position: absolute; top: 144px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
+                     style="position: absolute; top: 144px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
 
-                <div id="pdfZoom"
-                     style="display:none; position: absolute; top:40px; right:20px; z-index:100000; height: 64px;">
+                <div v-show="pdfPreviewUi.showZoom" id="pdfZoom"
+                     style="position: absolute; top:40px; right:20px; z-index:100000; height: 64px;">
                     <button class="btn btn-secondary  white  splitzoomin"
                             style="width:70px; height: 32px; margin-bottom:2px;  background-repeat: no-repeat; background-position: center; "
                             id="zoomIn"></button>
@@ -697,7 +697,7 @@ import {
     LTignoreWord,
     LTresetIgnorelist
 } from '../utils/languagetool.js'
-import {getExamMaterials, loadDOCX, loadHTML, loadImage, loadPDF, playAudio} from '../utils/filehandler.js'
+import {getExamMaterials, loadDOCX, loadHTML, loadImage, loadPDF, playAudio, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 
 import {SignalBridge} from '../utils/signalBridge.js'
@@ -815,7 +815,8 @@ export default {
             ltLanguage: activeSection.spellchecklang || "de-DE",
             clipboardHistory: [],
             showClipboardSidebar: false,
-            clipboardTooltip: { text: '', shown: false, x: 0, y: 0 }
+            clipboardTooltip: { text: '', shown: false, x: 0, y: 0 },
+            pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
         }
     },
     computed: {
@@ -1586,6 +1587,7 @@ export default {
         },
 
         hidepreview() {
+            resetPdfPreviewToolbar(this);
             let preview = document.querySelector("#preview")
             preview.style.display = 'none';
             preview.setAttribute("src", "about:blank");

@@ -39,7 +39,7 @@ const config = {
     },
 
     version: '2.0.0.1',
-    buildDate: '20260319',
+    buildDate: '20260320',
     buildNumber: '1',
     info: 'Release'
 }

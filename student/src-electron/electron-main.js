@@ -48,6 +48,8 @@ if (!config.development && process.argv.some(arg => arg.startsWith('--inspect') 
 }
 
 app.commandLine.appendSwitch('lang', 'de');
+// Chromium stack for main-process fetch ignores NODE_TLS_REJECT_UNAUTHORIZED (Electron 38+).
+app.commandLine.appendSwitch('ignore-certificate-errors');
 app.commandLine.appendSwitch('enable-unsafe-swiftshader');
 app.commandLine.appendSwitch('log-level', '3'); // 3 = WARN, 2 = ERROR, 1 = INFO
 

@@ -6,6 +6,15 @@ import {SignalBridge} from './signalBridge.js'
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
 
+/** Resets PdfviewPane toolbar visibility when closing preview (Vue-driven, not DOM hacks). */
+export function resetPdfPreviewToolbar(vm) {
+    Object.assign(vm.pdfPreviewUi, {
+        showInsert: false,
+        showPrint: false,
+        showSend: false,
+        showZoom: false,
+    });
+}
 
 // fetch file from disc - show preview
 export async function loadPDF(file, base64 = false, zoom=180, submission=false, type="send"){
@@ -46,6 +55,7 @@ export async function loadPDF(file, base64 = false, zoom=180, submission=false, 
                 showCancelButton: false,
                 didOpen: () => { this.$swal.showLoading(); },
             })
+            resetPdfPreviewToolbar(this);
             return
         }
         this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "application/pdf"})) 
@@ -63,8 +73,6 @@ export async function loadPDF(file, base64 = false, zoom=180, submission=false, 
     try{
         const zoomInButton = document.getElementById("zoomIn");
         const zoomOutButton = document.getElementById("zoomOut");
-        const pdfZoom = document.getElementById("pdfZoom");  //zoombutton container
-        pdfZoom.style.display = "block"
 
         // Entferne bestehende Event-Listener, bevor neue hinzugefügt werden
         zoomInButton.removeEventListener('click', this.zoomInHandler);
@@ -101,32 +109,12 @@ export async function loadPDF(file, base64 = false, zoom=180, submission=false, 
     //hide/show some buttons
     document.querySelector("#preview").style.display = 'block';
 
-
-    // Function to safely set display style
-    const safeSetDisplay = (selector, value) => {
-        const el = document.querySelector(selector); // Get element
-        if (el) { // Check if element exists
-            el.style.display = value; // Set style
-        }
-    };
-
-    // Always try to hide insert button (safely)
-    safeSetDisplay("#insert-button", 'none');
-
-    if (submission){ 
-        if (type == "send"){
-        safeSetDisplay("#send-button", 'flex'); // Show send button
-        safeSetDisplay("#print-button", 'none'); // Hide print button
-        }
-        else if (type == "print"){
-            safeSetDisplay("#print-button", 'flex'); // Show print button
-            safeSetDisplay("#send-button", 'none'); // Hide send button
-        }
-    }
-    else{
-        safeSetDisplay("#send-button", 'none'); // Hide send button
-        safeSetDisplay("#print-button", 'none'); // Hide print button
-    }
+    Object.assign(this.pdfPreviewUi, {
+        showInsert: false,
+        showPrint: !!(submission && type === 'print'),
+        showSend: !!(submission && type === 'send'),
+        showZoom: true,
+    });
 
    
 }
@@ -320,19 +308,12 @@ export async function loadImage(file, base64=false){
 
 
 
-    // Function to safely set display style, works in all environments
-    const safeSetDisplay = (selector, value) => {
-        const el = document.querySelector(selector); // Get element
-        if (el) { // Check if element exists
-            el.style.display = value; // Set style
-        }
-    };
-
-    // Apply styles safely to all elements
-    safeSetDisplay("#insert-button", 'flex'); 
-    safeSetDisplay("#print-button", 'none');
-    safeSetDisplay("#pdfZoom", 'none'); 
-    safeSetDisplay("#send-button", 'none');
+    Object.assign(this.pdfPreviewUi, {
+        showInsert: true,
+        showPrint: false,
+        showSend: false,
+        showZoom: false,
+    });
 
     document.querySelector("#preview").style.display = 'block'; 
 }
