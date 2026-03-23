@@ -243,8 +243,10 @@ async function LTfindWordPositions() {
             // Check if range is still valid and contains the wrong word
             const rangeText = word.range.toString();
             
-            // If word doesn't match, it was corrected - remove it
-            if (rangeText !== word.wrongWord) {
+            // If word doesn't match, it was corrected - remove it.
+            // Exception: zero-length words (insertion points) have no text to compare —
+            // their range anchors on the neighbouring char, so rangeText never equals "".
+            if (word.length > 0 && rangeText !== word.wrongWord) {
                 return false; // Remove corrected word
             }
             
@@ -374,12 +376,104 @@ async function LTfindWordPositions() {
         this.misspelledWords = this.misspelledWords.filter(word => word.position !== null);
     }
 
+    // Offset-map fallback: handles zero-length (missing punctuation/char), single spaces,
+    // and any word the regex approach failed to locate.
+    const remainingWords = this.misspelledWords.filter(word => !word.position)
+    if (remainingWords.length > 0) {
+        const offsetMap = this.LTbuildOffsetMap()
+        remainingWords.forEach(word => {
+            this.LTfindByOffsetMap(word, offsetMap)
+            // Extract position from range (same way as the regex branch above)
+            if (word.range && !word.position) {
+                const rects = word.range.getClientRects()
+                if (rects.length) {
+                    word.position = { left: rects[0].left, top: rects[0].top, width: rects[0].width, height: rects[0].height }
+                }
+            }
+        })
+    }
+
 }
 
 
 
 
 
+
+
+// Builds a flat array indexed by editor.getText() offset.
+// Entry is { pmPos } for real text chars, null for '\n' block/hardbreak separators.
+// Uses doc.nodesBetween() which mirrors ProseMirror's getTextBetween exactly —
+// robust to tables, images, nested structures, and any TipTap extension.
+function LTbuildOffsetMap() {
+    const doc = this.editor.state.doc
+    const map = []
+    let separated = true   // mirrors the 'separated' flag in ProseMirror's getTextBetween
+
+    doc.nodesBetween(0, doc.content.size, (node, pos) => {
+        if (node.isText) {
+            for (let i = 0; i < node.text.length; i++) {
+                map.push({ pmPos: pos + i })
+            }
+            separated = false
+        } else if (node.type.name === 'hardBreak') {
+            // HardBreak contributes '\n' to editor.getText()
+            map.push(null)
+            separated = false
+        } else if (!separated && node.isBlock) {
+            // Any block boundary → the '\n' blockSeparator in editor.getText()
+            map.push(null)
+            separated = true
+        }
+        // Non-text inline leaves (images etc.) contribute nothing → no map entry
+    })
+
+    return map
+}
+
+
+// Offset-map–based position search using ProseMirror's view.domAtPos().
+// Handles: length=0 (missing char), whitespace, and anything the regex missed.
+function LTfindByOffsetMap(word, offsetMap) {
+    const view = this.editor.view
+
+    // Convert a pair of consecutive PM positions to a DOM Range.
+    const rangeForPm = (pmStart, pmEnd) => {
+        try {
+            const s = view.domAtPos(pmStart)
+            const e = view.domAtPos(pmEnd)
+            const r = document.createRange()
+            r.setStart(s.node, s.offset)
+            r.setEnd(e.node, e.offset)
+            return r.getClientRects().length ? r : null
+        } catch (_) { return null }
+    }
+
+    if (word.length === 0) {
+        // Insertion: anchor on the last real char before the offset,
+        // walking backwards over any null (= \n) entries.
+        let refIdx = word.offset - 1
+        while (refIdx >= 0 && !offsetMap[refIdx]) refIdx--
+        if (refIdx < 0) return
+        const entry = offsetMap[refIdx]
+        const range = rangeForPm(entry.pmPos, entry.pmPos + 1)
+        if (!range) return
+        word.range = range
+        word.isInsertion = true   // → drawn as a vertical bar at the insertion point
+
+    } else {
+        // Whitespace / not-found word: map start and end via PM positions.
+        const startEntry = offsetMap[word.offset]
+        if (!startEntry) return
+        let endIdx = word.offset + word.length - 1
+        while (endIdx > word.offset && !offsetMap[endIdx]) endIdx--
+        const endEntry = offsetMap[endIdx]
+        if (!endEntry) return
+        const range = rangeForPm(startEntry.pmPos, endEntry.pmPos + 1)
+        if (!range) return
+        word.range = range
+    }
+}
 
 
 // function LThighlightWordsOld() {
@@ -457,8 +551,21 @@ function LThighlightWords() {
         const adjustedHeight = height 
 
         // Set highlight color and draw the rectangle
-        this.ctx.fillStyle = word.color;
-        this.ctx.fillRect(adjustedLeft, adjustedTop + translate, adjustedWidth, adjustedHeight);
+        if (word.isInsertion) {
+            // Missing character: draw a thin vertical bar at the insertion point
+            // (right edge of the reference character = where the char should be inserted)
+            const xPos = adjustedLeft + adjustedWidth
+            this.ctx.fillStyle = word.color
+            this.ctx.fillRect(xPos - this.zoom, adjustedTop, 2 * this.zoom, word.position.height)
+            if (word === this.currentLTword) {
+                this.ctx.globalAlpha = 0.2
+                this.ctx.fillRect(xPos - 10 * this.zoom, adjustedTop, 20 * this.zoom, word.position.height)
+                this.ctx.globalAlpha = 1
+            }
+        } else {
+            this.ctx.fillStyle = word.color;
+            this.ctx.fillRect(adjustedLeft, adjustedTop + translate, adjustedWidth, adjustedHeight);
+        }
     });
 }
 
@@ -483,4 +590,4 @@ function LTredrawHighlights() {
     this.LThighlightWords();
 }
 
-export { LTcheckAllWords, LTfindWordPositions, LThighlightWords, LTredrawHighlights, LTdisable, LThandleMisspelled, LTignoreWord, LTresetIgnorelist}
+export { LTcheckAllWords, LTfindWordPositions, LThighlightWords, LTredrawHighlights, LTdisable, LThandleMisspelled, LTignoreWord, LTresetIgnorelist, LTbuildOffsetMap, LTfindByOffsetMap }

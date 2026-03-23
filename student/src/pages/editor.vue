@@ -695,7 +695,9 @@ import {
     LThandleMisspelled,
     LThighlightWords,
     LTignoreWord,
-    LTresetIgnorelist
+    LTresetIgnorelist,
+    LTbuildOffsetMap,
+    LTfindByOffsetMap,
 } from '../utils/languagetool.js'
 import {getExamMaterials, loadDOCX, loadHTML, loadImage, loadPDF, playAudio, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
@@ -888,6 +890,8 @@ export default {
         LThandleMisspelled: LThandleMisspelled,
         LTignoreWord: LTignoreWord,
         LTresetIgnorelist: LTresetIgnorelist,
+        LTbuildOffsetMap: LTbuildOffsetMap,
+        LTfindByOffsetMap: LTfindByOffsetMap,
 
         LTshowWord(word) {
             this.currentLTword = word
