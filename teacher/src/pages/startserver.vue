@@ -53,55 +53,60 @@
         <!-- BIP Section END -->
         </div>
 
-        <!-- fixed headings for online exam list -->
-        <div class="flex-shrink-0 mt-2" v-if="config.bipIntegration && bipToken && onlineExams">
-            <span class="small d-block m-1">{{$t("startserver.onlineexams")}}<img src="/src/assets/img/svg/gtk-convert.svg" class="cursor-pointer ms-1" width="22" height="22" @click="fetchBipExams"></span>
-        </div>
-
-        <!-- scrollable exam lists (items only) -->
+        <!-- scrollable exam lists -->
         <div id="sidebar-scroll" class="flex-grow-1 overflow-auto pb-2" style="min-height: 0;">
-            <div v-if="config.bipIntegration" class="m-0">
-            <div id="onlineexams" class="m-1" v-if="onlineExams && onlineExams.length > 0">
-                <div v-for="exam of onlineExams">
-                    <div class="input-group" style="display:inline;">
-                        <div v-if="servername !== exam.examName" class="btn btn-sm btn-teal mt-1" :id="exam.examName" @click="setOnlineExam(exam)">{{exam.examName}}</div>
-                        <div v-if="servername === exam.examName" class="btn btn-sm btn-info mt-1" :id="exam.examName" @click="setOnlineExam(exam)">{{exam.examName}}</div> 
-                        
-                        <div class="btn btn-sm btn-cyan mt-1" style="width:14px; height: 31px;">
-                            <div style="writing-mode:vertical-rl; font-size:0.8em; margin-left:-10px; margin-top:2px; color: whitesmoke;">BiP</div>
-                        </div>
+            
+            <!-- headings for online exam list -->
+            <div class="flex-shrink-0 mt-2" v-if="config.bipIntegration && bipToken && onlineExams">
+                <span class="small d-block m-1">{{$t("startserver.onlineexams")}}<img src="/src/assets/img/svg/gtk-convert.svg" class="cursor-pointer ms-1" width="22" height="22" @click="fetchBipExams"></span>
+            </div>
 
+            <!-- online exams -->
+            <div v-if="config.bipIntegration" class="m-0">
+                <div id="onlineexams" class="m-1" v-if="onlineExams && onlineExams.length > 0">
+                    <div v-for="exam of onlineExams">
+                        <div class="input-group" style="display:inline;">
+                            <div v-if="servername !== exam.examName" class="btn btn-sm btn-teal mt-1" :id="exam.examName" @click="setOnlineExam(exam)">{{exam.examName}}</div>
+                            <div v-if="servername === exam.examName" class="btn btn-sm btn-info mt-1" :id="exam.examName" @click="setOnlineExam(exam)">{{exam.examName}}</div> 
+                            
+                            <div class="btn btn-sm btn-cyan mt-1" style="width:14px; height: 31px;">
+                                <div style="writing-mode:vertical-rl; font-size:0.8em; margin-left:-10px; margin-top:2px; color: whitesmoke;">BiP</div>
+                            </div>
+    
+                        </div>
+                        <img v-if="servername === exam.examName" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
+                    </div>
+                    <div v-if="onlineExams.length === 0" class="small mt-1">Noch keine vorhanden</div>
+                </div>
+            </div>
+
+            <!-- headings for previous exam list -->
+            <div class="flex-shrink-0 mt-2" v-if="previousExams && previousExams.length > 0">
+                <span class="small d-block m-1 mt-2">{{$t("startserver.previousexams")}}</span>
+            </div>
+    
+            <!-- previous exams -->
+            <div id="previous" class="m-1 mt-2" v-if="previousExams && previousExams.length > 0">
+                <div v-for="exam of previousExams">
+                    <div class="input-group" style="display:inline;">
+                        <div class="btn btn-sm btn-warning mt-1" @click="delPreviousExam(exam.examName)">x</div>
+                        <div  class="btn btn-sm mt-1" :id="exam.examName" 
+                            :class="[ servername === exam.examName ? 
+                                (exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? 'btn-info cursornotallowed' : 'btn-info ')  : 
+                                (exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? 'btn-secondary cursornotallowed' : 'btn-secondary ')
+                            ]"
+                            @click="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? '' : setPreviousExam(exam)"
+                            :title="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? $t('startserver.incompatible') : ''"
+                            >
+                            {{ exam.examName }}
+                        </div>
+                        <div v-if="exam.bip" class="btn btn-sm btn-cyan mt-1" style="width:14px; height: 31px;">
+                            <div style="writing-mode:vertical-rl; font-size:0.8em; margin-left:-10px; margin-top:2px;color: whitesmoke;">BiP</div>
+                        </div>
                     </div>
                     <img v-if="servername === exam.examName" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
                 </div>
-                <div v-if="onlineExams.length === 0" class="small mt-1">Noch keine vorhanden</div>
             </div>
-
-            </div>
-
-        <!-- previous exams start -->
-        <div id="previous" class="m-1 mt-2" v-if="previousExams && previousExams.length > 0">
-            <div v-for="exam of previousExams">
-                <div class="input-group" style="display:inline;">
-                    <div class="btn btn-sm btn-warning mt-1" @click="delPreviousExam(exam.examName)">x</div>
-                    <div  class="btn btn-sm mt-1" :id="exam.examName" 
-                        :class="[ servername === exam.examName ? 
-                            (exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? 'btn-info cursornotallowed' : 'btn-info ')  : 
-                            (exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? 'btn-secondary cursornotallowed' : 'btn-secondary ')
-                        ]"
-                        @click="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? '' : setPreviousExam(exam)"
-                        :title="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? $t('startserver.incompatible') : ''"
-                        >
-                        {{ exam.examName }}
-                    </div>
-                    <div v-if="exam.bip" class="btn btn-sm btn-cyan mt-1" style="width:14px; height: 31px;">
-                        <div style="writing-mode:vertical-rl; font-size:0.8em; margin-left:-10px; margin-top:2px;color: whitesmoke;">BiP</div>
-                    </div>
-                </div>
-                <img v-if="servername === exam.examName" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
-            </div>
-        </div>
-        <!-- previous exams end -->
         </div>
         <!-- sidebar-scroll end -->
 
