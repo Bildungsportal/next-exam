@@ -19,75 +19,51 @@
     <!-- sidebar -->
     <div id="sidebar" class="p-3 text-white bg-dark h-100 d-flex flex-column position-relative overflow-hidden" style="width: 240px; min-width: 240px;">
         <div class="flex-shrink-0">
-        <div class="btn btn-light ms-1 text-start infobutton nobutton">
-            <img src='/src/assets/img/svg/server.svg' class="me-2"  width="16" height="16" > 
+        <div class="btn btn-light ms-1 text-start infobutton" @click="activeTab = 'pruefung'; selectedExam = null; servername = ''; password = ''; checkExistingExam();" :style="activeTab !== 'pruefung' ? 'border-right: 2px solid #aaa; box-shadow: -6px -3px 10px -12px inset #000; color: #666;' : ''">
+            <img src='/src/assets/img/svg/server.svg' class="me-2"  width="16" height="16" :style="activeTab !== 'pruefung' ? 'opacity: 0.5;' : ''">
             {{$t("general.startserver")}}
-        </div><br>
- 
-    
-       
+        </div>
+        <div v-if="config.bipIntegration" class="btn btn-light ms-1 mt-1 text-start infobutton" @click="activeTab = 'bildungsportal'; selectedExam = null; servername = ''; password = ''; checkExistingExam();" :style="activeTab !== 'bildungsportal' ? 'border-right: 2px solid #aaa; box-shadow: -6px 0px 10px -12px inset #000; color: #666;' : ''">
+            <img src='/src/assets/img/svg/shield-lock-fill.svg' class="me-2 "  width="16" height="16"  :style="activeTab !== 'bildungsportal' ? 'opacity: 0.5;' : ''">
+            {{$t("dashboard.bildungsportal")}}
+        </div><br v-if="config.bipIntegration">
+
         <div v-if="freeDiscspace < 0.1" class="warning">  {{ $t("startserver.freespacewarning") }}   </div>
-        
+
         <div class="form-check form-switch m-1 mb-2 mt-2">
             <input id="advanced" type="checkbox"  v-model="advanced" class="form-check-input" @change="toggleAdvanced">
             <label for="advanced" class="form-check-label">{{$t('startserver.extendedsettings')}}</label>
         </div>
 
-
-
+ 
 
         <!-- BIP Section START -->
-        <div v-if="config.bipIntegration" class="m-0">
-            
-            <span class="small m-1">{{$t("dashboard.bildungsportal")}}</span><span v-if="bipToken" class="small m-1 me-0 text-secondary">(verbunden)</span>
+        <div v-if="config.bipIntegration && activeTab === 'bildungsportal'" class="m-0 mt-3" style="">
 
-            <div v-if="bipToken" title="logout" id="biploginbutton" @click="logoutBiP()" class="btn btn-success m-1" style="padding:0;">
+            <div v-if="bipToken" title="logout" id="biploginbutton" @click="logoutBiP()" class="btn btn-success m-1" style="padding:0px;">
                 <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
-                <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
-            </div> 
-            <div v-else title="login" id="biploginbutton" @click="loginBiP()" class="btn btn-info m-1" style="padding:0;">
+                <span style="padding:2px; font-size:0.9em;"  id="biploginbuttonlabel">Logout</span>
+            </div>
+            <div v-else title="login" id="biploginbutton" @click="loginBiP()" class="btn btn-info m-1" style="padding:0px;">
                 <img id="biplogo" style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
-                <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
-            </div> 
+                <span style="padding:2px; font-size:0.9em;"  id="biploginbuttonlabel">Login</span>
+            </div>
         </div>
         <!-- BIP Section END -->
         </div>
 
         <!-- scrollable exam lists -->
         <div id="sidebar-scroll" class="flex-grow-1 overflow-auto pb-2" style="min-height: 0;">
-            
-            <!-- headings for online exam list -->
-            <div class="flex-shrink-0 mt-2" v-if="config.bipIntegration && bipToken && onlineExams">
-                <span class="small d-block m-1">{{$t("startserver.onlineexams")}}<img src="/src/assets/img/svg/gtk-convert.svg" class="cursor-pointer ms-1" width="22" height="22" @click="fetchBipExams"></span>
-            </div>
-
-            <!-- online exams -->
-            <div v-if="config.bipIntegration" class="m-0">
-                <div id="onlineexams" class="m-1" v-if="onlineExams && onlineExams.length > 0">
-                    <div v-for="exam of onlineExams">
-                        <div class="input-group" style="display:inline;">
-                            <div v-if="servername !== exam.examName" class="btn btn-sm btn-teal mt-1" :id="exam.examName" @click="setOnlineExam(exam)">{{exam.examName}}</div>
-                            <div v-if="servername === exam.examName" class="btn btn-sm btn-info mt-1" :id="exam.examName" @click="setOnlineExam(exam)">{{exam.examName}}</div> 
-                            
-                            <div class="btn btn-sm btn-cyan mt-1" style="width:14px; height: 31px;">
-                                <div style="writing-mode:vertical-rl; font-size:0.8em; margin-left:-10px; margin-top:2px; color: whitesmoke;">BiP</div>
-                            </div>
-    
-                        </div>
-                        <img v-if="servername === exam.examName" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
-                    </div>
-                    <div v-if="onlineExams.length === 0" class="small mt-1">Noch keine vorhanden</div>
-                </div>
-            </div>
+            <div v-if="activeTab === 'pruefung'">
 
             <!-- headings for previous exam list -->
-            <div class="flex-shrink-0 mt-2" v-if="previousExams && previousExams.length > 0">
+            <div class="flex-shrink-0 mt-2" v-if="previousLocalExams && previousLocalExams.length > 0">
                 <span class="small d-block m-1 mt-2">{{$t("startserver.previousexams")}}</span>
             </div>
-    
+
             <!-- previous exams -->
-            <div id="previous" class="m-1 mt-2" v-if="previousExams && previousExams.length > 0">
-                <div v-for="exam of previousExams">
+            <div id="previous" class="m-1 mt-2" v-if="previousLocalExams && previousLocalExams.length > 0">
+                <div v-for="exam of previousLocalExams">
                     <div class="input-group" style="display:inline;">
                         <div class="btn btn-sm btn-warning mt-1" @click="delPreviousExam(exam.examName)">x</div>
                         <div  class="btn btn-sm mt-1" :id="exam.examName" 
@@ -100,18 +76,47 @@
                             >
                             {{ exam.examName }}
                         </div>
-                        <div v-if="exam.bip" class="btn btn-sm btn-cyan mt-1" style="width:14px; height: 31px;">
+                    </div>
+                    <img v-if="servername === exam.examName" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
+                </div>
+            </div>
+            </div>
+
+            <div v-if="activeTab === 'bildungsportal'">
+            <!-- headings for previous bip exam list -->
+            <div class="flex-shrink-0 mt-2" v-if="previousBipExams && previousBipExams.length > 0">
+                <span class="small d-block m-1 mt-2">{{$t("startserver.previousexams")}}</span>
+            </div>
+
+            <!-- previous bip exams -->
+            <div id="previous-bip" class="m-1 mt-2" v-if="previousBipExams && previousBipExams.length > 0">
+                <div v-for="exam of previousBipExams">
+                    <div class="input-group" style="display:inline;">
+                        <div class="btn btn-sm btn-warning mt-1" @click="delPreviousExam(exam.examName)">x</div>
+                        <div  class="btn btn-sm mt-1" :id="exam.examName" 
+                            :class="[ servername === exam.examName ? 
+                                (exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? 'btn-info cursornotallowed' : 'btn-info ')  : 
+                                (exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? 'btn-secondary cursornotallowed' : 'btn-secondary ')
+                            ]"
+                            @click="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? '' : setPreviousExam(exam)"
+                            :title="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? $t('startserver.incompatible') : ''"
+                            >
+                            {{ exam.examName }}
+                        </div>
+                        <div class="btn btn-sm btn-cyan mt-1" style="width:14px; height: 31px;">
                             <div style="writing-mode:vertical-rl; font-size:0.8em; margin-left:-10px; margin-top:2px;color: whitesmoke;">BiP</div>
                         </div>
                     </div>
                     <img v-if="servername === exam.examName" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
                 </div>
             </div>
+            </div>
         </div>
         <!-- sidebar-scroll end -->
+        
+        <div id="statusdiv" class="m-0 ms-1 btn btn-warning" style="bottom: 0; left: 0; width: 206px;">{{$t("startserver.connected")}}</div>
 
-        <div id="sidebar-bottom" class="flex-shrink-0 mt-2 position-relative">
-            <div id="statusdiv" class="m-0 ms-1 btn btn-warning position-absolute" style="bottom: 0; left: 0; width: 206px;">{{$t("startserver.connected")}}</div>
+        <div id="sidebar-bottom" class="flex-shrink-0 mt-auto position-relative">
             <button class="btn btn-outline-secondary btn-sm ms-1 mt-2 mb-1" @click="toggleLocale">{{ inactivelocale }}</button>
             <div class="small mt-1 ms-1">
                 <span @click="showCopyleft()" style="font-size:0.8em; cursor: pointer;">
@@ -125,34 +130,108 @@
     <!-- maincontent -->
     <div id="content" class="fadeinslow p-3">
         <div class="col8">
-            <div class="input-group  mb-1 mt-0">
-                <span class="input-group-text col-2 grayback" id="inputGroup-sizing-lg" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.examname")}}</span>
-                <input v-model="servername" @paste.prevent @drop.prevent @click="servername = ''; checkExistingExam()" maxlength="20" type="text" class="form-control" id="servername" placeholder="5a-mathematik" style="width:200px;max-width:200px;min-width:135px;">
-            </div> 
 
-            <!-- could be used to set an ESCAPE PASSWORD for students to make it harder to leave on connection loss -->
-            <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content"> 
-                <span id="pwd" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.pwd")}}</span>
-                <input v-model="password" type="text" class="form-control " id="examPassword" style="width:200px;" >
+            <!-- Prüfung anlegen START -->
+            <div v-if="activeTab === 'pruefung'">
+                <div class="input-group  mb-1 mt-0">
+                    <span class="input-group-text col-2 grayback" id="inputGroup-sizing-lg" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.examname")}}</span>
+                    <input v-model="servername" @paste.prevent @drop.prevent @click="servername = ''; checkExistingExam()" maxlength="20" type="text" class="form-control" id="servername" placeholder="5a-mathematik" style="width:200px;max-width:200px;min-width:135px;">
+                </div>
+
+                <!-- could be used to set an ESCAPE PASSWORD for students to make it harder to leave on connection loss -->
+                <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content">
+                    <span id="pwd" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.pwd")}}</span>
+                    <input v-model="password" type="text" class="form-control " id="examPassword" style="width:200px;" >
+                </div>
+
+                <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content">
+                    <span id="backupdir" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.backupfolder")}}</span>
+                    <span class="form-control text-truncate" style="width:360px;  font-size: 0.9em; padding-top: 8px; white-space: pre;">{{ backupdir }}</span>
+                    <button @click="setBackupdir()" id="backupdirbutton" class="btn btn-info p-0" style="width:40px;" :title="$t('startserver.backupfolderinfo')" >
+                        <img src="/src/assets/img/svg/settings.svg" style="vertical-align: sub;" class="" width="18" height="18" >
+                    </button>
+                </div>
+
+                <button @click="startServer()" :class="(!hostip) ? 'disabledstart':''" id="examstart" class="ps-1 pe-1 mb-3 btn btn-success" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
             </div>
+            <!-- Prüfung anlegen END -->
+
+            <!-- Bildungsportal START -->
+            <div v-if="activeTab === 'bildungsportal'" class="">
+            
+                <div v-if="!bipToken" class="text-secondary mt-1" style=" margin-left: 2px; margin-bottom: 14px;">
+                    <span>{{$t("startserver.bippleaselogin")}}</span>
+                </div>
+                <div v-if="bipToken" class="text-secondary mt-1" style=" margin-left: 2px; margin-bottom: 14px;">
+                    <span>{{$t("startserver.bipwelcome")}} {{bipUsername}}!</span>
+                </div>
+
+                <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content">
+                    <span id="pwd" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.pwd")}}</span>
+                    <input v-model="password" type="text" class="form-control " id="examPassword" style="width:200px;" >
+                </div>
+
+                <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content">
+                    <span id="backupdir" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.backupfolder")}}</span>
+                    <span class="form-control text-truncate" style="width:360px;  font-size: 0.9em; padding-top: 8px; white-space: pre;">{{ backupdir }}</span>
+                    <button @click="setBackupdir()" id="backupdirbutton" class="btn btn-info p-0" style="width:40px;" :title="$t('startserver.backupfolderinfo')" >
+                        <img src="/src/assets/img/svg/settings.svg" style="vertical-align: sub;" class="" width="18" height="18" >
+                    </button>
+                </div>
+
+                <button @click="startServer()" :class="(!hostip || !bipToken || !servername) ? 'disabledstart':''" class="ps-1 pe-1 mb-3 btn btn-success" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
 
 
-            <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content">  
-                <span id="backupdir" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.backupfolder")}}</span>
-                <span class="form-control text-truncate" style="width:360px;  font-size: 0.9em; padding-top: 8px; white-space: pre;">{{ backupdir }}</span>
-                <button @click="setBackupdir()" id="backupdirbutton" class="btn btn-info p-0" style="width:40px;" :title="$t('startserver.backupfolderinfo')" >
-                    <img src="/src/assets/img/svg/settings.svg" style="vertical-align: sub;" class="" width="18" height="18" >
-                </button>
+
+
+
+                <!-- BiP Prüfungen START -->
+                <div v-if="bipToken" class="text-secondary " style=" margin-left: 2px; margin-top: 6px;">
+                    <span>BiP Prüfungen</span>
+                    <button v-if="bipToken" class="btn p-0 white ms-1 mb-1" @click="fetchBipExams" title="Aktualisieren">
+                        <img src="/src/assets/img/svg/gtk-convert.svg" width="16" height="16">
+                    </button>
+                </div>
+
+                <div v-if="onlineExams && onlineExams.length > 0" class="bip-widget-grid">
+                    <div
+                        v-for="exam of onlineExams"
+                        :key="`bip-main-${exam.id}-${exam.examName}`"
+                        class="bip-exam-card"
+                        :class="{ 'bip-exam-card-active': servername === exam.examName }"
+                        @click="setOnlineExam(exam)"
+                    >
+                        <!-- Name + PIN -->
+                        <div class="bip-exam-card-head">
+                            <span v-if="exam.requireBiP" class="badge text-white flex-shrink-0 bg-success">BiP</span>
+                            <div class="bip-exam-name fw-semibold small">{{ exam.examName }}</div>
+                            <span v-if="exam.pin" class="badge bg-secondary-subtle text-secondary bip-status-pill">{{ exam.pin }}</span>
+                        </div>
+
+                        <!-- Date / Duration -->
+                        <div class="bip-exam-info-row text-secondary">
+                            <span v-if="exam.examDate">{{ exam.examDate.slice(8,10) }}.{{ exam.examDate.slice(5,7) }}.{{ exam.examDate.slice(0,4) }} {{ exam.examDate.slice(11,16) }}</span>
+                            <span class="text-muted" v-if="exam.examDate && exam.examDurationMinutes">·</span>
+                            <span v-if="exam.examDurationMinutes">{{ exam.examDurationMinutes }} min</span>
+                        </div>
+
+                        <!-- Feature badges -->
+                        <div class="bip-feature-badges">
+                            <span v-if="exam.examSections && exam.examSections[exam.activeSection]"
+                                  class="badge bip-type-badge"
+                                  :class="`bip-type-${exam.examSections[exam.activeSection].examtype}`">
+                                {{ {math:'Mathematik', editor:'Sprachen', eduvidual:'Eduvidual', website:'Website', activesheets:'Active Sheets', microsoft365:'Microsoft 365'}[exam.examSections[exam.activeSection].examtype] || exam.examSections[exam.activeSection].examtype }}
+                            </span>
+                            <span v-if="exam.examSections && exam.examSections[exam.activeSection] && exam.examSections[exam.activeSection].groups" class="badge bip-type-sus">A/B</span>
+                            <span v-if="exam.screenslocked" class="badge bg-danger-subtle text-danger border border-danger-subtle">gesperrt</span>
+                            <span v-if="exam.useExamSections" class="badge bg-secondary">§ {{ exam.activeSection }}/{{ exam.lockedSection }}</span>
+                            <span v-if="exam.examStudents && exam.examStudents.length" class="badge bip-type-sus">{{ exam.examStudents.length }} SuS</span>
+                        </div>
+                    </div>
+                </div>
             </div>
+            <!-- Bildungsportal END -->
 
-
-
-            
-            
-         
-
-            <button @click="startServer()" :class="(!hostip) ? 'disabled':''" id="examstart" class="ps-1 pe-1  mb-5 btn btn-success" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
-            
         </div>
 
         
@@ -223,7 +302,7 @@ export default {
             freeDiscspace: 100,
             previousExams: [],
             onlineExams: [] as Exam[],
-            biptest:false,   //switches between production and q
+            biptest:true,   //switches between production and q
             selectedExam: null,
 
             bipToken:this.$route.params.bipToken === 'false' || !this.$route.params.bipToken ?  false : this.$route.params.bipToken,   // parameter werden immer als string "false" übergeben, convert to bool
@@ -232,7 +311,8 @@ export default {
 
 
             bipnews: [],
-            BipInfoActive: false
+            BipInfoActive: false,
+            activeTab: 'pruefung'
         };
     },
     components: {},
@@ -261,6 +341,12 @@ export default {
     computed: {
         inactivelocale() { // Zeigt aktuellen Sprachcode
              return this.$i18n.locale === 'de' ? 'en' : 'de';
+        },
+        previousLocalExams() {
+            return (this.previousExams || []).filter(exam => !exam?.bip);
+        },
+        previousBipExams() {
+            return (this.previousExams || []).filter(exam => !!exam?.bip);
         }
     },
 
@@ -357,11 +443,16 @@ export default {
                     this.bipUsername = response.fullname
                     this.bipuserID = response.userid
 
-                    
-                    document.querySelector("#biploginbutton").classList.remove('btn-info')
-                    document.querySelector("#biploginbutton").classList.add('btn-success')
-                    document.querySelector("#biplogo").style.filter = "hue-rotate(140deg)"
-                    document.getElementById("biploginbutton").classList.add("disabledbutton");
+                    const loginBtn = document.querySelector("#biploginbutton")
+                    const bipLogo = document.querySelector("#biplogo")
+                    if (loginBtn) {
+                        loginBtn.classList.remove('btn-info')
+                        loginBtn.classList.add('btn-success')
+                        loginBtn.classList.add("disabledbutton")
+                    }
+                    if (bipLogo) {
+                        bipLogo.style.filter = "hue-rotate(140deg)"
+                    }
 
 
                     this.fetchBipExams()
@@ -385,16 +476,20 @@ export default {
         fetchBipExams(){
             let token = this.decodeBase64AndExtractTokens(this.bipToken)?.[1];
             if (!token) {
-                throw Error("cannot fetch from bip api without valid token")
+                // No valid token -> silently skip to avoid unhandled click errors
+                return;
             }
             
             const url = this.getBiPUrl() + '/webservice/rest/server.php?wstoken=' + token + '&wsfunction=local_dpu_get_exams_teacher&moodlewsrestformat=json';
 
+            console.log("url:", url)
             fetch(url, { method: "GET" })
             .then(response => { return response.json(); } )                  
             .then(data => {
                 //console.log("Daten von der API:", data);
                 this.bipData = data   // store all of the information in data
+                console.log(data)
+
 
                 this.onlineExams = data.exams;
             })
@@ -402,11 +497,10 @@ export default {
         },
 
 
-        setOnlineExam(exam){
-            document.getElementById('servername').value = exam.examName
+        async setOnlineExam(exam){
             this.servername = exam.examName
 
-            this.selectedExam = exam  // exam reprensents the exam object "serverstatus"
+            this.selectedExam = { ...exam, bip: true }  // mark as bip exam for consistent tab-based start logic
 
             // save the selected exam information to local serverstatus.json / create local exam folder
             this.bipData.exams.forEach(bipexam =>{
@@ -414,6 +508,9 @@ export default {
                     ipcRenderer.invoke('createBipExamdirectory', bipexam)
                 }
             }) 
+
+            // keep button state consistent with "Lokale Prüfung" tab
+            await this.checkExistingExam()
         },
 
 
@@ -674,7 +771,6 @@ export default {
 
         /**  setzt das feld prüfungsname auf den namen des angeklickten prüfungsverzeichnisses */
         async setPreviousExam(exam){
-            document.getElementById('servername').value = exam.examName
             this.servername = exam.examName
             this.selectedExam = exam
    
@@ -697,14 +793,16 @@ export default {
                         await this.$nextTick();
 
                     }
-                    document.getElementById('examstart').innerHTML = this.$t("startserver.resume")
+                    const examstart = document.getElementById('examstart')
+                    if (examstart) examstart.innerHTML = this.$t("startserver.resume")
                     let examPassword = document.getElementById('examPassword')
                     if (examPassword){
                         examPassword.disabled = true  // lock password input field if existing exam is found and password is already set - prevent changing examPassword
                     }
                     break
                 } else {
-                    document.getElementById('examstart').innerHTML = this.$t("startserver.start")
+                    const examstart = document.getElementById('examstart')
+                    if (examstart) examstart.innerHTML = this.$t("startserver.start")
                     let examPassword = document.getElementById('examPassword')
                     if (examPassword){
                         examPassword.disabled = false  // unlock password input field if no existing exam is found
@@ -769,6 +867,10 @@ export default {
             else {
                 let isBip = this.selectedExam && this.selectedExam.bip && this.servername === this.selectedExam.examName ? true : false
                 let bipId = this.selectedExam && this.selectedExam.id ? this.selectedExam.id : null
+
+                // Enforce tab separation: local exams only in local tab, bip exams only in bip tab
+                if (isBip && this.activeTab !== 'bildungsportal') { this.status("BiP-Prüfungen können nur im Tab Bildungsportal gestartet werden."); return; }
+                if (!isBip && this.activeTab === 'bildungsportal') { this.status("Lokale Prüfungen können nur im Tab Lokale Prüfung gestartet werden."); return; }
 
                 if (isBip && !this.bipToken){
                     this.status(this.$t("startserver.bipnotloggedin")); 
@@ -930,13 +1032,20 @@ export default {
         this.$i18n.locale = locale
         //console.log("locale:", systemLocale, locale)
 
-        // add event listener to exam input field to supress all special chars 
-        document.getElementById("servername").addEventListener("keypress", this.validateInput);
-        document.getElementById("servername").addEventListener("keyup",  this.handleKeyupEvent);
+        // add event listener to exam input field to suppress all special chars
+        const servernameEl = document.getElementById("servername");
+        if (servernameEl) {
+            servernameEl.addEventListener("keypress", this.validateInput);
+            servernameEl.addEventListener("keyup", this.handleKeyupEvent);
+        }
     },
     beforeUnmount() {
-        document.getElementById("servername").removeEventListener("keyup",  this.handleKeyupEvent);  // sollte eigentlich nicht notwendig sein, aber bei singlepage apps vielleicht besser und sauberer so
-        document.getElementById("servername").removeEventListener("keypress",  this.validateInput);
+        const servernameEl = document.getElementById("servername");
+        if (servernameEl) {
+            // should be safe for SPA unmount when element might already be gone
+            servernameEl.removeEventListener("keyup",  this.handleKeyupEvent);
+            servernameEl.removeEventListener("keypress",  this.validateInput);
+        }
     },
 }
 </script>
@@ -958,6 +1067,11 @@ export default {
 <style scoped>
 
 .disabledbutton {
+    pointer-events: none; 
+}
+
+.disabledstart {
+    filter: contrast(100%) grayscale(100%) brightness(80%) blur(0.6px);
     pointer-events: none; 
 }
 
@@ -999,6 +1113,88 @@ export default {
     background-color: whitesmoke;
     min-width: 680px;
 }
+
+
+
+.bip-widget-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.37rem;
+}
+
+.bip-exam-card {
+    width: 300px;
+    background: #f8f9fa;
+    border: 1px solid #198754;
+    border-left: 1px solid #198754;
+    border-radius: 5px;
+    padding: 7px 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+
+.bip-exam-card:hover {
+    border-color: #0dcaf0;
+}
+
+.bip-exam-card-active {
+    background: #d1e7dd;
+    /* box-shadow: 0 2px 8px rgba(25, 135, 84, 0.25); */
+}
+
+.bip-exam-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.bip-exam-name {
+    line-height: 1.3;
+    word-break: break-word;
+    text-align: left;
+    margin-right: auto; /* keep the PIN badge on the right */
+}
+
+.bip-status-pill {
+    flex-shrink: 0;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.bip-exam-info-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3px;
+    margin-bottom: 5px;
+    font-size: 0.77em;
+}
+
+.bip-feature-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3px;
+}
+
+.bip-feature-badges .badge,
+.bip-exam-card-head .badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* exam type badges — all same neutral gray */
+.bip-type-math,
+.bip-type-editor,
+.bip-type-eduvidual,
+.bip-type-website,
+.bip-type-activesheets,
+.bip-type-microsoft365,
+.bip-type-sus          { background: #e9ecef; color: #343a40; border: 1px solid #dee2e6; }
 
 .infobutton{
     width: 221px;

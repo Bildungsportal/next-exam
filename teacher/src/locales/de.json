@@ -1,6 +1,6 @@
 { 
     "general": {
-        "startserver":"Prüfung anlegen",
+        "startserver":"Lokale Prüfung",
         "slist": "Aktive Prüfungen",
         "ok": "OK",
         "offline": "Keine Netzwerkverbindung"
@@ -29,6 +29,8 @@
         "folderdelete": "Wollen Sie den lokalen Prüfungsordner löschen?",
         "onlineexams": "BiP Prüfungen",
         "bipnotloggedin": "Bitte melden Sie sich am BiP an, bevor Sie die Prüfung starten",
+        "bipwelcome": "Herzlich Willkommen",
+        "bippleaselogin": "Bitte melden Sie sich am Bildungsportal an, um die geplanten Prüfungen anzuzeigen.",
         "noNews":"Keine Neuigkeiten verfügbar",
         "backupfolder": "Backupverzeichnis",
         "backupfolderinfo": "Bitte geben Sie einen Pfad für das Backup-Verzeichnis ein",

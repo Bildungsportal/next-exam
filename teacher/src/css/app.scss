@@ -40,6 +40,17 @@ $theme-colors: (
 .bg-secondary       { background-color: $gray-600;}
 .bg-secondary:hover { background-color: $gray-500;}
 
+.bg-success        { background-color: $green-400!important; }
+.bg-success:hover  { background-color: $green-300!important; }
+
+.bs-success        { border-color: $green-400!important; }
+.bs-success:hover  { border-color: $green-300!important; }
+
+.bs-info        { border-color: $blue-400!important; }
+.bs-info:hover  { border-color: $blue-300!important; }
+
+.bg-info        { background-color: $blue-400!important; }
+.bg-info:hover  { background-color: $blue-300!important; }
 
 
 .btn-teal       { background-color: $teal-600;}

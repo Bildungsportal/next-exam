@@ -219,29 +219,25 @@ router.get('/msauth', async (req, res) => {
  * @param servername the chosen name (for example "mathe")
  * @param passwd the password needed to enter the dashboard  !!FIXME: use https and proper auth 
  **/
- router.get('/checkpasswd/:servername/:passwd?', function (req, res, next) {
+ router.get('/getserverinfo/:servername', function (req, res, next) {
     const servername = req.params.servername 
-    let passwd = req.params.passwd
-    if (!passwd){ passwd = ""}   // we allow empty passwords for now
+
     const mcServer = config.examServerList[servername]
 
     if (mcServer) { 
-        if (passwd === mcServer.serverinfo.password){ 
+       
         return res.send( {
             sender: "server", 
-            message: t("control.correctpw"), 
+            message: "success", 
             status: "success", 
             data: {
             pin: mcServer.serverinfo.pin,
             servertoken: mcServer.serverinfo.servertoken,
             serverip: mcServer.serverinfo.ip
             } 
-        } )} 
-        else { return res.send( {sender: "server", message: t("control.wrongpw"), status: "error"}) }
-    } 
-    else {
-        res.send( {sender: "server", message: t("control.notfound"), status: "error"})
+        } )
     }
+    else { return res.send( {sender: "server", message: "server not found", status: "error"}) }
 })
 
 

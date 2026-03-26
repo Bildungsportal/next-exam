@@ -47,10 +47,9 @@ function addParams(to){
 // since we almost moved to single and local instance teacher server password is not needed at all #REFACTOR ? 
 async function checkPasswd(to){
     let hostname = electron ? "localhost" : window.location.hostname
-    let passwd = to.params.passwd ? to.params.passwd : ""
-
+   
     const config = getConfig();
-    let res = await axios.get(`https://${hostname}:${config.serverApiPort}/server/control/checkpasswd/${to.params.servername}/${passwd}`)
+    let res = await axios.get(`https://${hostname}:${config.serverApiPort}/server/control/getserverinfo/${to.params.servername}`)
     .then(response => {  return response.data  })
     .catch( err => {console.error(`router @ checkPasswd:    ${err}`)})
 
@@ -59,12 +58,11 @@ async function checkPasswd(to){
         to.params.servertoken = res.data.servertoken; 
         to.params.serverip = res.data.serverip; 
         to.params.id = res.data.id
-        //console.log("router @ checkPasswd: password ok"); 
         return true 
     }
     else {  
-        console.log("router @ checkPasswd: password error"); 
-        return { path: '/startserver'}
+        console.log("router @ checkPasswd: serverinfo error"); 
+        return false
     }
 }
 
