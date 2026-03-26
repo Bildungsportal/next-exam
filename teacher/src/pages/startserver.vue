@@ -53,10 +53,9 @@
         <!-- BIP Section END -->
         </div>
 
-        <!-- fixed headings for exam lists -->
-        <div class="flex-shrink-0 mt-2" v-if="(config.bipIntegration && onlineExams && onlineExams.length > 0) || (previousExams && previousExams.length > 0)">
-            <span v-if="config.bipIntegration && bipToken && onlineExams" class="small d-block m-1">{{$t("startserver.onlineexams")}}<img data-v-b68b84a7="" src="/src/assets/img/svg/gtk-convert.svg" class="printercheck" width="22" height="22" @click="fetchBipExams"></span>
-            <span v-if="previousExams && previousExams.length > 0" class="small d-block m-1 mt-2">{{$t("startserver.previousexams")}}</span>
+        <!-- fixed headings for online exam list -->
+        <div class="flex-shrink-0 mt-2" v-if="config.bipIntegration && bipToken && onlineExams">
+            <span class="small d-block m-1">{{$t("startserver.onlineexams")}}<img src="/src/assets/img/svg/gtk-convert.svg" class="cursor-pointer ms-1" width="22" height="22" @click="fetchBipExams"></span>
         </div>
 
         <!-- scrollable exam lists (items only) -->
