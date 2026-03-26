@@ -47,9 +47,6 @@ class PlatformDispatcher {
     this.isGNOME = this._isGNOME();
     this.isUnity = this._isUNITY();
     this.isWayland = this._isWayland();
-    this.flameshot = this._getVersion('flameshot');
-    this.imagemagick = this._getVersion('convert');
-    this.imVersion = this._getImageMagickVersion();
     this.jre = this._detectJREId();
     this.publicBase = this._getPublicBase();
     this.jreDir = this._resolveJREDir();
@@ -258,33 +255,6 @@ class PlatformDispatcher {
     }
   }
 
-  _imagemagickAvailable() {
-    try {
-      execSync("magick -version", { stdio: 'ignore' });
-      //log.info("platformDispatcher @ _imagemagickAvailable: Found ImageMagick v7 (magick)");
-      return true;
-    } catch {
-      try {
-        execSync("which import", { stdio: 'ignore' });
-        //log.info("platformDispatcher @ _imagemagickAvailable: Found ImageMagick <7 (import)");
-        return true;
-      } catch (err) {
-        this.messages.push("platformDispatcher @ _imagemagickAvailable: ImageMagick not found");
-        return false;
-      }
-    }
-  }
-
-  _flameshotAvailable() {
-    try {
-      execSync("which flameshot", { stdio: 'ignore' });
-      return true;
-    } catch {
-      this.messages.push("platformDispatcher @ _flameshotAvailable: Flameshot not found");
-      return false;
-    }
-  }
-
   _setupDesktopPath() {
     this.desktopPath = this._getDesktopPath();
   }
@@ -299,23 +269,6 @@ class PlatformDispatcher {
 
   _fail(msg) {
       throw new Error(`[platformDispatcher] ${msg}`);
-  }
-
-  _getImageMagickVersion() {
-    try {
-      execSync("magick -version", { stdio: 'ignore' });
-      this.messages.push("platformDispatcher @ _getImageMagickVersion: Found ImageMagick v7 (magick)");
-      return "7";
-    } catch {
-      try {
-        execSync("which import", { stdio: 'ignore' });
-        this.messages.push("platformDispatcher @ _getImageMagickVersion: Found ImageMagick <7 (import)");
-        return "<7";
-      } catch (err) {
-        this.messages.push("platformDispatcher @ _getImageMagickVersion: ImageMagick not found");
-        return null;
-      }
-    }
   }
 
 }

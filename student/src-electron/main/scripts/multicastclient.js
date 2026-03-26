@@ -83,12 +83,9 @@ class MulticastClient {
 
             this.client.bind(this.PORT, bindAddr, () => {
                 try {
-                    this.client.setBroadcast(true);
+                    try { this.client.setBroadcast(true); } catch (e) { /* optional for multicast receive */ }
                     this.client.setMulticastTTL(128);
-                    
-                    // Explizites Joinen auf dem vom User gewählten Interface //
                     this.client.addMembership(this.MULTICAST_ADDR, config.hostip);
-                    
                     log.info(`UDP MC Client bound to ${bindAddr}:${this.PORT} and joined ${this.MULTICAST_ADDR}`);
                 } catch (e) {
                     log.error(`Multicast Join failed: ${e.message}`);
@@ -107,6 +104,19 @@ class MulticastClient {
         //check for deprecated instance in a loop
         this.refreshExamsScheduler = new SchedulerService(this.isDeprecatedInstance.bind(this), 5000)
         this.refreshExamsScheduler.start()
+    }
+
+    async stop(interfaceAddr) {
+        if (!this.client) return;
+        const addr = interfaceAddr ?? config.hostip;
+        if (this.refreshExamsScheduler) this.refreshExamsScheduler.stop();
+        try {
+            this.client.dropMembership(this.MULTICAST_ADDR, addr);
+        } catch (e) {}
+        await new Promise((resolve) => {
+            this.client.close(() => resolve());
+        });
+        this.client = null;
     }
 
     /**

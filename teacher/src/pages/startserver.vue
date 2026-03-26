@@ -1,7 +1,7 @@
 <template>
-
+<div class="startserver-page d-flex flex-column overflow-hidden" style="height: 100vh;">
 <!-- Header START -->
-<div class="w-100 p-3 text-white bg-dark text-left" style="height: 63px; z-index: 1000;">
+<div class="w-100 p-3 text-white bg-dark text-left flex-shrink-0" style="height: 63px; z-index: 1000;">
     <span class="text-white m-1">
         <img src="/src/assets/img/svg/shield-lock-fill.svg" class="white me-2  " width="32" height="32" >
         <span style="font-size:23px;" class="align-middle me-1 ">Next-Exam</span>
@@ -14,10 +14,11 @@
  
 
 
-<div id="wrapper" class="w-100 h-100 d-flex" >
+<div id="wrapper" class="w-100 d-flex flex-grow-1" style="min-height: 0;">
 
     <!-- sidebar -->
-    <div class="p-3 text-white bg-dark h-100 " style="width: 240px; min-width: 240px;">
+    <div id="sidebar" class="p-3 text-white bg-dark h-100 d-flex flex-column position-relative overflow-hidden" style="width: 240px; min-width: 240px;">
+        <div class="flex-shrink-0">
         <div class="btn btn-light ms-1 text-start infobutton nobutton">
             <img src='/src/assets/img/svg/server.svg' class="me-2"  width="16" height="16" > 
             {{$t("general.startserver")}}
@@ -35,9 +36,52 @@
 
 
 
+        <!-- BIP Section START -->
+        <div v-if="config.bipIntegration" class="m-0">
+            
+            <span class="small m-1">{{$t("dashboard.bildungsportal")}}</span><span v-if="bipToken" class="small m-1 me-0 text-secondary">(verbunden)</span>
+
+            <div v-if="bipToken" title="logout" id="biploginbutton" @click="logoutBiP()" class="btn btn-success m-1" style="padding:0;">
+                <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
+                <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
+            </div> 
+            <div v-else title="login" id="biploginbutton" @click="loginBiP()" class="btn btn-info m-1" style="padding:0;">
+                <img id="biplogo" style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
+                <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
+            </div> 
+        </div>
+        <!-- BIP Section END -->
+        </div>
+
+        <!-- fixed headings for exam lists -->
+        <div class="flex-shrink-0 mt-2" v-if="(config.bipIntegration && onlineExams && onlineExams.length > 0) || (previousExams && previousExams.length > 0)">
+            <span v-if="config.bipIntegration && bipToken && onlineExams" class="small d-block m-1">{{$t("startserver.onlineexams")}}<img data-v-b68b84a7="" src="/src/assets/img/svg/gtk-convert.svg" class="printercheck" width="22" height="22" @click="fetchBipExams"></span>
+            <span v-if="previousExams && previousExams.length > 0" class="small d-block m-1 mt-2">{{$t("startserver.previousexams")}}</span>
+        </div>
+
+        <!-- scrollable exam lists (items only) -->
+        <div id="sidebar-scroll" class="flex-grow-1 overflow-auto pb-2" style="min-height: 0;">
+            <div v-if="config.bipIntegration" class="m-0">
+            <div id="onlineexams" class="m-1" v-if="onlineExams && onlineExams.length > 0">
+                <div v-for="exam of onlineExams">
+                    <div class="input-group" style="display:inline;">
+                        <div v-if="servername !== exam.examName" class="btn btn-sm btn-teal mt-1" :id="exam.examName" @click="setOnlineExam(exam)">{{exam.examName}}</div>
+                        <div v-if="servername === exam.examName" class="btn btn-sm btn-info mt-1" :id="exam.examName" @click="setOnlineExam(exam)">{{exam.examName}}</div> 
+                        
+                        <div class="btn btn-sm btn-cyan mt-1" style="width:14px; height: 31px;">
+                            <div style="writing-mode:vertical-rl; font-size:0.8em; margin-left:-10px; margin-top:2px; color: whitesmoke;">BiP</div>
+                        </div>
+
+                    </div>
+                    <img v-if="servername === exam.examName" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
+                </div>
+                <div v-if="onlineExams.length === 0" class="small mt-1">Noch keine vorhanden</div>
+            </div>
+
+            </div>
+
         <!-- previous exams start -->
-        <div id="previous" class="m-1 mt-4 " v-if="previousExams && previousExams.length > 0">
-            <span class="small">{{$t("startserver.previousexams")}}</span>
+        <div id="previous" class="m-1 mt-2" v-if="previousExams && previousExams.length > 0">
             <div v-for="exam of previousExams">
                 <div class="input-group" style="display:inline;">
                     <div class="btn btn-sm btn-warning mt-1" @click="delPreviousExam(exam.examName)">x</div>
@@ -59,53 +103,19 @@
             </div>
         </div>
         <!-- previous exams end -->
-       
-
-        <!-- BIP Section START -->
-        <div v-if="config.bipIntegration" class="m-0">
-            <br> 
-            <span class="small m-1">{{$t("dashboard.bildungsportal")}}</span><span v-if="bipToken" class="small m-1 me-0 text-secondary">(verbunden)</span>
-
-            <div v-if="bipToken" title="logout" id="biploginbutton" @click="logoutBiP()" class="btn btn-success m-1" style="padding:0;">
-                <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
-                <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
-            </div> 
-            <div v-else title="login" id="biploginbutton" @click="loginBiP()" class="btn btn-info m-1" style="padding:0;">
-                <img id="biplogo" style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
-                <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
-            </div> 
-           
-            <div id="onlineexams" class="m-1 mt-4" v-if="bipToken && onlineExams">
-                <span class="small">{{$t("startserver.onlineexams")}} <img data-v-b68b84a7="" src="/src/assets/img/svg/gtk-convert.svg" class="printercheck" width="22" height="22" @click="fetchBipExams"></span>
-                <div v-for="exam of onlineExams">
-                    <div class="input-group" style="display:inline;">
-                        <div v-if="servername !== exam.examName" class="btn btn-sm btn-teal mt-1" :id="exam.examName" @click="setOnlineExam(exam)">{{exam.examName}}</div>
-                        <div v-if="servername === exam.examName" class="btn btn-sm btn-info mt-1" :id="exam.examName" @click="setOnlineExam(exam)">{{exam.examName}}</div> 
-                        
-                        <div class="btn btn-sm btn-cyan mt-1" style="width:14px; height: 31px;">
-                            <div style="writing-mode:vertical-rl; font-size:0.8em; margin-left:-10px; margin-top:2px; color: whitesmoke;">BiP</div>
-                        </div>
-
-                    </div>
-                    <img v-if="servername === exam.examName" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
-                </div>
-                <div v-if="onlineExams.length === 0" class="small mt-1">Noch keine vorhanden</div>
-            </div>
-
         </div>
-        <!-- BIP Section END --> 
+        <!-- sidebar-scroll end -->
 
-
-        <br> <br>
-        <div id="statusdiv" class="m-1 btn btn-warning">{{$t("startserver.connected")}}</div>
-        <br>
-       
-        <button class="btn btn-outline-secondary btn-sm ms-1 mt-3 mb-2" style="position: absolute; bottom:32px;" @click="toggleLocale">{{ inactivelocale }}</button>
-
-        <span @click="showCopyleft()" style="position: absolute; bottom:2px; left: 6px; font-size:0.8em;cursor: pointer;">
-            <span style=" display:inline-block; transform: scaleX(-1);font-size:1.2em; ">&copy; </span> 
-            <span style="vertical-align: text-bottom;">&nbsp;{{version}} {{ info }}</span>
-        </span>
+        <div id="sidebar-bottom" class="flex-shrink-0 mt-2 position-relative">
+            <div id="statusdiv" class="m-0 ms-1 btn btn-warning position-absolute" style="bottom: 0; left: 0; width: 206px;">{{$t("startserver.connected")}}</div>
+            <button class="btn btn-outline-secondary btn-sm ms-1 mt-2 mb-1" @click="toggleLocale">{{ inactivelocale }}</button>
+            <div class="small mt-1 ms-1">
+                <span @click="showCopyleft()" style="font-size:0.8em; cursor: pointer;">
+                    <span style="display:inline-block; transform: scaleX(-1);font-size:1.2em;">&copy;</span> 
+                    <span style="vertical-align: text-bottom;">&nbsp;{{version}} {{ info }}</span>
+                </span>
+            </div>
+        </div>
     </div>
 
     <!-- maincontent -->
@@ -166,11 +176,7 @@
 </div>
 <!-- BIB Infos END -->
 
-
-
-
-
-
+</div>
 </template>
 
 
@@ -960,7 +966,29 @@ export default {
 
 #statusdiv {
     display: block !important;
-    width: 200px  ;
+    width: 200px;
+}
+
+/* minimal scrollbar: thumb only, no track, no arrows */
+#sidebar-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+#sidebar-scroll::-webkit-scrollbar {
+    width: 8px;
+}
+#sidebar-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+#sidebar-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 4px;
+}
+#sidebar-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+#sidebar-scroll::-webkit-scrollbar-button {
+    display: none;
 }
 
 #content {

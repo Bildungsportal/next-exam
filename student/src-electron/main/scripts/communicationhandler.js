@@ -30,6 +30,7 @@ import crypto from 'crypto';
 import path from 'path';
 import platformDispatcher from './platformDispatcher.js';
 import { runRemoteCheck } from './remoteCheck.js'
+import { getVMFindings } from './vmDetection.js'
 import languageToolServer from './lt-server.js';
 import virtualBoxService from './virtualBoxService.js';
 const __dirname = import.meta.dirname; 
@@ -95,6 +96,9 @@ import { switchExamSection } from './switchExamSection.js';
         }  
 
         if (this.multicastClient.clientinfo.serverip) {  //check if server connected - get ip
+            if (this.multicastClient.clientinfo.virtualized && !this.multicastClient.clientinfo.vmFindings) {
+                this.multicastClient.clientinfo.vmFindings = getVMFindings();
+            }
             let payload = {clientinfo: this.multicastClient.clientinfo}
 
             fetch(`https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/update`, {

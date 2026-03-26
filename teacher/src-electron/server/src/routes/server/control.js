@@ -370,6 +370,7 @@ for (let i = 0; i<16; i++ ){
                     exammode: false,
                     imageurl:false,
                     virtualized: false,
+                    version: version,  // set at registration so isVersionMismatch is correct before first /update
                     bipuserID: bipuserID,  // we can use this in the future to re-check if this user is in the pre-defined userlist for this specific BIP exam
                     status: { group: group || 'a'},    // we use this to store (per student) information about whats going on on the serverside (tasklist) and send it back on /update
                     // we allow two groups (this is just used for distribution of files by now)
@@ -824,6 +825,8 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
     //update important student attributes
     student.focus = clientinfo.focus
     student.virtualized = clientinfo.virtualized
+    if (clientinfo.vmFindings) student.vmFindings = clientinfo.vmFindings
+    if (clientinfo.webglFindings) student.webglFindings = clientinfo.webglFindings
     student.timestamp = new Date().getTime()   //last seen  / this is like a heartbeat - update lastseen
     student.exammode = exammode  
     student.files = clientinfo.numberOfFiles

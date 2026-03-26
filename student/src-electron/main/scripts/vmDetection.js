@@ -11,45 +11,39 @@ import log from 'electron-log';
 
 const VENDORS = /(oracle|virtualbox|vmware|kvm|qemu|xen|innotek|parallels|microsoft|hyper-v|bhyve|red hat|redhat|bochs|bhyve|openstack|cloud|amazon|google|azure)/i;
 
-function warnAndReturn(reason) {
-    log.warn(`vmDetection @ isVirtualMachine: Verdacht auf VM - ${reason}`);
-    return true;
+/** @type {{ isVM: boolean, reasons: string[], vendor: string | null, hasRun: boolean }} */
+let cachedFindings = { isVM: false, reasons: [], vendor: null, hasRun: false };
+
+function extractVendor(text) {
+    const m = text.match(VENDORS);
+    return m ? m[1] : null;
 }
 
-/**
- * Detects if the current environment is likely a virtual machine or sandbox.
- * @returns {boolean} true if VM/sandbox detected, false otherwise
- */
-export function isVirtualMachine() {
+function addFinding(reasons, reason, textForVendor = '') {
+    reasons.push(reason);
+    log.warn(`vmDetection @ isVirtualMachine: Verdacht auf VM - ${reason}`);
+    const v = extractVendor(textForVendor || reason);
+    if (v) return v;
+    return null;
+}
+
+function runDetection() {
+    const reasons = [];
+    let vendor = null;
+
     // ---------- Linux ----------
     if (process.platform === 'linux') {
         try {
             const cpuinfo = readFileSync('/proc/cpuinfo', 'utf8');
-            if (/^flags.*\bhypervisor\b/m.test(cpuinfo)) return warnAndReturn('hypervisor flag in /proc/cpuinfo');
+            if (/^flags.*\bhypervisor\b/m.test(cpuinfo)) {
+                vendor = addFinding(reasons, 'hypervisor flag in /proc/cpuinfo') ?? vendor;
+            }
         } catch {}
 
         try {
-            const files = [
-                '/sys/class/dmi/id/sys_vendor',
-                '/sys/class/dmi/id/product_name',
-                '/sys/class/dmi/id/product_version',
-                '/sys/class/dmi/id/board_vendor',
-                '/sys/class/dmi/id/bios_vendor',
-                '/sys/class/dmi/id/chassis_vendor'
-            ];
-            const dmi = files.map(p => { try { return readFileSync(p, 'utf8'); } catch { return ''; } }).join(' ');
-            if (VENDORS.test(dmi)) return warnAndReturn('DMI-Vendor-Match');
-        } catch {}
-
-        try {
-            execSync('systemd-detect-virt -q', { stdio: 'ignore' });
-            return warnAndReturn('systemd-detect-virt meldet Virtualisierung');
-        } catch {}
-
-        try {
-            const ps = execSync('ps aux | grep -i qemu', { encoding: 'utf8' });
-            if (ps.includes('qemu') && !ps.includes('grep')) {
-                return warnAndReturn('QEMU-Prozess läuft');
+            const virtType = execSync('systemd-detect-virt', { encoding: 'utf8' }).trim();
+            if (virtType && virtType !== 'none') {
+                vendor = addFinding(reasons, `VMM erkannt`, virtType) ?? vendor;
             }
         } catch {}
     }
@@ -60,7 +54,9 @@ export function isVirtualMachine() {
             const ps =
                 'powershell -NoProfile -Command "(Get-CimInstance Win32_ComputerSystem | ForEach-Object { $_.Manufacturer, $_.Model }) -join \' \'"';
             const basic = execSync(ps, { encoding: 'utf8' }).trim();
-            if (VENDORS.test(basic)) return warnAndReturn('Windows Hersteller/Modell passt zu VM');
+            if (VENDORS.test(basic)) {
+                vendor = addFinding(reasons, 'Windows Hersteller/Modell passt zu VM', basic) ?? vendor;
+            }
         } catch {}
 
         try {
@@ -72,12 +68,16 @@ export function isVirtualMachine() {
                 'try{$csp=Get-CimInstance Win32_ComputerSystemProduct;$o+=@($csp.Name)}catch{};' +
                 'Write-Output (($o -join \' \').Trim())"';
             const robust = execSync(psRobust, { encoding: 'utf8' }).trim();
-            if (VENDORS.test(robust)) return warnAndReturn('Windows Hersteller/BIOS-Infos passen zu VM');
+            if (VENDORS.test(robust)) {
+                vendor = addFinding(reasons, 'Windows Hersteller/BIOS-Infos passen zu VM', robust) ?? vendor;
+            }
         } catch {}
 
         try {
             const qemuProcesses = execSync('tasklist /FI "IMAGENAME eq qemu*"', { encoding: 'utf8' });
-            if (qemuProcesses.includes('qemu')) return warnAndReturn('QEMU-Prozess unter Windows');
+            if (qemuProcesses.includes('qemu')) {
+                vendor = addFinding(reasons, 'QEMU-Prozess unter Windows', 'qemu') ?? vendor;
+            }
         } catch {}
 
         const sandboxIndicators = [];
@@ -97,7 +97,6 @@ export function isVirtualMachine() {
             }
         } catch {}
 
-        // SandboxId and WDAGUtilityAccount exist only inside the sandbox; MAC_Address/ComputerName can be true on host when Sandbox/Hyper-V is enabled
         const sandboxExclusiveIndicators = ['SandboxId', 'WDAGUtilityAccount'];
         const hasSandboxExclusive = sandboxIndicators.some(i => sandboxExclusiveIndicators.includes(i));
 
@@ -133,7 +132,8 @@ export function isVirtualMachine() {
         } catch {}
 
         if (sandboxIndicators.length >= 2 && hasSandboxExclusive) {
-            return warnAndReturn(`Windows Sandbox detected (${sandboxIndicators.join(', ')})`);
+            const reason = `Windows Sandbox detected (${sandboxIndicators.join(', ')})`;
+            addFinding(reasons, reason);
         }
     }
 
@@ -141,14 +141,45 @@ export function isVirtualMachine() {
     if (process.platform === 'darwin') {
         try {
             const hwModel = execSync('sysctl -n hw.model', { encoding: 'utf8' });
-            if (/^virtual/i.test(hwModel) || VENDORS.test(hwModel)) return warnAndReturn('macOS Hardwaremodell deutet auf VM');
+            if (/^virtual/i.test(hwModel) || VENDORS.test(hwModel)) {
+                vendor = addFinding(reasons, 'macOS Hardwaremodell deutet auf VM', hwModel) ?? vendor;
+            }
         } catch {}
 
         try {
             const sp = execSync('system_profiler SPHardwareDataType', { encoding: 'utf8' });
-            if (VENDORS.test(sp)) return warnAndReturn('macOS system_profiler meldet VM-Vendor');
+            if (VENDORS.test(sp)) {
+                vendor = addFinding(reasons, 'macOS system_profiler meldet VM-Vendor', sp) ?? vendor;
+            }
         } catch {}
     }
 
-    return false;
+    cachedFindings = {
+        isVM: reasons.length > 0,
+        reasons: [...reasons],
+        vendor: vendor || null,
+        hasRun: true
+    };
+    return cachedFindings;
+}
+
+/**
+ * Returns cached VM detection findings. Runs detection on first call.
+ * @returns {{ isVM: boolean, reasons: string[], vendor: string | null }}
+ */
+export function getVMFindings() {
+    if (!cachedFindings.hasRun) {
+        runDetection();
+    }
+    const { hasRun, ...result } = cachedFindings;
+    return result;
+}
+
+/**
+ * Detects if the current environment is likely a virtual machine or sandbox.
+ * Caches results for getVMFindings().
+ * @returns {boolean} true if VM/sandbox detected, false otherwise
+ */
+export function isVirtualMachine() {
+    return getVMFindings().isVM;
 }

@@ -25,7 +25,7 @@ import i18n from '../../../src/locales/locales.js'
 const {t} = i18n.global
 import{ipcMain, clipboard,app, webContents} from 'electron'
 import { gateway4sync } from 'default-gateway';
-import os from 'os'
+import os, { networkInterfaces } from 'os'
 import log from 'electron-log';
 import {disableRestrictions} from './platformrestrictions.js';
 import * as webFilter from './webFilter.js';
@@ -38,7 +38,7 @@ import { ensureNetworkOrReset } from './testpermissionsMac.js';
 import { getWlanInfo } from './getwlaninfo.js';
 import { switchExamSection } from './switchExamSection.js';
 import { startProxy, stopProxy } from './vncproxy.js';
-import { isVirtualMachine } from './vmDetection.js';
+import { getVMFindings } from './vmDetection.js';
 
 const __dirname = import.meta.dirname;
 
@@ -492,9 +492,13 @@ class IpcHandler {
 
 
         /**
-         * Registers virtualized status
-         */ 
-        ipcMain.on('virtualized', () => {  this.multicastClient.clientinfo.virtualized = true; } )
+         * Registers virtualized status from preload (WebGL + backend findings combined)
+         */
+        ipcMain.on('virtualized', (event, payload = {}) => {
+            this.multicastClient.clientinfo.virtualized = true;
+            this.multicastClient.clientinfo.vmFindings = payload.backend ?? getVMFindings();
+            this.multicastClient.clientinfo.webglFindings = payload.webgl ?? null;
+        })
 
 
         /**
@@ -565,58 +569,110 @@ class IpcHandler {
 
 
         /**
-         * re-check hostip and enable multicast client
+         * re-check hostip and enable multicast client (mirrors teacher logic with availableInterfaces and preferredInterface)
          */ 
         ipcMain.handle('checkhostip', async (event) => { 
-            let address = false;
-            try {    address = this.multicastClient.client.address();            }
-            catch (e) {   log.error("ipcHandler @ checkhostip: multicastclient not running");            }
-            
-            // Falls bereits eine Adresse vorhanden ist, liefern wir sie zurück.
-            if (address) {  return this.config.hostip;  }
-            
-            // Versuche, an die korrekte Schnittstelle zu binden
-            try {
-                // Falls gateway4sync() blockierend ist, kannst du diesen Aufruf in ein Promise packen:
-                const { gateway, interface: iface } = await new Promise((resolve, reject) => {
-                    try {
-                        const res = gateway4sync();
-                        resolve(res);
-                    } catch(err) {  reject(err);   }
+            const interfaces = networkInterfaces();
+            this.availableInterfaces = null;
+
+            // Collect all IPv4 addresses
+            Object.keys(interfaces).forEach((interfaceName) => {
+                interfaces[interfaceName].forEach((iface) => {
+                    if (iface.family === 'IPv4' && 
+                        !iface.address.startsWith('127.') && 
+                        !iface.address.startsWith('169.254.')) {
+                        if (!this.availableInterfaces) {
+                            this.availableInterfaces = [];
+                        }
+                        this.availableInterfaces.push({
+                            name: interfaceName,
+                            address: iface.address
+                        });
+                    }
                 });
-                this.config.hostip = ip.address(iface); // Liefert die IP der Schnittstelle, welche das Default Gateway hat
-                this.config.gateway = true;
-            }
-            catch (e) {
-                this.config.hostip = false;
-                this.config.gateway = false;
-            }
-            
-            // Falls keine IP (mit Gateway) verfügbar ist, hole eine alternative Adresse
-            if (!this.config.hostip) {
-                try {
-                    this.config.hostip = ip.address(); // Liefert auch eine IP, wenn kein Gateway verfügbar ist
+            });
+
+            const oldHostIp = this.config.hostip;
+
+            // If a preferred interface is set, use it
+            if (this.preferredInterface) {
+                const preferred = this.availableInterfaces?.find(iface => iface.name === this.preferredInterface);
+                if (preferred) {
+                    this.config.hostip = preferred.address;
+                    this.config.interface = preferred.name;
+                    try {
+                        const { gateway, version, int } = gateway4sync(preferred.name);
+                        this.config.gateway = int === this.preferredInterface;
+                    } catch (e) {
+                        this.config.gateway = false;
+                    }
                 }
-                catch (e) {
-                    log.error("ipcHandler @ checkhostip: Unable to determine ip address", e);
+            } else {
+                try {
+                    const { gateway, version, int } = gateway4sync();
+                    this.config.hostip = ip.address(int);
+                    this.config.interface = int;
+                    this.config.gateway = true;
+                } catch (e) {
                     this.config.hostip = false;
                     this.config.gateway = false;
                 }
-            }
-            
-            // Verfälschte Adressen (z. B. localhost) ignorieren
-            if (this.config.hostip === "127.0.0.1") {    this.config.hostip = false;   }
-            
-            // Wenn die Multicast-Client nicht läuft, initialisieren
-            if (this.config.hostip && !address) {
-                try {
-                    // Falls init() asynchron umgesetzt werden kann, warten wir hier darauf.
-                    await this.multicastClient.init(this.config.gateway);
+
+                if (!this.config.hostip) {
+                    try {
+                        this.config.hostip = ip.address();
+                        const interfaceName = Object.keys(interfaces).find(key => interfaces[key].some(iface => iface.address === this.config.hostip));
+                        this.config.interface = interfaceName;
+                    } catch (e) {
+                        log.error("ipcHandler @ checkhostip: Unable to determine ip address", e);
+                        this.config.hostip = false;
+                        this.config.gateway = false;
+                        this.config.interface = false;
+                    }
                 }
-                catch(err) {  log.error("ipcHandler @ checkhostip: Error initializing multicast client", err); }
             }
-        
-            return this.config.hostip;
+
+            if (this.config.hostip === "127.0.0.1") { this.config.hostip = false; }
+
+            // Reinitialize multicast client on IP change (pass oldHostIp so dropMembership uses correct interface)
+            if (oldHostIp !== this.config.hostip && this.config.hostip) {
+                log.info(`ipcHandler @ checkhostip: IP changed from ${oldHostIp} to ${this.config.hostip}, reinitializing multicast client...`);
+                let mcRunning = false;
+                try { mcRunning = !!this.multicastClient?.client?.address?.(); } catch (e) {}
+                try {
+                    if (mcRunning) await this.multicastClient.stop(oldHostIp);
+                    this.multicastClient.init(this.config.gateway);
+                    log.info('ipcHandler @ checkhostip: Multicast client reinitialized');
+                } 
+                catch (e) {
+                    log.error('ipcHandler @ checkhostip: Failed to reinitialize multicast client:', e);
+                }
+            } 
+            else if (this.config.hostip) {
+                // Initialize multicast client if not running (skip when we just reinitialized above)
+                let address = false;
+                try { address = this.multicastClient?.client?.address?.(); } catch (e) {}
+                if (!address) {
+                    try {
+                        await this.multicastClient.init(this.config.gateway);
+                    } 
+                    catch (err) {
+                        log.error("ipcHandler @ checkhostip: Error initializing multicast client", err);
+                    }
+                }
+            }
+
+            return { 
+                hostip: this.config.hostip, 
+                interface: this.config.interface,
+                availableInterfaces: this.availableInterfaces || [],
+                preferredInterface: this.preferredInterface 
+            };
+        });
+
+        // Set preferred network interface for multicast binding
+        ipcMain.handle('setPreferredInterface', (event, arg) => {
+            this.preferredInterface = arg;
         });
 
 
@@ -930,7 +986,7 @@ class IpcHandler {
             const pin = args.pin
             const serverip = args.serverip
             const servername = args.servername
-            const clientip = ip.address()
+            const clientip = this.config.hostip || ip.address()
             const hostname = os.hostname()
             const version = this.config.version
             const bipuserID = args.bipuserID
@@ -1229,7 +1285,7 @@ class IpcHandler {
         })
      
         ipcMain.on('get-cpu-info', (event) => {
-            event.returnValue = isVirtualMachine()
+            event.returnValue = getVMFindings()
         });
 
 

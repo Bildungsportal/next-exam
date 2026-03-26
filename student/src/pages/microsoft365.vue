@@ -93,9 +93,9 @@
                 @close="hidepreview"
             />
             <PdfviewPane
-                :src="currentpreview"
                 :localLockdown="localLockdown"
                 :examtype="examtype"
+                :toolbar="pdfPreviewUi"
                 @close="hidepreview"
             />
         </div>
@@ -133,7 +133,7 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 import PdfviewPane from '../components/PdfviewPane.vue'
 import WebviewPane from '../components/WebviewPane.vue'
-import {getExamMaterials, loadImage, loadPDF} from '../utils/filehandler.js'
+import {getExamMaterials, loadImage, loadPDF, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import {isElectronWindow} from "../types/platform.ts";
 import {SignalBridge} from '../utils/signalBridge.js'
 
@@ -183,6 +183,7 @@ export default {
             webviewVisible: false,
             internetCheckCounter: 0,
             msOfficeShare: null,
+            pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
         }
     },
     components: {
@@ -283,6 +284,7 @@ export default {
         },
 
         hidepreview() {
+            resetPdfPreviewToolbar(this);
             let preview = document.querySelector("#preview")
             preview.style.display = 'none';
             preview.setAttribute("src", "about:blank");

@@ -22,14 +22,14 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron'
-import virtualized from './preload/scripts/simplevmdetect.js';  // has to run in frontend (since we create a webgl insance) > inform backend (mulitcastClient.clientinfo)
-
+import webglFindings from './preload/scripts/simplevmdetect.js';  // has to run in frontend (WebGL) > inform backend (multicastClient.clientinfo)
 
 let config = ipcRenderer.sendSync('getconfig')  // we need to fetch the updated version of the systemconfig from express api (server.js)
-let virtualCpu = ipcRenderer.sendSync('get-cpu-info')
+const backendFindings = ipcRenderer.sendSync('get-cpu-info')  // { isVM, reasons, vendor } from vmDetection.js
 
-
-    if (virtualized || virtualCpu ){ipcRenderer.send('virtualized')}
+if (webglFindings.detected || backendFindings?.isVM) {
+    ipcRenderer.send('virtualized', { webgl: webglFindings, backend: backendFindings })
+}
 
 // Expose configuration (readonly) to the renderer process
     contextBridge.exposeInMainWorld('config', config);

@@ -43,6 +43,9 @@
             <button :title="$t('editor.copy')" @click="copySelection()"
                     class="invisible-button btn btn-outline-success p-1 mb-1 btn-sm"><img
                 src="/src/assets/img/svg/edit-copy.svg" class="" width="22" height="22"></button>
+            <button :title="$t('editor.cut')" @click="cutSelection()"
+                    class="invisible-button btn btn-outline-success p-1 mb-1 btn-sm"><img
+                src="/src/assets/img/svg/document-replace.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.paste')" @click="pasteSelection()"
                     class="invisible-button btn btn-outline-success p-1 me-2 mb-1 btn-sm"><img
                 src="/src/assets/img/svg/edit-paste.svg" class="white" width="22" height="22"></button>
@@ -451,9 +454,9 @@
         />
 
         <PdfviewPane
-            :src="currentpreview"
             :localLockdown="localLockdown"
             :examtype="examtype"
+            :toolbar="pdfPreviewUi"
             @close="hidepreview"
             @printBase64="printBase64"
             @insertImage="insertImage"
@@ -492,19 +495,19 @@
                  style="position: relative !important; top: 0 !important; left: 0 !important; transform: none !important; display: block !important; height:100% !important; margin-top:0;">
                 <embed src="" id="pdfembed"
                        style="border-radius:0 !important; background-size:contain; width:100% !important; height: 100% !important; background-color:transparent !important;"></embed>
-                <div class="btn btn-secondary white splitinsert" id="insert-button" @click="insertImage(selectedFile)"
+                <div v-show="examtype === 'editor' && pdfPreviewUi.showInsert" class="btn btn-secondary white splitinsert d-flex" id="insert-button" @click="insertImage()"
                      :title="$t('editor.insert')"
-                     style="position: absolute; top: 60px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
+                     style="position: absolute; top: 60px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
 
-                <div class="btn  btn-secondary splitprint" id="print-button" @click="printBase64(true)"
+                <div v-show="!localLockdown && pdfPreviewUi.showPrint" class="btn  btn-secondary splitprint d-flex" id="print-button" @click="printBase64(true)"
                      :title="$t('editor.print')"
-                     style="position: absolute; top: 110px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
-                <div class="btn  btn-secondary splitsend" id="send-button" @click="printBase64()"
+                     style="position: absolute; top: 110px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
+                <div v-show="!localLockdown && pdfPreviewUi.showSend" class="btn  btn-secondary splitsend d-flex" id="send-button" @click="printBase64()"
                      :title="$t('editor.send')"
-                     style="position: absolute; top: 144px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; display: none !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
+                     style="position: absolute; top: 144px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
 
-                <div id="pdfZoom"
-                     style="display:none; position: absolute; top:40px; right:20px; z-index:100000; height: 64px;">
+                <div v-show="pdfPreviewUi.showZoom" id="pdfZoom"
+                     style="position: absolute; top:40px; right:20px; z-index:100000; height: 64px;">
                     <button class="btn btn-secondary  white  splitzoomin"
                             style="width:70px; height: 32px; margin-bottom:2px;  background-repeat: no-repeat; background-position: center; "
                             id="zoomIn"></button>
@@ -530,6 +533,31 @@
         </div>
     </div>
     <!-- SPLITVIEW END -->
+
+
+    <!-- CLIPBOARD SIDEBAR START -->
+    <div id="clipboard-sidebar" :class="{ visible: showClipboardSidebar }">
+        <div class="clipboard-header">
+            <span>{{ $t('editor.clipboard') }}</span>
+            <button type="button" class="btn-close btn-close-sm" @click="showClipboardSidebar = false" :title="$t('editor.close')"></button>
+        </div>
+        <div class="clipboard-list">
+            <div v-if="clipboardHistory.length === 0" class="clipboard-empty">{{ $t('editor.clipboardEmpty') }}</div>
+            <div v-for="(item, idx) in clipboardHistory" :key="idx" class="clipboard-item" @click="pasteFromClipboard(item)"
+                 @mouseenter="clipboardTooltipShow($event, clipboardPreviewFull(item))"
+                 @mouseleave="clipboardTooltipHide">
+                <span class="clipboard-item-text">{{ clipboardPreview(item) }}</span>
+            </div>
+        </div>
+    </div>
+    <!-- CLIPBOARD SIDEBAR END -->
+
+    <Teleport to="body">
+        <div v-if="clipboardTooltip.shown" class="clipboard-tooltip-fixed"
+             :style="{ left: clipboardTooltip.x + 'px', top: clipboardTooltip.y + 'px' }">
+            {{ clipboardTooltip.text }}
+        </div>
+    </Teleport>
 
 
     <!-- LANGUAGE TOOL START -->
@@ -667,9 +695,11 @@ import {
     LThandleMisspelled,
     LThighlightWords,
     LTignoreWord,
-    LTresetIgnorelist
+    LTresetIgnorelist,
+    LTbuildOffsetMap,
+    LTfindByOffsetMap,
 } from '../utils/languagetool.js'
-import {getExamMaterials, loadDOCX, loadHTML, loadImage, loadPDF, playAudio} from '../utils/filehandler.js'
+import {getExamMaterials, loadDOCX, loadHTML, loadImage, loadPDF, playAudio, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 
 import {SignalBridge} from '../utils/signalBridge.js'
@@ -784,7 +814,11 @@ export default {
             internetCheckCounter:0,
             LThost: activeSection.languagetoolhost || "http://127.0.0.1",
             LTport: activeSection.languagetoolport || "8088",
-            ltLanguage: activeSection.spellchecklang || "de-DE"
+            ltLanguage: activeSection.spellchecklang || "de-DE",
+            clipboardHistory: [],
+            showClipboardSidebar: false,
+            clipboardTooltip: { text: '', shown: false, x: 0, y: 0 },
+            pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
         }
     },
     computed: {
@@ -856,6 +890,8 @@ export default {
         LThandleMisspelled: LThandleMisspelled,
         LTignoreWord: LTignoreWord,
         LTresetIgnorelist: LTresetIgnorelist,
+        LTbuildOffsetMap: LTbuildOffsetMap,
+        LTfindByOffsetMap: LTfindByOffsetMap,
 
         LTshowWord(word) {
             this.currentLTword = word
@@ -1455,29 +1491,60 @@ export default {
             return
         },
         // manual copy and paste because we disabled clipboard
+        addToClipboardHistory(html) {
+            if (!html || html.trim() === '') return;
+            this.clipboardHistory = [html, ...this.clipboardHistory.filter(item => item !== html)].slice(0, 10);
+        },
         copySelection() {
-            //this.selectedText = window.getSelection().toString();
-
             const selection = window.getSelection();
+            if (!selection.rangeCount) return;
             const range = selection.getRangeAt(0);
             const div = document.createElement('div');
-            div.appendChild(range.cloneContents()); // Fügt den ausgewählten Bereich zum Div-Element hinzu
-
-            this.selectedText = div.innerHTML
-            // this.selectedText = div.innerHTML.replace(/<\s*p[^>]*>/gi, '').replace(/<\/\s*p\s*>/gi, '<br>'); // Ersetzt <p> durch <br>
-
+            div.appendChild(range.cloneContents());
+            const html = div.innerHTML;
+            this.selectedText = html;
+            this.addToClipboardHistory(html);
+        },
+        cutSelection() {
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            this.copySelection();
+            this.editor.chain().focus().deleteSelection().run();
+        },
+        toggleClipboardSidebar() {
+            this.showClipboardSidebar = !this.showClipboardSidebar;
+        },
+        pasteFromClipboard(item) {
+            this.editor.chain().focus().insertContent(item, {parseOptions: {preserveWhitespace: 'full'}}).run();
+            this.showClipboardSidebar = false;
         },
         pasteSelection() {
-            if (!this.selectedText || this.selectedText == "") {
-                return
-            }
-            console.log("[pasteSelection] pasted:", this.selectedText)
-
-            this.editor.commands.insertContent(this.selectedText, {parseOptions: {preserveWhitespace: 'full'}});
-            // FIXME:  einfügen in den editor (auch ohne tiptap command) verursacht ein <p> element das nicht
-            // als korrekte node erkannt wird und dann auch beim languagetool parsing irgendwie ignoriert wird
-            // wenn ich der bewussten textnode ein wort hinzufüge bzw. irgendwas veränder wird das wort auch indieser map
-            // aufgeführt
+            this.toggleClipboardSidebar();
+        },
+        clipboardPreview(html) {
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            const text = div.textContent || div.innerText || '';
+            return text.length > 60 ? text.slice(0, 60) + '…' : text;
+        },
+        clipboardPreviewFull(html) {
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            return div.textContent || div.innerText || '';
+        },
+        clipboardTooltipShow(e, text) {
+            const textEl = e.currentTarget.querySelector('.clipboard-item-text');
+            if (!textEl || textEl.scrollWidth <= textEl.clientWidth) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            this.clipboardTooltip = {
+                text,
+                shown: true,
+                x: rect.right + 8,
+                y: rect.top
+            };
+        },
+        clipboardTooltipHide() {
+            this.clipboardTooltip = { text: '', shown: false, x: 0, y: 0 };
         },
         // implementing a sleep (wait) function
         sleep(ms) {
@@ -1524,6 +1591,7 @@ export default {
         },
 
         hidepreview() {
+            resetPdfPreviewToolbar(this);
             let preview = document.querySelector("#preview")
             preview.style.display = 'none';
             preview.setAttribute("src", "about:blank");
@@ -2118,7 +2186,7 @@ export default {
 @media print { //this controls how the editor view is printed (to pdf)
 
 
-    #editortoolbar, #webview, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer, span.NXTEhighlight::after, #highlight-layer, #languagetool, .split-view-container, #preview, #pdfembed {
+    #editortoolbar, #webview, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer, span.NXTEhighlight::after, #highlight-layer, #languagetool, #clipboard-sidebar, .split-view-container, #preview, #pdfembed {
         display: none !important;
     }
     body, #vuexambody {
@@ -2665,6 +2733,76 @@ Other Styles
     cursor: col-resize;
 }
 
+
+/** CLIPBOARD SIDEBAR STYLES */
+#clipboard-sidebar {
+    position: fixed;
+    z-index: 99999;
+    width: 220px;
+    max-height: 50vh;
+    left: -224px;
+    top: 163px;
+    background-color: rgba(255, 255, 255, 0.9);
+    box-shadow: 2px 1px 15px rgba(0, 0, 0, 0.1);
+    transition: left 0.25s ease;
+    overflow: hidden;
+    border: 1px solid #c5c5c5;
+}
+#clipboard-sidebar.visible {
+    left: 0;
+}
+#clipboard-sidebar .clipboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--bs-secondary);
+    border-bottom: 1px solid var(--bs-border-color);
+}
+#clipboard-sidebar .clipboard-list {
+    max-height: calc(50vh - 44px);
+    overflow-y: auto;
+    padding: 6px;
+}
+#clipboard-sidebar .clipboard-empty {
+    padding: 12px;
+    font-size: 0.8rem;
+    color: var(--bs-secondary);
+}
+#clipboard-sidebar .clipboard-item {
+    position: relative;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border-radius: 4px;
+}
+#clipboard-sidebar .clipboard-item-text {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#clipboard-sidebar .clipboard-item:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.clipboard-tooltip-fixed {
+    position: fixed;
+    max-width: 280px;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    background: var(--bs-dark);
+    color: var(--bs-light);
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 100001;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
+    pointer-events: none;
+}
 
 /** LANGUAGE TOOL STYLES */
 #highlight-layer {

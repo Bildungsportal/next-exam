@@ -70,9 +70,9 @@
             @close="hidepreview"
         />
         <PdfviewPane
-            :src="currentpreview"
             :localLockdown="localLockdown"
             :examtype="examtype"
+            :toolbar="pdfPreviewUi"
             @close="hidepreview"
             @printBase64="printBase64"                                  
         />
@@ -104,7 +104,7 @@ import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
-import { getExamMaterials, loadPDF, loadImage} from '../utils/filehandler.js'
+import { getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import PdfviewPane from '../components/PdfviewPane.vue'
 import WebviewPane from '../components/WebviewPane.vue';
 import PdfOverlay from '../components/PdfRenderer.vue';
@@ -175,6 +175,7 @@ export default {
             currentpreviewBase64: null,  // Base64 PDF for preview/submission
             submissionnumber: 0,  // Submission counter
             customFields: [],
+            pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
         }
     }, 
     components: { ExamHeader, PdfviewPane, WebviewPane, PdfOverlay },  
@@ -191,6 +192,7 @@ export default {
             return typeof allowedUrl === 'object' ? allowedUrl.url : allowedUrl;
         },
         hidepreview(){
+            resetPdfPreviewToolbar(this);
             let preview = document.querySelector("#preview")
             preview.style.display = 'none';
             preview.setAttribute("src", "about:blank");
