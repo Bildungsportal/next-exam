@@ -70,11 +70,12 @@
     </div>
 
     <!-- maincontent -->
-    <div id="content" class="fadeinslow p-3">
-        <div class="col8">
+    <div id="content" class="fadeinslow p-3 d-flex flex-column flex-grow-1" style="min-height: 0;">
+        <div class="col8 d-flex flex-column flex-grow-1" style="min-height: 0;">
 
             <!-- Prüfung anlegen START -->
-            <div v-if="activeTab === 'pruefung'">
+            <div v-if="activeTab === 'pruefung'" class="d-flex flex-column flex-grow-1" style="min-height: 0;">
+                <div class="flex-shrink-0">
                 <div class="input-group  mb-1 mt-0">
                     <span class="input-group-text col-2 grayback" id="inputGroup-sizing-lg" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.examname")}}</span>
                     <input v-model="servername" @paste.prevent @drop.prevent @click="servername = ''; checkExistingExam()" maxlength="20" type="text" class="form-control" id="servername" placeholder="5a-mathematik" style="width:200px;max-width:200px;min-width:135px;">
@@ -98,8 +99,10 @@
                 </div>
 
                 <button @click="startServer()" :class="(!hostip) ? 'disabledstart':''" id="examstart" class="ps-1 pe-1 mb-3 btn btn-cyan" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
+                </div><!-- /flex-shrink-0 -->
 
                 <!-- Lokale Prüfungen Widget-Grid START -->
+                <div class="flex-grow-1 exam-list-scroll">
                 <div v-if="previousLocalExams && previousLocalExams.length > 0" class="text-secondary" style="margin-left: 2px; margin-top: 12px;">
                     <span>{{$t("startserver.previousexams")}}</span>
                 </div>
@@ -116,7 +119,6 @@
                         <div class="bip-exam-card-head">
                             <span class="badge text-white flex-shrink-0 bg-cyan">local</span>
                             <div class="bip-exam-name fw-semibold small">{{ exam.examName }}</div>
-                            <span v-if="exam.pin" class="badge bg-secondary-subtle text-secondary bip-status-pill">{{ exam.pin }}</span>
                             <button @click.stop="delPreviousExam(exam.examName)" class="btn btn-sm btn-warning p-0 ms-auto" style="width:18px; height:18px; font-size:0.7em; line-height:1;">✕</button>
                         </div>
 
@@ -137,16 +139,18 @@
                             <span v-if="exam.examSections && exam.examSections[exam.activeSection] && exam.examSections[exam.activeSection].groups" class="badge bip-type-sus">A/B</span>
                             <span v-if="exam.screenslocked" class="badge bg-danger-subtle text-danger border border-danger-subtle">gesperrt</span>
                             <span v-if="exam.useExamSections" class="badge bg-secondary">§ {{ exam.activeSection }}/{{ exam.lockedSection }}</span>
+                            <span v-if="exam.pin" class="badge bg-secondary-subtle text-secondary bip-status-pill ms-auto">{{ exam.pin }}</span>
                         </div>
                     </div>
                 </div>
                 <!-- Lokale Prüfungen Widget-Grid END -->
+                </div><!-- /exam-list-scroll -->
             </div>
             <!-- Prüfung anlegen END -->
 
             <!-- Bildungsportal START -->
-            <div v-if="activeTab === 'bildungsportal'" class="">
-            
+            <div v-if="activeTab === 'bildungsportal'" class="d-flex flex-column flex-grow-1" style="min-height: 0;">
+                <div class="flex-shrink-0">
                 <div v-if="!bipToken" class="text-secondary mt-1" style=" margin-left: 2px; margin-bottom: 14px;">
                     <span>{{$t("startserver.bippleaselogin")}}</span>
                 </div>
@@ -170,13 +174,11 @@
                     </button>
                 </div>
 
-                <button @click="startServer()" :class="(!hostip || !bipToken || !servername) ? 'disabledstart':''" class="ps-1 pe-1 mb-3 btn btn-success" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
-
-
-
-
+                <button @click="startServer()" :class="(!hostip || !bipToken || !servername) ? 'disabledstart':''" id="examstart" class="ps-1 pe-1 mb-3 btn btn-success" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
+                </div><!-- /flex-shrink-0 -->
 
                 <!-- BiP Prüfungen START -->
+                <div class="flex-grow-1 exam-list-scroll">
                 <div v-if="bipToken" class="text-secondary " style=" margin-left: 2px; margin-top: 6px;">
                     <span>{{$t("startserver.onlineexams")}}</span>
                     <button v-if="bipToken" class="btn p-0 white ms-1 mb-1" @click="fetchBipExams" title="Aktualisieren">
@@ -196,7 +198,6 @@
                         <div class="bip-exam-card-head">
                             <span v-if="exam.requireBiP" class="badge text-white flex-shrink-0 bg-success">BiP</span>
                             <div class="bip-exam-name fw-semibold small">{{ exam.examName }}</div>
-                            <span v-if="exam.pin" class="badge bg-secondary-subtle text-secondary bip-status-pill">{{ exam.pin }}</span>
                             <button v-if="previousBipExams.some(p => p.examName === exam.examName)" @click.stop="delPreviousExam(exam.examName)" class="btn btn-sm btn-warning p-0 ms-auto" style="width:18px; height:18px; font-size:0.7em; line-height:1;">✕</button>
                         </div>
 
@@ -218,9 +219,11 @@
                             <span v-if="exam.screenslocked" class="badge bg-danger-subtle text-danger border border-danger-subtle">gesperrt</span>
                             <span v-if="exam.useExamSections" class="badge bip-type-sus">§ {{ exam.activeSection }}/4</span>
                             <span v-if="exam.examStudents && exam.examStudents.length" class="badge bip-type-sus">{{ exam.examStudents.length }} SuS</span>
+                            <span v-if="exam.pin" class="badge bg-secondary-subtle text-secondary bip-status-pill ms-auto">{{ exam.pin }}</span>
                         </div>
                     </div>
                 </div>
+                </div><!-- /exam-list-scroll -->
             </div>
             <!-- Bildungsportal END -->
 
@@ -1112,6 +1115,13 @@ export default {
 
 
 
+.exam-list-scroll {
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,0,0,0.2) transparent;
+}
+
 .bip-widget-grid {
     display: flex;
     flex-wrap: wrap;
@@ -1159,6 +1169,7 @@ export default {
     flex-shrink: 0;
     letter-spacing: 0.03em;
     text-transform: uppercase;
+    margin-left: auto;
 }
 
 .bip-exam-info-row {
