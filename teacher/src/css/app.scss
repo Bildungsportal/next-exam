@@ -78,3 +78,11 @@ $theme-colors: (
     border-color: $teal-700;
     color: $white;
 }
+
+
+.invert {
+    filter: invert(100%);
+}
+.snowwhite {
+    filter: invert(100%) brightness(200%);
+}

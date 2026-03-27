@@ -170,7 +170,7 @@ class WindowHandler {
 
     createWindow() {
         const primaryDisplay = screen.getPrimaryDisplay()
-        const { width, height } = { width: 1200, height: 800 }
+        const { width, height } = { width: 1280, height: 800 }
         const currentDir = fileURLToPath(new URL('.', import.meta.url))
 
         this.mainwindow = new BrowserWindow({
@@ -181,7 +181,7 @@ class WindowHandler {
             center: true,
             width: width,
             height: height,
-            minWidth: 1200,
+            minWidth: 1280,
             minHeight: 800,
             webPreferences: {
                 preload: process.env.QUASAR_ELECTRON_PRELOAD_FOLDER

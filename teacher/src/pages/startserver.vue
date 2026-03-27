@@ -38,6 +38,9 @@
         <!-- Extended Settings END -->
  
 
+
+
+
         <!-- BIP Section START -->
         <div v-if="config.bipIntegration && activeTab === 'bildungsportal'" class="m-0 mt-3" style="">
 
@@ -45,81 +48,13 @@
                 <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
                 <span style="padding:2px; font-size:0.9em;"  id="biploginbuttonlabel">Logout</span>
             </div>
-            <div v-else title="login" id="biploginbutton" @click="loginBiP()" class="btn btn-info m-1" style="padding:0px;">
+            <div v-else title="login" id="biploginbutton" @click="loginBiP()" class="btn btn-success m-1" style="padding:0px;">
                 <img id="biplogo" style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
                 <span style="padding:2px; font-size:0.9em;"  id="biploginbuttonlabel">Login</span>
             </div>
         </div>
         <!-- BIP Section END -->
         </div>
-
-        <!-- fixed headings for exam lists -->
-        <div class="flex-shrink-0 mt-2" v-if="(config.bipIntegration && onlineExams && onlineExams.length > 0) || (previousExams && previousExams.length > 0)">
-            <span v-if="config.bipIntegration && onlineExams && onlineExams.length > 0" class="small d-block m-1">{{$t("startserver.onlineexams")}}<img v-if="config.bipIntegration && bipToken && onlineExams" src="/src/assets/img/svg/gtk-convert.svg" class="cursor-pointer ms-1" width="22" height="22" @click="fetchBipExams"></span>
-            <span v-if="previousExams && previousExams.length > 0" class="small d-block m-1 mt-2">{{$t("startserver.previousexams")}}</span>
-        </div>
-
-        <!-- scrollable exam lists (items only) -->
-        <div id="sidebar-scroll" class="flex-grow-1 overflow-auto pb-2" style="min-height: 0;">
-            <div v-if="activeTab === 'pruefung'">
-
-            <!-- headings for previous exam list -->
-            <div class="flex-shrink-0 mt-2" v-if="previousLocalExams && previousLocalExams.length > 0">
-                <span class="small d-block m-1 mt-2">{{$t("startserver.previousexams")}}</span>
-            </div>
-
-            <!-- previous exams -->
-            <div id="previous" class="m-1 mt-2" v-if="previousLocalExams && previousLocalExams.length > 0">
-                <div v-for="exam of previousLocalExams">
-                    <div class="input-group" style="display:inline;">
-                        <div class="btn btn-sm btn-warning mt-1" @click="delPreviousExam(exam.examName)">x</div>
-                        <div  class="btn btn-sm mt-1" :id="exam.examName" 
-                            :class="[ servername === exam.examName ? 
-                                (exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? 'btn-cyan cursornotallowed' : 'btn-cyan ')  : 
-                                (exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? 'btn-secondary cursornotallowed' : 'btn-secondary ')
-                            ]"
-                            @click="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? '' : setPreviousExam(exam)"
-                            :title="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? $t('startserver.incompatible') : ''"
-                            >
-                            {{ exam.examName }}
-                        </div>
-                    </div>
-                    <img v-if="servername === exam.examName" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
-                </div>
-            </div>
-            </div>
-
-            <div v-if="activeTab === 'bildungsportal'">
-            <!-- headings for previous bip exam list -->
-            <div class="flex-shrink-0 mt-2" v-if="previousBipExams && previousBipExams.length > 0">
-                <span class="small d-block m-1 mt-2">{{$t("startserver.previousexams")}}</span>
-            </div>
-
-            <!-- previous bip exams -->
-            <div id="previous-bip" class="m-1 mt-2" v-if="previousBipExams && previousBipExams.length > 0">
-                <div v-for="exam of previousBipExams">
-                    <div class="input-group" style="display:inline;">
-                        <div class="btn btn-sm btn-warning mt-1" @click="delPreviousExam(exam.examName)">x</div>
-                        <div  class="btn btn-sm mt-1" :id="exam.examName" 
-                            :class="[ servername === exam.examName ?
-                                (exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? 'btn-success cursornotallowed' : 'btn-success ')  :
-                                (exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? 'btn-secondary cursornotallowed' : 'btn-secondary ')
-                            ]"
-                            @click="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? '' : setPreviousExam(exam)"
-                            :title="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? $t('startserver.incompatible') : ''"
-                            >
-                            {{ exam.examName }}
-                        </div>
-                        <div class="btn btn-sm btn-cyan mt-1" style="width:14px; height: 31px;">
-                            <div style="writing-mode:vertical-rl; font-size:0.8em; margin-left:-10px; margin-top:2px;color: whitesmoke;">BiP</div>
-                        </div>
-                    </div>
-                    <img v-if="servername === exam.examName" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" >
-                </div>
-            </div>
-            </div>
-        </div>
-        <!-- sidebar-scroll end -->
         
         <div id="statusdiv" class="m-0 ms-1 btn btn-warning" style="bottom: 0; left: 0; width: 206px;">{{$t("startserver.connected")}}</div>
 
@@ -157,8 +92,8 @@
                 <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content">
                     <span id="backupdir" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.backupfolder")}}</span>
                     <span class="form-control text-truncate" style="width:360px;  font-size: 0.9em; padding-top: 8px; white-space: pre;">{{ backupdir }}</span>
-                    <button @click="setBackupdir()" id="backupdirbutton" class="btn btn-info p-0" style="width:40px;" :title="$t('startserver.backupfolderinfo')" >
-                        <img src="/src/assets/img/svg/settings.svg" style="vertical-align: sub;" class="" width="18" height="18" >
+                    <button @click="setBackupdir()" id="backupdirbutton" class="btn btn-cyan p-0" style="width:40px;" :title="$t('startserver.backupfolderinfo')" >
+                        <img src="/src/assets/img/svg/settings.svg" style="vertical-align: sub;" class="snowwhite" width="18" height="18" >
                     </button>
                 </div>
 
@@ -182,6 +117,7 @@
                             <span class="badge text-white flex-shrink-0 bg-cyan">local</span>
                             <div class="bip-exam-name fw-semibold small">{{ exam.examName }}</div>
                             <span v-if="exam.pin" class="badge bg-secondary-subtle text-secondary bip-status-pill">{{ exam.pin }}</span>
+                            <button @click.stop="delPreviousExam(exam.examName)" class="btn btn-sm btn-warning p-0 ms-auto" style="width:18px; height:18px; font-size:0.7em; line-height:1;">✕</button>
                         </div>
 
                         <!-- Date / Duration -->
@@ -242,7 +178,7 @@
 
                 <!-- BiP Prüfungen START -->
                 <div v-if="bipToken" class="text-secondary " style=" margin-left: 2px; margin-top: 6px;">
-                    <span>BiP Prüfungen</span>
+                    <span>{{$t("startserver.onlineexams")}}</span>
                     <button v-if="bipToken" class="btn p-0 white ms-1 mb-1" @click="fetchBipExams" title="Aktualisieren">
                         <img src="/src/assets/img/svg/gtk-convert.svg" width="16" height="16">
                     </button>
@@ -261,6 +197,7 @@
                             <span v-if="exam.requireBiP" class="badge text-white flex-shrink-0 bg-success">BiP</span>
                             <div class="bip-exam-name fw-semibold small">{{ exam.examName }}</div>
                             <span v-if="exam.pin" class="badge bg-secondary-subtle text-secondary bip-status-pill">{{ exam.pin }}</span>
+                            <button v-if="previousBipExams.some(p => p.examName === exam.examName)" @click.stop="delPreviousExam(exam.examName)" class="btn btn-sm btn-warning p-0 ms-auto" style="width:18px; height:18px; font-size:0.7em; line-height:1;">✕</button>
                         </div>
 
                         <!-- Date / Duration -->
@@ -279,7 +216,7 @@
                             </span>
                             <span v-if="exam.examSections && exam.examSections[exam.activeSection] && exam.examSections[exam.activeSection].groups" class="badge bip-type-sus">A/B</span>
                             <span v-if="exam.screenslocked" class="badge bg-danger-subtle text-danger border border-danger-subtle">gesperrt</span>
-                            <span v-if="exam.useExamSections" class="badge bg-secondary">§ {{ exam.activeSection }}/{{ exam.lockedSection }}</span>
+                            <span v-if="exam.useExamSections" class="badge bip-type-sus">§ {{ exam.activeSection }}/4</span>
                             <span v-if="exam.examStudents && exam.examStudents.length" class="badge bip-type-sus">{{ exam.examStudents.length }} SuS</span>
                         </div>
                     </div>
