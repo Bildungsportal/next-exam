@@ -30,10 +30,8 @@ const routes = [
     { path: '/:pathMatch(.*)*',   component: notfound },
 ]
 
-async function addParams(to){
-    const config = (typeof window !== 'undefined' && window.ipcRenderer)
-        ? await window.ipcRenderer.invoke('getconfigasync')
-        : getConfig();
+function addParams(to){
+    const config = getConfig();
 
     to.params.version = config.version
     to.params.serverApiPort = config.serverApiPort

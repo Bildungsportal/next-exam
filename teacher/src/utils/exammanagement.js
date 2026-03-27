@@ -105,7 +105,8 @@ function stopserver(){
         html: `<div class="my-content">
             <span> ${message} </span>
             <br><br>
-            ${bipCompletedHtml}
+            <input class="form-check-input" style="margin-top: 0.1em;" type="checkbox" id="checkboxcompleted" checked>
+            <label class="form-check-label" for="checkboxcompleted"> ${this.$t("dashboard.exitbipcompleted")} </label>
         </div>`,
         icon: "error",
         showCancelButton: true,

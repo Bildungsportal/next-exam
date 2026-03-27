@@ -53,7 +53,13 @@
         <!-- BIP Section END -->
         </div>
 
-        <!-- scrollable exam lists -->
+        <!-- fixed headings for exam lists -->
+        <div class="flex-shrink-0 mt-2" v-if="(config.bipIntegration && onlineExams && onlineExams.length > 0) || (previousExams && previousExams.length > 0)">
+            <span v-if="config.bipIntegration && onlineExams && onlineExams.length > 0" class="small d-block m-1">{{$t("startserver.onlineexams")}}<img v-if="config.bipIntegration && bipToken && onlineExams" src="/src/assets/img/svg/gtk-convert.svg" class="cursor-pointer ms-1" width="22" height="22" @click="fetchBipExams"></span>
+            <span v-if="previousExams && previousExams.length > 0" class="small d-block m-1 mt-2">{{$t("startserver.previousexams")}}</span>
+        </div>
+
+        <!-- scrollable exam lists (items only) -->
         <div id="sidebar-scroll" class="flex-grow-1 overflow-auto pb-2" style="min-height: 0;">
             <div v-if="activeTab === 'pruefung'">
 
@@ -537,7 +543,10 @@ export default {
             .then(data => {
                 //console.log("Daten von der API:", data);
                 this.bipData = data   // store all of the information in data
-                this.onlineExams = data.exams;
+
+                this.onlineExams.splice(0)
+                this.onlineExams.push(...data.exams)
+
             })
             .catch(error => { console.error("Fehler beim API-Aufruf:", error);});
         },
