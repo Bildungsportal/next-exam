@@ -125,6 +125,7 @@
         "filedelete": "Do you really want to delete this file/folder?",
         "cannotDeleteActiveSheet": "Active Sheet cannot be deleted during exam",
         "exitdelete": "Delete all exam-related files on students devices",
+        "exitbipcompleted": "Mark exam on Bildungsportal as completed",
         "spellcheck": "Spellcheck",
         "spellcheckactivate": "activate spellcheck",
         "spellcheckchoose": "Please choose a language",

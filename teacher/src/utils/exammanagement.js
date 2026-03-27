@@ -97,10 +97,20 @@ function stopserver(){
             actions: 'my-swal2-actions'
         },
         title: this.$t("dashboard.exitexamsure"),
-        html: `<div class="my-content" > ${message} <br> </div>`,
+        html: `<div class="my-content">
+            <span> ${message} </span>
+            <br><br>
+            <input class="form-check-input" style="margin-top: 0.1em;" type="checkbox" id="checkboxcompleted" checked>
+            <label class="form-check-label" for="checkboxcompleted"> ${this.$t("dashboard.exitbipcompleted")} </label>
+        </div>`,
         icon: "error",
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
+        preConfirm: () => {
+            if (document.getElementById('checkboxcompleted').checked) {
+                this.bipPhase = 'completed';
+            }
+        }
     })
     .then( async (result) => {
         if (result.isConfirmed) {

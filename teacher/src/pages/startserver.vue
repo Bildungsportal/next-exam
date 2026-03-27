@@ -55,7 +55,7 @@
 
         <!-- fixed headings for exam lists -->
         <div class="flex-shrink-0 mt-2" v-if="(config.bipIntegration && onlineExams && onlineExams.length > 0) || (previousExams && previousExams.length > 0)">
-            <span v-if="config.bipIntegration && onlineExams && onlineExams.length > 0" class="small d-block m-1">{{$t("startserver.onlineexams")}}</span>
+            <span v-if="config.bipIntegration && onlineExams && onlineExams.length > 0" class="small d-block m-1">{{$t("startserver.onlineexams")}}<img v-if="config.bipIntegration && bipToken && onlineExams" src="/src/assets/img/svg/gtk-convert.svg" class="cursor-pointer ms-1" width="22" height="22" @click="fetchBipExams"></span>
             <span v-if="previousExams && previousExams.length > 0" class="small d-block m-1 mt-2">{{$t("startserver.previousexams")}}</span>
         </div>
 
@@ -391,9 +391,8 @@ export default {
                 //console.log("Daten von der API:", data);
                 this.bipData = data   // store all of the information in data
 
-                data.exams.forEach((exam: Exam) => {
-                    this.onlineExams.push(exam)
-                })
+                this.onlineExams.splice(0)
+                this.onlineExams.push(...data.exams)
 
             })
             .catch(error => { console.error("Fehler beim API-Aufruf:", error);});

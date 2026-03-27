@@ -1127,7 +1127,7 @@ export default {
                     return;
                 }
             }
-            if (!isFullDesktopCaptureLikely()) {
+            if (!isFullDesktopCaptureLikely() && !this.$route.params.config.development) {
                 this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
                 return;
             }

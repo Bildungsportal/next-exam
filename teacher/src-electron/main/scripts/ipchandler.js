@@ -982,6 +982,8 @@ class IpcHandler {
             gateway: conf.gateway,
             accessToken: conf.accessToken,
             version: conf.version,
+            buildDate: conf.buildDate,
+            buildNumber: conf.buildNumber,
             info: conf.info,
             buildforWEB: conf.buildforWEB,
             exammodes: conf.exammodes

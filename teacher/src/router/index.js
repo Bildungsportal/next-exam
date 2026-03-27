@@ -31,6 +31,8 @@ const routes = [
 ]
 
 function addParams(to){
+    const config = getConfig();
+
     to.params.version = config.version
     to.params.serverApiPort = config.serverApiPort 
     to.params.clientApiPort = config.clientApiPort

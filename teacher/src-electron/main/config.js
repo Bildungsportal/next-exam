@@ -4,10 +4,10 @@
 
 const config = {
     development: true,
-    showdevtools: false,
+    showdevtools: true,
     bipIntegration: true,
-    bipDemo: undefined,
-    bipApiUrl: 'https://www.bildung.gv.at/webservice/rest/next-exam/teacher',
+    bipDemo: true,
+    bipApiUrl: 'https://localhost:8444',
 
     workdirectory : "",
     tempdirectory : "",
@@ -39,7 +39,7 @@ const config = {
     },
 
     version: '2.0.0.1',
-    buildDate: '20260323',
+    buildDate: '20260327',
     buildNumber: '1',
     info: 'Release'
 }
