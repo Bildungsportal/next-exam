@@ -45,6 +45,7 @@ async function addParams(to){
 }
 
 
+
 //we double check the password for now..  use proper auth process in the future ;-)
 // since we almost moved to single and local instance teacher server password is not needed at all #REFACTOR ? 
 async function getServerInfo(to){
