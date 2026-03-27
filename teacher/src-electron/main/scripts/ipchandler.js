@@ -962,6 +962,9 @@ class IpcHandler {
         return pdf
     }
 
+
+    // this is a littlebit of a bad design choice - because of recursion we need to copy the config object but 
+    // we need to make sure we update this part everytime wie add something to the config   or it will get lost here
     copyConfig(conf) {
         let configCopy = {
             development: conf.development, 
@@ -971,6 +974,7 @@ class IpcHandler {
             bipApiUrl: conf.bipApiUrl,
             workdirectory: conf.workdirectory,
             tempdirectory: conf.tempdirectory,
+            backupdirectory: conf.backupdirectory,
             serverdirectory: conf.serverdirectory,
            
             serverApiPort: conf.serverApiPort,

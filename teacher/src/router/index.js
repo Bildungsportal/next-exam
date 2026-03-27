@@ -26,15 +26,17 @@ const routes = [
     { path: '/',                  component: startserver, beforeEnter: [addParams] },
     { path: '/startserver/:bipToken/:bipUsername/:bipuserID:',  name:"startserver",     component: startserver, beforeEnter: [addParams] },
     { path: '/serverlist',        component: serverlist,   beforeEnter: [addParams]},
-    { path: '/dashboard/:servername/:passwd?/:bipToken/:bipUsername/:bipuserID:/:biptest', name:"dashboard", component: dashboard, beforeEnter: [addParams, checkPasswd] },
+    { path: '/dashboard/:servername/:passwd?/:bipToken/:bipUsername/:bipuserID:/:biptest', name:"dashboard", component: dashboard, beforeEnter: [addParams, getServerInfo] },
     { path: '/:pathMatch(.*)*',   component: notfound },
 ]
 
-function addParams(to){
-    const config = getConfig();
+async function addParams(to){
+    const config = (typeof window !== 'undefined' && window.ipcRenderer)
+        ? await window.ipcRenderer.invoke('getconfigasync')
+        : getConfig();
 
     to.params.version = config.version
-    to.params.serverApiPort = config.serverApiPort 
+    to.params.serverApiPort = config.serverApiPort
     to.params.clientApiPort = config.clientApiPort
     to.params.electron = electron
     to.params.workdirectory = config.workdirectory   //attention.. this is the server base workdirectory > we add servername to get the actual exam workdirectory in the view
@@ -45,7 +47,7 @@ function addParams(to){
 
 //we double check the password for now..  use proper auth process in the future ;-)
 // since we almost moved to single and local instance teacher server password is not needed at all #REFACTOR ? 
-async function checkPasswd(to){
+async function getServerInfo(to){
     let hostname = electron ? "localhost" : window.location.hostname
    
     const config = getConfig();

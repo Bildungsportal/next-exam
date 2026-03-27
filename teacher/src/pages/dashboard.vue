@@ -712,6 +712,7 @@ export default {
                 examDate: new Date().toISOString().slice(0, 19),
                 examDurationMinutes: 100, 
                 pin: this.$route.params.pin,
+                backupdirectory: false,
                 requireBiP: false,
                 exammode: false,
                 delfolderonexit: true,
@@ -1518,12 +1519,15 @@ computed: {
             .then( res => res.json())
             .then( async (response) => {
                 if (response.serverstatus === false) {
+                    this.serverstatus.backupdirectory = this.config.backupdirectory || false
                     this.setServerStatus()  // there is no serverstatus - we need to set it to default
                     return
                 }
                 this.serverstatus = response.serverstatus // we slowly move things over to a centra serverstatus object
-         
-                
+                if (!this.serverstatus.backupdirectory) {  // preserve backupdirectory set in UI if not in saved status
+                    this.serverstatus.backupdirectory = this.config.backupdirectory || false
+                }
+                           
 
                 if (this.serverstatus.examSections[this.serverstatus.activeSection].examtype === "microsoft365"){  // unfortunately we can't automagically reconnect the teacher without violating privacy
                     this.serverstatus.exammode = false
@@ -1988,8 +1992,10 @@ computed: {
         this.$nextTick( async function () { // Code that will run only after the entire view has been rendered
        
             document.querySelector("#statusdiv").style.visibility = "hidden";
-           
+            
+        
             await this.getPreviousServerStatus()
+
             this.fetchInfo()
             this.initializeStudentwidgets()
 

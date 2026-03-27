@@ -30,11 +30,12 @@
 
         <div v-if="freeDiscspace < 0.1" class="warning">  {{ $t("startserver.freespacewarning") }}   </div>
 
+        <!-- Extended Settings START -->
         <div class="form-check form-switch m-1 mb-2 mt-2">
-            <input id="advanced" type="checkbox"  v-model="advanced" class="form-check-input" @change="toggleAdvanced">
             <label for="advanced" class="form-check-label">{{$t('startserver.extendedsettings')}}</label>
+            <input id="advanced" type="checkbox"  v-model="advanced" class="form-check-input" @change="toggleAdvanced">
         </div>
-
+        <!-- Extended Settings END -->
  
 
         <!-- BIP Section START -->
@@ -141,7 +142,10 @@
                 <!-- could be used to set an ESCAPE PASSWORD for students to make it harder to leave on connection loss -->
                 <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content">
                     <span id="pwd" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.pwd")}}</span>
-                    <input v-model="password" type="text" class="form-control " id="examPassword" style="width:200px;" >
+                    <input v-model="password" :type="showPassword ? 'text' : 'password'" class="form-control" id="examPassword" style="width:200px;">
+                    <button @click="togglePasswordVisibility" class="password-visibility-btn" type="button">
+                        <img :src="showPassword ? '/src/assets/img/svg/eye-slash-fill.svg' : '/src/assets/img/svg/eye-fill.svg'" class="password-visibility-icon" width="16" height="16">
+                    </button>
                 </div>
 
                 <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content">
@@ -168,7 +172,10 @@
 
                 <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content">
                     <span id="pwd" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.pwd")}}</span>
-                    <input v-model="password" type="text" class="form-control " id="examPassword" style="width:200px;" >
+                    <input v-model="password" :type="showPassword ? 'text' : 'password'" class="form-control" id="examPassword" style="width:200px;">
+                    <button @click="togglePasswordVisibility" class="password-visibility-btn" type="button">
+                        <img :src="showPassword ? '/src/assets/img/svg/eye-slash-fill.svg' : '/src/assets/img/svg/eye-fill.svg'" class="password-visibility-icon" width="16" height="16">
+                    </button>
                 </div>
 
                 <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content">
@@ -297,6 +304,7 @@ export default {
             hostname: window.location.hostname,
             hostip: this.$route.params.config.hostip,
             advanced: false,
+            showPassword: false,
             workdir: this.$route.params.config.workdirectory,
             backupdir: '',
             freeDiscspace: 100,
@@ -766,6 +774,7 @@ export default {
 
             this.config = await ipcRenderer.invoke('getconfigasync') 
             this.workdir = this.config.workdirectory   // just in case this is already altered in the backend make sure to display current settings
+            this.backupdir = this.config.backupdirectory || ''
         },
 
 
@@ -773,9 +782,7 @@ export default {
         async setPreviousExam(exam){
             this.servername = exam.examName
             this.selectedExam = exam
-   
-           
-           
+
             this.checkExistingExam()  //ändert den text am startbutton
         },
 
@@ -785,9 +792,13 @@ export default {
             for (let i = 0; i < this.previousExams.length; i++) {
                 const previousExam = this.previousExams[i] // current exam object
                 if (previousExam.examName === this.servername) {
-                    this.password = previousExam.examPassword
+                    this.password = ""
+                    this.advanced = false
+                    this.backupdir = previousExam.backupdirectory || this.config.backupdirectory || ''
+                    let hasExamPassword = typeof previousExam.examPassword === 'string' && previousExam.examPassword.trim() !== ''
 
-                    if (previousExam.examPassword !== ""){
+                    if (hasExamPassword) {
+                        // make password field visible to signal the user that a password is set   
                         this.password = previousExam.examPassword
                         this.advanced = true
                         await this.$nextTick();
@@ -795,17 +806,20 @@ export default {
                     }
                     const examstart = document.getElementById('examstart')
                     if (examstart) examstart.innerHTML = this.$t("startserver.resume")
-                    let examPassword = document.getElementById('examPassword')
-                    if (examPassword){
-                        examPassword.disabled = true  // lock password input field if existing exam is found and password is already set - prevent changing examPassword
+                    let examPasswordDiv = document.getElementById('examPassword')
+               
+                    if (examPasswordDiv){
+                        examPasswordDiv.disabled = hasExamPassword  // lock only if a real password is set
                     }
                     break
-                } else {
+                } 
+                else {
                     const examstart = document.getElementById('examstart')
                     if (examstart) examstart.innerHTML = this.$t("startserver.start")
-                    let examPassword = document.getElementById('examPassword')
-                    if (examPassword){
-                        examPassword.disabled = false  // unlock password input field if no existing exam is found
+                    
+                    let examPasswordDiv = document.getElementById('examPassword')
+                    if (examPasswordDiv){
+                        examPasswordDiv.disabled = false  // unlock password input field if no existing exam is found
                     }
                 }
             }        
@@ -840,10 +854,12 @@ export default {
         },
 
 
-        async setBackupdir(){   // achtung: custom workdir spreizt sich mit der idee die teacher instanz als reine webversion laufen zulassen - wontfix?
+        async setBackupdir(){
             let response = await ipcRenderer.invoke('setbackupdir')
             this.backupdir = response.backupdir
-            if (response.message == "error"){   
+            this.config.backupdirectory = response.backupdir
+
+            if (response.message == "error"){
                 this.status(this.$t("startserver.directoryerror"))
             }
         },
@@ -851,10 +867,15 @@ export default {
         toggleAdvanced(){
             if (!this.advanced){     
                 this.password = ""
+                this.showPassword = false
             }
             else {
                 this.checkExistingExam()
             }
+        },
+
+        togglePasswordVisibility(){
+            this.showPassword = !this.showPassword
         },
 
         async startServer(){
@@ -1071,7 +1092,7 @@ export default {
 }
 
 .disabledstart {
-    filter: contrast(100%) grayscale(100%) brightness(80%) blur(0.6px);
+    filter: contrast(100%) grayscale(60%) brightness(130%) blur(0.6px);
     pointer-events: none; 
 }
 
@@ -1378,6 +1399,25 @@ export default {
 
 .custom-swal2-icon {
     margin: 3em auto 1em auto !important
+}
+
+.password-visibility-btn {
+    width: 40px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+}
+
+.password-visibility-btn:focus,
+.password-visibility-btn:active {
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+}
+
+.password-visibility-icon {
+    opacity: 0.55;
 }
 
 
