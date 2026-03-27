@@ -276,7 +276,7 @@
             <span class="small m-1">{{$t("dashboard.bildungsportal")}}</span><span v-if="bipToken" class="small m-1 me-0 text-secondary">(verbunden)</span>
             <div id="biploginbutton" @click="showBipInfo()" class="disabledbutton btn btn-success m-1" style="padding:0;">
                 <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
-                <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
+                <span v-if="bipUsername" id="biploginbuttonlabel" style="padding:2px; font-size:0.9em;">{{bipUsername}}</span><span style="padding:2px; font-size:0.9em;" v-else id="biploginbuttonlabel">Login</span>
             </div> 
         </div>
         <!-- BIP Section END -->
@@ -712,6 +712,7 @@ export default {
                 examDate: new Date().toISOString().slice(0, 19),
                 examDurationMinutes: 100, 
                 pin: this.$route.params.pin,
+                backupdirectory: false,
                 requireBiP: false,
                 exammode: false,
                 delfolderonexit: true,
@@ -1518,12 +1519,15 @@ computed: {
             .then( res => res.json())
             .then( async (response) => {
                 if (response.serverstatus === false) {
+                    this.serverstatus.backupdirectory = this.config.backupdirectory || false
                     this.setServerStatus()  // there is no serverstatus - we need to set it to default
                     return
                 }
                 this.serverstatus = response.serverstatus // we slowly move things over to a centra serverstatus object
-         
-                
+                if (!this.serverstatus.backupdirectory) {  // preserve backupdirectory set in UI if not in saved status
+                    this.serverstatus.backupdirectory = this.config.backupdirectory || false
+                }
+                           
 
                 if (this.serverstatus.examSections[this.serverstatus.activeSection].examtype === "microsoft365"){  // unfortunately we can't automagically reconnect the teacher without violating privacy
                     this.serverstatus.exammode = false
@@ -1988,8 +1992,10 @@ computed: {
         this.$nextTick( async function () { // Code that will run only after the entire view has been rendered
        
             document.querySelector("#statusdiv").style.visibility = "hidden";
-           
+            
+        
             await this.getPreviousServerStatus()
+
             this.fetchInfo()
             this.initializeStudentwidgets()
 

@@ -87,6 +87,11 @@ function stopserver(){
     let message = this.$t("dashboard.exitexam")
     if (!this.serverstatus.exammode) { message = this.$t("dashboard.exitexaminfo")}
 
+    const bipCompletedHtml = this.serverstatus?.bip ? `
+            <input class="form-check-input" style="margin-top: 0.1em;" type="checkbox" id="checkboxcompleted">
+            <label class="form-check-label" for="checkboxcompleted"> ${this.$t("dashboard.exitbipcompleted")} </label>
+        ` : '';
+
     this.$swal.fire({
         customClass: {
             popup: 'my-popup',
@@ -107,7 +112,8 @@ function stopserver(){
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
         preConfirm: () => {
-            if (document.getElementById('checkboxcompleted').checked) {
+            const checkbox = document.getElementById('checkboxcompleted');
+            if (this.serverstatus?.bip && checkbox?.checked) {
                 this.bipPhase = 'completed';
             }
         }

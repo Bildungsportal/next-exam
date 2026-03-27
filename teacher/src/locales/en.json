@@ -1,7 +1,7 @@
 { 
     "general": {
-        "startserver":"Start Exam",
-        "slist": "Aktive Exams",
+        "startserver":"Local Exam",
+        "slist": "Active Exams",
         "ok": "OK",
         "offline": "No Network Connection"
     },
@@ -16,7 +16,7 @@
         "connected": "connected",
         "start": "Start Exam",
         "resume": "Resume Exam",
-        "examname": "Name",
+        "examname": "Exam Name",
         "pwd": "Password",
         "emptypw": "Please provide a valid password",
         "emptyname": "Please provide a valid username",
@@ -30,6 +30,8 @@
         "folderdelete": "Delete local exam folder?",
         "onlineexams": "BiP Exams",
         "bipnotloggedin": "Please log in to BiP before starting the exam",
+        "bipwelcome": "Welcome",
+        "bippleaselogin": "Please log in to Bildungsportal to view planned exams.",
         "noNews":"No News available",
         "backupfolder": "Backup-Directory",
         "backupfolderinfo": "Please provide a path for the backup directory",
@@ -43,7 +45,7 @@
         "removeURLconfirm": "Are you sure you want to remove this URL?",
         "remoteassistant": "Remote Assistant",
         "server": "Server",
-        "name": "Name",
+        "name": "Exam Name",
         "pin": "Pin",
         "connected": "connected",
         "stopserver": "Stop Exam",
