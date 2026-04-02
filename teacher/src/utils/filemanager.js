@@ -417,41 +417,19 @@ function showBase64FilePreview(base64, filename){
 
 
 // show base64 encoded PDF in PdfRenderer component
-function showBase64PdfInRenderer(base64, filename){
-    // Set the preview PDF data for PdfRenderer component
-    this.activesheetsPreviewPdf = base64;
+function showBase64PdfInRenderer(base64, filename, group){
+    console.log('[showBase64PdfInRenderer] opening group:', group);
+
+    if (group) {
+        this.activesheetsPreviewGroup = group;
+        const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+        const fileObj = group === 'B' ? section.groupB?.examConfig?.activeSheets : section.groupA?.examConfig?.activeSheets;
+        this.activesheetsPreviewCustomFields = fileObj?.customFields ? JSON.parse(JSON.stringify(fileObj.customFields)) : [];
+        this.activesheetsPreviewBlacklist = fileObj?.blacklist ? [...fileObj.blacklist] : [];
+    }
+
     this.activesheetsPreviewFilename = filename;
-    
-    // Find the file in examInstructionFiles and load customFields
-    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-    let fileObj = null;
-    let group = null;
-    let fileIndex = -1;
-    
-    // Search in groupA
-    if (section.groupA && section.groupA.examInstructionFiles) {
-        const index = section.groupA.examInstructionFiles.findIndex(f => f.filename === filename);
-        if (index !== -1) {
-            fileObj = section.groupA.examInstructionFiles[index];
-            group = 'A';
-            fileIndex = index;
-        }
-    }
-    
-    // Search in groupB if not found in groupA
-    if (!fileObj && section.groupB && section.groupB.examInstructionFiles) {
-        const index = section.groupB.examInstructionFiles.findIndex(f => f.filename === filename);
-        if (index !== -1) {
-            fileObj = section.groupB.examInstructionFiles[index];
-            group = 'B';
-            fileIndex = index;
-        }
-    }
-    
-    // Load customFields from file or set empty array
-    this.activesheetsPreviewCustomFields = fileObj && fileObj.customFields ? JSON.parse(JSON.stringify(fileObj.customFields)) : [];
-    this.activesheetsPreviewGroup = group;
-    this.activesheetsPreviewFileIndex = fileIndex;
+    this.activesheetsPreviewPdf = base64;
     
     // Hide other preview components
     this.webviewVisible = false;

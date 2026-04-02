@@ -68,6 +68,15 @@
                 <span class="edit-tool-icon">─</span>
                 <span class="edit-tool-label">Text</span>
             </button>
+            <button
+                type="button"
+                :class="['btn btn-sm edit-tool-btn', drawMode === 'delete' ? 'edit-tool-active edit-tool-delete-active' : 'edit-tool-inactive']"
+                @click.stop="setDrawMode('delete')"
+                title="Feld löschen"
+            >
+                <span class="edit-tool-icon">✕</span>
+                <span class="edit-tool-label">Löschen</span>
+            </button>
         </div>
         <div v-if="effectiveLoading" class="overlay">
             <div class="spinner"></div>
@@ -79,7 +88,7 @@
                 :key="pageIndex"
                 class="pdf-page-wrapper"
                 :style="{ width: page.width + 'px', height: page.height + 'px' }"
-                @mousedown="editMode ? startDrawing($event, pageIndex) : null"
+                @mousedown="editMode && drawMode !== 'delete' ? startDrawing($event, pageIndex) : null"
                 @mousemove="editMode && isDrawing ? updateDrawing($event, pageIndex) : null"
                 @mouseup="editMode && isDrawing ? finishDrawing($event, pageIndex) : null"
                 @mouseleave="editMode && isDrawing ? cancelDrawing() : null"
@@ -88,10 +97,12 @@
 
                 <div
                     v-for="field in page.formFields"
+                    v-show="!isBlacklisted(field.id)"
                     :key="field.id"
-                    class="input-overlay"
+                    :class="['input-overlay', editMode && drawMode === 'delete' ? 'delete-mode-field' : '']"
                     :id="field.id + '_wrapper'"
                     :style="field.style"
+                    @click.stop="editMode && drawMode === 'delete' ? deleteField(field.id, false) : null"
                 >
                     <input
                         v-if="field.type === 'checkbox'"
@@ -121,10 +132,12 @@
 
                 <div
                     v-for="cloze in page.clozeFields"
+                    v-show="!isBlacklisted(cloze.id)"
                     :key="cloze.id"
-                    :class="['input-overlay', cloze.type === 'checkbox' || cloze.type === 'deselect' ? 'checkbox-overlay' : '']"
+                    :class="['input-overlay', cloze.type === 'checkbox' || cloze.type === 'deselect' ? 'checkbox-overlay' : '', editMode && drawMode === 'delete' ? 'delete-mode-field' : '']"
                     :id="cloze.id + '_wrapper'"
                     :style="cloze.style"
+                    @click.stop="editMode && drawMode === 'delete' ? deleteField(cloze.id, false) : null"
                 >
                     <input
                         v-if="cloze.type === 'checkbox'"
@@ -153,10 +166,12 @@
 
                 <div
                     v-for="box in page.boxFields"
+                    v-show="!isBlacklisted(box.id)"
                     :key="box.id"
-                    :class="['input-overlay', box.type === 'checkbox' ? 'checkbox-overlay' : '']"
+                    :class="['input-overlay', box.type === 'checkbox' ? 'checkbox-overlay' : '', editMode && drawMode === 'delete' ? 'delete-mode-field' : '']"
                     :id="box.id + '_wrapper'"
                     :style="box.style"
+                    @click.stop="editMode && drawMode === 'delete' ? deleteField(box.id, false) : null"
                 >
                     <input
                         v-if="box.type === 'checkbox'"
@@ -183,9 +198,10 @@
                 <div
                     v-for="customField in getCustomFieldsForPage(pageIndex)"
                     :key="customField.id"
-                    class="input-overlay"
+                    :class="['input-overlay', editMode && drawMode === 'delete' ? 'delete-mode-field' : '']"
                     :id="customField.id + '_wrapper'"
                     :style="customField.style"
+                    @click.stop="editMode && drawMode === 'delete' ? deleteField(customField.id, true) : null"
                 >
                     <textarea
                         v-if="!customField.type || customField.type === 'textarea'"
@@ -247,6 +263,10 @@ export default {
         customFields: {
             type: Array,
             default: () => []
+        },
+        blacklist: {
+            type: Array,
+            default: () => []
         }
     },
     data() {
@@ -256,6 +276,7 @@ export default {
             warningShown: false,
             editMode: false,
             localCustomFields: [],
+            localBlacklist: [],
             customFieldCounter: 0,
             drawMode: 'textinput',
             isDrawing: false,
@@ -300,6 +321,12 @@ export default {
                 }
             }
         },
+        blacklist: {
+            immediate: true,
+            handler(newList) {
+                this.localBlacklist = Array.isArray(newList) ? [...newList] : [];
+            }
+        },
         parsedPages: {
             handler(newPages) {
                 if (newPages && newPages.length > 0 && !this.warningShown) {
@@ -323,7 +350,7 @@ export default {
             this.warningShown = false; // Reset warning flag for new PDF
             try {
                 const uint8 = this.base64ToUint8Array(base64Data);
-                this.parsedPages = await parsePdfToPages(uint8, { enableLogging: true, debugBoxExtraction: true });
+                this.parsedPages = await parsePdfToPages(uint8);
             } catch (error) {
                 console.error('PdfOverlay: Failed to parse PDF data', error);
                 this.parsedPages = [];
@@ -373,8 +400,8 @@ export default {
         },
         toggleEditMode() {
             if (this.editMode) {
-                // Save mode: emit customFields before turning off edit mode
-                this.$emit('save-custom-fields', JSON.parse(JSON.stringify(this.localCustomFields)));
+                // Save mode: emit customFields and blacklist before turning off edit mode
+                this.$emit('save-custom-fields', JSON.parse(JSON.stringify(this.localCustomFields)), [...this.localBlacklist]);
             }
             this.editMode = !this.editMode;
             if (!this.editMode) {
@@ -520,6 +547,18 @@ export default {
         },
         getCustomFieldsForPage(pageIndex) {
             return this.localCustomFields.filter(field => field.pageIndex === pageIndex);
+        },
+        deleteField(fieldId, isCustom) {
+            if (isCustom) {
+                this.localCustomFields = this.localCustomFields.filter(f => f.id !== fieldId);
+            } else {
+                if (!this.localBlacklist.includes(fieldId)) {
+                    this.localBlacklist.push(fieldId);
+                }
+            }
+        },
+        isBlacklisted(fieldId) {
+            return this.localBlacklist.includes(fieldId);
         }
     }
 };
@@ -801,6 +840,22 @@ background-color: transparent;
 .input-overlay {
     position: absolute;
     pointer-events: auto;
+}
+
+.delete-mode-field {
+    cursor: crosshair !important;
+    outline: 2px dashed rgba(220, 53, 69, 0.7);
+}
+
+.delete-mode-field:hover {
+    outline: 2px solid rgb(220, 53, 69);
+    background-color: rgba(220, 53, 69, 0.15) !important;
+}
+
+.edit-tool-delete-active {
+    background-color: #dc3545 !important;
+    color: white !important;
+    border-color: #dc3545 !important;
 }
 
 .checkbox-overlay {

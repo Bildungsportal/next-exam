@@ -208,7 +208,7 @@ async function configureActivesheets(forceDialog = false){
             <span style="font-size:0.8em;">(.pdf)</span>
             <br>  <br> 
             Gruppe<br>
-            <button id="fbtnA" class="swal2-button btn btn-info m-2" style="width: 42px; height: 42px;">A</button>
+            <button id="fbtnA" class="swal2-button btn btn-cyan m-2" style="width: 42px; height: 42px;">A</button>
             <button id="fbtnB" class="swal2-button btn btn-warning m-2" style="width: 42px; height: 42px;filter: grayscale(90%);">B</button>
             <button id="fbtnC" class="swal2-button btn btn-warning m-2" style="padding:0px;width: 42px; height: 42px;filter: grayscale(90%); background: linear-gradient(-60deg, #0dcaf0 50%, #ffc107 50%);">AB</button>
         </div>`
@@ -347,9 +347,9 @@ async function configureActivesheets(forceDialog = false){
         
         // Show PdfRenderer for the first file if available
         if (firstFileBase64 && firstFileName) {
-            // Call showBase64PdfInRenderer if available (it should be available in dashboard.vue context)
             if (typeof this.showBase64PdfInRenderer === 'function') {
-                this.showBase64PdfInRenderer(firstFileBase64, firstFileName);
+                const previewGroup = activeGroup === 'b' ? 'B' : 'A';
+                this.showBase64PdfInRenderer(firstFileBase64, firstFileName, previewGroup);
             }
         }
     });    
@@ -982,7 +982,7 @@ function defineMaterials(who) {
             <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
             <br>  <br> 
             Gruppe<br>
-            <button id="fbtnA" class="swal2-button btn btn-info m-2" style="width: 42px; height: 42px;">A</button>
+            <button id="fbtnA" class="swal2-button btn btn-cyan m-2" style="width: 42px; height: 42px;">A</button>
             <button id="fbtnB" class="swal2-button btn btn-warning m-2" style="width: 42px; height: 42px;filter: grayscale(90%);">B</button>
             <button id="fbtnC" class="swal2-button btn btn-warning m-2" style="padding:0px;width: 42px; height: 42px;filter: grayscale(90%); background: linear-gradient(-60deg, #0dcaf0 50%, #ffc107 50%);">AB</button>
         </div>`
@@ -1270,41 +1270,32 @@ async function addFileAsExamMaterial(fileOrBase64, filename, activeGroup, server
         }
     }
     
-    // If this is an Active Sheet, remove all existing Active Sheets from the target groups
-    if (isActiveSheet) {
-        if (activeGroup === "a" || activeGroup === "all") {
-            // Remove all files with IsActiveSheet: true from group A
-            serverstatus.examSections[activeSection].groupA.examInstructionFiles = 
-                serverstatus.examSections[activeSection].groupA.examInstructionFiles.filter(file => !file.IsActiveSheet);
-        }
-        if (activeGroup === "b" || activeGroup === "all") {
-            // Remove all files with IsActiveSheet: true from group B
-            serverstatus.examSections[activeSection].groupB.examInstructionFiles = 
-                serverstatus.examSections[activeSection].groupB.examInstructionFiles.filter(file => !file.IsActiveSheet);
-        }
-    }
-    
-    // Create file object (same structure as in defineMaterials)
+    // Create file object
     const fileObject = {
         filename: finalFilename,
         filetype: filetype,
         filecontent: base64Content,
         checksum: checksum
     };
-    
-    // Add IsActiveSheet flag if specified
+
     if (isActiveSheet) {
-        fileObject.IsActiveSheet = true;
+        // Active Sheet goes to group.examConfig.activeSheets
+        if (activeGroup === "a" || activeGroup === "all") {
+            serverstatus.examSections[activeSection].groupA.examConfig.activeSheets = { ...fileObject };
+        }
+        if (activeGroup === "b" || activeGroup === "all") {
+            serverstatus.examSections[activeSection].groupB.examConfig.activeSheets = { ...fileObject };
+        }
+    } else {
+        // Regular material goes into examInstructionFiles
+        if (activeGroup === "a" || activeGroup === "all") {
+            serverstatus.examSections[activeSection].groupA.examInstructionFiles.push(fileObject);
+        }
+        if (activeGroup === "b" || activeGroup === "all") {
+            serverstatus.examSections[activeSection].groupB.examInstructionFiles.push(fileObject);
+        }
     }
-    
-    // Add to groups based on activeGroup
-    if (activeGroup === "a" || activeGroup === "all") {
-        serverstatus.examSections[activeSection].groupA.examInstructionFiles.push(fileObject);
-    }
-    if (activeGroup === "b" || activeGroup === "all") {
-        serverstatus.examSections[activeSection].groupB.examInstructionFiles.push(fileObject);
-    }
-    
+
     return fileObject;
 }
 

@@ -94,6 +94,7 @@
             :loading="isLoading"
             :pdf-base64="pdfBase64"
             :custom-fields="customFields"
+            :blacklist="blacklist"
         />
     
     </div>
@@ -175,6 +176,7 @@ export default {
             currentpreviewBase64: null,  // Base64 PDF for preview/submission
             submissionnumber: 0,  // Submission counter
             customFields: [],
+            blacklist: [],
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
         }
     }, 
@@ -434,19 +436,12 @@ export default {
                 }
                 
                 // Find Active Sheet PDF in the target group
-                let activeSheetFile = null;
-                const groupFiles = section[targetGroup]?.examInstructionFiles || [];
-                activeSheetFile = groupFiles.find(file => file.IsActiveSheet === true && file.filetype === 'pdf');
-                
-                // If not found in examInstructionFiles, also check examMaterials (in case they're loaded separately)
-                if (!activeSheetFile && this.examMaterials && this.examMaterials.length > 0) {
-                    activeSheetFile = this.examMaterials.find(file => file.IsActiveSheet === true && file.filetype === 'pdf');
-                }
-
+                const activeSheetFile = section[targetGroup]?.examConfig?.activeSheets?.filename ? section[targetGroup].examConfig.activeSheets : null;
                 if (activeSheetFile && activeSheetFile.filecontent) {
                     this.pdfBase64 = activeSheetFile.filecontent;
-                    this.activeSheetPdfFilename = activeSheetFile.filename;  // Store the PDF filename
+                    this.activeSheetPdfFilename = activeSheetFile.filename;
                     this.customFields = activeSheetFile.customFields ? JSON.parse(JSON.stringify(activeSheetFile.customFields)) : [];
+                    this.blacklist = activeSheetFile.blacklist ? [...activeSheetFile.blacklist] : [];
                 } else {
                     console.warn('No Active Sheet PDF found for group:', targetGroup);
                     this.pdfBase64 = null;

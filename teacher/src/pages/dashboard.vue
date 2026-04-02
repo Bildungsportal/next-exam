@@ -143,6 +143,7 @@
             :pdfBase64="activesheetsPreviewPdf"
             :loading="false"
             :customFields="activesheetsPreviewCustomFields"
+            :blacklist="activesheetsPreviewBlacklist"
             @close="discardActivesheetsPdf"
             @save-custom-fields="saveCustomFields"
         />
@@ -196,21 +197,33 @@
                 </div>
 
 
-                <!-- Active Sheets Info -->
-                <div v-if="isExamType('activesheets')" class="small text-white-50 text-truncate ms-1">    <!--  show one or both files that are defined as IsActiveSheet:true in examInstructionFiles of group A and B -->
-                    <div v-if="serverstatus.examSections[serverstatus.activeSection].groups">
-                        <!--  show both filenames if groups are enabled -->
-                        <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA.examInstructionFiles.some(file => file.IsActiveSheet === true) && serverstatus.examSections[serverstatus.activeSection].groupB.examInstructionFiles.some(file => file.IsActiveSheet === true)">
-                            {{truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupA.examInstructionFiles.find(file => file.IsActiveSheet === true).filename, 20)}} <br>
-                            {{truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupB.examInstructionFiles.find(file => file.IsActiveSheet === true).filename, 20)}}
+                <!-- Active Sheets PDF Buttons -->
+                <div v-if="isExamType('activesheets')" class="d-flex flex-column gap-1">
+                    <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
+                        <div class="input-group" v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.activeSheets?.filename">
+                            <div class="btn btn-sm btn-secondary" @click="removeActiveSheet('A')" style="padding:4px 8px;">x</div>
+                            <div class="btn btn-sm btn-warning filename-button" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
+                                {{ truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 18) }}
+                            </div>
+                            <div class="btn btn-sm btn-teal extension-button-sidebar"><div class="vertical-text-sidebar">A</div></div>
                         </div>
-                    </div>
-                    <div v-else>
-                        <!-- show only the filename for group A if groups are disabled -->
-                        <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA.examInstructionFiles.some(file => file.IsActiveSheet === true)">
-                            {{truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupA.examInstructionFiles.find(file => file.IsActiveSheet === true).filename, 20)}}
+                        <div class="input-group" v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.activeSheets?.filename">
+                            <div class="btn btn-sm btn-secondary" @click="removeActiveSheet('B')" style="padding:4px 8px;">x</div>
+                            <div class="btn btn-sm btn-warning filename-button" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename, 'B')">
+                                {{ truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename, 18) }}
+                            </div>
+                            <div class="btn btn-sm btn-teal extension-button-sidebar"><div class="vertical-text-sidebar">B</div></div>
                         </div>
-                    </div>
+                    </template>
+                    <template v-else>
+                        <div class="input-group" v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.activeSheets?.filename">
+                            <div class="btn btn-sm btn-secondary" @click="removeActiveSheet('A')" style="padding:4px 8px;">x</div>
+                            <div class="btn btn-sm btn-warning filename-button" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
+                                {{ truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 18) }}
+                            </div>
+                            <div class="btn btn-sm btn-teal extension-button-sidebar"><div class="vertical-text-sidebar">PDF</div></div>
+                        </div>
+                    </template>
                 </div>
 
                 <!-- Microsoft365 Buttons -->
@@ -689,6 +702,7 @@ export default {
             activesheetsPreviewPdf: null,
             activesheetsPreviewFilename: null,
             activesheetsPreviewCustomFields: [],
+            activesheetsPreviewBlacklist: [],
             activesheetsPreviewGroup: null,
             activesheetsPreviewFileIndex: -1,
             
@@ -742,7 +756,6 @@ export default {
 
                         formsUrl: null,
                         msOfficeFile: null, 
-                        activeSheetFile: null,
                         linespacing: 2, 
                         languagetool: false,
                         fontfamily: "sans-serif", 
@@ -754,9 +767,9 @@ export default {
                         rdpConfig: null,
                         localVMConfig: null,
 
-                        groups: false, 
-                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [] }, 
-                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [] }
+                        groups: false,
+                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
+                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
                     },
                     2: {
                         examtype: 'math',   
@@ -773,7 +786,6 @@ export default {
 
                         formsUrl: null,
                         msOfficeFile: null, 
-                        activeSheetFile: null,
                         linespacing: 2, 
                         languagetool: false,
                         fontfamily: "sans-serif", 
@@ -785,9 +797,9 @@ export default {
                         rdpConfig: null,
                         localVMConfig: null,
 
-                        groups: false, 
-                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [] }, 
-                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [] }
+                        groups: false,
+                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
+                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
                     },
                     3: {
                         examtype: 'math',   
@@ -804,7 +816,6 @@ export default {
 
                         formsUrl: null,
                         msOfficeFile: null, 
-                        activeSheetFile: null,
                         linespacing: 2, 
                         languagetool: false,
                         fontfamily: "sans-serif", 
@@ -814,9 +825,9 @@ export default {
                         rdpConfig: null,
                         localVMConfig: null,
 
-                        groups: false, 
-                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [] }, 
-                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [] }
+                        groups: false,
+                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
+                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
                     },
                     4: {
                         examtype: 'math',   
@@ -833,7 +844,6 @@ export default {
 
                         formsUrl: null,
                         msOfficeFile: null, 
-                        activeSheetFile: null,
                         linespacing: 2, 
                         languagetool: false,
                         fontfamily: "sans-serif", 
@@ -842,9 +852,9 @@ export default {
                         domainname: false,  
                         rdpConfig: null,
                         localVMConfig: null,
-                        groups: false, 
-                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [] }, 
-                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [] }
+                        groups: false,
+                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
+                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
                     }
                 },                
             } as Exam
@@ -895,15 +905,13 @@ computed: {
 
     hasActiveSheetsPdf() {
         if (this.serverstatus.examSections[this.serverstatus.activeSection].examtype !== 'activesheets') {
-            return true; // Not activesheets mode, so no restriction
+            return true;
         }
         const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-        const groupAFiles = section.groupA?.examInstructionFiles || [];
-        const groupBFiles = section.groupB?.examInstructionFiles || [];
-        // Check if there's at least one PDF with IsActiveSheet: true in BOTH groups
-        const hasGroupA = groupAFiles.some(file => file.IsActiveSheet === true && file.filetype === 'pdf');
-        const hasGroupB = groupBFiles.some(file => file.IsActiveSheet === true && file.filetype === 'pdf');
-        return hasGroupA && hasGroupB;
+        if (section.groups) {
+            return !!(section.groupA?.examConfig?.activeSheets?.filename && section.groupB?.examConfig?.activeSheets?.filename);
+        }
+        return !!section.groupA?.examConfig?.activeSheets?.filename;
     },
 
     activeSheetsPdfFilename() {
@@ -911,12 +919,7 @@ computed: {
             return null;
         }
         const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-        const groupAFiles = section.groupA?.examInstructionFiles || [];
-        const groupBFiles = section.groupB?.examInstructionFiles || [];
-        // Find first PDF with IsActiveSheet: true
-        const activeSheetFile = groupAFiles.find(file => file.IsActiveSheet === true && file.filetype === 'pdf') ||
-                               groupBFiles.find(file => file.IsActiveSheet === true && file.filetype === 'pdf');
-        return activeSheetFile ? activeSheetFile.filename : null;
+        return section.groupA?.examConfig?.activeSheets?.filename || null;
     }
 
 },
@@ -1419,22 +1422,29 @@ computed: {
             this.activesheetsPreviewPdf = null;
             this.activesheetsPreviewFilename = null;
             this.activesheetsPreviewCustomFields = [];
+            this.activesheetsPreviewBlacklist = [];
             this.activesheetsPreviewGroup = null;
-            this.activesheetsPreviewFileIndex = -1;
             this.hidepreview();
         },
-        // save customFields to the file in examInstructionFiles
-        saveCustomFields(customFields) {
-            if (this.activesheetsPreviewGroup && this.activesheetsPreviewFileIndex >= 0) {
+        // save customFields and blacklist to group.examConfig.activeSheets
+        saveCustomFields(customFields, blacklist = []) {
+            console.log('[saveCustomFields] group:', this.activesheetsPreviewGroup, 'count:', customFields.length);
+            if (this.activesheetsPreviewGroup) {
                 const section = this.serverstatus.examSections[this.serverstatus.activeSection];
                 const group = this.activesheetsPreviewGroup === 'A' ? section.groupA : section.groupB;
-                if (group && group.examInstructionFiles && group.examInstructionFiles[this.activesheetsPreviewFileIndex]) {
-                    // Update customFields in the file object (Vue 3: direct assign is reactive)
-                    group.examInstructionFiles[this.activesheetsPreviewFileIndex].customFields = JSON.parse(JSON.stringify(customFields));
-                    // Update local preview data
+                if (group && group.examConfig?.activeSheets?.filename) {
+                    group.examConfig.activeSheets.customFields = JSON.parse(JSON.stringify(customFields));
+                    group.examConfig.activeSheets.blacklist = [...blacklist];
                     this.activesheetsPreviewCustomFields = JSON.parse(JSON.stringify(customFields));
+                    this.activesheetsPreviewBlacklist = [...blacklist];
                 }
             }
+        },
+
+        removeActiveSheet(group) {
+            const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+            if (group === 'A') section.groupA.examConfig.activeSheets = {};
+            else section.groupB.examConfig.activeSheets = {};
         },
         //show pincode 
         showinfo(){
@@ -3018,6 +3028,30 @@ hr {
 
 .custom-swal2-icon {
     margin: 3em auto 1em auto !important
+}
+
+.extension-button-sidebar {
+    width: 14px;
+    height: 31px;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.vertical-text-sidebar {
+    writing-mode: vertical-rl;
+    font-size: 0.7em;
+    color: whitesmoke;
+    text-align: center;
+    transform: translateX(-10%);
+}
+
+.filename-button {
+    max-width: 158px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 
