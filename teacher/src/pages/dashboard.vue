@@ -742,6 +742,7 @@ export default {
 
                         formsUrl: null,
                         msOfficeFile: null, 
+                        activeSheetFile: null,
                         linespacing: 2, 
                         languagetool: false,
                         fontfamily: "sans-serif", 
@@ -772,6 +773,7 @@ export default {
 
                         formsUrl: null,
                         msOfficeFile: null, 
+                        activeSheetFile: null,
                         linespacing: 2, 
                         languagetool: false,
                         fontfamily: "sans-serif", 
@@ -802,6 +804,7 @@ export default {
 
                         formsUrl: null,
                         msOfficeFile: null, 
+                        activeSheetFile: null,
                         linespacing: 2, 
                         languagetool: false,
                         fontfamily: "sans-serif", 
@@ -830,6 +833,7 @@ export default {
 
                         formsUrl: null,
                         msOfficeFile: null, 
+                        activeSheetFile: null,
                         linespacing: 2, 
                         languagetool: false,
                         fontfamily: "sans-serif", 

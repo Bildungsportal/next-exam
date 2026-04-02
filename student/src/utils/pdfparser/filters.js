@@ -28,19 +28,19 @@ export const filterMethods = {
         if (!boxes || boxes.length === 0) {
             return [];
         }
-
-        const tolerance = this.DUPLICATE_TOLERANCE_PX;
+        const dupTolerance = 4; // px tolerance for duplicate boxes at same position
         const keep = new Array(boxes.length).fill(true);
         const rects = boxes.map((box) => this.getRectFromStyle(box.style));
         let removedDuplicates = 0;
         let removedContainers = 0;
 
         const contains = (rectA, rectB) =>
-            rectB.left >= rectA.left &&
-            rectB.right <= rectA.right &&
-            rectB.top >= rectA.top &&
-            rectB.bottom <= rectA.bottom;
+            rectB.left >= rectA.left - 2 &&
+            rectB.right <= rectA.right + 2 &&
+            rectB.top >= rectA.top - 2 &&
+            rectB.bottom <= rectA.bottom + 2;
 
+        // Pass 1: remove true duplicates (same position AND same size within 3px)
         for (let i = 0; i < boxes.length; i += 1) {
             if (!keep[i]) continue;
             for (let j = i + 1; j < boxes.length; j += 1) {
@@ -48,11 +48,11 @@ export const filterMethods = {
                 const ri = rects[i];
                 const rj = rects[j];
                 const samePos =
-                    Math.abs(ri.left - rj.left) <= tolerance &&
-                    Math.abs(ri.top - rj.top) <= tolerance;
+                    Math.abs(ri.left - rj.left) <= dupTolerance &&
+                    Math.abs(ri.top - rj.top) <= dupTolerance;
                 const sameSize =
-                    Math.abs(ri.width - rj.width) <= tolerance &&
-                    Math.abs(ri.height - rj.height) <= tolerance;
+                    Math.abs(ri.width - rj.width) <= dupTolerance &&
+                    Math.abs(ri.height - rj.height) <= dupTolerance;
 
                 if (samePos && sameSize) {
                     keep[j] = false;
@@ -61,21 +61,32 @@ export const filterMethods = {
             }
         }
 
+
+        // Pass 2: remove structural container rectangles.
+        // A box is a container if it contains at least one smaller kept box.
+        // Small interactive fields (checkbox/deselect or tiny text boxes) are
+        // never removed — they are always leaf nodes, never containers.
+        const SMALL_FIELD_MAX = 40; // px — boxes smaller than this on both axes are protected
         for (let i = 0; i < boxes.length; i += 1) {
             if (!keep[i]) continue;
             const rectI = rects[i];
-            const areaI = rectI.area;
 
+            // Protect small fields unconditionally
+            if (rectI.width <= SMALL_FIELD_MAX && rectI.height <= SMALL_FIELD_MAX) continue;
+
+            let containsSmaller = false;
             for (let j = 0; j < boxes.length; j += 1) {
                 if (i === j || !keep[j]) continue;
                 const rectJ = rects[j];
-                const areaJ = rectJ.area;
-
-                if (areaI > areaJ && contains(rectI, rectJ)) {
-                    keep[i] = false;
-                    removedContainers += 1;
+                if (rectI.area > rectJ.area && contains(rectI, rectJ)) {
+                    containsSmaller = true;
                     break;
                 }
+            }
+
+            if (containsSmaller) {
+                keep[i] = false;
+                removedContainers += 1;
             }
         }
 
@@ -91,10 +102,10 @@ export const filterMethods = {
     /**
      * Filter out boxes that contain text items (coarse).
      */
-    async filterBoxesWithText(boxFields, page, viewport) {
+    async filterBoxesWithText(boxFields, page, viewport, cachedTextContent = null) {
         if (!boxFields || boxFields.length === 0) return boxFields;
 
-        const textContent = await page.getTextContent();
+        const textContent = cachedTextContent ?? await page.getTextContent();
         if (!textContent || !textContent.items || textContent.items.length === 0) {
             return boxFields;
         }
@@ -150,10 +161,10 @@ export const filterMethods = {
     /**
      * Filter out boxes that overlap text items (precise).
      */
-    async filterBoxesWithTextPrecise(boxFields, page, viewport) {
+    async filterBoxesWithTextPrecise(boxFields, page, viewport, cachedTextContent = null) {
         if (!boxFields || boxFields.length === 0) return boxFields;
 
-        const textContent = await page.getTextContent();
+        const textContent = cachedTextContent ?? await page.getTextContent();
         if (!textContent || !textContent.items || textContent.items.length === 0) {
             return boxFields;
         }
@@ -168,6 +179,46 @@ export const filterMethods = {
 
             const rect = this.getRectFromStyle(box.style);
             const overlapTol = 3;
+
+            // --- Angabe-Rechteck detection ---
+            // Collect all text items whose center lies fully inside this box.
+            // If the contained text has more than one word (or more than one
+            // non-trivial token), the rectangle is a label/info frame and must
+            // not become an interactive input field.
+            const containedWords = [];
+            for (const item of textContent.items) {
+                if (!item.str || !item.str.trim()) continue;
+
+                const tx2 = pdfjsLib.Util.transform(viewport.transform, item.transform);
+                const fs2 = Math.sqrt(tx2[0] * tx2[0] + tx2[1] * tx2[1]);
+                const cx = tx2[4] + (typeof item.width === 'number' ? Math.abs(item.width) : fs2) / 2;
+                const cy = tx2[5] - fs2 / 2;
+
+                const inside =
+                    cx >= rect.left - overlapTol &&
+                    cx <= rect.right + overlapTol &&
+                    cy >= rect.top - overlapTol &&
+                    cy <= rect.bottom + overlapTol;
+
+                if (inside) {
+                    // Count words in this item
+                    const words = item.str.trim().split(/\s+/).filter(w => w.length > 0);
+                    containedWords.push(...words);
+                }
+            }
+
+            // A single letter/digit or empty box → keep as interactive field.
+            // Two or more distinct words → info/label frame → drop it.
+            if (containedWords.length > 1) {
+                // Still allow the box if the "words" are really just single
+                // characters (e.g. "A B C D" answer labels inside a cell) — that
+                // means every token is a single character.
+                const allSingleChars = containedWords.every(w => w.length === 1);
+                if (!allSingleChars) {
+                    return false;
+                }
+            }
+            // --- end Angabe-Rechteck detection ---
 
             for (const item of textContent.items) {
                 if (!item.str || !item.str.trim()) continue;
