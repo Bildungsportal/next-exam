@@ -165,6 +165,7 @@ const initialViewport = page.getViewport({ scale: 1.5 });
 
         if (this.enableLogging) {
             console.log(`[PDF p${pageNum}] after filterAndMerge: ${boxFields.length}, after filterBoxesWithText: ${boxFieldsWithoutText.length}, after filterBoxesWithTextPrecise: ${boxFieldsPreciseFilter.length}`);
+            boxFieldsPreciseFilter.forEach(b => console.log(`  FIELD: type=${b.type} x=${parseFloat(b.style.left).toFixed(1)} y=${parseFloat(b.style.top).toFixed(1)} w=${parseFloat(b.style.width).toFixed(1)} h=${parseFloat(b.style.height).toFixed(1)}`));
         }
 
         const allFields = [...clozeFields, ...boxFieldsPreciseFilter];
@@ -176,7 +177,7 @@ const initialViewport = page.getViewport({ scale: 1.5 });
         const warnings = [];
         const hasWarning = isVectorizedPage || totalFields < this.SCAN_MIN_BOXES;
         if (isVectorizedPage) {
-            warnings.push(`pdfparser @ processPage: page ${pageNum} has no extractable text and no form fields — this PDF appears to be a fully vectorized/flattened export (e.g. iLovePDF). Field detection is not supported for this format.`);
+            warnings.push(`This PDF appears to be a fully vectorized export. Automatic field detection is not supported — please add form fields manually.`);
         } else if (totalFields < this.SCAN_MIN_BOXES) {
             const warningMsg = `pdfparser @ processPage: only ${totalFields} fields found (${formFields.length} form fields, ${filteredClozeFields.length} cloze fields, ${filteredBoxFields.length} box fields) - possible scanned PDF without detectable forms`;
             warnings.push(warningMsg);

@@ -381,20 +381,8 @@ export const detectorMethods = {
             pathPoints.push({ x: data[dIndex], y: data[dIndex + 1] });
             dIndex += 2;
           } else if (op === 15) {
-            // curveTo: 3 control points (6 values). Include all for bounding box.
-            pathPoints.push({ x: data[dIndex],     y: data[dIndex + 1] });
-            pathPoints.push({ x: data[dIndex + 2], y: data[dIndex + 3] });
-            pathPoints.push({ x: data[dIndex + 4], y: data[dIndex + 5] });
             dIndex += 6;
-          } else if (op === 16) {
-            // curveTo1 (v): 2 control points + endpoint (4 values), first cp = current
-            pathPoints.push({ x: data[dIndex],     y: data[dIndex + 1] });
-            pathPoints.push({ x: data[dIndex + 2], y: data[dIndex + 3] });
-            dIndex += 4;
-          } else if (op === 17) {
-            // curveTo2 (y): cp1=current, 2 more points (4 values)
-            pathPoints.push({ x: data[dIndex],     y: data[dIndex + 1] });
-            pathPoints.push({ x: data[dIndex + 2], y: data[dIndex + 3] });
+          } else if (op === 16 || op === 17) {
             dIndex += 4;
           }
         }

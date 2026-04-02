@@ -176,7 +176,7 @@ const initialViewport = page.getViewport({ scale: 1.5 });
         const warnings = [];
         const hasWarning = isVectorizedPage || totalFields < this.SCAN_MIN_BOXES;
         if (isVectorizedPage) {
-            warnings.push(`pdfparser @ processPage: page ${pageNum} has no extractable text and no form fields — this PDF appears to be a fully vectorized/flattened export (e.g. iLovePDF). Field detection is not supported for this format.`);
+            warnings.push(`This PDF appears to be a fully vectorized export. Automatic field detection is not supported — please add form fields manually.`);
         } else if (totalFields < this.SCAN_MIN_BOXES) {
             const warningMsg = `pdfparser @ processPage: only ${totalFields} fields found (${formFields.length} form fields, ${filteredClozeFields.length} cloze fields, ${filteredBoxFields.length} box fields) - possible scanned PDF without detectable forms`;
             warnings.push(warningMsg);

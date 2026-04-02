@@ -74,17 +74,33 @@ export const filterMethods = {
             // Protect small fields unconditionally
             if (rectI.width <= SMALL_FIELD_MAX && rectI.height <= SMALL_FIELD_MAX) continue;
 
-            let containsSmaller = false;
+            let shouldRemove = false;
             for (let j = 0; j < boxes.length; j += 1) {
                 if (i === j || !keep[j]) continue;
                 const rectJ = rects[j];
+                // Remove if it contains a smaller kept box
                 if (rectI.area > rectJ.area && contains(rectI, rectJ)) {
-                    containsSmaller = true;
+                    shouldRemove = true;
                     break;
+                }
+                // Also remove non-checkbox boxes that significantly overlap a checkbox/deselect
+                const isCheckboxJ = boxes[j].type === 'checkbox' || boxes[j].type === 'deselect';
+                if (isCheckboxJ) {
+                    const overlapLeft = Math.max(rectI.left, rectJ.left);
+                    const overlapRight = Math.min(rectI.right, rectJ.right);
+                    const overlapTop = Math.max(rectI.top, rectJ.top);
+                    const overlapBottom = Math.min(rectI.bottom, rectJ.bottom);
+                    const overlapW = Math.max(0, overlapRight - overlapLeft);
+                    const overlapH = Math.max(0, overlapBottom - overlapTop);
+                    const overlapArea = overlapW * overlapH;
+                    if (overlapArea > rectJ.area * 0.3) {
+                        shouldRemove = true;
+                        break;
+                    }
                 }
             }
 
-            if (containsSmaller) {
+            if (shouldRemove) {
                 keep[i] = false;
                 removedContainers += 1;
             }

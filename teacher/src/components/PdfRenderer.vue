@@ -27,8 +27,8 @@
             </li>
         </ul>
         <div class="activesheets-banner">
-            <div class="banner-pill">
-                {{ $t('pdf.activesheets') }}
+            <div class="banner-pill" :class="{ 'banner-pill--warning': pdfHasWarning }">
+                {{ pdfHasWarning ? pdfWarningText : $t('pdf.activesheets') }}
             </div>
         </div>
         <div v-if="editMode" class="edit-floating-menu">
@@ -85,15 +85,6 @@
                 @mouseleave="editMode && isDrawing ? cancelDrawing() : null"
             >
                 <img :src="page.imgSrc" class="pdf-bg-image" />
-
-                <div
-                    v-if="page.warnings && page.warnings.length"
-                    class="pdf-warning"
-                >
-                    <p v-for="(warning, wIndex) in page.warnings" :key="wIndex">
-                        {{ warning }}
-                    </p>
-                </div>
 
                 <div
                     v-for="field in page.formFields"
@@ -275,6 +266,13 @@ export default {
     computed: {
         effectiveLoading() {
             return this.loading || this.isParsing;
+        },
+        pdfHasWarning() {
+            return this.parsedPages.some(page => page.hasWarning);
+        },
+        pdfWarningText() {
+            const page = this.parsedPages.find(p => p.hasWarning);
+            return page?.warnings?.[0] ?? '';
         }
     },
     watch: {
@@ -325,7 +323,7 @@ export default {
             this.warningShown = false; // Reset warning flag for new PDF
             try {
                 const uint8 = this.base64ToUint8Array(base64Data);
-                this.parsedPages = await parsePdfToPages(uint8);
+                this.parsedPages = await parsePdfToPages(uint8, { enableLogging: true, debugBoxExtraction: true });
             } catch (error) {
                 console.error('PdfOverlay: Failed to parse PDF data', error);
                 this.parsedPages = [];
@@ -780,6 +778,12 @@ background-color: transparent;
     pointer-events: none;
 }
 
+.banner-pill--warning {
+    color: #5a1a00;
+    background-color: rgba(255, 120, 60, 0.85);
+    border-color: #e05a00;
+}
+
 .pdf-bg-image {
     display: block;
     width: 100%;
@@ -787,22 +791,6 @@ background-color: transparent;
     pointer-events: none;
 }
 
-.pdf-warning {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    right: 10px;
-    background: rgba(255, 193, 7, 0.9);
-    color: #000;
-    padding: 6px 10px;
-    font-size: 0.85rem;
-    border-radius: 4px;
-    z-index: 20;
-}
-
-.pdf-warning p {
-    margin: 0;
-}
 
 .pdf-empty-state {
     text-align: center;
