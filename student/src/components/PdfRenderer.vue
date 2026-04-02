@@ -25,6 +25,7 @@
                 <div
                     v-for="field in page.formFields"
                     :key="field.id"
+                    v-show="!isBlacklisted(field.id)"
                     class="input-overlay"
                     :id="field.id + '_wrapper'"
                     :style="field.style"
@@ -58,6 +59,7 @@
                 <div
                     v-for="cloze in page.clozeFields"
                     :key="cloze.id"
+                    v-show="!isBlacklisted(cloze.id)"
                     :class="['input-overlay', cloze.type === 'checkbox' || cloze.type === 'deselect' ? 'checkbox-overlay' : '']"
                     :id="cloze.id + '_wrapper'"
                     :style="cloze.style"
@@ -90,6 +92,7 @@
                 <div
                     v-for="box in page.boxFields"
                     :key="box.id"
+                    v-show="!isBlacklisted(box.id)"
                     :class="['input-overlay', box.type === 'checkbox' ? 'checkbox-overlay' : '']"
                     :id="box.id + '_wrapper'"
                     :style="box.style"
@@ -177,13 +180,18 @@ export default {
         customFields: {
             type: Array,
             default: () => []
+        },
+        blacklist: {
+            type: Array,
+            default: () => []
         }
     },
     data() {
         return {
             parsedPages: [],
             isParsing: false,
-            warningShown: false
+            warningShown: false,
+            localBlacklist: []
         };
     },
     computed: {
@@ -196,6 +204,12 @@ export default {
             immediate: true,
             handler(newData) {
                 this.processPdf(newData);
+            }
+        },
+        blacklist: {
+            immediate: true,
+            handler(newList) {
+                this.localBlacklist = Array.isArray(newList) ? [...newList] : [];
             }
         },
         parsedPages: {
@@ -271,6 +285,9 @@ export default {
                 return [];
             }
             return this.customFields.filter(field => field.pageIndex === pageIndex);
+        },
+        isBlacklisted(fieldId) {
+            return this.localBlacklist.includes(fieldId);
         }
     }
 };

@@ -165,7 +165,6 @@ const initialViewport = page.getViewport({ scale: 1.5 });
 
         if (this.enableLogging) {
             console.log(`[PDF p${pageNum}] after filterAndMerge: ${boxFields.length}, after filterBoxesWithText: ${boxFieldsWithoutText.length}, after filterBoxesWithTextPrecise: ${boxFieldsPreciseFilter.length}`);
-            boxFieldsPreciseFilter.forEach(b => console.log(`  FIELD: type=${b.type} x=${parseFloat(b.style.left).toFixed(1)} y=${parseFloat(b.style.top).toFixed(1)} w=${parseFloat(b.style.width).toFixed(1)} h=${parseFloat(b.style.height).toFixed(1)}`));
         }
 
         const allFields = [...clozeFields, ...boxFieldsPreciseFilter];

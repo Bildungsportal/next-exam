@@ -418,8 +418,6 @@ function showBase64FilePreview(base64, filename){
 
 // show base64 encoded PDF in PdfRenderer component
 function showBase64PdfInRenderer(base64, filename, group){
-    console.log('[showBase64PdfInRenderer] opening group:', group);
-
     if (group) {
         this.activesheetsPreviewGroup = group;
         const section = this.serverstatus.examSections[this.serverstatus.activeSection];

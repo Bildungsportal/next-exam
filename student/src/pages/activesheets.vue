@@ -447,6 +447,7 @@ export default {
                     this.pdfBase64 = null;
                     this.activeSheetPdfFilename = null;
                     this.customFields = [];
+                    this.blacklist = [];
                 }
                 
                 this.isLoading = false;

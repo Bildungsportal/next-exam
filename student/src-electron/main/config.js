@@ -8,7 +8,7 @@ const config = {
     showdevtools: true,
     useBundledJRE: true,
     bipIntegration: true,
-    bipDemo: true,
+    bipDemo: false,
     bipApiUrl: 'https://localhost:8444',
 
     workdirectory : "",   // (desktop path + examdir)
