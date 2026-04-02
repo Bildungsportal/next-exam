@@ -432,7 +432,8 @@ export default {
         async fetchBipExams() {
             let token = this.decodeBase64AndExtractTokens(this.bipToken)?.[1];
             if (!token) {
-                throw Error("cannot fetch from bip api without valid token")
+                console.error("student.vue@fetchBipExams: cannot fetch from bip api without valid token")
+                return;
             }
             
             const url = this.getBiPUrl() + '/webservice/rest/server.php?wstoken=' + token + '&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json';
@@ -442,11 +443,8 @@ export default {
                 return response.json();
             })
             .then(data => {
-                // console.log("Data from API:", data);
                 this.bipData = data   // Store all of the information in data
-                this.onlineExams = data.exams
-                console.log(data)
-                this.bipAutoconnect()
+                this.onlineExams = data.exams 
             })
             .catch(error => {
                 console.error("Error during API call:", error);
