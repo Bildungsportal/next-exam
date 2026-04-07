@@ -7,6 +7,8 @@ import log from 'electron-log';
 
 let child = null;
 let currentPort = null;
+let currentTargetHost = null;
+let currentTargetPort = null;
 
 function getHelperPath() {
     const __filename = fileURLToPath(import.meta.url);
@@ -56,13 +58,41 @@ async function waitForPort(port, timeoutMs = 1500) {
     return false;
 }
 
+function clearStateIfProcess(proc) {
+    if (child === proc) {
+        child = null;
+        currentPort = null;
+        currentTargetHost = null;
+        currentTargetPort = null;
+    }
+}
+
 export async function startProxy({ host, port }) {
     const scriptPath = getHelperPath();
+    const portNum = Number(port);
 
-    // Wenn der Helper bereits läuft, einfach den bestehenden Proxy-Port zurückgeben
-    if (child && !child.killed && currentPort) {
-        log.info('vncproxy @ startProxy: reusing existing helper on ws port', currentPort);
+    const sameTarget =
+        child &&
+        !child.killed &&
+        currentPort &&
+        currentTargetHost === host &&
+        currentTargetPort === portNum;
+
+    if (sameTarget) {
+        log.info('vncproxy @ startProxy: reusing existing helper on ws port', currentPort, 'for', host, portNum);
         return currentPort;
+    }
+
+    if (child && !child.killed) {
+        log.info(
+            'vncproxy @ startProxy: target changed, restarting helper',
+            currentTargetHost,
+            currentTargetPort,
+            '->',
+            host,
+            portNum
+        );
+        stopProxy();
     }
 
     try {
@@ -78,20 +108,25 @@ export async function startProxy({ host, port }) {
         return null;
     }
 
+    currentTargetHost = host;
+    currentTargetPort = portNum;
+
     try {
-        child = spawn(process.execPath, [scriptPath, host, String(port), String(currentPort)], {
+        const proc = spawn(process.execPath, [scriptPath, host, String(portNum), String(currentPort)], {
             stdio: 'inherit'
         });
-        child.on('exit', (code, signal) => {
+        child = proc;
+        proc.on('exit', (code, signal) => {
             log.info(`vncproxy-helper exited with code ${code}, signal ${signal}`);
-            child = null;
-            currentPort = null;
+            clearStateIfProcess(proc);
         });
-        log.info('vncproxy @ startProxy: helper spawned for target', host, port, 'on ws port', currentPort);
+        log.info('vncproxy @ startProxy: helper spawned for target', host, portNum, 'on ws port', currentPort);
     } catch (err) {
         log.error('vncproxy @ startProxy: failed to spawn helper', err);
         child = null;
         currentPort = null;
+        currentTargetHost = null;
+        currentTargetPort = null;
         return null;
     }
 
@@ -107,6 +142,8 @@ export async function startProxy({ host, port }) {
         }
         child = null;
         currentPort = null;
+        currentTargetHost = null;
+        currentTargetPort = null;
         return null;
     }
 
@@ -122,5 +159,7 @@ export function stopProxy() {
         }
     }
     child = null;
+    currentPort = null;
+    currentTargetHost = null;
+    currentTargetPort = null;
 }
-

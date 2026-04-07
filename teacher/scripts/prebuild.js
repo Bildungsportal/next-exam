@@ -48,7 +48,7 @@ const config = {
         math: ${process.env.EXAMMODE_MATH === 'true'},
         microsoft365: ${process.env.EXAMMODE_MICROSOFT365 === 'true'},
         activesheets: ${process.env.EXAMMODE_ACTIVESHEETS === 'true'},
-        localVM: ${process.env.EXAMMODE_LOCALVM === 'true'}
+        localvm: ${process.env.EXAMMODE_LOCALVM === 'true'}
     },
 
     version: '${process.env.VERSION}.${process.env.BUILD_NUMBER}',

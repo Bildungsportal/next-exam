@@ -33,6 +33,7 @@ import { runRemoteCheck } from './remoteCheck.js'
 import { getVMFindings } from './vmDetection.js'
 import languageToolServer from './lt-server.js';
 import virtualBoxService from './virtualBoxService.js';
+import { stopProxy } from './vncproxy.js';
 const __dirname = import.meta.dirname; 
 import { switchExamSection } from './switchExamSection.js';
  /**
@@ -595,6 +596,7 @@ import { switchExamSection } from './switchExamSection.js';
     async endExam(serverstatus){
         
         WindowHandler.removeBlurListener();
+        stopProxy();
       
         //only disable restrictions if not in exam mode ( seriosuly.. how could this ever happen? )
         if (this.multicastClient.clientinfo.exammode){

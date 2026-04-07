@@ -35,11 +35,11 @@ const config = {
         math: true,
         microsoft365: true,
         activesheets: true,
-        localVM: true
+        localvm: true
     },
 
     version: '2.0.0.1',
-    buildDate: '20260402',
+    buildDate: '20260407',
     buildNumber: '1',
     info: 'Release'
 }

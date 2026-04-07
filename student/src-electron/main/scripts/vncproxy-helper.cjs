@@ -48,7 +48,11 @@ wss.on('connection', (ws) => {
 
   ws.on('close', cleanup);
   ws.on('error', cleanup);
-  tcp.on('error', cleanup);
+  // Surface TCP failures (wrong host/port or VNC not listening) in the helper stderr stream
+  tcp.on('error', (err) => {
+    console.error('vncproxy-helper: tcp error', host, targetPort, err && err.message ? err.message : err);
+    cleanup();
+  });
   tcp.on('end', cleanup);
 });
 

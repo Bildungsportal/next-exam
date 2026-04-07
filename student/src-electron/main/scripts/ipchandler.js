@@ -37,7 +37,7 @@ import { updateSystemTray } from './traymenu.js';
 import { ensureNetworkOrReset } from './testpermissionsMac.js';
 import { getWlanInfo } from './getwlaninfo.js';
 import { switchExamSection } from './switchExamSection.js';
-import { startProxy, stopProxy } from './vncproxy.js';
+import { startProxy } from './vncproxy.js';
 import { getVMFindings } from './vmDetection.js';
 
 const __dirname = import.meta.dirname;
