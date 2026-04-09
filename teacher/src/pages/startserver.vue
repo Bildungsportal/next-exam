@@ -266,9 +266,9 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 import {Exam} from "../types/api";
 
 
-// Erfassen von unhandled promise rejections
+// Capture unhandled promise rejections
 window.addEventListener('unhandledrejection', event => {
-  log.error('Unhandled promise rejection:', event.reason); // Loggen des Fehlers
+  log.error('Unhandled promise rejection:', event.reason);
 });
 
 Object.assign(console, log.functions);
@@ -282,7 +282,7 @@ export default {
         return {
             version: this.$route.params.version,
             info: config.info,
-            config: this.$route.params.config,  //achtung: config enthält rekursive elemente und wird daher in ipchandler.copyConfig() kopiert
+            config: this.$route.params.config,  // warning: config contains recursive elements, copied in ipchandler.copyConfig()
             buildDate: this.$route.params.config.buildDate,
             title: document.title,
             servername : this.$route.params.config.development ? "5a-mathematik":"",
@@ -303,7 +303,7 @@ export default {
             selectedExam: null,
             bipNameConflict: false,
 
-            bipToken:this.$route.params.bipToken === 'false' || !this.$route.params.bipToken ?  false : this.$route.params.bipToken,   // parameter werden immer als string "false" übergeben, convert to bool
+            bipToken:this.$route.params.bipToken === 'false' || !this.$route.params.bipToken ?  false : this.$route.params.bipToken,   // params are always passed as string "false", convert to bool
             bipuserID: this.$route.params.bipuserID === 'false' || !this.$route.params.bipuserID ?  false : this.$route.params.bipuserID,
             bipUsername:this.$route.params.bipUsername === 'false' || !this.$route.params.bipUsername ?  false : this.$route.params.bipUsername,
 
@@ -315,10 +315,10 @@ export default {
     },
     components: {},
     directives: {
-        // Diese Direktive sucht alle <a>-Tags in dem Element und fügt target="_blank" hinzu. (zb. für Digi4school Schulbücher die ausschliesslich in einem Popup angezeigt werden sollen)
+        // Finds all <a> tags and adds target="_blank" (e.g. for Digi4school books that must open in a popup)
         externalLinks: {
             mounted(el) {
-                // Wird beim ersten Rendern ausgeführt (in Vue 3 ist "mounted" anstelle von "inserted")
+                // Runs on first render (Vue 3 uses "mounted" instead of "inserted")
                 const links = el.querySelectorAll("a");
                 links.forEach(link => {
                     link.setAttribute("target", "_blank");
@@ -327,7 +327,7 @@ export default {
 
             },
             updated(el) {
-                // Wird auch bei Aktualisierungen des Inhalts ausgeführt
+                // Also runs on content updates
                 const links = el.querySelectorAll("a");
                 links.forEach(link => {
                     link.setAttribute("target", "_blank");
@@ -337,7 +337,7 @@ export default {
         }
     },
     computed: {
-        inactivelocale() { // Zeigt aktuellen Sprachcode
+        inactivelocale() { // Returns the inactive locale code
              return this.$i18n.locale === 'de' ? 'en' : 'de';
         },
         previousLocalExams() {
@@ -351,7 +351,7 @@ export default {
     methods: {
         formatUnixDate(value) {
             if (!value) return "";
-            // Falls der Unix-Timestamp in Sekunden vorliegt (typischerweise 10-stellig), multiplizieren wir ihn mit 1000.
+            // If timestamp is in seconds (10 digits), multiply by 1000
             let timestamp = Number(value);
             if (timestamp < 10000000000) {
                 timestamp *= 1000;
@@ -365,7 +365,7 @@ export default {
 
 
         toggleLocale() {
-            // Umschalte zwischen 'de' und 'en'
+            // Toggle between 'de' and 'en'
             this.$i18n.locale = this.$i18n.locale === 'de' ? 'en' : 'de';
         },
 
@@ -416,7 +416,7 @@ export default {
         },
 
         /**
-         * holt userdaten sobald das login token erhalten wurde
+         * Fetches user data once the login token has been received.
          * @param base64String contains 2 base64 encoded tokens
          */
         fetchBiPData(base64String){
@@ -469,7 +469,7 @@ export default {
         },
 
         /**
-         * lädt vorkonfigurierte exams vom bildungsportal via bip/api
+         * Fetches pre-configured exams from the Bildungsportal via BiP API.
          */
         fetchBipExams(){
             let token = this.decodeBase64AndExtractTokens(this.bipToken)?.[1];
@@ -483,14 +483,14 @@ export default {
             fetch(url, { method: "GET" })
             .then(response => { return response.json(); } )                  
             .then(data => {
-                //console.log("Daten von der API:", data);
+                //console.log("Data from API:", data);
                 this.bipData = data   // store all of the information in data
 
                 this.onlineExams.splice(0)
                 this.onlineExams.push(...data.exams)
 
             })
-            .catch(error => { console.error("Fehler beim API-Aufruf:", error);});
+            .catch(error => { console.error("API call failed:", error);});
         },
 
 
@@ -647,7 +647,7 @@ export default {
 
 
 
-        // Überprüfen, ob der String Base64-codiert ist
+        // Check if a string is Base64-encoded
         isBase64(str) {
             try {
                 return btoa(atob(str)) === str;
@@ -656,13 +656,13 @@ export default {
             }
         },
 
-        // Base64-String dekodieren und mögliche Tokens extrahieren
+        // Decode a Base64 string and extract tokens
         decodeBase64AndExtractTokens(base64Str) {
             if (base64Str == null || !this.isBase64(base64Str)) {
                 return null;
             }
             const decodedStr = atob(base64Str);
-            const tokens = decodedStr.split(/[:\s,]+/); // Trennzeichen anpassen, falls nötig
+            const tokens = decodedStr.split(/[:\s,]+/); // adjust separators if needed
             return tokens;
         },
 
@@ -739,7 +739,7 @@ export default {
 
 
 
-        async checkDiscspace(){   // achtung: custom workdir spreizt sich mit der idee die teacher instanz als reine webversion laufen zulassen - wontfix?
+        async checkDiscspace(){   // note: custom workdir conflicts with running teacher as pure web instance - wontfix
            this.freeDiscspace = await ipcRenderer.invoke('checkDiscspace')
         },
 
@@ -754,22 +754,22 @@ export default {
            // console.log("previousExams:", this.previousExams)
 
 
-            this.config = await ipcRenderer.invoke('getconfigasync') 
-            this.workdir = this.config.workdirectory   // just in case this is already altered in the backend make sure to display current settings
+            this.config = await ipcRenderer.invoke('getconfigasync')
+            this.workdir = this.config.workdirectory   // reflect any backend changes to workdir
             this.backupdir = this.config.backupdirectory || ''
         },
 
 
-        /**  setzt das feld prüfungsname auf den namen des angeklickten prüfungsverzeichnisses */
+        /** Sets the exam name field to the clicked exam directory name. */
         async setPreviousExam(exam){
             this.servername = exam.examName
             this.selectedExam = exam
 
-            this.checkExistingExam()  //ändert den text am startbutton
+            this.checkExistingExam()  // updates start button label
         },
 
 
-        /** überprüft ob die ausgewählte prüfung bereits existiert und ändert den text am startbutton */
+        /** Checks if the selected exam already exists and updates the start button accordingly. */
         async checkExistingExam(){
             const examstart = document.getElementById('examstart')
             const examPasswordDiv = document.getElementById('examPassword')
@@ -778,7 +778,7 @@ export default {
                 const previousExam = this.previousExams[i] // current exam object
                 if (previousExam.examName === this.servername) {
 
-                    // BiP-Prüfung mit gleichem Namen: blockieren wenn wir im lokalen Tab sind
+                    // BiP exam with same name: block if we are in the local tab
                     if (previousExam.bip && this.activeTab !== 'bildungsportal') {
                         this.backupdir = ''
                         this.bipNameConflict = true
@@ -811,7 +811,7 @@ export default {
                 }
             }
 
-            // kein match gefunden
+            // no match found
             this.bipNameConflict = false
             this.backupdir = ''
             if (examstart) {
@@ -823,9 +823,9 @@ export default {
             }
         },
 
-        /** löscht die ausgewählte prüfung */
+        /** Deletes the selected exam. */
         delPreviousExam(name){
-            // ASK for confirmation!
+            // Ask for confirmation!
             this.$swal.fire({
                 customClass: {
                     popup: 'my-popup',
