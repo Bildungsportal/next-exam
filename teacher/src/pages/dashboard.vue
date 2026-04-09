@@ -1828,7 +1828,7 @@ computed: {
         async updateBiPServerInfo(status){
             let token = this.decodeBase64AndExtractTokens(this.bipToken)?.[1];
             if (!token || !this.serverstatus.bip) {
-                throw Error("cannot fetch from bip api without valid token")
+                console.error("dashboard @ updateBiPServerInfo: cannot fetch from bip api without valid token")
             }
 
             //console.log("bip exam - updating server info")

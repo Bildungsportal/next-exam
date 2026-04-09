@@ -79,6 +79,7 @@
                 <div class="input-group  mb-1 mt-0">
                     <span class="input-group-text col-2 grayback" id="inputGroup-sizing-lg" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.examname")}}</span>
                     <input v-model="servername" @paste.prevent @drop.prevent @click="servername = ''; checkExistingExam()" maxlength="20" type="text" class="form-control" id="servername" placeholder="5a-mathematik" style="width:200px;max-width:200px;min-width:135px;">
+                    <span v-if="bipNameConflict" class="text-warning ms-2 align-self-center" style="font-size:0.8em;">⚠ {{$t("startserver.bipNameConflictShort")}}</span>
                 </div>
 
                 <!-- could be used to set an ESCAPE PASSWORD for students to make it harder to leave on connection loss -->
@@ -300,6 +301,7 @@ export default {
             onlineExams: [] as Exam[],
             biptest:true,   //switches between production and q
             selectedExam: null,
+            bipNameConflict: false,
 
             bipToken:this.$route.params.bipToken === 'false' || !this.$route.params.bipToken ?  false : this.$route.params.bipToken,   // parameter werden immer als string "false" übergeben, convert to bool
             bipuserID: this.$route.params.bipuserID === 'false' || !this.$route.params.bipuserID ?  false : this.$route.params.bipuserID,
@@ -769,41 +771,56 @@ export default {
 
         /** überprüft ob die ausgewählte prüfung bereits existiert und ändert den text am startbutton */
         async checkExistingExam(){
+            const examstart = document.getElementById('examstart')
+            const examPasswordDiv = document.getElementById('examPassword')
+
             for (let i = 0; i < this.previousExams.length; i++) {
                 const previousExam = this.previousExams[i] // current exam object
                 if (previousExam.examName === this.servername) {
+
+                    // BiP-Prüfung mit gleichem Namen: blockieren wenn wir im lokalen Tab sind
+                    if (previousExam.bip && this.activeTab !== 'bildungsportal') {
+                        this.backupdir = ''
+                        this.bipNameConflict = true
+                        if (examstart) examstart.classList.add('disabledstart')
+                        if (examPasswordDiv) examPasswordDiv.disabled = false
+                        return
+                    }
+
+                    this.bipNameConflict = false
                     this.password = ""
                     this.advanced = false
                     this.backupdir = previousExam.backupdirectory || ''
                     let hasExamPassword = typeof previousExam.examPassword === 'string' && previousExam.examPassword.trim() !== ''
 
                     if (hasExamPassword) {
-                        // make password field visible to signal the user that a password is set   
+                        // make password field visible to signal the user that a password is set
                         this.password = previousExam.examPassword
                         this.advanced = true
                         await this.$nextTick();
 
                     }
-                    const examstart = document.getElementById('examstart')
-                    if (examstart) examstart.innerHTML = this.$t("startserver.resume")
-                    let examPasswordDiv = document.getElementById('examPassword')
-               
+                    if (examstart) {
+                        examstart.innerHTML = this.$t("startserver.resume")
+                        examstart.classList.remove('disabledstart')
+                    }
                     if (examPasswordDiv){
                         examPasswordDiv.disabled = hasExamPassword  // lock only if a real password is set
                     }
-                    break
-                } 
-                else {
-                    this.backupdir = ''
-                    const examstart = document.getElementById('examstart')
-                    if (examstart) examstart.innerHTML = this.$t("startserver.start")
-
-                    let examPasswordDiv = document.getElementById('examPassword')
-                    if (examPasswordDiv){
-                        examPasswordDiv.disabled = false  // unlock password input field if no existing exam is found
-                    }
+                    return
                 }
-            }        
+            }
+
+            // kein match gefunden
+            this.bipNameConflict = false
+            this.backupdir = ''
+            if (examstart) {
+                examstart.innerHTML = this.$t("startserver.start")
+                examstart.classList.remove('disabledstart')
+            }
+            if (examPasswordDiv){
+                examPasswordDiv.disabled = false
+            }
         },
 
         /** löscht die ausgewählte prüfung */
@@ -858,12 +875,19 @@ export default {
 
         async startServer(){
             if (this.servername === "" ){
-                this.status(this.$t("startserver.emptyname")); 
+                this.status(this.$t("startserver.emptyname"));
             }
             // else if (this.password === ""){
-            //     this.status(this.$t("startserver.emptypw")); 
+            //     this.status(this.$t("startserver.emptypw"));
             // }
             else {
+                // Block if a BiP exam with this name exists locally but we're in the local tab
+                const conflictingBipExam = this.previousExams.find(e => e.examName === this.servername && e.bip)
+                if (conflictingBipExam && this.activeTab !== 'bildungsportal') {
+                    this.status(this.$t("startserver.bipNameConflictInfo"))
+                    return
+                }
+
                 let isBip = this.selectedExam && this.selectedExam.bip && this.servername === this.selectedExam.examName ? true : false
                 let bipId = this.selectedExam && this.selectedExam.id ? this.selectedExam.id : null
 

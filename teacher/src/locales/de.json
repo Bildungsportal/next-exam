@@ -29,6 +29,8 @@
         "folderdelete": "Wollen Sie den lokalen Prüfungsordner löschen?",
         "onlineexams": "BiP Prüfungen",
         "bipnotloggedin": "Bitte melden Sie sich am BiP an, bevor Sie die Prüfung starten",
+        "bipNameConflictInfo": "Eine BiP-Prüfung mit diesem Namen existiert bereits lokal. Wechseln Sie zum Tab 'Bildungsportal' um sie fortzusetzen.",
+        "bipNameConflictShort": "Eine BiP-Prüfung mit diesem Namen existiert bereits lokal.",
         "bipwelcome": "Herzlich Willkommen",
         "bippleaselogin": "Bitte melden Sie sich am Bildungsportal an, um die geplanten Prüfungen anzuzeigen.",
         "noNews":"Keine Neuigkeiten verfügbar",
