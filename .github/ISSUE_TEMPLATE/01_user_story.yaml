@@ -29,7 +29,7 @@ body:
         - WHEN ich einen Prüfungszeitraum angebe
         - THEN wird dieser Zeitraum im Prüfungsübersicht angezeigt und nach Ablauf wird die Prüfung automatisch beendet
     validations:
-      required: true
+      required: false
   - type: input
     id: design-link
     attributes:
