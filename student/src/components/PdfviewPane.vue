@@ -13,8 +13,9 @@
       
             <!-- print button -->
             <li v-if="!localLockdown && toolbar.showPrint" class="nav-item">
-                <div class="nav-link btn btn-light btn-sm unstyled" id="print-button" @click="printBase64(true)" :title="$t('editor.print')">
+                <div class="nav-link btn btn-success btn-sm unstyled unstyled-send" id="print-button" @click="printBase64(true)" :title="$t('editor.printToPrinter')">
                     <img src="/src/assets/img/svg/print.svg" class="white" >
+                    <span class="ms-2 send-label">{{ $t('editor.printToPrinter') }}</span>
                 </div>
             </li>
 

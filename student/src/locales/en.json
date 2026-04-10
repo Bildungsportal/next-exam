@@ -89,6 +89,7 @@
         "paste": "paste",
         "playaudio": "Play Audio",
         "print": "print",
+        "printToPrinter": "Print document",
         "reallyplay": "Do you want to play the audiofile?",
         "reconnect": "reconnect",
         "redo": "redo",

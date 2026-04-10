@@ -9,7 +9,7 @@ import { execSync } from 'child_process';
 import os from 'os';
 import log from 'electron-log';
 
-const VENDORS = /(oracle|virtualbox|vmware|kvm|qemu|xen|innotek|parallels|microsoft|hyper-v|bhyve|red hat|redhat|bochs|bhyve|openstack|cloud|amazon|google|azure)/i;
+const VENDORS = /(oracle|virtualbox|vmware|kvm|qemu|xen|innotek|parallels|hyper-v|bhyve|red hat|redhat|bochs|bhyve|openstack|cloud|amazon|azure)/i;
 
 /** @type {{ isVM: boolean, reasons: string[], vendor: string | null, hasRun: boolean }} */
 let cachedFindings = { isVM: false, reasons: [], vendor: null, hasRun: false };
