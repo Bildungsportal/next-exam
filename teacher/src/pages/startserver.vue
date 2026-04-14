@@ -386,7 +386,7 @@ export default {
         },
 
         logoutBiP(){
-            this.$swal({
+            this.$swal.fire({
                 title: this.$t("dashboard.bildungsportal"),
                 text:  this.$t("dashboard.logoutBiP"),
                 showCancelButton: true,
@@ -487,7 +487,7 @@ export default {
                 this.bipData = data   // store all of the information in data
 
                 this.onlineExams.splice(0)
-                this.onlineExams.push(...data.exams)
+                this.onlineExams.push(...(data.exams ?? []))
 
             })
             .catch(error => { console.error("API call failed:", error);});
