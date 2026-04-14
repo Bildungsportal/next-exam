@@ -443,8 +443,8 @@ export default {
                 return response.json();
             })
             .then(data => {
-                this.bipData = data   // Store all of the information in data
-                this.onlineExams = data.exams 
+                this.bipData = data
+                this.onlineExams = Array.isArray(data?.exams) ? data.exams : []
             })
             .catch(error => {
                 console.error("Error during API call:", error);
@@ -460,7 +460,7 @@ export default {
 
             fetch(url, {method: 'POST'})
                 .then(res => res.json())
-                .then(response => {
+                .then(async (response) => {
                     if (response.fullname){
                         this.$swal.fire({
                             title: "BiP Response",
@@ -478,8 +478,8 @@ export default {
                         document.querySelector("#biplogo").style.filter = "hue-rotate(140deg)"
                         document.getElementById("biploginbutton").classList.add("disabledbutton");
 
-
-                        this.fetchBipExams()
+                        await this.fetchBipExams()
+                        await this.fetchInfo()
                     }
                     else {
                         this.$swal.fire({
@@ -825,6 +825,71 @@ export default {
             delete this.serverFailureCount[serverIdentifier];
         },
 
+        /** Merge BiP portal exams into a server list (works with or without multicast / manual IP servers). */
+        mergeBipExamsIntoServerlist(newServerlist) {
+            if (!this.onlineExams?.length) {
+                return newServerlist;
+            }
+            this.onlineExams.forEach(exam => {
+                const examId = exam.id || exam.examName;
+                const existingInNewList = newServerlist.find(s => (s.id || s.servername) === examId);
+                const existingInCurrentList = this.serverlist.find(s => (s.id || s.servername) === examId);
+
+                if (existingInNewList) {
+                    if (existingInNewList.examStatus !== exam.examStatus) {
+                        existingInNewList.examStatus = exam.examStatus;
+                    }
+                } else if (existingInCurrentList) {
+                    const updatedServer = {
+                        ...existingInCurrentList,
+                        examStatus: exam.examStatus,
+                    };
+                    newServerlist.push(updatedServer);
+                } else {
+                    const newServer = {
+                        id: exam.id,
+                        servername: exam.examName,
+                        reachable: true,
+                        serverport: this.serverApiPort,
+                        timestamp: Date.now(),
+                        bip: true,
+                        examStatus: exam.examStatus,
+                        version: exam.version
+                    };
+                    newServerlist.push(newServer);
+                }
+            });
+            return newServerlist;
+        },
+
+        dedupeServerlistById(newServerlist) {
+            return newServerlist.reduce((unique, server) => {
+                if (!unique.some(u => u.id === server.id)) {
+                    unique.push(server);
+                }
+                return unique;
+            }, []);
+        },
+
+        applyOnlineExamStatusToServerlist() {
+            if (!this.onlineExams?.length) {
+                return;
+            }
+            let hasChanges = false;
+            this.onlineExams.forEach(exam => {
+                const existingServer = this.serverlist.find(server => server.id === exam.id);
+                if (existingServer) {
+                    if (existingServer.examStatus !== exam.examStatus) {
+                        existingServer.examStatus = exam.examStatus;
+                        hasChanges = true;
+                    }
+                }
+            });
+            if (hasChanges) {
+                this.serverlist = [...this.serverlist];
+            }
+        },
+
 
         async fetchInfo() {
             let getinfo = await signalBridge.invoke('getinfoasync')  // gets serverlist and clientinfo from multicastclient
@@ -913,53 +978,8 @@ export default {
                     newServerlist = [...newServerlist, ...this.serverlistAdvanced];
 
                 }
-                // add bip servers to newServerlist
-                if (this.onlineExams.length > 0) {
-                    this.onlineExams.forEach(exam => {
-                        // Optimized: Check if server already exists in newServerlist or current serverlist
-                        const examId = exam.id || exam.examName;
-                        const existingInNewList = newServerlist.find(s => (s.id || s.servername) === examId);
-                        const existingInCurrentList = this.serverlist.find(s => (s.id || s.servername) === examId);
-
-                        if (existingInNewList) {
-                            // Server already exists in newServerlist, only update examStatus
-                            if (existingInNewList.examStatus !== exam.examStatus) {
-                                existingInNewList.examStatus = exam.examStatus;
-                            }
-                        } else if (existingInCurrentList) {
-                            // Server exists in current list, but not in newServerlist
-                            // Use existing server and update only relevant properties
-                            const updatedServer = {
-                                ...existingInCurrentList,
-                                examStatus: exam.examStatus,
-                                // Timestamp remains unchanged
-                            };
-                            newServerlist.push(updatedServer);
-                        } else {
-                            // Create new server entry in serverlist format (only for new servers)
-                            const newServer = {
-                                id: exam.id,
-                                servername: exam.examName,
-                                reachable: true,
-                                serverport: this.serverApiPort,
-                                timestamp: Date.now(), // Only for new servers
-                                bip: true,
-                                examStatus: exam.examStatus,
-                                version: exam.version
-                            };
-                            newServerlist.push(newServer);
-                        }
-                    })
-                }
-
-                // Remove duplicate servers from newServerlist
-                newServerlist = newServerlist.reduce((unique, server) => {
-                    if (!unique.some(u => u.id === server.id)) {  // Check if server already exists in array based on serverip and servername
-                        unique.push(server); // Add server if it doesn't exist
-                    }
-                    return unique;
-                }, []);
-
+                newServerlist = this.mergeBipExamsIntoServerlist(newServerlist);
+                newServerlist = this.dedupeServerlistById(newServerlist);
 
                 // Optimized: Update serverlist only if relevant data has changed
                 if (!this.isServerlistEqual(this.serverlist, newServerlist)) {
@@ -967,46 +987,27 @@ export default {
                     this.serverlist = newServerlist // update serverlist - but only if there are new servers or relevant changes
                 }
 
-                // Optimized: Update exam status only if status has actually changed
-                if (this.onlineExams.length > 0) {
-                    let hasChanges = false;
-                    this.onlineExams.forEach(exam => {
-                        // Only exams that were also created for the student are updated via the API and their exam status is set - other exams that are also bip-exams therefore have no exam status
-                        const existingServer = this.serverlist.find(server => server.id === exam.id);// Check if server already exists in currentserverlist
-                        if (existingServer) {
-                            if (existingServer.examStatus !== exam.examStatus) {
-                                console.log("student.vue @ fetchInfo: updating exam status for existing server")
-                                existingServer.examStatus = exam.examStatus;
-                                hasChanges = true;
-                            }
-                        }
-                    });
-                    // Only trigger re-render if something has changed
-                    if (hasChanges) {
-                        // Vue automatically detects the change through direct mutation
-                        // but we still set a new reference to be safe
-                        this.serverlist = [...this.serverlist];
-                    }
-                }
+                this.applyOnlineExamStatusToServerlist();
 
 
             } 
-            else {  // Sometimes explicit is easier to read (no servers incoming via multicast)
-                if (this.serverlistAdvanced.length !== 0) {  // One server coming via direct ip polling
-                    // Optimized: Compare with isServerlistEqual instead of only server names
-                    if (!this.isServerlistEqual(this.serverlist, this.serverlistAdvanced)) {
-                        this.serverlist = this.serverlistAdvanced;
-                    }
+            else {  // No multicast: still show manual IP servers and BiP exams from the portal
+                let newServerlist = this.serverlistAdvanced.length !== 0 ? [...this.serverlistAdvanced] : [];
+                newServerlist = this.mergeBipExamsIntoServerlist(newServerlist);
+                newServerlist = this.dedupeServerlistById(newServerlist);
+
+                if (newServerlist.length > 0) {
+                    this.safeAssign('servertimeout', 0);
                 } else {
-                    // Optimized: Only set if list is not already empty
-                    if (this.serverlist.length !== 0) {
-                        this.serverlist = [];
-                    }
-                    // Optimized: Only increment servertimeout if not already high enough
                     if (this.servertimeout <= 2) {
                         this.servertimeout++;
                     }
                 }
+
+                if (!this.isServerlistEqual(this.serverlist, newServerlist)) {
+                    this.serverlist = newServerlist;
+                }
+                this.applyOnlineExamStatusToServerlist();
             }
 
 
