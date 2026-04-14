@@ -43,9 +43,9 @@ export type Section = {
   sectionname: string,
   spellchecklang: string | null,
   suggestions: boolean | null,
-  moodleTestId: null, // Remove?
-  moodleDomain: null, // Remove?
-  moodleURL: null, // Remove?
+  moodleTestId: number | null,
+  moodleDomain: string | null,
+  moodleURL: string | null,
   cmargin: Margin[],
   formsUrl: string | null,
   msOfficeFile: boolean | null, // Remove?
@@ -54,7 +54,9 @@ export type Section = {
   fontfamily: string | null,
   fontsize: number | null,
   audioRepeat: number | null,
-  domainname: boolean | null, // Remove?
+  domainname: string | null,
+  blockSubdomains: boolean | null,
+  blockSubfolders: boolean | null,
   rdpConfig: null, // Remove?
   localVMConfig: any,
   groups: boolean,

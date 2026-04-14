@@ -124,7 +124,7 @@
             </div>
         </div>
         <!-- focuswarning end  -->
-        <webview ref="wvmain" id="gformswebview" autosize="on"
+        <webview ref="wvmain" id="formswebview" autosize="on"
                  :src="formsUrlComputed"></webview>
 
     </div>
@@ -231,7 +231,7 @@ export default {
             this.getExamMaterials()
 
 
-            const webview = document.getElementById('gformswebview');
+            const webview = document.getElementById('formswebview');
             if (webview) {
                 const shadowRoot = webview.shadowRoot;
                 const iframe = shadowRoot.querySelector('iframe');
@@ -507,7 +507,7 @@ export default {
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
         // Clean up webview by removing it from DOM to prevent crashes (blocking is handled in backend, but we still clean up local listeners)
-        const webview = document.getElementById('gformswebview');
+        const webview = document.getElementById('formswebview');
         if (webview) {
             // Remove webview element listeners
             if (this._onDomReady) {
@@ -535,7 +535,7 @@ export default {
 <style scoped>
 
 
-#gformswebview {
+#formswebview {
     height: 100% !important;
     width: 100% !important;
     display: block;
