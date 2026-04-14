@@ -484,7 +484,7 @@ class WindowHandler {
      */
     async createExamWindow(examtype, token, serverstatus, primarydisplay) {
         // just to be sure we check some important vars here
-        if (examtype !== "rdp" && examtype !== "website" &&  examtype !== "gforms" && examtype !== "eduvidual" && examtype !== "editor" && examtype !== "math" && examtype !== "microsoft365" && examtype !== "activesheets" && examtype !== "localvm" || !token){  // for now.. we probably should stop everything here
+        if (examtype !== "rdp" && examtype !== "website" &&  examtype !== "forms" && examtype !== "eduvidual" && examtype !== "editor" && examtype !== "math" && examtype !== "microsoft365" && examtype !== "activesheets" && examtype !== "localvm" || !token){  // for now.. we probably should stop everything here
             log.warn("missing parameters for exam-mode or mode not in allowed list!")
             examtype = "editor" 
         } 
@@ -538,6 +538,8 @@ class WindowHandler {
                 webviewTag: true,
                 webSecurity: false            }
         });
+
+        this.installVueJsDevTools(this.examwindow);
 
         // Electron 39: ready-to-show fires AFTER show() is called, so use did-finish-load instead
         this.examwindow.webContents.once('did-finish-load', async () => {
@@ -645,7 +647,7 @@ class WindowHandler {
                 });
             });
         }
-        // this is the normal exam mode (editor, math, eduvidual, website, gforms, activesheets, localvm)
+        // this is the normal exam mode (editor, math, eduvidual, website, forms, activesheets, localvm)
         else { 
             let url = examtype   // editor || math || tbd.
             if (app.isPackaged) {
@@ -670,7 +672,7 @@ class WindowHandler {
         // Block navigation on examwindow.webContents level for all modes that can display PDFs in examheader
         // This prevents navigation when clicking links in PDFs displayed in the examheader
         // Webview/BrowserView blocking is handled separately via IPC in ipchandler.js or mode-specific handlers below
-        const examTypesWithPdfInHeader = ["gforms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math", "localvm"];
+        const examTypesWithPdfInHeader = ["forms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math", "localvm"];
         if (examTypesWithPdfInHeader.includes(serverstatus.examSections[serverstatus.lockedSection].examtype)) {
             this.examwindow.webContents.on('will-navigate', (event, url) => {
                 event.preventDefault(); // Prevent navigation away from the Vue app (e.g. from PDF links in examheader)
@@ -785,8 +787,6 @@ class WindowHandler {
                 this.multicastClient.clientinfo.focus = true
             }  
         });
-        
-        this.installVueJsDevTools(this.examwindow);
     }
 
 
@@ -876,6 +876,8 @@ class WindowHandler {
             }
         })
 
+        this.installVueJsDevTools(this.mainwindow);
+
         // Register event handlers before loading
         this.mainwindow.on('close', async  (e) => {   // ask before closing
             if (!this.config.development && !this.mainwindow.allowexit) {  // allowexit ist ein override vom context menu oder screenshot test. dieser kann die app schliessen
@@ -914,8 +916,6 @@ class WindowHandler {
             log.info(`windowhandler @ createMainWindow: Loading URL: ${url}`)
             this.mainwindow.loadURL(url)
         }
-        
-        this.installVueJsDevTools(this.mainwindow);
     }
 
 

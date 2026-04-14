@@ -28,7 +28,7 @@ import student from '/src/pages/student.vue'
 const notfound = () => import('/src/pages/notfound.vue')
 const editor = () => import('/src/pages/editor.vue')
 const geogebra = () => import('/src/pages/geogebra.vue')
-const gforms = () => import('/src/pages/forms.vue')
+const forms = () => import('/src/pages/forms.vue')
 const lock = () => import('/src/pages/lock.vue')
 const eduvidual = () => import('/src/pages/eduvidual.vue')
 const microsoft365 = () => import('/src/pages/microsoft365.vue')
@@ -61,7 +61,7 @@ const routes = [ // to load a specific view just replace the component at path: 
     { path: '/student',             name:"student",      component: student,      beforeEnter: [addParams]            },
     { path: '/editor/:token',       name:"editor",       component: editor,       beforeEnter: [addParams, fetchInfo] },  
     { path: '/math/:token',         name:"math",         component: geogebra,     beforeEnter: [addParams, fetchInfo] },
-    { path: '/gforms/:token',       name:"gforms",       component: gforms,       beforeEnter: [addParams, fetchInfo] },
+    { path: '/forms/:token',        name:"forms",        component: forms,       beforeEnter: [addParams, fetchInfo] },
     { path: '/eduvidual/:token',    name:"eduvidual",    component: eduvidual,    beforeEnter: [addParams, fetchInfo] },
     { path: '/website/:token',      name:"website",      component: website,      beforeEnter: [addParams, fetchInfo] },
     { path: '/activesheets/:token', name:"activesheets", component: activesheets, beforeEnter: [addParams, fetchInfo] },

@@ -29,7 +29,7 @@ const config = {
     exammodes: {
         rdp: true,
         website: true,
-        gforms: true,
+        forms: true,
         eduvidual: true,
         editor: true,
         math: true,

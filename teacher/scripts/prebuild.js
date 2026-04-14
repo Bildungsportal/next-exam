@@ -42,7 +42,7 @@ const config = {
     exammodes: {
         rdp: ${process.env.EXAMMODE_RDP === 'true'},
         website: ${process.env.EXAMMODE_WEBSITE === 'true'},
-        gforms: ${process.env.EXAMMODE_GFORMS === 'true'},
+        forms: ${process.env.EXAMMODE_FORMS === 'true'},
         eduvidual: ${process.env.EXAMMODE_EDUVIDUAL === 'true'},
         editor: ${process.env.EXAMMODE_EDITOR === 'true'},
         math: ${process.env.EXAMMODE_MATH === 'true'},

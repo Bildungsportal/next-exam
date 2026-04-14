@@ -192,6 +192,8 @@ class WindowHandler {
             }
         })
 
+        this.installVueJsDevTools(this.mainwindow);
+
         // Electron 39: ready-to-show fires AFTER show() is called, so use did-finish-load instead
         this.mainwindow.webContents.once('did-finish-load', () => {
             log.info('windowhandler @ createWindow: did-finish-load - showing window')
@@ -265,8 +267,6 @@ class WindowHandler {
                 process.exit(0);
             }
         });
-
-        this.installVueJsDevTools(this.mainwindow);
     }
 
 

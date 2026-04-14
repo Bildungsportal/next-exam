@@ -177,7 +177,7 @@
                 <li v-if="config.exammodes && config.exammodes.math"><a class="dropdown-item" @click="selectExamType('math')" :class="{ active: isExamType('math') }">{{$t('dashboard.math')}}</a></li>
                 <li v-if="config.exammodes && config.exammodes.editor"><a class="dropdown-item" @click="selectExamType('editor')" :class="{ active: isExamType('editor') }">{{$t('dashboard.lang')}}</a></li>
                 <li v-if="config.exammodes && config.exammodes.eduvidual"><a class="dropdown-item" @click="selectExamType('eduvidual')" :class="{ active: isExamType('eduvidual') }">{{$t('dashboard.eduvidual')}}</a></li>
-                <li v-if="config.exammodes && config.exammodes.gforms"><a class="dropdown-item" @click="selectExamType('gforms')" :class="{ active: isExamType('gforms') }">{{$t('dashboard.gforms')}}</a></li>
+                <li v-if="config.exammodes && config.exammodes.forms"><a class="dropdown-item" @click="selectExamType('forms')" :class="{ active: isExamType('forms') }">{{$t('dashboard.forms')}}</a></li>
                 <li v-if="config.exammodes && config.exammodes.website"><a class="dropdown-item" @click="selectExamType('website')" :class="{ active: isExamType('website') }">Website</a></li>
                 <li v-if="config.exammodes && config.exammodes.activesheets"><a class="dropdown-item" @click="selectExamType('activesheets')" :class="{ active: isExamType('activesheets') }">Active Sheets</a></li>
                 <li v-if="config.exammodes && config.exammodes.microsoft365"><a class="dropdown-item" @click="selectExamType('microsoft365')" :class="{ active: isExamType('microsoft365') }">Microsoft365</a></li>
@@ -886,7 +886,7 @@ computed: {
     lockDownload() {
         const examType = this.serverstatus.examSections[this.serverstatus.activeSection].examtype;
         const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-        return examType === 'eduvidual' || examType === 'gforms' || examType === 'website' || (examType === 'microsoft365' && !section.msOfficeFile);
+        return examType === 'eduvidual' || examType === 'forms' || examType === 'website' || (examType === 'microsoft365' && !section.msOfficeFile);
     },
     
     lockPdfSummary() {
@@ -1203,7 +1203,7 @@ computed: {
             // Call existing methods based on type
             if (type === 'editor') this.configureEditor();
             if (type === 'eduvidual') this.getTestID();
-            if (type === 'gforms') this.getFormsID();
+            if (type === 'forms') this.getFormsID();
             if (type === 'website') this.getTestURL();
             if (type === 'math') this.configureMath();
             if (type === 'activesheets') this.configureActivesheets();
@@ -1218,7 +1218,7 @@ computed: {
             case 'math': return this.$t('dashboard.math');
             case 'editor': return this.$t('dashboard.lang');
             case 'eduvidual': return this.$t('dashboard.eduvidual');
-            case 'gforms': return this.$t('dashboard.gforms');
+            case 'forms': return this.$t('dashboard.forms');
             case 'website': return 'Website';
             case 'activesheets': return 'Active Sheets';
             case 'microsoft365': return 'Microsoft365';

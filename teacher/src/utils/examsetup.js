@@ -129,7 +129,7 @@ async function getFormsID(){
             inputLabel: 'my-input-label',
             actions: 'my-swal2-actions'
         },
-        title: this.$t("dashboard.gforms"),
+        title: this.$t("dashboard.forms"),
         icon: 'question',
         input: 'url',
         showCancelButton: true,
@@ -137,7 +137,7 @@ async function getFormsID(){
         html: `
         <div class="my-content" style="text-align:left; max-width: 520px; margin: 0 auto;">
             <p style="margin-bottom:8px;">
-                ${this.$t("dashboard.gformshint")}
+                ${this.$t("dashboard.formshint")}
             </p>
             <div style="font-size:0.85em; line-height:1.4; margin-top:4px;">
                 <div style="margin-bottom:4px; font-weight:bold;">
@@ -154,6 +154,9 @@ async function getFormsID(){
                 </div>
             </div>
         </div>`,
+        didOpen: () => {
+            document.getElementsByClassName('my-custom-input')[0].value = this.serverstatus.examSections[this.serverstatus.activeSection]?.formsUrl
+        },
         inputValidator: (value) => {
             if (!value) {return this.$t("dashboard.moodleInvalidId")}
             if (!isValidFullDomainName(value)) {return this.$t("dashboard.invalidDomain")}
