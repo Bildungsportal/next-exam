@@ -20,7 +20,7 @@
 import fs from 'fs'
 //import i18n from '../../renderer/src/locales/locales.js'
 //const { t } = i18n.global
-import { BrowserWindow, ipcMain, dialog } from 'electron'
+import { BrowserWindow, ipcMain, dialog, session } from 'electron'
 import {join} from 'path'
 import log from 'electron-log';
 import { networkInterfaces } from 'os'
@@ -213,6 +213,24 @@ class IpcHandler {
             log.info("ipchandler @ loginBiP: opening bip window. testenvironment:", biptest)
             this.WindowHandler.createBiPLoginWin(biptest)
             event.returnValue = "hello from bip logon"
+        })
+
+        /** Clears BiP web session (same default session as BiP BrowserWindow) so the next login shows the portal login again. */
+        ipcMain.handle('clearBipPortalSession', async (_event, biptest) => {
+            const ses = session.defaultSession
+            const origins = biptest
+                ? ['https://q.bildung.gv.at']
+                : ['https://bildung.gv.at', 'https://www.bildung.gv.at']
+            const storages = ['cookies', 'localstorage', 'sessionstorage', 'indexdb', 'websql']
+            for (const origin of origins) {
+                try {
+                    await ses.clearStorageData({ origin, storages })
+                } catch (e) {
+                    log.warn(`ipchandler @ clearBipPortalSession: ${origin}`, e)
+                }
+            }
+            log.info('ipchandler @ clearBipPortalSession: done')
+            return true
         })
 
 

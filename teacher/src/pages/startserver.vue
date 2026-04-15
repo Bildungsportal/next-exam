@@ -394,13 +394,23 @@ export default {
                 cancelButtonText: this.$t("dashboard.cancel"),
                 focusConfirm: false,
                 icon: 'question',
-            }).then((result) => {
+            }).then(async (result) => {
                 if (result.isConfirmed) {
+                    try {
+                        await ipcRenderer.invoke('clearBipPortalSession', this.biptest)
+                    } catch (e) {
+                        console.warn('startserver @ logoutBiP: clearBipPortalSession', e)
+                    }
                     this.bipToken = false
                     this.bipUsername = false
                     this.bipuserID = false
                     this.bipData = null
                     this.onlineExams = []
+                    const loginBtn = document.querySelector('#biploginbutton')
+                    if (loginBtn) {
+                        loginBtn.classList.remove('disabledbutton')
+                    }
+                    this.$router.replace({ path: '/' })
                 } 
             });
         },
@@ -446,7 +456,6 @@ export default {
                     if (loginBtn) {
                         loginBtn.classList.remove('btn-info')
                         loginBtn.classList.add('btn-success')
-                        loginBtn.classList.add("disabledbutton")
                     }
                     if (bipLogo) {
                         bipLogo.style.filter = "hue-rotate(140deg)"
@@ -474,23 +483,37 @@ export default {
         fetchBipExams(){
             let token = this.decodeBase64AndExtractTokens(this.bipToken)?.[1];
             if (!token) {
-                // No valid token -> silently skip to avoid unhandled click errors
                 return;
             }
-            
-            const url = this.getBiPUrl() + '/webservice/rest/server.php?wstoken=' + token + '&wsfunction=local_dpu_get_exams_teacher&moodlewsrestformat=json';
 
-            fetch(url, { method: "GET" })
-            .then(response => { return response.json(); } )                  
-            .then(data => {
-                //console.log("Data from API:", data);
-                this.bipData = data   // store all of the information in data
+            const url = this.getBiPUrl() + '/webservice/rest/server.php';
+            const body = new URLSearchParams({
+                wstoken: token,
+                wsfunction: 'local_dpu_get_exams_teacher',
+                moodlewsrestformat: 'json',
+            });
 
-                this.onlineExams.splice(0)
-                this.onlineExams.push(...(data.exams ?? []))
-
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: body.toString(),
             })
-            .catch(error => { console.error("API call failed:", error);});
+            .then(response => response.json())
+            .then(data => {
+                if (data?.exception || data?.errorcode) {
+                    console.error('startserver @ fetchBipExams: Moodle API error', data);
+                    this.$swal.fire({
+                        title: this.$t('startserver.bipExamListFailedTitle'),
+                        html: `${this.$t('startserver.bipExamListFailedBody')}<br><br><small class="text-muted">${data.message || ''} (${data.errorcode || ''})</small>`,
+                        icon: 'error',
+                    });
+                    return;
+                }
+                this.bipData = data;
+                this.onlineExams.splice(0);
+                this.onlineExams.push(...(Array.isArray(data.exams) ? data.exams : []));
+            })
+            .catch(error => { console.error('startserver @ fetchBipExams:', error); });
         },
 
 
@@ -1088,10 +1111,6 @@ export default {
 
 
 <style scoped>
-
-.disabledbutton {
-    pointer-events: none; 
-}
 
 .disabledstart {
     filter: contrast(100%) grayscale(60%) brightness(130%) blur(0.6px);

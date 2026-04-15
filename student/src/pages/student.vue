@@ -381,6 +381,10 @@ export default {
                     this.pincode = ""
                     this.bipData = null
                     this.onlineExams = []
+                    const loginBtn = document.querySelector('#biploginbutton')
+                    if (loginBtn) {
+                        loginBtn.classList.remove('disabledbutton')
+                    }
                 }
             });
         },
@@ -476,7 +480,6 @@ export default {
                         document.querySelector("#biploginbutton").classList.remove('btn-info')
                         document.querySelector("#biploginbutton").classList.add('btn-success')
                         document.querySelector("#biplogo").style.filter = "hue-rotate(140deg)"
-                        document.getElementById("biploginbutton").classList.add("disabledbutton");
 
                         await this.fetchBipExams()
                         await this.fetchInfo()
@@ -1378,7 +1381,7 @@ body {
 
 
 .disabledbutton {
-    pointer-events: none; /* Disables clicks */
+    /* intentionally left blank: class kept for compatibility */
 }
 
 .disabledexam {

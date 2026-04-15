@@ -33,6 +33,8 @@
         "bipNameConflictShort": "Eine BiP-Prüfung mit diesem Namen existiert bereits lokal.",
         "bipwelcome": "Herzlich Willkommen",
         "bippleaselogin": "Bitte melden Sie sich am Bildungsportal an, um die geplanten Prüfungen anzuzeigen.",
+        "bipExamListFailedTitle": "Bildungsportal",
+        "bipExamListFailedBody": "Die Prüfungsliste konnte nicht geladen werden. Wenn Prüfungen existieren, aber keine angezeigt werden, liegt oft ein Validierungsfehler in der Moodle-Webservice-Antwort vor (invalid_response) — das muss serverseitig in der BiP-Erweiterung behoben werden.",
         "noNews":"Keine Neuigkeiten verfügbar",
         "backupfolder": "Backupverzeichnis",
         "backupfolderinfo": "Bitte geben Sie einen Pfad für das Backup-Verzeichnis ein",
