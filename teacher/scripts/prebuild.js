@@ -19,6 +19,7 @@ const config = {
     development: ${process.env.DEVELOPMENT},
     showdevtools: ${process.env.SHOWDEVTOOLS},
     bipIntegration: ${process.env.BIP_INTEGRATION},
+    bipDemo: ${process.env.BIP_DEMO},
     bipApiUrl: '${process.env.BIP_API_URL}',
 
     workdirectory : "",
@@ -30,7 +31,7 @@ const config = {
     multicastClientPort: ${process.env.MULTICAST_CLIENT_PORT},
     multicastServerClientPort: ${process.env.MULTICAST_SERVER_CLIENT_PORT},
 
-    multicastServerAdrr: '239.255.255.250',
+    multicastServerAdrr: '239.1.1.1',
     hostip: "0.0.0.0",
     gateway: true,
     examServerList: {},
@@ -41,12 +42,13 @@ const config = {
     exammodes: {
         rdp: ${process.env.EXAMMODE_RDP === 'true'},
         website: ${process.env.EXAMMODE_WEBSITE === 'true'},
-        gforms: ${process.env.EXAMMODE_GFORMS === 'true'},
+        forms: ${process.env.EXAMMODE_FORMS === 'true'},
         eduvidual: ${process.env.EXAMMODE_EDUVIDUAL === 'true'},
         editor: ${process.env.EXAMMODE_EDITOR === 'true'},
         math: ${process.env.EXAMMODE_MATH === 'true'},
         microsoft365: ${process.env.EXAMMODE_MICROSOFT365 === 'true'},
-        activesheets: ${process.env.EXAMMODE_ACTIVESHEETS === 'true'}
+        activesheets: ${process.env.EXAMMODE_ACTIVESHEETS === 'true'},
+        localvm: ${process.env.EXAMMODE_LOCALVM === 'true'}
     },
 
     version: '${process.env.VERSION}.${process.env.BUILD_NUMBER}',

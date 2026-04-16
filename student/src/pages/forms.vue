@@ -104,9 +104,9 @@
             @close="hidepreview"
         />
         <PdfviewPane
-            :src="currentpreview"
             :localLockdown="localLockdown"
             :examtype="examtype"
+            :toolbar="pdfPreviewUi"
             @close="hidepreview"
         />
     </div>
@@ -124,8 +124,8 @@
             </div>
         </div>
         <!-- focuswarning end  -->
-        <webview ref="wvmain" id="gformswebview" autosize="on"
-                 :src="`https://docs.google.com/forms/d/e/${gformsTestId}/viewform`"></webview>
+        <webview ref="wvmain" id="formswebview" autosize="on"
+                 :src="formsUrlComputed"></webview>
 
     </div>
   </div>
@@ -138,7 +138,7 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 import PdfviewPane from '../components/PdfviewPane.vue'
 import WebviewPane from '../components/WebviewPane.vue'
-import {getExamMaterials, loadImage, loadPDF} from '../utils/filehandler.js'
+import {getExamMaterials, loadImage, loadPDF, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import {isElectronWindow} from "../types/platform.ts";
 import {SignalBridge} from '../utils/signalBridge.js'
 
@@ -170,9 +170,9 @@ export default {
             serverstatus: this.$route.params.serverstatus,
             localLockdown: this.$route.params.localLockdown,
 
-            // section and forms id will be resolved on first fetchInfo based on allowSectionSwitch
+            // section and forms url will be resolved on first fetchInfo based on allowSectionSwitch
             lockedSection: null,
-            gformsTestId: null,
+            formsUrl: null,
 
             config: this.$route.params.config,
             clientinfo: null,
@@ -193,9 +193,15 @@ export default {
             // Event listener references for cleanup
             _onDomReady: null,
             _onPreviewClick: null,
-            internetCheckCounter: 0
+            internetCheckCounter: 0,
+            pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
         }
     },
+  computed: {
+        formsUrlComputed() {
+            return this.formsUrl || 'about:blank'
+        }
+  },
     components: {ExamHeader, PdfviewPane, WebviewPane},
     async mounted() {
         this.currentFile = this.clientname
@@ -209,7 +215,7 @@ export default {
             this.fetchinfointerval = new SchedulerService(5000);
             this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
             this.fetchinfointerval.start();
-            await this.fetchInfo(); // initial sync for clientinfo, serverstatus and gforms id
+            await this.fetchInfo(); // initial sync for clientinfo, serverstatus and forms url
 
             this.clockinterval = new SchedulerService(1000);
             this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
@@ -225,7 +231,7 @@ export default {
             this.getExamMaterials()
 
 
-            const webview = document.getElementById('gformswebview');
+            const webview = document.getElementById('formswebview');
             if (webview) {
                 const shadowRoot = webview.shadowRoot;
                 const iframe = shadowRoot.querySelector('iframe');
@@ -243,7 +249,7 @@ export default {
                                     await signalBridge.invoke('start-blocking-for-website-webview', {
                                         guestId,
                                         mode: 'forms',
-                                        gformsTestId: this.gformsTestId
+                                        formsUrl: this.formsUrl
                                     });
                                     console.log(`forms @ mounted: backend blocking setup for webview ${guestId}`);
                                 }
@@ -281,6 +287,40 @@ export default {
                             if (element) { element.style.display = 'none'; }
                             const element2 = document.querySelector('[aria-label="Punktzahl ansehen"]');  // the button doesnt work anyways and doesnt make sense if questions have been answered with longtext
                             if (element2) { element2.style.display = 'none'; }
+
+                            // CSS-basiertes Ausblenden problematischer Links und Footer
+                            try {
+                                const style = document.createElement('style');
+                                style.type = 'text/css';
+                                style.textContent = \`
+                                    /* Microsoft Forms: alle Links im Branding / Hilfebereich ausblenden */
+                                    [role="link"] {
+                                        display: none !important;
+                                    }
+                                    #branding-footer {
+                                        display: none !important;
+                                    }
+                                    #FormTitleId_EnableScreenReader {
+                                        display: none !important;
+                                    }
+                                    button[aria-label="Formularmenü"],
+                                    button[aria-label="Form menu"] {
+                                        display: none !important;
+                                    }
+
+                                    /* Google Forms: Hilfe-/Feedback-Menü inklusive Missbrauch melden verstecken */
+                                    div[data-report-abuse-url] button[aria-haspopup="menu"],
+                                    div[data-report-abuse-url] button[aria-label="Hilfe und Feedback"],
+                                    div[data-report-abuse-url] button[aria-label="Help & feedback"] {
+                                        display: none !important;
+                                    }
+                                \`;
+                                document.head.appendChild(style);
+                            } catch (e) {
+                                console.warn('[Next-Exam Forms] failed to inject CSS', e);
+                            }
+
+                 
                         })();  // Sofortige Ausführung der anonymen Funktion
                     `);
                 };
@@ -319,11 +359,34 @@ export default {
         loadImage: loadImage,
 
 
-        reloadWebview() {
-            this.$refs.wvmain.setAttribute("src", `https://docs.google.com/forms/d/e/${this.gformsTestId}/viewform`);
+        async reloadWebview() {
+            if (!this.$swal) {
+                this.$refs.wvmain.setAttribute("src", this.formsUrlComputed);
+                return;
+            }
+
+            const result = await this.$swal.fire({
+                title: this.$t('forms.reload_title') || 'Formular neu laden?',
+                text: this.$t('forms.reload_text') || 'Wenn Sie das Formular neu laden, gehen alle bisherigen Eingaben verloren.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: this.$t('forms.reload_confirm') || 'OK',
+                cancelButtonText: this.$t('forms.reload_cancel') || this.$t('dashboard.cancel') || 'Abbrechen',
+                customClass: {
+                    popup: 'my-popup',
+                    title: 'my-title',
+                    content: 'my-content',
+                    actions: 'my-swal2-actions'
+                }
+            });
+
+            if (result.isConfirmed) {
+                this.$refs.wvmain.setAttribute("src", this.formsUrlComputed);
+            }
         },
 
         hidepreview() {
+            resetPdfPreviewToolbar(this);
             let preview = document.querySelector("#preview")
             preview.style.display = 'none';
             preview.setAttribute("src", "about:blank");
@@ -402,8 +465,8 @@ export default {
                 this.lockedSection = sectionIndex
 
                 const section = this.serverstatus.examSections?.[sectionIndex]
-                if (section && section.gformsTestId) {
-                    this.gformsTestId = section.gformsTestId
+                if (section && section.formsUrl) {
+                    this.formsUrl = section.formsUrl
                 }
 
                 if (!this.focus) {
@@ -444,7 +507,7 @@ export default {
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
         // Clean up webview by removing it from DOM to prevent crashes (blocking is handled in backend, but we still clean up local listeners)
-        const webview = document.getElementById('gformswebview');
+        const webview = document.getElementById('formswebview');
         if (webview) {
             // Remove webview element listeners
             if (this._onDomReady) {
@@ -472,7 +535,7 @@ export default {
 <style scoped>
 
 
-#gformswebview {
+#formswebview {
     height: 100% !important;
     width: 100% !important;
     display: block;

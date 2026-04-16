@@ -25,6 +25,7 @@ import { activeWindow } from 'get-windows';
 import platformDispatcher from './platformDispatcher.js';
 import {fileURLToPath} from "node:url";
 import path from 'path';
+import * as devtoolsInstaller from 'electron-devtools-installer';
 
 const __dirname = import.meta.dirname;
 
@@ -88,7 +89,24 @@ class WindowHandler {
             else { return false }
         }
     }
+    
+    getBiPUrl(biptest) {
+        if (this.config.bipDemo) {
+            return this.config.bipApiUrl;
+        } else if (biptest) {
+            return `https://q.bildung.gv.at`;
+        } else {
+            return `https://bildung.gv.at`;
+        }
+    }
 
+    installVueJsDevTools(win) {
+        if (!app.isPackaged) {
+            devtoolsInstaller.installExtension(devtoolsInstaller.VUEJS_DEVTOOLS)
+                .then((name) => console.log(`Added Extension: ${name.name}`))
+                .catch((err) => console.log('An error occurred: ', err));
+        }
+    }
 
     createBiPLoginWin(biptest) {
         this.bipwindow = new BrowserWindow({
@@ -108,8 +126,7 @@ class WindowHandler {
            // transparent: true
         })
      
-        if (biptest){   this.bipwindow.loadURL(`https://q.bildung.gv.at/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)   }
-        else {          this.bipwindow.loadURL(`https://www.bildung.gv.at/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)   }
+        this.bipwindow.loadURL(this.getBiPUrl(biptest)+`/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)
 
         // Electron 39: ready-to-show fires AFTER show() is called, so use did-finish-load instead
         this.bipwindow.webContents.once('did-finish-load', () => {
@@ -278,7 +295,9 @@ class WindowHandler {
         //log.info(`windowhandler @ initBlockWindows: found ${displays.length} displays`)
         
         if (!this.config.development) {  // lock all screens
-            // Wait for exam window to be visible and positioned (important for Wayland/KWin)
+            if (displays.length <= 1) return
+            // Wait for exam window to be visible and positioned; never create block windows before that
+            let examReady = false
             if (this.examwindow && !this.examwindow.isDestroyed()) {
                 let retries = 0
                 const maxRetries = 10
@@ -286,8 +305,16 @@ class WindowHandler {
                     await this.sleep(100)
                     retries++
                 }
-                // Additional wait to ensure positioning is complete on Wayland
-                await this.sleep(200)
+                if (this.examwindow.isVisible()) {
+                    examReady = true
+                    // Additional wait to ensure positioning is complete on Wayland
+                    await this.sleep(200)
+                }
+            }
+            
+            if (!examReady) {
+                log.info("windowhandler @ initBlockWindows: exam window not ready, skipping block window creation")
+                return
             }
             
             // Clean up destroyed block windows from array
@@ -298,14 +325,8 @@ class WindowHandler {
             
             // First, use the reserved exam display ID (set immediately when exam window was created)
             // This ensures the screen is reserved even if the window isn't fully initialized yet
-            if (this.examDisplayId) {
+            if (this.examDisplayId !== undefined && this.examDisplayId !== null) {
                 usedDisplayIds.add(this.examDisplayId)
-            }
-            
-            // Always exclude primary display (exam window location)
-            const primaryDisplay = screen.getPrimaryDisplay()
-            if (primaryDisplay && primaryDisplay.id) {
-                usedDisplayIds.add(primaryDisplay.id)
             }
             
             // Check exam window display (as fallback/verification, but reserved ID takes priority)
@@ -313,8 +334,10 @@ class WindowHandler {
                 try {
                     const bounds = this.examwindow.getBounds()
                     const display = screen.getDisplayMatching(bounds)
-                    usedDisplayIds.add(display.id)
-                    log.info(`windowhandler @ initBlockWindows: exam window is on display ${display.id}`)
+                    if (display && display.id !== undefined && display.id !== null) {
+                        usedDisplayIds.add(display.id)
+                        log.info(`windowhandler @ initBlockWindows: exam window is on display ${display.id}`)
+                    }
                 } catch (err) {
                     log.error(`windowhandler @ initBlockWindows: error getting exam window display: ${err}`)
                 }
@@ -325,8 +348,10 @@ class WindowHandler {
                 try {
                     const bounds = blockwin.getBounds()
                     const display = screen.getDisplayMatching(bounds)
-                    usedDisplayIds.add(display.id)
-                    log.info(`windowhandler @ initBlockWindows: block window found on display ${display.id}`)
+                    if (display && display.id !== undefined && display.id !== null) {
+                        usedDisplayIds.add(display.id)
+                        log.info(`windowhandler @ initBlockWindows: block window found on display ${display.id}`)
+                    }
                 } catch (err) {
                     log.error(`windowhandler @ initBlockWindows: error getting block window display: ${err}`)
                 }
@@ -351,7 +376,6 @@ class WindowHandler {
             })
         }
     }
-
 
 
 
@@ -460,7 +484,7 @@ class WindowHandler {
      */
     async createExamWindow(examtype, token, serverstatus, primarydisplay) {
         // just to be sure we check some important vars here
-        if (examtype !== "rdp" && examtype !== "website" &&  examtype !== "gforms" && examtype !== "eduvidual" && examtype !== "editor" && examtype !== "math" && examtype !== "microsoft365" && examtype !== "activesheets" || !token){  // for now.. we probably should stop everything here
+        if (examtype !== "rdp" && examtype !== "website" &&  examtype !== "forms" && examtype !== "eduvidual" && examtype !== "editor" && examtype !== "math" && examtype !== "microsoft365" && examtype !== "activesheets" && examtype !== "localvm" || !token){  // for now.. we probably should stop everything here
             log.warn("missing parameters for exam-mode or mode not in allowed list!")
             examtype = "editor" 
         } 
@@ -503,7 +527,7 @@ class WindowHandler {
             autoHideMenuBar: true,
             minimizable: false,
             visibleOnAllWorkspaces: true,
-            kiosk: this.config.development ? false : true,
+            // kiosk: this.config.development ? false : true,  // prevents kiosk mode on ubuntu gnome (Unity)
             show: true,
             transparent: false,
             icon: join(platformDispatcher.publicBase, 'icons', 'icon.png'),
@@ -514,6 +538,8 @@ class WindowHandler {
                 webviewTag: true,
                 webSecurity: false            }
         });
+
+        this.installVueJsDevTools(this.examwindow);
 
         // Electron 39: ready-to-show fires AFTER show() is called, so use did-finish-load instead
         this.examwindow.webContents.once('did-finish-load', async () => {
@@ -535,7 +561,7 @@ class WindowHandler {
                     // probably not needed because we disable missioncontrol anyways - seems to interfere with kiosk mode on macos (again)
                     // this.examwindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
-                    if (!this.isWayland){ this.checkWindowInterval.start() } // constantly check if the active window is the examwindow - if not, bring it to front
+                    if (!platformDispatcher.isWayland){ this.checkWindowInterval.start() } // constantly check if the active window is the examwindow - if not, bring it to front
                     await enableRestrictions(this)  // disable keyboard shortcuts etc.
                     
                     await this.sleep(1000)  // do not set blur listener too early
@@ -621,7 +647,7 @@ class WindowHandler {
                 });
             });
         }
-        // this is the normal exam mode (editor, math, eduvidual, website, gforms)
+        // this is the normal exam mode (editor, math, eduvidual, website, forms, activesheets, localvm)
         else { 
             let url = examtype   // editor || math || tbd.
             if (app.isPackaged) {
@@ -646,7 +672,7 @@ class WindowHandler {
         // Block navigation on examwindow.webContents level for all modes that can display PDFs in examheader
         // This prevents navigation when clicking links in PDFs displayed in the examheader
         // Webview/BrowserView blocking is handled separately via IPC in ipchandler.js or mode-specific handlers below
-        const examTypesWithPdfInHeader = ["gforms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math"];
+        const examTypesWithPdfInHeader = ["forms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math", "localvm"];
         if (examTypesWithPdfInHeader.includes(serverstatus.examSections[serverstatus.lockedSection].examtype)) {
             this.examwindow.webContents.on('will-navigate', (event, url) => {
                 event.preventDefault(); // Prevent navigation away from the Vue app (e.g. from PDF links in examheader)
@@ -849,6 +875,8 @@ class WindowHandler {
                 backgroundThrottling: true  // allow throttling when window is in background
             }
         })
+
+        this.installVueJsDevTools(this.mainwindow);
 
         // Register event handlers before loading
         this.mainwindow.on('close', async  (e) => {   // ask before closing

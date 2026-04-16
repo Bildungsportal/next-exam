@@ -26,13 +26,15 @@ const routes = [
     { path: '/',                  component: startserver, beforeEnter: [addParams] },
     { path: '/startserver/:bipToken/:bipUsername/:bipuserID:',  name:"startserver",     component: startserver, beforeEnter: [addParams] },
     { path: '/serverlist',        component: serverlist,   beforeEnter: [addParams]},
-    { path: '/dashboard/:servername/:passwd?/:bipToken/:bipUsername/:bipuserID:', name:"dashboard", component: dashboard, beforeEnter: [addParams, checkPasswd] },
+    { path: '/dashboard/:servername/:passwd?/:bipToken/:bipUsername/:bipuserID:/:biptest', name:"dashboard", component: dashboard, beforeEnter: [addParams, getServerInfo] },
     { path: '/:pathMatch(.*)*',   component: notfound },
 ]
 
 function addParams(to){
+    const config = getConfig();
+
     to.params.version = config.version
-    to.params.serverApiPort = config.serverApiPort 
+    to.params.serverApiPort = config.serverApiPort
     to.params.clientApiPort = config.clientApiPort
     to.params.electron = electron
     to.params.workdirectory = config.workdirectory   //attention.. this is the server base workdirectory > we add servername to get the actual exam workdirectory in the view
@@ -41,14 +43,14 @@ function addParams(to){
 }
 
 
+
 //we double check the password for now..  use proper auth process in the future ;-)
 // since we almost moved to single and local instance teacher server password is not needed at all #REFACTOR ? 
-async function checkPasswd(to){
+async function getServerInfo(to){
     let hostname = electron ? "localhost" : window.location.hostname
-    let passwd = to.params.passwd ? to.params.passwd : ""
-
+   
     const config = getConfig();
-    let res = await axios.get(`https://${hostname}:${config.serverApiPort}/server/control/checkpasswd/${to.params.servername}/${passwd}`)
+    let res = await axios.get(`https://${hostname}:${config.serverApiPort}/server/control/getserverinfo/${to.params.servername}`)
     .then(response => {  return response.data  })
     .catch( err => {console.error(`router @ checkPasswd:    ${err}`)})
 
@@ -57,12 +59,11 @@ async function checkPasswd(to){
         to.params.servertoken = res.data.servertoken; 
         to.params.serverip = res.data.serverip; 
         to.params.id = res.data.id
-        //console.log("router @ checkPasswd: password ok"); 
         return true 
     }
     else {  
-        console.log("router @ checkPasswd: password error"); 
-        return { path: '/startserver'}
+        console.log("router @ checkPasswd: serverinfo error"); 
+        return false
     }
 }
 

@@ -1,31 +1,39 @@
 <template>
-    <!-- Header START -->
-    <div :key="0" class="w-100 p-3 text-white bg-dark text-left " style="min-width: 1180px; height: 63px; z-index: 100;">
-        <span class="text-white m-1">
-            <img src="/src/assets/img/svg/speedometer.svg" class="white me-2  " width="32" height="32" >
-            <span style="font-size:23px;" class="align-middle me-1 ">Next-Exam</span>
-        </span>
-        <span class="align-middle ms-3" style="float: right; font-size:23px;">Dashboard</span>
-        <div v-if="serverstatus.useExamSections && !serverstatus.allowSectionSwitch" style="position: absolute; left:257px; top:38px; min-width: 550px; z-index: 0;">
-            <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 1 && !serverstatus.examSections[1].locked, 'sectionbuttonactivered': serverstatus.activeSection == 1 && serverstatus.examSections[1].locked, 'btn-secondary': serverstatus.activeSection != 1,'btn-danger': serverstatus.examSections[1].locked}">{{ serverstatus.examSections[1].sectionname }}</div>
-            <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 2 && !serverstatus.examSections[2].locked, 'sectionbuttonactivered': serverstatus.activeSection == 2 && serverstatus.examSections[2].locked, 'btn-secondary': serverstatus.activeSection != 2,'btn-danger': serverstatus.examSections[2].locked}">{{ serverstatus.examSections[2].sectionname }}</div>
-            <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 3 && !serverstatus.examSections[3].locked, 'sectionbuttonactivered': serverstatus.activeSection == 3 && serverstatus.examSections[3].locked, 'btn-secondary': serverstatus.activeSection != 3,'btn-danger': serverstatus.examSections[3].locked}">{{ serverstatus.examSections[3].sectionname }}</div>
-            <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 4 && !serverstatus.examSections[4].locked, 'sectionbuttonactivered': serverstatus.activeSection == 4 && serverstatus.examSections[4].locked, 'btn-secondary': serverstatus.activeSection != 4,'btn-danger': serverstatus.examSections[4].locked}">{{ serverstatus.examSections[4].sectionname }}</div>
-        </div>
-        <!-- allowSectionSwitch: active tab white (sectionbuttonactive), no red border; tabs only switch dashboard view -->
-        <div v-if="serverstatus.useExamSections && serverstatus.allowSectionSwitch" style="position: absolute; left:257px; top:38px; min-width: 550px; z-index: 0;">
-            <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 1 ? 'sectionbuttonactive' : 'btn-secondary'">{{ serverstatus.examSections[1].sectionname }}</div>
-            <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 2 ? 'sectionbuttonactive' : 'btn-secondary'">{{ serverstatus.examSections[2].sectionname }}</div>
-            <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 3 ? 'sectionbuttonactive' : 'btn-secondary'">{{ serverstatus.examSections[3].sectionname }}</div>
-            <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 4 ? 'sectionbuttonactive' : 'btn-secondary'">{{ serverstatus.examSections[4].sectionname }}</div>
-        </div>
 
 
-        <div class="btn btn-sm btn-cyan m-0 me-1 mt-0" style="float: right; padding:3px; height:32px; width:32px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22" > </div>
-        <div class="btn btn-sm btn-danger m-0 me-1 mt-0" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style="float: right; height:32px;"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" >&nbsp; {{$t('dashboard.stopserver')}}&nbsp; </div>
-        <div v-if="!hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 me-1 " style="cursor: unset; float: right">{{ $t("general.offline") }}</div>
+<!-- Header START -->
+<div :key="0" class="w-100 p-3 text-white bg-dark text-left " style="position: relative; display: flex; align-items: center; justify-content: space-between; min-width: 1180px; height: 62px; z-index: 100;">
+    <span class="text-white m-1" style="flex-shrink: 0;">
+        <img src="/src/assets/img/svg/speedometer.svg" class="white me-2  " width="32" height="32" >
+        <span style="font-size:23px;" class="align-middle me-1 ">Next-Exam</span>
+    </span>
+
+    <div style="flex-shrink: 0; text-align: right;">
+        <div class="btn btn-sm btn-cyan m-0 me-1 mt-0" style=" padding:3px; height:32px; width:32px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22" > </div>
+        <div class="btn btn-sm btn-danger m-0 me-1 mt-0" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style=" height:32px;"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" >&nbsp; {{$t('dashboard.stopserver')}}&nbsp; </div>
+        <div v-if="!hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 me-1 " style="cursor: unset;">{{ $t("general.offline") }}</div>
+        <span class="align-middle ms-3" style="font-size:23px;">Dashboard</span>
     </div>
-    <!-- Header END -->
+    
+    <div v-if="serverstatus.useExamSections && !serverstatus.allowSectionSwitch" style="position: absolute; left:257px; bottom: 0; min-width: 550px; z-index: 0;">
+        <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 1 && !serverstatus.examSections[1].locked, 'sectionbuttonactivered': serverstatus.activeSection == 1 && serverstatus.examSections[1].locked, 'btn-secondary': serverstatus.activeSection != 1,'btn-danger': serverstatus.examSections[1].locked}">{{ serverstatus.examSections[1].sectionname }}</div>
+        <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 2 && !serverstatus.examSections[2].locked, 'sectionbuttonactivered': serverstatus.activeSection == 2 && serverstatus.examSections[2].locked, 'btn-secondary': serverstatus.activeSection != 2,'btn-danger': serverstatus.examSections[2].locked}">{{ serverstatus.examSections[2].sectionname }}</div>
+        <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 3 && !serverstatus.examSections[3].locked, 'sectionbuttonactivered': serverstatus.activeSection == 3 && serverstatus.examSections[3].locked, 'btn-secondary': serverstatus.activeSection != 3,'btn-danger': serverstatus.examSections[3].locked}">{{ serverstatus.examSections[3].sectionname }}</div>
+        <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 4 && !serverstatus.examSections[4].locked, 'sectionbuttonactivered': serverstatus.activeSection == 4 && serverstatus.examSections[4].locked, 'btn-secondary': serverstatus.activeSection != 4,'btn-danger': serverstatus.examSections[4].locked}">{{ serverstatus.examSections[4].sectionname }}</div>
+    </div>
+    <!-- allowSectionSwitch: active tab white (sectionbuttonactive), no red border; tabs only switch dashboard view -->
+    <div v-if="serverstatus.useExamSections && serverstatus.allowSectionSwitch" style="position: absolute; left:257px; bottom: 0; min-width: 550px; z-index: 0;">
+        <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 1 ? 'sectionbuttonactive' : 'btn-secondary'">{{ serverstatus.examSections[1].sectionname }}</div>
+        <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 2 ? 'sectionbuttonactive' : 'btn-secondary'">{{ serverstatus.examSections[2].sectionname }}</div>
+        <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 3 ? 'sectionbuttonactive' : 'btn-secondary'">{{ serverstatus.examSections[3].sectionname }}</div>
+        <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 4 ? 'sectionbuttonactive' : 'btn-secondary'">{{ serverstatus.examSections[4].sectionname }}</div>
+    </div>
+
+
+    
+
+</div>
+<!-- Header END -->
 
 
 <div id="wrapper" class="w-100 h-100 d-flex"  style="z-index: 100;">
@@ -135,6 +143,7 @@
             :pdfBase64="activesheetsPreviewPdf"
             :loading="false"
             :customFields="activesheetsPreviewCustomFields"
+            :blacklist="activesheetsPreviewBlacklist"
             @close="discardActivesheetsPdf"
             @save-custom-fields="saveCustomFields"
         />
@@ -168,11 +177,12 @@
                 <li v-if="config.exammodes && config.exammodes.math"><a class="dropdown-item" @click="selectExamType('math')" :class="{ active: isExamType('math') }">{{$t('dashboard.math')}}</a></li>
                 <li v-if="config.exammodes && config.exammodes.editor"><a class="dropdown-item" @click="selectExamType('editor')" :class="{ active: isExamType('editor') }">{{$t('dashboard.lang')}}</a></li>
                 <li v-if="config.exammodes && config.exammodes.eduvidual"><a class="dropdown-item" @click="selectExamType('eduvidual')" :class="{ active: isExamType('eduvidual') }">{{$t('dashboard.eduvidual')}}</a></li>
-                <li v-if="config.exammodes && config.exammodes.gforms"><a class="dropdown-item" @click="selectExamType('gforms')" :class="{ active: isExamType('gforms') }">{{$t('dashboard.gforms')}}</a></li>
+                <li v-if="config.exammodes && config.exammodes.forms"><a class="dropdown-item" @click="selectExamType('forms')" :class="{ active: isExamType('forms') }">{{$t('dashboard.forms')}}</a></li>
                 <li v-if="config.exammodes && config.exammodes.website"><a class="dropdown-item" @click="selectExamType('website')" :class="{ active: isExamType('website') }">Website</a></li>
                 <li v-if="config.exammodes && config.exammodes.activesheets"><a class="dropdown-item" @click="selectExamType('activesheets')" :class="{ active: isExamType('activesheets') }">Active Sheets</a></li>
                 <li v-if="config.exammodes && config.exammodes.microsoft365"><a class="dropdown-item" @click="selectExamType('microsoft365')" :class="{ active: isExamType('microsoft365') }">Microsoft365</a></li>
                 <li v-if="config.exammodes && config.exammodes.rdp"><a class="dropdown-item" @click="selectExamType('rdp')" :class="{ active: isExamType('rdp') }">RDP</a> </li>
+                <li v-if="config.exammodes && config.exammodes.localvm"><a class="dropdown-item" @click="selectExamType('localvm')" :class="{ active: isExamType('localvm') }">LocalVM</a> </li>
             </ul>
 
             <!-- Additional Info Section -->
@@ -188,21 +198,33 @@
                 </div>
 
 
-                <!-- Active Sheets Info -->
-                <div v-if="isExamType('activesheets')" class="small text-white-50 text-truncate ms-1">    <!--  show one or both files that are defined as IsActiveSheet:true in examInstructionFiles of group A and B -->
-                    <div v-if="serverstatus.examSections[serverstatus.activeSection].groups">
-                        <!--  show both filenames if groups are enabled -->
-                        <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA.examInstructionFiles.some(file => file.IsActiveSheet === true) && serverstatus.examSections[serverstatus.activeSection].groupB.examInstructionFiles.some(file => file.IsActiveSheet === true)">
-                            {{truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupA.examInstructionFiles.find(file => file.IsActiveSheet === true).filename, 20)}} <br>
-                            {{truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupB.examInstructionFiles.find(file => file.IsActiveSheet === true).filename, 20)}}
+                <!-- Active Sheets PDF Buttons -->
+                <div v-if="isExamType('activesheets')" class="d-flex flex-column gap-1">
+                    <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
+                        <div class="input-group" v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.activeSheets?.filename">
+                            <div class="btn btn-sm btn-secondary" @click="removeActiveSheet('A')" style="padding:4px 8px;">x</div>
+                            <div class="btn btn-sm btn-warning filename-button" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
+                                {{ truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 18) }}
+                            </div>
+                            <div class="btn btn-sm btn-teal extension-button-sidebar"><div class="vertical-text-sidebar">A</div></div>
                         </div>
-                    </div>
-                    <div v-else>
-                        <!-- show only the filename for group A if groups are disabled -->
-                        <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA.examInstructionFiles.some(file => file.IsActiveSheet === true)">
-                            {{truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupA.examInstructionFiles.find(file => file.IsActiveSheet === true).filename, 20)}}
+                        <div class="input-group" v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.activeSheets?.filename">
+                            <div class="btn btn-sm btn-secondary" @click="removeActiveSheet('B')" style="padding:4px 8px;">x</div>
+                            <div class="btn btn-sm btn-warning filename-button" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename, 'B')">
+                                {{ truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename, 18) }}
+                            </div>
+                            <div class="btn btn-sm btn-teal extension-button-sidebar"><div class="vertical-text-sidebar">B</div></div>
                         </div>
-                    </div>
+                    </template>
+                    <template v-else>
+                        <div class="input-group" v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.activeSheets?.filename">
+                            <div class="btn btn-sm btn-secondary" @click="removeActiveSheet('A')" style="padding:4px 8px;">x</div>
+                            <div class="btn btn-sm btn-warning filename-button" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
+                                {{ truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 18) }}
+                            </div>
+                            <div class="btn btn-sm btn-teal extension-button-sidebar"><div class="vertical-text-sidebar">PDF</div></div>
+                        </div>
+                    </template>
                 </div>
 
                 <!-- Microsoft365 Buttons -->
@@ -268,12 +290,12 @@
             <span class="small m-1">{{$t("dashboard.bildungsportal")}}</span><span v-if="bipToken" class="small m-1 me-0 text-secondary">(verbunden)</span>
             <div id="biploginbutton" @click="showBipInfo()" class="disabledbutton btn btn-success m-1" style="padding:0;">
                 <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
-                <span v-if="bipUsername" id="biploginbuttonlabel">{{bipUsername}}</span><span v-else id="biploginbuttonlabel">Login</span>
+                <span v-if="bipUsername" id="biploginbuttonlabel" style="padding:2px; font-size:0.9em;">{{bipUsername}}</span><span style="padding:2px; font-size:0.9em;" v-else id="biploginbuttonlabel">Login</span>
             </div> 
         </div>
         <!-- BIP Section END -->
         
-        <div v-if="showDesc" id="description" class="btn m-1" style="white-space: pre-line;" >{{ currentDescription }}</div>
+        <div v-if="showDesc" id="description" class="btn m-1" style="white-space: pre-line;" v-html="currentDescription"></div>
         <div id="statusdiv" class="btn btn-warning m-1"> {{$t('dashboard.connected')}}  </div>
 
         <span @click="showCopyleft()" style="position: absolute; bottom:2px; left: 6px; font-size:0.8em;cursor: pointer;">
@@ -336,8 +358,8 @@
                 <label for="screenshotOcr" class="form-check-label">{{$t('dashboard.ocr')}}</label>
             </div>
             <div class="form-check form-switch  m-1 mb-2">
-                <input v-model=serverstatus.useExamSections @click="" :title="$t('dashboard.activatesections')" checked=false class="form-check-input" type="checkbox" id="activatesections">
-                <label class="form-check-label">{{$t('dashboard.activatesections')}}   </label><br>
+                <input v-model=serverstatus.useExamSections @change="onToggleExamSections" :disabled="sectionsLocked" :title="sectionsLocked ? $t('dashboard.sectionslocked') : $t('dashboard.activatesections')" checked=false class="form-check-input" type="checkbox" id="activatesections">
+                <label class="form-check-label" :class="{'text-muted': sectionsLocked}">{{$t('dashboard.activatesections')}}   </label><br>
             </div>
             <div v-if="serverstatus.useExamSections" class="form-check form-switch  m-1 mb-2 ms-3">
                 <input v-model=serverstatus.allowSectionSwitch @click="" :title="$t('dashboard.allowsectionswitch')" checked=false class="form-check-input" type="checkbox" id="allowsectionswitch">
@@ -513,7 +535,7 @@
                             </button> 
      
                             <div v-cloak :id="student.token" style="position: relative;background-size: cover; height: 132px;" v-bind:style="(student.imageurl && now - 20000 < student.timestamp)? `background-image: url('${student.imageurl}')`:'background-image: url(user-red.svg)'"></div>
-                            <div v-if="student.virtualized && now - 20000 < student.timestamp" class="virtualizedinfo" @mouseover="showDescription($t('dashboard.virtualizedinfo'))" @mouseout="hideDescription">{{$t("dashboard.virtualized")}}</div>
+                            <div v-if="student.virtualized && now - 20000 < student.timestamp" class="virtualizedinfo" @mouseover="showDescription($t('dashboard.virtualizedinfo'), { vmFindings: student.vmFindings, webglFindings: student.webglFindings })" @mouseout="hideDescription">{{$t("dashboard.virtualized")}}</div>
                             <div v-if="!student.focus && now - 20000 < student.timestamp" class="kioskwarning" @mouseover="showDescription($t('dashboard.leftkioskinfo'))" @mouseout="hideDescription">{{$t("dashboard.leftkiosk")}}</div>
                             <div v-if="student.status.sendexam && now - 20000 < student.timestamp" class="examrequest" @mouseover="showDescription($t('dashboard.examrequestinfo'))" @mouseout="hideDescription">{{$t("dashboard.examrequest")}}</div>
                             <div v-if="student.remoteassistant && now - 20000 < student.timestamp" class="remoteassistant" @mouseover="showDescription($t('dashboard.remoteassistantinfo'), student.remoteassistant)" @mouseout="hideDescription">{{$t("dashboard.remoteassistant")}}</div>
@@ -532,8 +554,8 @@
 
                         <!-- bottom buttons START-->
                         <div class="btn-group pt-0" role="group" style="">
-                            <button v-if="(now - 20000 < student.timestamp)" @click="showStudentview(student)" @mouseover="showDescription($t('dashboard.studentinfo'))" @mouseout="hideDescription" type="button" class="btn btn-cyan btn-sm " style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">
-                                <img src="/src/assets/img/svg/eye-fill.svg" class="white" width="18" height="18" >
+                            <button v-if="(now - 20000 < student.timestamp)" @click="showStudentview(student)" @mouseover="showDescription(getStudentInfoText(student), false, true)" @mouseout="hideDescription" type="button" :class="['btn btn-sm', isVersionMismatch(student) ? 'btn-warning' : 'btn-cyan']" style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">
+                                <img :src="isVersionMismatch(student) ? '/src/assets/img/svg/exclamation-triangle-fill.svg' : '/src/assets/img/svg/eye-fill.svg'" :class="isVersionMismatch(student) ? 'text-dark' : 'white'" width="18" height="18" >
                             </button>
                             <button v-if="(now - 20000 > student.timestamp)" type="button" class="btn btn-outline-danger btn-sm " style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">{{$t('dashboard.offline')}} </button>
                             <button v-if="(now - 20000 < student.timestamp) && student.exammode && student.focus" @mouseover="showDescription($t('dashboard.secureinfo'))" @mouseout="hideDescription"  @click='' type="button" 
@@ -594,7 +616,7 @@
 
 
 
-<script >
+<script lang="ts">
 import { VueDraggableNext } from 'vue-draggable-next'
 import { v4 as uuidv4 } from 'uuid'
 import {SchedulerService} from '../utils/schedulerservice.js'
@@ -607,7 +629,8 @@ import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile,
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
 import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer } from '../utils/filemanager'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore } from '../utils/exammanagement.js'
-import { getTestURL, getTestID, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
+import { getTestURL, getTestID, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
+import { Exam } from '../types/api'
 
 class EmptyWidget {
     constructor() {
@@ -680,6 +703,7 @@ export default {
             activesheetsPreviewPdf: null,
             activesheetsPreviewFilename: null,
             activesheetsPreviewCustomFields: [],
+            activesheetsPreviewBlacklist: [],
             activesheetsPreviewGroup: null,
             activesheetsPreviewFileIndex: -1,
             
@@ -691,6 +715,8 @@ export default {
             bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
             bipUsername:this.$route.params.bipUsername === 'false' ?  false : this.$route.params.bipUsername,
             bipStatus: "closed", // "open" or "closed" or "offline"
+            bipPhase: "ready",
+            biptest:this.$route.params.biptest,
 
             serverstatus:{   // this object contains all neccessary information for students about the current exam settings
                 bip: false,
@@ -701,6 +727,7 @@ export default {
                 examDate: new Date().toISOString().slice(0, 19),
                 examDurationMinutes: 100, 
                 pin: this.$route.params.pin,
+                backupdirectory: false,
                 requireBiP: false,
                 exammode: false,
                 delfolderonexit: true,
@@ -728,7 +755,7 @@ export default {
                         moodleURL:null, 
                         cmargin: { side: 'right', size: 3 }, 
 
-                        gformsTestId: null,
+                        formsUrl: null,
                         msOfficeFile: null, 
                         linespacing: 2, 
                         languagetool: false,
@@ -739,10 +766,11 @@ export default {
                         blockSubdomains: false,
                         blockSubfolders: false,
                         rdpConfig: null,
+                        localVMConfig: null,
 
-                        groups: false, 
-                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [] }, 
-                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [] }
+                        groups: false,
+                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
+                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
                     },
                     2: {
                         examtype: 'math',   
@@ -757,7 +785,7 @@ export default {
                         moodleURL:null, 
                         cmargin: { side: 'right', size: 3 }, 
 
-                        gformsTestId: null,
+                        formsUrl: null,
                         msOfficeFile: null, 
                         linespacing: 2, 
                         languagetool: false,
@@ -768,10 +796,11 @@ export default {
                         blockSubdomains: false,
                         blockSubfolders: false,
                         rdpConfig: null,
+                        localVMConfig: null,
 
-                        groups: false, 
-                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [] }, 
-                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [] }
+                        groups: false,
+                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
+                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
                     },
                     3: {
                         examtype: 'math',   
@@ -786,7 +815,7 @@ export default {
                         moodleURL:null, 
                         cmargin: { side: 'right', size: 3 }, 
 
-                        gformsTestId: null,
+                        formsUrl: null,
                         msOfficeFile: null, 
                         linespacing: 2, 
                         languagetool: false,
@@ -795,10 +824,11 @@ export default {
                         audioRepeat: 0,
                         domainname: false,  
                         rdpConfig: null,
+                        localVMConfig: null,
 
-                        groups: false, 
-                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [] }, 
-                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [] }
+                        groups: false,
+                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
+                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
                     },
                     4: {
                         examtype: 'math',   
@@ -813,7 +843,7 @@ export default {
                         moodleURL:null, 
                         cmargin: { side: 'right', size: 3 }, 
 
-                        gformsTestId: null,
+                        formsUrl: null,
                         msOfficeFile: null, 
                         linespacing: 2, 
                         languagetool: false,
@@ -821,14 +851,14 @@ export default {
                         fontsize: '12pt',
                         audioRepeat: 0,
                         domainname: false,  
-                       
                         rdpConfig: null,
-                        groups: false, 
-                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [] }, 
-                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [] }
+                        localVMConfig: null,
+                        groups: false,
+                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
+                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
                     }
                 },                
-            }
+            } as Exam
         };
     },
 
@@ -847,11 +877,16 @@ computed: {
             return this.serverstatus.exammode && this.serverstatus.examSections[this.serverstatus.activeSection].locked;
         }
     },
-    
+
+    // disable sections toggle when exammode is active and any section is locked
+    sectionsLocked() {
+        return this.serverstatus.exammode && Object.values(this.serverstatus.examSections).some(s => s.locked)
+    },
+
     lockDownload() {
         const examType = this.serverstatus.examSections[this.serverstatus.activeSection].examtype;
         const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-        return examType === 'eduvidual' || examType === 'gforms' || examType === 'website' || (examType === 'microsoft365' && !section.msOfficeFile);
+        return examType === 'eduvidual' || examType === 'forms' || examType === 'website' || (examType === 'microsoft365' && !section.msOfficeFile);
     },
     
     lockPdfSummary() {
@@ -871,15 +906,13 @@ computed: {
 
     hasActiveSheetsPdf() {
         if (this.serverstatus.examSections[this.serverstatus.activeSection].examtype !== 'activesheets') {
-            return true; // Not activesheets mode, so no restriction
+            return true;
         }
         const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-        const groupAFiles = section.groupA?.examInstructionFiles || [];
-        const groupBFiles = section.groupB?.examInstructionFiles || [];
-        // Check if there's at least one PDF with IsActiveSheet: true in BOTH groups
-        const hasGroupA = groupAFiles.some(file => file.IsActiveSheet === true && file.filetype === 'pdf');
-        const hasGroupB = groupBFiles.some(file => file.IsActiveSheet === true && file.filetype === 'pdf');
-        return hasGroupA && hasGroupB;
+        if (section.groups) {
+            return !!(section.groupA?.examConfig?.activeSheets?.filename && section.groupB?.examConfig?.activeSheets?.filename);
+        }
+        return !!section.groupA?.examConfig?.activeSheets?.filename;
     },
 
     activeSheetsPdfFilename() {
@@ -887,12 +920,7 @@ computed: {
             return null;
         }
         const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-        const groupAFiles = section.groupA?.examInstructionFiles || [];
-        const groupBFiles = section.groupB?.examInstructionFiles || [];
-        // Find first PDF with IsActiveSheet: true
-        const activeSheetFile = groupAFiles.find(file => file.IsActiveSheet === true && file.filetype === 'pdf') ||
-                               groupBFiles.find(file => file.IsActiveSheet === true && file.filetype === 'pdf');
-        return activeSheetFile ? activeSheetFile.filename : null;
+        return section.groupA?.examConfig?.activeSheets?.filename || null;
     }
 
 },
@@ -961,6 +989,7 @@ computed: {
         configureMath: configureMath,
         configureActivesheets: configureActivesheets,
         configureRDP: configureRDP,
+        configureLocalVM: configureLocalVM,
         defineMaterials: defineMaterials,             // define materials for exam
 
         handleAllowedUrlRemove: handleAllowedUrlRemove,
@@ -986,9 +1015,11 @@ computed: {
             this.now = new Date().getTime()
 
             this.hostip = ipcRenderer.sendSync('checkhostip')
-            if (!this.hostip) return; 
+            if (!this.hostip) return;
 
-            this.updateBiPServerInfo(this.bipStatus);
+            if (this.bipToken && this.serverstatus.bip) {
+                this.updateBiPServerInfo(this.bipStatus);
+            }
             
             if (this.serverlogActive && this.serverlogReload){
                 this.serverlog = await ipcRenderer.invoke('getlog')
@@ -1044,7 +1075,7 @@ computed: {
                             if (student.token == this.studentwidgets[i].token){ 
                                 //now update the entry in the original widgets object and check if the student is online
                                 if (this.now - 20000 > student.timestamp){
-                                    if (this.studentwidgets[i].online && !this.muteAudio){ //play short soundfile on the first time the student timestamp is older than 20 seconds
+                                    if (this.studentwidgets[i].online && !this.muteAudio){ // play short soundfile on the first time the student timestamp is older than 20 seconds
                                         console.log(`dashboard @ fetchInfo: student ${student.clientname} just went offline`)
                                         const audio = new Audio('dialog-warning.oga');
                                         audio.play();
@@ -1052,7 +1083,14 @@ computed: {
                                     else { student.online = false }  // set online status on student object
                                 }
                                 else {student.online = true }  // set online status on student object
-                                
+
+                                // play sound once when student loses focus for the first time
+                                if (!student.focus && this.studentwidgets[i].focus && !this.muteAudio) {
+                                    console.log(`dashboard @ fetchInfo: student ${student.clientname} lost focus`)
+                                    const focusAudio = new Audio('dialog-warning.oga');
+                                    focusAudio.play();
+                                }
+
                                 // Überschreibe das studentwidget, aber korrigiere die Gruppenzugehörigkeit basierend auf der aktuellen Section
                                 this.studentwidgets[i] = student;
                                 
@@ -1165,11 +1203,12 @@ computed: {
             // Call existing methods based on type
             if (type === 'editor') this.configureEditor();
             if (type === 'eduvidual') this.getTestID();
-            if (type === 'gforms') this.getFormsID();
+            if (type === 'forms') this.getFormsID();
             if (type === 'website') this.getTestURL();
             if (type === 'math') this.configureMath();
             if (type === 'activesheets') this.configureActivesheets();
             if (type === 'rdp') this.configureRDP();
+            if (type === 'localvm') this.configureLocalVM();
         },
 
         // get label for the current exam type
@@ -1179,12 +1218,20 @@ computed: {
             case 'math': return this.$t('dashboard.math');
             case 'editor': return this.$t('dashboard.lang');
             case 'eduvidual': return this.$t('dashboard.eduvidual');
-            case 'gforms': return this.$t('dashboard.gforms');
+            case 'forms': return this.$t('dashboard.forms');
             case 'website': return 'Website';
             case 'activesheets': return 'Active Sheets';
             case 'microsoft365': return 'Microsoft365';
             case 'rdp': return 'RDP';
+            case 'localvm': return 'LocalVM';
             default: return 'Select Type';
+            }
+        },
+
+        // when exam sections are toggled off, reset activeSection to 1
+        onToggleExamSections(){
+            if (!this.serverstatus.useExamSections && this.serverstatus.activeSection > 1) {
+                this.serverstatus.activeSection = 1
             }
         },
 
@@ -1279,24 +1326,33 @@ computed: {
             this.setServerStatus(); // Änderungen speichern
         },
       
-        async showDescription(description, info=false) {
-         
+        async showDescription(description, info=false, isHtml=false) {
             if (info) {
-                description += '\n'; 
-                // if additional info is provided, add it to the description - in that case only remoteassistance is delivering additional info for now
-                if (info.keywords.length > 0) {
-                    description += '\n';  
+                description += '\n';
+                // remoteassistant: keywords and ports
+                if (info.keywords?.length > 0) {
+                    description += '\n';
                     description += `Keywords: ${info.keywords.join(', ')}`;
                 }
-                if (info.ports.length > 0) {
-                    description += '\n';  
+                if (info.ports?.length > 0) {
+                    description += '\n';
                     description += `Ports: ${info.ports.join(', ')}`;
                 }
-                this.currentDescription = description;
+                // virtualized: vmFindings (backend) and webglFindings (frontend)
+                const vm = info.vmFindings;
+                const webgl = info.webglFindings;
+                if (vm?.isVM && vm?.reasons?.length > 0) {
+                    description += '\n\n' + this.$t('dashboard.vmFindingsBackend') + '\n';
+                    description += vm.reasons.map(r => '• ' + r).join('\n');
+                    if (vm.vendor) description += '\n' + this.$t('dashboard.vmFindingsVendor') + ': ' + vm.vendor;
+                }
+                if (webgl?.detected) {
+                    description += '\n\n' + this.$t('dashboard.vmFindingsWebgl');
+                    if (webgl.vendor) description += '\n• Vendor: ' + webgl.vendor;
+                    if (webgl.renderer) description += '\n• Renderer: ' + webgl.renderer;
+                }
             }
-            else {
-                this.currentDescription = description;
-            }
+            this.currentDescription = isHtml ? description : description.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
             this.showDesc = true;
         },
         hideDescription() {
@@ -1333,6 +1389,22 @@ computed: {
                 allowEnterKey: false,
             });
         },
+        // compare teacher vs student version (major.minor.patch)
+        isVersionMismatch(student) {
+            if (!student?.version) return true;
+            const vteacher = (this.version || '').split('.').slice(0, 3).join('.');
+            const vstudent = String(student.version).split('.').slice(0, 3).join('.');
+            return vteacher !== vstudent;
+        },
+        getStudentInfoText(student) {
+            const escape = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const name = escape(student?.clientname ?? '?');
+            const v = escape(student?.version ?? '?');
+            const ip = escape(student?.clientip ?? '?');
+            const docs = student?.files ?? 0;
+            const versionSuffix = this.isVersionMismatch(student) ? ` (->${escape(this.version)})` : '';
+            return `<b>${name}</b><br>Version: ${v}${versionSuffix}<br>IP: ${ip}<br>Documents: ${docs}`;
+        },
         //display student specific actions
         showStudentview(student) {
             document.querySelector("#studentinfocontainer").style.display = 'block';
@@ -1351,22 +1423,29 @@ computed: {
             this.activesheetsPreviewPdf = null;
             this.activesheetsPreviewFilename = null;
             this.activesheetsPreviewCustomFields = [];
+            this.activesheetsPreviewBlacklist = [];
             this.activesheetsPreviewGroup = null;
-            this.activesheetsPreviewFileIndex = -1;
             this.hidepreview();
         },
-        // save customFields to the file in examInstructionFiles
-        saveCustomFields(customFields) {
-            if (this.activesheetsPreviewGroup && this.activesheetsPreviewFileIndex >= 0) {
+        // save customFields and blacklist to group.examConfig.activeSheets
+        saveCustomFields(customFields, blacklist = []) {
+            console.log('[saveCustomFields] group:', this.activesheetsPreviewGroup, 'count:', customFields.length);
+            if (this.activesheetsPreviewGroup) {
                 const section = this.serverstatus.examSections[this.serverstatus.activeSection];
                 const group = this.activesheetsPreviewGroup === 'A' ? section.groupA : section.groupB;
-                if (group && group.examInstructionFiles && group.examInstructionFiles[this.activesheetsPreviewFileIndex]) {
-                    // Update customFields in the file object (Vue 3: direct assign is reactive)
-                    group.examInstructionFiles[this.activesheetsPreviewFileIndex].customFields = JSON.parse(JSON.stringify(customFields));
-                    // Update local preview data
+                if (group && group.examConfig?.activeSheets?.filename) {
+                    group.examConfig.activeSheets.customFields = JSON.parse(JSON.stringify(customFields));
+                    group.examConfig.activeSheets.blacklist = [...blacklist];
                     this.activesheetsPreviewCustomFields = JSON.parse(JSON.stringify(customFields));
+                    this.activesheetsPreviewBlacklist = [...blacklist];
                 }
             }
+        },
+
+        removeActiveSheet(group) {
+            const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+            if (group === 'A') section.groupA.examConfig.activeSheets = {};
+            else section.groupB.examConfig.activeSheets = {};
         },
         //show pincode 
         showinfo(){
@@ -1455,12 +1534,15 @@ computed: {
             .then( res => res.json())
             .then( async (response) => {
                 if (response.serverstatus === false) {
+                    this.serverstatus.backupdirectory = this.config.backupdirectory || false
                     this.setServerStatus()  // there is no serverstatus - we need to set it to default
                     return
                 }
                 this.serverstatus = response.serverstatus // we slowly move things over to a centra serverstatus object
-         
-                
+                if (!this.serverstatus.backupdirectory) {  // preserve backupdirectory set in UI if not in saved status
+                    this.serverstatus.backupdirectory = this.config.backupdirectory || false
+                }
+                           
 
                 if (this.serverstatus.examSections[this.serverstatus.activeSection].examtype === "microsoft365"){  // unfortunately we can't automagically reconnect the teacher without violating privacy
                     this.serverstatus.exammode = false
@@ -1690,7 +1772,9 @@ computed: {
                             btnA.textContent = newStatus;
 
                             //call api and update bip data
-                            this.updateBiPServerInfo(newStatus);
+                            if (this.bipToken && this.serverstatus.bip) {
+                                this.updateBiPServerInfo(newStatus);
+                            }
                             this.bipStatus = newStatus;
                         });
                         btnA.dataset.listenerAdded = 'true';
@@ -1702,44 +1786,81 @@ computed: {
 
         toggleBipStatus() {
             const newStatus = this.bipStatus === 'closed' ? 'open' : 'closed';
-            this.updateBiPServerInfo(newStatus);
+            if (this.bipToken && this.serverstatus.bip) {
+                this.updateBiPServerInfo(newStatus);
+            }
             this.bipStatus = newStatus;
-            this.updateBiPServerInfo(newStatus);
         },
 
+        getBiPUrl(): string {
+            if (this.config.bipDemo) {
+                return this.config.bipApiUrl;
+            } else if (this.biptest) {
+                return `https://q.bildung.gv.at`;
+            } else {
+                return `https://bildung.gv.at`;
+            }
+        },
+
+        // Überprüfen, ob der String Base64-codiert ist
+        isBase64(str) {
+            try {
+                return btoa(atob(str)) === str;
+            } catch (err) {
+                return false;
+            }
+        },
+        
+        // Base64-String dekodieren und mögliche Tokens extrahieren
+        decodeBase64AndExtractTokens(base64Str) {
+            if (base64Str == null || !this.isBase64(base64Str)) {
+                return null;
+            }
+            const decodedStr = atob(base64Str);
+            const tokens = decodedStr.split(/[:\s,]+/); // Trennzeichen anpassen, falls nötig
+            return tokens;
+        },
 
          /** 
          * if this is a bip exam configured online that needs students to login into bip too
          * update exam info on server via api
          */
         async updateBiPServerInfo(status){
-            if (!this.bipToken || !this.serverstatus.bip) { return }
+            let token = this.decodeBase64AndExtractTokens(this.bipToken)?.[1];
+            if (!token || !this.serverstatus.bip) {
+                console.error("dashboard @ updateBiPServerInfo: cannot fetch from bip api without valid token")
+            }
 
             //console.log("bip exam - updating server info")
             let payload = {
                 teacherIP: this.serverip,
-                teacherID: this.bipuserID,   /// wird von student.vue nicht nach dashboard.vue übertragen.. ebenso token
                 pin: this.serverstatus.pin,
                 status: status,
-                examID: this.serverstatus.id
+                examID: this.serverstatus.id,
+                phase: this.bipPhase
             }
 
-            // if (this.config.development){  // call to demo api
-                let url= "http://localhost:3000/teacher"
-                fetch(url, {
-                    method: "POST",
-                    headers: {"Content-Type": "application/json" },
-                    body: JSON.stringify(payload) // Daten als JSON-String senden
-                })
-                .then(response => { return response.json(); } )                  
-                .then(data => { 
-                   // console.log(data.message, data.data);
-                })
-                .catch(error => { console.error("Fehler beim API-Aufruf:", error.message);});
-            // }
-            // else{
-            //     //call to real bip api
-            // }
+            const url= this.getBiPUrl()+"/webservice/rest/server.php?wstoken="+token+"&wsfunction=local_dpu_update_exam_status_teacher&moodlewsrestformat=json"
+       
+            fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams(payload).toString()
+            })
+            .then(response => { return response.json(); } )                  
+            .then(data => { 
+               // console.log(data.message, data.data);
+            })
+            .catch(error => {
+                console.error("Fehler beim API-Aufruf:", error.message);
+                if (this.bipPhase === 'completed') {
+                    this.$swal.fire({
+                        title: this.$t("dashboard.attention"),
+                        text: `Bildungsportal aktuell nicht erreichbar, bitte setzen Sie selbst zu einem späteren Zeitpunkt die Prüfungsphase im Bildungsportal auf Abgeschlossen!`,
+                        icon: "warn"
+                    })
+                }
+            });
         },
 
         playAudioFile(filecontent, filename){
@@ -1886,12 +2007,16 @@ computed: {
         this.$nextTick( async function () { // Code that will run only after the entire view has been rendered
        
             document.querySelector("#statusdiv").style.visibility = "hidden";
-           
+            
+        
             await this.getPreviousServerStatus()
+
             this.fetchInfo()
             this.initializeStudentwidgets()
 
-            this.updateBiPServerInfo(this.bipStatus);
+            if (this.bipToken && this.serverstatus.bip) {
+                this.updateBiPServerInfo(this.bipStatus);
+            }
 
             // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
             this.fetchinterval = new SchedulerService(4000);
@@ -2855,8 +2980,7 @@ hr {
 .my-custom-input-select {
     margin-top: 0px !important;
     width: -webkit-fill-available !important;
-    margin: 0px 2em 3px !important;
-    width: 343px !important;
+    margin: 0px 44px 0px 44px !important;
 }  
 .my-swal2-actions {
     margin-top: 10px !important;
@@ -2905,6 +3029,30 @@ hr {
 
 .custom-swal2-icon {
     margin: 3em auto 1em auto !important
+}
+
+.extension-button-sidebar {
+    width: 14px;
+    height: 31px;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.vertical-text-sidebar {
+    writing-mode: vertical-rl;
+    font-size: 0.7em;
+    color: whitesmoke;
+    text-align: center;
+    transform: translateX(-10%);
+}
+
+.filename-button {
+    max-width: 158px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 

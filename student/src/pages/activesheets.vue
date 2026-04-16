@@ -70,9 +70,9 @@
             @close="hidepreview"
         />
         <PdfviewPane
-            :src="currentpreview"
             :localLockdown="localLockdown"
             :examtype="examtype"
+            :toolbar="pdfPreviewUi"
             @close="hidepreview"
             @printBase64="printBase64"                                  
         />
@@ -94,6 +94,7 @@
             :loading="isLoading"
             :pdf-base64="pdfBase64"
             :custom-fields="customFields"
+            :blacklist="blacklist"
         />
     
     </div>
@@ -104,7 +105,7 @@ import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
-import { getExamMaterials, loadPDF, loadImage} from '../utils/filehandler.js'
+import { getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import PdfviewPane from '../components/PdfviewPane.vue'
 import WebviewPane from '../components/WebviewPane.vue';
 import PdfOverlay from '../components/PdfRenderer.vue';
@@ -175,6 +176,8 @@ export default {
             currentpreviewBase64: null,  // Base64 PDF for preview/submission
             submissionnumber: 0,  // Submission counter
             customFields: [],
+            blacklist: [],
+            pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
         }
     }, 
     components: { ExamHeader, PdfviewPane, WebviewPane, PdfOverlay },  
@@ -191,6 +194,7 @@ export default {
             return typeof allowedUrl === 'object' ? allowedUrl.url : allowedUrl;
         },
         hidepreview(){
+            resetPdfPreviewToolbar(this);
             let preview = document.querySelector("#preview")
             preview.style.display = 'none';
             preview.setAttribute("src", "about:blank");
@@ -432,24 +436,18 @@ export default {
                 }
                 
                 // Find Active Sheet PDF in the target group
-                let activeSheetFile = null;
-                const groupFiles = section[targetGroup]?.examInstructionFiles || [];
-                activeSheetFile = groupFiles.find(file => file.IsActiveSheet === true && file.filetype === 'pdf');
-                
-                // If not found in examInstructionFiles, also check examMaterials (in case they're loaded separately)
-                if (!activeSheetFile && this.examMaterials && this.examMaterials.length > 0) {
-                    activeSheetFile = this.examMaterials.find(file => file.IsActiveSheet === true && file.filetype === 'pdf');
-                }
-
+                const activeSheetFile = section[targetGroup]?.examConfig?.activeSheets?.filename ? section[targetGroup].examConfig.activeSheets : null;
                 if (activeSheetFile && activeSheetFile.filecontent) {
                     this.pdfBase64 = activeSheetFile.filecontent;
-                    this.activeSheetPdfFilename = activeSheetFile.filename;  // Store the PDF filename
+                    this.activeSheetPdfFilename = activeSheetFile.filename;
                     this.customFields = activeSheetFile.customFields ? JSON.parse(JSON.stringify(activeSheetFile.customFields)) : [];
+                    this.blacklist = activeSheetFile.blacklist ? [...activeSheetFile.blacklist] : [];
                 } else {
                     console.warn('No Active Sheet PDF found for group:', targetGroup);
                     this.pdfBase64 = null;
                     this.activeSheetPdfFilename = null;
                     this.customFields = [];
+                    this.blacklist = [];
                 }
                 
                 this.isLoading = false;

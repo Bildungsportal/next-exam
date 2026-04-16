@@ -5,35 +5,37 @@
 
          
             <!-- insert button -->
-            <li class="nav-item" v-if="examtype == 'editor'">
-                <div class="nav-link btn btn-light btn-sm unstyled" id="insert-button" style="display: inline-flex" @click="insertImage(selectedFile)" :title="$t('editor.insert')">
+            <li v-if="examtype === 'editor' && toolbar.showInsert" class="nav-item">
+                <div class="nav-link btn btn-light btn-sm unstyled" id="insert-button" @click="insertImage()" :title="$t('editor.insert')">
                     <img src="/src/assets/img/svg/edit-download.svg" class="white" >
                 </div>
             </li>
       
             <!-- print button -->
-            <li class="nav-item" v-if="!localLockdown">
-                <div class="nav-link btn btn-light btn-sm unstyled" id="print-button" style="display: inline-flex" @click="printBase64(true)" :title="$t('editor.print')">
+            <li v-if="!localLockdown && toolbar.showPrint" class="nav-item">
+                <div class="nav-link btn btn-success btn-sm unstyled unstyled-send" id="print-button" @click="printBase64(true)" :title="$t('editor.printToPrinter')">
                     <img src="/src/assets/img/svg/print.svg" class="white" >
+                    <span class="ms-2 send-label">{{ $t('editor.printToPrinter') }}</span>
                 </div>
             </li>
 
             <!-- send button -->
-            <li class="nav-item" v-if="!localLockdown">
-                <div class="nav-link btn btn-light btn-sm unstyled" id="send-button" style="display: inline-flex" @click="printBase64()" :title="$t('editor.send')">
+            <li v-if="!localLockdown && toolbar.showSend" class="nav-item">
+                <div class="nav-link btn btn-success btn-sm unstyled unstyled-send" id="send-button" @click="printBase64()" :title="$t('editor.send')">
                     <img src="/src/assets/img/svg/document-send.svg" class="white">
+                    <span class="ms-2 send-label">{{ $t('editor.send') }}</span>
                  </div>
             </li>
             
             <!-- zoom buttons -->
-            <li class="nav-item" id="pdfZoom" style="display:none;">
+            <li v-show="toolbar.showZoom" class="nav-item" id="pdfZoom">
                 <div class="nav-link btn btn-light btn-sm unstyled" style="display:inline-flex;" id="zoomIn" :title="$t('editor.zoomIn')">  <img src="/src/assets/img/svg/zoom-in.svg" class="" ></div>
                 <div class="nav-link btn btn-light btn-sm unstyled" style="display:inline-flex;" id="zoomOut" :title="$t('editor.zoomOut')"> <img src="/src/assets/img/svg/zoom-out.svg" class="" ></div>
             </li>
 
             <!-- close button -->
             <li class="nav-item ms-auto">  
-                <div type="button" class="nav-link btn btn-light btn-sm" :title="$t('editor.close')" @click.stop="closePane"style="width:40px; height:40px; text-align:center; font-weight:bold;">&times;</div> 
+                <div type="button" class="nav-link btn btn-light btn-sm" :title="$t('editor.close')" @click.stop="closePane" style="width:40px; height:40px; text-align:center; font-weight:bold;">&times;</div> 
             </li>
 
         </ul>
@@ -48,10 +50,12 @@
   export default {
     name: 'PdfviewPane',
     props: {
-      id: { type: String, default: '' },
-      src: { type: String, default: '' },
       localLockdown: { type: Boolean, default: false },
       examtype: { type: String, default: 'math' },
+      toolbar: {
+        type: Object,
+        required: true,
+      },
     },
 
 
@@ -68,7 +72,7 @@
     methods: {
       closePane() { this.$emit('close'); },                                // send 'close' Event
       printBase64(base64=false) { this.$emit('printBase64', base64); },
-      insertImage(selectedFile) { this.$emit('insertImage', selectedFile); }
+      insertImage() { this.$emit('insertImage'); }
 
     }
   }
@@ -80,12 +84,22 @@
         padding: 10px !important;
         margin: 0px !important;
         border: none !important;
-        border-radius: 0px !important;
+        border-radius: 0 !important;
         align-items: center !important;
         width: 40px !important;
         height: 40px !important;
         text-align: center !important;
        
+    }
+    .unstyled.unstyled-send {
+        width: auto !important;
+        min-width: 120px !important;
+        display: inline-flex !important;
+        justify-content: center !important;
+        color: #000 !important;
+    }
+    .unstyled-send .send-label {
+        color: #000 !important;
     }
     .unstyled img{
         width: 20px !important;

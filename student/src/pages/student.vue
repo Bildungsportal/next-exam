@@ -18,10 +18,10 @@
         <button v-if="clientinfo.groups && clientinfo.group == 'b' && token && !localLockdown" type="button"
                 class="btn btn-warning btn-sm m-1 mt-1" style="cursor: unset; width: 32px; float: right"> B
         </button>
-        <div v-if="!hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 " style="cursor: unset; float: right">
+        <div v-if="!hostipDisplay && !token" id="adv" class="btn btn-danger btn-sm m-0  mt-1 " style="cursor: unset; float: right">
             {{ $t("student.offline") }}
-            {{ hostip }}
         </div>
+        <div v-if="hostipDisplay && !token" id="adv" class="btn btn-sm btn-outline-success m-0 mt-1" :style="canSelectInterface ? 'cursor: pointer; float: right' : 'cursor: unset; float: right'" @click="canSelectInterface && reconfigurePreferredInterface()">{{ hostip?.interface ? hostip.interface + ' : ' + hostip.hostip : hostipDisplay }}</div>
         <div v-if="networkerror" id="adv" class="btn btn-danger btn-sm m-0  mt-1 " style="cursor: unset; float: right">
             {{ $t("student.noapi") }}
         </div>
@@ -145,7 +145,7 @@
                                 {{ server.servername }}
                             </div>
 
-                            <div v-if="server.version !== version" class="badge btn-danger "
+                            <div v-if="server.version !== version" class="badge btn-warning "
                                  style="width:170px; height:20px; vertical-align: text-bottom; margin-top: 2px; display: inline;"
                                  :title="$t('student.outdatedinfo')"> {{ $t('student.outdated') }} {{ server.version }}
                             </div>
@@ -213,7 +213,7 @@
 </template>
 
 
-<script>
+<script lang="ts">
 import validator from 'validator'
 import log from 'electron-log/renderer'
 import {SchedulerService} from '../utils/schedulerservice.js'
@@ -222,6 +222,8 @@ import speedometer_img from 'src/assets/img/svg/speedometer.svg'
 import server_img from 'src/assets/img/svg/server.svg'
 import login_students_img from 'src/assets/img/login_students.jpg'
 import emblem_warning_img from '/src/assets/img/svg/emblem-warning.svg'
+import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync } from '../utils/screenshotCapture.js'
+import { Exam } from '../types/api'
 
 
 // Capture unhandled promise rejections
@@ -246,8 +248,8 @@ export default {
         return {
             version: this.$route.params.version,
             token: "",
-            username: this.$route.params.config.development ? "Thomas" : "",
-            pincode: this.$route.params.config.development ? "1111" : "",
+            username: this.$route.params.config.development ? "Thomas" : "" as string | boolean,
+            pincode: this.$route.params.config.development ? "1111" : "" as string,
             clientinfo: {},
             serverlist: [],
             serverlistAdvanced: [],
@@ -261,7 +263,7 @@ export default {
             buildDate: this.$route.params.config.buildDate,
             startExamEvent: null,
             advanced: false,
-            serverip: "",
+            serverip: "" as string,
             servername: "",
             hostip: this.$route.params.config.hostip,
             clickCount: 0,
@@ -269,15 +271,17 @@ export default {
             localLockdown: false,
             isLoading: true,
 
-            biptest: false,
+            biptest: true,
             bipToken: false,
             bipUsername: false,
             bipuserID: false,
             servertimeout: false,
             bipData: null,
-            onlineExams: [],
+            onlineExams: [] as Exam[],
             validip: true,
             serverFailureCount: {}, // Track failed ping attempts for manually added servers
+            activeDialog: false,
+
             speedometer_img,
             server_img,
             login_students_img,
@@ -287,6 +291,12 @@ export default {
     computed: {
         inactivelocale() { // Display current language code
             return this.$i18n.locale === 'de' ? 'en' : 'de';
+        },
+        hostipDisplay() {
+            return this.hostip && (typeof this.hostip === 'object' ? this.hostip.hostip : this.hostip);
+        },
+        canSelectInterface() {
+            return !this.token && this.hostip?.availableInterfaces?.length > 1;
         }
     },
 
@@ -298,17 +308,60 @@ export default {
             signalBridge.send('set-new-locale', this.$i18n.locale);
         },
 
+        async selectPreferredInterface() {
+            if (this.activeDialog || !this.hostip?.availableInterfaces?.length) return;
+            this.activeDialog = true;
+            this.$swal.fire({
+                customClass: {
+                    popup: 'my-popup',
+                    title: 'my-title',
+                    content: 'my-content',
+                    input: 'my-custom-input',
+                    inputLabel: 'my-input-label',
+                    actions: 'my-swal2-actions'
+                },
+                title: this.$t("student.selectinterface"),
+                html: "<div class='my-content'>" + this.$t("student.selectinterfaceinfo") + "<br><br>" +
+                    this.hostip.availableInterfaces.map(netInterface =>
+                        `<div style="margin: 5px 0; padding: 5px; background-color: #f8f9fa; border-radius: 3px;">
+                            <strong>${netInterface.name}</strong>: ${netInterface.address}
+                        </div>`
+                    ).join('') + "</div>",
+                showCancelButton: true,
+                cancelButtonText: this.$t("dashboard.cancel"),
+                input: "select",
+                inputOptions: this.hostip.availableInterfaces.reduce((acc, curr) => {
+                    acc[curr.name] = curr.name;
+                    return acc;
+                }, {}),
+                inputPlaceholder: "",
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    await signalBridge.invoke('setPreferredInterface', result.value);
+                    const updated = await signalBridge.invoke('checkhostip');
+                    this.safeAssign('hostip', updated);
+                }
+                this.activeDialog = false;
+            });
+        },
+
+        reconfigurePreferredInterface() {
+            if (this.token) return;
+            this.activeDialog = false;
+            this.selectPreferredInterface();
+        },
+
         async loginBiP() {
-            if (this.config.bipDemo) {   // skip bip logon and fake bip info
+            /*if (this.config.bipDemo) {   // skip bip logon and fake bip info
                 this.bipUsername = "Marie Curie"
                 this.bipuserID = 8
-                this.bipToken = "3bb55e2ae29dc744e74dcbdca7722615"
+                this.bipToken = btoa("Token:4fce5b97fe36cb42313621ebf3ff2a1a")
                 this.username = this.bipUsername
 
                 await this.fetchBipExams()
                 this.bipAutoconnect()
                 return  //skip real login
-            }
+            }*/
             let IPCresponse = signalBridge.sendSync('loginBiP', this.biptest)
             if (IPCresponse && IPCresponse.status === "success") {
 
@@ -334,6 +387,10 @@ export default {
                     this.pincode = ""
                     this.bipData = null
                     this.onlineExams = []
+                    const loginBtn = document.querySelector('#biploginbutton')
+                    if (loginBtn) {
+                        loginBtn.classList.remove('disabledbutton')
+                    }
                 }
             });
         },
@@ -343,14 +400,14 @@ export default {
          */
         bipAutoconnect() {
             if (this.onlineExams.length > 0) {
-                this.onlineExams.forEach(exam => {
+                this.onlineExams.forEach((exam: Exam) => {
                     if (exam.examStatus == "open") {
                         exam.examTeachers.forEach(teacher => {
                             if (teacher.teacherIP) {
                                 //console.log(exam)
                                 this.serverip = teacher.teacherIP
                                 this.username = this.bipUsername
-                                this.pincode = parseInt(exam.examPin)     // Set the pin to the exam pin for auto connect
+                                this.pincode = exam.examPin.toString()     // Set the pin to the exam pin for auto connect
                                 console.log(`connecting to exam: ${exam.examName} with teacher: ${teacher.teacherID} and pin: ${exam.examPin}`)
                                 this.registerClient(teacher.teacherIP, exam.examName)
                             }
@@ -369,80 +426,78 @@ export default {
             }
         },
 
+        getBiPUrl(): string {
+            if (this.config.bipDemo) {
+                return this.config.bipApiUrl;
+            } else if (this.biptest) {
+                return `https://q.bildung.gv.at`;
+            } else {
+                return `https://bildung.gv.at`;
+            }
+        },
+
         /**
          * Loads pre-configured exams from the education portal via bip/api
          */
         async fetchBipExams() {
-            if (!this.bipToken) return;  // cannot fetch from bip api without valid token
+            let token = this.decodeBase64AndExtractTokens(this.bipToken)?.[1];
+            if (!token) {
+                console.error("student.vue@fetchBipExams: cannot fetch from bip api without valid token")
+                return;
+            }
 
-            //  return // disable bip api call for now - this must connect to the real bip api server
-            //probably the path needs to be set in .env and config.js
+            const url = this.getBiPUrl() + '/webservice/rest/server.php?wstoken=' + token + '&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json';
 
-
-            // if (this.config.development){
-            let url = this.config.bipApiUrl + "/webservice/rest/server.php?wstoken=" + this.bipToken + "&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json"
-
-            await fetch(url, {
-                method: "GET",
-                headers: {"Content-Type": "application/x-www-form-urlencoded"}
+            await fetch(url, { method: "GET" })
+            .then(response => {
+                return response.json();
             })
-                .then(response => {
-                    return response.json();
-                })
-                .then(data => {
-                    // console.log("Data from API:", data);
-                    this.bipData = data   // Store all of the information in data
-                    this.onlineExams = data.exams
-                    console.log(data)
-                    return
-                })
-                .catch(error => {
-                    console.error("Error during API call:", error);
-                });
-            return
-            // }
-            // else {
-            // Do actual BIP API Call
-            // let url= "https://www.bildung.gv.at/webservice/rest/next-exam/teacher"
-            // fetch(url, {
-            //     method: "GET",
-            //     headers: {"Content-Type": "application/json" }
-            // })
-            // .then(response => { return response.json(); } )
-            // .then(data => {
-            //     console.log("Data from API:", data);
-            //     this.bipData = data   // Store all of the information in data
-            //     data.exams.forEach( exam => {
-            //   this.onlineExams = this.data.exams
-            //     })
-            // })
-            // .catch(error => { console.error("Error during API call:", error);});
-            // }
+            .then(data => {
+                this.bipData = data
+                this.onlineExams = Array.isArray(data?.exams) ? data.exams : []
+            })
+            .catch(error => {
+                console.error("Error during API call:", error);
+            });
         },
 
 
         fetchBiPData(base64String) {
             const tokens = this.decodeBase64AndExtractTokens(base64String);
             let token = tokens[1]
-            let url = `https://www.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json`
-            if (this.biptest) {
-                url = `https://q.bildung.gv.at/webservice/rest/server.php?wstoken=${token}&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json`
-            }
+            console.log("token"+token);
+            let url = this.getBiPUrl()+'/webservice/rest/server.php?wstoken='+token+'&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json';
 
             fetch(url, {method: 'POST'})
                 .then(res => res.json())
-                .then(response => {
-                    console.log(response)
-                    this.$swal.fire({
-                        title: "BiP Response",
-                        text: "Connection established",
-                        icon: 'info',
-                        showCancelButton: false,
-                    })
-                    if (response.fullname) {
-                        this.username = response.fullname
-                        this.bipuserID = response.userid
+                .then(async (response) => {
+                    if (response.fullname){
+                        this.$swal.fire({
+                            title: "BiP Response",
+                            text: "Verbindung hergestellt",
+                            icon: 'info',
+                            showCancelButton: false,
+                        })
+
                         this.bipUsername = response.fullname
+                        this.bipuserID = response.userid
+
+
+                        document.querySelector("#biploginbutton").classList.remove('btn-info')
+                        document.querySelector("#biploginbutton").classList.add('btn-success')
+                        document.querySelector("#biplogo").style.filter = "hue-rotate(140deg)"
+
+                        await this.fetchBipExams()
+                        await this.fetchInfo()
+                    }
+                    else {
+                        this.$swal.fire({
+                            title: "BiP Response",
+                            text: "Verbindung konnte nicht hergestellt werden",
+                            icon: 'info',
+                            showCancelButton: false,
+                        })
+
                     }
                 })
                 .catch(err => {
@@ -691,8 +746,6 @@ export default {
                     return;
                 }
             });
-
-             */
         },
 
 
@@ -795,6 +848,71 @@ export default {
             delete this.serverFailureCount[serverIdentifier];
         },
 
+        /** Merge BiP portal exams into a server list (works with or without multicast / manual IP servers). */
+        mergeBipExamsIntoServerlist(newServerlist) {
+            if (!this.onlineExams?.length) {
+                return newServerlist;
+            }
+            this.onlineExams.forEach(exam => {
+                const examId = exam.id || exam.examName;
+                const existingInNewList = newServerlist.find(s => (s.id || s.servername) === examId);
+                const existingInCurrentList = this.serverlist.find(s => (s.id || s.servername) === examId);
+
+                if (existingInNewList) {
+                    if (existingInNewList.examStatus !== exam.examStatus) {
+                        existingInNewList.examStatus = exam.examStatus;
+                    }
+                } else if (existingInCurrentList) {
+                    const updatedServer = {
+                        ...existingInCurrentList,
+                        examStatus: exam.examStatus,
+                    };
+                    newServerlist.push(updatedServer);
+                } else {
+                    const newServer = {
+                        id: exam.id,
+                        servername: exam.examName,
+                        reachable: true,
+                        serverport: this.serverApiPort,
+                        timestamp: Date.now(),
+                        bip: true,
+                        examStatus: exam.examStatus,
+                        version: exam.version
+                    };
+                    newServerlist.push(newServer);
+                }
+            });
+            return newServerlist;
+        },
+
+        dedupeServerlistById(newServerlist) {
+            return newServerlist.reduce((unique, server) => {
+                if (!unique.some(u => u.id === server.id)) {
+                    unique.push(server);
+                }
+                return unique;
+            }, []);
+        },
+
+        applyOnlineExamStatusToServerlist() {
+            if (!this.onlineExams?.length) {
+                return;
+            }
+            let hasChanges = false;
+            this.onlineExams.forEach(exam => {
+                const existingServer = this.serverlist.find(server => server.id === exam.id);
+                if (existingServer) {
+                    if (existingServer.examStatus !== exam.examStatus) {
+                        existingServer.examStatus = exam.examStatus;
+                        hasChanges = true;
+                    }
+                }
+            });
+            if (hasChanges) {
+                this.serverlist = [...this.serverlist];
+            }
+        },
+
 
         async fetchInfo() {
             let getinfo = await signalBridge.invoke('getinfoasync')  // gets serverlist and clientinfo from multicastclient
@@ -883,53 +1001,8 @@ export default {
                     newServerlist = [...newServerlist, ...this.serverlistAdvanced];
 
                 }
-                // add bip servers to newServerlist
-                if (this.onlineExams.length > 0) {
-                    this.onlineExams.forEach(exam => {
-                        // Optimized: Check if server already exists in newServerlist or current serverlist
-                        const examId = exam.id || exam.examName;
-                        const existingInNewList = newServerlist.find(s => (s.id || s.servername) === examId);
-                        const existingInCurrentList = this.serverlist.find(s => (s.id || s.servername) === examId);
-
-                        if (existingInNewList) {
-                            // Server already exists in newServerlist, only update examStatus
-                            if (existingInNewList.examStatus !== exam.examStatus) {
-                                existingInNewList.examStatus = exam.examStatus;
-                            }
-                        } else if (existingInCurrentList) {
-                            // Server exists in current list, but not in newServerlist
-                            // Use existing server and update only relevant properties
-                            const updatedServer = {
-                                ...existingInCurrentList,
-                                examStatus: exam.examStatus,
-                                // Timestamp remains unchanged
-                            };
-                            newServerlist.push(updatedServer);
-                        } else {
-                            // Create new server entry in serverlist format (only for new servers)
-                            const newServer = {
-                                id: exam.id,
-                                servername: exam.examName,
-                                reachable: true,
-                                serverport: this.serverApiPort,
-                                timestamp: Date.now(), // Only for new servers
-                                bip: true,
-                                examStatus: exam.examStatus,
-                                version: exam.version
-                            };
-                            newServerlist.push(newServer);
-                        }
-                    })
-                }
-
-                // Remove duplicate servers from newServerlist
-                newServerlist = newServerlist.reduce((unique, server) => {
-                    if (!unique.some(u => u.id === server.id)) {  // Check if server already exists in array based on serverip and servername
-                        unique.push(server); // Add server if it doesn't exist
-                    }
-                    return unique;
-                }, []);
-
+                newServerlist = this.mergeBipExamsIntoServerlist(newServerlist);
+                newServerlist = this.dedupeServerlistById(newServerlist);
 
                 // Optimized: Update serverlist only if relevant data has changed
                 if (!this.isServerlistEqual(this.serverlist, newServerlist)) {
@@ -937,45 +1010,27 @@ export default {
                     this.serverlist = newServerlist // update serverlist - but only if there are new servers or relevant changes
                 }
 
-                // Optimized: Update exam status only if status has actually changed
-                if (this.onlineExams.length > 0) {
-                    let hasChanges = false;
-                    this.onlineExams.forEach(exam => {
-                        // Only exams that were also created for the student are updated via the API and their exam status is set - other exams that are also bip-exams therefore have no exam status
-                        const existingServer = this.serverlist.find(server => server.id === exam.id);// Check if server already exists in currentserverlist
-                        if (existingServer) {
-                            if (existingServer.examStatus !== exam.examStatus) {
-                                console.log("student.vue @ fetchInfo: updating exam status for existing server")
-                                existingServer.examStatus = exam.examStatus;
-                                hasChanges = true;
-                            }
-                        }
-                    });
-                    // Only trigger re-render if something has changed
-                    if (hasChanges) {
-                        // Vue automatically detects the change through direct mutation
-                        // but we still set a new reference to be safe
-                        this.serverlist = [...this.serverlist];
-                    }
-                }
+                this.applyOnlineExamStatusToServerlist();
 
 
-            } else {  // Sometimes explicit is easier to read (no servers incoming via multicast)
-                if (this.serverlistAdvanced.length !== 0) {  // One server coming via direct ip polling
-                    // Optimized: Compare with isServerlistEqual instead of only server names
-                    if (!this.isServerlistEqual(this.serverlist, this.serverlistAdvanced)) {
-                        this.serverlist = this.serverlistAdvanced;
-                    }
+            } 
+            else {  // No multicast: still show manual IP servers and BiP exams from the portal
+                let newServerlist = this.serverlistAdvanced.length !== 0 ? [...this.serverlistAdvanced] : [];
+                newServerlist = this.mergeBipExamsIntoServerlist(newServerlist);
+                newServerlist = this.dedupeServerlistById(newServerlist);
+
+                if (newServerlist.length > 0) {
+                    this.safeAssign('servertimeout', 0);
                 } else {
-                    // Optimized: Only set if list is not already empty
-                    if (this.serverlist.length !== 0) {
-                        this.serverlist = [];
-                    }
-                    // Optimized: Only increment servertimeout if not already high enough
                     if (this.servertimeout <= 2) {
                         this.servertimeout++;
                     }
                 }
+
+                if (!this.isServerlistEqual(this.serverlist, newServerlist)) {
+                    this.serverlist = newServerlist;
+                }
+                this.applyOnlineExamStatusToServerlist();
             }
 
 
@@ -984,9 +1039,12 @@ export default {
              * If not we exit here
              */
             const newHostip = await signalBridge.invoke('checkhostip');
-            // console.log(newHostip);
-            this.safeAssign('hostip', newHostip); // Optimized: Only set if changed
-            if (!this.hostip) return;
+            this.safeAssign('hostip', newHostip);
+            const hasIp = this.hostip && (typeof this.hostip === 'object' ? this.hostip.hostip : this.hostip);
+            if (!hasIp) return;
+            if (this.hostip?.availableInterfaces?.length > 1 && !this.hostip?.preferredInterface) {
+                this.selectPreferredInterface();
+            }
             if (this.clientinfo.token) return;   // stop spamming the api if already connected
 
 
@@ -1074,27 +1132,29 @@ export default {
             return new Promise(resolve => setTimeout(resolve, ms));
         },
 
-
         /** register client on the server **/
-        registerClient(serverip, servername) {
-
+        async registerClient(serverip, servername) {
             if (this.username === "") {
-                this.$swal.fire({
-                    title: "Error",
-                    text: this.$t("student.nouser"),
-                    icon: 'error',
-                    showCancelButton: false,
-                })
-            } else if (this.pincode === "") {
-                this.$swal.fire({
-                    title: "Error",
-                    text: this.$t("student.nopin"),
-                    icon: 'error',
-                    showCancelButton: false,
-                })
-            } else {
+                this.$swal.fire({ title: "Error", text: this.$t("student.nouser"), icon: 'error', showCancelButton: false });
+                return;
+            }
+            if (this.pincode === "") {
+                this.$swal.fire({ title: "Error", text: this.$t("student.nopin"), icon: 'error', showCancelButton: false });
+                return;
+            }
+            if (!hasActiveScreenshotStream()) {
+                const ok = await ensureDisplayStreamAsync();
+                if (!ok) {
+                    this.$swal.fire({ title: "Error", text: this.$t("student.screenshotpermission"), icon: 'error', showCancelButton: false });
+                    return;
+                }
+            }
+            if (!isFullDesktopCaptureLikely() && !this.$route.params.config.development) {
+                this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
+                return;
+            }
 
-                const charMap = {
+            const charMap = {
                     'ć': 'c',
                     'č': 'c',
                     'š': 's',
@@ -1148,7 +1208,6 @@ export default {
                         showCancelButton: false,
                     })
                 }
-            }
         },
         showCopyleft() {
             this.$swal.fire({
@@ -1275,6 +1334,8 @@ export default {
             this.fetchBiPData(token)
         });
 
+        // Screenshot scheduler only in main window (this page); exam window never loads student.vue
+        initScreenshotScheduler(signalBridge);
 
         // Set locale to system locale or fallback to 'en'
         const systemLocale = navigator.language.split('-')[0] // e.g. "de" from "de-DE"
@@ -1335,7 +1396,7 @@ body {
 
 
 .disabledbutton {
-    pointer-events: none; /* Disables clicks */
+    /* intentionally left blank: class kept for compatibility */
 }
 
 .disabledexam {

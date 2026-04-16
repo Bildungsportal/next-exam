@@ -20,12 +20,13 @@ import path from 'path'
 import fs from 'fs'
 import ip from 'ip'
 import net from 'net'
+import dns from 'dns'
 import i18n from '../../../src/locales/locales.js'
 
 const {t} = i18n.global
-import {ipcMain, clipboard, app, webContents} from 'electron'
-import {gateway4sync} from 'default-gateway';
-import os from 'os'
+import { ipcMain, clipboard, app, webContents } from 'electron'
+import { gateway4sync } from 'default-gateway';
+import os, { networkInterfaces } from 'os'
 import log from 'electron-log';
 import {disableRestrictions} from './platformrestrictions.js';
 import * as webFilter from './webFilter.js';
@@ -33,10 +34,12 @@ import mammoth from 'mammoth';
 
 import languageToolServer from './lt-server';
 import platformDispatcher from './platformDispatcher.js';
-import {updateSystemTray} from './traymenu.js';
-import {ensureNetworkOrReset} from './testpermissionsMac.js';
-import {getWlanInfo} from './getwlaninfo.js';
-import {switchExamSection} from './switchExamSection.js';
+import { updateSystemTray } from './traymenu.js';
+import { ensureNetworkOrReset } from './testpermissionsMac.js';
+import { getWlanInfo } from './getwlaninfo.js';
+import { switchExamSection } from './switchExamSection.js';
+import { startProxy } from './vncproxy.js';
+import { getVMFindings } from './vmDetection.js';
 
 const __dirname = import.meta.dirname;
 
@@ -115,9 +118,21 @@ class IpcHandler {
                     .catch(err => log.error(`ipchandler @ getExamMaterials: ${err}`));
                 return examMaterials
             }
-
-
         })
+
+        ipcMain.handle('start-proxy', async (event, payload) => {
+            try {
+                const { host, port } = payload || {};
+                if (!host || !port) {
+                    throw new Error('Invalid proxy target');
+                }
+                const result = await startProxy({ host, port });
+                return { port: result };
+            } catch (err) {
+                log.error('ipchandler @ start-proxy:', err);
+                return { port: null, error: err.message };
+            }
+        });
 
         // Helper function for common exception URLs (used by all exam modes)
         const checkCommonExceptions = (targetUrl) => {
@@ -217,13 +232,23 @@ class IpcHandler {
             blockSubfolders,
             moodleTestId,
             moodleDomain,
-            gformsTestId
+            formsUrl
         }) => {
             const guest = webContents.fromId(Number(guestId));
             if (!guest || guest.isDestroyed?.()) return false;
 
             // Remove old listeners to prevent duplicate registrations
             guest.removeAllListeners('will-navigate');
+
+            // Precompute Forms URL info (formsUrl must be a full URL)
+            let formsUrlObj = null;
+            if (typeof formsUrl === 'string' && formsUrl) {
+                try {
+                    formsUrlObj = new URL(formsUrl);
+                } catch (e) {
+                    formsUrlObj = null;
+                }
+            }
 
             // URL validation function - different logic based on mode; returns { allowed, reason? } for website mode
             const getAllowResult = (targetUrl) => {
@@ -247,10 +272,23 @@ class IpcHandler {
                     if (targetUrl.includes("login") && targetUrl.includes("tirol.gv.at")) return {allowed: true};
                     return {allowed: false, reason: 'not in eduvidual allow list'};
                 } else if (mode === "forms") {
-                    if (targetUrl.includes(gformsTestId)) return {allowed: true};
-                    if (targetUrl.includes("docs.google.com") && targetUrl.includes("formResponse")) return {allowed: true};
-                    if (targetUrl.includes("docs.google.com") && targetUrl.includes("viewscore")) return {allowed: true};
-                    return {allowed: false, reason: 'not in forms allow list'};
+                    const lowerUrl = String(targetUrl).toLowerCase();
+                    if (checkCommonExceptions(lowerUrl)) return { allowed: true };
+
+                    // Lock to same origin of the configured forms URL
+                    if (formsUrlObj) {
+                        try {
+                            const currentObj = new URL(targetUrl);
+                            if (currentObj.origin === formsUrlObj.origin) {
+                                return { allowed: true };
+                            }
+                        } catch (e) {
+                            return { allowed: false, reason: 'invalid target URL for forms mode' };
+                        }
+                    }
+
+                    // If we have no valid base URL or URL is outside allowed scope, block
+                    return { allowed: false, reason: 'not in forms allow list' };
                 } else if (mode === "rdp") {
                     return {allowed: true};
                 }
@@ -344,12 +382,32 @@ class IpcHandler {
             return successResult || results[results.length - 1];
         })
 
+        /**
+         * Resolve a hostname to an IPv4 address for LanguageTool configuration
+         */
+        ipcMain.handle('resolveHostToIp', async (_event, host) => {
+            if (!host || typeof host !== 'string') {
+                return { ok: false, ip: null, error: 'invalid-host' };
+            }
+            try {
+                const lookupHost = host.trim().replace(/^https?:\/\//i, '').split('/')[0];
+                if (!lookupHost) {
+                    return { ok: false, ip: null, error: 'empty-host' };
+                }
+                const result = await dns.promises.lookup(lookupHost, { family: 4 });
+                return { ok: true, ip: result.address, error: null };
+            } catch (err) {
+                log.warn('ipchandler @ resolveHostToIp: failed', host, err?.message);
+                return { ok: false, ip: null, error: err?.message || 'lookup-failed' };
+            }
+        })
+
 
         /**
          *  Start LOCAL Lockdown
          */
         ipcMain.on('locallockdown', (event, args) => {
-            log.info("ipchandler @ locallockdown: locking down client without teacher connection")
+            log.info("ipchandler @ locallockdown: locking down client without teacher connection", args)
 
             let serverstatus = {
                 exammode: true,
@@ -388,6 +446,9 @@ class IpcHandler {
                 }
             }
 
+            // make serverstatus available for getinfoasync() so the renderer (editor) sees password and examSections
+            this.multicastClient.serverstatus = serverstatus;
+
             this.multicastClient.clientinfo.name = args.clientname;
             this.multicastClient.clientinfo.serverip = "127.0.0.1";
             this.multicastClient.clientinfo.servername = "localhost";
@@ -414,10 +475,12 @@ class IpcHandler {
 
 
         /**
-         * Registers virtualized status
+         * Registers virtualized status from preload (WebGL + backend findings combined)
          */
-        ipcMain.on('virtualized', () => {
+        ipcMain.on('virtualized', (event, payload = {}) => {
             this.multicastClient.clientinfo.virtualized = true;
+            this.multicastClient.clientinfo.vmFindings = payload.backend ?? getVMFindings();
+            this.multicastClient.clientinfo.webglFindings = payload.webgl ?? null;
         })
 
 
@@ -486,66 +549,111 @@ class IpcHandler {
 
 
         /**
-         * re-check hostip and enable multicast client
+         * re-check hostip and enable multicast client (mirrors teacher logic with availableInterfaces and preferredInterface)
          */
         ipcMain.handle('checkhostip', async (event) => {
-            let address = false;
-            try {
-                address = this.multicastClient.client.address();
-            } catch (e) {
-                log.error("ipcHandler @ checkhostip: multicastclient not running");
-            }
+            const interfaces = networkInterfaces();
+            this.availableInterfaces = null;
 
-            // Falls bereits eine Adresse vorhanden ist, liefern wir sie zurück.
-            if (address) {
-                return this.config.hostip;
-            }
-
-            // Versuche, an die korrekte Schnittstelle zu binden
-            try {
-                // Falls gateway4sync() blockierend ist, kannst du diesen Aufruf in ein Promise packen:
-                const {gateway, interface: iface} = await new Promise((resolve, reject) => {
-                    try {
-                        const res = gateway4sync();
-                        resolve(res);
-                    } catch (err) {
-                        reject(err);
+            // Collect all IPv4 addresses
+            Object.keys(interfaces).forEach((interfaceName) => {
+                interfaces[interfaceName].forEach((iface) => {
+                    if (iface.family === 'IPv4' &&
+                        !iface.address.startsWith('127.') &&
+                        !iface.address.startsWith('169.254.')) {
+                        if (!this.availableInterfaces) {
+                            this.availableInterfaces = [];
+                        }
+                        this.availableInterfaces.push({
+                            name: interfaceName,
+                            address: iface.address
+                        });
                     }
                 });
-                this.config.hostip = ip.address(iface); // Liefert die IP der Schnittstelle, welche das Default Gateway hat
-                this.config.gateway = true;
-            } catch (e) {
-                this.config.hostip = false;
-                this.config.gateway = false;
-            }
+            });
 
-            // Falls keine IP (mit Gateway) verfügbar ist, hole eine alternative Adresse
-            if (!this.config.hostip) {
+            const oldHostIp = this.config.hostip;
+
+            // If a preferred interface is set, use it
+            if (this.preferredInterface) {
+                const preferred = this.availableInterfaces?.find(iface => iface.name === this.preferredInterface);
+                if (preferred) {
+                    this.config.hostip = preferred.address;
+                    this.config.interface = preferred.name;
+                    try {
+                        const { gateway, version, int } = gateway4sync(preferred.name);
+                        this.config.gateway = int === this.preferredInterface;
+                    } catch (e) {
+                        this.config.gateway = false;
+                    }
+                }
+            } else {
                 try {
-                    this.config.hostip = ip.address(); // Liefert auch eine IP, wenn kein Gateway verfügbar ist
+                    const { gateway, version, int } = gateway4sync();
+                    this.config.hostip = ip.address(int);
+                    this.config.interface = int;
+                    this.config.gateway = true;
                 } catch (e) {
-                    log.error("ipcHandler @ checkhostip: Unable to determine ip address", e);
                     this.config.hostip = false;
                     this.config.gateway = false;
+                }
+
+                if (!this.config.hostip) {
+                    try {
+                        this.config.hostip = ip.address();
+                        const interfaceName = Object.keys(interfaces).find(key => interfaces[key].some(iface => iface.address === this.config.hostip));
+                        this.config.interface = interfaceName;
+                    } catch (e) {
+                        log.error("ipcHandler @ checkhostip: Unable to determine ip address", e);
+                        this.config.hostip = false;
+                        this.config.gateway = false;
+                        this.config.interface = false;
+                    }
                 }
             }
 
             // Verfälschte Adressen (z. B. localhost) ignorieren
-            if (this.config.hostip === "127.0.0.1") {
-                this.config.hostip = false;
-            }
+            if (this.config.hostip === "127.0.0.1") { this.config.hostip = false; }
 
-            // Wenn die Multicast-Client nicht läuft, initialisieren
-            if (this.config.hostip && !address) {
+            // Reinitialize multicast client on IP change (pass oldHostIp so dropMembership uses correct interface)
+            if (oldHostIp !== this.config.hostip && this.config.hostip) {
+                log.info(`ipcHandler @ checkhostip: IP changed from ${oldHostIp} to ${this.config.hostip}, reinitializing multicast client...`);
+                let mcRunning = false;
+                try { mcRunning = !!this.multicastClient?.client?.address?.(); } catch (e) {}
                 try {
-                    // Falls init() asynchron umgesetzt werden kann, warten wir hier darauf.
-                    await this.multicastClient.init(this.config.gateway);
-                } catch (err) {
-                    log.error("ipcHandler @ checkhostip: Error initializing multicast client", err);
+                    if (mcRunning) await this.multicastClient.stop(oldHostIp);
+                    this.multicastClient.init(this.config.gateway);
+                    log.info('ipcHandler @ checkhostip: Multicast client reinitialized');
+                }
+                catch (e) {
+                    log.error('ipcHandler @ checkhostip: Failed to reinitialize multicast client:', e);
+                }
+            }
+            else if (this.config.hostip) {
+                // Initialize multicast client if not running (skip when we just reinitialized above)
+                let address = false;
+                try { address = this.multicastClient?.client?.address?.(); } catch (e) {}
+                if (!address) {
+                    try {
+                        await this.multicastClient.init(this.config.gateway);
+                    }
+                    catch (err) {
+                        log.error("ipcHandler @ checkhostip: Error initializing multicast client", err);
+                    }
                 }
             }
 
-            return this.config.hostip;
+            return {
+                hostip: this.config.hostip,
+                interface: this.config.interface,
+                availableInterfaces: this.availableInterfaces || [],
+                preferredInterface: this.preferredInterface
+            };
+        });
+
+        // Set preferred network interface for multicast binding
+        ipcMain.handle('setPreferredInterface', (event, arg) => {
+            this.preferredInterface = arg;
         });
 
 
@@ -786,6 +894,17 @@ class IpcHandler {
             }
         })
 
+        // Screenshot config for frontend scheduler (serverip, port, clientinfo, interval)
+        ipcMain.handle('getScreenshotConfig', async () => {
+            const ci = this.multicastClient.clientinfo;
+            return {
+                serverip: ci.serverip,
+                serverApiPort: this.config.serverApiPort,
+                clientinfo: { ...ci },
+                screenshotinterval: ci.screenshotinterval
+            };
+        })
+
         // Student-initiated section switch when allowSectionSwitch is true; always uses current serverstatus and section number
         ipcMain.handle('switch-exam-section', async (event, sectionNumber) => {
             const serverstatus = this.WindowHandler.examwindow?.serverstatus;
@@ -859,7 +978,7 @@ class IpcHandler {
             const pin = args.pin
             const serverip = args.serverip
             const servername = args.servername
-            const clientip = ip.address()
+            const clientip = this.config.hostip || ip.address()
             const hostname = os.hostname()
             const version = this.config.version
             const bipuserID = args.bipuserID
@@ -869,85 +988,82 @@ class IpcHandler {
             }
 
 
-            const url = `https://${serverip}:${this.config.serverApiPort}/server/control/registerclient/${servername}/${pin}/${clientname}/${clientip}/${hostname}/${version}/${bipuserID}`;
+
+            // Encrypt the registration payload and derive sessionRef from the pin.
+            let payload = { pin, clientname, clientip, hostname, version, bipuserID }
+            const url = `https://${serverip}:${this.config.serverApiPort}/server/control/registerclient/${servername}`;
             const signal = AbortSignal.timeout(8000); // 8000 Millisekunden = 8 Sekunden AbortSignal mit einem Timeout
 
 
-            fetch(url, {method: 'GET', signal})
-                .then(response => response.json())
-                .then(data => {
-                    if (data && data.status == "success") {  // registration successfull otherwise data would be "false"
-                        // Erfolgreiche Registrierung
-                        this.multicastClient.clientinfo.name = clientname;
-                        this.multicastClient.clientinfo.serverip = serverip;
-                        this.multicastClient.clientinfo.servername = servername;
-                        this.multicastClient.clientinfo.ip = clientip;
-                        this.multicastClient.clientinfo.hostname = hostname;
-                        this.multicastClient.clientinfo.token = data.token; // we need to store the client token in order to check against it before processing critical api calls
-                        this.multicastClient.clientinfo.focus = true;
-                        this.multicastClient.clientinfo.pin = pin;
+            this.prepareSecurePayload(payload, pin)
+            .then(packet => {
+                payload = null;
+                return fetch(url, { method: 'POST', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ packet }) });
+            })
+            .then(response => response.json()) 
+            .then(data => {
+                if (data && data.status == "success") {  // registration successfull otherwise data would be "false"
+                    // Erfolgreiche Registrierung
+                    this.multicastClient.clientinfo.name = clientname;
+                    this.multicastClient.clientinfo.serverip = serverip;
+                    this.multicastClient.clientinfo.servername = servername;
+                    this.multicastClient.clientinfo.ip = clientip;
+                    this.multicastClient.clientinfo.hostname = hostname;
+                    this.multicastClient.clientinfo.token = data.token; // we need to store the client token in order to check against it before processing critical api calls
+                    this.multicastClient.clientinfo.focus = true;
+                    this.multicastClient.clientinfo.pin = pin;
+                   
+                    log.info(`ipchandler @ register: successfully registered at ${servername} @ ${serverip} as ${clientname}`);
+                    event.returnValue = data;
 
-                        log.info(`ipchandler @ register: successfully registered at ${servername} @ ${serverip} as ${clientname}`);
-                        event.returnValue = data;
-
-                        //create exam folder in workfolder
-                        let uniqueexamName = `${servername}-${pin}`
-                        config.examdirectory = path.join(config.workdirectory, uniqueexamName)
-                        if (!fs.existsSync(config.examdirectory)) {
-                            fs.mkdirSync(config.examdirectory, {recursive: true});
-                        }
-                    } else {
-                        if (data.version) {
-                            // compare versions and display message (teacher needs upgrade.. client needs upgrade)
-                            const comparisonResult = this.compareSoftware(config.version, config.info, data.version, data.versioninfo) //serverVersion, serverStatus, localVersion, localStatus
-                            if (comparisonResult > 0) {
-                                event.returnValue = {
-                                    status: "error",
-                                    message: "Ihre Version von Next-Exam ist neuer als die der Lehrperson!"
-                                };
-                            } else if (comparisonResult < 0) {
-                                event.returnValue = {
-                                    status: "error",
-                                    message: "Ihre Version von Next-Exam ist zu alt. Laden sie sich eine aktuelle Version herunter!"
-                                };
-                            } else {
-                                event.returnValue = {
-                                    status: "error",
-                                    message: "Unbekannter Fehler beim Verbindungsaufbau."
-                                };
-                            }
-                        }
-                        event.returnValue = {status: "error", message: data.message};
-                    }
-                })
-                .catch(async error => {
-                    // Fehlerbehandlung
-                    let errorMessage = error.message;
-                    if (error.name === 'AbortError') {
-                        errorMessage = "The request timed out";
-                    } // Timeout-Nachricht anpassen
-                    log.error(`ipchandler @ register: ${errorMessage}`);
-
-                    // on macos the permission settings in rare cases mess up the ability to fetch the teacher api
-                    // check for network permissions on macOS and reset them if needed
-                    if (process.platform === "darwin") {
-                        let response = await ensureNetworkOrReset(serverip, this.config.serverApiPort);
-                        if (response && response === "reset") {   // quit the app if the user wants to reset the permissions
-                            app.quit();
-                            return
-                        }
+                    // Notify renderer (main window) so screenshot scheduler can start immediately on successful connect
+                    try {
+                        this.WindowHandler.mainwindow?.webContents?.send('screenshot-config', {
+                            screenshotinterval: this.multicastClient.clientinfo.screenshotinterval,
+                            serverip: this.multicastClient.clientinfo.serverip
+                        });
+                    } catch (e) {
+                        log.debug('ipchandler @ register: screenshot-config send', e?.message);
                     }
 
-                    // show warning message if the user does not want to reset the permissions
-                    event.returnValue = {
-                        sender: "client",
-                        message: "Es gibt ein Problem mit dem Netzwerk, den Firewallregeln oder den Netzwerkberechtigungen! Bitte beheben sie dieses Problem und starten Sie Next-Exam neu!",
-                        status: "error"
-                    };
-                    return;
-
-
-                });
+                    //create exam folder in workfolder
+                    let uniqueexamName = `${servername}-${pin}`
+                    config.examdirectory = path.join(config.workdirectory, uniqueexamName)
+                    if (!fs.existsSync(config.examdirectory)){ fs.mkdirSync(config.examdirectory, { recursive: true }); }
+                } 
+                else {
+                    if (data.version){
+                        // compare versions and display message (teacher needs upgrade.. client needs upgrade)
+                        const comparisonResult = this.compareSoftware(config.version, config.info , data.version, data.versioninfo ) //serverVersion, serverStatus, localVersion, localStatus
+                        if (comparisonResult > 0) {       event.returnValue = { status: "error", message: "Ihre Version von Next-Exam ist neuer als die der Lehrperson!" };   } 
+                        else if (comparisonResult < 0) {  event.returnValue = { status: "error", message: "Ihre Version von Next-Exam ist zu alt. Laden sie sich eine aktuelle Version herunter!" };   } 
+                        else {                            event.returnValue = { status: "error", message: "Unbekannter Fehler beim Verbindungsaufbau." };    }
+                    }
+                    event.returnValue = { status: "error", message: data.message };
+                }
+            })
+            .catch(async error => {
+                // Fehlerbehandlung
+                let errorMessage = error.message;
+                if (error.name === 'AbortError') { errorMessage = "The request timed out";   } // Timeout-Nachricht anpassen 
+                log.error(`ipchandler @ register: ${errorMessage}`);
+             
+                // on macos the permission settings in rare cases mess up the ability to fetch the teacher api 
+                // check for network permissions on macOS and reset them if needed
+                if (process.platform === "darwin"){    
+                    let response = await ensureNetworkOrReset(serverip, this.config.serverApiPort); 
+                    if (response && response === "reset") {   // quit the app if the user wants to reset the permissions
+                        app.quit();
+                        return
+                    }
+                }
+                
+                // show warning message if the user does not want to reset the permissions
+                event.returnValue = { sender: "client", message: "Es gibt ein Problem mit dem Netzwerk, den Firewallregeln oder den Netzwerkberechtigungen! Bitte beheben sie dieses Problem und starten Sie Next-Exam neu!", status: "error" };
+                return;  
+                    
+                
+            });
         })
 
 
@@ -1160,7 +1276,7 @@ class IpcHandler {
         })
 
         ipcMain.on('get-cpu-info', (event) => {
-            event.returnValue = this.isVirtualMachine()
+            event.returnValue = getVMFindings()
         });
 
 
@@ -1193,6 +1309,22 @@ class IpcHandler {
         });
 
 
+    }
+
+    async prepareSecurePayload(data, sessionRef) {
+        const PAD = '0';
+        const enc = new TextEncoder(); // Initialize text encoder
+
+        const raw = enc.encode((sessionRef + PAD).padEnd(32, '0').slice(0, 32));
+        const k = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['encrypt']); // Import key for AES-GCM
+
+        const iv = crypto.getRandomValues(new Uint8Array(12)); // Generate 12-byte random IV
+        const buf = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, k, enc.encode(JSON.stringify(data)));
+
+        return {
+          v: btoa(String.fromCharCode(...iv)),
+          d: btoa(String.fromCharCode(...new Uint8Array(buf)))
+        };
     }
 
     isVirtualMachine() {

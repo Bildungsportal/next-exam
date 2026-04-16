@@ -116,11 +116,26 @@ async function LTcheckAllWords(closeLT = true){
     
 
     try {
-        const response = await fetch(`${this.LThost}:8088/v2/check`, {
+
+        const headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+        };
+        // Optional custom headers for logging/proxy; only set when available (editor context)
+        if (this.servername != null) headers['X-Exam-Name'] = String(this.servername);
+        if (this.clientname != null) headers['X-Student-Name'] = String(this.clientname);
+        if (this.pincode != null && this.pincode !== '') headers['X-Exam-Pin'] = String(this.pincode);
+
+        const response = await fetch(`${this.LThost}:${this.LTport ?? '8088'}/v2/check`, {
             method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
-            body: new URLSearchParams({ text: this.text, language: this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang}).toString() 
+            headers,
+            body: new URLSearchParams({
+                text: this.text,
+                language: this.ltLanguage || this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang
+            }).toString()
         });
+
+
         if (!response.ok) { throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`);   }
         const data = await response.json();      
         this.spellcheckFallback = false
@@ -130,9 +145,6 @@ async function LTcheckAllWords(closeLT = true){
             this.LTinfo = "Keine Fehler gefunden"
             return;
         }
-        // this.LTinfo = "closing..."
-        let positions = await this.LTfindWordPositions();  //finde wörter im text und erzeuge highlights
-        this.LThighlightWords(positions)
             
 
 
@@ -197,12 +209,26 @@ async function LTfindWordPositions() {
     const textForValidation = this.text; // Text that was used for API call
     const currentEditorText = this.editor.getText();
 
-    // Set colors based on issue type
+    // Set colors based on issue type (LanguageTool API: typographical, whitespace, misspelling, grammar, style, punctuation, semantics, redundancy, etc.)
     this.misspelledWords.forEach(word => {
-        if (word.rule.issueType === "typographical") { word.color = "rgba(146, 43, 33 , 0.3)"; }
-        else if (word.rule.issueType === "whitespace") { word.color = "rgba(243, 190, 41, 0.5)"; word.whitespace = true; }
-        else if (word.rule.issueType === "misspelling") { word.color = "rgba(211, 84, 0, 0.3)"; }
-        else { word.color = "rgba(108, 52, 131, 0.3)"; }
+        const t = word.rule?.issueType ?? '';
+        const onlySpaces = word.wrongWord && word.wrongWord.trim() === '';
+
+        // Alle reinen Leerzeichenfehler (egal ob whitespace oder typographical) gleich behandeln
+        if (t === 'whitespace' || (t === 'typographical' && onlySpaces)) {
+            word.color = 'rgba(243, 190, 41, 0.5)'; // gelb
+            word.whitespace = true;
+        }
+        else if (t === 'typographical') {
+            word.color = 'rgba(146, 43, 33, 0.3)'; // rötlich, echte Typografiefehler
+        }
+        else if (t === 'misspelling') { word.color = 'rgba(211, 84, 0, 0.3)'; }
+        else if (t === 'grammar') { word.color = 'rgba(26, 115, 232, 0.35)'; }
+        else if (t === 'style') { word.color = 'rgba(0, 128, 128, 0.35)'; }
+        else if (t === 'punctuation') { word.color = 'rgba(136, 84, 208, 0.35)'; }
+        else if (t === 'semantics') { word.color = 'rgba(180, 80, 180, 0.35)'; }
+        else if (t === 'redundancy') { word.color = 'rgba(200, 100, 50, 0.35)'; }
+        else { word.color = 'rgba(108, 52, 131, 0.3)'; }
     });
 
     // First: Validate existing positions - check if words still exist at their positions
@@ -217,8 +243,10 @@ async function LTfindWordPositions() {
             // Check if range is still valid and contains the wrong word
             const rangeText = word.range.toString();
             
-            // If word doesn't match, it was corrected - remove it
-            if (rangeText !== word.wrongWord) {
+            // If word doesn't match, it was corrected - remove it.
+            // Exception: zero-length words (insertion points) have no text to compare —
+            // their range anchors on the neighbouring char, so rangeText never equals "".
+            if (word.length > 0 && rangeText !== word.wrongWord) {
                 return false; // Remove corrected word
             }
             
@@ -259,9 +287,28 @@ async function LTfindWordPositions() {
             const nodeEndOffset = textOffset + text.length;
 
             wordsNeedingPosition.forEach(word => {
-                // Create regex pattern with word boundaries
+                // Create regex pattern with safe word boundaries
                 const escapedWord = word.wrongWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                const pattern = word.wrongWord.trim() === '' ? '\\s\\s+' : `\\b${escapedWord}\\b`;
+                let pattern;
+
+                // reine Leerzeichen (z.B. doppelte Spaces)
+                if (word.wrongWord.trim() === '') {
+                    pattern = '\\s\\s+';
+                } else {
+                    const firstChar = word.wrongWord[0] || '';
+                    const lastChar = word.wrongWord[word.wrongWord.length - 1] || '';
+                    const startsWithWordChar = /\w/.test(firstChar);
+                    const endsWithWordChar = /\w/.test(lastChar);
+
+                    if (startsWithWordChar || endsWithWordChar) {
+                        // „normale“ Wörter → Wortgrenzen verwenden
+                        pattern = `\\b${escapedWord}\\b`;
+                    } else {
+                        // z.B. " ," → keine Wortgrenzen, nur die Sequenz
+                        pattern = escapedWord;
+                    }
+                }
+
                 const regex = new RegExp(pattern, 'g');
 
                 let match;
@@ -312,27 +359,15 @@ async function LTfindWordPositions() {
                 );
 
                 if (positionAlreadyUsed) continue;
-                
-                // Check if another word is closer to this match
-                const closerWord = this.misspelledWords.find(w => 
-                    w !== word && 
-                    !w.position &&
-                    Math.abs(w.offset - matchOffset) < Math.abs(word.offset - matchOffset)
-                );
-
-                if (closerWord) continue;
 
                 // Assign position
-                if (rects.length > 0) {
-                    const rect = rects[0];
-                    word.position = {
-                        left: rect.left,
-                        top: rect.top,
-                        width: rect.width,
-                        height: rect.height,
-                    };
-                    word.range = range;
-                }
+                word.position = {
+                    left: firstRect.left,
+                    top: firstRect.top,
+                    width: firstRect.width,
+                    height: firstRect.height,
+                };
+                word.range = range;
                 break;
             }
         });
@@ -341,12 +376,104 @@ async function LTfindWordPositions() {
         this.misspelledWords = this.misspelledWords.filter(word => word.position !== null);
     }
 
+    // Offset-map fallback: handles zero-length (missing punctuation/char), single spaces,
+    // and any word the regex approach failed to locate.
+    const remainingWords = this.misspelledWords.filter(word => !word.position)
+    if (remainingWords.length > 0) {
+        const offsetMap = this.LTbuildOffsetMap()
+        remainingWords.forEach(word => {
+            this.LTfindByOffsetMap(word, offsetMap)
+            // Extract position from range (same way as the regex branch above)
+            if (word.range && !word.position) {
+                const rects = word.range.getClientRects()
+                if (rects.length) {
+                    word.position = { left: rects[0].left, top: rects[0].top, width: rects[0].width, height: rects[0].height }
+                }
+            }
+        })
+    }
+
 }
 
 
 
 
 
+
+
+// Builds a flat array indexed by editor.getText() offset.
+// Entry is { pmPos } for real text chars, null for '\n' block/hardbreak separators.
+// Uses doc.nodesBetween() which mirrors ProseMirror's getTextBetween exactly —
+// robust to tables, images, nested structures, and any TipTap extension.
+function LTbuildOffsetMap() {
+    const doc = this.editor.state.doc
+    const map = []
+    let separated = true   // mirrors the 'separated' flag in ProseMirror's getTextBetween
+
+    doc.nodesBetween(0, doc.content.size, (node, pos) => {
+        if (node.isText) {
+            for (let i = 0; i < node.text.length; i++) {
+                map.push({ pmPos: pos + i })
+            }
+            separated = false
+        } else if (node.type.name === 'hardBreak') {
+            // HardBreak contributes '\n' to editor.getText()
+            map.push(null)
+            separated = false
+        } else if (!separated && node.isBlock) {
+            // Any block boundary → the '\n' blockSeparator in editor.getText()
+            map.push(null)
+            separated = true
+        }
+        // Non-text inline leaves (images etc.) contribute nothing → no map entry
+    })
+
+    return map
+}
+
+
+// Offset-map–based position search using ProseMirror's view.domAtPos().
+// Handles: length=0 (missing char), whitespace, and anything the regex missed.
+function LTfindByOffsetMap(word, offsetMap) {
+    const view = this.editor.view
+
+    // Convert a pair of consecutive PM positions to a DOM Range.
+    const rangeForPm = (pmStart, pmEnd) => {
+        try {
+            const s = view.domAtPos(pmStart)
+            const e = view.domAtPos(pmEnd)
+            const r = document.createRange()
+            r.setStart(s.node, s.offset)
+            r.setEnd(e.node, e.offset)
+            return r.getClientRects().length ? r : null
+        } catch (_) { return null }
+    }
+
+    if (word.length === 0) {
+        // Insertion: anchor on the last real char before the offset,
+        // walking backwards over any null (= \n) entries.
+        let refIdx = word.offset - 1
+        while (refIdx >= 0 && !offsetMap[refIdx]) refIdx--
+        if (refIdx < 0) return
+        const entry = offsetMap[refIdx]
+        const range = rangeForPm(entry.pmPos, entry.pmPos + 1)
+        if (!range) return
+        word.range = range
+        word.isInsertion = true   // → drawn as a vertical bar at the insertion point
+
+    } else {
+        // Whitespace / not-found word: map start and end via PM positions.
+        const startEntry = offsetMap[word.offset]
+        if (!startEntry) return
+        let endIdx = word.offset + word.length - 1
+        while (endIdx > word.offset && !offsetMap[endIdx]) endIdx--
+        const endEntry = offsetMap[endIdx]
+        if (!endEntry) return
+        const range = rangeForPm(startEntry.pmPos, endEntry.pmPos + 1)
+        if (!range) return
+        word.range = range
+    }
+}
 
 
 // function LThighlightWordsOld() {
@@ -424,11 +551,43 @@ function LThighlightWords() {
         const adjustedHeight = height 
 
         // Set highlight color and draw the rectangle
-        this.ctx.fillStyle = word.color;
-        this.ctx.fillRect(adjustedLeft, adjustedTop + translate, adjustedWidth, adjustedHeight);
+        if (word.isInsertion) {
+            // Missing character: draw a thin vertical bar at the insertion point
+            // (right edge of the reference character = where the char should be inserted)
+            const xPos = adjustedLeft + adjustedWidth
+            this.ctx.fillStyle = word.color
+            this.ctx.fillRect(xPos - this.zoom, adjustedTop, 2 * this.zoom, word.position.height)
+            if (word === this.currentLTword) {
+                this.ctx.globalAlpha = 0.2
+                this.ctx.fillRect(xPos - 10 * this.zoom, adjustedTop, 20 * this.zoom, word.position.height)
+                this.ctx.globalAlpha = 1
+            }
+        } else {
+            this.ctx.fillStyle = word.color;
+            this.ctx.fillRect(adjustedLeft, adjustedTop + translate, adjustedWidth, adjustedHeight);
+        }
     });
 }
 
 
 
-export { LTcheckAllWords, LTfindWordPositions, LThighlightWords, LTdisable, LThandleMisspelled, LTignoreWord, LTresetIgnorelist}
+// Lightweight redraw for scroll: only refreshes viewport coords from existing ranges, no regex search.
+// Must be called inside a requestAnimationFrame callback for best sync with the browser paint cycle.
+function LTredrawHighlights() {
+    if (!this.LTactive || !this.textContainer || !this.misspelledWords?.length) return;
+
+    this.misspelledWords.forEach(word => {
+        if (!word.range) return;
+        try {
+            const rects = word.range.getClientRects();
+            if (rects.length > 0) {
+                const r = rects[0];
+                word.position = { left: r.left, top: r.top, width: r.width, height: r.height };
+            }
+        } catch (e) { /* stale range – will be cleaned up on next full LT check */ }
+    });
+
+    this.LThighlightWords();
+}
+
+export { LTcheckAllWords, LTfindWordPositions, LThighlightWords, LTredrawHighlights, LTdisable, LThandleMisspelled, LTignoreWord, LTresetIgnorelist, LTbuildOffsetMap, LTfindByOffsetMap }

@@ -8,10 +8,18 @@ export const detectorMethods = {
      */
     determineBoxType(widthPx, heightPx) {
         const SQUARE_TOLERANCE = 5;
+        const MC_BOX_MAX_SIZE = this.MC_BOX_MAX_SIZE ?? 80;
         const isSquare = Math.abs(widthPx - heightPx) <= SQUARE_TOLERANCE;
-        if (isSquare && widthPx <= this.CHECKBOX_MAX_SIZE && heightPx <= this.CHECKBOX_MAX_SIZE) {
+
+        // Small squares: standard checkbox (tick)
+        if (isSquare && widthPx <= this.CHECKBOX_MAX_SIZE) {
             return 'checkbox';
         }
+        // Medium-to-large squares (26-80px): MC answer box filled with slash
+        if (isSquare && widthPx > this.CHECKBOX_MAX_SIZE && widthPx <= MC_BOX_MAX_SIZE) {
+            return 'deselect';
+        }
+        // Tall rectangles: textarea
         if (heightPx > 35) {
             return 'textarea';
         }
@@ -61,6 +69,13 @@ export const detectorMethods = {
     const minY = Math.min(...ys);
     const maxY = Math.max(...ys);
 
+    // Reject paths that are too small to be interactive fields (glyph outlines, decorations).
+    // Real checkboxes are typically ≥8 PDF units; letter glyphs are 2–7 units.
+    const MIN_PATH_PDF_UNITS = 8;
+    if ((maxX - minX) < MIN_PATH_PDF_UNITS || (maxY - minY) < MIN_PATH_PDF_UNITS) {
+      return;
+    }
+
     this.addBoxFromPdfRect([minX, minY, maxX, maxY], viewport, boxFields, true);
   },
 
@@ -87,8 +102,25 @@ export const detectorMethods = {
 
     let inputType = typeHint || this.determineBoxType(cssW, cssH);
 
-    if ((inputType === 'textarea' || typeHint === 'textarea') && cssH <= this.SINGLE_LINE_TEXTAREA_MAX_HEIGHT) {
+    if (inputType === 'textarea' && cssH <= this.SINGLE_LINE_TEXTAREA_MAX_HEIGHT) {
       inputType = 'text';
+    }
+
+    // Normalize checkbox size to a minimum of 18x18px.
+    // The drawn path is often a sub-element of the visible checkbox (e.g. inner
+    // fill area), so we expand outward from the center.
+    let finalX = cssX;
+    let finalY = cssY;
+    let finalW = cssW;
+    let finalH = cssH;
+    if (inputType === 'checkbox' || inputType === 'deselect') {
+      const MIN_CB = 18;
+      const centerX = cssX + cssW / 2;
+      const centerY = cssY + cssH / 2;
+      finalW = Math.max(cssW, MIN_CB);
+      finalH = Math.max(cssH, MIN_CB);
+      finalX = centerX - finalW / 2;
+      finalY = centerY - finalH / 2;
     }
 
     boxFields.push({
@@ -98,10 +130,10 @@ export const detectorMethods = {
       isTableCell,
       style: {
         position: 'absolute',
-        left: `${cssX}px`,
-        top: `${cssY}px`,
-        width: `${cssW}px`,
-        height: `${cssH}px`,
+        left: `${finalX}px`,
+        top: `${finalY}px`,
+        width: `${finalW}px`,
+        height: `${finalH}px`,
         zIndex: 5,
       },
     });
@@ -148,7 +180,15 @@ export const detectorMethods = {
         this.addBox(data[dIndex], data[dIndex + 1], data[dIndex + 2], data[dIndex + 3], ctm, viewport, boxFields);
         dIndex += 4;
       } else if (op === 15) {
+        // curveTo: skip 6 values (3 points), update current position to endpoint
+        currentX = data[dIndex + 4];
+        currentY = data[dIndex + 5];
         dIndex += 6;
+      } else if (op === 16 || op === 17) {
+        // curveTo1/curveTo2: skip 4 values
+        currentX = data[dIndex + 2];
+        currentY = data[dIndex + 3];
+        dIndex += 4;
       }
     }
 
@@ -270,7 +310,7 @@ export const detectorMethods = {
             }
 
             const pdfRect = [rectLeft, cellTop, rectRight, cellBottom];
-            this.addBoxFromPdfRect(pdfRect, viewport, boxFields, false, 'textarea', true);
+            this.addBoxFromPdfRect(pdfRect, viewport, boxFields, false, null, true);
             added += 1;
           }
         }
@@ -342,6 +382,8 @@ export const detectorMethods = {
             dIndex += 2;
           } else if (op === 15) {
             dIndex += 6;
+          } else if (op === 16 || op === 17) {
+            dIndex += 4;
           }
         }
         if (pathPoints.length > 2 && this.isPathClosed(pathPoints)) {
@@ -405,8 +447,8 @@ export const detectorMethods = {
   /**
    * Detect cloze fields (underscores/dots) and Unicode checkboxes on a page.
    */
-  async extractClozeFields(page, viewport) {
-    const textContent = await page.getTextContent();
+  async extractClozeFields(page, viewport, knownBoxRects = [], cachedTextContent = null) {
+    const textContent = cachedTextContent ?? await page.getTextContent();
     const clozeFields = [];
 
     const measureCanvas = document.createElement('canvas');
@@ -459,6 +501,24 @@ export const detectorMethods = {
       const usesExtremeSpacing = typeof item.charSpacing === 'number' && Math.abs(item.charSpacing) > fontSize * 0.2;
       const useScale = usesExtremeSpacing && Math.abs(widthScale - 1) > 0.15;
 
+      // When the font has no adjustment entry, canvas measurements use the wrong
+      // substitute font → positions drift.  Use item.width (PDF-native, always
+      // reliable) to interpolate substring widths proportionally instead.
+      const knownFont = !!customAdjust;
+      const itemWidthPdf = typeof item.width === 'number' ? Math.abs(item.width) : null;
+
+      const measureSubstringWidth = (subText) => {
+        if (knownFont || !itemWidthPdf || !text.length) {
+          return this.measureTextWidthWithMetrics(subText, measureCtx, fontSize, useScale, widthScale, fontScale, customAdjust);
+        }
+        // Proportional split: measure relative widths with canvas (font shape
+        // may be wrong but proportions within the same font are consistent),
+        // then scale to the known total width from the PDF stream.
+        const measuredTotal = measureCtx.measureText(text).width || 1;
+        const measuredSub   = measureCtx.measureText(subText).width || 0;
+        return itemWidthPdf * (measuredSub / measuredTotal);
+      };
+
       if (this.detectUnderscores) {
         const regex = /(_+)/g;
         let match;
@@ -467,24 +527,8 @@ export const detectorMethods = {
           const underscoreStr = match[0];
           const startIndex = match.index;
           const prefixText = text.substring(0, startIndex);
-          const prefixWidth = this.measureTextWidthWithMetrics(
-            prefixText,
-            measureCtx,
-            fontSize,
-            useScale,
-            widthScale,
-            fontScale,
-            customAdjust,
-          );
-          const underscoreWidth = this.measureTextWidthWithMetrics(
-            underscoreStr,
-            measureCtx,
-            fontSize,
-            useScale,
-            widthScale,
-            fontScale,
-            customAdjust,
-          );
+          const prefixWidth = measureSubstringWidth(prefixText);
+          const underscoreWidth = measureSubstringWidth(underscoreStr);
           const finalX = itemX + prefixWidth;
 
           clozeFields.push({
@@ -529,25 +573,23 @@ export const detectorMethods = {
             continue;
           }
 
+          // Reject table-of-contents patterns:
+          // "Kapitel 1...." → letter/digit directly before dots (no space)
+          const charBeforeDots = startIndex > 0 ? text[startIndex - 1] : '';
+          if (/[A-Za-z0-9]/.test(charBeforeDots)) {
+            lastIndex = startIndex + dotStr.length;
+            continue;
+          }
+          // ".... 12" or "....12" → page number directly after dots
+          const afterDots = text.substring(startIndex + dotStr.length, startIndex + dotStr.length + 6);
+          if (/^\s*\d+\s*$/.test(afterDots)) {
+            lastIndex = startIndex + dotStr.length;
+            continue;
+          }
+
           const prefixText = text.substring(0, startIndex);
-          const prefixWidth = this.measureTextWidthWithMetrics(
-            prefixText,
-            measureCtx,
-            fontSize,
-            useScale,
-            widthScale,
-            fontScale,
-            customAdjust,
-          );
-          const dotWidth = this.measureTextWidthWithMetrics(
-            dotStr,
-            measureCtx,
-            fontSize,
-            useScale,
-            widthScale,
-            fontScale,
-            customAdjust,
-          );
+          const prefixWidth = measureSubstringWidth(prefixText);
+          const dotWidth = measureSubstringWidth(dotStr);
           const finalX = itemX + prefixWidth;
 
           clozeFields.push({
@@ -571,15 +613,7 @@ export const detectorMethods = {
         for (let i = 0; i < text.length; i += 1) {
           if (text[i] === '☐' || text[i] === '☑' || text[i] === '☒') {
             const prefixText = text.substring(0, i);
-            const prefixWidth = this.measureTextWidthWithMetrics(
-              prefixText,
-              measureCtx,
-              fontSize,
-              useScale,
-              widthScale,
-              fontScale,
-              customAdjust,
-            );
+            const prefixWidth = measureSubstringWidth(prefixText);
 
             clozeFields.push({
               id: this.generateElementId('cloze'),
@@ -605,7 +639,7 @@ export const detectorMethods = {
     }
 
     if (this.detectIsolatedLines) {
-      const isolatedLineFields = await this.findIsolatedHorizontalLines(page, viewport);
+      const isolatedLineFields = await this.findIsolatedHorizontalLines(page, viewport, knownBoxRects);
       clozeFields.push(...isolatedLineFields);
     }
 
@@ -616,7 +650,7 @@ export const detectorMethods = {
   /**
    * Detect isolated horizontal lines and convert them to cloze fields.
    */
-  async findIsolatedHorizontalLines(page, viewport) {
+  async findIsolatedHorizontalLines(page, viewport, knownBoxRects = []) {
     const clozeFields = [];
     const opList = await page.getOperatorList();
     const OPS = pdfjsLib.OPS;
@@ -679,8 +713,37 @@ export const detectorMethods = {
             currentX = nextX;
             currentY = nextY;
             dIndex += 2;
-          } else if (op === this.OP_CODE.rectangle) dIndex += 4;
-          else if (op === 15) dIndex += 6;
+          } else if (op === this.OP_CODE.rectangle) {
+            // Synthesize all 4 edges of the rectangle so its top/bottom edges
+            // are never mistaken for isolated horizontal lines
+            const rx = data[dIndex];
+            const ry = data[dIndex + 1];
+            const rw = data[dIndex + 2];
+            const rh = data[dIndex + 3];
+            dIndex += 4;
+
+            const tl = this.transformPoint(rx,      ry,      ctm);
+            const tr = this.transformPoint(rx + rw, ry,      ctm);
+            const bl = this.transformPoint(rx,      ry + rh, ctm);
+            const br = this.transformPoint(rx + rw, ry + rh, ctm);
+
+            const toVp = (p1, p2) => viewport.convertToViewportRectangle([
+              Math.min(p1.x, p2.x), Math.min(p1.y, p2.y),
+              Math.max(p1.x, p2.x), Math.max(p1.y, p2.y),
+            ]);
+
+            // top and bottom horizontal edges
+            const topR = toVp(tl, tr);
+            hLines.push({ x1: Math.min(topR[0], topR[2]), x2: Math.max(topR[0], topR[2]), y: (topR[1] + topR[3]) / 2, fromRect: true });
+            const botR = toVp(bl, br);
+            hLines.push({ x1: Math.min(botR[0], botR[2]), x2: Math.max(botR[0], botR[2]), y: (botR[1] + botR[3]) / 2, fromRect: true });
+
+            // left and right vertical edges
+            const leftR = toVp(tl, bl);
+            vLines.push({ x: (leftR[0] + leftR[2]) / 2, y1: Math.min(leftR[1], leftR[3]), y2: Math.max(leftR[1], leftR[3]), fromRect: true });
+            const rightR = toVp(tr, br);
+            vLines.push({ x: (rightR[0] + rightR[2]) / 2, y1: Math.min(rightR[1], rightR[3]), y2: Math.max(rightR[1], rightR[3]), fromRect: true });
+          } else if (op === 15) dIndex += 6;
         }
       }
     }
@@ -690,6 +753,9 @@ export const detectorMethods = {
     const VERTICAL_PROXIMITY = 5;
 
     const isolatedLines = hLines.filter((line) => {
+      // Lines that were synthesized from rectangle opcodes are never isolated
+      if (line.fromRect) return false;
+
       const hasNearbyHLine = hLines.some((otherLine) => {
         if (line === otherLine) return false;
         const yDistance = Math.abs(line.y - otherLine.y);
@@ -723,7 +789,18 @@ export const detectorMethods = {
         return crossesY || minYDistance <= VERTICAL_PROXIMITY;
       });
 
-      return !hasNearbyVLine;
+      if (hasNearbyVLine) return false;
+
+      // Third guard: reject lines that match the top or bottom edge of a known box field
+      const isBoxEdge = knownBoxRects.some((rect) => {
+        const xOverlap = line.x1 >= rect.left - 6 && line.x2 <= rect.right + 6;
+        const onTopEdge    = Math.abs(line.y - rect.top) <= 4;
+        const onBottomEdge = Math.abs(line.y - (rect.top + rect.height)) <= 4;
+        return xOverlap && (onTopEdge || onBottomEdge);
+      });
+      if (isBoxEdge) return false;
+
+      return true;
     });
 
     isolatedLines.forEach((line) => {
@@ -797,40 +874,57 @@ export const detectorMethods = {
       const usesExtremeSpacing = typeof item.charSpacing === 'number' && Math.abs(item.charSpacing) > fontSize * 0.2;
       const useScale = usesExtremeSpacing && Math.abs(widthScale - 1) > 0.15;
 
-      const capitalLetterRegex = /(?<![A-Za-z])([A-Z])/g;
+      // Proportional substring measurement (same logic as extractClozeFields)
+      const knownFontD = !!customAdjust;
+      const itemWidthPdfD = typeof item.width === 'number' ? Math.abs(item.width) : null;
+      const measureSubstringWidthD = (subText) => {
+        if (knownFontD || !itemWidthPdfD || !text.length) {
+          return this.measureTextWidthWithMetrics(subText, measureCtx, fontSize, useScale, widthScale, fontScale, customAdjust);
+        }
+        const measuredTotal = measureCtx.measureText(text).width || 1;
+        const measuredSub   = measureCtx.measureText(subText).width || 0;
+        return itemWidthPdfD * (measuredSub / measuredTotal);
+      };
+
+      // Only A-F are valid MC answer labels; wider alphabet causes too many false positives
+      const capitalLetterRegex = /(?<![A-Za-z])([A-F])(?![A-Za-z0-9])/g;
       let capitalMatch;
+
+      // Pre-scan: how many isolated A-F tokens exist in this text item?
+      // Two or more is a strong signal that this is a genuine MC row.
+      const mcTokens = [...text.matchAll(/(?<![A-Za-z])([A-F])(?![A-Za-z0-9])/g)].map(m => m[1]);
+      const uniqueMcTokens = new Set(mcTokens);
+      const isMcRow = uniqueMcTokens.size >= 2;
 
       while ((capitalMatch = capitalLetterRegex.exec(text)) !== null) {
         const letter = capitalMatch[1];
         const startIndex = capitalMatch.index;
-        const afterLetter = text.substring(startIndex + 1, startIndex + 3);
-        const hasOnlySpacesOrEnd = afterLetter.length === 0 || /^\s{0,2}$/.test(afterLetter);
+
+        // Must not be followed by letters or digits (already in regex, belt-and-suspenders)
         const nextChar = text[startIndex + 1];
-        const isFollowedByLetter = nextChar && /[A-Za-z]/.test(nextChar);
-        if (!hasOnlySpacesOrEnd || isFollowedByLetter) {
-          continue;
+        if (nextChar && /[A-Za-z0-9]/.test(nextChar)) continue;
+
+        // Must not be preceded by a letter (already in regex)
+        const prevChar = startIndex > 0 ? text[startIndex - 1] : '';
+        if (/[A-Za-z]/.test(prevChar)) continue;
+
+        // Reject sentence-start: capital letter after ". " or at position 0 of a long sentence
+        const before5 = text.substring(Math.max(0, startIndex - 5), startIndex);
+        const afterSentenceEnd = /[.!?]\s+$/.test(before5);
+        if (afterSentenceEnd && !isMcRow) continue;
+
+        // Require at least one MC-like context clue when not a clear MC row:
+        // letter is alone in the item, or surrounded by MC punctuation (.) () :
+        if (!isMcRow) {
+          const after3 = text.substring(startIndex + 1, startIndex + 4);
+          const hasMcPunctAfter  = /^[\s.\):,]/.test(after3) || startIndex + 1 >= text.length;
+          const hasMcPunctBefore = startIndex === 0 || /[\s.\):(]$/.test(before5);
+          if (!hasMcPunctAfter || !hasMcPunctBefore) continue;
         }
 
         const prefixText = text.substring(0, startIndex);
-        const prefixWidth = this.measureTextWidthWithMetrics(
-          prefixText,
-          measureCtx,
-          fontSize,
-          useScale,
-          widthScale,
-          fontScale,
-          customAdjust,
-        );
-
-        const letterWidth = this.measureTextWidthWithMetrics(
-          letter,
-          measureCtx,
-          fontSize,
-          useScale,
-          widthScale,
-          fontScale,
-          customAdjust,
-        );
+        const prefixWidth = measureSubstringWidthD(prefixText);
+        const letterWidth = measureSubstringWidthD(letter);
 
         const checkboxSize = fontSize * 1.1;
         const checkboxLeft = itemX + prefixWidth - (checkboxSize - letterWidth) / 2;

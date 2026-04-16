@@ -47,20 +47,31 @@ class IosTaskDispatcher {
     async dispatch(signal, payload) {
         switch (signal) {
 
+            /**
+             * fetches clientinfo and serverstatus from the multicastclient and returns them as an object
+             * @returns {Object} {clientinfo: Object, serverstatus: Object}
+             */
             case 'getinfoasync':
                 return this.getinfoasync(payload);
+
             /**
              * fetches exam materials from the teacher and returns them as an object
              * @returns {Object} {exammaterials: Object}
              */
             case 'getmaterials':
                 return
+
             /**
              * submits the exam to the teacher and returns a boolean
              * @returns {Boolean} true if the exam was submitted successfully, false otherwise
              */
             case 'finalsubmit':
                 return
+
+            /**
+             * fetches the wlan info and returns it as an object
+             * @returns {Object} {wlanInfo: Object}
+             */
             case 'get-wlan-info':
                 return this.getwlaninfo()
             case 'set-new-locale':
@@ -104,6 +115,22 @@ class IosTaskDispatcher {
             case 'collapse-browserview':
             case 'restore-browserview':
                 return; // Ignore since no BrowserViews in Capacitor
+            case 'submitexam':
+                return
+            case 'getPDFbase64':
+                return
+            case 'getbackupfile':
+                return
+            case 'getfilesasync':
+                return
+            case 'storeHTML':
+                return
+            case 'printpdf':
+                return
+            case 'checkhostip':
+                return
+            case 'getScreenshotConfig':
+                return { serverip: null, serverApiPort: null, clientinfo: {}, screenshotinterval: 0 }
             default:
                 throw new Error(`Signal ${signal} nicht für iOS implementiert.`);
         }

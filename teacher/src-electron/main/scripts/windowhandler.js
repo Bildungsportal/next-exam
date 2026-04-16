@@ -22,6 +22,7 @@ import { join } from 'path'
 import path from 'path'
 import { fileURLToPath } from 'node:url'
 import log from 'electron-log'
+import * as devtoolsInstaller from 'electron-devtools-installer';
 
 const __dirname = import.meta.dirname
 
@@ -68,8 +69,15 @@ class WindowHandler {
         this.config = config
     }
 
-
-
+    getBiPUrl(biptest) {
+        if (this.config.bipDemo) {
+            return this.config.bipApiUrl;
+        } else if (biptest) {
+            return `https://q.bildung.gv.at`;
+        } else {
+            return `https://bildung.gv.at`;
+        }
+    }
 
     createBiPLoginWin(biptest) {
         this.bipwindow = new BrowserWindow({
@@ -88,9 +96,8 @@ class WindowHandler {
             show: false,
            // transparent: true
         })
-     
-        if (biptest){   this.bipwindow.loadURL(`https://q.bildung.gv.at/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)   }
-        else {          this.bipwindow.loadURL(`https://www.bildung.gv.at/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)   }
+        
+        this.bipwindow.loadURL(this.getBiPUrl(biptest)+`/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)
 
         // Electron 39: ready-to-show fires AFTER show() is called, so use did-finish-load instead
         this.bipwindow.webContents.once('did-finish-load', () => {
@@ -149,6 +156,13 @@ class WindowHandler {
 
 
 
+    installVueJsDevTools(win) {
+        if (!app.isPackaged) {
+            devtoolsInstaller.installExtension(devtoolsInstaller.VUEJS_DEVTOOLS)
+                .then((name) => console.log(`Added Extension: ${name.name}`))
+                .catch((err) => console.log('An error occurred: ', err));
+        }
+    }
 
 
 
@@ -156,7 +170,7 @@ class WindowHandler {
 
     createWindow() {
         const primaryDisplay = screen.getPrimaryDisplay()
-        const { width, height } = { width: 800, height: 800 }
+        const { width, height } = { width: 1280, height: 800 }
         const currentDir = fileURLToPath(new URL('.', import.meta.url))
 
         this.mainwindow = new BrowserWindow({
@@ -167,7 +181,7 @@ class WindowHandler {
             center: true,
             width: width,
             height: height,
-            minWidth: 1200,
+            minWidth: 1280,
             minHeight: 800,
             webPreferences: {
                 preload: process.env.QUASAR_ELECTRON_PRELOAD_FOLDER
@@ -177,6 +191,8 @@ class WindowHandler {
                 webviewTag: true
             }
         })
+
+        this.installVueJsDevTools(this.mainwindow);
 
         // Electron 39: ready-to-show fires AFTER show() is called, so use did-finish-load instead
         this.mainwindow.webContents.once('did-finish-load', () => {

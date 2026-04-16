@@ -1,52 +1,9 @@
-#line 1 "C:\\Users\\admin\\Documents\\next-exam\\student\\disable-shortcuts\\app\\resource.rc"
+#line 1 "C:\\Users\\vboxuser\\Next-Exam-Dev\\next-exam\\student\\disable-shortcuts\\app\\resource.rc"
 
 
 
 
-#line 1 "C:\\Users\\admin\\Documents\\next-exam\\student\\disable-shortcuts\\app\\resource.h"
-
-
-
-
-#pragma once
-
-
-
-
-
-#line 6 "C:\\Users\\admin\\Documents\\next-exam\\student\\disable-shortcuts\\app\\resource.rc"
-#line 1 "C:\\Users\\admin\\Documents\\next-exam\\student\\disable-shortcuts\\app\\version.h"
-
-
-#line 7 "C:\\Users\\admin\\Documents\\next-exam\\student\\disable-shortcuts\\app\\resource.rc"
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#pragma once
-#line 22 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-
-
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\ctype.h"
-
-
-
+#line 1 "C:\\Users\\vboxuser\\Next-Exam-Dev\\next-exam\\student\\disable-shortcuts\\app\\resource.h"
 
 
 
@@ -55,7 +12,26 @@
 
 
 
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+
+
+#line 6 "C:\\Users\\vboxuser\\Next-Exam-Dev\\next-exam\\student\\disable-shortcuts\\app\\resource.rc"
+#line 1 "C:\\Users\\vboxuser\\Next-Exam-Dev\\next-exam\\student\\disable-shortcuts\\app\\version.h"
+
+
+#line 7 "C:\\Users\\vboxuser\\Next-Exam-Dev\\next-exam\\student\\disable-shortcuts\\app\\resource.rc"
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -64,8 +40,10 @@
 
 
 #pragma once
+#line 22 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
-#line 1 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\ctype.h"
 
 
 
@@ -77,6 +55,25 @@
 
 
 
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+
+
+
+
+
+
+
+#pragma once
+
+#line 1 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+
+
+
+
+
+
+
+#pragma once
 
 
 
@@ -98,12 +95,15 @@
 
 
 
-#line 34 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-#line 35 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+
+
+
+#line 34 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+#line 35 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
     
-#line 39 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 39 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
 
@@ -113,16 +113,16 @@
     
     
 
-#line 49 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 49 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
         
 
 
             
-        #line 54 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-    #line 55 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-#line 56 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+        #line 54 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+    #line 55 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+#line 56 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
-#line 1 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 1 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -272,11 +272,11 @@
 
 
 
-#line 151 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 151 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
-#line 155 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 155 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -306,29 +306,29 @@
 
 
 
-#line 185 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 185 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
-#line 188 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 188 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
-#line 190 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 190 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
 
 
-#line 196 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 196 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
-#line 200 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 200 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
 
 
 
-#line 207 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 207 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -340,7 +340,7 @@
 
 
 
-#line 219 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 219 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -349,8 +349,8 @@
 
 
 
-#line 228 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
-#line 229 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 228 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
+#line 229 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -1676,7 +1676,7 @@
 
 
 
-#line 1555 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 1555 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -1707,7 +1707,7 @@
 
 
 
-#line 1586 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 1586 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -1732,7 +1732,7 @@
 
 
 
-#line 1611 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 1611 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -1745,7 +1745,7 @@
 
 
 
-#line 1624 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 1624 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -1784,7 +1784,7 @@
 
 
 
-#line 1663 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 1663 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -1896,7 +1896,7 @@
 
 
 
-#line 1775 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 1775 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -1999,7 +1999,7 @@
 
 
 
-#line 1878 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 1878 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -2168,7 +2168,7 @@
 
 
 
-#line 2047 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 2047 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -2270,7 +2270,7 @@
 
 
 
-#line 2149 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 2149 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -2487,8 +2487,8 @@
 
 
 
-#line 2366 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
-#line 2367 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 2366 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
+#line 2367 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -2716,7 +2716,7 @@
 
 
 
-#line 2595 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 2595 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
     
     
     
@@ -2755,7 +2755,7 @@
     
     
 
-#line 2634 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 2634 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -2989,7 +2989,7 @@
 
 
 
-#line 2868 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 2868 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -2999,7 +2999,7 @@
 
 
 
-#line 2878 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 2878 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -3007,24 +3007,24 @@
     
 
 
-#line 2886 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
-#line 2887 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 2886 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
+#line 2887 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
 
 
 
-#line 2894 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
-#line 2895 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 2894 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
+#line 2895 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
 
 
 
-#line 2902 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
-#line 2903 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 2902 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
+#line 2903 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -3036,7 +3036,7 @@
 
 
 
-#line 2915 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 2915 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -3070,7 +3070,7 @@
 
 
 
-#line 2949 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
+#line 2949 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
 
 
 
@@ -3096,7 +3096,7 @@
 
 
 
-#line 1 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\concurrencysal.h"
+#line 1 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\concurrencysal.h"
 
 
 
@@ -3387,11 +3387,11 @@
 
 
 
-#line 292 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\concurrencysal.h"
+#line 292 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\concurrencysal.h"
 
 
 
-#line 296 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\concurrencysal.h"
+#line 296 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\concurrencysal.h"
 
 
 
@@ -3484,16 +3484,16 @@
 
 
 
-#line 389 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\concurrencysal.h"
+#line 389 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\concurrencysal.h"
 
 
 
 
 
-#line 395 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\concurrencysal.h"
-#line 2975 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\sal.h"
-#line 58 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-#line 1 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+#line 395 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\concurrencysal.h"
+#line 2975 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\sal.h"
+#line 58 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+#line 1 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
 
 
@@ -3516,8 +3516,8 @@
 
 
         
-    #line 24 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
-#line 25 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+    #line 24 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
+#line 25 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
 
 
@@ -3526,19 +3526,19 @@
 
 
         
-    #line 34 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
-#line 35 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+    #line 34 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
+#line 35 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
 
 
     
-#line 40 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+#line 40 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
 
 
 
     
-#line 46 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+#line 46 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
 #pragma warning(push)
 #pragma warning(disable:   4514 4820 )
@@ -3549,7 +3549,7 @@
 
 
 
-#line 57 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+#line 57 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
 
     
@@ -3557,8 +3557,8 @@
         typedef unsigned __int64  uintptr_t;
     
 
-#line 65 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
-#line 66 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+#line 65 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
+#line 66 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
 
     
@@ -3566,27 +3566,27 @@
 
 
         typedef char* va_list;
-    #line 74 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
-#line 75 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+    #line 74 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
+#line 75 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
 
 
 
     
-#line 81 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+#line 81 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
 
 
 
 
-#line 87 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+#line 87 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
 
 
-#line 91 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+#line 91 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
     
     
-#line 94 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+#line 94 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
 
 
@@ -3598,7 +3598,7 @@
 
 
 
-#line 106 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+#line 106 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
 
 
@@ -3606,25 +3606,7 @@
 
 
 
-#line 114 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
-
-
-
-
-
-
-
-
-
-
-
-#line 126 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
-
-
-
-
-
-#line 132 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+#line 114 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
 
 
@@ -3635,7 +3617,14 @@
 
 
 
-#line 143 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+
+#line 126 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
+
+
+
+
+
+#line 132 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
 
 
@@ -3646,7 +3635,18 @@
 
 
 
-#line 154 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+#line 143 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
+
+
+
+
+
+
+
+
+
+
+#line 154 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
     void __cdecl __va_start(va_list* , ...);
 
@@ -3657,7 +3657,7 @@
 
     
 
-#line 165 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+#line 165 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
 
 
@@ -3694,15 +3694,15 @@
 
 
 
-#line 202 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+#line 202 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
     
 
-#line 206 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vadefs.h"
+#line 206 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vadefs.h"
 
 #pragma warning(pop) 
 #pragma pack(pop)
-#line 59 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 59 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 #pragma warning(push)
 #pragma warning(disable:   4514 4820 )
@@ -3720,7 +3720,7 @@
 
 
 
-#line 77 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 77 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
 
@@ -3730,15 +3730,15 @@
 
 
 
-#line 87 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-
-    
-
+#line 87 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
     
 
 
-#line 95 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+    
+
+
+#line 95 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 __pragma(pack(push, 8))
 
@@ -3749,8 +3749,8 @@ __pragma(pack(push, 8))
 
 
         
-    #line 106 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-#line 107 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+    #line 106 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+#line 107 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
 
@@ -3769,59 +3769,54 @@ __pragma(pack(push, 8))
 
     
 
-#line 126 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 126 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
-#line 128 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 128 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
         
-    #line 130 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-#line 131 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+    #line 130 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+#line 131 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
     
 
-#line 136 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 136 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
         
-    #line 138 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-#line 139 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+    #line 138 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+#line 139 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
 
 
 
-#line 145 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 145 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
     
     
-#line 148 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-
-
-
-
-    
-#line 154 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-
-
-
-
+#line 148 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
 
 
     
+#line 154 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
-#line 166 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
 
 
 
-#line 170 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+
+
+
+
+
+#line 165 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
     
-#line 172 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 167 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
 
 
     
-#line 178 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 173 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
     
@@ -3829,8 +3824,8 @@ __pragma(pack(push, 8))
 
 
       
-    #line 186 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-#line 187 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+    #line 181 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+#line 182 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
 
@@ -3844,70 +3839,56 @@ __pragma(pack(push, 8))
 
 
 
-#line 201 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 196 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
 
-#line 205 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 200 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
 
-#line 209 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 204 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
     typedef _Bool __vcrt_bool;
-#line 211 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 206 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
 
     
-#line 216 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 211 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
     
-#line 220 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 215 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
     
-#line 224 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 219 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
 
     
     typedef unsigned short wchar_t;
-#line 230 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 225 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
     
 
 
         
-    #line 237 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-#line 238 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+    #line 232 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+#line 233 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
     
 
 
-#line 244 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 239 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
 
-#line 248 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 243 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
-
-
-
-
-
-
-
-
-    
-#line 260 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-
-
-
-#line 264 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
 
 
 
@@ -3917,99 +3898,56 @@ __pragma(pack(push, 8))
 
 
     
-#line 274 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 255 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+
+
+
+#line 259 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+
+
+
+
+
+
+
+
+    
+#line 269 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
     
 
-#line 279 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 274 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
         
-    #line 281 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-#line 282 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+    #line 276 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+#line 277 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
     
 
-#line 287 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 282 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
         
-    #line 289 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-#line 290 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+    #line 284 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+#line 285 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
     
 
-#line 295 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 290 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
         
-    #line 297 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-#line 298 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+    #line 292 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+#line 293 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
 
 
 
-#line 304 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 299 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
 
-#line 308 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 303 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
-
-
-    
-        
-    
-
-
-
-#line 318 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-#line 319 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-
-
-
-#line 323 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-    
-#line 325 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-
-
-
-
-
-
-
-
-
-    
-
-
-        
-    #line 339 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-#line 340 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-
-
-
-
-
-
-
-
-
-#line 350 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-
-
-    
-
-
-        
-
-
-
-
-    #line 361 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-#line 362 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-
-
-
-#line 366 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
 
 
     
@@ -4017,8 +3955,71 @@ __pragma(pack(push, 8))
     
 
 
-#line 374 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-#line 375 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+
+#line 313 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+#line 314 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+
+
+
+#line 318 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+    
+#line 320 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+
+
+
+
+
+
+
+
+
+    
+
+
+        
+    #line 334 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+#line 335 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+
+
+
+
+
+
+
+    
+#line 344 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+
+
+
+
+
+
+#line 351 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+
+
+    
+
+
+        
+
+
+
+
+    #line 362 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+#line 363 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+
+
+
+#line 367 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+
+
+    
+        
+    
+
+
+#line 375 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+#line 376 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
     void __cdecl __security_init_cookie(void);
@@ -4026,14 +4027,14 @@ __pragma(pack(push, 8))
     
 
 
-#line 383 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 384 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 
-#line 386 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 387 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
         void __cdecl __security_check_cookie(  uintptr_t _StackCookie);
         __declspec(noreturn) void __cdecl __report_gsfailure(  uintptr_t _StackCookie);
-    #line 389 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-#line 390 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+    #line 390 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+#line 391 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 extern uintptr_t __security_cookie;
 
@@ -4041,14 +4042,14 @@ extern uintptr_t __security_cookie;
     
     
     
-#line 398 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
+#line 399 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
 
 __pragma(pack(pop))
 
 #pragma warning(pop) 
 
-#line 404 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime.h"
-#line 11 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 405 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime.h"
+#line 11 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
@@ -4075,20 +4076,20 @@ __pragma(pack(pop))
 
 
         
-    #line 38 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 39 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+    #line 38 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 39 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
     
-#line 43 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 43 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
     
         
     
 
-#line 50 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 51 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 50 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 51 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
@@ -4110,13 +4111,13 @@ __pragma(pack(pop))
 
 
         
-    #line 73 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 74 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+    #line 73 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 74 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
     
-#line 79 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 79 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
@@ -4132,7 +4133,7 @@ __pragma(pack(pop))
 
 
     
-#line 95 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 95 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
     
@@ -4148,16 +4149,16 @@ __pragma(pack(pop))
 
 
         
-    #line 111 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 112 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+    #line 111 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 112 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
     
 
 
         
-    #line 119 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 120 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+    #line 119 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 120 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 #pragma warning(push)
 #pragma warning(disable: 4324  4514 4574 4710 4793 4820 4995 4996 28719 28726 28727 )
@@ -4173,76 +4174,61 @@ __pragma(pack(push, 8))
 
     
 
-#line 136 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 136 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
-#line 138 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 138 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
         
-    #line 140 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 141 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+    #line 140 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 141 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
 
     
-#line 147 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 147 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
     
 
-#line 152 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 152 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
-#line 154 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 154 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
         
-    #line 156 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 157 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+    #line 156 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 157 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
-#line 161 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 161 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
     
-#line 163 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-
-
-    
-
-
-#line 169 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-
-
-
-
-
-#line 175 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-    
-#line 177 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-
-
-
+#line 163 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
     
-#line 184 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+
+
+#line 169 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
-#line 188 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+
+
+#line 175 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
     
-#line 190 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-
-
-
-
+#line 177 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
 
 
     
-#line 201 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 184 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
-
+#line 188 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+    
+#line 190 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
@@ -4253,37 +4239,52 @@ __pragma(pack(push, 8))
 
 
     
-
-
-        
-    #line 219 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 220 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 201 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
-#line 224 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-    
-#line 226 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
 
 
 
-#line 230 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-    
-#line 232 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
 
 
 
-#line 236 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-    
-#line 238 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+
+
 
 
     
 
 
         
-    #line 245 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 246 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+    #line 219 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 220 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+
+
+
+#line 224 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+    
+#line 226 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+
+
+
+#line 230 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+    
+#line 232 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+
+
+
+#line 236 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+    
+#line 238 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+
+
+    
+
+
+        
+    #line 245 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 246 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
@@ -4307,13 +4308,13 @@ __pragma(pack(push, 8))
 
 
 
-#line 270 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 270 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
-#line 274 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 274 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
     typedef _Bool __crt_bool;
-#line 276 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 276 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
@@ -4333,9 +4334,9 @@ __pragma(pack(push, 8))
 
 
             
-        #line 296 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-    #line 297 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 298 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+        #line 296 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+    #line 297 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 298 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
@@ -4359,16 +4360,16 @@ __pragma(pack(push, 8))
         
     
 
-#line 322 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 323 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 322 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 323 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
         
-#line 327 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 327 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
     
-#line 331 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 331 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
  
@@ -4380,19 +4381,19 @@ __pragma(pack(push, 8))
 
   
 
-#line 343 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 343 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
    
-  #line 345 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
- #line 346 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 347 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+  #line 345 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+ #line 346 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 347 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
  
 
-#line 352 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 352 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
    
- #line 354 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 355 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+ #line 354 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 355 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
@@ -4407,7 +4408,7 @@ __pragma(pack(push, 8))
                 unsigned int,
                 uintptr_t
         );
-#line 370 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 370 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
  void __cdecl _invalid_parameter_noinfo(void);
  __declspec(noreturn) void __cdecl _invalid_parameter_noinfo_noreturn(void);
@@ -4438,8 +4439,8 @@ __declspec(noreturn)
 
 
 
-#line 401 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 402 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 401 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 402 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
@@ -4455,121 +4456,11 @@ __declspec(noreturn)
     
 
 
-#line 419 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 419 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
-#line 423 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-
-
-    
-
-
-        
-
-
-    #line 432 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 433 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
-
-        
-    #line 451 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 452 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-
-
-    
-
-
-        
-    #line 459 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 460 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-
-
-
-#line 464 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-
-
-
-
-
-
-
-
-
-
-
-
-
-#line 478 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-
-
-    
-    
-    
-    
-    
-    
-    
-
-    
-    
-    
-    
-    
-#line 494 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-
-
-
-
-
-    
-#line 501 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-
-
-
-#line 505 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-
-
-
-
-
-
-
-
-    
-        
-    
-
-
-
-
-
-#line 522 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 523 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-
-
-
-#line 527 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-
-
-
-
-
-#line 533 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 423 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
     
@@ -4578,9 +4469,119 @@ __declspec(noreturn)
         
 
 
+    #line 432 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 433 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
-    #line 543 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 544 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+        
+    #line 451 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 452 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+
+
+    
+
+
+        
+    #line 459 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 460 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+
+
+
+#line 464 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 478 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+
+
+    
+    
+    
+    
+    
+    
+    
+
+    
+    
+    
+    
+    
+#line 494 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+
+
+
+
+
+    
+#line 501 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+
+
+
+#line 505 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+
+
+
+
+
+
+
+
+    
+        
+    
+
+
+
+
+
+#line 522 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 523 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+
+
+
+#line 527 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+
+
+
+
+
+#line 533 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+
+
+    
+
+
+        
+
+
+
+    #line 543 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 544 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
@@ -4632,7 +4633,7 @@ __declspec(noreturn)
 
 
     
-#line 596 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 596 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
@@ -4672,28 +4673,28 @@ typedef _Mbstatet mbstate_t;
 
 
 
-#line 636 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 636 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
-#line 640 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 640 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
     
 
 
         typedef __time64_t time_t;
-    #line 647 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
-#line 648 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+    #line 647 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
+#line 648 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
     
-#line 653 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 653 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
     typedef size_t rsize_t;
-#line 657 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt.h"
+#line 657 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt.h"
 
 
 
@@ -6113,8 +6114,8 @@ __pragma(pack(pop))
 
 
 #pragma warning(pop) 
-#line 13 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\ctype.h"
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wctype.h"
+#line 13 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\ctype.h"
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wctype.h"
 
 
 
@@ -6145,9 +6146,9 @@ __pragma(pack(push, 8))
 
     
 
-#line 32 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wctype.h"
+#line 32 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wctype.h"
         
-    #line 34 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wctype.h"
+    #line 34 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wctype.h"
 
      const unsigned short* __cdecl __pctype_func(void);
      const wctype_t*       __cdecl __pwctype_func(void);
@@ -6158,8 +6159,8 @@ __pragma(pack(push, 8))
 
         
         
-    #line 45 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wctype.h"
-#line 46 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wctype.h"
+    #line 45 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wctype.h"
+#line 46 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wctype.h"
 
 
 
@@ -6230,7 +6231,7 @@ __pragma(pack(push, 8))
        int __cdecl _isleadbyte_l(  int _C,   _locale_t _Locale);
 
     __declspec(deprecated("This function or variable has been superceded by newer library " "or operating system functionality. Consider using " "iswctype" " " "instead. See online help for details."))  int __cdecl is_wctype(  wint_t _C,   wctype_t _Type);
-#line 117 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wctype.h"
+#line 117 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wctype.h"
 
 
 
@@ -6271,11 +6272,9 @@ __pragma(pack(push, 8))
 
         
             
-        #line 158 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wctype.h"
+        #line 158 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wctype.h"
 
-    #line 160 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wctype.h"
-
-
+    #line 160 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wctype.h"
 
 
 
@@ -6313,14 +6312,16 @@ __pragma(pack(push, 8))
 
 
 
-#line 200 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wctype.h"
+
+
+#line 200 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wctype.h"
 
 
 
 __pragma(pack(pop))
 
 #pragma warning(pop) 
-#line 14 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\ctype.h"
+#line 14 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\ctype.h"
 
 #pragma warning(push)
 #pragma warning(disable: 4324  4514 4574 4710 4793 4820 4995 4996 28719 28726 28727 )
@@ -6613,13 +6614,13 @@ __pragma(pack(push, 8))
 
 
 
-#line 307 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\ctype.h"
+#line 307 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\ctype.h"
 __pragma(pack(pop))
 
 #pragma warning(pop) 
-#line 311 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\ctype.h"
-#line 25 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winapifamily.h"
+#line 311 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\ctype.h"
+#line 25 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winapifamily.h"
 
 
 
@@ -6641,11 +6642,11 @@ __pragma(pack(pop))
 
 #pragma warning(push)
 #pragma warning(disable:4001) 
-#line 23 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winapifamily.h"
+#line 23 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winapifamily.h"
 #pragma once
-#line 25 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winapifamily.h"
+#line 25 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winapifamily.h"
 
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winpackagefamily.h"
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winpackagefamily.h"
 
 
 
@@ -6667,13 +6668,13 @@ __pragma(pack(pop))
 
 #pragma warning(push)
 #pragma warning(disable:4001) 
-#line 23 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winpackagefamily.h"
+#line 23 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winpackagefamily.h"
 #pragma once
-#line 25 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winpackagefamily.h"
+#line 25 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winpackagefamily.h"
 
 
 
-#line 29 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winpackagefamily.h"
+#line 29 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winpackagefamily.h"
 
 
 
@@ -6733,11 +6734,11 @@ __pragma(pack(pop))
 
 
 #pragma warning(pop)
-#line 89 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winpackagefamily.h"
-#line 90 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winpackagefamily.h"
+#line 89 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winpackagefamily.h"
+#line 90 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winpackagefamily.h"
 
-#line 92 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winpackagefamily.h"
-#line 27 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winapifamily.h"
+#line 92 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winpackagefamily.h"
+#line 27 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winapifamily.h"
 
 
 
@@ -6801,7 +6802,7 @@ __pragma(pack(pop))
 
 
 
-#line 91 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winapifamily.h"
+#line 91 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winapifamily.h"
 
 
 
@@ -6853,34 +6854,34 @@ __pragma(pack(pop))
 
 
 
-#line 148 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winapifamily.h"
+#line 148 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winapifamily.h"
 
 
 
-#line 152 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winapifamily.h"
+#line 152 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winapifamily.h"
 
 
 
 
 
 
-#line 159 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winapifamily.h"
+#line 159 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winapifamily.h"
 
 
 
 
 
-#line 165 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winapifamily.h"
+#line 165 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winapifamily.h"
 
 
 
-#line 169 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winapifamily.h"
+#line 169 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winapifamily.h"
 
 
 
 
 
-#line 175 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winapifamily.h"
+#line 175 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winapifamily.h"
 
 
 
@@ -6892,7 +6893,7 @@ __pragma(pack(pop))
 
 
 
-#line 187 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winapifamily.h"
+#line 187 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winapifamily.h"
 
 
 
@@ -6949,18 +6950,16 @@ __pragma(pack(pop))
 
 
 
-#line 244 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winapifamily.h"
+#line 244 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winapifamily.h"
 
 
 
 #pragma warning(pop)
-#line 249 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winapifamily.h"
-#line 250 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winapifamily.h"
+#line 249 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winapifamily.h"
+#line 250 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winapifamily.h"
 
-#line 252 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\winapifamily.h"
-#line 26 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-
-
+#line 252 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\winapifamily.h"
+#line 26 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -6971,10 +6970,12 @@ __pragma(pack(pop))
 
 
 
-#line 39 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
 
-#line 41 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 42 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+
+#line 39 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+
+#line 41 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 42 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -6983,34 +6984,34 @@ __pragma(pack(pop))
 #pragma warning(disable:4201) 
 #pragma warning(disable:4668) 
 #pragma warning(disable:4820) 
-#line 51 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 51 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
 
-#line 58 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 58 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
-#line 62 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 62 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
-#line 66 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 66 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
-#line 70 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 70 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
-#line 74 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 74 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
-#line 78 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 78 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -7028,7 +7029,7 @@ __pragma(pack(pop))
 
 
 
-#line 96 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 96 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -7038,8 +7039,8 @@ __pragma(pack(pop))
 
 
 
-#line 106 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 107 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 106 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 107 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -7049,19 +7050,19 @@ __pragma(pack(pop))
 
 
 
-#line 117 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 117 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
 
-#line 124 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 125 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 124 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 125 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
@@ -7079,34 +7080,34 @@ __pragma(pack(pop))
 
 
 #pragma once
-#line 19 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 19 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 #pragma warning(push)
 #pragma warning(disable:4668) 
-#line 24 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 24 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
  
 
-#line 30 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 30 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
   
- #line 32 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+ #line 32 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
  
 
 
 
   
- #line 39 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+ #line 39 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
  
   
   
- #line 44 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+ #line 44 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
-#line 46 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 46 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
@@ -7127,7 +7128,7 @@ __pragma(pack(pop))
 
 
 
-#line 67 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 67 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
@@ -7160,7 +7161,7 @@ __pragma(pack(pop))
 
 
 
-#line 100 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 100 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
@@ -7173,7 +7174,7 @@ __pragma(pack(pop))
 
 
 
-#line 113 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 113 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
@@ -7277,7 +7278,7 @@ __pragma(pack(pop))
 
 
 
-#line 217 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 217 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
@@ -7380,7 +7381,7 @@ __pragma(pack(pop))
 
 
 
-#line 320 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 320 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
@@ -7440,7 +7441,7 @@ __pragma(pack(pop))
 
 
 
-#line 380 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 380 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
@@ -7528,7 +7529,7 @@ __pragma(pack(pop))
 
 
 
-#line 468 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 468 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
@@ -7548,16 +7549,16 @@ __pragma(pack(pop))
 
 
 
-#line 488 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 488 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
 
 
-#line 494 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 494 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
-#line 497 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 497 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
@@ -7626,7 +7627,7 @@ __pragma(pack(pop))
 
 
 
-#line 566 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 566 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
@@ -7637,7 +7638,7 @@ __pragma(pack(pop))
 
 
 
-#line 577 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 577 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
@@ -7668,7 +7669,7 @@ __pragma(pack(pop))
 
 
 
-#line 608 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 608 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
@@ -7685,7 +7686,7 @@ __pragma(pack(pop))
 
 
 
-#line 625 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 625 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
@@ -7703,7 +7704,7 @@ __pragma(pack(pop))
 
 
 
-#line 643 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 643 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
@@ -7736,7 +7737,7 @@ __pragma(pack(pop))
 
 
 
-#line 676 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 676 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
@@ -7754,9 +7755,9 @@ __pragma(pack(pop))
 
 
 
-#line 694 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 694 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\driverspecs.h"
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\driverspecs.h"
 
 
 
@@ -7881,7 +7882,7 @@ __pragma(pack(pop))
 
 
 
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdv_driverspecs.h"
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdv_driverspecs.h"
 
 
 
@@ -7903,13 +7904,13 @@ __pragma(pack(pop))
 
 
 
-#line 23 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdv_driverspecs.h"
-#line 126 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\driverspecs.h"
+#line 23 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdv_driverspecs.h"
+#line 126 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\driverspecs.h"
 
 
 
 #pragma once
-#line 131 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\driverspecs.h"
+#line 131 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\driverspecs.h"
 
 
 
@@ -8033,7 +8034,7 @@ __pragma(pack(pop))
 
 
 
-#line 255 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\driverspecs.h"
+#line 255 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\driverspecs.h"
 
     
     
@@ -8050,7 +8051,7 @@ __pragma(pack(pop))
     
     
 
-#line 272 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\driverspecs.h"
+#line 272 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\driverspecs.h"
 
     
     
@@ -8477,9 +8478,9 @@ __pragma(pack(pop))
     
     
     
-#line 699 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\driverspecs.h"
+#line 699 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\driverspecs.h"
     
-#line 701 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\driverspecs.h"
+#line 701 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\driverspecs.h"
     
 
 
@@ -8665,7 +8666,7 @@ __pragma(pack(pop))
     
     
 
-#line 887 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\driverspecs.h"
+#line 887 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\driverspecs.h"
 
     
     
@@ -8679,11 +8680,9 @@ __pragma(pack(pop))
 
 
 
-#line 901 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\driverspecs.h"
+#line 901 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\driverspecs.h"
 
-#line 696 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
-
-
+#line 696 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 
@@ -8694,15 +8693,19 @@ __pragma(pack(pop))
 
 
 
-#line 709 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+
+
+#line 709 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
 
 #pragma warning(pop)
-#line 713 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
+#line 713 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
 
-#line 715 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\specstrings.h"
-#line 129 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\kernelspecs.h"
+
+#line 716 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\specstrings.h"
+
+#line 129 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\kernelspecs.h"
 
 
 
@@ -8742,7 +8745,7 @@ __pragma(pack(pop))
 
 
 #pragma once
-#line 41 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\kernelspecs.h"
+#line 41 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\kernelspecs.h"
 
 
 
@@ -8758,19 +8761,19 @@ __pragma(pack(pop))
 
     
 
-#line 57 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\kernelspecs.h"
+#line 57 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\kernelspecs.h"
     
 
-#line 60 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\kernelspecs.h"
+#line 60 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\kernelspecs.h"
     
 
-#line 63 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\kernelspecs.h"
+#line 63 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\kernelspecs.h"
     
 
-#line 66 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\kernelspecs.h"
+#line 66 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\kernelspecs.h"
     
 
-#line 69 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\kernelspecs.h"
+#line 69 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\kernelspecs.h"
 
     
     
@@ -8964,20 +8967,20 @@ __pragma(pack(pop))
 
 
 
-#line 263 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\kernelspecs.h"
-#line 130 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 263 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\kernelspecs.h"
+#line 130 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
-#line 134 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 134 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
-#line 140 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 140 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
-#line 142 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 142 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -8986,12 +8989,12 @@ __pragma(pack(pop))
 
 
 
-#line 151 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 151 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
-#line 156 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 156 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -9002,7 +9005,7 @@ __pragma(pack(pop))
 
 
 
-#line 167 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 167 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -9016,7 +9019,7 @@ __pragma(pack(pop))
 
 
 
-#line 181 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 181 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -9025,16 +9028,16 @@ __pragma(pack(pop))
 
 
 
-#line 190 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 190 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
 
-#line 197 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 197 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
-#line 199 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 199 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -9056,9 +9059,9 @@ __pragma(pack(pop))
 
 
 
-#line 221 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 221 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
 
 
 
@@ -9083,7 +9086,7 @@ __pragma(pack(pop))
 
 #pragma warning(push)
 #pragma warning(disable:4668) 
-#line 26 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 26 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
 
 
 
@@ -9093,41 +9096,41 @@ __pragma(pack(pop))
 
 
 
-#line 36 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 36 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
  
 
 
-#line 40 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 40 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
   
 
-#line 43 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 43 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
    
-  #line 45 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+  #line 45 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
   typedef unsigned long POINTER_64_INT;
- #line 47 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+ #line 47 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
  
-#line 49 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 49 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
 
 
 
 
 
-#line 55 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 55 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
 
 
 
 
-#line 60 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 60 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
 
 
-#line 63 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 63 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
 
 
 
 
 
 #pragma once
-#line 70 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 70 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
 
 
 
@@ -9161,7 +9164,7 @@ typedef unsigned int DWORD32, *PDWORD32;
 
 
 
-#line 104 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 104 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
 
 
 
@@ -9179,7 +9182,7 @@ typedef unsigned int DWORD32, *PDWORD32;
 
 
 
-#line 122 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 122 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
 
 
 
@@ -9200,8 +9203,8 @@ typedef unsigned int DWORD32, *PDWORD32;
 
 
 
-#line 143 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
-#line 144 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 143 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
+#line 144 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
 
 
 
@@ -9215,7 +9218,7 @@ typedef unsigned int DWORD32, *PDWORD32;
 
 typedef void*  HANDLE64;
 typedef HANDLE64 *PHANDLE64;
-#line 158 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 158 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
 
 
 
@@ -9399,7 +9402,7 @@ PtrToPtr32(
 
 
 
-#line 342 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 342 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
 
 
 
@@ -9468,7 +9471,7 @@ PtrToPtr32(
 
 
 
-#line 411 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 411 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
 
 
 
@@ -9535,7 +9538,7 @@ typedef LONG_PTR SSIZE_T, *PSSIZE_T;
 
 
 
-#line 478 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 478 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
 
 
 
@@ -9574,16 +9577,16 @@ typedef KAFFINITY *PKAFFINITY;
 
 
 #pragma warning(pop)
-#line 517 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
+#line 517 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
 
-#line 519 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\basetsd.h"
-#line 223 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 519 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\basetsd.h"
+#line 223 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
-#line 229 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 229 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -9592,120 +9595,120 @@ typedef KAFFINITY *PKAFFINITY;
 
 
 
-#line 238 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 239 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 238 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 239 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
 
-#line 246 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 247 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 246 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 247 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
 
-#line 254 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 255 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 254 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 255 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
 
-#line 262 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 263 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 262 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 263 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
 
-#line 270 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 271 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 270 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 271 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
-#line 277 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 277 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
-#line 281 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 281 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
-#line 286 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 286 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
-#line 288 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 288 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
-#line 290 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 291 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 290 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 291 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
-#line 295 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 295 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
-#line 300 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 300 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
-#line 302 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 303 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 302 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 303 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
-#line 308 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 308 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
-#line 310 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 311 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 310 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 311 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
 
-#line 318 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 319 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 318 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 319 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
 
-#line 326 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 327 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 326 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 327 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
-#line 332 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 332 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
-#line 334 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 335 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 334 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 335 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
 
-#line 342 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 343 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 342 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 343 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
 
-#line 350 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 351 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 350 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 351 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -9722,8 +9725,8 @@ typedef KAFFINITY *PKAFFINITY;
 
 
 
-#line 368 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 369 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 368 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 369 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -9732,66 +9735,69 @@ typedef KAFFINITY *PKAFFINITY;
 
 
 
-#line 378 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 379 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
 
 
 
 
 
 
-#line 386 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 387 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
 
 
 
 
-#line 392 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
 
-#line 394 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 395 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 389 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
+#line 393 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 394 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
-#line 400 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
 
-#line 402 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 403 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
 
 
 
 
+#line 401 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 402 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
-#line 412 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 413 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
 
 
+#line 409 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 410 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
+#line 415 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
+#line 417 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 418 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
+#line 424 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
+#line 426 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
+#line 429 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 430 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
 
+#line 437 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 438 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
-#line 437 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
 
 
 
@@ -9802,8 +9808,6 @@ typedef KAFFINITY *PKAFFINITY;
 
 
 
-#line 448 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 449 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
 
 
 
@@ -9815,10 +9819,34 @@ typedef KAFFINITY *PKAFFINITY;
 
 
 
+#line 462 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
-#line 464 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+
+
+
+
+
+
+
+#line 473 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 474 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#line 489 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -9835,14 +9863,12 @@ typedef void *  PVOID64;
 
 
 
-#line 481 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 506 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
-#line 483 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-
-
-#line 486 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 508 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
+#line 511 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -9853,15 +9879,15 @@ typedef void *  PVOID64;
 
 
 
-#line 499 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 522 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
-#line 505 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
 
 
+#line 530 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -9876,11 +9902,10 @@ typedef void *  PVOID64;
 
 
 
-#line 522 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
 
 
 
-
+#line 548 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -9893,8 +9918,8 @@ typedef short SHORT;
 typedef long LONG;
 
 typedef int INT;
-#line 539 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 540 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 561 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 562 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -9905,7 +9930,7 @@ typedef wchar_t WCHAR;
 
 
 
-#line 551 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 573 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 typedef WCHAR *PWCHAR, *LPWCH, *PWCH;
 typedef const WCHAR *LPCWCH, *PCWCH;
@@ -9970,7 +9995,7 @@ typedef  const WCHAR __unaligned *PCUNZWCH;
 
 
 
-#line 616 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 638 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -10001,7 +10026,7 @@ typedef  const CHAR *PCNZCH;
 typedef WCHAR TCHAR, *PTCHAR;
 typedef WCHAR TUCHAR, *PTUCHAR;
 
-#line 647 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 669 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 typedef LPWCH LPTCH, PTCH;
 typedef LPCWCH LPCTCH, PCTCH;
@@ -10040,7 +10065,7 @@ typedef PCUNZWCH PCUNZTCH;
 
 
 
-#line 686 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 708 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -10103,7 +10128,7 @@ typedef UQUAD *PUQUAD;
 
 
 
-#line 749 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 771 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -10116,13 +10141,13 @@ typedef SCHAR *PSCHAR;
 
 
 
-#line 762 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 784 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
-#line 767 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 768 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 789 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 790 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -10144,12 +10169,25 @@ typedef struct _PROCESSOR_NUMBER {
 
 
 
+
+
 typedef struct _GROUP_AFFINITY {
     KAFFINITY Mask;
     USHORT Group;
     USHORT Reserved[3];
 } GROUP_AFFINITY, *PGROUP_AFFINITY;
 
+typedef struct _GROUP_AFFINITY32 {
+    ULONG Mask;
+    USHORT Group;
+    USHORT Reserved[3];
+} GROUP_AFFINITY32, *PGROUP_AFFINITY32;
+
+typedef struct _GROUP_AFFINITY64 {
+    unsigned __int64 Mask;
+    USHORT Group;
+    USHORT Reserved[3];
+} GROUP_AFFINITY64, *PGROUP_AFFINITY64;
 
 
 
@@ -10158,7 +10196,10 @@ typedef struct _GROUP_AFFINITY {
 
 
 
-#line 804 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+
+
+
+#line 842 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -10172,13 +10213,13 @@ typedef struct _GROUP_AFFINITY {
 typedef void *HANDLE;
 
 
-#line 818 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 856 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
-#line 820 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 858 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
-#line 824 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 862 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 typedef HANDLE *PHANDLE;
 
 
@@ -10201,8 +10242,8 @@ typedef ULONG  FLONG;
 
 
 typedef   long HRESULT;
-#line 847 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
-#line 848 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 885 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+#line 886 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -10229,7 +10270,7 @@ typedef   long HRESULT;
     
     
     
-#line 875 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 913 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -10239,7 +10280,7 @@ typedef   long HRESULT;
 
 
 
-#line 885 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 923 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -10253,7 +10294,18 @@ typedef   long HRESULT;
 
 
 
-#line 899 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 937 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -10344,7 +10396,7 @@ typedef enum {
     DEFAULT_COMPARTMENT_ID
 } COMPARTMENT_ID, *PCOMPARTMENT_ID;
 
-#line 990 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1039 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -10375,7 +10427,7 @@ typedef NTSTATUS *PNTSTATUS;
 
 
 
-#line 1021 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1070 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -10417,7 +10469,7 @@ typedef NTSTATUS *PNTSTATUS;
 
 
 
-#line 1063 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1112 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -10427,7 +10479,7 @@ typedef NTSTATUS *PNTSTATUS;
 
 
 
-#line 1073 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1122 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -10437,7 +10489,7 @@ typedef NTSTATUS *PNTSTATUS;
 
 
 
-#line 1083 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1132 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -10454,7 +10506,7 @@ typedef NTSTATUS *PNTSTATUS;
 
 typedef long SECURITY_STATUS;
 
-#line 1100 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1149 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -10487,7 +10539,7 @@ typedef long SECURITY_STATUS;
 
 
 
-#line 1133 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1182 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 typedef struct _FLOAT128 {
     __int64 LowPart;
     __int64 HighPart;
@@ -10527,7 +10579,7 @@ typedef unsigned __int64 ULONGLONG;
 
 
 
-#line 1173 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1222 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 typedef LONGLONG *PLONGLONG;
 typedef ULONGLONG *PULONGLONG;
@@ -10540,7 +10592,7 @@ typedef LONGLONG USN;
 
 
 
-#line 1186 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1235 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 typedef union _LARGE_INTEGER {
     struct {
         ULONG LowPart;
@@ -10552,7 +10604,7 @@ typedef union _LARGE_INTEGER {
     } u;
     LONGLONG QuadPart;
 } LARGE_INTEGER;
-#line 1198 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1247 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 typedef LARGE_INTEGER *PLARGE_INTEGER;
 
@@ -10560,7 +10612,7 @@ typedef LARGE_INTEGER *PLARGE_INTEGER;
 
 
 
-#line 1206 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1255 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 typedef union _ULARGE_INTEGER {
     struct {
         ULONG LowPart;
@@ -10572,7 +10624,7 @@ typedef union _ULARGE_INTEGER {
     } u;
     ULONGLONG QuadPart;
 } ULARGE_INTEGER;
-#line 1218 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1267 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 typedef ULARGE_INTEGER *PULARGE_INTEGER;
 
@@ -10744,7 +10796,7 @@ typedef LARGE_INTEGER PHYSICAL_ADDRESS, *PPHYSICAL_ADDRESS;
 
 
 
-#line 1393 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1442 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -10794,7 +10846,7 @@ _rotr16 (
 #pragma intrinsic(_rotr8)
 #pragma intrinsic(_rotr16)
 
-#line 1443 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1492 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -10836,7 +10888,7 @@ _rotr64 (
 #pragma intrinsic(_rotr)
 #pragma intrinsic(_rotr64)
 
-#line 1485 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1534 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -10945,7 +10997,7 @@ typedef struct _UNICODE_STRING {
 
 
       PWCH   Buffer;
-#line 1594 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1643 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 } UNICODE_STRING;
 typedef UNICODE_STRING *PUNICODE_STRING;
 typedef const UNICODE_STRING *PCUNICODE_STRING;
@@ -10982,7 +11034,7 @@ typedef const UNICODE_STRING *PCUNICODE_STRING;
 
 
 
-#line 1631 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1680 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -11099,7 +11151,7 @@ ListEntry64To32(
     l32->Flink = (ULONG)l64->Flink;
     l32->Blink = (ULONG)l64->Blink;
 }
-#line 1748 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1797 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -11117,7 +11169,7 @@ typedef struct _WNF_STATE_NAME {
 
 typedef struct _WNF_STATE_NAME* PWNF_STATE_NAME;
 typedef const struct _WNF_STATE_NAME* PCWNF_STATE_NAME;
-#line 1766 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1815 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 typedef struct _STRING32 {
@@ -11262,7 +11314,7 @@ typedef const OBJECT_ATTRIBUTES *PCOBJECT_ATTRIBUTES;
 
 
 
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
 
 
 
@@ -11283,30 +11335,23 @@ typedef const OBJECT_ATTRIBUTES *PCOBJECT_ATTRIBUTES;
 
 
 
-#line 22 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
+#line 22 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
 typedef struct _GUID {
     unsigned long  Data1;
     unsigned short Data2;
     unsigned short Data3;
     unsigned char  Data4[ 8 ];
 } GUID;
-#line 29 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
-#line 30 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
+#line 29 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
+#line 30 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
 
 
 
 
 
 
-#line 37 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
-#line 38 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
-
-
-
-
-
-
-
+#line 37 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
+#line 38 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
 
 
 
@@ -11328,7 +11373,14 @@ typedef struct _GUID {
 
 
 
-#line 67 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
+
+
+
+
+
+
+
+#line 67 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
 
 
 
@@ -11338,12 +11390,12 @@ typedef struct _GUID {
 
 
 typedef GUID *LPGUID;
-#line 77 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
+#line 77 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
 
 
 
 typedef const GUID *LPCGUID;
-#line 82 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
+#line 82 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
 
 
 
@@ -11365,7 +11417,7 @@ typedef FMTID *LPFMTID;
 
 
 
-#line 104 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
+#line 104 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
 
 
 
@@ -11373,8 +11425,8 @@ typedef FMTID *LPFMTID;
 
 
 
-#line 112 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
-#line 113 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
+#line 112 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
+#line 113 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
 
 
 
@@ -11382,8 +11434,8 @@ typedef FMTID *LPFMTID;
 
 
 
-#line 121 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
-#line 122 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
+#line 121 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
+#line 122 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
 
 
 
@@ -11391,8 +11443,8 @@ typedef FMTID *LPFMTID;
 
 
 
-#line 130 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
-#line 131 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
+#line 130 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
+#line 131 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
 
 
 
@@ -11400,31 +11452,15 @@ typedef FMTID *LPFMTID;
 
 
 
-#line 139 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
-#line 140 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
+#line 139 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
+#line 140 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
 
-#line 142 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
-
-
-
-
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
+#line 142 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
 
 
 
 
-
-
-
-#pragma once
-
-
-
-
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_memory.h"
-
-
-
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
 
 
 
@@ -11435,7 +11471,12 @@ typedef FMTID *LPFMTID;
 #pragma once
 
 
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_memcpy_s.h"
+
+
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_memory.h"
+
+
+
 
 
 
@@ -11446,7 +11487,18 @@ typedef FMTID *LPFMTID;
 #pragma once
 
 
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\errno.h"
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_memcpy_s.h"
+
+
+
+
+
+
+
+#pragma once
+
+
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\errno.h"
 
 
 
@@ -11480,7 +11532,7 @@ __pragma(pack(push, 8))
 
 
 
-#line 35 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\errno.h"
+#line 35 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\errno.h"
 
 
 
@@ -11576,16 +11628,16 @@ __pragma(pack(push, 8))
     
     
     
-#line 131 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\errno.h"
+#line 131 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\errno.h"
 
 
 
 __pragma(pack(pop))
 
 #pragma warning(pop) 
-#line 138 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\errno.h"
-#line 12 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_memcpy_s.h"
-#line 1 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime_string.h"
+#line 138 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\errno.h"
+#line 12 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_memcpy_s.h"
+#line 1 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime_string.h"
 
 
 
@@ -11623,7 +11675,7 @@ int __cdecl memcmp(
 
  
 
-#line 43 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime_string.h"
+#line 43 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime_string.h"
 void* __cdecl memcpy(
       void* _Dst,
             void const* _Src,
@@ -11639,7 +11691,7 @@ void* __cdecl memcpy(
 
  
 
-#line 63 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime_string.h"
+#line 63 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime_string.h"
 void* __cdecl memset(
       void*  _Dst,
                                int    _Val,
@@ -11688,10 +11740,10 @@ void* __cdecl memset(
 
 __pragma(pack(pop))
 
-#line 112 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\vcruntime_string.h"
+#line 112 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\vcruntime_string.h"
 
 #pragma warning(pop) 
-#line 13 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_memcpy_s.h"
+#line 13 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_memcpy_s.h"
 
 #pragma warning(push)
 #pragma warning(disable: 4324  4514 4574 4710 4793 4820 4995 4996 28719 28726 28727 )
@@ -11701,7 +11753,7 @@ __pragma(pack(push, 8))
 
 
     
-#line 23 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_memcpy_s.h"
+#line 23 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_memcpy_s.h"
 
 
 
@@ -11766,14 +11818,14 @@ __pragma(pack(push, 8))
 
 
 
-#line 88 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_memcpy_s.h"
+#line 88 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_memcpy_s.h"
 
 
 
 
 #pragma warning(pop) 
 __pragma(pack(pop))
-#line 15 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_memory.h"
+#line 15 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_memory.h"
 
 
 #pragma warning(push)
@@ -11835,7 +11887,7 @@ __pragma(pack(push, 8))
 
 
 
-#line 77 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_memory.h"
+#line 77 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_memory.h"
 
 
 
@@ -11856,7 +11908,7 @@ __pragma(pack(push, 8))
                                  size_t      _Size
         );
 
-#line 98 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_memory.h"
+#line 98 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_memory.h"
 
 
 
@@ -11873,17 +11925,17 @@ __pragma(pack(push, 8))
 
 
 
-#line 115 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_memory.h"
+#line 115 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_memory.h"
 
 
 
 __pragma(pack(pop))
 
-#line 121 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_memory.h"
+#line 121 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_memory.h"
 
 #pragma warning(pop) 
-#line 14 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wstring.h"
+#line 14 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wstring.h"
 
 
 
@@ -11951,7 +12003,7 @@ __pragma(pack(push, 8))
             wchar_t**      _Context
         );
 
-#line 69 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wstring.h"
+#line 69 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wstring.h"
 
 
 
@@ -11963,7 +12015,7 @@ __pragma(pack(push, 8))
 
 
 
-#line 81 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wstring.h"
+#line 81 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wstring.h"
 
  
  __declspec(allocator) wchar_t* __cdecl _wcsdup(
@@ -11972,7 +12024,7 @@ __pragma(pack(push, 8))
 
 
 
-#line 90 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wstring.h"
+#line 90 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wstring.h"
 
 
 
@@ -12003,7 +12055,7 @@ __DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1(
     )
 
 __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_EX(wchar_t*, __RETURN_POLICY_DST, , wcscpy, wcscpy_s, wchar_t,  , wchar_t, _Destination,   wchar_t const*, _Source)
-#line 124 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wstring.h"
+#line 124 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wstring.h"
 
  
  size_t __cdecl wcscspn(
@@ -12018,9 +12070,9 @@ __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_EX(wchar_t*, __RETURN_POLICY_DST, , wcsc
 
  
 
-#line 141 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wstring.h"
+#line 141 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wstring.h"
 
-#line 145 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wstring.h"
+#line 145 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wstring.h"
  size_t __cdecl wcsnlen(
       wchar_t const* _Source,
                             size_t         _MaxCount
@@ -12030,9 +12082,9 @@ __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_EX(wchar_t*, __RETURN_POLICY_DST, , wcsc
 
      
     
-#line 157 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wstring.h"
+#line 157 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wstring.h"
     
-#line 161 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wstring.h"
+#line 161 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wstring.h"
     static __inline size_t __cdecl wcsnlen_s(
           wchar_t const* _Source,
                                 size_t         _MaxCount
@@ -12041,7 +12093,7 @@ __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_EX(wchar_t*, __RETURN_POLICY_DST, , wcsc
         return (_Source == 0) ? 0 : wcsnlen(_Source, _MaxCount);
     }
 
-#line 170 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wstring.h"
+#line 170 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wstring.h"
 
 __DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_2(
     errno_t, wcsncat_s,
@@ -12134,7 +12186,7 @@ __DEFINE_CPP_OVERLOAD_STANDARD_NFUNC_0_2_EX(
 
 
 
-#line 263 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wstring.h"
+#line 263 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wstring.h"
 
 
 
@@ -12256,7 +12308,7 @@ __DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_0(
     )
 
 __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_0_EX(wchar_t*, __RETURN_POLICY_DST, , _wcslwr, _wcslwr_s,  , wchar_t, _String)
-#line 387 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wstring.h"
+#line 387 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wstring.h"
 
 
  errno_t __cdecl _wcslwr_s_l(
@@ -12290,7 +12342,7 @@ __DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_0(
     )
 
 __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_0_EX(wchar_t*, __RETURN_POLICY_DST, , _wcsupr, _wcsupr_s,  , wchar_t, _String)
-#line 423 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wstring.h"
+#line 423 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wstring.h"
 
 
  errno_t __cdecl _wcsupr_s_l(
@@ -12435,7 +12487,7 @@ __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_EX(
     
 
 
-#line 568 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wstring.h"
+#line 568 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wstring.h"
 
       __declspec(deprecated("The POSIX name for this item is deprecated. Instead, use the ISO C " "and C++ conformant name: " "_wcsdup" ". See online help for details."))
      wchar_t* __cdecl wcsdup(
@@ -12444,7 +12496,7 @@ __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_EX(
 
     
 
-#line 577 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wstring.h"
+#line 577 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wstring.h"
 
     
     
@@ -12501,16 +12553,16 @@ __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_EX(
           wchar_t const* _String2
         );
 
-#line 634 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wstring.h"
+#line 634 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wstring.h"
 
 
 
 __pragma(pack(pop))
 
-#line 640 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\corecrt_wstring.h"
+#line 640 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\corecrt_wstring.h"
 
 #pragma warning(pop) 
-#line 15 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
+#line 15 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
 
 
 
@@ -12570,7 +12622,7 @@ __pragma(pack(push, 8))
             char**      _Context
         );
 
-#line 75 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
+#line 75 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
 
  void* __cdecl _memccpy(
       void*       _Dst,
@@ -12627,7 +12679,7 @@ __DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1(
     )
 
 __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_EX(char*, __RETURN_POLICY_DST, __EMPTY_DECLSPEC, strcpy, strcpy_s, char,  , char, _Destination,   char const*, _Source)
-#line 135 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
+#line 135 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
 
  
  size_t __cdecl strcspn(
@@ -12638,7 +12690,7 @@ __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_EX(char*, __RETURN_POLICY_DST, __EMPTY_D
 
 
 
-#line 146 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
+#line 146 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
 
  
  __declspec(allocator) char* __cdecl _strdup(
@@ -12647,7 +12699,7 @@ __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_EX(char*, __RETURN_POLICY_DST, __EMPTY_D
 
 
 
-#line 155 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
+#line 155 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
 
  
  
@@ -12724,7 +12776,7 @@ __DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_0(
     )
 
 __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_0_EX(char*, __RETURN_POLICY_DST, , _strlwr, _strlwr_s,  , char, _String)
-#line 234 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
+#line 234 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
 
 
  errno_t __cdecl _strlwr_s_l(
@@ -12835,9 +12887,9 @@ __DEFINE_CPP_OVERLOAD_STANDARD_NFUNC_0_2_EX(
 
  
 
-#line 347 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
+#line 347 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
 
-#line 351 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
+#line 351 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
  size_t __cdecl strnlen(
       char const* _String,
                             size_t      _MaxCount
@@ -12847,9 +12899,9 @@ __DEFINE_CPP_OVERLOAD_STANDARD_NFUNC_0_2_EX(
 
      
     
-#line 363 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
+#line 363 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
     
-#line 367 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
+#line 367 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
     static __inline size_t __cdecl strnlen_s(
           char const* _String,
                                 size_t      _MaxCount
@@ -12858,7 +12910,7 @@ __DEFINE_CPP_OVERLOAD_STANDARD_NFUNC_0_2_EX(
         return _String == 0 ? 0 : strnlen(_String, _MaxCount);
     }
 
-#line 376 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
+#line 376 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
 
 
  errno_t __cdecl _strnset_s(
@@ -12907,7 +12959,7 @@ __DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_1(
     )
 
 __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_EX(char*, __RETURN_POLICY_DST, __EMPTY_DECLSPEC, _strset, _strset_s, char,  , char, _Destination,   int, _Value)
-#line 428 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
+#line 428 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
 
  
  size_t __cdecl strspn(
@@ -12933,7 +12985,7 @@ __DEFINE_CPP_OVERLOAD_SECURE_FUNC_0_0(
     )
 
 __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_0_EX(char*, __RETURN_POLICY_DST, , _strupr, _strupr_s,  , char, _String)
-#line 456 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
+#line 456 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
 
 
  errno_t __cdecl _strupr_s_l(
@@ -13062,16 +13114,16 @@ __DEFINE_CPP_OVERLOAD_STANDARD_FUNC_0_1_EX(
           char* _String
         );
 
-#line 585 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
+#line 585 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
 
 
 
 __pragma(pack(pop))
 
 #pragma warning(pop) 
-#line 592 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
-#line 593 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\ucrt\\string.h"
-#line 147 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
+#line 592 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
+#line 593 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\ucrt\\string.h"
+#line 147 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
 
 
 
@@ -13099,7 +13151,7 @@ __pragma(pack(pop))
 
 
 
-#line 175 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
+#line 175 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
 
 
 
@@ -13127,11 +13179,11 @@ __pragma(pack(pop))
 
 
 
-#line 203 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
-#line 204 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
-#line 205 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
-#line 206 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\guiddef.h"
-#line 1911 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 203 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
+#line 204 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
+#line 205 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
+#line 206 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\guiddef.h"
+#line 1960 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -13140,7 +13192,7 @@ typedef struct  _OBJECTID {
     GUID Lineage;
     ULONG Uniquifier;
 } OBJECTID;
-#line 1920 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 1969 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -13188,7 +13240,7 @@ typedef struct  _OBJECTID {
 
 
 
-#line 1968 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 2017 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -13303,15 +13355,15 @@ typedef struct  _OBJECTID {
 
 
 
-#line 2088 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 2137 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
-#line 2090 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 2139 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 
-#line 2096 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 2145 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -13351,9 +13403,9 @@ typedef struct  _OBJECTID {
 
 
 
-#line 2136 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 2185 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
-#line 2138 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 2187 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -13388,7 +13440,7 @@ typedef struct  _OBJECTID {
 
 char _RTL_CONSTANT_STRING_type_check(const void *s);
 
-#line 2173 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 2222 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -13421,7 +13473,7 @@ char _RTL_CONSTANT_STRING_type_check(const void *s);
 
 
 
-#line 1 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\excpt.h"
+#line 1 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\excpt.h"
 
 
 
@@ -13466,7 +13518,7 @@ typedef enum _EXCEPTION_DISPOSITION
 
 
 
-#line 46 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\excpt.h"
+#line 46 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\excpt.h"
     
 
         struct _EXCEPTION_RECORD;
@@ -13480,8 +13532,8 @@ typedef enum _EXCEPTION_DISPOSITION
               struct _DISPATCHER_CONTEXT* DispatcherContext
             );
 
-    #line 60 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\excpt.h"
-#line 61 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.37.32822\\include\\excpt.h"
+    #line 60 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\excpt.h"
+#line 61 "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\include\\excpt.h"
 
 
 
@@ -13509,7 +13561,7 @@ int           __cdecl _abnormal_termination(void);
 __pragma(pack(pop))
 
 #pragma warning(pop) 
-#line 2206 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 2255 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 typedef
  
@@ -13807,7 +13859,14 @@ typedef   enum _SUITE_TYPE {
 
 
 
-#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
+
+
+
+
+
+
+
+#line 1 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
 
 
@@ -13829,9 +13888,9 @@ typedef   enum _SUITE_TYPE {
 
 #pragma warning(push)
 #pragma warning(disable:4668) 
-#line 23 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
+#line 23 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 #pragma warning(disable:4001) 
-#line 25 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
+#line 25 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
 #pragma once
 
@@ -13992,100 +14051,100 @@ typedef   enum _SUITE_TYPE {
 
 
 
-#line 186 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
 
-#line 188 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
 
 
 
 
-#line 193 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
+#line 191 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
-#line 195 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
+#line 193 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
 
 
 
-#line 200 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
+#line 198 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
-#line 202 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
+#line 200 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
 
 
 
-#line 207 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
+#line 205 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
-#line 209 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
+#line 207 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
 
 
-#line 213 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
 
+#line 212 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
+#line 214 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
 
 
+#line 218 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
 
 
 
 
 
-#line 225 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
 
 
 
 
 
+#line 230 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
-#line 232 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
 
 
-#line 235 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
 
 
 
-#line 239 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
-#line 240 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
+#line 237 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
 
+#line 240 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
 
 
+#line 244 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
+#line 245 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
 
-#line 248 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
-#line 249 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
 
 
 
 
 
+#line 253 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
+#line 254 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
-#line 256 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
 
-#line 258 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
 
-#line 260 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
 
-#line 262 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
 
-#line 264 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
 
-#line 266 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
+#line 261 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
-#line 268 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
+#line 263 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
-#line 270 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
+#line 265 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
+#line 267 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
-#line 273 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
-#line 274 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
+#line 269 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
+#line 271 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
+#line 273 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
+#line 275 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
 
+#line 278 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
+#line 279 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
 
 
@@ -14111,19 +14170,24 @@ typedef   enum _SUITE_TYPE {
 
 
 
-#line 305 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
+
+
+
+
+
+#line 310 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
 
 
 #pragma warning(pop)
 
 
-#line 312 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
-#line 313 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
+#line 317 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
+#line 318 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
-#line 315 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\sdkddkver.h"
+#line 320 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\sdkddkver.h"
 
-#line 2504 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 2560 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -14851,7 +14915,7 @@ typedef   enum _SUITE_TYPE {
 
 
 
-#line 3232 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 3288 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -14878,7 +14942,7 @@ typedef   enum _SUITE_TYPE {
 
 
 
-#line 3259 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 3315 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -14905,7 +14969,7 @@ typedef   enum _SUITE_TYPE {
 
 
 
-#line 3286 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 3342 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -14973,7 +15037,7 @@ typedef   enum _SUITE_TYPE {
 
 
 
-#line 3354 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 3410 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -14999,13 +15063,13 @@ typedef   enum _SUITE_TYPE {
 
 
 
-#line 3380 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 3436 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
-#line 3384 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 3440 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
-#line 3386 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 3442 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
@@ -15021,18 +15085,18 @@ typedef   enum _SUITE_TYPE {
 
 
 
-#line 3402 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 3458 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
 
 
 #pragma warning(pop)
-#line 3408 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 3464 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
 
-#line 3411 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.22000.0\\shared\\ntdef.h"
+#line 3467 "C:\\Program Files (x86)\\Windows Kits\\10\\include\\10.0.26100.0\\shared\\ntdef.h"
 
-#line 8 "C:\\Users\\admin\\Documents\\next-exam\\student\\disable-shortcuts\\app\\resource.rc"
+#line 8 "C:\\Users\\vboxuser\\Next-Exam-Dev\\next-exam\\student\\disable-shortcuts\\app\\resource.rc"
 
 100       ICON         "../assets/icon.ico"
 

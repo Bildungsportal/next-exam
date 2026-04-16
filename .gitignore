@@ -24,5 +24,9 @@ logs
 *.log
 npm-debug.log*
 
+.cursor/
+
+config.js
+
 # Capacitor build artifacts (recreated on each build:ios)
 /student/src-capacitor/www/

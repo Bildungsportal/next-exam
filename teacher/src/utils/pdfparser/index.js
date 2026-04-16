@@ -37,7 +37,8 @@ class PdfParser {
         this.OP_CODE = { moveTo: 13, lineTo: 14, rectangle: 19, transform: 12, save: 0, restore: 1 };
         this.DUPLICATE_TOLERANCE_PX = 12; // px tolerance for duplicate boxes
         this.MIN_SIZE_PDF_UNITS = 5; // roughly ~10px at scale 1.5
-        this.CHECKBOX_MAX_SIZE = 25; // px threshold to treat as checkbox
+        this.CHECKBOX_MAX_SIZE = 25; // px threshold to treat as small checkbox
+        this.MC_BOX_MAX_SIZE = options.mcBoxMaxSize ?? 80; // px upper limit for MC answer squares (deselect)
         this.SINGLE_LINE_TEXTAREA_MAX_HEIGHT = 30; // px threshold to downgrade textarea to input
         this.SCAN_MIN_BOXES = 2; // threshold to detect scan PDFs
         this.elementCounter = 0; // running id for generated overlay elements
@@ -94,6 +95,7 @@ class PdfParser {
 
     setupWorker() {
         if (pdfjsLib.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+            // Resolved at runtime in Electron renderer; alias in quasar.config provides build-time path
             pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
                 'pdfjs-dist/legacy/build/pdf.worker.mjs',
                 import.meta.url
@@ -116,7 +118,7 @@ class PdfParser {
     }
 
     async processPage(page, pageNum) {
-        const initialViewport = page.getViewport({ scale: 1.5 });
+const initialViewport = page.getViewport({ scale: 1.5 });
         const rotationCorrection = await this.detectTextRotation(page, initialViewport);
         const isContentRotated = rotationCorrection !== null;
         const viewport = page.getViewport({ scale: 1.5, rotation: rotationCorrection || 0 });
@@ -127,26 +129,43 @@ class PdfParser {
 
         const imgSrc = await this.renderPageToCanvas(page, viewport);
 
-        const [formFields, clozeFields, rawBoxFields] = await Promise.all([
+        // Two-pass: extract box geometry first so cloze detection can use it as context
+        const [formFields, rawBoxFields] = await Promise.all([
             this.detectFormFields ? this.extractFormFields(page, viewport, pageNum) : Promise.resolve([]),
-            this.extractClozeFields(page, viewport),
             this.detectBoxFields ? this.extractBoxFields(page, viewport) : Promise.resolve([])
         ]);
 
-        if (this.debugBoxExtraction) {
-            console.log(`processPage: rawBoxFields=${rawBoxFields.length}`);
+        // Detect vectorized/flattened PDFs: no extractable text and no AcroForm fields.
+        // These are typically iLovePDF or similar exports where all content is vector paths.
+        // Field detection is unreliable for such PDFs.
+        const textContent = await page.getTextContent();
+        const isVectorizedPage = formFields.length === 0 && textContent.items.length === 0;
+
+        // Build a simple rect array from raw box fields for context lookup
+        const knownBoxRects = rawBoxFields.map(b => this.getRectFromStyle(b.style));
+        // Pass pre-fetched textContent to avoid redundant page.getTextContent() calls
+        const clozeFields = await this.extractClozeFields(page, viewport, knownBoxRects, textContent);
+
+        if (this.enableLogging) {
+            const _dbgBoxByType = rawBoxFields.reduce((a, b) => { a[b.type] = (a[b.type]||0)+1; return a; }, {});
+            const _dbgBoxSizes  = [...new Set(rawBoxFields.map(b => `${parseFloat(b.style.width).toFixed(0)}x${parseFloat(b.style.height).toFixed(0)}`))].slice(0, 20);
+            console.log(`[PDF p${pageNum}] boxFields: ${rawBoxFields.length} total`, _dbgBoxByType, '| unique sizes:', _dbgBoxSizes.join(', '));
+            console.log(`[PDF p${pageNum}] formFields: ${formFields.length}`, formFields.reduce((a,f)=>{ a[f.type]=(a[f.type]||0)+1; return a; }, {}));
+            console.log(`[PDF p${pageNum}] clozeFields: ${clozeFields.length}`, clozeFields.reduce((a,c)=>{ a[c.type]=(a[c.type]||0)+1; return a; }, {}));
+        }
+
+        if (this.enableLogging && this.debugBoxExtraction) {
             const tableCells = rawBoxFields.filter(b => b.isTableCell);
-            console.log(`processPage: table-cells in rawBoxFields=${tableCells.length}`);
+            console.log(`processPage: rawBoxFields=${rawBoxFields.length}, table-cells=${tableCells.length}`);
         }
 
         let boxFields = this.enableFilterAndMerge ? this.filterAndMergeBoxes(rawBoxFields) : rawBoxFields;
-        if (this.debugBoxExtraction) {
-            const tableCellsAfterFilter = boxFields.filter(b => b.isTableCell);
-            console.log(`processPage: table-cells after filterAndMergeBoxes=${tableCellsAfterFilter.length}`);
-        }
+        const boxFieldsWithoutText = this.enableFilterBoxesWithText ? await this.filterBoxesWithText(boxFields, page, viewport, textContent) : boxFields;
+        const boxFieldsPreciseFilter = this.enableFilterBoxesWithTextPrecise ? await this.filterBoxesWithTextPrecise(boxFieldsWithoutText, page, viewport, textContent) : boxFieldsWithoutText;
 
-        const boxFieldsWithoutText = this.enableFilterBoxesWithText ? await this.filterBoxesWithText(boxFields, page, viewport) : boxFields;
-        const boxFieldsPreciseFilter = this.enableFilterBoxesWithTextPrecise ? await this.filterBoxesWithTextPrecise(boxFieldsWithoutText, page, viewport) : boxFieldsWithoutText;
+        if (this.enableLogging) {
+            console.log(`[PDF p${pageNum}] after filterAndMerge: ${boxFields.length}, after filterBoxesWithText: ${boxFieldsWithoutText.length}, after filterBoxesWithTextPrecise: ${boxFieldsPreciseFilter.length}`);
+        }
 
         const allFields = [...clozeFields, ...boxFieldsPreciseFilter];
         const filteredAllFields = this.enableFilterAndMerge ? this.filterAndMergeBoxes(allFields) : allFields;
@@ -155,8 +174,10 @@ class PdfParser {
 
         const totalFields = formFields.length + filteredClozeFields.length + filteredBoxFields.length;
         const warnings = [];
-        const hasWarning = totalFields < this.SCAN_MIN_BOXES;
-        if (hasWarning) {
+        const hasWarning = isVectorizedPage || totalFields < this.SCAN_MIN_BOXES;
+        if (isVectorizedPage) {
+            warnings.push(`This PDF appears to be a fully vectorized export. Automatic field detection is not supported — please add form fields manually.`);
+        } else if (totalFields < this.SCAN_MIN_BOXES) {
             const warningMsg = `pdfparser @ processPage: only ${totalFields} fields found (${formFields.length} form fields, ${filteredClozeFields.length} cloze fields, ${filteredBoxFields.length} box fields) - possible scanned PDF without detectable forms`;
             warnings.push(warningMsg);
         }
@@ -167,9 +188,10 @@ class PdfParser {
             imgSrc: imgSrc,
             formFields: formFields,
             clozeFields: filteredClozeFields,
-            boxFields: filteredBoxFields,
+            boxFields: isVectorizedPage ? [] : filteredBoxFields,
             warnings,
             hasWarning: hasWarning,
+            isVectorizedPage: isVectorizedPage,
             isContentRotated: isContentRotated
         };
     }
@@ -191,12 +213,12 @@ class PdfParser {
         return detectorMethods.extractFormFields.call(this, page, viewport, pageNum);
     }
 
-    async extractClozeFields(page, viewport) {
-        return detectorMethods.extractClozeFields.call(this, page, viewport);
+    async extractClozeFields(page, viewport, knownBoxRects = [], cachedTextContent = null) {
+        return detectorMethods.extractClozeFields.call(this, page, viewport, knownBoxRects, cachedTextContent);
     }
 
-    async findIsolatedHorizontalLines(page, viewport) {
-        return detectorMethods.findIsolatedHorizontalLines.call(this, page, viewport);
+    async findIsolatedHorizontalLines(page, viewport, knownBoxRects = []) {
+        return detectorMethods.findIsolatedHorizontalLines.call(this, page, viewport, knownBoxRects);
     }
 
 
@@ -248,12 +270,12 @@ class PdfParser {
         return filterMethods.filterAndMergeBoxes.call(this, boxes);
     }
 
-    async filterBoxesWithText(boxFields, page, viewport) {
-        return filterMethods.filterBoxesWithText.call(this, boxFields, page, viewport);
+    async filterBoxesWithText(boxFields, page, viewport, cachedTextContent = null) {
+        return filterMethods.filterBoxesWithText.call(this, boxFields, page, viewport, cachedTextContent);
     }
 
-    async filterBoxesWithTextPrecise(boxFields, page, viewport) {
-        return filterMethods.filterBoxesWithTextPrecise.call(this, boxFields, page, viewport);
+    async filterBoxesWithTextPrecise(boxFields, page, viewport, cachedTextContent = null) {
+        return filterMethods.filterBoxesWithTextPrecise.call(this, boxFields, page, viewport, cachedTextContent);
     }
 
     async extractBoxFields(page, viewport) {

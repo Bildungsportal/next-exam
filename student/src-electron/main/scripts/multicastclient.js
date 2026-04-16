@@ -16,6 +16,7 @@
  */
 
 
+import dgram from 'dgram';
 import config from '../../../src/utils/config.js';  // node not vue (relative path needed)
 import log from 'electron-log';
 import {SchedulerService} from './schedulerservice.ts'
@@ -56,7 +57,10 @@ class MulticastClient {
             privateSpellcheck: {activated: false},
             localLockdown: false,
             group: 'a',
-            submissionnumber: 0
+            submissionnumber: 0,
+            localVMHost: null,
+            localVMState: null,
+            version: config.version
         }
     }
 
@@ -66,7 +70,8 @@ class MulticastClient {
      */
     init (gateway) {
         this.gateway = gateway
-        this.client = new UdpBridge()  // moving this here will allow to respawn it if binding fails
+        this.client = dgram.createSocket({ type: 'udp4', reuseAddr: true }) // reuseAddr ist wichtig für Windows
+
 
         this.client.on('error', (err) => {
             LoggingBridge.error(`multicastclient @ init: UDP MC Client error:\n${err.stack}`);
@@ -74,12 +79,19 @@ class MulticastClient {
         });
 
         try {
-            this.client.bind(this.PORT, '0.0.0.0',  () => { 
-                this.client.setBroadcast(true)
-                this.client.setMulticastTTL(128); 
-                if (this.gateway) {this.client.addMembership(this.MULTICAST_ADDR)} // es ist für ein verlässliches multicast sinnvoll der gruppe beizutreten
-                if (!this.gateway) {LoggingBridge.warn("mcclient: No Gateway! Starting MulticastClient without adding group membership")}
-                LoggingBridge.info(`multicastclient @ init: UDP MC Client listening on http://${config.hostip}:${this.client.address().port}`)
+
+            // Auf Windows binden wir direkt an die gewählte Host-IP statt an 0.0.0.0 //
+            const bindAddr = process.platform === 'win32' ? config.hostip : '0.0.0.0';
+
+            this.client.bind(this.PORT, bindAddr,  () => {
+                try {
+                    try { this.client.setBroadcast(true); } catch (e) { /* optional for multicast receive */ }
+                    this.client.setMulticastTTL(128);
+                    this.client.addMembership(this.MULTICAST_ADDR, config.hostip);
+                    LoggingBridge.info(`UDP MC Client bound to ${bindAddr}:${this.PORT} and joined ${this.MULTICAST_ADDR}`)
+                } catch (e) {
+                    log.error(`Multicast Join failed: ${e.message}`);
+                }
             })
         }
         catch (e){ 
@@ -93,11 +105,23 @@ class MulticastClient {
         this.refreshExamsScheduler.start()
     }
 
+    async stop(interfaceAddr) {
+        if (!this.client) return;
+        const addr = interfaceAddr ?? config.hostip;
+        if (this.refreshExamsScheduler) this.refreshExamsScheduler.stop();
+        try {
+            this.client.dropMembership(this.MULTICAST_ADDR, addr);
+        } catch (e) {}
+        await new Promise((resolve) => {
+            this.client.close(() => resolve());
+        });
+        this.client = null;
+    }
+
     /**
      * receives messages and stores new exam instances in this.examServerList[]
      */
      messageReceived (message, rinfo) {
-      
         const serverInfo = JSON.parse(String(message))
         serverInfo.serverip = rinfo.address
         serverInfo.serverport = rinfo.port

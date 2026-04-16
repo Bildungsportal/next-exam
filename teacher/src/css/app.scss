@@ -1,83 +1,88 @@
-@import '../../node_modules/bootstrap/scss/bootstrap';
-@import '../../node_modules/sweetalert2/dist/sweetalert2.css';
-@import './style-main.css';
-// Here we override bootstrap color variables globally
+// 1. Bootstrap functions & variables — needed to reference $blue-400, $teal-600 etc.
+@import '../../node_modules/bootstrap/scss/functions';
+@import '../../node_modules/bootstrap/scss/variables';
+@import '../../node_modules/bootstrap/scss/variables-dark';
 
-$colors: (
-  "blue":       $blue,
-  "indigo":     $indigo,
-  "purple":     $purple,
-  "pink":       $pink,
-  "red":        $red,
-  "orange":     $orange,
-  "yellow":     $yellow,
-  "green":      $green,
-  "teal":       $teal,
-  "cyan":       $cyan,
-  "white":      $white,
-  "gray":       $gray-600,
-  "gray-dark":  $gray-800
-);
-
+// 2. Override theme-colors BEFORE Bootstrap compiles utilities
+//    Bootstrap variables use !default so our definitions here take precedence
 $theme-colors: (
   "primary":    $blue-700,
   "secondary":  $secondary,
-  "success":    $success,
-  "info":       $info,
-  "warning":    $warning,
-  "danger":     $danger,
+  "success":    $green-400,
+  "info":       $cyan-500,
+  "warning":    $yellow-400,
+  "danger":     $red-600,
   "light":      $light,
   "dark":       $dark
 );
 
-
-.bg-teal       { background-color: $teal-600;}
-.bg-teal:hover { background-color: $teal-700;}
-
-.bg-danger       { background-color: $red-600;}
-.bg-danger:hover { background-color: $red-500;}
-
-.bg-secondary       { background-color: $gray-600;}
-.bg-secondary:hover { background-color: $gray-500;}
+// 3. Full Bootstrap (generates all utilities with our overrides above)
+@import '../../node_modules/bootstrap/scss/bootstrap';
+@import '../../node_modules/sweetalert2/dist/sweetalert2.css';
+@import './style-main.css';
 
 
+// 4. Custom classes not covered by Bootstrap's utility generation
 
-.btn-teal       { background-color: $teal-600;}
-.btn-teal:hover { background-color: $teal-700;}
-
-.btn-danger       { background-color: $red-600; border-color:$red-600;}
-.btn-danger:hover { background-color: $red-500; border-color:$red-500;}
-
-.btn-cyan       { background-color: $cyan-600;}
-.btn-cyan:hover { background-color: $cyan-500;}
-
-.btn-warning        { background-color: $yellow-400 }
-.btn-warning:hover  { background-color: $yellow-300 }
-
-.btn-success        { background-color: $green-400; border-color:$green-400; }
-.btn-success:hover  { background-color: $green-300; border-color:$green-300;}
+.bg-teal       { background-color: $teal-600; }
+.bg-teal:hover { background-color: $teal-700; }
 
 
-.btn-primary        { background-color: $blue-400; border-color:$blue-400; }
-.btn-primary:hover  { background-color: $blue-300; border-color:$blue-300;}
+/* CYAN BACKGROUND */
 
+.bg-cyan       { background-color: $cyan-600 !important; }
+.bg-cyan-transparent { background-color:rgba(10.4, 161.6, 192, 0.4) !important; }
+.btn-cyan       { background-color: $cyan-600 !important; color: $white; }
+.btn-cyan:hover { background-color: $cyan-500 !important; color: $white; }
+
+
+/* TEAL BACKGROUND */
+
+.bg-teal       { background-color: $teal-600 !important; }
+
+.btn-teal       { background-color: $teal-600; }
+.btn-teal:hover { background-color: $teal-700; }
+
+
+
+/* GREEN BORDER */
+.bs-success        { border-color: $green-400 !important; }
+.bs-success:hover  { border-color: $green-300 !important; }
+
+
+
+
+
+
+.btn-primary        { background-color: $blue-400; border-color: $blue-400; }
+.btn-primary:hover  { background-color: $blue-300; border-color: $blue-300; }
+
+
+.bs-info        { border-color: $blue-400 !important; }
+.bs-info:hover  { border-color: $blue-300 !important; }
 
 .cyanback-500 {
     background-color: $cyan-500;
 }
 .grayback {
-  background-color: $gray-200;
+    background-color: $gray-200;
 }
 
-
-
-.form-check-input:checked { 
-  background-color: $blue-600;
-  border-color: $blue-600;
+.form-check-input:checked {
+    background-color: $blue-600;
+    border-color: $blue-600;
 }
 
 #description {
-  background-color: $teal-600;
-  border-color: $teal-700;
-  color: $white;
+    background-color: $teal-600;
+    border-color: $teal-700;
+    color: $white;
+}
+
+
+.invert {
+    filter: invert(100%);
+}
+.snowwhite {
+    filter: invert(100%) brightness(200%);
 }

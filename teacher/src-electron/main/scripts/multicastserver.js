@@ -58,11 +58,13 @@ class MulticastServer {
             version: config.version
         }
         
-        this.server.bind(this.SRC_PORT,'0.0.0.0',  () => { // Add the HOST_IP_ADDRESS for reliability
+        // Bind auf 0.0.0.0, damit der Server auf allen lokalen Interfaces senden kann; tatsächliche Multicast-Route über setMulticastInterface()
+        this.server.bind(this.SRC_PORT, '0.0.0.0', () => {
             this.server.setBroadcast(true)
             this.server.setMulticastTTL(128)
             this.server.setTTL(128)
-            this.server.addMembership(this.MULTICAST_ADDR); 
+            this.server.setMulticastInterface(config.hostip)
+            this.server.addMembership(this.MULTICAST_ADDR, config.hostip) 
             
 
             //check for deprecated instance in a loop

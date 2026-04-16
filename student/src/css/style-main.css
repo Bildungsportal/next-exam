@@ -129,7 +129,7 @@ input:focus::placeholder {
 /* Zusätzlicher Container für .focuswarning und Blur-Effekt */
 .focus-container {
     position: relative;
-    z-index: 100000;
+    z-index: 1000000;
 }
 
 

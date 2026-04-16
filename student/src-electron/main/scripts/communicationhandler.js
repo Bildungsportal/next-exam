@@ -24,20 +24,16 @@ import { join } from 'path'
 import { screen, ipcMain, app, BrowserWindow, webContents } from 'electron'
 import WindowHandler from './windowhandler.js'
 import IpcHandler from './ipchandler.js'
-import { execSync } from 'child_process';
 import log from 'electron-log';
 import {SchedulerService} from './schedulerservice.ts'
-import Tesseract from 'tesseract.js';
 import crypto from 'crypto';
 import path from 'path';
-import https from 'https';
-import screenshot from 'screenshot-desktop-wayland';
-import { Worker } from 'worker_threads';
 import platformDispatcher from './platformDispatcher.js';
 import { runRemoteCheck } from './remoteCheck.js'
+import { getVMFindings } from './vmDetection.js'
 import languageToolServer from './lt-server.js';
-const shell = (cmd) => {   return execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }); };  // stderr unterdrückt 
-const agent = new https.Agent({ rejectUnauthorized: false });
+import virtualBoxService from './virtualBoxService.js';
+import { stopProxy } from './vncproxy.js';
 const __dirname = import.meta.dirname; 
 import { switchExamSection } from './switchExamSection.js';
  /**
@@ -50,13 +46,7 @@ import { switchExamSection } from './switchExamSection.js';
         this.config = null
         this.updateStudentIntervall = null
         this.WindowHandler = null
-        this.screenshotAbility = false
-        this.screenshotFails = 0 // we count fails and deactivate on 4 consequent fails
-        this.firstCheckScreenshot = true
         this.timer = 0
-        this.worker = null
-        this.useWorker = true
-        this.workerFails = 0
     }
  
     init (mc, config) {
@@ -64,81 +54,12 @@ import { switchExamSection } from './switchExamSection.js';
         this.config = config
         this.updateScheduler = new SchedulerService(this.requestUpdate.bind(this), 5000)
         this.updateScheduler.start()
-        this.screenshotScheduler = new SchedulerService(this.sendScreenshot.bind(this), this.multicastClient.clientinfo.screenshotinterval)
-        this.screenshotScheduler.start()
-        if (!this.worker && platformDispatcher.useWorker){  this.setupImageWorker()  }
-    }
- 
-
-    /**
-     * Setup the image worker
-     * uses fork to create a new child process
-     * uses the imageWorkerLinux.js or imageWorkerSharp.js file
-     * the worker is used to process the screenshot in a separate process
-     */
-    async setupImageWorker() {
-        const workerURL = platformDispatcher.workerURL;
-        
-        this.worker = new Worker(workerURL, { type: 'module', env: { ...process.env } });
-        log.debug("communicationhandler @ setupImageWorker: ImageWorker initialized. Using " + platformDispatcher.workerFileName)
-        
-
-        this.worker.on('error', error => {
-            log.error('communicationhandler @ setupImageWorker: Worker error:', error);
-        });
-        
-        this.worker.on('exit', code => {
-            if (code !== 0) {
-                this.workerFails += 1
-                if (this.workerFails > 4){
-                    this.useWorker = false
-                    log.error('communicationhandler @ setupImageWorker: Worker failed 5 times - switching to no processing')
-                }
-                else { this.setupImageWorker(); }
-            }
-        });
     }
 
-
-
-    /**
-     * Process the screenshot 
-     * if useWorker is true, the screenshot is processed in a separate process
-     * otherwise the screenshot is not processed and the original screenshot is returned
-     */
-    async processImage(imgBuffer) {
-        if (platformDispatcher.useWorker) {
-            if (!this.worker) { //triple check if worker is initialized
-                platformDispatcher.useWorker = false
-                throw new Error('Worker not initialized');
-            }
-            this.worker.postMessage({ imgBuffer: Array.from(imgBuffer), imVersion: platformDispatcher.imVersion });
-            const result = await new Promise(resolve => {
-                this.worker.once('message', (message) => {
-                    resolve(message);
-                });
-            });
-            
-            if (!result.success) throw new Error(result.error);
-            return result; 
-        } else {
-            // fallback to no processing   
-            const screenshotBase64 = Buffer.from(imgBuffer).toString('base64');
-            const headerBase64 = screenshotBase64
-            return { success: true, screenshotBase64: screenshotBase64, headerBase64: headerBase64, isblack: false, imgBuffer: imgBuffer };
-
-        }
-    }
+    
 
 
 
-
-
-
-
-    /** 
-     * Update current Serverstatus + Studenttstatus (every 5 seconds)
-     */
     async requestUpdate(){
 
         this.timer++   // we use timer to time loops with different intervals without introducing new unneccesary schedulers
@@ -176,6 +97,9 @@ import { switchExamSection } from './switchExamSection.js';
         }  
 
         if (this.multicastClient.clientinfo.serverip) {  //check if server connected - get ip
+            if (this.multicastClient.clientinfo.virtualized && !this.multicastClient.clientinfo.vmFindings) {
+                this.multicastClient.clientinfo.vmFindings = getVMFindings();
+            }
             let payload = {clientinfo: this.multicastClient.clientinfo}
 
             fetch(`https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/update`, {
@@ -218,137 +142,6 @@ import { switchExamSection } from './switchExamSection.js';
 
 
 
-    async sendScreenshot(){
-        if (this.multicastClient.clientinfo.localLockdown){return}
-        if (this.multicastClient.beaconsLost >= 5 ){return}  // connection lost reset triggered
-        if (this.multicastClient.clientinfo.serverip) {  //check if server connected - get ip
-            
-            let success, screenshotBase64, headerBase64, isblack; // Variablen außerhalb des if-Blocks definieren
-            let imgBuffer = null;
-
-            try {
-                if (platformDispatcher.screenshotAbility){  
-                    //grab screenshot from desktop via screenshot-desktop-wayland (flameshot, imagemagic, etc)
-                    imgBuffer = await screenshot({ format: 'png' });
-                    ({ success, screenshotBase64, headerBase64, isblack, imgBuffer } = await this.processImage(imgBuffer));  // kein imageBuffer mitgegeben bedeutet nutze screenshot-desktop im worker
-                    if (success) { this.screenshotFails = 0;}
-                    else { 
-                        throw new Error("Image processing failed");
-                    }
-                }
-                else {
-                    //grab "screenshot" from appwindow
-                    let currentFocusedMindow = WindowHandler.getCurrentFocusedWindow()  //returns exam window if nothing in focus or main window
-                    if (currentFocusedMindow) {
-                        let result = await currentFocusedMindow.webContents.capturePage()  // this should always work because it's onboard electron
-                        imgBuffer = result.toPNG()
-                    }
-                    ({ success, screenshotBase64, headerBase64, isblack } = await this.processImage(imgBuffer)); // attention processImage  converts buffer to uint8array
-                }
-            }
-            catch(err){
-                this.screenshotFails +=1;
-                log.error(`communicationhandler @ sendScreenshot: processImage failed: ${err}`)
-            }
-
-          
-            
-            /**
-             * MACOS WORKAROUND - switch to pagecapture if no permissons are granted
-             */
-            if (process.platform === "darwin" && this.firstCheckScreenshot && imgBuffer !== null){  //this is for macOS because it delivers a blank background screenshot without permissions. we catch that case with a workaround
-                this.firstCheckScreenshot = false   //never do this again
-                const publicPath = platformDispatcher.publicBase;
-                try{
-                    const { data: { text } }   = await Tesseract.recognize(imgBuffer , 'eng',{ langPath: publicPath, cachePath: this.config.tempdirectory } );
-                    let appWindowVisible = text.includes("Exam")   //check if the word "Exam" can be found in screenshot - otherwise it is most likely a blank desktop - macos quirk
-                    if (!appWindowVisible){
-                        platformDispatcher.screenshotAbility=false;
-                        log.warn("communicationhandler @ sendScreenshot (macos): Please check your screenshot permissions - Switching to PageCapture");
-                    }
-                    else { log.info("communicationhandler @ sendScreenshot (macos): MacOS screenshotpermissions check OK");}
-                }catch(err){  log.error(`communicationhandler @ sendScreenshot (macos): ${err}`); }
-            }
-
-
-            // if something went wrong we do not have a screenshot - so do not update the server
-            if (!screenshotBase64){
-                if(this.screenshotFails > 4 && platformDispatcher.screenshotAbility){ platformDispatcher.screenshotAbility=false; log.error(`communicationhandler @ sendScreenshot: Screenshot error -> Switching to PageCapture`) } 
-                else if (this.screenshotFails > 4 && !platformDispatcher.screenshotAbility){ platformDispatcher.useWorker = false; log.error(`communicationhandler @ sendScreenshot: PageCapture error -> Switching to No-Processing`) }   
-                else if (this.screenshotFails > 4 && !platformDispatcher.screenshotAbility && !platformDispatcher.useWorker){ log.error(`communicationhandler @ sendScreenshot: no screenshot available - please fix your setup`) }
-                return
-            }
-
-
-
-
-            //do not run colorcheck if already locked
-            if ( this.multicastClient.clientinfo.exammode && !this.config.development && this.multicastClient.clientinfo.focus){
-                if (isblack){
-                    this.multicastClient.clientinfo.focus = false
-                    log.info("communicationhandler @ sendScreenshot: Student Screenshot does not fit requirements (allblack)");
-                }   
-            }
-
-            // Berechnen des MD5-Hashs des Base64-Strings
-            let screenshothash = null
-            try { screenshothash = crypto.createHash('md5').update(Buffer.from(screenshotBase64, 'base64')).digest("hex");  }  // Berechnen des MD5-Hashs des Base64-Strings
-            catch(err){ log.error(`communicationhandler @ sendScreenshot: creating hash failed: ${err.message}`)  }
-            
-            const payload = {
-                clientinfo: this.multicastClient.clientinfo,
-                screenshot: screenshotBase64,
-                screenshothash: screenshothash,
-                header: headerBase64,
-                screenshotfilename: this.multicastClient.clientinfo.token + ".jpg",
-            };
-                
-            // send screenshot to server via email fetch request
-            let attempt = 0;
-            const maxRetries = 2;
-            const url = `https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/updatescreenshot`;
-            this.doScreenshotUpdate(url, payload, agent, attempt, maxRetries); // Erste Anfrage starten
-        }
-    }
-
-
-
-
-
-    doScreenshotUpdate(url, payload, agent, attempt = 0, maxRetries) {
-        fetch(url, {
-            method: "POST",
-            cache: "no-store",
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-            agent,
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('communicationhandler @ doScreenshotUpdate: Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data && data.status === "error") {
-                log.error("communicationhandler @ doScreenshotUpdate: Status Error:", data.message);
-            }
-        })
-        .catch(error => {
-            if (attempt < maxRetries - 1) {
-                this.doScreenshotUpdate(url, payload, agent, attempt + 1, maxRetries); // Retry
-            } else if (attempt === maxRetries - 1 && this.multicastClient.beaconsLost === 0) {
-                log.error(`communicationhandler @ doScreenshotUpdate (fetch): ${error.message}`);
-            }
-        });
-    }
-
-
-
-
-
     async kickStudent(studentstatus){
         log.warn("communicationhandler @ kickStudent: Student got kicked by Teacher")
         this.multicastClient.kicked = false
@@ -371,161 +164,137 @@ import { switchExamSection } from './switchExamSection.js';
      * could also handle kick, focusrestore, and even trigger file requests
      */
     async processUpdatedServerstatus(serverstatus, studentstatus){
-        // update serverstatus in multicastclient so getinfoasync (and thus the frontend) returns current serverstatus on next fetch
         this.multicastClient.serverstatus = serverstatus;
-        
-        
-        ///////////////////////////////
-        // individual status updates
 
-        if ( studentstatus && Object.keys(studentstatus).length !== 0) {  // we have status updates (tasks) - do it!
-            if (studentstatus.printdenied) {
-                WindowHandler.examwindow.webContents.send('denied')   //trigger, why
-            }
-
-            if (studentstatus.kicked) {  // student got kicked by teacher
-                this.kickStudent(studentstatus)
-                return   //this ends here because we got kicked by the teacher
-            }
-
-            if (studentstatus.delfolder === true){
-                log.info("communicationhandler @ processUpdatedServerstatus: cleaning exam workfolder")
-                let delfolder = true
-                try {
-                    if (fs.existsSync(this.config.examdirectory)){   // set by server.js (desktop path + examdir)
-                        fs.rmSync(this.config.examdirectory, { recursive: true });
-                        fs.mkdirSync(this.config.examdirectory);
-                    }
-                } catch (error) { 
-                    delfolder = false
-                    WindowHandler.examwindow.webContents.send('fileerror', error)  
-                    log.error(`communicationhandler @ processUpdatedServerstatus: Can not delete directory - ${error} `)
-                }
-
-                if (delfolder == false){  //try deleting file by file (the one that causes the problem will stay in the folder)
-                    if (fs.existsSync(this.config.examdirectory)) {
-                        const files = fs.readdirSync(this.config.examdirectory);
-
-                        files.forEach(file => {
-                            const filePath = join(this.config.examdirectory, file);
-                            try {
-                                const stats = fs.statSync(filePath);
-                                if (stats.isDirectory()) { fs.rmSync(filePath, { recursive: true }); }  // Versuche, das Verzeichnis rekursiv zu löschen
-                                else { fs.unlinkSync(filePath);  }// Versuche, die Datei zu löschen 
-                            }
-                            catch (error) {
-                                log.error(`communicationhandler @ processUpdatedServerstatus: (delfolder) Fehler beim Löschen der Datei/Verzeichnis: ${filePath}`, error);
-                            }
-                        });
-                    }
-                }
-                if (WindowHandler.examwindow) {  WindowHandler.examwindow.webContents.send('loadfilelist');   }
-            }
-
-
-            if (studentstatus.focus == false){
-                this.multicastClient.clientinfo.focus = false
-            }
-
-            if (studentstatus.restorefocusstate === true){
-                log.info("communicationhandler @ processUpdatedServerstatus: restoring focus state for student")
-                this.multicastClient.clientinfo.focus = true
-                if (WindowHandler.examwindow && !this.config.development){ 
-                    WindowHandler.examwindow.setKiosk(true)
-                    WindowHandler.examwindow.focus()
-                }
-            }
-            if (studentstatus.activatePrivateSpellcheck == true && this.multicastClient.clientinfo.privateSpellcheck.activated == false  ){
-                log.info("communicationhandler @ processUpdatedServerstatus: activating spellcheck for student")
-                this.multicastClient.clientinfo.privateSpellcheck.activate = true  //clientinfo.privateSpellcheck will be put on this.privateSpellcheck in editor updated via fetchInfo()
-                this.multicastClient.clientinfo.privateSpellcheck.activated = true
-                ipcMain.emit("startLanguageTool")
-            }
-            if (studentstatus.activatePrivateSpellcheck == false && this.multicastClient.clientinfo.privateSpellcheck.activated == true ) {
-                log.info("communicationhandler @ processUpdatedServerstatus: de-activating spellcheck for student")
-                this.multicastClient.clientinfo.privateSpellcheck.activate = false
-                this.multicastClient.clientinfo.privateSpellcheck.activated = false 
-            }
-
-            this.multicastClient.clientinfo.privateSpellcheck.suggestions = studentstatus.activatePrivateSuggestions
-
-            if (studentstatus.sendexam === true){
-                this.sendExamToTeacher()
-            }
-            if (studentstatus.fetchfiles === true){
-                this.requestFileFromServer(studentstatus.files)
-            }
-            if (studentstatus.getmaterials === true){
-                if (WindowHandler.examwindow){  
-                    WindowHandler.examwindow.webContents.send('getmaterials')  // if we change group we need to get the materials again
-                }
-            }
-            
-            // this is an microsoft365 thing. check if exam mode is office, check if this is set - otherwise do not enter exammode - it will fail
-            //set or update sharing link - it will be used in "microsoft365" exam mode
-            this.multicastClient.clientinfo.msofficeshare = studentstatus.msofficeshare  
-            
-
-            if (studentstatus.group){
-                //set or update group 
-                if (this.multicastClient.clientinfo.group !== studentstatus.group){
-                    this.multicastClient.clientinfo.group = studentstatus.group  
-                    if (WindowHandler.examwindow){  
-                        WindowHandler.examwindow.webContents.send('getmaterials')  // if we change group we need to get the materials again
-                    }
-                }
-            }
-
-        
-
+        const kicked = await this.handleStudentStatusUpdates(studentstatus);
+        if (kicked) {
+            return;
         }
 
+        this.handleExamSections(serverstatus);
+        this.handleGlobalServerStatus(serverstatus);
+    }
 
-        ////////////////////////////////
-        // global status updates
-        ////////////////////////////////
+    async handleStudentStatusUpdates(studentstatus){
+        if (!studentstatus || Object.keys(studentstatus).length === 0) {
+            return false;
+        }
 
+        if (studentstatus.printdenied) {
+            WindowHandler.examwindow.webContents.send('denied');
+        }
+
+        if (studentstatus.kicked) {
+            await this.kickStudent(studentstatus);
+            return true;
+        }
+
+        if (studentstatus.delfolder === true){
+            log.info("communicationhandler @ processUpdatedServerstatus: cleaning exam workfolder");
+            let delfolder = true;
+            try {
+                if (fs.existsSync(this.config.examdirectory)){
+                    fs.rmSync(this.config.examdirectory, { recursive: true });
+                    fs.mkdirSync(this.config.examdirectory);
+                }
+            } catch (error) { 
+                delfolder = false;
+                WindowHandler.examwindow.webContents.send('fileerror', error);
+                log.error(`communicationhandler @ processUpdatedServerstatus: Can not delete directory - ${error} `);
+            }
+
+            if (delfolder === false){
+                if (fs.existsSync(this.config.examdirectory)) {
+                    const files = fs.readdirSync(this.config.examdirectory);
+
+                    files.forEach(file => {
+                        const filePath = join(this.config.examdirectory, file);
+                        try {
+                            const stats = fs.statSync(filePath);
+                            if (stats.isDirectory()) { fs.rmSync(filePath, { recursive: true }); }
+                            else { fs.unlinkSync(filePath); }
+                        }
+                        catch (error) {
+                            log.error(`communicationhandler @ processUpdatedServerstatus: (delfolder) Fehler beim Löschen der Datei/Verzeichnis: ${filePath}`, error);
+                        }
+                    });
+                }
+            }
+            if (WindowHandler.examwindow) {
+                WindowHandler.examwindow.webContents.send('loadfilelist');
+            }
+        }
+
+        if (studentstatus.focus === false){
+            this.multicastClient.clientinfo.focus = false;
+        }
+
+        if (studentstatus.restorefocusstate === true){
+            log.info("communicationhandler @ processUpdatedServerstatus: restoring focus state for student");
+            this.multicastClient.clientinfo.focus = true;
+            if (WindowHandler.examwindow && !this.config.development){ 
+                WindowHandler.examwindow.setKiosk(true);
+                WindowHandler.examwindow.focus();
+            }
+        }
+        if (studentstatus.activatePrivateSpellcheck === true && this.multicastClient.clientinfo.privateSpellcheck.activated === false){
+            log.info("communicationhandler @ processUpdatedServerstatus: activating spellcheck for student");
+            this.multicastClient.clientinfo.privateSpellcheck.activate = true;
+            this.multicastClient.clientinfo.privateSpellcheck.activated = true;
+            ipcMain.emit("startLanguageTool");
+        }
+        if (studentstatus.activatePrivateSpellcheck === false && this.multicastClient.clientinfo.privateSpellcheck.activated === true) {
+            log.info("communicationhandler @ processUpdatedServerstatus: de-activating spellcheck for student");
+            this.multicastClient.clientinfo.privateSpellcheck.activate = false;
+            this.multicastClient.clientinfo.privateSpellcheck.activated = false;
+        }
+
+        this.multicastClient.clientinfo.privateSpellcheck.suggestions = studentstatus.activatePrivateSuggestions;
+
+        if (studentstatus.sendexam === true){
+            this.sendExamToTeacher();
+        }
+        if (studentstatus.fetchfiles === true){
+            this.requestFileFromServer(studentstatus.files);
+        }
+        if (studentstatus.getmaterials === true){
+            if (WindowHandler.examwindow){  
+                WindowHandler.examwindow.webContents.send('getmaterials');
+            }
+        }
         
-        /***********************************
-         * SWITCH EXAM SECTION  START
-         * ATTENTION: move this to a separate function - it is too complex and should be split up
-         * in the future we well determine if section switch is handled by the teacher or by the student and act accordingly
-         * if handled by student the teacher stttus is ignored and the swich section function is called directly (probably move to ipchandler.js)
-         */
+        this.multicastClient.clientinfo.msofficeshare = studentstatus.msofficeshare;
+        
+        if (studentstatus.group){
+            if (this.multicastClient.clientinfo.group !== studentstatus.group){
+                this.multicastClient.clientinfo.group = studentstatus.group;
+                if (WindowHandler.examwindow){  
+                    WindowHandler.examwindow.webContents.send('getmaterials');
+                }
+            }
+        }
 
+        return false;
+    }
+
+    handleExamSections(serverstatus){
         if (WindowHandler.examwindow){
             if (serverstatus.allowSectionSwitch !== WindowHandler.examwindow.serverstatus.allowSectionSwitch){
-                // update serverstatus in examwindow so it is available for the frontend
-                log.info("communicationhandler @ processUpdatedServerstatus: permission to switch exam section changed")
-                WindowHandler.examwindow.serverstatus.allowSectionSwitch = serverstatus.allowSectionSwitch
+                log.info("communicationhandler @ processUpdatedServerstatus: permission to switch exam section changed");
+                WindowHandler.examwindow.serverstatus.allowSectionSwitch = serverstatus.allowSectionSwitch;
             }
         }
 
-        // if student is in locked state in exam mode
         if (serverstatus.exammode && this.multicastClient.clientinfo.exammode){
-            if (serverstatus.useExamSections){  // exam sections are enabled
-                if (!serverstatus.allowSectionSwitch){  // server handles section switch
-                    //check if the current active section is the same as the one in the serverstatus - if not change to the new section and send to teacher
+            if (serverstatus.useExamSections){
+                if (!serverstatus.allowSectionSwitch){
                     if (serverstatus.lockedSection !== this.multicastClient.clientinfo.lockedSection){
-                        // call switchExamSection function to switch to the new section
-                        switchExamSection(this, serverstatus, serverstatus.lockedSection)
+                        switchExamSection(this, serverstatus, serverstatus.lockedSection);
                     }
                 }
             }
         }
-   
-      
 
-        
-
-        if (serverstatus.screenslocked && !this.multicastClient.clientinfo.screenlock) {  this.activateScreenlock() }
-        else if (!serverstatus.screenslocked ) { this.killScreenlock() }
-
-        // screenshot safety (OCR searches for next-exam string)
-        if (serverstatus.screenshotocr) { this.multicastClient.clientinfo.screenshotocr = true  }
-        else { this.multicastClient.clientinfo.screenshotocr = false   }
-
-        // Groups handling: use client's section when allowSectionSwitch, else server's; group membership from that section's groupA/groupB.users
         const sectionForSync = serverstatus.allowSectionSwitch ? this.multicastClient.clientinfo.lockedSection : serverstatus.lockedSection;
         const section = serverstatus.examSections[sectionForSync];
         if (section?.groups) {
@@ -543,37 +312,63 @@ import { switchExamSection } from './switchExamSection.js';
         } else {
             this.multicastClient.clientinfo.groups = false;
         }
+    }
 
-        //update screenshotinterval
-        if (serverstatus.screenshotinterval || serverstatus.screenshotinterval === 0) { //0 is the same as false or undefined but should be treated as number
-            
+    handleGlobalServerStatus(serverstatus){
+        if (serverstatus.screenslocked && !this.multicastClient.clientinfo.screenlock) {
+            this.activateScreenlock();
+        } else if (!serverstatus.screenslocked ) {
+            this.killScreenlock();
+        }
+
+        if (serverstatus.screenshotocr) {
+            this.multicastClient.clientinfo.screenshotocr = true;
+        } else {
+            this.multicastClient.clientinfo.screenshotocr = false;
+        }
+
+        if (serverstatus.screenshotinterval || serverstatus.screenshotinterval === 0) {
             if (this.multicastClient.clientinfo.screenshotinterval !== serverstatus.screenshotinterval*1000 ) {
-                log.info("communicationhandler @ processUpdatedServerstatus: ScreenshotInterval changed to", serverstatus.screenshotinterval*1000)
-                this.multicastClient.clientinfo.screenshotinterval = serverstatus.screenshotinterval*1000
-                  if ( serverstatus.screenshotinterval == 0) {
-                    log.info("communicationhandler @ processUpdatedServerstatus: ScreenshotInterval disabled!")
+                log.info("communicationhandler @ processUpdatedServerstatus: ScreenshotInterval changed to", serverstatus.screenshotinterval*1000);
+                this.multicastClient.clientinfo.screenshotinterval = serverstatus.screenshotinterval*1000;
+                if ( serverstatus.screenshotinterval == 0) {
+                    log.info("communicationhandler @ processUpdatedServerstatus: ScreenshotInterval disabled!");
                 }
-                // clear old interval and start new interval if set to something bigger than zero
-                this.screenshotScheduler.stop()
-                
-                if (this.multicastClient.clientinfo.screenshotinterval > 0){
-                    this.screenshotScheduler.interval = this.multicastClient.clientinfo.screenshotinterval
-                    this.screenshotScheduler.start()
-                   
+                try {
+                    WindowHandler.mainwindow?.webContents?.send('screenshot-config', {
+                        screenshotinterval: this.multicastClient.clientinfo.screenshotinterval,
+                        serverip: this.multicastClient.clientinfo.serverip
+                    });
+                } catch (e) {
+                    log.debug('communicationhandler @ processUpdatedServerstatus: screenshot-config send', e?.message);
                 }
             }
         }
         
         if (serverstatus.exammode && !this.multicastClient.clientinfo.exammode){
-            this.killScreenlock() // remove lockscreen immediately - don't wait for server info
-            this.startExam(serverstatus)
+            log.info("communicationhandler @ processUpdatedServerstatus: exammode activated");
+            this.killScreenlock();
+            this.startExam(serverstatus);
         }
         else if (!serverstatus.exammode && this.multicastClient.clientinfo.exammode){
-            this.killScreenlock() 
-            this.endExam(serverstatus)
+            log.info("communicationhandler @ processUpdatedServerstatus: exammode deactivated");
+            this.killScreenlock();
+            this.endExam(serverstatus);
         }
-
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // send base64 pdf to teacher
     sendBase64PDFtoTeacher(base64pdf, section=1){
@@ -728,10 +523,34 @@ import { switchExamSection } from './switchExamSection.js';
         this.multicastClient.clientinfo.linespacing = serverstatus.examSections[effectiveSection].linespacing // we try to double linespacing on demand in pdf creation
         this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[effectiveSection].audioRepeat // restrict repetition of audio files (for listening comprehension)
 
+        const examtype = serverstatus.examSections[effectiveSection].examtype;
+
         if (!WindowHandler.examwindow){  // why do we check? because exammode is left if the server connection gets lost but students could reconnect while the exam window is still open and we don't want to create a second one
             log.info("communicationhandler @ startExam: creating exam window")
-            this.multicastClient.clientinfo.examtype = serverstatus.examSections[effectiveSection].examtype
-            WindowHandler.createExamWindow(serverstatus.examSections[effectiveSection].examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+            this.multicastClient.clientinfo.examtype = examtype
+
+            if (examtype === 'localvm') {
+                try {
+                    const vmConfig = serverstatus.examSections[effectiveSection].localVMConfig || {};
+                    const vmName = vmConfig.vmName;
+                    if (!vmName) {
+                        log.error("communicationhandler @ startExam: no vmName configured for localvm examtype");
+                        this.multicastClient.clientinfo.exammode = false;
+                        return;
+                    }
+                    this.multicastClient.clientinfo.localVMHost = null;
+                    this.multicastClient.clientinfo.localVMState = null;
+                    const vmResult = await virtualBoxService.startVmAndResolveHost(vmName);
+                    this.multicastClient.clientinfo.localVMHost = vmResult.ip;
+                    this.multicastClient.clientinfo.localVMState = vmResult.state;
+                } catch (err) {
+                    log.error("communicationhandler @ startExam: LocalVM start failed", err);
+                    this.multicastClient.clientinfo.exammode = false;
+                    return;
+                }
+            }
+
+            WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
         }
         else if (WindowHandler.examwindow){  //reconnect into active exam session with exam window already open
             log.error("communicationhandler @ startExam: found existing Examwindow..")
@@ -777,6 +596,7 @@ import { switchExamSection } from './switchExamSection.js';
     async endExam(serverstatus){
         
         WindowHandler.removeBlurListener();
+        stopProxy();
       
         //only disable restrictions if not in exam mode ( seriosuly.. how could this ever happen? )
         if (this.multicastClient.clientinfo.exammode){
@@ -839,6 +659,13 @@ import { switchExamSection } from './switchExamSection.js';
         await WindowHandler.showExitQuestion()
     }
 
+
+
+
+
+
+
+    
     /**
      * Closes examwindow only when no printToPDF operation is running
      */
@@ -862,7 +689,6 @@ import { switchExamSection } from './switchExamSection.js';
             WindowHandler.examwindow = null
         }
     }
-
 
     // this is manually triggered if connection is lost during exam - we allow the student to get out of the kiosk mode 
     // INFO: this is basically redundant 

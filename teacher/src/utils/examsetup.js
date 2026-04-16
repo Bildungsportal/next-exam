@@ -117,7 +117,7 @@ async function getTestID(){
 
 
 /**
- * Google Forms
+ * Forms (Google or Microsoft)
  */
 async function getFormsID(){
     this.$swal.fire({
@@ -129,24 +129,45 @@ async function getFormsID(){
             inputLabel: 'my-input-label',
             actions: 'my-swal2-actions'
         },
-        title: this.$t("dashboard.gforms"),
+        title: this.$t("dashboard.forms"),
         icon: 'question',
-        input: 'text',
+        input: 'url',
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
-        html: `<div class="m-1 my-content">
-        ${this.$t("dashboard.gformshint")} <br>
-        <span style="font-size:0.8em">
-            (https://docs.google.com/forms/d/e/<span style="background-color: lightblue; padding:0 3px 0 3px;">1FAIpQLScuTG7yldD0VRhFgOC_2fhbVdgXn95Kf_w2rUbJm79S1kJBnA</span>/viewform)
-        </span>
+        html: `
+        <div class="my-content" style="text-align:left; max-width: 520px; margin: 0 auto;">
+            <p style="margin-bottom:8px;">
+                ${this.$t("dashboard.formshint")}
+            </p>
+            <div style="font-size:0.85em; line-height:1.4; margin-top:4px;">
+                <div style="margin-bottom:4px; font-weight:bold;">
+                    ${this.$t("dashboard.forms_google_title")}
+                </div>
+                <div style="margin-left:10px; margin-bottom:8px;">
+                    ${this.$t("dashboard.forms_google_hint")}
+                </div>
+                <div style="margin-bottom:4px; font-weight:bold;">
+                    ${this.$t("dashboard.forms_ms_title")}
+                </div>
+                <div style="margin-left:10px;">
+                    ${this.$t("dashboard.forms_ms_hint")}
+                </div>
+            </div>
         </div>`,
+        didOpen: () => {
+            document.getElementsByClassName('my-custom-input')[0].value = this.serverstatus.examSections[this.serverstatus.activeSection]?.formsUrl
+        },
         inputValidator: (value) => {
             if (!value) {return this.$t("dashboard.moodleInvalidId")}
+            if (!isValidFullDomainName(value)) {return this.$t("dashboard.invalidDomain")}
         }
     }).then((input) => {
-        if (!input.value) { this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math"}
+        const val = input.value ? input.value.trim() : "";
+        if (!val) {
+            this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math"
+        }
         else {
-            this.serverstatus.examSections[this.serverstatus.activeSection].gformsTestId = input.value
+            this.serverstatus.examSections[this.serverstatus.activeSection].formsUrl = val
             this.backupinterval.stop();
             this.autobackup = false;
         }
@@ -190,7 +211,7 @@ async function configureActivesheets(forceDialog = false){
             <span style="font-size:0.8em;">(.pdf)</span>
             <br>  <br> 
             Gruppe<br>
-            <button id="fbtnA" class="swal2-button btn btn-info m-2" style="width: 42px; height: 42px;">A</button>
+            <button id="fbtnA" class="swal2-button btn btn-cyan m-2" style="width: 42px; height: 42px;">A</button>
             <button id="fbtnB" class="swal2-button btn btn-warning m-2" style="width: 42px; height: 42px;filter: grayscale(90%);">B</button>
             <button id="fbtnC" class="swal2-button btn btn-warning m-2" style="padding:0px;width: 42px; height: 42px;filter: grayscale(90%); background: linear-gradient(-60deg, #0dcaf0 50%, #ffc107 50%);">AB</button>
         </div>`
@@ -329,9 +350,9 @@ async function configureActivesheets(forceDialog = false){
         
         // Show PdfRenderer for the first file if available
         if (firstFileBase64 && firstFileName) {
-            // Call showBase64PdfInRenderer if available (it should be available in dashboard.vue context)
             if (typeof this.showBase64PdfInRenderer === 'function') {
-                this.showBase64PdfInRenderer(firstFileBase64, firstFileName);
+                const previewGroup = activeGroup === 'b' ? 'B' : 'A';
+                this.showBase64PdfInRenderer(firstFileBase64, firstFileName, previewGroup);
             }
         }
     });    
@@ -400,18 +421,97 @@ async function configureRDP(){
 
 
 /**
+ * LocalVM (VirtualBox VM selection)
+ */
+async function configureLocalVM(){
+    const ipc = window.ipcRenderer;
+    if (!ipc) {
+        this.$swal.fire({
+            icon: 'error',
+            title: 'LocalVM',
+            text: 'Local VirtualBox integration is not available in this environment.'
+        });
+        return;
+    }
+
+    let vmNames = [];
+    try {
+        vmNames = await ipc.invoke('get-vm-list');
+    } catch (error) {
+        console.error('examsetup @ configureLocalVM: get-vm-list failed', error);
+        vmNames = [];
+    }
+
+    if (!Array.isArray(vmNames) || vmNames.length === 0) {
+        this.$swal.fire({
+            icon: 'warning',
+            title: 'LocalVM',
+            text: 'Keine VirtualBox-VMs gefunden. Bitte prüfen Sie die VBoxManage-Installation.'
+        });
+        return;
+    }
+
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    const currentVmName = section.localVMConfig && section.localVMConfig.vmName ? section.localVMConfig.vmName : '';
+
+    const inputOptions = vmNames.reduce((acc, name) => {
+        acc[name] = name;
+        return acc;
+    }, {});
+
+    let selectedVmName = currentVmName || vmNames[0];
+
+    await this.$swal.fire({
+        customClass: {
+            popup: 'my-popup',
+            title: 'my-title',
+            content: 'my-content',
+            input: 'my-custom-input-select',
+            actions: 'my-swal2-actions'
+        },
+        title: 'LocalVM',
+        icon: 'question',
+        input: 'select',
+        inputOptions,
+        inputValue: selectedVmName,
+        showCancelButton: true,
+        cancelButtonText: this.$t('dashboard.cancel'),
+        preConfirm: (value) => {
+            selectedVmName = value || '';
+            if (!selectedVmName) {
+                return 'Bitte wählen Sie eine VM aus.';
+            }
+            return true;
+        }
+    }).then((result) => {
+        if (!result.isConfirmed) {
+            return;
+        }
+        section.localVMConfig = {
+            vmName: selectedVmName
+        };
+        this.setServerStatus();
+    });
+}
+
+
+/**
 * Text Editor
 */
 async function configureEditor(){
     const inputOptions = {
         'de-DE': this.$t("dashboard.de"),
         'en-GB': this.$t("dashboard.en"),
+        'en-US': this.$t("dashboard.en_us"),
         'fr-FR': this.$t("dashboard.fr"),
         'es-ES': this.$t("dashboard.es"),
         'it-IT': this.$t("dashboard.it"),
         'sl-SI': this.$t("dashboard.sl"),
         'none':this.$t("dashboard.none"),
     }
+
+    // holds resolved IPv4 for custom LanguageTool host while dialog is open
+    let resolvedLtIp = null;
 
     const updateMarginValueDisplay = () => {
         const marginValueInput = document.getElementById('marginValue');
@@ -430,7 +530,7 @@ async function configureEditor(){
         },
         title: this.$t("dashboard.texteditor"),
         html: `
-        <div class="my-content" style="font-size: 0.8em !important; text-align:left; margin-left:6px;">
+        <div class="my-content" style="font-size: 0.8em !important; text-align:left; margin:0 12px;">
             <div>
                 <label >
                     <h6>${this.$t("dashboard.cmargin-value")}</h6>
@@ -459,9 +559,9 @@ async function configureEditor(){
                 <label><input type="radio" name="fontfamily" value="sans-serif" checked/> sans-serif</label> &nbsp;
             </div>
 
-            <div>
+            <div style="margin-top:8px;">
                 <h6>${this.$t("dashboard.fontsize")}</h6>
-                <select id="fontsize" class="my-select" value="12pt">
+                <select id="fontsize" class="my-select" value="12pt" style="width:100%;max-width:100%;">
                     <option value="8pt">8 pt</option>
                     <option value="10pt">10 pt</option>
                     <option value="12pt">12 pt</option>
@@ -473,9 +573,9 @@ async function configureEditor(){
             </div>
 
             <hr>
-            <div>
+            <div style="margin-top:8px;">
                 <h6>${this.$t("dashboard.audiorepeattitle")}</h6>
-                <select id="audiorepeat" class="my-select">
+                <select id="audiorepeat" class="my-select" style="width:100%;max-width:100%;">
                     <option value="0">${this.$t("dashboard.audioallow")}</option>
                     <option value="1">1${this.$t("dashboard.audiorepeat1")}</option>
                     <option value="2">2${this.$t("dashboard.audiorepeat2")}</option>
@@ -495,7 +595,14 @@ async function configureEditor(){
                 <input class="form-check-input" type="checkbox" id="checkboxCustomHost">
                 <label class="form-check-label" for="checkboxCustomHost"> ${this.$t("dashboard.customhost")} </label><br>
                 
-                <input type="text" id="languagetoolhost" class="form-control" style="margin-top:4px; width: 100%; display: block; color: #6c757d;" value="http://127.0.0.1" disabled><br><br>
+                <div style="display:flex; gap:8px; margin-top:4px; width:99%; align-items:center;">
+                    <div style="position:relative; flex:1;">
+                        <input type="text" id="languagetoolhost" class="form-control" style="width:100%; padding-right:24px; color: #6c757d;" value="https://languagetool" disabled>
+                        <span id="languagetoolhostStatus" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-weight:bold; cursor:help; z-index:2;"></span>
+                    </div>
+                    <input type="text" id="languagetoolport" class="form-control" style="width:90px; color: #6c757d;" value="8088" disabled>
+                </div>
+                <br><br>
                 <h6 style="margin-bottom:0px;">${this.$t("dashboard.spellcheckchoose")}</h6>
             </div>
              
@@ -544,7 +651,7 @@ async function configureEditor(){
             }
 
             const defaultFontSize = this.serverstatus.examSections[this.serverstatus.activeSection].fontsize || '12pt';
-            console.log("defaultFontSize:", defaultFontSize)
+            // console.log("defaultFontSize:", defaultFontSize)
             const selectElement2 = document.getElementById('fontsize');
             if (selectElement2) {
                 setTimeout(() => {
@@ -558,22 +665,52 @@ async function configureEditor(){
             const checkboxSuggestions = document.getElementById('checkboxsuggestions');
             const checkboxCustomHost = document.getElementById('checkboxCustomHost');
             const languagetoolhostInput = document.getElementById('languagetoolhost');
+            const languagetoolportInput = document.getElementById('languagetoolport');
+            const hostStatus = document.getElementById('languagetoolhostStatus');
             
-            // Initialize LanguageTool Host field
+            // Initialize LanguageTool host and port fields
             const savedHost = this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost;
+            const savedPort = this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolport;
             
-            // Set default value or saved value
+            // Set default values or saved values
             if (savedHost) {
                 languagetoolhostInput.value = savedHost;
                 checkboxCustomHost.checked = true;
                 languagetoolhostInput.disabled = false;
                 languagetoolhostInput.style.color = '#000000';
+                if (languagetoolportInput) {
+                    languagetoolportInput.value = savedPort || '8088';
+                    languagetoolportInput.disabled = false;
+                    languagetoolportInput.style.color = '#000000';
+                }
             } else {
-                languagetoolhostInput.value = 'http://127.0.0.1';
+                languagetoolhostInput.value = 'https://languagetool';
                 checkboxCustomHost.checked = false;
                 languagetoolhostInput.disabled = true;
                 languagetoolhostInput.style.color = '#6c757d';
+                if (languagetoolportInput) {
+                    languagetoolportInput.value = '8088';
+                    languagetoolportInput.disabled = true;
+                    languagetoolportInput.style.color = '#6c757d';
+                }
             }
+
+            // Helper to update status icon
+            const setHostStatus = (state) => {
+                if (!hostStatus) { return; }
+                if (state === 'ok') {
+                    hostStatus.textContent = '✓';
+                    hostStatus.style.color = '#28a745';
+                    hostStatus.title = this.$t('dashboard.host_ok') || 'Host erfolgreich aufgelöst';
+                } else if (state === 'warn') {
+                    hostStatus.textContent = '▲';
+                    hostStatus.style.color = '#ffc107';
+                    hostStatus.title = this.$t('dashboard.host_warn') || 'Host konnte nicht aufgelöst werden';
+                } else {
+                    hostStatus.textContent = '';
+                    hostStatus.removeAttribute('title');
+                }
+            };
             
             // Initial: suggestions and custom host checkboxes deaktivieren, falls LT nicht gecheckt ist
             checkboxSuggestions.disabled = !checkboxLT.checked;
@@ -582,6 +719,10 @@ async function configureEditor(){
             if (!checkboxLT.checked) {
                 languagetoolhostInput.disabled = true;
                 languagetoolhostInput.style.color = '#6c757d';
+                if (languagetoolportInput) {
+                    languagetoolportInput.disabled = true;
+                    languagetoolportInput.style.color = '#6c757d';
+                }
             }
             
             // Event Listener für checkboxLT, um den Status von checkboxsuggestions und checkboxCustomHost anzupassen
@@ -594,14 +735,70 @@ async function configureEditor(){
                     checkboxCustomHost.checked = false;
                     languagetoolhostInput.disabled = true;
                     languagetoolhostInput.style.color = '#6c757d';
+                    if (languagetoolportInput) {
+                        languagetoolportInput.disabled = true;
+                        languagetoolportInput.style.color = '#6c757d';
+                    }
                 }
             });
             
             // Event Listener für checkboxCustomHost, um das Textinput zu aktivieren/deaktivieren
             checkboxCustomHost.addEventListener('change', () => {
-                languagetoolhostInput.disabled = !checkboxCustomHost.checked;
-                languagetoolhostInput.style.color = checkboxCustomHost.checked ? '#000000' : '#6c757d';
+                const enabled = checkboxCustomHost.checked;
+                languagetoolhostInput.disabled = !enabled;
+                languagetoolhostInput.style.color = enabled ? '#000000' : '#6c757d';
+                if (languagetoolportInput) {
+                    languagetoolportInput.disabled = !enabled;
+                    languagetoolportInput.style.color = enabled ? '#000000' : '#6c757d';
+                }
+                if (!enabled) {
+                    setHostStatus('none');
+                    resolvedLtIp = null;
+                }
             });
+
+            // DNS-Check während der Dialog offen ist (debounced)
+            let ltResolveTimeout = null;
+            const scheduleResolve = () => {
+                if (!checkboxCustomHost.checked || languagetoolhostInput.disabled) {
+                    setHostStatus('none');
+                    resolvedLtIp = null;
+                    return;
+                }
+                const raw = languagetoolhostInput.value || '';
+                if (!raw.trim()) {
+                    setHostStatus('none');
+                    resolvedLtIp = null;
+                    return;
+                }
+                if (ltResolveTimeout) {
+                    clearTimeout(ltResolveTimeout);
+                }
+                ltResolveTimeout = setTimeout(async () => {
+                    try {
+                        const hostOnly = raw.trim().replace(/^https?:\/\//i, '').split('/')[0];
+                        const result = await window.ipcRenderer?.invoke?.('resolveHostToIp', hostOnly);
+                        if (!result || !result.ok || !result.ip) {
+                            setHostStatus('warn');
+                            resolvedLtIp = null;
+                            return;
+                        }
+                        setHostStatus('ok');
+                        resolvedLtIp = result.ip;
+                    } catch (e) {
+                        setHostStatus('warn');
+                        resolvedLtIp = null;
+                    }
+                }, 600);
+            };
+
+            if (languagetoolhostInput) {
+                languagetoolhostInput.addEventListener('input', scheduleResolve);
+                // Initialen Check für Default-Wert nur, wenn Custom Host aktiv ist
+                if (checkboxCustomHost.checked) {
+                    scheduleResolve();
+                }
+            }
 
             
         },
@@ -621,6 +818,7 @@ async function configureEditor(){
             const checkboxLTElement = document.getElementById('checkboxLT');
             const checkboxCustomHostElement = document.getElementById('checkboxCustomHost');
             const languagetoolhostElement = document.getElementById('languagetoolhost');
+            const languagetoolportElement = document.getElementById('languagetoolport');
             const marginValueElement = document.getElementById('marginValue');
             const audioRepeatElement = document.getElementById('audiorepeat');
             const fontSizeElement = document.getElementById('fontsize');
@@ -628,11 +826,21 @@ async function configureEditor(){
             this.serverstatus.examSections[this.serverstatus.activeSection].suggestions = checkboxSuggestionsElement ? checkboxSuggestionsElement.checked : false; 
             this.serverstatus.examSections[this.serverstatus.activeSection].languagetool = checkboxLTElement ? checkboxLTElement.checked : false;
             
-            // Save LanguageTool Host value if custom host checkbox is checked
+            // Save LanguageTool host (as resolved IP) and port values if custom host checkbox is checked
             if (checkboxCustomHostElement && checkboxCustomHostElement.checked && languagetoolhostElement) {
-                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost = languagetoolhostElement.value || 'http://127.0.0.1';
+                const rawHost = languagetoolhostElement.value || 'http://127.0.0.1';
+                const protocolMatch = rawHost.match(/^(https?:\/\/)/i);
+                const protocol = protocolMatch ? protocolMatch[1] : 'http://';
+                const hostForConfig = resolvedLtIp ? `${protocol}${resolvedLtIp}` : rawHost;
+                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost = hostForConfig;
+                if (languagetoolportElement && languagetoolportElement.value) {
+                    this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolport = languagetoolportElement.value;
+                } else {
+                    this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolport = '8088';
+                }
             } else {
                 this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost = null;
+                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolport = null;
             } 
 
             const radioButtons = document.querySelectorAll('input[name="correction_margin"]');
@@ -777,7 +985,7 @@ function defineMaterials(who) {
             <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
             <br>  <br> 
             Gruppe<br>
-            <button id="fbtnA" class="swal2-button btn btn-info m-2" style="width: 42px; height: 42px;">A</button>
+            <button id="fbtnA" class="swal2-button btn btn-cyan m-2" style="width: 42px; height: 42px;">A</button>
             <button id="fbtnB" class="swal2-button btn btn-warning m-2" style="width: 42px; height: 42px;filter: grayscale(90%);">B</button>
             <button id="fbtnC" class="swal2-button btn btn-warning m-2" style="padding:0px;width: 42px; height: 42px;filter: grayscale(90%); background: linear-gradient(-60deg, #0dcaf0 50%, #ffc107 50%);">AB</button>
         </div>`
@@ -1065,41 +1273,32 @@ async function addFileAsExamMaterial(fileOrBase64, filename, activeGroup, server
         }
     }
     
-    // If this is an Active Sheet, remove all existing Active Sheets from the target groups
-    if (isActiveSheet) {
-        if (activeGroup === "a" || activeGroup === "all") {
-            // Remove all files with IsActiveSheet: true from group A
-            serverstatus.examSections[activeSection].groupA.examInstructionFiles = 
-                serverstatus.examSections[activeSection].groupA.examInstructionFiles.filter(file => !file.IsActiveSheet);
-        }
-        if (activeGroup === "b" || activeGroup === "all") {
-            // Remove all files with IsActiveSheet: true from group B
-            serverstatus.examSections[activeSection].groupB.examInstructionFiles = 
-                serverstatus.examSections[activeSection].groupB.examInstructionFiles.filter(file => !file.IsActiveSheet);
-        }
-    }
-    
-    // Create file object (same structure as in defineMaterials)
+    // Create file object
     const fileObject = {
         filename: finalFilename,
         filetype: filetype,
         filecontent: base64Content,
         checksum: checksum
     };
-    
-    // Add IsActiveSheet flag if specified
+
     if (isActiveSheet) {
-        fileObject.IsActiveSheet = true;
+        // Active Sheet goes to group.examConfig.activeSheets
+        if (activeGroup === "a" || activeGroup === "all") {
+            serverstatus.examSections[activeSection].groupA.examConfig.activeSheets = { ...fileObject };
+        }
+        if (activeGroup === "b" || activeGroup === "all") {
+            serverstatus.examSections[activeSection].groupB.examConfig.activeSheets = { ...fileObject };
+        }
+    } else {
+        // Regular material goes into examInstructionFiles
+        if (activeGroup === "a" || activeGroup === "all") {
+            serverstatus.examSections[activeSection].groupA.examInstructionFiles.push(fileObject);
+        }
+        if (activeGroup === "b" || activeGroup === "all") {
+            serverstatus.examSections[activeSection].groupB.examInstructionFiles.push(fileObject);
+        }
     }
-    
-    // Add to groups based on activeGroup
-    if (activeGroup === "a" || activeGroup === "all") {
-        serverstatus.examSections[activeSection].groupA.examInstructionFiles.push(fileObject);
-    }
-    if (activeGroup === "b" || activeGroup === "all") {
-        serverstatus.examSections[activeSection].groupB.examInstructionFiles.push(fileObject);
-    }
-    
+
     return fileObject;
 }
 
@@ -1166,4 +1365,4 @@ function openAllowedUrl(allowedUrl){
 
 
 
-export { getTestURL, getTestID, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }
+export { getTestURL, getTestID, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }

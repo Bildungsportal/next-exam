@@ -20,13 +20,14 @@
 import fs from 'fs'
 //import i18n from '../../renderer/src/locales/locales.js'
 //const { t } = i18n.global
-import { BrowserWindow, ipcMain, dialog } from 'electron'
+import { BrowserWindow, ipcMain, dialog, session } from 'electron'
 import {join} from 'path'
 import log from 'electron-log';
 import { networkInterfaces } from 'os'
 import { exec } from 'child_process';
 import { gateway4sync} from 'default-gateway';
 import ip from 'ip'
+import dns from 'dns'
 
 import server from "../../server/src/server.js"
 import checkDiskSpace from 'check-disk-space';
@@ -158,10 +159,6 @@ class IpcHandler {
                                 scaleFactor: 1,
                                 pagesPerSheet: 1,
                                 landscape: false,
-                                dpi: {
-                                    horizontal: 600,
-                                    vertical: 600
-                                },
                                 pageSize: 'A4', 
                                 margins: {
                                     marginType: 'none'
@@ -218,6 +215,24 @@ class IpcHandler {
             event.returnValue = "hello from bip logon"
         })
 
+        /** Clears BiP web session (same default session as BiP BrowserWindow) so the next login shows the portal login again. */
+        ipcMain.handle('clearBipPortalSession', async (_event, biptest) => {
+            const ses = session.defaultSession
+            const origins = biptest
+                ? ['https://q.bildung.gv.at']
+                : ['https://bildung.gv.at', 'https://www.bildung.gv.at']
+            const storages = ['cookies', 'localstorage', 'sessionstorage', 'indexdb', 'websql']
+            for (const origin of origins) {
+                try {
+                    await ses.clearStorageData({ origin, storages })
+                } catch (e) {
+                    log.warn(`ipchandler @ clearBipPortalSession: ${origin}`, e)
+                }
+            }
+            log.info('ipchandler @ clearBipPortalSession: done')
+            return true
+        })
+
 
 
         // returns the current serverstatus object of the given server(name)
@@ -271,6 +286,29 @@ class IpcHandler {
         // returns current config async
         ipcMain.handle('getconfigasync', (event) => {  
             return this.copyConfig(config)
+        })  
+
+
+        // returns a list of available VirtualBox VMs on the teacher machine
+        ipcMain.handle('get-vm-list', async () => {
+            return await new Promise((resolve) => {
+                exec('VBoxManage list vms', { encoding: 'utf8' }, (error, stdout) => {
+                    if (error) {
+                        log.error('ipchandler @ get-vm-list: VBoxManage failed', error);
+                        resolve([]);
+                        return;
+                    }
+                    const lines = stdout.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+                    const names = [];
+                    for (const line of lines) {
+                        const match = line.match(/\"(.+?)\"/);
+                        if (match && match[1]) {
+                            names.push(match[1]);
+                        }
+                    }
+                    resolve(names);
+                });
+            });
         })  
 
 
@@ -842,6 +880,26 @@ class IpcHandler {
             }
         })
 
+        /**
+         * Resolve a hostname to an IPv4 address for LanguageTool configuration (teacher app)
+         */ 
+        ipcMain.handle('resolveHostToIp', async (_event, host) => {
+            if (!host || typeof host !== 'string') {
+                return { ok: false, ip: null, error: 'invalid-host' };
+            }
+            try {
+                const lookupHost = host.trim().replace(/^https?:\/\//i, '').split('/')[0];
+                if (!lookupHost) {
+                    return { ok: false, ip: null, error: 'empty-host' };
+                }
+                const result = await dns.promises.lookup(lookupHost, { family: 4 });
+                return { ok: true, ip: result.address, error: null };
+            } catch (err) {
+                log.warn('teacher ipchandler @ resolveHostToIp: failed');
+                return { ok: false, ip: null, error: err?.message || 'lookup-failed' };
+            }
+        })
+
 
 
 
@@ -922,14 +980,19 @@ class IpcHandler {
         return pdf
     }
 
+
+    // this is a littlebit of a bad design choice - because of recursion we need to copy the config object but 
+    // we need to make sure we update this part everytime wie add something to the config   or it will get lost here
     copyConfig(conf) {
         let configCopy = {
             development: conf.development, 
             showdevtools: conf.showdevtools,
             bipIntegration: conf.bipIntegration,
             bipDemo: conf.bipDemo,
+            bipApiUrl: conf.bipApiUrl,
             workdirectory: conf.workdirectory,
             tempdirectory: conf.tempdirectory,
+            backupdirectory: conf.backupdirectory,
             serverdirectory: conf.serverdirectory,
            
             serverApiPort: conf.serverApiPort,
@@ -941,6 +1004,8 @@ class IpcHandler {
             gateway: conf.gateway,
             accessToken: conf.accessToken,
             version: conf.version,
+            buildDate: conf.buildDate,
+            buildNumber: conf.buildNumber,
             info: conf.info,
             buildforWEB: conf.buildforWEB,
             exammodes: conf.exammodes

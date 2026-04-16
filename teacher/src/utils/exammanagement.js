@@ -87,6 +87,11 @@ function stopserver(){
     let message = this.$t("dashboard.exitexam")
     if (!this.serverstatus.exammode) { message = this.$t("dashboard.exitexaminfo")}
 
+    const bipCompletedHtml = this.serverstatus?.bip ? `
+            <input class="form-check-input" style="margin-top: 0.1em;" type="checkbox" id="checkboxcompleted">
+            <label class="form-check-label" for="checkboxcompleted"> ${this.$t("dashboard.exitbipcompleted")} </label>
+        ` : '';
+
     this.$swal.fire({
         customClass: {
             popup: 'my-popup',
@@ -97,10 +102,20 @@ function stopserver(){
             actions: 'my-swal2-actions'
         },
         title: this.$t("dashboard.exitexamsure"),
-        html: `<div class="my-content" > ${message} <br> </div>`,
+        html: `<div class="my-content">
+            <span> ${message} </span>
+            <br><br>
+            ${bipCompletedHtml}
+        </div>`,
         icon: "error",
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
+        preConfirm: () => {
+            const checkbox = document.getElementById('checkboxcompleted');
+            if (this.serverstatus?.bip && checkbox?.checked) {
+                this.bipPhase = 'completed';
+            }
+        }
     })
     .then( async (result) => {
         if (result.isConfirmed) {
@@ -255,7 +270,7 @@ function sendFiles(who) {
             <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
             <br>  <br> 
             Gruppe<br>
-            <button id="fbtnA" class="swal2-button btn btn-info m-2" style="width: 42px; height: 42px;">A</button>
+            <button id="fbtnA" class="swal2-button btn btn-cyan m-2" style="width: 42px; height: 42px;">A</button>
             <button id="fbtnB" class="swal2-button btn btn-warning m-2" style="width: 42px; height: 42px;filter: grayscale(90%);">B</button>
             <button id="fbtnC" class="swal2-button btn btn-warning m-2" style="padding:0px;width: 42px; height: 42px;filter: grayscale(90%); background: linear-gradient(-60deg, #0dcaf0 50%, #ffc107 50%);">AB</button>
         </div>`

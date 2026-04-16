@@ -27,7 +27,7 @@ import {SchedulerService} from './schedulerservice.ts'
 class MulticastClient {
     constructor () {
         this.PORT = config.multicastServerClientPort
-        this.MULTICAST_ADDR = '239.255.255.250'
+        this.MULTICAST_ADDR = config.multicastServerAdrr
         this.client = null
         this.examServerList = []
         this.refreshExamsIntervall = null
@@ -41,12 +41,21 @@ class MulticastClient {
         this.gateway = gateway
         try {
             this.client = dgram.createSocket('udp4')
+            // Bind auf 0.0.0.0, damit alle Interfaces abgedeckt sind; eigentliche Interface-Wahl über addMembership()
             this.client.bind(this.PORT, '0.0.0.0', () => { 
                 this.client.setBroadcast(true)
                 this.client.setMulticastTTL(128); 
-                if (this.gateway) { this.client.addMembership(this.MULTICAST_ADDR) }
-                if (!this.gateway) {log.warn("multicastclient @ init: No Gateway! Starting MulticastClient without adding group membership")}
-                log.info(`multicastclient @ init: UDP MC Client listening on http://${config.hostip}:${this.client.address().port}`)
+                try {
+                    // join multicast group auf der tatsächlich ermittelten Interface-IP
+                    this.client.addMembership(this.MULTICAST_ADDR, config.hostip)
+                    log.info(`multicastclient @ init: joined ${this.MULTICAST_ADDR} on iface ${config.hostip}`);
+                } catch (e) {
+                    log.error(`multicastclient @ init: addMembership failed for ${this.MULTICAST_ADDR} on ${config.hostip}`, e);
+                }
+                if (!this.gateway) {
+                    log.warn("multicastclient @ init: No default gateway detected – joined multicast group on local interface");
+                }
+                log.info(`multicastclient @ init: UDP MC Client listening on 0.0.0.0:${this.client.address().port} (hostip=${config.hostip})`)
             })
         }
         catch (err){log.error(err)}
@@ -62,7 +71,7 @@ class MulticastClient {
 
     async stop () {
         try {
-            this.client.dropMembership(this.MULTICAST_ADDR) // entfernt Multicast-Mitgliedschaft
+            this.client.dropMembership(this.MULTICAST_ADDR, config.hostip)
         } catch(e){}
         this.client.close() // schließt den UDP-Socket
         if (this.refreshExamsScheduler) this.refreshExamsScheduler.stop() // stoppt den Scheduler

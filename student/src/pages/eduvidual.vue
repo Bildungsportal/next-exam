@@ -69,9 +69,9 @@
             @close="hidepreview"
         />
         <PdfviewPane
-            :src="currentpreview"
             :localLockdown="localLockdown"
             :examtype="examtype"
+            :toolbar="pdfPreviewUi"
             @close="hidepreview"
         />
     </div> 
@@ -113,7 +113,7 @@ import {SignalBridge} from '../utils/signalBridge.js'
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
 
-import { getExamMaterials, loadPDF, loadImage} from '../utils/filehandler.js'
+import { getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import PdfviewPane from '../components/PdfviewPane.vue'
 import WebviewPane from '../components/WebviewPane.vue';
 
@@ -173,7 +173,8 @@ export default {
             _onDidStartLoading: null,
             _onDidStopLoading: null,
             _onPreviewClick: null,
-            internetCheckCounter:0
+            internetCheckCounter:0,
+            pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
         }
     }, 
     components: { ExamHeader, PdfviewPane, WebviewPane },  
@@ -339,6 +340,7 @@ export default {
         },
 
         hidepreview(){
+            resetPdfPreviewToolbar(this);
             let preview = document.querySelector("#preview")
             preview.style.display = 'none';
             preview.setAttribute("src", "about:blank");

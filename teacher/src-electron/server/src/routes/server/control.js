@@ -219,29 +219,25 @@ router.get('/msauth', async (req, res) => {
  * @param servername the chosen name (for example "mathe")
  * @param passwd the password needed to enter the dashboard  !!FIXME: use https and proper auth 
  **/
- router.get('/checkpasswd/:servername/:passwd?', function (req, res, next) {
+ router.get('/getserverinfo/:servername', function (req, res, next) {
     const servername = req.params.servername 
-    let passwd = req.params.passwd
-    if (!passwd){ passwd = ""}   // we allow empty passwords for now
+
     const mcServer = config.examServerList[servername]
 
     if (mcServer) { 
-        if (passwd === mcServer.serverinfo.password){ 
+       
         return res.send( {
             sender: "server", 
-            message: t("control.correctpw"), 
+            message: "success", 
             status: "success", 
             data: {
             pin: mcServer.serverinfo.pin,
             servertoken: mcServer.serverinfo.servertoken,
             serverip: mcServer.serverinfo.ip
             } 
-        } )} 
-        else { return res.send( {sender: "server", message: t("control.wrongpw"), status: "error"}) }
-    } 
-    else {
-        res.send( {sender: "server", message: t("control.notfound"), status: "error"})
+        } )
     }
+    else { return res.send( {sender: "server", message: "server not found", status: "error"}) }
 })
 
 
@@ -309,19 +305,23 @@ for (let i = 0; i<16; i++ ){
 
 
 
- router.get('/registerclient/:servername/:pin/:clientname/:clientip/:hostname/:version/:bipuserid', async function (req, res, next) {
-    const clientname = req.params.clientname
-    const clientip = req.params.clientip
-    const pin = req.params.pin
-    const version = req.params.version
+ router.post('/registerclient/:servername', async function (req, res, next) {
+    const { packet } = req.body || {}
     const servername = req.params.servername
-    const token = `csrf-${crypto.randomUUID()}`
     const mcServer = config.examServerList[servername] // get the multicastserver object
-    const hostname = req.params.hostname
-    const bipuserID = req.params.bipuserid
+    const sessionRef = String(mcServer?.serverinfo?.pin || '')
+    let clientname, clientip, pin, version, hostname, bipuserID
+    try {
+        const payload = await processSecurePayload(packet, sessionRef)
+        ;({ clientname, clientip, pin, version, hostname, bipuserID } = payload || {})
+    } catch (err) {
+        return res.send({ sender: "server", message: "Wrong PIN", status: "error" })
+    }
+    const token = `csrf-${crypto.randomUUID()}`
 
-    log.info("control @ registerclient: Client Version:",version)
-    // this needs to change once we reached v1.0 (featurefreeze for stable version)
+    //log.info("control @ registerclient: Client Version:",version)
+
+
     let vteacher = config.version.split('.').slice(0, 2),
     versionteacher = vteacher.join('.'); 
     let vstudent = version.split('.').slice(0, 2),
@@ -330,9 +330,10 @@ for (let i = 0; i<16; i++ ){
     //console.log(versionteacher, versionstudent)
   
     if (!mcServer) {  return res.send({sender: "server", message:t("control.notfound"), status: "error"} )  }
+    if (!pin || !clientname || !clientip || !hostname || !version) { return res.send({sender: "server", message:"Invalid registration payload", status: "error"} ) }
     if (`${versionteacher}` !== versionstudent ) {  return res.send({sender: "server", message:t("control.versionmismatch"), status: "error", version: config.version, versioninfo: config.info} )  }  
     
-    if (mcServer.serverstatus.requireBiP && bipuserID == 'false'){ // req.params come as string.. not nice but simple
+    if (mcServer.serverstatus.requireBiP && (bipuserID === false || bipuserID === 'false' || !bipuserID)){ // allow old string values and strict false
         return res.send({sender: "server", message:t("control.biprequired"), status: "error"} ) 
     }
     try {
@@ -365,6 +366,7 @@ for (let i = 0; i<16; i++ ){
                     exammode: false,
                     imageurl:false,
                     virtualized: false,
+                    version: version,  // set at registration so isVersionMismatch is correct before first /update
                     bipuserID: bipuserID,  // we can use this in the future to re-check if this user is in the pre-defined userlist for this specific BIP exam
                     status: { group: group || 'a'},    // we use this to store (per student) information about whats going on on the serverside (tasklist) and send it back on /update
                     // we allow two groups (this is just used for distribution of files by now)
@@ -416,7 +418,7 @@ for (let i = 0; i<16; i++ ){
                 }
 
                 mcServer.studentList.push(client)
-                return res.json({sender: "server", message:t("control.registered"), status: "success", token: token})  // on success return client token (auth needed for server api)
+                return res.json({sender: "server", message:"Student successfully registered", status: "success", token: token})  // on success return client token (auth needed for server api)
             }
             else {
 
@@ -427,20 +429,20 @@ for (let i = 0; i<16; i++ ){
 
                     //inform frontend about re-connection
                     WindowHandler.mainwindow.webContents.send("reconnected", registeredClient)
-                    return res.json({sender: "server", message:t("control.registered"), status: "success", token: registeredClient.token})  //send back old token
+                    return res.json({sender: "server", message:"Student successfully reconnected", status: "success", token: registeredClient.token})  //send back old token
                 }
                 else {
-                    return res.json({sender: "server", message:t("control.alreadyregistered"), status: "error"})
+                    return res.json({sender: "server", message:"Student already registered", status: "error"})
                 }  
             }
         }
         else {
-            return res.json({sender: "server", message:t("control.wrongpin"), status: "error"})
+            return res.json({sender: "server", message:"Wrong PIN", status: "error"})
         }
     }
     catch (err){
         log.error(`control @ registerclient: ${err}`);
-        return res.json({sender: "server", message:"an unknown error occured", status: "error"})
+        return res.json({sender: "server", message:"An unknown error occurred", status: "error"})
     }
 })
 
@@ -819,10 +821,13 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
     //update important student attributes
     student.focus = clientinfo.focus
     student.virtualized = clientinfo.virtualized
+    if (clientinfo.vmFindings) student.vmFindings = clientinfo.vmFindings
+    if (clientinfo.webglFindings) student.webglFindings = clientinfo.webglFindings
     student.timestamp = new Date().getTime()   //last seen  / this is like a heartbeat - update lastseen
     student.exammode = exammode  
     student.files = clientinfo.numberOfFiles
     student.remoteassistant = clientinfo.remoteassistant
+    student.version = clientinfo.version
 
     if (clientinfo.focus) { student.status.restorefocusstate = false }  // remove task because its obviously done
     if (clientinfo.screenshotinterval == 0){ student.imageurl = "person-lines-fill.svg"  }
@@ -896,32 +901,42 @@ router.post('/updatescreenshot', async function (req, res, next) {
 
             // only scan screenshot in exam mode and NOT if a restoring/unlocking operation is already in process (otherwise it will lock the unlocked again)
             if (mcServer.serverstatus.exammode && mcServer.serverstatus.screenshotocr && !student.status.restorefocusstate && student.focus){
-                try{
-                    const header = req.body.header.split(';base64,').pop();
-                    const headerimageBuffer = Buffer.from(header, 'base64');
-
-
-                    const publicPath = app.isPackaged
-                    ? path.join(process.resourcesPath,'app.asar.unpacked', 'public')
-                    : path.resolve(__dirname, '../../public');
-                    
-                    if (!TesseractWorker){
-                        TesseractWorker = await Tesseract.createWorker('eng',1,{
-                            langPath: publicPath , 
-                            cachePath: config.workdirectory   
-                        });
-                    }
-                     
-                    const { data: { text } }  = await TesseractWorker.recognize(headerimageBuffer);
-                    let pincodeVisible = text.includes(mcServer.serverinfo.pin)
-
-                    if (!pincodeVisible){
-                        student.focus = pincodeVisible  // this is the local student object for the frontend
-                        student.status.focus = pincodeVisible  // this sets the studentstatus object which is fetched on every update - the students react on this
-                        log.info("control @ updatescreenshot (ocr): Student Screenshot does not include Exam PIN");
-                    }
+                //put a new distinct timestamp on multicastserver once to track how long ocr and exam mode is activated and only run ocr if the timestamp is older than 10 seconds
+                if (!mcServer.serverinfo.ocrTimestamp){
+                    mcServer.serverinfo.ocrTimestamp = new Date().getTime()
                 }
-                catch(err){ log.info(`control @ updatescreenshot (ocr): ${err}`); }
+
+                if (mcServer.serverinfo.ocrTimestamp + 20000 > new Date().getTime()){
+                    // do nothing  -  give the clients enough time to switch into kiosk mode first (this prevents false positives on exam start)
+                }
+                else {
+                    // run ocr
+                    try{
+                        const header = req.body.header.split(';base64,').pop();
+                        const headerimageBuffer = Buffer.from(header, 'base64');
+
+                        const publicPath = app.isPackaged
+                        ? path.join(process.resourcesPath,'app.asar.unpacked', 'public')
+                        : path.resolve(__dirname, '../../public');
+                        
+                        if (!TesseractWorker){
+                            TesseractWorker = await Tesseract.createWorker('eng',1,{
+                                langPath: publicPath , 
+                                cachePath: config.workdirectory   
+                            });
+                        }
+                         
+                        const { data: { text } }  = await TesseractWorker.recognize(headerimageBuffer);
+                        let pincodeVisible = text.includes(mcServer.serverinfo.pin)
+
+                        if (!pincodeVisible){
+                            student.focus = pincodeVisible  // this is the local student object for the frontend
+                            student.status.focus = pincodeVisible  // this sets the studentstatus object which is fetched on every update - the students react on this
+                            log.info("control @ updatescreenshot (ocr): Student Screenshot does not include Exam PIN");
+                        }
+                    }
+                    catch(err){ log.info(`control @ updatescreenshot (ocr): ${err}`); }
+                }
             }
 
             if (!student.focus) { // Archiviere Screenshot, wenn Student nicht fokussiert ist
@@ -1043,6 +1058,22 @@ function requestSourceAllowed(req,res){
     res.json('Request denied') 
     return false 
 }
+
+async function processSecurePayload(packet, sessionRef) {
+    const PAD = '0'; 
+    const enc = new TextEncoder(); // Initialize text encoder
+    
+    const raw = enc.encode((sessionRef + PAD).padEnd(32, '0').slice(0, 32));
+    const k = await crypto.subtle.importKey('raw', raw, 'AES-GCM', false, ['decrypt']); // Import key for decryption
+    
+    const iv = new Uint8Array(atob(packet.v).split('').map(c => c.charCodeAt(0))); // Decode IV from Base64
+    const buf = new Uint8Array(atob(packet.d).split('').map(c => c.charCodeAt(0))); // Decode data from Base64
+  
+    const res = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, k, buf); // Decrypt the buffer
+    return JSON.parse(new TextDecoder().decode(res)); // Parse and return JSON
+  }
+
+
 //this is needed by the /oauth and /msauth routes 
 function generateCodeVerifier() {
     return crypto.randomBytes(32).toString('hex');
