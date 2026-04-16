@@ -516,7 +516,7 @@ export default {
                 spellchecklang: "german",
                 suggestions: true
             })
-            /*
+
             const inputOptions = {
                 'de-DE': this.$t("student.de"),
                 'en-GB': this.$t("student.en"),

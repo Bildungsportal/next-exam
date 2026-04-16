@@ -6,7 +6,7 @@ export class UdpBridge {
         if (isElectronWindow(window)) {
             // ELECTRON SETUP
             const dgram = window.require ? window.require('dgram') : require('dgram');
-            this.nativeClient = dgram.createSocket('udp4');
+            this.nativeClient = dgram.createSocket({ type: 'udp4', reuseAddr: true });
             console.log('UdpBridge: Running in Electron mode');
         } else {
             // CAPACITOR SETUP

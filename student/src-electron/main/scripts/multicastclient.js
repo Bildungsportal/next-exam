@@ -70,7 +70,7 @@ class MulticastClient {
      */
     init (gateway) {
         this.gateway = gateway
-        this.client = dgram.createSocket({ type: 'udp4', reuseAddr: true }) // reuseAddr ist wichtig für Windows
+        this.client = new UdpBridge()  // moving this here will allow to respawn it if binding fails
 
 
         this.client.on('error', (err) => {
@@ -90,7 +90,7 @@ class MulticastClient {
                     this.client.addMembership(this.MULTICAST_ADDR, config.hostip);
                     LoggingBridge.info(`UDP MC Client bound to ${bindAddr}:${this.PORT} and joined ${this.MULTICAST_ADDR}`)
                 } catch (e) {
-                    log.error(`Multicast Join failed: ${e.message}`);
+                    LoggingBridge.error(`Multicast Join failed: ${e.message}`);
                 }
             })
         }
