@@ -70,7 +70,7 @@ class MulticastClient {
      */
     init (gateway) {
         this.gateway = gateway
-        this.client = new UdpBridge()  // moving this here will allow to respawn it if binding fails
+        this.client = dgram.createSocket({ type: 'udp4', reuseAddr: true }) // reuseAddr ist wichtig für Windows
 
 
         this.client.on('error', (err) => {

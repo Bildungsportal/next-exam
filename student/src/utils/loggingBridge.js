@@ -28,7 +28,7 @@ import log from "electron-log";
 
 
 // class wraps logging for electron and capacitor
-class LoggingBridge {
+export class LoggingBridge {
     // constructor stores reference to target window
     constructor() {
         this.targetWindow = null;

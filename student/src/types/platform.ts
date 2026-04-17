@@ -1,11 +1,13 @@
 // Do not import from "electron" here – renderer gets ipcRenderer via preload (contextBridge); types from env.d.ts
+import {markRaw} from "vue";
+
 export interface ElectronWindow extends Window {
   ipcRenderer: NonNullable<Window['ipcRenderer']>;
   require: NodeJS.Require; // type only - runtime value is window.require
 }
 
 export function isElectronWindow(window: Window | ElectronWindow): window is ElectronWindow {
-  return typeof window !== 'undefined' && 'ipcRenderer' in window;
+  return window != null && 'ipcRenderer' in window;
 }
 
 // isIOS does a simple user agent based detection

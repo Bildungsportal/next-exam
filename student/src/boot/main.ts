@@ -35,7 +35,6 @@ export default defineBoot(async ( { app, router } ) => {
         }
     };
     app.config.globalProperties.$config = config;
-    window.config = config;
 
     app.use(i18n)
 // Das Plugin wird mit den Optionen installiert, die nun den globalen didOpen Hook enthalten.
@@ -52,7 +51,6 @@ export default defineBoot(async ( { app, router } ) => {
             }, 300);
         }
     })
-    multicastClient.init(config.gateway)
     LoggingBridge.init(window);
     NavigationHandler.init(LoggingBridge, multicastclient, config, router);
     IosTaskDispatcher.init(LoggingBridge, multicastclient, NavigationHandler);

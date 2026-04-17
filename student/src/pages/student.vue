@@ -215,7 +215,6 @@
 
 <script lang="ts">
 import validator from 'validator'
-import log from 'electron-log/renderer'
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {SignalBridge} from '../utils/signalBridge.js'
 import speedometer_img from 'src/assets/img/svg/speedometer.svg'
@@ -224,6 +223,7 @@ import login_students_img from 'src/assets/img/login_students.jpg'
 import emblem_warning_img from '/src/assets/img/svg/emblem-warning.svg'
 import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync } from '../utils/screenshotCapture.js'
 import { Exam } from '../types/api'
+import loggingBridge from "../utils/loggingBridge.js";
 
 
 // Capture unhandled promise rejections
@@ -309,6 +309,7 @@ export default {
         },
 
         async selectPreferredInterface() {
+            loggingBridge.info('selectPreferredInterface');
             if (this.activeDialog || !this.hostip?.availableInterfaces?.length) return;
             this.activeDialog = true;
             this.$swal.fire({

@@ -1,13 +1,13 @@
 import { UdpSocket } from 'capacitor-udp-socket';
 import {getElectronRequire, isElectronWindow} from '../types/platform.ts'
+import {markRaw} from "vue";
 
 export class UdpBridge {
     constructor() {
         if (isElectronWindow(window)) {
-            console.log('isElectronWindow', window)
             // ELECTRON SETUP
-            const require = getElectronRequire();
-            const dgram = require('dgram');
+            const electronrequire = getElectronRequire();
+            const dgram = electronrequire('dgram');
             this.nativeClient = dgram.createSocket({ type: 'udp4', reuseAddr: true });
             console.log('UdpBridge: Running in Electron mode');
         } else {
@@ -40,7 +40,7 @@ export class UdpBridge {
     }
 
     on(event, callback) {
-        if (isElectronWindow()) {
+        if (isElectronWindow(window)) {
             this.nativeClient.on(event, callback);
         } else {
             if (!this.listeners[event]) this.listeners[event] = [];
