@@ -1530,7 +1530,7 @@ computed: {
 
         // we save serverstatus everytime we start an exam - therefore exams can be resumed easily by the teacher if something wicked happens
         getPreviousServerStatus(){
-            let result = fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/getserverstatus/${this.servername}/${this.servertoken}`, { method: 'POST', headers: {'Content-Type': 'application/json' },})
+            let result = fetch(`https://${this.hostname}:${this.serverApiPort}/server/control/getserverstatus/${this.servername}/${this.servertoken}`, { method: 'POST', headers: {'Content-Type': 'application/json' },})
             .then( res => res.json())
             .then( async (response) => {
                 if (response.serverstatus === false) {
@@ -1589,7 +1589,7 @@ computed: {
          * this should be the goTo function from now on to update the backend in a single request
         */
         setServerStatus(){
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setserverstatus/${this.servername}/${this.servertoken}`, { 
+            fetch(`https://${this.hostname}:${this.serverApiPort}/server/control/setserverstatus/${this.servername}/${this.servertoken}`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json' },
                 body: JSON.stringify({ serverstatus: this.serverstatus })
