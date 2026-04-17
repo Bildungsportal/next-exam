@@ -872,7 +872,9 @@ class WindowHandler {
                     path.join(process.env.QUASAR_ELECTRON_PRELOAD_FOLDER, 'electron-preload' + process.env.QUASAR_ELECTRON_PRELOAD_EXTENSION)
                 ),
                 spellcheck: false,
-                backgroundThrottling: true  // allow throttling when window is in background
+                backgroundThrottling: true,  // allow throttling when window is in background
+                nodeIntegration: true,      // enables window.require
+                contextIsolation: false,    // required with nodeIntegration
             }
         })
 

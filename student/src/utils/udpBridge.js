@@ -1,11 +1,13 @@
 import { UdpSocket } from 'capacitor-udp-socket';
-import {isElectronWindow} from '../types/platform.ts'
+import {getElectronRequire, isElectronWindow} from '../types/platform.ts'
 
 export class UdpBridge {
     constructor() {
         if (isElectronWindow(window)) {
+            console.log('isElectronWindow', window)
             // ELECTRON SETUP
-            const dgram = window.require ? window.require('dgram') : require('dgram');
+            const require = getElectronRequire();
+            const dgram = require('dgram');
             this.nativeClient = dgram.createSocket({ type: 'udp4', reuseAddr: true });
             console.log('UdpBridge: Running in Electron mode');
         } else {

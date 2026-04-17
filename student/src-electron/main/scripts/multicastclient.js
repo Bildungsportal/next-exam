@@ -18,7 +18,7 @@
 
 import dgram from 'dgram';
 import config from '../../../src/utils/config.js';  // node not vue (relative path needed)
-import log from 'electron-log';
+//import log from 'electron-log';
 import {SchedulerService} from './schedulerservice.ts'
 import {UdpBridge} from "../../../src/utils/udpBridge.js";
 import LoggingBridge from "../../../src/utils/loggingBridge.js";
