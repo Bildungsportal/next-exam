@@ -27,7 +27,7 @@ import * as devtoolsInstaller from 'electron-devtools-installer';
 const __dirname = import.meta.dirname
 
 // Base path for public assets (icons, etc.): packaged = app.asar.unpacked/public, dev = project public
-function getPublicBase() {
+export function getPublicBase() {
   if (app.isPackaged) {
     const unpacked = join(process.resourcesPath, 'app.asar.unpacked', 'public');
     return fs.existsSync(unpacked) ? unpacked : join(process.resourcesPath, 'app.asar.unpacked');

@@ -20,8 +20,8 @@
 import fs from 'fs'
 //import i18n from '../../renderer/src/locales/locales.js'
 //const { t } = i18n.global
-import { BrowserWindow, ipcMain, dialog, session } from 'electron'
-import {join} from 'path'
+import { ipcMain, dialog, session } from 'electron'
+import { join } from 'path'
 import log from 'electron-log';
 import { networkInterfaces } from 'os'
 import { exec } from 'child_process';
@@ -31,180 +31,19 @@ import dns from 'dns'
 
 import server from "../../server/src/server.js"
 import checkDiskSpace from 'check-disk-space';
-
+import { enqueuePrintJob } from './printjobhandler.js'
 
 class IpcHandler {
     constructor () {
         this.multicastClient = null
         this.config = null
         this.WindowHandler = null
-        this.printQueue = []
-        this.isProcessingPrint = false
     }
     init (mc, config, wh, ch) {
         this.multicastClient = mc
         this.config = config
         this.WindowHandler = wh  
         this.CommunicationHandler = ch
-
-        /**
-         * Process print queue sequentially - one job at a time
-         */
-        this._processPrintQueue = async () => {
-            if (this.isProcessingPrint) {
-                return; // Already processing
-            }
-
-            this.isProcessingPrint = true;
-
-            while (this.printQueue.length > 0) {
-                const job = this.printQueue.shift(); // Get first job from queue
-                log.info(`ipchandler @ _processPrintQueue: Processing print job (${this.printQueue.length} remaining in queue)`);
-
-                try {
-                    await this._processPrintJob(job.docBase64, job.printerName, job.previewType);
-                    job.resolve(true);
-                } catch (error) {
-                    log.error(`ipchandler @ _processPrintQueue: Print job failed: ${error.message}`);
-                    job.reject(error);
-                }
-            }
-
-            this.isProcessingPrint = false;
-            log.info('ipchandler @ _processPrintQueue: Print queue empty, processing stopped');
-        };
-
-        /**
-         * Process a single print job - returns Promise that resolves after print callback completes
-         */
-        this._processPrintJob = async (docBase64, printerName, previewType) => {
-            return new Promise((resolve, reject) => {
-                let hiddenWin = new BrowserWindow({
-                    show: false,
-                    useContentSize: true, // Ensure width/height refers to content area
-                    webPreferences: {
-                        plugins: true,
-                        webSecurity: false,
-                        zoomFactor: 1.0  // Force 1:1 scaling to ignore system scale factor
-                    }
-                });
-                
-                // Set zoom factor to 1.0 to ignore system DPI scaling (fixes Chromium print bug)
-                hiddenWin.webContents.setZoomFactor(1.0);
-                
-                let dataUrl = ``;
-                if (previewType === "pdf") {
-                    dataUrl = `data:application/pdf;base64,${docBase64}`;
-                } 
-                else if (previewType === "image") {
-                    dataUrl = `data:image/jpeg;base64,${docBase64}`;
-                } else {
-                    log.error('ipchandler @ _processPrintJob: Invalid preview type!');
-                    if (hiddenWin && !hiddenWin.isDestroyed()) {
-                        hiddenWin.close();
-                    }
-                    reject(new Error('Invalid preview type'));
-                    return;
-                }
-
-                hiddenWin.on('closed', () => { hiddenWin = null; });
-
-                hiddenWin.webContents.on('did-stop-loading', async () => {
-                    try {
-                        const isPDFRendered = await hiddenWin.webContents.executeJavaScript(`
-                            new Promise(resolve => {
-                                let elapsed = 0;
-                                const interval = 500; // Check every 500 ms
-                                const timeout = 2000; // Maximum 2 seconds wait
-                                const checkPDFLoaded = () => {
-                                    const embed = document.querySelector('embed[type="application/pdf"]');
-                                    const img = document.querySelector('img');
-
-                                    if (embed && embed.clientHeight > 0) {
-                                        clearInterval(timer);
-                                        setTimeout(() => {
-                                            resolve(true); // PDF is assumed to be fully rendered
-                                        }, 1000);
-                                    } 
-                                    else if (img && img.clientHeight > 0) {
-                                        clearInterval(timer);
-                                        resolve(true); // Image is fully rendered
-                                    }    
-                                    else if (elapsed >= timeout) {
-                                        clearInterval(timer);
-                                        resolve(false); // Time expired, not rendered
-                                    } 
-                                    else { elapsed += interval; }
-                                };
-                                const timer = setInterval(checkPDFLoaded, interval);
-                            });
-                        `);
-                        
-                        if (isPDFRendered) {
-                            log.info(`ipchandler @ _processPrintJob: base64 ${previewType} received - printing on: ${printerName}`)
-                            
-                            // add timeout to avoid hanging queue when print callback never fires
-                            const printTimeout = setTimeout(() => {
-                                log.error(`ipchandler @ _processPrintJob: print job timeout for printer ${printerName}`);
-                                if (hiddenWin && !hiddenWin.isDestroyed()) {
-                                    hiddenWin.close();
-                                }
-                                reject(new Error('Print job timeout'));
-                            }, 10000);
-
-                            hiddenWin.webContents.print({ 
-                                silent: true, 
-                                deviceName: printerName,
-                                printBackground: true,
-                                scaleFactor: 1,
-                                pagesPerSheet: 1,
-                                landscape: false,
-                                pageSize: 'A4', 
-                                margins: {
-                                    marginType: 'none'
-                                }
-                            }, (success, failureReason) => {
-                                clearTimeout(printTimeout);
-                                // log if print job was handed over to OS or failed
-                                if (!success) {
-                                    log.error(`ipchandler @ _processPrintJob: print job failed for printer ${printerName}: ${failureReason || 'unknown reason'}`);
-                                    if (hiddenWin && !hiddenWin.isDestroyed()) {
-                                        hiddenWin.close();
-                                    }
-                                    reject(new Error(failureReason || 'Print job failed'));
-                                } else {
-                                    log.info(`ipchandler @ _processPrintJob: print job successfully handed over to OS for printer ${printerName}`);
-                                    if (hiddenWin && !hiddenWin.isDestroyed()) {
-                                        hiddenWin.close();
-                                    }
-                                    resolve(true);
-                                }
-                            });
-                        } else {
-                            log.error('ipchandler @ _processPrintJob: Rendering/Print failed!');
-                            if (hiddenWin && !hiddenWin.isDestroyed()) {
-                                hiddenWin.close();
-                            }
-                            reject(new Error('Rendering/Print failed'));
-                        }
-                    } catch (error) {
-                        log.error(`ipchandler @ _processPrintJob: Error during print job: ${error.message}`);
-                        if (hiddenWin && !hiddenWin.isDestroyed()) {
-                            hiddenWin.close();
-                        }
-                        reject(error);
-                    }
-                });
-
-                hiddenWin.loadURL(dataUrl).catch((error) => {
-                    log.error(`ipchandler @ _processPrintJob: Error loading URL: ${error.message}`);
-                    if (hiddenWin && !hiddenWin.isDestroyed()) {
-                        hiddenWin.close();
-                    }
-                    reject(error);
-                });
-            });
-        };
 
         /**
          *  Start BIP Login Sequence
@@ -710,31 +549,11 @@ class IpcHandler {
 
 
         /**
-         * Print a Document as base64 string via webcontents.print() without specific platformdependent libraries
-         * INFO: it is currently not possible to get a "finished-rendering" event from the chrome-pdf-plugin. therefore timeouts are used as a workaround
-         * Uses a print queue to handle multiple simultaneous requests sequentially
+         * Print a document as base64 (PDF or image); queue + raster pipeline live in printjobhandler.js
          */
-        ipcMain.handle('printBase64', async (event, docBase64, printerName, previewType) => {
+        ipcMain.handle('printBase64', async (event, docBase64, printerName, previewType, jobTitle) => {
             try {
-                return await new Promise((resolve, reject) => {
-                    // Add job to queue
-                    this.printQueue.push({
-                        docBase64,
-                        printerName,
-                        previewType,
-                        resolve,
-                        reject
-                    });
-
-                    log.info(`ipchandler @ printBase64: Print request added to queue (${this.printQueue.length} jobs in queue)`);
-
-                    // Start queue processing if not already running
-                    if (!this.isProcessingPrint) {
-                        this._processPrintQueue().catch((error) => {
-                            log.error(`ipchandler @ printBase64: Queue processing error: ${error.message}`);
-                        });
-                    }
-                });
+                return await enqueuePrintJob(docBase64, printerName, previewType, jobTitle)
             } catch (error) {
                 log.warn(`ipchandler @ printBase64: returning error to renderer: ${error.message}`);
                 return { success: false, error: error.message };

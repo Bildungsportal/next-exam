@@ -294,7 +294,7 @@ async function processPrintrequest(student){
         log.info(`filemanager @ managePrintrequest: direct print from ${student.clientname} accepted`)
         this.status(`Druckauftrag von ${student.clientname} verarbeitet`)
        
-        this.printBase64(student.printrequest, 'pdf')
+        this.printBase64(student.printrequest, 'pdf', `${student.clientname}.pdf`)
         return                   //if direct print is allowed this task ends here
     }
 
@@ -533,13 +533,20 @@ function sleep(ms) {
 
 
 //print pdf in focus - uses window.print()
-async function printBase64(documentBase64 = this.currentpreviewBase64, type=this.currentpreviewType){   //use currentpreview or a given base64 document
+async function printBase64(documentBase64 = this.currentpreviewBase64, type = this.currentpreviewType, jobTitle) {
     if (!this.defaultPrinter){
         this.showSetup()
         return
     }
+    const title = (jobTitle != null && String(jobTitle).trim() !== '')
+        ? String(jobTitle).trim()
+        : (this.currentpreviewname && String(this.currentpreviewname).trim()) || 'Next-Exam'
     this.visualfeedback(`Druckauftrag an Drucker übertragen`)
-    ipcRenderer.invoke("printBase64", documentBase64, this.defaultPrinter, type) 
+    try {
+        await ipcRenderer.invoke('printBase64', documentBase64, this.defaultPrinter, type, title)
+    } catch (e) {
+        log.error(`filemanager @ printBase64: ${e.message}`)
+    }
 }
 
 
