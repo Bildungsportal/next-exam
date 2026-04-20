@@ -69,14 +69,14 @@
                     class="invisible-button btn btn-outline-success p-1 me-2 mb-1 btn-sm "><img
                 src="/src/assets/img/svg/format-text-underline.svg" class="white" width="22" height="22"></button>
 
-            <button :title="$t('editor.heading1')" @click="editor.chain().focus().toggleHeading({ level: 1 }).run()"
+            <!-- <button :title="$t('editor.heading1')" @click="editor.chain().focus().toggleHeading({ level: 1 }).run()"
                     :class="{ 'is-active': editor.isActive('heading', { level: 1 }) }"
                     class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img
                 src="/src/assets/img/svg/h1.svg" width="22" height="22"></button>
             <button :title="$t('editor.heading2')" @click="editor.chain().focus().toggleHeading({ level: 2 }).run()"
                     :class="{ 'is-active': editor.isActive('heading', { level: 2 }) }"
                     class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/h2.svg" width="22" height="22"></button>
+                src="/src/assets/img/svg/h2.svg" width="22" height="22"></button> -->
             <button :title="$t('editor.heading3')" @click="editor.chain().focus().toggleHeading({ level: 3 }).run()"
                     :class="{ 'is-active': editor.isActive('heading', { level: 3 }) }"
                     class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img
@@ -89,10 +89,10 @@
                     :class="{ 'is-active': editor.isActive('heading', { level: 5 }) }"
                     class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img
                 src="/src/assets/img/svg/h5.svg" width="22" height="22"></button>
-            <button :title="$t('editor.heading6')" @click="editor.chain().focus().toggleHeading({ level: 6 }).run()"
+            <!-- <button :title="$t('editor.heading6')" @click="editor.chain().focus().toggleHeading({ level: 6 }).run()"
                     :class="{ 'is-active': editor.isActive('heading', { level: 6 }) }"
                     class="invisible-button btn btn-outline-secondary p-1 me-2 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/h6.svg" width="22" height="22"></button>
+                src="/src/assets/img/svg/h6.svg" width="22" height="22"></button> -->
 
 
             <button :title="$t('editor.subscript')" @click="editor.chain().focus().toggleSubscript().run()"
@@ -487,8 +487,8 @@
         <!-- PDF Preview Container -->
         <div
             id="preview"
-            :class="['fadeinfast', 'splitback', 'split-pane', 'split-pane--left', 'p-2', { 'splitback--empty': !pdfPreviewState }]"
-            :style="{ flexBasis: splitLeftPct + '%' }"
+            :class="['fadeinfast', 'splitback', 'split-pane', 'split-pane--left', 'p-0', { 'splitback--empty': !pdfPreviewState }]"
+            :style="{ flexBasis: splitLeftPct + '%', '--nx-preview-scroll-padding': '6px' }"
         >
             <WebviewPane
                 id="webview"
@@ -709,9 +709,12 @@ import {SignalBridge} from '../utils/signalBridge.js'
 const lowlight = createLowlight(common)
 
 // signalBridge instance centralizes ipc calls with platform checks
-const signalBridge = new SignalBridge(window);
+const signalBridge = new SignalBridge(window)
 
-
+// Default zoom for #editorcontainer (screen); @media print forces zoom 1 separately.
+const EDITOR_ZOOM_INITIAL = 1.6
+const EDITOR_ZOOM_MIN = 0.85
+const EDITOR_ZOOM_MAX = 2.2
 
 export default {
     components: {
@@ -767,7 +770,7 @@ export default {
             wordcount: 0,
             now: 0,
             pincode: this.$route.params.pincode,
-            zoom: 1.5,
+            zoom: EDITOR_ZOOM_INITIAL,
             battery: null,
             proseMirrorMargin: '30mm',
             editorWidth: '210mm',
@@ -1504,11 +1507,11 @@ export default {
             })
         },
         zoomin() {
-            if (this.zoom < 4) this.zoom += 0.1
+            if (this.zoom < EDITOR_ZOOM_MAX) this.zoom = Math.min(EDITOR_ZOOM_MAX, this.zoom + 0.1)
             document.getElementById(`editorcontainer`).style.zoom = this.zoom
         },
         zoomout() {
-            if (this.zoom > 0.5) this.zoom -= 0.1
+            if (this.zoom > EDITOR_ZOOM_MIN) this.zoom = Math.max(EDITOR_ZOOM_MIN, this.zoom - 0.1)
             document.getElementById(`editorcontainer`).style.zoom = this.zoom
         },
         setCSSVariable(variableName, value) {
@@ -1600,7 +1603,6 @@ export default {
         async toggleSplitview() {
             this.splitview = !this.splitview;
             this.webviewVisible = false
-            this.zoom = 1
             this.LTdisable();  //close lt
             await this.sleep(1000) //wait for re-rendering of #preview div 
 
@@ -1989,7 +1991,6 @@ export default {
 
         console.log(`editor @ mounted: Component mounted, initializing editor`)
         this.createEditor(); // this initializes the editor
-        this.zoomin()
         this.getExamMaterials()
 
       
@@ -2371,7 +2372,7 @@ Other Styles
     margin-left: auto;
     margin-right: auto;
     margin-bottom: 50px;
-    zoom: 1;
+    zoom: 1.6;
     font-family: var(--js-fontfamily);
 
 }

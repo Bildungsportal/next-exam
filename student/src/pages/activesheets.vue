@@ -66,8 +66,8 @@
     <div :class="splitview ? 'split-view-container' : ''">
         <div
             id="preview"
-            :class="splitview ? ['p-2', 'split-pane', 'split-pane--left', 'splitback', { 'splitback--empty': !pdfPreviewState }] : 'p-4'"
-            :style="splitview ? { flexBasis: splitLeftPct + '%' } : { '--nx-preview-top-offset': '60px', '--nx-preview-content-width': '90%' }"
+            :class="splitview ? ['p-0', 'split-pane', 'split-pane--left', 'splitback', { 'splitback--empty': !pdfPreviewState }] : 'p-4'"
+            :style="splitview ? { flexBasis: splitLeftPct + '%', '--nx-preview-scroll-padding': '6px' } : { '--nx-preview-top-offset': '60px', '--nx-preview-content-width': '90%' }"
         >
         <WebviewPane
             id="webview"
