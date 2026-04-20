@@ -1,5 +1,5 @@
 <template>
-  <div class="column" style="height: 100%">
+  <div class="column nx-rdp-root" style="height: 100%; position: relative;">
     <!-- HEADER START -->
     <exam-header
         :serverstatus="serverstatus"
@@ -84,7 +84,11 @@
 
 
     <!-- angabe/pdf preview start -->
-    <div id="preview" class="fadeinfast p-4">
+    <div
+        id="preview"
+        class="fadeinfast p-4"
+        style="--nx-preview-chrome-top: 80px; --nx-preview-top-offset: 0px; --nx-preview-content-width: 90%;"
+    >
         <WebviewPane
             id="webview"
             :src="urlForWebview || ''"
@@ -428,7 +432,7 @@ export default {
     width: 100% !important;
     display: block;
     position: relative;
-    top: 0;
+    top: 0 !important;
     left: 0;
 }
 
@@ -462,11 +466,12 @@ export default {
 #preview {
     display: none;
     position: absolute;
-    top: 0;
+    top: var(--nx-preview-chrome-top, 148px);
     left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgba(0, 0, 0, 0.4);
+    width: 100%;
+    box-sizing: border-box;
+    height: calc(100% - var(--nx-preview-chrome-top, 148px));
+  
     z-index: 100000;
 }
 

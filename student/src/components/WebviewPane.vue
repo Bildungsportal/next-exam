@@ -1,5 +1,5 @@
 <template>
-  <div v-show="visible" :id="id" class="position-relative w-100">
+  <div v-show="visible" :id="id" class="position-relative w-100" style="height: 100%; min-height: 0;">
     
       <ul
       class="nav nav-tabs position-absolute top-0 start-0 end-0 w-100 bg-white"
