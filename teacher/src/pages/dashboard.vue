@@ -1529,6 +1529,29 @@ computed: {
             return value.length > len ? value.substr(0, len) + '...' : value;
         },
 
+        migrateServerStatus() {
+            const status = this.serverstatus;
+            if (!status || typeof status !== 'object') return;
+            if (!status.examSections || typeof status.examSections !== 'object') status.examSections = {};
+
+            for (const section of Object.values(status.examSections)) {
+                if (!section || typeof section !== 'object') continue;
+
+                for (const groupKey of ['groupA', 'groupB']) {
+                    if (!section[groupKey] || typeof section[groupKey] !== 'object') {
+                        section[groupKey] = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} };
+                    }
+
+                    const group = section[groupKey];
+                    if (!Array.isArray(group.users)) group.users = [];
+                    if (!Array.isArray(group.examInstructionFiles)) group.examInstructionFiles = [];
+                    if (!Array.isArray(group.allowedUrls)) group.allowedUrls = [];
+                    if (!group.examConfig || typeof group.examConfig !== 'object') group.examConfig = {};
+                    if (!group.examConfig.activeSheets || typeof group.examConfig.activeSheets !== 'object') group.examConfig.activeSheets = {};
+                }
+            }
+        },
+
         // we save serverstatus everytime we start an exam - therefore exams can be resumed easily by the teacher if something wicked happens
         getPreviousServerStatus(){
             let result = fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/getserverstatus/${this.servername}/${this.servertoken}`, { method: 'POST', headers: {'Content-Type': 'application/json' },})
@@ -1540,6 +1563,7 @@ computed: {
                     return
                 }
                 this.serverstatus = response.serverstatus // we slowly move things over to a centra serverstatus object
+                this.migrateServerStatus()
                 if (!this.serverstatus.backupdirectory) {  // preserve backupdirectory set in UI if not in saved status
                     this.serverstatus.backupdirectory = this.config.backupdirectory || false
                 }

@@ -36,6 +36,14 @@ export async function loadPDF(file, base64 = false, zoom=180, submission=false, 
 
     const pdfEmbed = document.querySelector("#pdfembed");
     pdfEmbed.style.backgroundImage = ``;  // clear a previous image preview
+    try {
+        const filename = typeof file === 'string' ? file : (file?.filename || file?.name || file?.originalname || '');
+        pdfEmbed.dataset.filename = filename;
+        pdfEmbed.dataset.previewKind = 'pdf';
+        pdfEmbed.dataset.previewUrl = '';
+    } catch (e) {
+        console.warn('filehandler @ loadPDF: cannot set pdfembed dataset filename', e);
+    }
     
     if (base64){
         const response = await fetch(file.filecontent); // lade die Data-URL  //filecontent contains a url data:application/pdf;base64,b23d342dsn2....
@@ -74,25 +82,24 @@ export async function loadPDF(file, base64 = false, zoom=180, submission=false, 
         const zoomInButton = document.getElementById("zoomIn");
         const zoomOutButton = document.getElementById("zoomOut");
 
-        // Entferne bestehende Event-Listener, bevor neue hinzugefügt werden
-        zoomInButton.removeEventListener('click', this.zoomInHandler);
-        zoomOutButton.removeEventListener('click', this.zoomOutHandler);
+        // Some views use a rendered PDF preview that manages zoom internally.
+        // Only attach legacy zoom handlers if the DOM buttons exist.
+        if (zoomInButton && zoomOutButton) {
+            zoomInButton.removeEventListener('click', this.zoomInHandler);
+            zoomOutButton.removeEventListener('click', this.zoomOutHandler);
 
-        // Definiere neue Event-Listener
-        this.zoomInHandler = () => {
-            this.currentPDFZoom += 20; // Erhöht den Zoom um 10%
-            this.loadPDF(file, base64, this.currentPDFZoom, submission)
-            
-        };
-        this.zoomOutHandler = () => {
-            this.currentPDFZoom = Math.max(40, this.currentPDFZoom - 20); // Verhindert, dass der Zoom unter 40% geht
-          
-            this.loadPDF(file, base64, this.currentPDFZoom, submission)
-            
-        };
-        // Füge die Event-Listener erneut hinzu
-        zoomInButton.addEventListener('click', this.zoomInHandler);
-        zoomOutButton.addEventListener('click', this.zoomOutHandler);
+            this.zoomInHandler = () => {
+                this.currentPDFZoom += 20;
+                this.loadPDF(file, base64, this.currentPDFZoom, submission)
+            };
+            this.zoomOutHandler = () => {
+                this.currentPDFZoom = Math.max(40, this.currentPDFZoom - 20);
+                this.loadPDF(file, base64, this.currentPDFZoom, submission)
+            };
+
+            zoomInButton.addEventListener('click', this.zoomInHandler);
+            zoomOutButton.addEventListener('click', this.zoomOutHandler);
+        }
     }
     catch(e){
         console.error("filehandler @ loadPDF: error", e)
@@ -276,6 +283,12 @@ export async function loadImage(file, base64=false){
 
 
     const pdfEmbed = document.querySelector("#pdfembed");
+    try {
+        pdfEmbed.dataset.previewKind = 'image';
+        pdfEmbed.dataset.previewUrl = this.currentpreview || '';
+    } catch (e) {
+        console.warn('filehandler @ loadImage: cannot set pdfembed preview dataset', e);
+    }
     
     // Create an image element to determine the dimensions of the image
     // always resize the pdfembed div to the same aspect ratio of the given image

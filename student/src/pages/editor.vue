@@ -445,7 +445,7 @@
 
     <!-- NORMAL VIEW START -->
     <!-- PDF Preview Container -->
-    <div v-if="!splitview" id="preview" class=" p-4">
+    <div v-if="!splitview" id="preview" class="p-4 editor-preview-overlay">
         <WebviewPane
             id="webview"
             :src="urlForWebview"
@@ -455,7 +455,7 @@
             @close="hidepreview"
         />
 
-        <PdfviewPane
+        <PdfviewPaneRendered
             :localLockdown="localLockdown"
             :examtype="examtype"
             :toolbar="pdfPreviewUi"
@@ -482,10 +482,13 @@
 
     <!-- SPLITVIEW START -->
     <div v-if="splitview" class="split-view-container"
-         style="overflow: hidden; display: flex !important; flex-direction: row !important; height: 100% !important;">
+         style="overflow: hidden;">
         <!-- PDF Preview Container -->
-        <div id="preview" class="fadeinfast splitback"
-             style="background-repeat: no-repeat; background-position: center; flex-grow: 1 !important; display: block !important; position: static !important; top: 0 !important; left: auto !important; width: auto !important; height: auto !important; background-color: transparent !important; z-index: auto !important; backdrop-filter: none !important;">
+        <div
+            id="preview"
+            class="fadeinfast splitback split-pane split-pane--left"
+            :style="{ flexBasis: splitLeftPct + '%' }"
+        >
             <WebviewPane
                 id="webview"
                 :src="urlForWebview"
@@ -493,37 +496,31 @@
                 :allowed-url="urlForWebview"
                 :block-external="true"
             />
-            <div class="embed-container"
-                 style="position: relative !important; top: 0 !important; left: 0 !important; transform: none !important; display: block !important; height:100% !important; margin-top:0;">
-                <embed src="" id="pdfembed"
-                       style="border-radius:0 !important; background-size:contain; width:100% !important; height: 100% !important; background-color:transparent !important;"></embed>
-                <div v-show="examtype === 'editor' && pdfPreviewUi.showInsert" class="btn btn-secondary white splitinsert d-flex" id="insert-button" @click="insertImage()"
-                     :title="$t('editor.insert')"
-                     style="position: absolute; top: 60px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
-
-                <div v-show="!localLockdown && pdfPreviewUi.showPrint" class="btn  btn-secondary splitprint d-flex" id="print-button" @click="printBase64(true)"
-                     :title="$t('editor.print')"
-                     style="position: absolute; top: 110px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
-                <div v-show="!localLockdown && pdfPreviewUi.showSend" class="btn  btn-secondary splitsend d-flex" id="send-button" @click="printBase64()"
-                     :title="$t('editor.send')"
-                     style="position: absolute; top: 144px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
-
-                <div v-show="pdfPreviewUi.showZoom" id="pdfZoom"
-                     style="position: absolute; top:40px; right:20px; z-index:100000; height: 64px;">
-                    <button class="btn btn-secondary  white  splitzoomin"
-                            style="width:70px; height: 32px; margin-bottom:2px;  background-repeat: no-repeat; background-position: center; "
-                            id="zoomIn"></button>
-                    <br>
-                    <button class="btn btn-secondary white   splitzoomout"
-                            style="width:70px; height: 32px; margin-bottom:2px; background-repeat: no-repeat; background-position: center;"
-                            id="zoomOut"></button>
-                </div>
-
-            </div>
+            <PdfviewPaneRendered
+                :localLockdown="localLockdown"
+                :examtype="examtype"
+                :toolbar="pdfPreviewUi"
+                :showClose="false"
+                @close="hidepreview"
+                @printBase64="printBase64"
+                @insertImage="insertImage"
+            />
         </div>
+        <div
+            class="split-divider"
+            role="separator"
+            aria-orientation="vertical"
+            :aria-valuenow="Math.round(splitLeftPct)"
+            aria-valuemin="20"
+            aria-valuemax="80"
+            @pointerdown.prevent="startSplitResize"
+            title="Ziehen zum Anpassen"
+        ></div>
         <!-- Editor Container -->
         <div id="editormaincontainer"
-             style="min-width:230mm!important;padding:10px; overflow-x: auto !important; overflow-y: scroll !important; background-color: #eeeefa !important;">
+             class="split-pane split-pane--right"
+             :style="{ flexBasis: (100 - splitLeftPct) + '%' }"
+             style="padding:10px; overflow-x: auto !important; overflow-y: scroll !important; background-color: #eeeefa !important;">
             <div id="editorcontainer" class="shadow">
                 <!-- Wrapper with dynamic key so EditorContent is not hoisted and ref owner context is preserved -->
                 <div v-if="editor" :key="'split-' + (editor ? 'ready' : '')">
@@ -687,7 +684,7 @@ import moment from 'moment-timezone';
 
 import ExamHeader from '../components/ExamHeader.vue';
 import WebviewPane from '../components/WebviewPane.vue'
-import PdfviewPane from '../components/PdfviewPane.vue'
+import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {
@@ -718,7 +715,7 @@ export default {
         EditorContent,
         ExamHeader,
         WebviewPane,
-        PdfviewPane
+        PdfviewPaneRendered
     },
     data() {
         const status = this.$route.params.serverstatus;
@@ -798,6 +795,8 @@ export default {
             LTactive: false,
             spellcheckFallback: false,
             splitview: false,
+            splitLeftPct: 50,
+            _splitResizing: false,
             currentPDFZoom: 80,
             currentPDFData: null,
             ignoreList: new Set(),
@@ -894,6 +893,39 @@ export default {
         LTresetIgnorelist: LTresetIgnorelist,
         LTbuildOffsetMap: LTbuildOffsetMap,
         LTfindByOffsetMap: LTfindByOffsetMap,
+
+        startSplitResize(e) {
+            // Use pointer events to support mouse + touch.
+            if (!this.splitview) return;
+            this._splitResizing = true;
+            window.addEventListener('pointermove', this.onSplitResizeMove, { passive: false });
+            window.addEventListener('pointerup', this.stopSplitResize, { passive: true });
+            window.addEventListener('pointercancel', this.stopSplitResize, { passive: true });
+            this.onSplitResizeMove(e);
+        },
+
+        onSplitResizeMove(e) {
+            if (!this._splitResizing) return;
+            e.preventDefault();
+            const container = document.querySelector('.split-view-container');
+            if (!container) return;
+            const rect = container.getBoundingClientRect();
+            const x = Math.min(Math.max(e.clientX - rect.left, 0), rect.width);
+            const pct = (x / rect.width) * 100;
+            const minLeftPx = 320;
+            const minRightPx = 420;
+            const minPct = (minLeftPx / rect.width) * 100;
+            const maxPct = 100 - (minRightPx / rect.width) * 100;
+            const clamped = Math.min(Math.max(pct, minPct), maxPct);
+            this.splitLeftPct = Math.min(80, Math.max(20, Math.round(clamped * 10) / 10));
+        },
+
+        stopSplitResize() {
+            this._splitResizing = false;
+            window.removeEventListener('pointermove', this.onSplitResizeMove);
+            window.removeEventListener('pointerup', this.stopSplitResize);
+            window.removeEventListener('pointercancel', this.stopSplitResize);
+        },
 
         LTshowWord(word) {
             this.currentLTword = word
@@ -2052,7 +2084,7 @@ export default {
         this.fetchinfointerval.start();
 
         this.saveContentCallback = () => this.saveContent(true, 'auto');  // wegs 2 parameter muss dieser umweg genommen werden sonst kann ich den eventlistener nicht mehr entfernen
-        this.saveinterval = new SchedulerService(20000);
+        this.saveinterval = new SchedulerService(2000);
         this.saveinterval.addEventListener('action', this.saveContentCallback);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
         this.saveinterval.start();
 
@@ -2130,6 +2162,7 @@ export default {
         document.removeEventListener('click', this.hideSpellcheckMenu);
         this.editorcontentcontainer.removeEventListener('mouseup', this.getSelectedTextInfo);
         document.getElementById('editormaincontainer').removeEventListener('scroll', this.LTupdateHighlights, {passive: true});
+        this.stopSplitResize()
 
         this.saveinterval.removeEventListener('action', this.saveContentCallback);
 
@@ -2188,9 +2221,10 @@ export default {
 @media print { //this controls how the editor view is printed (to pdf)
 
 
-    #editortoolbar, #webview, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer, span.NXTEhighlight::after, #highlight-layer, #languagetool, #clipboard-sidebar, .split-view-container, #preview, #pdfembed {
+    #editortoolbar, #webview, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer, span.NXTEhighlight::after, #highlight-layer, #languagetool, #clipboard-sidebar, #preview, #pdfembed, .pdf-toolbar, .split-divider {
         display: none !important;
     }
+
     body, #vuexambody {
         position: relative !important;
         height: auto !important;
@@ -2439,8 +2473,78 @@ Other Styles
 
 }
 
+.editor-preview-overlay .embed-container {
+    width: 92vw;
+    height: calc(100vh - 60px - 120px);
+    margin: calc(60px + 20px) auto 40px;
+}
 
-#insert-button {
+.split-pane {
+    flex: 0 0 auto;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.split-pane--left {
+    background-repeat: no-repeat;
+    background-position: center;
+    background-color: transparent;
+    position: static;
+    top: 0;
+    left: auto;
+    width: auto;
+    height: auto;
+    z-index: auto;
+    backdrop-filter: none;
+    display: block;
+}
+
+.split-divider {
+    flex: 0 0 10px;
+    cursor: col-resize;
+    position: relative;
+    background: transparent;
+    touch-action: none;
+}
+
+.split-divider::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 4px;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.split-divider:hover::before {
+    background: rgba(13, 110, 253, 0.55);
+}
+
+.split-view-container {
+    user-select: none;
+    display: flex ;
+    flex-direction: row ;
+    height: 100% ;
+}
+
+/* Splitview must override overlay preview hidden state */
+.split-view-container #preview {
+    display: block;
+    position: static;
+    width: auto;
+    height: auto;
+    background-color: transparent;
+    backdrop-filter: none;
+}
+
+.split-view-container #editorcontent,
+.split-view-container .pdf-scroll-container {
+    user-select: text;
+}
+
+
+.splitinsert {
     border: none;
     border-radius: 0px;
     border-top-right-radius: 6px;
@@ -2456,12 +2560,12 @@ Other Styles
     margin-top: 30px;
 }
 
-#insert-button img {
+.splitinsert img {
     width: 32px;
     height: 52px;
 }
 
-#print-button {
+.splitprint {
     border: none;
     border-radius: 0px;
     border-top-right-radius: 6px;
@@ -2476,12 +2580,12 @@ Other Styles
     margin-top: 30px;
 }
 
-#print-button img {
+.splitprint img {
     width: 32px;
     height: 52px;
 }
 
-#send-button {
+.splitsend {
     border: none;
     border-radius: 0px;
     border-top-right-radius: 6px;
@@ -2496,7 +2600,7 @@ Other Styles
     margin-top: 10px;
 }
 
-#send-button img {
+.splitsend img {
     width: 32px;
     height: 52px;
 }

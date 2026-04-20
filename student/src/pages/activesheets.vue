@@ -69,7 +69,7 @@
             :block-external="true"
             @close="hidepreview"
         />
-        <PdfviewPane
+        <PdfviewPaneRendered
             :localLockdown="localLockdown"
             :examtype="examtype"
             :toolbar="pdfPreviewUi"
@@ -106,7 +106,7 @@ import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import { getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../utils/filehandler.js'
-import PdfviewPane from '../components/PdfviewPane.vue'
+import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue';
 import PdfOverlay from '../components/PdfRenderer.vue';
 import {SignalBridge} from '../utils/signalBridge.js'
@@ -180,7 +180,7 @@ export default {
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
         }
     }, 
-    components: { ExamHeader, PdfviewPane, WebviewPane, PdfOverlay },  
+    components: { ExamHeader, PdfviewPaneRendered, WebviewPane, PdfOverlay },  
     methods: { 
         // ... (Deine existierenden Methoden: getExamMaterials, loadPDF, etc. behalten) ...
         // from filehandler.js

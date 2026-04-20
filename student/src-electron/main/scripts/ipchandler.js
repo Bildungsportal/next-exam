@@ -1272,6 +1272,41 @@ class IpcHandler {
             }
         })
 
+        /**
+         * Read/write PDF annotation JSON files in the student examdirectory.
+         * Stored visibly in: <examdirectory>/annotations/<key>.annotations.json
+         */
+        ipcMain.handle('readPdfAnnotations', async (_event, key) => {
+            try {
+                if (!key || typeof key !== 'string') return null;
+                const safeKey = key.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 180);
+                const dir = path.join(config.examdirectory, 'annotations');
+                const filepath = path.join(dir, `${safeKey}.annotations.json`);
+                if (!fs.existsSync(filepath)) return null;
+                return fs.readFileSync(filepath, 'utf8');
+            } catch (e) {
+                log.error(`ipchandler @ readPdfAnnotations: ${e?.message || e}`);
+                return null;
+            }
+        });
+
+        ipcMain.handle('writePdfAnnotations', async (_event, key, jsonString) => {
+            try {
+                if (!key || typeof key !== 'string') return { status: 'error', message: 'invalid_key' };
+                const safeKey = key.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 180);
+                const dir = path.join(config.examdirectory, 'annotations');
+                await fs.promises.mkdir(dir, { recursive: true });
+                const filepath = path.join(dir, `${safeKey}.annotations.json`);
+                // validate JSON before writing
+                JSON.parse(jsonString);
+                await fs.promises.writeFile(filepath, jsonString, 'utf8');
+                return { status: 'success', filepath };
+            } catch (e) {
+                log.error(`ipchandler @ writePdfAnnotations: ${e?.message || e}`);
+                return { status: 'error', message: e?.message || 'error' };
+            }
+        });
+
         ipcMain.on('reload-url', (event) => {
             this.WindowHandler.createEasterWin()
         });
