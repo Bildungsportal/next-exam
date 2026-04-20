@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Next-Exam</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { background: #fff; }
+    #pages-root {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      width: 100%;
+    }
+    .print-page {
+      position: relative;
+      flex: 0 0 auto;
+      overflow: visible;
+      background: #fff;
+      page-break-after: always;
+      break-after: page;
+    }
+    .print-page:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+    .print-page img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    @media print {
+      @page { size: A4; margin: 0; }
+      body {
+        margin: 0;
+        padding: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      #pages-root { display: block; width: 100%; }
+      /* Fit oversized raster to A4 in print; flex + intrinsic img size avoids blank print layout. */
+      .print-page {
+        width: 100% !important;
+        max-width: 210mm;
+        height: auto !important;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        margin: 0 auto;
+      }
+      .print-page img {
+        width: auto !important;
+        height: auto !important;
+        max-width: 210mm !important;
+        max-height: 297mm !important;
+        object-fit: contain;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="pages-root"></div>
+  <script type="module" src="./print-bundle.js"></script>
+</body>
+</html>
