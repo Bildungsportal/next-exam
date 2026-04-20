@@ -38,51 +38,51 @@ export class LoggingBridge {
         this.targetWindow = window;
     }
 
-    error(message) {
+    error(...message) {
         const win = this.targetWindow
 
         if (isElectronWindow(win)) {
-            log.error(message)
+            log.error(...message)
         }
 
         if (isIOS()) {
-            console.error(message)
+            console.error(...message)
         }
     }
 
-    warn(message) {
+    warn(...message) {
         const win = this.targetWindow
 
         if (isElectronWindow(win)) {
-            log.warn(message)
+            log.warn(...message)
         }
 
         if (isIOS()) {
-            console.warn(message)
+            console.warn(...message)
         }
     }
 
-    info(message) {
+    info(...message) {
         const win = this.targetWindow
 
         if (isElectronWindow(win)) {
-            log.info(message)
+            log.info(...message)
         }
 
         if (isIOS()) {
-            console.info(message)
+            console.info(...message)
         }
     }
 
-    debug(message) {
+    debug(...message) {
         const win = this.targetWindow
 
         if (isElectronWindow(win)) {
-            log.debug(message)
+            log.debug(...message)
         }
 
         if (isIOS()) {
-            console.debug(message)
+            console.debug(...message)
         }
     }
 }

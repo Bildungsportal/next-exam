@@ -75,11 +75,16 @@ export class SignalBridge {
         const win = this.targetWindow
 
         if (isElectronWindow(win) && win.ipcRenderer && typeof win.ipcRenderer.invoke === 'function') {
-            return await win.ipcRenderer.invoke(channel, ...args)
+            loggingBridge.info('signalBridge invoke electron call', channel, ...args)
+            const response = await win.ipcRenderer.invoke(channel, ...args);
+            loggingBridge.info(`signalBridge invoke electron ${channel}, got response: `, response)
+            return response
         }
 
         if (isIOS()) {
-            return await this.iosTaskDispatcher.dispatch(channel, ...args)
+            let response = await this.iosTaskDispatcher.dispatch(channel, ...args);
+            loggingBridge.info(`signalBridge invoke ios ${channel}, got response: `, response)
+            return response
         }
 
         // log unsupported platform information
