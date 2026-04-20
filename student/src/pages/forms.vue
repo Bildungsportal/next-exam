@@ -103,10 +103,11 @@
             :block-external="true"
             @close="hidepreview"
         />
-        <PdfviewPane
+        <PdfviewPaneRendered
             :localLockdown="localLockdown"
             :examtype="examtype"
             :toolbar="pdfPreviewUi"
+            :preview="pdfPreviewState"
             @close="hidepreview"
         />
     </div>
@@ -136,7 +137,7 @@ import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
-import PdfviewPane from '../components/PdfviewPane.vue'
+import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue'
 import {getExamMaterials, loadImage, loadPDF, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import {isElectronWindow} from "../types/platform.ts";
@@ -195,6 +196,7 @@ export default {
             _onPreviewClick: null,
             internetCheckCounter: 0,
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
+            pdfPreviewState: null,
         }
     },
   computed: {
@@ -202,7 +204,7 @@ export default {
             return this.formsUrl || 'about:blank'
         }
   },
-    components: {ExamHeader, PdfviewPane, WebviewPane},
+    components: {ExamHeader, PdfviewPaneRendered, WebviewPane},
     async mounted() {
         this.currentFile = this.clientname
         this.entrytime = new Date().getTime()
@@ -387,9 +389,9 @@ export default {
 
         hidepreview() {
             resetPdfPreviewToolbar(this);
+            this.pdfPreviewState = null;
             let preview = document.querySelector("#preview")
             preview.style.display = 'none';
-            preview.setAttribute("src", "about:blank");
             URL.revokeObjectURL(this.currentpreview);
         },
 

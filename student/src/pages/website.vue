@@ -66,10 +66,11 @@
             :block-external="true"
             @close="hidepreview"
         />
-        <PdfviewPane
+        <PdfviewPaneRendered
             :localLockdown="localLockdown"
             :examtype="examtype"
             :toolbar="pdfPreviewUi"
+            :preview="pdfPreviewState"
             @close="hidepreview"
         />
     </div>
@@ -110,7 +111,7 @@ import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import { getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../utils/filehandler.js'
-import PdfviewPane from '../components/PdfviewPane.vue'
+import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue';
 import {SignalBridge} from '../utils/signalBridge.js'
 
@@ -176,9 +177,10 @@ export default {
             _onPreviewClick: null,
             internetCheckCounter:0,
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
+            pdfPreviewState: null,
         }
     }, 
-    components: { ExamHeader, PdfviewPane, WebviewPane },  
+    components: { ExamHeader, PdfviewPaneRendered, WebviewPane },  
     methods: { 
 
         // from filehandler.js
@@ -197,9 +199,9 @@ export default {
         
         hidepreview(){
             resetPdfPreviewToolbar(this);
+            this.pdfPreviewState = null;
             let preview = document.querySelector("#preview")
             preview.style.display = 'none';
-            preview.setAttribute("src", "about:blank");
             URL.revokeObjectURL(this.currentpreview);
         },
 

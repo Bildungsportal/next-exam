@@ -16,6 +16,14 @@ export function resetPdfPreviewToolbar(vm) {
     });
 }
 
+/** showUrl() hides .embed-container; clear that inline style when showing PDF/image again. */
+function restorePdfPreviewRoot() {
+    const preview = document.querySelector('#preview');
+    if (!preview) return;
+    const root = preview.querySelector('.embed-container');
+    if (root) root.style.removeProperty('display');
+}
+
 // fetch file from disc - show preview
 export async function loadPDF(file, base64 = false, zoom=180, submission=false, type="send"){
 
@@ -30,26 +38,15 @@ export async function loadPDF(file, base64 = false, zoom=180, submission=false, 
     this.currentPDFZoom = zoom
     URL.revokeObjectURL(this.currentpreview);
     this.webviewVisible = false
-
-    const embedcontainer = document.querySelector(".embed-container");
-    embedcontainer.style.display = 'flex';
-
-    const pdfEmbed = document.querySelector("#pdfembed");
-    pdfEmbed.style.backgroundImage = ``;  // clear a previous image preview
-    try {
-        const filename = typeof file === 'string' ? file : (file?.filename || file?.name || file?.originalname || '');
-        pdfEmbed.dataset.filename = filename;
-        pdfEmbed.dataset.previewKind = 'pdf';
-        pdfEmbed.dataset.previewUrl = '';
-    } catch (e) {
-        console.warn('filehandler @ loadPDF: cannot set pdfembed dataset filename', e);
-    }
+    const filename = typeof file === 'string' ? file : (file?.filename || file?.name || file?.originalname || '');
+    let fallbackUrl = '';
     
     if (base64){
         const response = await fetch(file.filecontent); // lade die Data-URL  //filecontent contains a url data:application/pdf;base64,b23d342dsn2....
         const blob = await response.blob(); // konvertiere in Blob
         this.currentpreview = URL.createObjectURL(blob); // erzeuge Object URL
         this.currentpreviewBase64 = file.filecontent.split(',')[1];  // we only need the base64 data not the complete url
+        fallbackUrl = file.filecontent || '';
     }
     else {   //fetch file from filesystem
         let data = await signalBridge.invoke('getpdfasync', file )
@@ -70,51 +67,19 @@ export async function loadPDF(file, base64 = false, zoom=180, submission=false, 
         this.currentpreviewBase64 = Buffer.from(data).toString('base64');
     }
 
-    if(!this.splitview){
-        pdfEmbed.style.height = "80vh";
-        pdfEmbed.style.width = "90vw";  
-    }
-    else {   // SPLITVIEW
-
-    }
-
-    try{
-        const zoomInButton = document.getElementById("zoomIn");
-        const zoomOutButton = document.getElementById("zoomOut");
-
-        // Some views use a rendered PDF preview that manages zoom internally.
-        // Only attach legacy zoom handlers if the DOM buttons exist.
-        if (zoomInButton && zoomOutButton) {
-            zoomInButton.removeEventListener('click', this.zoomInHandler);
-            zoomOutButton.removeEventListener('click', this.zoomOutHandler);
-
-            this.zoomInHandler = () => {
-                this.currentPDFZoom += 20;
-                this.loadPDF(file, base64, this.currentPDFZoom, submission)
-            };
-            this.zoomOutHandler = () => {
-                this.currentPDFZoom = Math.max(40, this.currentPDFZoom - 20);
-                this.loadPDF(file, base64, this.currentPDFZoom, submission)
-            };
-
-            zoomInButton.addEventListener('click', this.zoomInHandler);
-            zoomOutButton.addEventListener('click', this.zoomOutHandler);
-        }
-    }
-    catch(e){
-        console.error("filehandler @ loadPDF: error", e)
-    }
-
-
-
-
-    // pdf anzeigen
-    pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=${this.currentPDFZoom}`);
+    this.pdfPreviewState = {
+        kind: 'pdf',
+        url: this.currentpreview,
+        filename,
+        fallbackUrl,
+    };
 
 
 
     //hide/show some buttons
-    document.querySelector("#preview").style.display = 'block';
+    const preview = document.querySelector("#preview");
+    if (preview) preview.style.display = 'block';
+    restorePdfPreviewRoot();
 
     Object.assign(this.pdfPreviewUi, {
         showInsert: false,
@@ -266,8 +231,7 @@ export async function loadImage(file, base64=false){
     URL.revokeObjectURL(this.currentpreview);
 
     this.webviewVisible = false
-    const embedcontainer = document.querySelector(".embed-container");
-    embedcontainer.style.display = 'flex';
+    const filename = typeof file === 'string' ? file : (file?.filename || file?.name || file?.originalname || '');
 
     if (base64){
         const response = await fetch(file.filecontent); // lade die Data-URL  //filecontent contains a url data:application/pdf;base64,b23d342dsn2....
@@ -281,43 +245,12 @@ export async function loadImage(file, base64=false){
         this.currentpreviewBase64 = Buffer.from(data).toString('base64');
     }
 
-
-    const pdfEmbed = document.querySelector("#pdfembed");
-    try {
-        pdfEmbed.dataset.previewKind = 'image';
-        pdfEmbed.dataset.previewUrl = this.currentpreview || '';
-    } catch (e) {
-        console.warn('filehandler @ loadImage: cannot set pdfembed preview dataset', e);
-    }
-    
-    // Create an image element to determine the dimensions of the image
-    // always resize the pdfembed div to the same aspect ratio of the given image
-    const img = new window.Image();
-    img.onload = function() {
-        const width = img.width;
-        const height = img.height;
-        const aspectRatio = width / height;
-
-        const containerWidth = window.innerWidth * 0.8;
-        const containerHeight = window.innerHeight * 0.8;
-        const containerAspectRatio = containerWidth / containerHeight;
-
-        if(!this.splitview){
-            if (aspectRatio > containerAspectRatio) {
-                pdfEmbed.style.width = '80vw';
-                pdfEmbed.style.height = `calc(80vw / ${aspectRatio})`;
-            } else {
-                pdfEmbed.style.height = '80vh';
-                pdfEmbed.style.width = `calc(80vh * ${aspectRatio})`;
-            }
-        }
-        pdfEmbed.style.backgroundImage = `url(${this.currentpreview})`;
-    }.bind(this);
-    img.src = this.currentpreview;
-
-
-    // clear the pdf viewer
-    pdfEmbed.setAttribute("src", "about:blank");
+    this.pdfPreviewState = {
+        kind: 'image',
+        url: this.currentpreview,
+        filename,
+        fallbackUrl: base64 ? (file?.filecontent || '') : '',
+    };
 
 
 
@@ -328,7 +261,9 @@ export async function loadImage(file, base64=false){
         showZoom: false,
     });
 
-    document.querySelector("#preview").style.display = 'block'; 
+    const preview = document.querySelector("#preview");
+    if (preview) preview.style.display = 'block';
+    restorePdfPreviewRoot();
 }
 
 

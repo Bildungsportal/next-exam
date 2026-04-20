@@ -445,7 +445,7 @@
 
     <!-- NORMAL VIEW START -->
     <!-- PDF Preview Container -->
-    <div v-if="!splitview" id="preview" class="p-4 editor-preview-overlay">
+    <div v-if="!splitview" id="preview" class="p-4 editor-preview-overlay" style="--nx-preview-top-offset: 60px; --nx-preview-content-width: 90%;">
         <WebviewPane
             id="webview"
             :src="urlForWebview"
@@ -459,6 +459,7 @@
             :localLockdown="localLockdown"
             :examtype="examtype"
             :toolbar="pdfPreviewUi"
+            :preview="pdfPreviewState"
             @close="hidepreview"
             @printBase64="printBase64"
             @insertImage="insertImage"
@@ -486,7 +487,7 @@
         <!-- PDF Preview Container -->
         <div
             id="preview"
-            class="fadeinfast splitback split-pane split-pane--left"
+            :class="['fadeinfast', 'splitback', 'split-pane', 'split-pane--left', 'p-2', { 'splitback--empty': !pdfPreviewState }]"
             :style="{ flexBasis: splitLeftPct + '%' }"
         >
             <WebviewPane
@@ -500,7 +501,9 @@
                 :localLockdown="localLockdown"
                 :examtype="examtype"
                 :toolbar="pdfPreviewUi"
+                :preview="pdfPreviewState"
                 :showClose="false"
+                :style="!pdfPreviewState ? 'display:none;' : ''"
                 @close="hidepreview"
                 @printBase64="printBase64"
                 @insertImage="insertImage"
@@ -820,6 +823,7 @@ export default {
             showClipboardSidebar: false,
             clipboardTooltip: { text: '', shown: false, x: 0, y: 0 },
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
+            pdfPreviewState: null,
         }
     },
     computed: {
@@ -1626,6 +1630,7 @@ export default {
 
         hidepreview() {
             resetPdfPreviewToolbar(this);
+            this.pdfPreviewState = null;
             let preview = document.querySelector("#preview")
             preview.style.display = 'none';
             preview.setAttribute("src", "about:blank");
@@ -2084,7 +2089,7 @@ export default {
         this.fetchinfointerval.start();
 
         this.saveContentCallback = () => this.saveContent(true, 'auto');  // wegs 2 parameter muss dieser umweg genommen werden sonst kann ich den eventlistener nicht mehr entfernen
-        this.saveinterval = new SchedulerService(2000);
+        this.saveinterval = new SchedulerService(20000);
         this.saveinterval.addEventListener('action', this.saveContentCallback);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
         this.saveinterval.start();
 
@@ -2473,11 +2478,6 @@ Other Styles
 
 }
 
-.editor-preview-overlay .embed-container {
-    width: 92vw;
-    height: calc(100vh - 60px - 120px);
-    margin: calc(60px + 20px) auto 40px;
-}
 
 .split-pane {
     flex: 0 0 auto;
@@ -2531,11 +2531,12 @@ Other Styles
 /* Splitview must override overlay preview hidden state */
 .split-view-container #preview {
     display: block;
-    position: static;
+    position: relative;
     width: auto;
     height: auto;
     background-color: transparent;
     backdrop-filter: none;
+    z-index: auto;
 }
 
 .split-view-container #editorcontent,
@@ -2984,7 +2985,23 @@ Other Styles
 
 //mus integrate images this way otherwise they won't be integrated in the final build
 .splitback {
-    background-image: url('/src/assets/img/svg/edit-copy-light.svg');
+    position: relative;
+}
+.splitback.splitback--empty::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url('/src/assets/img/svg/document-replace.svg');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 180px;
+    opacity: 0.85;
+}
+.splitback > * {
+    position: relative;
+    z-index: 1;
 }
 
 .splitzoomin {

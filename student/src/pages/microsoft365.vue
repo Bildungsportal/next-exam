@@ -92,10 +92,11 @@
                 :block-external="true"
                 @close="hidepreview"
             />
-            <PdfviewPane
+            <PdfviewPaneRendered
                 :localLockdown="localLockdown"
                 :examtype="examtype"
                 :toolbar="pdfPreviewUi"
+                :preview="pdfPreviewState"
                 @close="hidepreview"
             />
         </div>
@@ -131,7 +132,7 @@ import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
-import PdfviewPane from '../components/PdfviewPane.vue'
+import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue'
 import {getExamMaterials, loadImage, loadPDF, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import {isElectronWindow} from "../types/platform.ts";
@@ -184,10 +185,11 @@ export default {
             internetCheckCounter: 0,
             msOfficeShare: null,
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
+            pdfPreviewState: null,
         }
     },
     components: {
-        ExamHeader, PdfviewPane, WebviewPane
+        ExamHeader, PdfviewPaneRendered, WebviewPane
     },
     mounted() {
         this.fetchInfo()
@@ -285,9 +287,9 @@ export default {
 
         hidepreview() {
             resetPdfPreviewToolbar(this);
+            this.pdfPreviewState = null;
             let preview = document.querySelector("#preview")
             preview.style.display = 'none';
-            preview.setAttribute("src", "about:blank");
             URL.revokeObjectURL(this.currentpreview);
             if (isElectronWindow(window)) {
                 signalBridge.send('restore-browserview');   // ms365 only !!!!!!!!!!

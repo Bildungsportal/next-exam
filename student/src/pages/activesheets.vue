@@ -23,8 +23,12 @@
     <!-- filelist start - show local files from workfolder (pdf and gbb only)-->
     <div id="toolbar" class="d-inline p-1 pt-0"> 
               
+        <div :title="$t('editor.splitview')" @click="toggleSplitview()"
+             class="invisible-button btn btn-outline-info p-0 ms-1 me-1 mb-0 btn-sm">
+            <img src="/src/assets/img/svg/view-split-left-right.svg" class="" width="22" height="22">
+        </div>
         <button v-if="!localLockdown" :title="$t('editor.backup')" @click="saveContent(true, 'manual');" class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm"><img src="/src/assets/img/svg/document-save.svg" class="" width="22" height="22" ></button>
-        <button v-if="!localLockdown" id="printfinalexam" class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm" @click="sendExamToTeacher(false, 'print')" :title="$t('editor.print')"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" ></button>
+        <button v-if="!localLockdown" id="printfinalexam" class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm pe-2 ps-1" @click="sendExamToTeacher(false, 'print')" :title="$t('editor.print')"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.print') }}</button>
         <button v-if="!localLockdown" id="sendfinalexam"  class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm pe-2 ps-1 " @click="sendExamToTeacher(false, 'send')" :title="$t('editor.sendfinalexam')"><img src="/src/assets/img/svg/document-send.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.finalsubmit') }}</button>
 
 
@@ -59,8 +63,12 @@
     
   
 
-    <!-- angabe/pdf preview start -->
-    <div id="preview" class="p-4">
+    <div :class="splitview ? 'split-view-container' : ''">
+        <div
+            id="preview"
+            :class="splitview ? ['p-2', 'split-pane', 'split-pane--left', 'splitback', { 'splitback--empty': !pdfPreviewState }] : 'p-4'"
+            :style="splitview ? { flexBasis: splitLeftPct + '%' } : { '--nx-preview-top-offset': '60px', '--nx-preview-content-width': '90%' }"
+        >
         <WebviewPane
             id="webview"
             :src="urlForWebview || ''"
@@ -73,13 +81,29 @@
             :localLockdown="localLockdown"
             :examtype="examtype"
             :toolbar="pdfPreviewUi"
+            :preview="pdfPreviewState"
+            :showClose="!splitview"
+            :style="!pdfPreviewState ? 'display:none;' : ''"
             @close="hidepreview"
-            @printBase64="printBase64"                                  
+            @printBase64="printBase64"
         />
-    </div>
-    <!-- angabe/pdf preview end -->
-
-    <div id="content">
+        </div>
+        <div
+            v-if="splitview"
+            class="split-divider"
+            role="separator"
+            aria-orientation="vertical"
+            :aria-valuenow="Math.round(splitLeftPct)"
+            aria-valuemin="20"
+            aria-valuemax="80"
+            @pointerdown.prevent="startSplitResize"
+            title="Ziehen zum Anpassen"
+        ></div>
+        <div
+            id="content"
+            :class="splitview ? 'split-pane split-pane--right' : ''"
+            :style="splitview ? { flexBasis: (100 - splitLeftPct) + '%' } : null"
+        >
         <div v-if="!focus" class="focus-container">
             <div id="focuswarning" class="infodiv p-4 d-block focuswarning" >
                 <div class="mb-3 row">
@@ -97,6 +121,7 @@
             :blacklist="blacklist"
         />
     
+        </div>
     </div>
 </template>
 
@@ -178,6 +203,10 @@ export default {
             customFields: [],
             blacklist: [],
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
+            pdfPreviewState: null,
+            splitview: false,
+            splitLeftPct: 50,
+            _splitResizing: false,
         }
     }, 
     components: { ExamHeader, PdfviewPaneRendered, WebviewPane, PdfOverlay },  
@@ -195,10 +224,66 @@ export default {
         },
         hidepreview(){
             resetPdfPreviewToolbar(this);
+            this.pdfPreviewState = null;
             let preview = document.querySelector("#preview")
-            preview.style.display = 'none';
+            if (!this.splitview) preview.style.display = 'none';
             preview.setAttribute("src", "about:blank");
             URL.revokeObjectURL(this.currentpreview);
+        },
+
+        toggleSplitview() {
+            const next = !this.splitview;
+            this.splitview = next;
+            this.$nextTick(() => {
+                const preview = document.querySelector("#preview");
+                if (!preview) return;
+
+                // entering splitview: remove inline display:none so CSS layout can size the pane
+                if (this.splitview) {
+                    preview.style.display = '';
+                    if (this._onPreviewClick) preview.removeEventListener("click", this._onPreviewClick);
+                    return;
+                }
+
+                // leaving splitview: also close preview (no overlay left behind)
+                resetPdfPreviewToolbar(this);
+                this.pdfPreviewState = null;
+                preview.style.display = 'none';
+                URL.revokeObjectURL(this.currentpreview);
+                if (this._onPreviewClick) preview.addEventListener("click", this._onPreviewClick);
+            });
+        },
+
+        startSplitResize(e) {
+            if (!this.splitview) return;
+            this._splitResizing = true;
+            window.addEventListener('pointermove', this.onSplitResizeMove, { passive: false });
+            window.addEventListener('pointerup', this.stopSplitResize, { passive: true });
+            window.addEventListener('pointercancel', this.stopSplitResize, { passive: true });
+            this.onSplitResizeMove(e);
+        },
+
+        onSplitResizeMove(e) {
+            if (!this._splitResizing) return;
+            e.preventDefault();
+            const container = document.querySelector('.split-view-container');
+            if (!container) return;
+            const rect = container.getBoundingClientRect();
+            const x = Math.min(Math.max(e.clientX - rect.left, 0), rect.width);
+            const pct = (x / rect.width) * 100;
+            const minLeftPx = 320;
+            const minRightPx = 420;
+            const minPct = (minLeftPx / rect.width) * 100;
+            const maxPct = 100 - (minRightPx / rect.width) * 100;
+            const clamped = Math.min(Math.max(pct, minPct), maxPct);
+            this.splitLeftPct = Math.min(80, Math.max(20, Math.round(clamped * 10) / 10));
+        },
+
+        stopSplitResize() {
+            this._splitResizing = false;
+            window.removeEventListener('pointermove', this.onSplitResizeMove);
+            window.removeEventListener('pointerup', this.stopSplitResize);
+            window.removeEventListener('pointercancel', this.stopSplitResize);
         },
         loadBase64file(file){
             this.webviewVisible = false
@@ -782,6 +867,7 @@ export default {
         signalBridge.removeAllListeners('submitexam');
         signalBridge.removeAllListeners('save');
         signalBridge.removeAllListeners('denied');
+        this.stopSplitResize()
     },
     
 }
@@ -811,6 +897,66 @@ export default {
     height: 100%;
 }
 
+.split-view-container {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    overflow: hidden;
+}
+
+.split-pane {
+    flex: 0 0 auto;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.split-pane--left {
+    background-color: transparent;
+}
+
+/* must integrate images this way otherwise they won't be integrated in the final build */
+.splitback {
+    position: relative;
+}
+.splitback.splitback--empty::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url('/src/assets/img/svg/document-replace.svg');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 180px;
+    opacity: 0.85;
+}
+.splitback > * {
+    position: relative;
+    z-index: 1;
+}
+
+.split-divider {
+    flex: 0 0 10px;
+    cursor: col-resize;
+    position: relative;
+    background: transparent;
+    touch-action: none;
+}
+
+.split-divider::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 4px;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.split-divider:hover::before {
+    background: rgba(13, 110, 253, 0.55);
+}
+
 #preview {
     display: none;
     position: absolute;
@@ -822,6 +968,16 @@ export default {
     z-index:100001;
     backdrop-filter: blur(2px);
   
+}
+
+.split-view-container #preview {
+    display: block;
+    position: relative;
+    width: auto;
+    height: auto;
+    background-color: transparent;
+    backdrop-filter: none;
+    z-index: auto;
 }
 
  //this controls how the activesheets view is printed (to pdf)

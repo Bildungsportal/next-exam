@@ -141,7 +141,7 @@ export function showUrl(url){
             }
         }
 
-        const embedcontainer = document.querySelector(".embed-container");
+        const embedcontainer = document.querySelector('#preview .embed-container');
         if (embedcontainer) {
             embedcontainer.style.display = 'none';
         }

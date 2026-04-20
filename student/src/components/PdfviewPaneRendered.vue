@@ -1,6 +1,6 @@
 <template>
   <div class="embed-container pdfview-pane-rendered" @click.stop>
-    <ul class="nav nav-tabs position-absolute top-0 start-0 end-0 w-100 bg-white pdf-toolbar">
+    <ul class="nav nav-tabs bg-white pdf-toolbar">
       <li v-if="examtype === 'editor' && toolbar.showInsert" class="nav-item">
         <div class="nav-link btn btn-light btn-sm unstyled" id="insert-button" @click="insertImage()" :title="$t('editor.insert')">
           <img src="/src/assets/img/svg/edit-download.svg" class="white">
@@ -50,9 +50,6 @@
         <div type="button" class="nav-link btn btn-light btn-sm" :title="$t('editor.close')" @click.stop="closePane" style="width:40px; height:40px; text-align:center; font-weight:bold;">&times;</div>
       </li>
     </ul>
-
-    <!-- keep legacy target so existing loadPDF() still works -->
-    <embed ref="legacyEmbed" src="" id="pdfembed" class="legacy-embed" />
 
     <div v-if="isParsing" class="render-overlay">
       <div class="spinner"></div>
@@ -127,6 +124,7 @@ export default {
     examtype: { type: String, default: 'math' },
     toolbar: { type: Object, required: true },
     showClose: { type: Boolean, default: true },
+    preview: { type: Object, default: null },
   },
   data() {
     return {
@@ -141,7 +139,6 @@ export default {
       draftLine: null,
       annotations: [],
       annotationsKey: null,
-      _embedObserver: null,
       _saveTimer: null,
     }
   },
@@ -157,15 +154,16 @@ export default {
       return this.currentDraft?.style || {}
     },
   },
-  mounted() {
-    const embed = this.$refs.legacyEmbed
-    if (!embed) return
-
-    this._embedObserver = new MutationObserver(() => this.onEmbedChanged())
-    this._embedObserver.observe(embed, { attributes: true, attributeFilter: ['src', 'data-filename', 'data-preview-kind', 'data-preview-url'] })
+  watch: {
+    preview: {
+      deep: true,
+      immediate: true,
+      handler(p) {
+        this.applyPreview(p)
+      },
+    },
   },
   beforeUnmount() {
-    if (this._embedObserver) this._embedObserver.disconnect()
     if (this._saveTimer) clearTimeout(this._saveTimer)
   },
   methods: {
@@ -325,37 +323,39 @@ export default {
       this.draftLine = null
     },
 
-    async onEmbedChanged() {
-      const embed = this.$refs.legacyEmbed
-      const src = embed?.getAttribute('src') || ''
-      const filename = embed?.dataset?.filename || ''
-      const previewKind = embed?.dataset?.previewKind || ''
-      const previewUrl = embed?.dataset?.previewUrl || ''
+    async applyPreview(preview) {
+      const kind = preview?.kind || ''
+      const url = preview?.url || ''
+      const filename = preview?.filename || ''
+      const fallbackUrl = preview?.fallbackUrl || ''
 
-      if (previewKind === 'image' && previewUrl) {
+      if (kind === 'image' && url) {
+        this.cancelDraw()
         this.isParsing = false
         this.parsedPages = []
-        this.imagePreviewUrl = previewUrl
+        this.annotationsKey = null
+        this.annotations = []
+        this.imagePreviewUrl = url
         return
       }
 
-      if (!src || src === 'about:blank') {
+      if (kind !== 'pdf' || !url) {
+        this.cancelDraw()
         this.isParsing = false
         this.parsedPages = []
         this.imagePreviewUrl = ''
+        this.annotationsKey = null
+        this.annotations = []
         return
       }
 
       this.imagePreviewUrl = ''
-
-      // strip the fragment (#toolbar=0...)
-      const pdfUrl = src.split('#')[0]
       this.annotationsKey = filename ? filename : 'pdf-preview'
       await this.loadAnnotations()
-      await this.renderPdfFromUrl(pdfUrl, filename)
+      await this.renderPdfFromUrl(url, filename, fallbackUrl)
     },
 
-    async renderPdfFromUrl(pdfUrl, filename = '') {
+    async renderPdfFromUrl(pdfUrl, filename = '', fallbackPdfUrl = '') {
       this.isParsing = true
       try {
         let uint8
@@ -364,9 +364,16 @@ export default {
           const buf = await res.arrayBuffer()
           uint8 = new Uint8Array(buf)
         } catch (e) {
-          if (!filename) throw e
-          const data = await signalBridge.invoke('getpdfasync', filename)
-          uint8 = new Uint8Array(data)
+          try {
+            if (!fallbackPdfUrl) throw e
+            const res = await fetch(fallbackPdfUrl)
+            const buf = await res.arrayBuffer()
+            uint8 = new Uint8Array(buf)
+          } catch (e2) {
+            if (!filename) throw e2
+            const data = await signalBridge.invoke('getpdfasync', filename)
+            uint8 = new Uint8Array(data)
+          }
         }
         this.parsedPages = await parsePdfToPages(uint8, {
           detectFormFields: false,
@@ -425,6 +432,9 @@ export default {
 
 <style scoped>
 .pdf-toolbar {
+  position: absolute;
+  left: 0;
+  right: 0;
   z-index: 2000;
   pointer-events: auto;
   font-size: 1.1rem;
@@ -433,6 +443,10 @@ export default {
   align-items: center;
   gap: 2px !important;
   padding: 0 8px;
+  top: var(--nx-preview-top-offset, 0px);
+  /* Fill .embed-container only; content width is set on that wrapper. */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Bootstrap nav-tabs can collapse spacing; enforce per-item spacing */
@@ -487,6 +501,16 @@ export default {
   box-shadow: none !important;
 }
 
+/* Bootstrap dims active buttons via filter; keep tool colors vivid. */
+.pdf-toolbar .btn:active,
+.pdf-toolbar .btn.active,
+.pdf-toolbar .nav-link:active,
+.pdf-toolbar .nav-link.active,
+.pdf-tool-btn:active,
+.pdf-tool-btn.active {
+  filter: none !important;
+}
+
 .tool-swatch {
   width: 16px;
   height: 16px;
@@ -520,17 +544,20 @@ export default {
   font-size: 0.9rem;
   user-select: none;
 }
-.legacy-embed {
-  display: none;
-}
 .render-overlay {
   position: absolute;
-  inset: 0;
+  top: calc(40px + var(--nx-preview-top-offset, 0px));
+  left: 0;
+  right: 0;
+  width: 100%;
+  box-sizing: border-box;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
   background: rgba(255, 255, 255, 0.7);
+  border-radius: 6px;
   z-index: 1500;
 }
 .spinner {
@@ -545,9 +572,9 @@ export default {
 
 .pdf-scroll-container {
   position: relative;
-  top: 40px;
+  top: calc(40px + var(--nx-preview-top-offset, 0px));
   width: 100%;
-  height: calc(100% - 40px);
+  height: calc(100% - 40px - var(--nx-preview-top-offset, 0px));
   overflow: auto;
   padding: 16px;
   background: rgba(33, 37, 41, 0.92);
@@ -620,10 +647,15 @@ export default {
 
 .embed-container {
   position: relative;
-  width: 100%;
+  /* Single place for overlay width; children use 100% of this box. */
+  width: var(--nx-preview-content-width, 100%);
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
   height: 100%;
   display: flex;
   align-items: flex-start;
+  box-sizing: border-box;
 }
 
 @media print {
