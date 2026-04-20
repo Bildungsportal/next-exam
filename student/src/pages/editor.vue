@@ -292,9 +292,11 @@
                     src="/src/assets/img/svg/view-split-left-right.svg" class="white" width="22" height="22"></div>
 
                 <div v-if="!localLockdown" id="printfinalexam"
-                     class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm"
+                     class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm pe-2 ps-1" 
                      @click="sendExamToTeacher(false, 'print')" :title="$t('editor.print')"><img
-                    src="/src/assets/img/svg/print.svg" class="white" width="22" height="22"></div>
+                    src="/src/assets/img/svg/print.svg" class="white" width="22" height="22"
+                    style="vertical-align: top;"> {{ $t('editor.print') }}
+                </div>
                 <div v-if="!localLockdown" id="sendfinalexam"
                      class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm pe-2 ps-1 "
                      @click="sendExamToTeacher(false, 'send')" :title="$t('editor.sendfinalexam')"><img
