@@ -58,7 +58,7 @@ function registerPrintConsumeHandler() {
             log.warn(`${LOG}: consume ok window but pending job is null (wcId=${senderId})`)
             return null
         }
-        log.info(`${LOG}: consume returning job printer=${job.printerName} title=${job.jobTitle} docChars≈${job.docBase64 ? String(job.docBase64).length : 0}`)
+        log.info(`${LOG}: job consumed by renderer (${job.jobTitle})`)
         return { docBase64: job.docBase64, printerName: job.printerName, jobTitle: job.jobTitle }
     })
 }
@@ -66,33 +66,6 @@ function registerPrintConsumeHandler() {
 registerPrintRendererLogHandler()
 registerPrintConsumeHandler()
 
-// Warm up the Chromium CUPS print backend so it is ready before the first real job.
-// On Linux, Chromium starts the PrintBackendServiceManager lazily on the first
-// webContents.print call. While that utility process initialises, Chromium accepts
-// print calls and fires success:true but never forwards the jobs to CUPS. This
-// function fires a silent webContents.print on a minimal hidden window at app-ready
-// time so the backend is already running when the first real job arrives.
-let printBackendWarmedUp = false
-
-export async function warmUpPrintBackend() {
-    if (printBackendWarmedUp) return
-    printBackendWarmedUp = true
-    try {
-        const win = new BrowserWindow({
-            show: false, width: 1, height: 1,
-            webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: false, webSecurity: false, preload: getPreloadPath() },
-        })
-        await win.loadURL('data:text/html,<html><body></body></html>')
-        await new Promise((resolve) => {
-            win.webContents.print({ silent: true, deviceName: '' }, () => resolve())
-            setTimeout(resolve, 5000)
-        })
-        if (!win.isDestroyed()) win.close()
-        log.info(`${LOG}: print backend warm-up done`)
-    } catch (err) {
-        log.warn(`${LOG}: print backend warm-up error (non-fatal): ${err.message}`)
-    }
-}
 
 function sanitizeTitle(raw) {
     const s = raw != null && String(raw).trim() ? String(raw).trim() : 'Next-Exam'
@@ -163,33 +136,20 @@ async function processPrintJobPdf(docBase64, printerName, jobTitle) {
                 }
                 cleanup()
                 clearPendingPdfPrintPayload('after print-ready')
-                log.info(`${LOG}: renderer ready, waiting for paint before webContents.print (${title})`)
-
-                // Wait for Chromium to actually composite a frame before printing.
-                // On first cold start the GPU process may not have painted yet even though
-                // the renderer says it is ready, causing the spooler to receive a blank page.
-                const doPrint = () => {
-                    log.info(`${LOG}: paint received, calling webContents.print (${title}) deviceName=${printerName}`)
+                // Wake the Chromium PrintBackendServiceManager with a no-op using the real
+                // printer name, then do the actual print. Using the real deviceName forces
+                // Chromium to contact the CUPS backend process (an invalid name like '\x00'
+                // gets rejected internally before reaching the backend).
+                win.webContents.print({ silent: true, deviceName: printerName }, () => {
                     win.webContents.print(printOptions, (success, reason) => {
                         if (success) {
-                            log.info(`${LOG}: webContents.print callback success (${title})`)
+                            log.info(`${LOG}: printed OK → ${printerName} (${title})`)
                             setTimeout(resolve, PRINT_POST_HANDOFF_DELAY_MS)
                         } else {
-                            log.error(`${LOG}: webContents.print callback failed (${title}) reason=${reason || 'empty'}`)
+                            log.error(`${LOG}: print failed → ${printerName} (${title}) reason=${reason || 'empty'}`)
                             reject(new Error(reason || 'Print failed'))
                         }
                     })
-                }
-
-                // Run a rAF inside the renderer via executeJavaScript so the Chromium
-                // compositor has flushed at least one frame before we hand off to print.
-                // This closes the gap on first cold-start where the GPU process hasn't
-                // painted yet even though the JS side reports ready.
-                win.webContents.executeJavaScript(
-                    'new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))'
-                ).then(doPrint).catch(() => {
-                    log.warn(`${LOG}: compositor rAF wait failed, printing anyway`)
-                    doPrint()
                 })
             }
             const onError = (event, msg) => {
@@ -200,7 +160,7 @@ async function processPrintJobPdf(docBase64, printerName, jobTitle) {
                 }
                 cleanup()
                 clearPendingPdfPrintPayload('after print-error')
-                log.error(`${LOG}: renderer print-error (${title}): ${msg || 'empty'}`)
+                log.error(`${LOG}: renderer error (${title}): ${msg || 'empty'}`)
                 reject(new Error(msg || 'Print renderer error'))
             }
 
@@ -210,7 +170,6 @@ async function processPrintJobPdf(docBase64, printerName, jobTitle) {
             pendingPdfPrintJob = { docBase64, printerName, jobTitle: title }
             pendingPdfPrintWebContentsId = win.webContents.id
             const loadUrl = `${getTeacherAppLoadUrl()}#/system-print`
-            log.info(`${LOG}: pdf job start wcId=${win.webContents.id} loadURL=${loadUrl.slice(0, 120)}${loadUrl.length > 120 ? '…' : ''}`)
             win.loadURL(loadUrl).catch((err) => {
                 log.error(`${LOG}: loadURL failed (${title}): ${err.message}`)
                 cleanup()
@@ -219,20 +178,14 @@ async function processPrintJobPdf(docBase64, printerName, jobTitle) {
             })
 
             timeoutId = setTimeout(() => {
-                log.error(`${LOG}: print timeout (${title}) wcId=${win.webContents.id}`)
+                log.error(`${LOG}: timeout (${title})`)
                 cleanup()
                 clearPendingPdfPrintPayload('timeout')
                 reject(new Error('Print timeout'))
             }, PRINT_TOTAL_TIMEOUT_MS)
         })
-
-        log.info(`${LOG}: print job finished OK for ${printerName} (${title})`)
     } finally {
-        const id = win.webContents?.id
-        if (!win.isDestroyed()) {
-            log.info(`${LOG}: closing hidden print window wcId=${id}`)
-            win.close()
-        }
+        if (!win.isDestroyed()) win.close()
     }
 }
 
@@ -270,7 +223,7 @@ async function processPrintJobImage(docBase64, printerName, jobTitle) {
                 },
                 (success, reason) => {
                     clearTimeout(timeout)
-                    if (success) { log.info(`${LOG}: image job handed to OS (${title})`); setTimeout(resolve, PRINT_POST_HANDOFF_DELAY_MS) }
+                    if (success) { log.info(`${LOG}: printed OK → ${printerName} (${title})`); setTimeout(resolve, PRINT_POST_HANDOFF_DELAY_MS) }
                     else reject(new Error(reason || 'Image print failed'))
                 }
             )
@@ -295,24 +248,21 @@ async function drainPrintQueue() {
     isProcessingPrint = true
     while (printQueue.length > 0) {
         const job = printQueue.shift()
-        log.info(`${LOG}: processing job (${printQueue.length} remaining)`)
         try {
             await processPrintJob(job.docBase64, job.printerName, job.previewType, job.jobTitle)
             job.resolve(true)
         } catch (err) {
-            log.error(`${LOG}: job failed: ${err.message}`)
+            log.error(`${LOG}: job failed (${sanitizeTitle(job.jobTitle)}): ${err.message}`)
             job.reject(err)
         }
     }
     isProcessingPrint = false
-    log.info(`${LOG}: queue empty`)
 }
 
 export function enqueuePrintJob(docBase64, printerName, previewType, jobTitle) {
     return new Promise((resolve, reject) => {
         printQueue.push({ docBase64, printerName, previewType, jobTitle, resolve, reject })
-        const docLen = docBase64 != null ? String(docBase64).length : 0
-        log.info(`${LOG}: enqueued type=${previewType} printer=${printerName} title=${sanitizeTitle(jobTitle)} docChars≈${docLen} (${printQueue.length} in queue)`)
+        log.info(`${LOG}: queued → ${printerName} "${sanitizeTitle(jobTitle)}" (${printQueue.length} in queue)`)
         if (!isProcessingPrint) drainPrintQueue().catch(err => log.error(`${LOG}: queue error: ${err.message}`))
     })
 }

@@ -27,8 +27,7 @@ import config from './main/config.js';
 import server from './server/src/server.js';
 import multicastClient from './main/scripts/multicastclient.js';
 import WindowHandler from './main/scripts/windowhandler.js';
-import IpcHandler from './main/scripts/ipchandler.js'
-import { warmUpPrintBackend } from './main/scripts/printjobhandler.js';
+import IpcHandler from './main/scripts/ipchandler.js';
 
 // So Electron single-instance lock uses a different userData than student (lock key = userData + execPath)
 app.setName('next-exam-teacher');
@@ -188,7 +187,6 @@ app.whenReady().then(()=>{
     powerSaveBlocker.start('prevent-display-sleep')
 
     WindowHandler.createWindow()
-    warmUpPrintBackend().catch(() => {})
 
     globalShortcut.register('CommandOrControl+Shift+D', () => {  const win = BrowserWindow.getFocusedWindow(); if (win) { win.webContents.toggleDevTools() }});
     globalShortcut.register('Alt+Left', () => {  return false });  // Navigation attempt blocked
