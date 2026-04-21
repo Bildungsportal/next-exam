@@ -7,6 +7,7 @@ import notfound from '../pages/notfound.vue';
 import startserver from '../pages/startserver.vue';
 import dashboard from '../pages/dashboard.vue';
 import serverlist from '../pages/serverlist.vue';
+import SystemPrintPdf from '../pages/SystemPrintPdf.vue';
 
 // config is exposed to renderer via preload (contextBridge)
 function getConfig() { return typeof window !== 'undefined' && window.config ? window.config : {}; }
@@ -26,6 +27,7 @@ const routes = [
     { path: '/',                  component: startserver, beforeEnter: [addParams] },
     { path: '/startserver/:bipToken/:bipUsername/:bipuserID:',  name:"startserver",     component: startserver, beforeEnter: [addParams] },
     { path: '/serverlist',        component: serverlist,   beforeEnter: [addParams]},
+    { path: '/system-print', name: 'system-print', component: SystemPrintPdf, beforeEnter: [addParams] },
     { path: '/dashboard/:servername/:passwd?/:bipToken/:bipUsername/:bipuserID:/:biptest', name:"dashboard", component: dashboard, beforeEnter: [addParams, getServerInfo] },
     { path: '/:pathMatch(.*)*',   component: notfound },
 ]

@@ -39,7 +39,7 @@ export function getPublicBase() {
 
 
 // Renderer built into public/ (one copy); when packaged use app.asar.unpacked/public
-function getRendererIndexPath() {
+export function getRendererIndexPath() {
   if (app.isPackaged) {
     const unpacked = join(process.resourcesPath, 'app.asar.unpacked', 'public', 'index.html');
     if (fs.existsSync(unpacked)) return unpacked;

@@ -1,9 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import * as esbuild from 'esbuild';
-
 // load .env (same as student / quasar way)
 dotenv.config();
 
@@ -98,40 +95,4 @@ if (fs.existsSync(customPortableNsi)) {
   console.log('✅ Custom portable.nsi copied to node_modules template');
 } else {
   console.log('⚠️ Custom portable.nsi not found, using default template');
-}
-
-// 4. Hidden-window print bundle: entry + built bundle in public/print-document/ (preload source copied from src-electron/preload)
-const __prebuildDir = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.join(__prebuildDir, '..');
-
-async function buildPrintDocumentBundle() {
-  const outDir = path.join(repoRoot, 'public', 'print-document');
-  fs.mkdirSync(outDir, { recursive: true });
-
-  const workerSrc = path.join(repoRoot, 'node_modules', 'pdfjs-dist', 'legacy', 'build', 'pdf.worker.mjs');
-  if (!fs.existsSync(workerSrc)) {
-    throw new Error(`pdf.worker.mjs not found at ${workerSrc}`);
-  }
-  fs.copyFileSync(workerSrc, path.join(outDir, 'pdf.worker.mjs'));
-
-  const preloadSrc = path.join(repoRoot, 'src-electron', 'preload', 'print-document-preload.cjs');
-  fs.copyFileSync(preloadSrc, path.join(outDir, 'print-document-preload.cjs'));
-
-  await esbuild.build({
-    entryPoints: [path.join(repoRoot, 'public', 'print-document', 'print-entry.mjs')],
-    bundle: true,
-    format: 'esm',
-    platform: 'browser',
-    target: 'es2022',
-    outfile: path.join(outDir, 'print-bundle.js'),
-    logLevel: 'info',
-  });
-}
-
-try {
-  await buildPrintDocumentBundle();
-  console.log('✅ print-document bundle built (public/print-document/)');
-} catch (e) {
-  console.error('❌ print-document bundle failed:', e);
-  process.exit(1);
 }

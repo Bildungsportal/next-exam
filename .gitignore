@@ -23,7 +23,4 @@ logs
 *.log
 npm-debug.log*
 
-.cursor/
-.claude/
-
 config.js
