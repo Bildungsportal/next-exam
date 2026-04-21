@@ -38,10 +38,6 @@
     "rollup"
   ],
   "dependencies": {
-    "@capacitor/clipboard": "^8.0.1",
-    "@capacitor/device": "^8.0.0",
-    "@capacitor/filesystem": "^8.1.2",
-    "@capacitor/network": "^8.0.1",
     "@jimp/jpeg": "^0.22.12",
     "@novnc/novnc": "^1.6.0",
     "@quasar/extras": "^1.16.4",

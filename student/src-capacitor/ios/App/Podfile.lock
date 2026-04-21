@@ -1,28 +1,59 @@
 PODS:
-  - Capacitor (7.4.4):
+  - Capacitor (8.3.1):
     - CapacitorCordova
-  - CapacitorApp (7.1.1):
+  - CapacitorApp (8.1.0):
     - Capacitor
-  - CapacitorCordova (7.4.4)
+  - CapacitorClipboard (8.0.1):
+    - Capacitor
+  - CapacitorCordova (8.3.1)
+  - CapacitorDevice (8.0.2):
+    - Capacitor
+  - CapacitorFilesystem (8.1.2):
+    - Capacitor
+    - IONFilesystemLib (~> 1.1.1)
+  - CapacitorNetwork (8.0.1):
+    - Capacitor
+  - IONFilesystemLib (1.1.2)
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
+  - "CapacitorClipboard (from `../../node_modules/@capacitor/clipboard`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorDevice (from `../../node_modules/@capacitor/device`)"
+  - "CapacitorFilesystem (from `../../node_modules/@capacitor/filesystem`)"
+  - "CapacitorNetwork (from `../../node_modules/@capacitor/network`)"
+
+SPEC REPOS:
+  trunk:
+    - IONFilesystemLib
 
 EXTERNAL SOURCES:
   Capacitor:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorApp:
     :path: "../../node_modules/@capacitor/app"
+  CapacitorClipboard:
+    :path: "../../node_modules/@capacitor/clipboard"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
+  CapacitorDevice:
+    :path: "../../node_modules/@capacitor/device"
+  CapacitorFilesystem:
+    :path: "../../node_modules/@capacitor/filesystem"
+  CapacitorNetwork:
+    :path: "../../node_modules/@capacitor/network"
 
 SPEC CHECKSUMS:
-  Capacitor: 358dd1c3fdd71d969547b17e159fd8a7736cb45f
-  CapacitorApp: 63b237168fc869e758481dba283315a85743ee78
-  CapacitorCordova: bf648a636f3c153f652d312ae145fb508b6ffced
+  Capacitor: 46dbaa89c1d1cd121b9fc2dc839c1f39cc49e326
+  CapacitorApp: 449ffe26375e96f8aaaee625ac6e01e5c57c8650
+  CapacitorClipboard: c75fdaa6e622111119f35e7914ecfc67b05efecb
+  CapacitorCordova: 9010447fe25e869705fcf525e5f490facde87608
+  CapacitorDevice: 14cba6f88d1c3074cbf825fea977c8c526453ff8
+  CapacitorFilesystem: 2db285a1ac6e475cc27cae2e1bea999000f9e2be
+  CapacitorNetwork: 8812ce60d11fb63d8f2e4ba51a49b2e59892ebe2
+  IONFilesystemLib: 21a63377696b2d8fab5632ecfb7d2ac67bddb68a
 
-PODFILE CHECKSUM: 992ab7669c1ab6196b4f4288a1f54126040edd42
+PODFILE CHECKSUM: e514b26af7042fb9c16f007a10f3686f51982100
 
 COCOAPODS: 1.16.2
