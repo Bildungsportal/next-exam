@@ -27,6 +27,7 @@ import {Clipboard} from "@capacitor/clipboard";
 import path from "path";
 import mammoth from "mammoth";
 import config from "../config.js"
+import { Network } from '@capacitor/network';
 
 class IosTaskDispatcher {
 
@@ -42,9 +43,14 @@ class IosTaskDispatcher {
         this.loggingBridge = loggingBridge
         this.navigationHandler = navigationHandler
         this.multicastclient = mc
+
+        Network.addListener('networkStatusChange', status => {
+            console.log('Network status changed', status);
+        });
     }
 
     async dispatch(signal, payload) {
+        //loggingBridge.info("signal dispatch", signal, payload);
         switch (signal) {
 
             /**
@@ -77,7 +83,7 @@ class IosTaskDispatcher {
             case 'set-new-locale':
                 return this.setnewlocale(payload);
             case 'checkhostip':
-                return this.checkhostip(payload);
+                return await this.checkhostip(payload);
             case 'loginBiP':
                 return this.loginbip(payload);
             case 'reload-url':
@@ -117,17 +123,7 @@ class IosTaskDispatcher {
                 return; // Ignore since no BrowserViews in Capacitor
             case 'submitexam':
                 return
-            case 'getPDFbase64':
-                return
-            case 'getbackupfile':
-                return
             case 'getfilesasync':
-                return
-            case 'storeHTML':
-                return
-            case 'printpdf':
-                return
-            case 'checkhostip':
                 return
             case 'getScreenshotConfig':
                 return { serverip: null, serverApiPort: null, clientinfo: {}, screenshotinterval: 0 }
@@ -169,11 +165,19 @@ class IosTaskDispatcher {
     }
 
     async checkhostip(payload) {
-        let address = false;
+        try {
+            this.loggingBridge.info("checkhostip start");
+            const networkStatus = await Network.getStatus();
+            this.loggingBridge.info("checkhostip end", Network, networkStatus);
+            return networkStatus
+        } catch (err) {
+            this.loggingBridge.error("checkhostip error", Network, err);
+        }
+        /*let address = false;
         try {
             address = this.multicastclient.client.address();
         } catch (e) {
-            this.loggingBridge.error("IosTaskDispatcher @ checkhostip: multicastclient not running");
+            this.loggingBridge.error("IosTaskDispatcher @ checkhostip: multicastclient not running", this.multicastclient?.client);
             this.loggingBridge.error(this);
         }
 
@@ -227,6 +231,7 @@ class IosTaskDispatcher {
         }
 
         return config.hostip;
+        */
     }
 
     /**
