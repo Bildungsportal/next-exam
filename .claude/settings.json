@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node scripts/prebuild.js)",
+      "Bash(lpstat -p)",
+      "Bash(lpstat -d)",
+      "Bash(lpstat -a)"
+    ]
+  }
+}
