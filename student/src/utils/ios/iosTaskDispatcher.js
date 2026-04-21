@@ -28,6 +28,7 @@ import path from "path";
 import mammoth from "mammoth";
 import config from "../config.js"
 import { Network } from '@capacitor/network';
+import { registerPlugin } from '@capacitor/core';
 
 class IosTaskDispatcher {
 
@@ -47,6 +48,8 @@ class IosTaskDispatcher {
         Network.addListener('networkStatusChange', status => {
             console.log('Network status changed', status);
         });
+
+        this.NetworkInfo = registerPlugin('NetworkInfo');
     }
 
     async dispatch(signal, payload) {
@@ -165,13 +168,20 @@ class IosTaskDispatcher {
     }
 
     async checkhostip(payload) {
-        try {
-            this.loggingBridge.info("checkhostip start");
+        /*try {
+            this.loggingBridge.info("checkhostip networkStatus start");
             const networkStatus = await Network.getStatus();
-            this.loggingBridge.info("checkhostip end", Network, networkStatus);
+            this.loggingBridge.info("checkhostip networkStatus end", Network, networkStatus);
             return networkStatus
         } catch (err) {
             this.loggingBridge.error("checkhostip error", Network, err);
+        }*/
+        try {
+            const { ip } = await this.NetworkInfo.getWifiIP()
+            this.loggingBridge.info("checkhostip ip", ip)
+            return ip
+        } catch (e) {
+            this.loggingBridge.error('Could not get IP:', e)
         }
         /*let address = false;
         try {
