@@ -161,7 +161,6 @@ export default defineConfig(( ctx: any ) => {
       // https: true,
       open: true, // opens browser window automatically
       host: 'localhost',
-      port: 9300,
       vueDevtools: false
     },
 

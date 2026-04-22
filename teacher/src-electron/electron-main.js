@@ -92,10 +92,10 @@ log.transports.console.format = (message) => {
       default:     return [String(message.data)];
     }
 };
-log.verbose(`main @ init: -------------------`)
-log.verbose(`main @ init: starting Next-Exam Teacher "${config.version} ${config.info}" (${process.platform})${config.development ? ' (devmode on)' : ''}`)
-log.verbose(`main @ init: -------------------`)
-log.info(`main @ init: Logfilelocation at ${logfile}`)
+log.verbose(`main: -------------------`)
+log.verbose(`main: starting Next-Exam Teacher "${config.version} ${config.info}" (${process.platform})${config.development ? ' (devmode on)' : ''}`)
+log.verbose(`main: -------------------`)
+log.info(`main: Logfilelocation at ${logfile}`)
 platformDispatcher.messages.forEach(message => { log.debug(message) });
 
 // log electron version and other platform information

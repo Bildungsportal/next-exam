@@ -160,8 +160,8 @@ class WindowHandler {
             // Dev-only: keep optional dependency out of release builds.
             import('electron-devtools-installer')
                 .then((m) => m.installExtension(m.VUEJS_DEVTOOLS))
-                .then((name) => console.log(`Added Extension: ${name.name}`))
-                .catch((err) => console.log('Devtools install skipped: ', err?.message || err));
+                .then((name) => log.info(`windowhandler @ devtools: Added Extension: ${name.name}`))
+                .catch((err) => log.warn(`windowhandler @ devtools: install skipped: ${err?.message || err}`));
         }
     }
 

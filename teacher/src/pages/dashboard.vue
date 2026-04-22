@@ -199,33 +199,44 @@
                 </div>
 
 
-                <!-- Active Sheets PDF Buttons -->
-                <div v-if="isExamType('activesheets')" class="d-flex flex-column gap-1">
+                <!-- Active Sheets: panel with group pills, filename, remove -->
+                <div v-if="isExamType('activesheets')" class="activesheets-sidebar-block">
+                    <div class="activesheets-panel-caption">{{ $t('dashboard.activesheetsPanelCaption') }}</div>
                     <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
-                        <div class="input-group" v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.activeSheets?.filename">
-                            <div class="btn btn-sm btn-secondary" @click="removeActiveSheet('A')" style="padding:4px 8px;">x</div>
-                            <div class="btn btn-sm btn-warning filename-button" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
-                                {{ truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 18) }}
-                            </div>
-                            <div class="btn btn-sm btn-teal extension-button-sidebar"><div class="vertical-text-sidebar">A</div></div>
+                        <div class="activesheets-row">
+                            <span class="activesheets-group-pill">A</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.activeSheets?.filename">
+                                <button type="button" class="btn btn-sm btn-warning activesheets-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
+                                    {{ truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 22) }}
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-light activesheets-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('A')">&times;</button>
+                            </template>
+                            <div v-else class="activesheets-placeholder">{{ $t('dashboard.activesheetsNoPdf') }}</div>
                         </div>
-                        <div class="input-group" v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.activeSheets?.filename">
-                            <div class="btn btn-sm btn-secondary" @click="removeActiveSheet('B')" style="padding:4px 8px;">x</div>
-                            <div class="btn btn-sm btn-warning filename-button" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename, 'B')">
-                                {{ truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename, 18) }}
-                            </div>
-                            <div class="btn btn-sm btn-teal extension-button-sidebar"><div class="vertical-text-sidebar">B</div></div>
+                        <div class="activesheets-row">
+                            <span class="activesheets-group-pill activesheets-group-pill--b">B</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.activeSheets?.filename">
+                                <button type="button" class="btn btn-sm btn-warning activesheets-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename, 'B')">
+                                    {{ truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename, 22) }}
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-light activesheets-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('B')">&times;</button>
+                            </template>
+                            <div v-else class="activesheets-placeholder">{{ $t('dashboard.activesheetsNoPdf') }}</div>
                         </div>
                     </template>
                     <template v-else>
-                        <div class="input-group" v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.activeSheets?.filename">
-                            <div class="btn btn-sm btn-secondary" @click="removeActiveSheet('A')" style="padding:4px 8px;">x</div>
-                            <div class="btn btn-sm btn-warning filename-button" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
-                                {{ truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 18) }}
-                            </div>
-                            <div class="btn btn-sm btn-teal extension-button-sidebar"><div class="vertical-text-sidebar">PDF</div></div>
+                        <div class="activesheets-row">
+                            <span class="activesheets-group-pill">{{ $t('dashboard.activesheetsPdfPill') }}</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.activeSheets?.filename">
+                                <button type="button" class="btn btn-sm btn-warning activesheets-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
+                                    {{ truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 22) }}
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-light activesheets-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('A')">&times;</button>
+                            </template>
+                            <div v-else class="activesheets-placeholder">{{ $t('dashboard.activesheetsNoPdf') }}</div>
                         </div>
                     </template>
+                    <div v-if="!hasActiveSheetsPdf" class="activesheets-hint">{{ $t('dashboard.activesheetsChooseHint') }}</div>
                 </div>
 
                 <!-- Microsoft365 Buttons -->
@@ -3078,6 +3089,88 @@ hr {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.activesheets-sidebar-block {
+    margin-top: 0.35rem;
+    padding: 0.5rem 0.55rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.22);
+}
+
+.activesheets-panel-caption {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.055em;
+    color: rgba(255, 255, 255, 0.52);
+    margin-bottom: 0.5rem;
+}
+
+.activesheets-row {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.activesheets-row:last-of-type {
+    margin-bottom: 0;
+}
+
+.activesheets-group-pill {
+    flex: 0 0 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(165deg, #0dcaf0 0%, #0a9cb8 100%);
+    border-radius: 5px;
+    line-height: 1;
+    user-select: none;
+}
+
+.activesheets-group-pill--b {
+    background: linear-gradient(165deg, #ffc107 0%, #d39e00 100%);
+    color: #212529;
+}
+
+.activesheets-filename {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: left;
+}
+
+.activesheets-remove {
+    flex: 0 0 auto;
+    padding: 0.2rem 0.4rem;
+    line-height: 1;
+    font-size: 1.05rem;
+    font-weight: 300;
+    opacity: 0.9;
+}
+
+.activesheets-placeholder {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.74rem;
+    color: rgba(255, 255, 255, 0.42);
+    border: 1px dashed rgba(255, 255, 255, 0.22);
+    border-radius: 4px;
+    padding: 0.4rem 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.activesheets-hint {
+    margin-top: 0.55rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.55);
+    line-height: 1.35;
 }
 
 
