@@ -23,6 +23,7 @@
 import log from 'electron-log';
 import chalk from 'chalk';
 import { app, BrowserWindow, powerSaveBlocker, nativeTheme, globalShortcut, Menu } from 'electron'
+import platformDispatcher from './main/scripts/platformDispatcher.js';
 import config from './main/config.js';
 import server from './server/src/server.js';
 import multicastClient from './main/scripts/multicastclient.js';
@@ -72,7 +73,9 @@ applyExamModesOverrideFromArg(process.argv)
 app.setName('next-exam-teacher');
 
 log.initialize(); // initialize the logger for any renderer process
-let logfile = `${config.workdirectory}/next-exam-teacher.log`
+if (!config.workdirectory) config.workdirectory = platformDispatcher.workdirectory
+if (!config.tempdirectory) config.tempdirectory = platformDispatcher.tempdirectory
+let logfile = platformDispatcher.logfile
 
 log.eventLogger.startLogging();
 log.errorHandler.startCatching();
@@ -93,6 +96,17 @@ log.verbose(`main @ init: -------------------`)
 log.verbose(`main @ init: starting Next-Exam Teacher "${config.version} ${config.info}" (${process.platform})${config.development ? ' (devmode on)' : ''}`)
 log.verbose(`main @ init: -------------------`)
 log.info(`main @ init: Logfilelocation at ${logfile}`)
+platformDispatcher.messages.forEach(message => { log.debug(message) });
+
+// log electron version and other platform information
+log.debug(`main: Electron version: ${process.versions.electron}`)
+log.debug(`main: Chromium version: ${process.versions.chrome}`)
+log.debug(`main: Node version: ${process.versions.node}`)
+log.debug(`main: V8 version: ${process.versions.v8}`)
+log.debug(`main: OS: ${process.platform} ${process.arch}`)
+log.debug(`main: Arch: ${process.arch}`)
+log.debug(`main: Desktop: ${platformDispatcher.desktopName}`)
+log.debug(`main: Display server: ${platformDispatcher.displayServer}`)
 
 
 // Minimal macOS application menu to enable standard shortcuts like Cmd+C / Cmd+V / Cmd+Q

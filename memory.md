@@ -6,3 +6,4 @@ BUG^print^firstCold^pdfjs+raster+silent;logs success;only after full app restart
 TECH^teacherCli^examModes^--exam-modes=csv overrides config.exammodes at runtime^teacher/src-electron/electron-main.js
 TECH^build^protectMain^main bundle path=teacher/dist/electron/UnPackaged/electron-main.js;run protect via electron-builder beforePack^teacher/scripts/protect-main.mjs+teacher/quasar.config.ts
 BUG^build^protectMainImportMeta^bytenode+esbuild cjs makes import_meta.url undef→new URL('.',import.meta.url) crash;fix replace import_meta.url with pathToFileURL(__filename).href^teacher/scripts/protect-main.mjs
+PATH^platform^dispatcher^teacher/src-electron/main/scripts/platformDispatcher.js used by teacher main startup logs^teacher/src-electron/electron-main.js
