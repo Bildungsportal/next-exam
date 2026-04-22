@@ -2,11 +2,9 @@
  * VUE.js Frontend - Routing 
 */
 import { createRouter as _createRouter, createWebHashHistory } from 'vue-router'
-import axios from 'axios'
 import notfound from '../pages/notfound.vue';
 import startserver from '../pages/startserver.vue';
 import dashboard from '../pages/dashboard.vue';
-import serverlist from '../pages/serverlist.vue';
 import SystemPrintPdf from '../pages/SystemPrintPdf.vue';
 
 // config is exposed to renderer via preload (contextBridge)
@@ -26,7 +24,6 @@ if (userAgent.indexOf(' electron/') > -1) {
 const routes = [
     { path: '/',                  component: startserver, beforeEnter: [addParams] },
     { path: '/startserver/:bipToken/:bipUsername/:bipuserID:',  name:"startserver",     component: startserver, beforeEnter: [addParams] },
-    { path: '/serverlist',        component: serverlist,   beforeEnter: [addParams]},
     { path: '/system-print', name: 'system-print', component: SystemPrintPdf, beforeEnter: [addParams] },
     { path: '/dashboard/:servername/:passwd?/:bipToken/:bipUsername/:bipuserID:/:biptest', name:"dashboard", component: dashboard, beforeEnter: [addParams, getServerInfo] },
     { path: '/:pathMatch(.*)*',   component: notfound },
@@ -52,9 +49,14 @@ async function getServerInfo(to){
     let hostname = electron ? "localhost" : window.location.hostname
    
     const config = getConfig();
-    let res = await axios.get(`https://${hostname}:${config.serverApiPort}/server/control/getserverinfo/${to.params.servername}`)
-    .then(response => {  return response.data  })
-    .catch( err => {console.error(`router @ checkPasswd:    ${err}`)})
+    let res
+    try {
+        const response = await fetch(`https://${hostname}:${config.serverApiPort}/server/control/getserverinfo/${to.params.servername}`)
+        res = await response.json()
+    } catch (err) {
+        console.error(`router @ checkPasswd:    ${err}`)
+        return false
+    }
 
     if (res.status === "success") { 
         to.params.pin = res.data.pin; 
@@ -91,18 +93,18 @@ export function createRouter() {
         routes
     });
 
-    router.beforeEach(async (to, from, next) => {
-        if (from.name == "dashboard"){  // wir kommen aus einem exam server - blockiere verlassen sofern im exam mode
+    router.beforeEach(async (to, from) => {
+        if (from.name == "dashboard") {  // wir kommen aus einem exam server - blockiere verlassen sofern im exam mode
             let servername = extractServername(from.path)
             const serverstatus = await window.ipcRenderer?.invoke("getserverstatus", servername)
-         
-             // if (serverstatus && serverstatus.exammode) {
+
+            // if (serverstatus && serverstatus.exammode) {
             if (serverstatus) {     // blockiere immer sofern der server noch läuft - "Exam beenden" Button killt den server - dann ist serverstatus = false
                 console.warn("router @ createRouter: Der Exam-Modus ist aktiv. Keyboard/Mouse Hotkey Navigation ist nicht erlaubt.");
-                next(false);  // Verhindert die Navigation
-            } 
-            else {  next();  }
-        } else {  next();  }
+                return false
+            }
+        }
+        return true
     });
 
     return router;

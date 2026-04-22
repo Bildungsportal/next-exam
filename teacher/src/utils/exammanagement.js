@@ -1,5 +1,3 @@
-import axios from "axios"
-import FormData from 'form-data'
 import log from 'electron-log/renderer';
 
 
@@ -200,8 +198,9 @@ function kick(studenttoken, studentip){
 //restore focus state for specific student -- we tell the client that his status is restored which will then (on the next update) update it's focus state on the server 
 function restore(studenttoken){
     this.visualfeedback(this.$t("dashboard.restore"),2000)
-    axios.get(`https://${this.serverip}:${this.serverApiPort}/server/control/restore/${this.servername}/${this.servertoken}/${studenttoken}`)
-        .then( response => { log.info(`exammanagment @ restore:  ${response.data.message}`)  })
+    fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/restore/${this.servername}/${this.servertoken}/${studenttoken}`)
+        .then( response => response.json() )
+        .then( data => { log.info(`exammanagment @ restore:  ${data.message}`)  })
         .catch( err => {log.error(`exammanagment @ restore:  ${err}`)});
 }
 
@@ -354,12 +353,9 @@ function sendFiles(who) {
         if (this.serverstatus.examSections[this.serverstatus.activeSection].groups && who == "all"){ who = activeGroup}  //nur wenn who == all wurde der allgemeine filesend dialog aufgeruden. who kann auch ein student token sein
 
         //console.log(formData)
-        axios({
-            method: "post", 
-            url: `https://${this.serverip}:${this.serverApiPort}/server/data/upload/${this.servername}/${this.servertoken}/${who}`, 
-            data: formData, 
-        })
-        .then( (response) => {log.info("exmmmanagment @ sendFiles:", response.data) })
+        fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/upload/${this.servername}/${this.servertoken}/${who}`, { method: "POST", body: formData })
+        .then( (response) => response.json() )
+        .then( (data) => {log.info("exmmmanagment @ sendFiles:", data) })
         .catch( err =>{ log.error(`${err}`) })
     });    
 }

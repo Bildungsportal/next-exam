@@ -26,8 +26,7 @@ import i18n from '../../../../../src/locales/locales.js'
 const { t } = i18n.global
 import fs from 'fs' 
 import qs from 'qs'
-import axios from "axios"
-import { msalConfig } from '../../../../../src/msalutils/authConfig.ts'
+import { msalConfig } from '../../../../../src/msalutils/authConfigShared.ts'
 import log from 'electron-log';
 
 import WindowHandler from '../../../../main/scripts/windowhandler.js'
@@ -74,21 +73,28 @@ router.get('/msauth', async (req, res) => {
     const code = req.query.code;
     const codeVerifier =  config.codeVerifier;
     try {
-        const response = await axios.post('https://login.microsoftonline.com/common/oauth2/v2.0/token', qs.stringify({
-            client_id: msalConfig.auth.clientId,
-            grant_type: 'authorization_code',
-            scope: 'openid profile offline_access Files.ReadWrite.AppFolder Files.Read Files.ReadWrite',
-            code,
-            redirect_uri: msalConfig.auth.redirectUri,
-            code_verifier: codeVerifier,
-            }), {
+        const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Origin': 'https://localhost',
             },
-        });
+            body: qs.stringify({
+                client_id: msalConfig.auth.clientId,
+                grant_type: 'authorization_code',
+                scope: 'openid profile offline_access Files.ReadWrite.AppFolder Files.Read Files.ReadWrite',
+                code,
+                redirect_uri: msalConfig.auth.redirectUri,
+                code_verifier: codeVerifier,
+            }),
+        })
+        const tokenJson = await tokenResponse.json()
 
-        config.accessToken = response.data.access_token     // we received the access token - store it on global config object
+        if (!tokenResponse.ok) {
+            throw new Error(tokenJson.error_description || tokenJson.error || `${tokenResponse.status} ${tokenResponse.statusText}`)
+        }
+
+        config.accessToken = tokenJson.access_token     // we received the access token - store it on global config object
 
         let html = `
         <!DOCTYPE html>
@@ -108,7 +114,7 @@ router.get('/msauth', async (req, res) => {
         </html>`
         res.send(html);
     } catch (error) {
-        console.error(error.response.data);
+        console.error(error);
         let html = `
         <!DOCTYPE html>
         <html lang="en">
@@ -119,7 +125,7 @@ router.get('/msauth', async (req, res) => {
                 <link rel="stylesheet" href="/static/css/staticstyles.css">
             </head>
             <body><br>
-                <h4>${error.response.data.error_description}</h4> <br>
+                <h4>${error.message}</h4> <br>
                 Please close this Window and try again! <br>
                 <button onclick="window.close()" class="custom-btn custom-btn-danger">Close Window</button>
             </body>
