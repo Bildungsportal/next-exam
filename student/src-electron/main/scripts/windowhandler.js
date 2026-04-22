@@ -569,6 +569,8 @@ class WindowHandler {
                 }
                 catch(e){ log.error("windowhandler @ did-finish-load: error in examwindow setup", e)}
             }
+
+            this.addBlurListener()  
         })
 
 
@@ -1067,7 +1069,7 @@ class WindowHandler {
         const hasActiveScreenlock = winhandler.screenlockwindows.some(win => win && !win.isDestroyed() && win.isVisible())
         // Also check clientinfo.screenlock flag as fallback in case array was cleared but windows still exist
         if (hasActiveScreenlock || winhandler.multicastClient?.clientinfo?.screenlock) { return }// do nothing if screenlockwindow stole focus // do not trigger an infinite loop between exam window and screenlock window (stealing each others focus because screenlockwindow appears above exam window and will capture a klick and therefore steal focus)
-        if (winhandler.focusTargetAllowed){ 
+        if (!winhandler.focusTargetAllowed){ 
             winhandler.examwindow.moveTop();
             winhandler.examwindow.show(); 
             winhandler.examwindow.focus(); //trotzdem focus zurück auf die app

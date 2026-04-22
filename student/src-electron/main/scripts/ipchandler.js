@@ -532,7 +532,25 @@ class IpcHandler {
             return answer
         } )
 
+        /**
+         * Restore focus state locally (LocalLockdown unlock)
+         */
+        ipcMain.handle('restorefocusstateLocal', async () => {
+            if (!this.multicastClient?.clientinfo?.localLockdown) {
+                return { ok: false, reason: 'not-local-lockdown' };
+            }
 
+            this.multicastClient.clientinfo.focus = true;
+
+            if (this.WindowHandler?.examwindow && !this.config.development) {
+                this.WindowHandler.examwindow.moveTop();
+                this.WindowHandler.examwindow.setKiosk(true);
+                this.WindowHandler.examwindow.show();
+                this.WindowHandler.examwindow.focus();
+            }
+
+            return { ok: true };
+        })
 
         /**
          * Returns the main config object

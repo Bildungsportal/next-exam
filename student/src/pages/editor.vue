@@ -427,6 +427,27 @@
                 <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32">
                 <div class="mt-3"> {{ timesinceentry }}</div>
             </div>
+            <div v-if="localLockdown" class="mt-2">
+                <div class="input-group">
+                    <span class="input-group-text">Passwort</span>
+                    <input
+                        ref="localUnlockInput"
+                        v-model="localUnlockPassword"
+                        class="form-control"
+                        type="password"
+                        autocomplete="current-password"
+                        placeholder="Passwort"
+                        @input="localUnlockError = false"
+                        @keyup.enter="tryUnlockLocalLockdown"
+                    >
+                    <button class="btn btn-outline-dark" type="button" :disabled="localUnlockBusy" @click="tryUnlockLocalLockdown">
+                        Freischalten
+                    </button>
+                </div>
+                <div v-if="localUnlockError" class="mt-2 text-dark">
+                    {{ $t("general.wrongpassword") }}
+                </div>
+            </div>
         </div>
     </div>
     <!-- focuswarning end  -->
@@ -757,6 +778,9 @@ export default {
             token: this.$route.params.token,
             clientname: this.$route.params.clientname,
             localLockdown: this.$route.params.localLockdown,
+            localUnlockPassword: '',
+            localUnlockError: false,
+            localUnlockBusy: false,
             localfiles: null,
             serverApiPort: this.$route.params.serverApiPort,
             clientApiPort: this.$route.params.clientApiPort,
@@ -867,6 +891,9 @@ export default {
         focus(newValue) {
             if (!newValue) {
                 this.$nextTick(() => this.$refs.focusWarningOverlay?.focus()); // DOM .focus() steals focus from editor
+                if (this.localLockdown) {
+                    this.$nextTick(() => this.$refs.localUnlockInput?.focus());
+                }
             }
         },
     },
@@ -1687,6 +1714,30 @@ export default {
                 if (!editorcontentcontainer) return;
                 const editableDiv = editorcontentcontainer.firstElementChild;
                 if (editableDiv) editableDiv.blur()  // remove text cursor (carret)
+            }
+        },
+        async tryUnlockLocalLockdown() {
+            if (!this.localLockdown) return;
+
+            const expected = this.serverstatus?.password ?? "";
+            const provided = this.localUnlockPassword ?? "";
+            if (!expected || provided !== expected) {
+                this.localUnlockError = true;
+                return;
+            }
+
+            this.localUnlockBusy = true;
+            try {
+                const result = await signalBridge.invoke('restorefocusstateLocal');
+                if (result?.ok) {
+                    this.localUnlockPassword = '';
+                    this.localUnlockError = false;
+                    this.focus = true;
+                    return;
+                }
+                this.localUnlockError = true;
+            } finally {
+                this.localUnlockBusy = false;
             }
         },
         handleCtrlAlt(event) {

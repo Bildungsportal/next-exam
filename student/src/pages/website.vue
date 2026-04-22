@@ -88,6 +88,27 @@
                     <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32" >
                     <div class="mt-3"> {{ formatTime(entrytime) }}</div>
                 </div>
+                <div v-if="localLockdown" class="mt-2">
+                    <div class="input-group">
+                        <span class="input-group-text">Passwort</span>
+                        <input
+                            ref="localUnlockInput"
+                            v-model="localUnlockPassword"
+                            class="form-control"
+                            type="password"
+                            autocomplete="current-password"
+                            placeholder="Passwort"
+                            @input="localUnlockError = false"
+                            @keyup.enter="tryUnlockLocalLockdown"
+                        >
+                        <button class="btn btn-outline-dark" type="button" :disabled="localUnlockBusy" @click="tryUnlockLocalLockdown">
+                            Freischalten
+                        </button>
+                    </div>
+                    <div v-if="localUnlockError" class="mt-2 text-dark">
+                        {{ $t("general.wrongpassword") }}
+                    </div>
+                </div>
             </div>
         </div>
         <!-- focuswarning end  -->
@@ -142,6 +163,9 @@ export default {
             pincode : this.$route.params.pincode,
             config: this.$route.params.config,
             localLockdown: this.$route.params.localLockdown,
+            localUnlockPassword: '',
+            localUnlockError: false,
+            localUnlockBusy: false,
 
             // section and url will be resolved on first fetchInfo based on allowSectionSwitch
             lockedSection: null,
@@ -179,7 +203,14 @@ export default {
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
             pdfPreviewState: null,
         }
-    }, 
+    },
+    watch: {
+        focus(newValue) {
+            if (!newValue && this.localLockdown) {
+                this.$nextTick(() => this.$refs.localUnlockInput?.focus());
+            }
+        },
+    },
     components: { ExamHeader, PdfviewPaneRendered, WebviewPane },  
     methods: { 
 
@@ -227,6 +258,30 @@ export default {
             if (!this.config.development && !response.focus){  //immediately block frontend
                 this.focus = false 
             }  
+        },
+        async tryUnlockLocalLockdown() {
+            if (!this.localLockdown) return;
+
+            const expected = this.serverstatus?.password ?? "";
+            const provided = this.localUnlockPassword ?? "";
+            if (!expected || provided !== expected) {
+                this.localUnlockError = true;
+                return;
+            }
+
+            this.localUnlockBusy = true;
+            try {
+                const result = await signalBridge.invoke('restorefocusstateLocal');
+                if (result?.ok) {
+                    this.localUnlockPassword = '';
+                    this.localUnlockError = false;
+                    this.focus = true;
+                    return;
+                }
+                this.localUnlockError = true;
+            } finally {
+                this.localUnlockBusy = false;
+            }
         },
         async loadFilelist(){
             let filelist = await signalBridge.invoke('getfilesasync', null)
