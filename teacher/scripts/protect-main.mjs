@@ -107,6 +107,8 @@ const createObfuscatedCjs = async () => {
   let fixedCjsCode = cjsCode.replace(/const\s+__dirname\s*=\s*import_meta\.dirname\s*;/g, '');
   // Also handle cases where it's used in other contexts (shouldn't happen, but just in case)
   fixedCjsCode = fixedCjsCode.replace(/import_meta\.dirname/g, '__dirname');
+  // Fix import.meta.url transformation: esbuild uses import_meta.url, which is undefined in CJS.
+  fixedCjsCode = fixedCjsCode.replace(/import_meta\.url/g, "require('url').pathToFileURL(__filename).href");
   const result = JavaScriptObfuscator.obfuscate(fixedCjsCode, config);
   await fs.writeFile(obfuscatedEntryPath, result.getObfuscatedCode(), 'utf8');
 };
