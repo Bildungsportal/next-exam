@@ -274,6 +274,7 @@ export default defineConfig(( ctx: any ) => {
         asarUnpack: [
           'public',
         ],
+        beforePack: 'scripts/beforepack.js',
         afterPack: 'scripts/afterpack.js',
         directories: { output: `../release/${version}.${buildNumber}_${artifactDate}` },
         compression: 'normal',
