@@ -116,7 +116,7 @@ async function configureEduvidual(presetGroup) {
         inputPlaceholder: 'https://www.eduvidual.at/mod/quiz/view.php?id=6153159',
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
-        html: `<div class="my-content">Bitte geben Sie eine gültige Eduvidual Test-URL ein.</div>`,
+        html: `<div class="my-content">${this.$t("dashboard.eduvidualTestUrlHint")}</div>`,
         inputValidator: (value) => {
             if (!value || !isValidMoodleDomainName(value)) return this.$t("dashboard.moodleInvalidDomain");
             const { testid } = extractDomainAndId(value);
@@ -260,6 +260,40 @@ function activesheetsIsPdfFile(file) {
     return (file.type && file.type.includes('pdf')) || (file.name && file.name.toLowerCase().endsWith('.pdf'));
 }
 
+function microsoft365IsTemplateFile(file) {
+    const name = (file && file.name) ? String(file.name).toLowerCase() : '';
+    return name.endsWith('.docx') || name.endsWith('.xlsx');
+}
+
+/** Returns picked Office template File or null if dialog cancelled (native input). */
+function pickOfficeTemplateFromUser() {
+    return new Promise((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.xlsx,.docx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        input.multiple = false;
+        let settled = false;
+        const settle = (file) => {
+            if (settled) return;
+            settled = true;
+            window.removeEventListener('focus', onWinFocus);
+            input.remove();
+            resolve(file || null);
+        };
+        const onWinFocus = () => {
+            setTimeout(() => {
+                if (!settled && (!input.files || input.files.length === 0)) settle(null);
+            }, 300);
+        };
+        input.addEventListener('change', () => {
+            settle(input.files && input.files.length ? input.files[0] : null);
+        });
+        document.body.appendChild(input);
+        window.addEventListener('focus', onWinFocus);
+        requestAnimationFrame(() => input.click());
+    });
+}
+
 /**
  * Active Sheets (PDF Forms): native file picker; group preset from sidebar or default when opening from exam-type menu.
  * @param {'a'|'b'|'all'|undefined} presetGroup - With groups off, always "all"; with groups on, default "a" if omitted (call from sidebar with explicit preset).
@@ -282,14 +316,14 @@ async function configureActivesheets(presetGroup) {
     if (bad.length) {
         await this.$swal.fire({
             customClass: { popup: 'my-popup', title: 'my-title', content: 'my-content', actions: 'my-swal2-actions' },
-            title: this.$t("dashboard.invalidpdf") || "Ungültige PDF-Datei!",
+            title: this.$t("dashboard.invalidpdf"),
             icon: 'error',
             showConfirmButton: true,
         });
         return;
     }
 
-    this.status(this.$t("dashboard.processingfiles") || "Dateien werden verarbeitet...");
+    this.status(this.$t("dashboard.processingfiles"));
 
     let firstFileBase64 = null;
     let firstFileName = null;
@@ -335,6 +369,52 @@ async function configureActivesheets(presetGroup) {
 }
 
 /**
+ * Microsoft365: configure Office template per group (A/B) or for all (AB when groups off).
+ * Stores template in group.examConfig.microsoft365.template (base64 + name).
+ * @param {'a'|'b'|'all'|undefined} presetGroup
+ */
+async function configureMicrosoft365Template(presetGroup) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    const hasGroups = !!section.groups;
+    const whoNorm = String(presetGroup || 'all').toLowerCase();
+    const activeGroup = hasGroups ? (whoNorm === 'b' ? 'b' : whoNorm === 'a' ? 'a' : 'a') : 'all';
+
+    const groupA = section.groupA;
+    const groupB = section.groupB;
+    if (!groupA.examConfig) groupA.examConfig = {};
+    if (!groupB.examConfig) groupB.examConfig = {};
+    if (!groupA.examConfig.microsoft365) groupA.examConfig.microsoft365 = {};
+    if (!groupB.examConfig.microsoft365) groupB.examConfig.microsoft365 = {};
+
+    const file = await pickOfficeTemplateFromUser();
+    if (!file) return;
+    if (!microsoft365IsTemplateFile(file)) {
+        await this.$swal.fire({
+            customClass: { popup: 'my-popup', title: 'my-title', content: 'my-content', actions: 'my-swal2-actions' },
+            title: this.$t("dashboard.invalid_file"),
+            text: this.$t("dashboard.invalid_file_text"),
+            icon: 'error',
+            showConfirmButton: true,
+        });
+        return;
+    }
+
+    const filecontent = await readFileAsBase64(file);
+    const template = { filename: file.name, filecontent, mimetype: file.type || '' };
+
+    if (!hasGroups) {
+        groupA.examConfig.microsoft365.template = template;
+        groupB.examConfig.microsoft365.template = template;
+    } else if (activeGroup === 'b') {
+        groupB.examConfig.microsoft365.template = template;
+    } else {
+        groupA.examConfig.microsoft365.template = template;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(section, 'msOfficeFile')) delete section.msOfficeFile;
+    this.setServerStatus();
+}
+/**
  * RDP
  */
 async function configureRDP(presetGroup){
@@ -369,7 +449,7 @@ async function configureRDP(presetGroup){
         html: `<div class="my-content">${this.$t("dashboard.rdpconfiginfo")}</div>`,
         inputValidator: (value) => {
             const raw = String(value || '').trim();
-            if (!raw) return "Bitte geben Sie eine gültige Domain ein.";
+            if (!raw) return this.$t("dashboard.invalidDomain");
             return undefined;
         }
     });
@@ -684,11 +764,11 @@ async function configureEditor(){
                 if (state === 'ok') {
                     hostStatus.textContent = '✓';
                     hostStatus.style.color = '#28a745';
-                    hostStatus.title = this.$t('dashboard.host_ok') || 'Host erfolgreich aufgelöst';
+                    hostStatus.title = this.$t('dashboard.host_ok');
                 } else if (state === 'warn') {
                     hostStatus.textContent = '▲';
                     hostStatus.style.color = '#ffc107';
-                    hostStatus.title = this.$t('dashboard.host_warn') || 'Host konnte nicht aufgelöst werden';
+                    hostStatus.title = this.$t('dashboard.host_warn');
                 } else {
                     hostStatus.textContent = '';
                     hostStatus.removeAttribute('title');
@@ -1352,4 +1432,4 @@ function openAllowedUrl(allowedUrl){
 
 
 
-export { configureWebsite, configureEduvidual, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }
+export { configureWebsite, configureEduvidual, configureMicrosoft365Template, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }

@@ -76,7 +76,7 @@ export type ExamConfig = {
   gforms: Record<string, unknown>,
   website: WebsiteConfig,
   math: Record<string, unknown>,
-  microsoft365: Record<string, unknown>,
+  microsoft365: Microsoft365Config,
   rdp: RdpConfig,
   localvm: Record<string, unknown>,
 }
@@ -100,6 +100,16 @@ export type EduvidualConfig = {
 
 export type RdpConfig = {
   domain?: string,
+}
+
+export type Microsoft365Config = {
+  template?: Microsoft365Template,
+}
+
+export type Microsoft365Template = {
+  filename?: string,
+  filecontent?: string,
+  mimetype?: string,
 }
 
 export type File = {
