@@ -185,7 +185,7 @@
                 <li v-if="config.exammodes && config.exammodes.localvm"><a class="dropdown-item" @click="selectExamType('localvm')" :class="{ active: isExamType('localvm') }">LocalVM</a> </li>
             </ul>
             </div>
-            <button v-if="!isExamType('activesheets') && !isExamType('math') && !isExamType('website') && !isExamType('eduvidual')" class="btn btn-sm btn-secondary p-0 sidebar-exammode-settings" :class="lockSettings ? 'disabledexam' : ''" style="width: 31px; height: 31px; display: inline-flex; vertical-align: middle; justify-content: center; align-items: center;" @click="selectExamType(serverstatus.examSections[serverstatus.activeSection].examtype)"  @mouseover="showDescription($t('dashboard.extendedsettings_mode'))"  @mouseout="hideDescription">
+            <button v-if="!isExamType('activesheets') && !isExamType('math') && !isExamType('website') && !isExamType('eduvidual') && !isExamType('rdp')" class="btn btn-sm btn-secondary p-0 sidebar-exammode-settings" :class="lockSettings ? 'disabledexam' : ''" style="width: 31px; height: 31px; display: inline-flex; vertical-align: middle; justify-content: center; align-items: center;" @click="selectExamType(serverstatus.examSections[serverstatus.activeSection].examtype)"  @mouseover="showDescription($t('dashboard.extendedsettings_mode'))"  @mouseout="hideDescription">
                 <img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22">
             </button>
             </div>
@@ -311,6 +311,63 @@
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureEduvidual('all')">
                                 <span class="sidebar-pick-btn__label">Test URL</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- RDP Config -->
+                <div v-if="isExamType('rdp')" class="basematerial-sidebar-block mt-2">
+                    <div class="basematerial-panel-caption">RDP</div>
+
+                    <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill">A</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.rdp?.domain">
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.rdp.domain">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.rdp.domain }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeRdp('a')">&times;</button>
+                                </div>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureRDP('a')">
+                                <span class="sidebar-pick-btn__label">RDP URL</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill basematerial-group-pill--b">B</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.rdp?.domain">
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.rdp.domain">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.rdp.domain }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeRdp('b')">&times;</button>
+                                </div>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureRDP('b')">
+                                <span class="sidebar-pick-btn__label">RDP URL</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill basematerial-group-pill--ab" aria-label="A/B">AB</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.rdp?.domain">
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.rdp.domain">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.rdp.domain }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeRdp('all')">&times;</button>
+                                </div>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureRDP('all')">
+                                <span class="sidebar-pick-btn__label">RDP URL</span>
                                 <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
                             </button>
                         </div>
@@ -910,7 +967,6 @@ export default {
                         fontfamily: "sans-serif", 
                         fontsize: '12pt',
                         audioRepeat: 0,
-                        rdpConfig: null,
                         localVMConfig: null,
 
                         groups: false,
@@ -934,7 +990,6 @@ export default {
                         fontfamily: "sans-serif", 
                         fontsize: '12pt',
                         audioRepeat: 0,
-                        rdpConfig: null,
                         localVMConfig: null,
 
                         groups: false,
@@ -958,7 +1013,6 @@ export default {
                         fontfamily: "sans-serif", 
                         fontsize: '12pt',
                         audioRepeat: 0,
-                        rdpConfig: null,
                         localVMConfig: null,
 
                         groups: false,
@@ -982,7 +1036,6 @@ export default {
                         fontfamily: "sans-serif", 
                         fontsize: '12pt',
                         audioRepeat: 0,
-                        rdpConfig: null,
                         localVMConfig: null,
                         groups: false,
                         groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
@@ -1080,6 +1133,24 @@ computed: {
             const clearCfg = (g) => {
                 if (!g || !g.examConfig) return;
                 g.examConfig.eduvidual = {};
+            };
+            if (!section.groups || group === 'all') {
+                clearCfg(section.groupA);
+                clearCfg(section.groupB);
+            } else if (group === 'b') {
+                clearCfg(section.groupB);
+            } else {
+                clearCfg(section.groupA);
+            }
+            this.setServerStatus();
+        },
+
+        removeRdp(group) {
+            const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+            if (!section) return;
+            const clearCfg = (g) => {
+                if (!g || !g.examConfig) return;
+                g.examConfig.rdp = {};
             };
             if (!section.groups || group === 'all') {
                 clearCfg(section.groupA);
@@ -1376,7 +1447,7 @@ computed: {
             if (type === 'forms') this.getFormsID();
             if (type === 'website') {/* configured via sidebar */}
             if (type === 'math') {/* no dialog */}
-            if (type === 'rdp') this.configureRDP();
+            if (type === 'rdp') {/* configured via sidebar */}
             if (type === 'localvm') this.configureLocalVM();
         },
 
@@ -1727,6 +1798,7 @@ computed: {
                     if (!group.examConfig.activeSheets || typeof group.examConfig.activeSheets !== 'object') group.examConfig.activeSheets = {};
                     if (!group.examConfig.website || typeof group.examConfig.website !== 'object') group.examConfig.website = {};
                     if (!group.examConfig.eduvidual || typeof group.examConfig.eduvidual !== 'object') group.examConfig.eduvidual = {};
+                    if (!group.examConfig.rdp || typeof group.examConfig.rdp !== 'object') group.examConfig.rdp = {};
                 }
 
                 if (section.domainname || section.blockSubdomains || section.blockSubfolders) {
@@ -1754,6 +1826,13 @@ computed: {
                     if (Object.prototype.hasOwnProperty.call(section, 'moodleURL')) delete section.moodleURL;
                     if (Object.prototype.hasOwnProperty.call(section, 'moodleTestId')) delete section.moodleTestId;
                     if (Object.prototype.hasOwnProperty.call(section, 'moodleDomain')) delete section.moodleDomain;
+                }
+
+                if (section.rdpConfig && section.rdpConfig.domain) {
+                    const nextConfig = { domain: section.rdpConfig.domain };
+                    section.groupA.examConfig.rdp = nextConfig;
+                    section.groupB.examConfig.rdp = nextConfig;
+                    if (Object.prototype.hasOwnProperty.call(section, 'rdpConfig')) delete section.rdpConfig;
                 }
             }
         },

@@ -51,7 +51,6 @@ export type Section = {
   fontfamily: string | null,
   fontsize: number | null,
   audioRepeat: number | null,
-  rdpConfig: null, // Remove?
   localVMConfig: any,
   groups: boolean,
   groupA: Group,
@@ -78,7 +77,7 @@ export type ExamConfig = {
   website: WebsiteConfig,
   math: Record<string, unknown>,
   microsoft365: Record<string, unknown>,
-  rdp: Record<string, unknown>,
+  rdp: RdpConfig,
   localvm: Record<string, unknown>,
 }
 
@@ -97,6 +96,10 @@ export type EduvidualConfig = {
   url?: string,
   moodleDomain?: string | null,
   moodleTestId?: number | null,
+}
+
+export type RdpConfig = {
+  domain?: string,
 }
 
 export type File = {

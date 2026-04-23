@@ -365,7 +365,8 @@ export default {
                 this.lockedSection = sectionIndex
 
                 const section = this.serverstatus.examSections?.[sectionIndex]
-                this.rdpConfig = section?.rdpConfig || null
+                const groupKey = section && section.groups && this.clientinfo?.status?.group === 'b' ? 'groupB' : 'groupA'
+                this.rdpConfig = section?.[groupKey]?.examConfig?.rdp || null
                 this.rdpUrl = this.rdpConfig && this.rdpConfig.domain
                     ? `https://${this.rdpConfig.domain}/RDWeb/webclient/index.html`
                     : null

@@ -337,10 +337,21 @@ async function configureActivesheets(presetGroup) {
 /**
  * RDP
  */
-async function configureRDP(){
-    let savedDomain = ''; // Store domain value before dialog closes (Electron 39 compatibility)
+async function configureRDP(presetGroup){
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    const hasGroups = !!section.groups;
+    const whoNorm = String(presetGroup || 'all').toLowerCase();
+    const activeGroup = hasGroups ? (whoNorm === 'b' ? 'b' : 'a') : 'all';
 
-    this.$swal.fire({
+    const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    const groupB = section.groupB || (section.groupB = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    if (!groupA.examConfig) groupA.examConfig = {};
+    if (!groupB.examConfig) groupB.examConfig = {};
+
+    const currentConfig = activeGroup === 'b' ? (groupB.examConfig.rdp || {}) : (groupA.examConfig.rdp || {});
+    const currentValue = currentConfig.domain || '';
+
+    const result = await this.$swal.fire({
         customClass: {
             popup: 'my-popup',
             title: 'my-title',
@@ -350,49 +361,45 @@ async function configureRDP(){
         },
         title: this.$t("dashboard.rdp"),
         icon: 'question',
-        html: `
-        <div class="my-content">
-            <span class="text">${this.$t("dashboard.rdpconfiginfo")}</span>
-            <br> <br>
-            <label>
-                <input type="text" id="domain" class="form-control my-select" placeholder="rdweb.schule.lan">
-            </label>
-            
-        </div>
-        `,
+        input: 'text',
+        inputValue: currentValue,
+        inputPlaceholder: 'rdweb.schule.lan',
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
-        didOpen: () => {
-            if (this.serverstatus.examSections[this.serverstatus.activeSection].rdpConfig) {
-                document.getElementById('domain').value = this.serverstatus.examSections[this.serverstatus.activeSection].rdpConfig.domain || ''
-            }
-        },
-        preConfirm: () => {
-            // Save domain value before dialog closes (Electron 39 compatibility)
-            const domainElement = document.getElementById('domain');
-            savedDomain = domainElement ? domainElement.value.trim() : '';
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const domain = savedDomain; // Use saved value instead of reading from DOM
-            
-            if (!domain) {
-                this.$swal.fire({
-                    title: "Fehler",
-                    text: "Bitte geben Sie eine gültige Domain ein.",
-                    icon: "error"
-                });
-                return;
-            }
-
-            const rdpConfig = {
-                domain: domain
-            }
-
-            this.serverstatus.examSections[this.serverstatus.activeSection].rdpConfig = rdpConfig;
-            this.setServerStatus();
+        html: `<div class="my-content">${this.$t("dashboard.rdpconfiginfo")}</div>`,
+        inputValidator: (value) => {
+            const raw = String(value || '').trim();
+            if (!raw) return "Bitte geben Sie eine gültige Domain ein.";
+            return undefined;
         }
     });
+
+    if (!result.isConfirmed) return;
+
+    const raw = String(result.value || '').trim();
+    if (!raw) return;
+
+    let domain = raw;
+    try {
+        const asUrl = raw.includes('://') ? raw : `https://${raw}`;
+        domain = new URL(asUrl).host;
+    } catch (e) {
+        domain = raw;
+    }
+
+    const nextConfig = { domain };
+
+    if (!hasGroups) {
+        groupA.examConfig.rdp = nextConfig;
+        groupB.examConfig.rdp = nextConfig;
+    } else if (activeGroup === 'b') {
+        groupB.examConfig.rdp = nextConfig;
+    } else {
+        groupA.examConfig.rdp = nextConfig;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(section, 'rdpConfig')) delete section.rdpConfig;
+    this.setServerStatus();
 }
 
 
