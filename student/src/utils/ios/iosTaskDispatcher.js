@@ -53,7 +53,6 @@ class IosTaskDispatcher {
     }
 
     async dispatch(signal, payload) {
-        //loggingBridge.info("signal dispatch", signal, payload);
         switch (signal) {
 
             /**
@@ -86,7 +85,7 @@ class IosTaskDispatcher {
             case 'set-new-locale':
                 return this.setnewlocale(payload);
             case 'checkhostip':
-                return await this.checkhostip(payload);
+                return await this.checkhostip();
             case 'loginBiP':
                 return this.loginbip(payload);
             case 'reload-url':
@@ -167,81 +166,25 @@ class IosTaskDispatcher {
         }
     }
 
-    async checkhostip(payload) {
-        /*try {
-            this.loggingBridge.info("checkhostip networkStatus start");
+    async checkhostip() {
+        try {
             const networkStatus = await Network.getStatus();
-            this.loggingBridge.info("checkhostip networkStatus end", Network, networkStatus);
-            return networkStatus
-        } catch (err) {
-            this.loggingBridge.error("checkhostip error", Network, err);
-        }*/
-        try {
-            const { ip } = await this.NetworkInfo.getWifiIP()
-            this.loggingBridge.info("checkhostip ip", ip)
-            return ip
-        } catch (e) {
-            this.loggingBridge.error('Could not get IP:', e)
-        }
-        /*let address = false;
-        try {
-            address = this.multicastclient.client.address();
-        } catch (e) {
-            this.loggingBridge.error("IosTaskDispatcher @ checkhostip: multicastclient not running", this.multicastclient?.client);
-            this.loggingBridge.error(this);
-        }
-
-        // Falls bereits eine Adresse vorhanden ist, liefern wir sie zurück.
-        if (address) {
-            return config.hostip;
-        }
-
-        // Versuche, an die korrekte Schnittstelle zu binden
-        try {
-            // Falls gateway4sync() blockierend ist, kannst du diesen Aufruf in ein Promise packen:
-            const {gateway, interface: iface} = await new Promise((resolve, reject) => {
+            this.loggingBridge.info("checkhostip networkStatus", networkStatus);
+            if (networkStatus.connected) {
                 try {
-                    //const res = gateway4sync();
-                    //resolve(res);
-                } catch (err) {
-                    reject(err);
+                    const { ip } = await this.NetworkInfo.getWifiIP()
+                    this.loggingBridge.info("checkhostip ip", ip)
+                    return ip
+                } catch (e) {
+                    this.loggingBridge.error('Could not get IP:', e)
+                    return false
                 }
-            });
-            config.hostip = ip.address(iface); // Liefert die IP der Schnittstelle, welche das Default Gateway hat
-            config.gateway = true;
-        } catch (e) {
-            config.hostip = false;
-            config.gateway = false;
-        }
-
-        // Falls keine IP (mit Gateway) verfügbar ist, hole eine alternative Adresse
-        if (!config.hostip) {
-            try {
-                config.hostip = ip.address(); // Liefert auch eine IP, wenn kein Gateway verfügbar ist
-            } catch (e) {
-                this.loggingBridge.error("IosTaskDispatcher @ checkhostip: Unable to determine ip address", e);
-                config.hostip = false;
-                config.gateway = false;
             }
+        } catch (err) {
+            this.loggingBridge.error("checkhostip networkStatus error", err)
+            return false
         }
 
-        // Verfälschte Adressen (z. B. localhost) ignorieren
-        if (config.hostip === "127.0.0.1") {
-            config.hostip = false;
-        }
-
-        // Wenn die Multicast-Client nicht läuft, initialisieren
-        if (config.hostip && !address) {
-            try {
-                // Falls init() asynchron umgesetzt werden kann, warten wir hier darauf.
-                await this.multicastclient.init(config.gateway);
-            } catch (err) {
-                this.loggingBridge.error("IosTaskDispatcher @ checkhostip: Error initializing multicast client", err);
-            }
-        }
-
-        return config.hostip;
-        */
     }
 
     /**
