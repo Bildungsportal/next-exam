@@ -142,6 +142,14 @@
                 </div>
             </div>
 
+            <div class="materials-pick-row">
+                <span class="materials-group-pill materials-group-pill--ab" aria-label="A/B">AB</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="emitChooseMaterials('all')">
+                  <span class="sidebar-pick-btn__label">{{ $t('dashboard.materialsChoosePlaceholder') }}</span>
+                  <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                </button>
+            </div>
+
         </template>
     </div>
 </template>
@@ -345,7 +353,7 @@
   }
 
   .materials-group-pill {
-    flex: 0 0 30px;
+    flex: 0 0 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -356,12 +364,20 @@
     border-radius: 5px;
     line-height: 1;
     user-select: none;
-    height: 31px;
+    height: 32px;
   }
 
   .materials-group-pill--b {
     background: linear-gradient(165deg, #ffc107 0%, #d39e00 100%);
     color: #212529;
+  }
+
+  .materials-group-pill--ab {
+    background: linear-gradient(135deg, var(--bs-info) 0 50%, var(--bs-warning) 50% 100%);
+    color: var(--bs-dark);
+    border: 0px solid rgba(255, 255, 255, 0.12);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+    transform: translateY(-0.5px);
   }
 
   .materials-group-stack {

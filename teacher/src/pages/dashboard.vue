@@ -222,6 +222,7 @@
                                 <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
                             </button>
                         </div>
+
                         <div class="activesheets-row">
                             <span class="activesheets-group-pill activesheets-group-pill--b">B</span>
                             <template v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.activeSheets?.filename">
@@ -240,7 +241,7 @@
                     </template>
                     <template v-else>
                         <div class="activesheets-row">
-                            <span class="activesheets-group-pill">{{ $t('dashboard.activesheetsPdfPill') }}</span>
+                            <span class="activesheets-group-pill activesheets-group-pill--ab" aria-label="A/B">AB</span>
                             <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.activeSheets?.filename">
                                 <div class="btn-group activesheets-filegroup" role="group">
                                     <button type="button" class="btn btn-sm btn-teal activesheets-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
@@ -258,30 +259,32 @@
                 </div>
 
                 <!-- Microsoft365 Buttons -->
-                <div v-if="isExamType('microsoft365')" class="d-flex flex-column gap-2">
-                <!-- Connect Button -->
-                <button v-if="!config.accessToken" @click="openAuthWindow()" class="btn btn-sm btn-primary">
-                    <img src="/src/assets/img/svg/win.svg" width="24" height="24">
-                    <span class="ms-1">Verbinden</span>
-                </button>
+                <div v-if="isExamType('microsoft365')" class="sidebar-dropdown-inset mt-2">
+                    <div class="d-flex flex-column gap-2">
+                    <!-- Connect Button -->
+                    <button v-if="!config.accessToken" @click="openAuthWindow()" class="btn btn-sm btn-primary">
+                        <img src="/src/assets/img/svg/win.svg" width="24" height="24">
+                        <span class="ms-1">Verbinden</span>
+                    </button>
 
-                <!-- File Select Button -->
-                <button v-if="config.accessToken && !serverstatus.examSections[serverstatus.activeSection].msOfficeFile" @click="onedriveUploadselect()" class="btn btn-sm btn-info text-truncate">
-                    <img src="/src/assets/img/svg/win.svg" width="24" height="24">
-                    <span class="ms-1">Datei wählen</span>
-                </button>
+                    <!-- File Select Button -->
+                    <button v-if="config.accessToken && !serverstatus.examSections[serverstatus.activeSection].msOfficeFile" @click="onedriveUploadselect()" class="btn btn-sm btn-info text-truncate">
+                        <img src="/src/assets/img/svg/win.svg" width="24" height="24">
+                        <span class="ms-1">Datei wählen</span>
+                    </button>
 
-                <!-- Selected File Button -->
-                <button v-if="config.accessToken && serverstatus.examSections[serverstatus.activeSection].msOfficeFile" @click="onedriveUploadselect()" class="btn btn-sm btn-success text-truncate">
-                    <img src="/src/assets/img/svg/win.svg" width="24" height="24">
-                    <span class="ms-1">{{serverstatus.examSections[serverstatus.activeSection].msOfficeFile.name}}</span>
-                </button>
+                    <!-- Selected File Button -->
+                    <button v-if="config.accessToken && serverstatus.examSections[serverstatus.activeSection].msOfficeFile" @click="onedriveUploadselect()" class="btn btn-sm btn-success text-truncate">
+                        <img src="/src/assets/img/svg/win.svg" width="24" height="24">
+                        <span class="ms-1">{{serverstatus.examSections[serverstatus.activeSection].msOfficeFile.name}}</span>
+                    </button>
 
-                <!-- Logout Button -->
-                <button v-if="config.accessToken" @click="logout365()" class="btn btn-sm btn-warning">
-                    <img src="/src/assets/img/svg/win.svg" width="24" height="24">
-                    <span class="ms-1">Logout</span>
-                </button>
+                    <!-- Logout Button -->
+                    <button v-if="config.accessToken" @click="logout365()" class="btn btn-sm btn-warning">
+                        <img src="/src/assets/img/svg/win.svg" width="24" height="24">
+                        <span class="ms-1">Logout</span>
+                    </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1668,7 +1671,6 @@ computed: {
             .then( response => { /*console.log(response.message)*/  })
             .catch(err => { console.warn(err) })
         },
-
 
         // setup groups
         // every user is automatically in group a (see control /registerclient) - this function resets group arrangement and pushes every user into group a
@@ -3206,7 +3208,6 @@ hr {
 
 /* Pick-row dashed buttons: activesheets + MaterialsList; flex aligns label/+ identically (grid+inline spans differed by subtree/font metrics) */
 .sidebar-pick-btn.btn {
-    --bs-btn-line-height: 1;
     flex: 1 1 auto;
     min-width: 0;
     width: 100%;
@@ -3216,12 +3217,11 @@ hr {
     align-items: center;
     justify-content: flex-start;
     gap: 0.5rem;
-    height: 31px;
-    min-height: 31px;
-    max-height: 31px;
+    height: 32px;
+    min-height: 32px;
+    max-height: 32px;
     padding: 0 0.5rem !important;
     font-size: 0.8rem;
-    line-height: 1 !important;
     color: rgba(255, 255, 255, 0.55);
     border: 1px dashed rgba(255, 255, 255, 0.28) !important;
     border-radius: 0.25rem;
@@ -3268,7 +3268,7 @@ hr {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
-    padding: 0.5rem 0.55rem;
+    padding: 0.5rem var(--bs-btn-padding-x, 0.75rem);
     border-width: 1px 0;
     border-style: solid;
     border-color: rgba(255, 255, 255, 0.14);
@@ -3296,8 +3296,8 @@ hr {
 }
 
 .activesheets-group-pill {
-    flex: 0 0 30px;
-    height: 31px;
+    flex: 0 0 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3306,13 +3306,19 @@ hr {
     color: #fff;
     background: linear-gradient(165deg, #0dcaf0 0%, #0a9cb8 100%);
     border-radius: 5px;
-    line-height: 1;
     user-select: none;
 }
 
 .activesheets-group-pill--b {
     background: linear-gradient(165deg, #ffc107 0%, #d39e00 100%);
     color: #212529;
+}
+
+.activesheets-group-pill--ab {
+    background: linear-gradient(135deg, var(--bs-info) 0 50%, var(--bs-warning) 50% 100%);
+    color: var(--bs-dark);
+    border: 0px solid rgba(255, 255, 255, 0.12);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .activesheets-filename {
