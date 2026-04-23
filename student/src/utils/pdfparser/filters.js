@@ -1,5 +1,20 @@
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
+/** Horizontal advance of a text item in viewport px (pdfjs width is text-space; scale changed across majors). */
+export function textItemRunWidthPx(tx, item, measureCtx, str) {
+    const horizScale = Math.hypot(tx[0], tx[1]);
+    const measured = measureCtx && str ? measureCtx.measureText(str).width || 0 : 0;
+    if (typeof item.width !== 'number' || !Number.isFinite(item.width)) {
+        return measured > 0 ? measured : horizScale * (str?.length || 0) * 0.6;
+    }
+    const wAbs = Math.abs(item.width);
+    const scaled = wAbs * horizScale;
+    if (measured > 0.5 && str && str.length > 0) {
+        return Math.abs(measured - scaled) <= Math.abs(measured - wAbs) ? scaled : wAbs;
+    }
+    return scaled;
+}
+
 // Collection of filter utilities extracted from the PDF parser
 export const filterMethods = {
     /**
@@ -141,9 +156,17 @@ export const filterMethods = {
                 const itemX = tx[4];
                 const itemY = tx[5];
 
-                const textWidth = typeof item.width === 'number' ? Math.abs(item.width) : fontSize * item.str.length * 0.6;
-                const textLeft = itemX;
-                const textRight = itemX + textWidth;
+                let textLeft;
+                let textRight;
+                if (typeof item.width === 'number' && item.width !== 0) {
+                    const xEnd = itemX + tx[0] * item.width;
+                    textLeft = Math.min(itemX, xEnd);
+                    textRight = Math.max(itemX, xEnd);
+                } else {
+                    const est = fontSize * item.str.length * 0.6;
+                    textLeft = itemX;
+                    textRight = itemX + est;
+                }
                 const textTop = itemY - fontSize;
                 const textBottom = itemY;
                 const textCenterX = (textLeft + textRight) / 2;
@@ -207,8 +230,16 @@ export const filterMethods = {
 
                 const tx2 = pdfjsLib.Util.transform(viewport.transform, item.transform);
                 const fs2 = Math.sqrt(tx2[0] * tx2[0] + tx2[1] * tx2[1]);
-                const cx = tx2[4] + (typeof item.width === 'number' ? Math.abs(item.width) : fs2) / 2;
-                const cy = tx2[5] - fs2 / 2;
+                const wRaw = typeof item.width === 'number' ? item.width : 0;
+                let cx;
+                let cy;
+                if (wRaw !== 0) {
+                    cx = tx2[4] + (tx2[0] * wRaw) / 2;
+                    cy = tx2[5] + (tx2[1] * wRaw) / 2 - fs2 / 2;
+                } else {
+                    cx = tx2[4] + fs2 / 2;
+                    cy = tx2[5] - fs2 / 2;
+                }
 
                 const inside =
                     cx >= rect.left - overlapTol &&
@@ -261,7 +292,7 @@ export const filterMethods = {
                 measureCtx.font = `${fontSize}px ${effectiveFontFamily}`;
 
                 const measuredFullWidth = measureCtx.measureText(item.str).width || 0;
-                const actualFullWidthRaw = typeof item.width === 'number' ? Math.abs(item.width) : measuredFullWidth;
+                const actualFullWidthRaw = textItemRunWidthPx(tx, item, measureCtx, item.str);
                 let widthScale = measuredFullWidth > 0 ? actualFullWidthRaw / measuredFullWidth : 1;
                 if (!Number.isFinite(widthScale) || widthScale <= 0.2 || widthScale >= 3) {
                     widthScale = 1;
@@ -274,8 +305,16 @@ export const filterMethods = {
                 const itemX = tx[4];
                 const itemY = tx[5];
 
-                const textLeft = itemX;
-                const textRight = itemX + textWidth;
+                let textLeft;
+                let textRight;
+                if (typeof item.width === 'number' && item.width !== 0) {
+                    const xEnd = itemX + tx[0] * item.width;
+                    textLeft = Math.min(itemX, xEnd);
+                    textRight = Math.max(itemX, xEnd);
+                } else {
+                    textLeft = itemX;
+                    textRight = itemX + textWidth;
+                }
                 const textTop = itemY - fontSize;
                 const textBottom = itemY + 2;
 

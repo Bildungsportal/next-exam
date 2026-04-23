@@ -157,23 +157,22 @@
 
     <!-- SIDEBAR start -->
     <div :key="5" class="p-3 text-white bg-dark h-100 " style="width: 240px; min-width: 240px;">
-        <div class="btn btn-light m-1 mt-0 text-start infobutton" @click="showinfo()">{{$t('dashboard.name')}} <br><b> {{$route.params.servername}}</b> </div><br>
-        <div class="btn btn-light m-1  text-start infobutton" @click="showinfo()">{{$t('dashboard.pin')}}<br><b> {{ serverstatus.pin }} </b>  </div><br>
-        <div class="btn btn-light m-1 mb-3 text-start infobutton" @click="showinfo()">{{$t('dashboard.server')}} <br><b>{{serverip}}</b> </div><br>
+        <div class="sidebar-info-strip sidebar-panel-bleed">
+        <div class="btn btn-light text-start infobutton" @click="showinfo()">{{$t('dashboard.name')}} <br><b> {{$route.params.servername}}</b> </div>
+        <div class="btn btn-light text-start infobutton" @click="showinfo()">{{$t('dashboard.pin')}}<br><b> {{ serverstatus.pin }} </b>  </div>
+        <div class="btn btn-light mb-3 text-start infobutton" @click="showinfo()">{{$t('dashboard.server')}} <br><b>{{serverip}}</b> </div>
+        </div>
+
         
-        
-        <div class="dropdown-section m-1" style="width: 200px"   :class="lockInExammode ? 'disabledexam-dropdown' : ''">
-            <!-- Dropdown Button -->
+        <div class="dropdown-section sidebar-panel-bleed mt-2" :class="lockInExammode ? 'disabledexam-dropdown' : ''">
+            <div class="sidebar-dropdown-inset">
             <div class="mb-1">{{$t("dashboard.exammode")}}</div>
 
-            <button class="btn btn-sm btn-secondary dropdown-toggle d-inline-flex justify-content-between align-items-center" style="width: 166px; vertical-align: middle; text-align: left;"  type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <div class="sidebar-exammode-row">
+            <div class="dropdown sidebar-exammode-dropdown-wrap">
+            <button class="btn btn-sm btn-secondary dropdown-toggle d-flex justify-content-between align-items-center sidebar-exammode-toggle w-100" style="text-align: left;" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-popper="static">
                  <span>{{ getSelectedExamTypeLabel() }}</span>
             </button>
-            <button class="btn btn-sm btn-secondary p-0" :class="lockSettings ? 'disabledexam' : ''" style="width: 31px; height: 31px; margin-left: 3px; display: inline-flex; vertical-align: middle; justify-content: center; align-items: center;" @click="selectExamType(serverstatus.examSections[serverstatus.activeSection].examtype)"  @mouseover="showDescription($t('dashboard.extendedsettings_mode'))"  @mouseout="hideDescription"> 
-                <img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22">
-            </button>
-
-            <!-- Dropdown Menu -->
             <ul class="dropdown-menu" style="cursor: pointer;">
                 <li v-if="config.exammodes && config.exammodes.math"><a class="dropdown-item" @click="selectExamType('math')" :class="{ active: isExamType('math') }">{{$t('dashboard.math')}}</a></li>
                 <li v-if="config.exammodes && config.exammodes.editor"><a class="dropdown-item" @click="selectExamType('editor')" :class="{ active: isExamType('editor') }">{{$t('dashboard.lang')}}</a></li>
@@ -185,8 +184,13 @@
                 <li v-if="config.exammodes && config.exammodes.rdp"><a class="dropdown-item" @click="selectExamType('rdp')" :class="{ active: isExamType('rdp') }">RDP</a> </li>
                 <li v-if="config.exammodes && config.exammodes.localvm"><a class="dropdown-item" @click="selectExamType('localvm')" :class="{ active: isExamType('localvm') }">LocalVM</a> </li>
             </ul>
+            </div>
+            <button v-if="!isExamType('activesheets')" class="btn btn-sm btn-secondary p-0 sidebar-exammode-settings" :class="lockSettings ? 'disabledexam' : ''" style="width: 31px; height: 31px; display: inline-flex; vertical-align: middle; justify-content: center; align-items: center;" @click="selectExamType(serverstatus.examSections[serverstatus.activeSection].examtype)"  @mouseover="showDescription($t('dashboard.extendedsettings_mode'))"  @mouseout="hideDescription"> 
+                <img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22">
+            </button>
+            </div>
+            </div>
 
-            <!-- Additional Info Section -->
             <div class="mt-2">
                 <!-- Editor Spellcheck Info -->
                 <div v-if="isExamType('editor') && serverstatus.examSections[serverstatus.activeSection].languagetool" class="small text-white-50">
@@ -206,37 +210,51 @@
                         <div class="activesheets-row">
                             <span class="activesheets-group-pill">A</span>
                             <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.activeSheets?.filename">
-                                <button type="button" class="btn btn-sm btn-warning activesheets-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
-                                    {{ truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 22) }}
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-light activesheets-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('A')">&times;</button>
+                                <div class="btn-group activesheets-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal activesheets-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
+                                        <span class="activesheets-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename), 22) }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary activesheets-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('A')">&times;</button>
+                                </div>
                             </template>
-                            <div v-else class="activesheets-placeholder">{{ $t('dashboard.activesheetsNoPdf') }}</div>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureActivesheets('a')">
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.activesheetsNoPdf') }}</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
                         </div>
                         <div class="activesheets-row">
                             <span class="activesheets-group-pill activesheets-group-pill--b">B</span>
                             <template v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.activeSheets?.filename">
-                                <button type="button" class="btn btn-sm btn-warning activesheets-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename, 'B')">
-                                    {{ truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename, 22) }}
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-light activesheets-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('B')">&times;</button>
+                                <div class="btn-group activesheets-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal activesheets-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename, 'B')">
+                                        <span class="activesheets-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename), 22) }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary activesheets-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('B')">&times;</button>
+                                </div>
                             </template>
-                            <div v-else class="activesheets-placeholder">{{ $t('dashboard.activesheetsNoPdf') }}</div>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureActivesheets('b')">
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.activesheetsNoPdf') }}</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
                         </div>
                     </template>
                     <template v-else>
                         <div class="activesheets-row">
                             <span class="activesheets-group-pill">{{ $t('dashboard.activesheetsPdfPill') }}</span>
                             <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.activeSheets?.filename">
-                                <button type="button" class="btn btn-sm btn-warning activesheets-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
-                                    {{ truncatedClientName(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 22) }}
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-light activesheets-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('A')">&times;</button>
+                                <div class="btn-group activesheets-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal activesheets-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
+                                        <span class="activesheets-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename), 22) }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary activesheets-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('A')">&times;</button>
+                                </div>
                             </template>
-                            <div v-else class="activesheets-placeholder">{{ $t('dashboard.activesheetsNoPdf') }}</div>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureActivesheets('all')">
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.activesheetsNoPdf') }}</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
                         </div>
                     </template>
-                    <div v-if="!hasActiveSheetsPdf" class="activesheets-hint">{{ $t('dashboard.activesheetsChooseHint') }}</div>
                 </div>
 
                 <!-- Microsoft365 Buttons -->
@@ -270,20 +288,23 @@
 
 
         <!-- Files Section START -->
-        <div class="mb-2" style="display: inline-block; width: 100%; position: relative;">
-            <div class=" m-1 mt-3" style="display: inline-block;">{{$t("dashboard.materials")}}</div>
-            <div class="btn btn-sm m-1 btn-cyan plusbutton " @click="defineMaterials('all');hideDescription();" @mouseover="showDescription($t('dashboard.definematerials'))" @mouseout="hideDescription"  style="">+</div>
-            <MaterialsList class="m-1" 
-                :examSection="serverstatus.examSections[serverstatus.activeSection]" 
+        <div class="materials-sidebar-block sidebar-panel-bleed mt-2 mb-2">
+            <div class="materials-sidebar-header">
+                <div class="materials-panel-caption">{{ $t('dashboard.materials') }}</div>
+            </div>
+            <MaterialsList
+                class="materials-sidebar-list"
+                :examSection="serverstatus.examSections[serverstatus.activeSection]"
                 :exammode="serverstatus.exammode"
-                @remove-file="handleFileRemove" 
-                @show-preview="(base64, filename) => showBase64FilePreview.call(this, base64, filename)" 
+                @remove-file="handleFileRemove"
+                @choose-materials="handleChooseMaterialsGroup"
+                @show-preview="(base64, filename) => showBase64FilePreview.call(this, base64, filename)"
                 @show-pdf-in-renderer="(base64, filename) => showBase64PdfInRenderer.call(this, base64, filename)"
-                @show-image-preview="showBase64ImagePreview" 
+                @show-image-preview="showBase64ImagePreview"
                 @play-audio-file="playAudioFile"
                 @remove-allowed-url="handleAllowedUrlRemove"
                 @open-allowed-url="openAllowedUrl"
-            />   
+            />
         </div>
         <!-- Files Section END -->
 
@@ -1178,6 +1199,11 @@ computed: {
             }
         },
 
+        handleChooseMaterialsGroup(group) {
+            this.defineMaterials(group);
+            this.hideDescription();
+        },
+
         // remove file from group a or b
         handleFileRemove({ group, index }) {
             this.$swal.fire({
@@ -1218,7 +1244,6 @@ computed: {
             if (type === 'forms') this.getFormsID();
             if (type === 'website') this.getTestURL();
             if (type === 'math') this.configureMath();
-            if (type === 'activesheets') this.configureActivesheets();
             if (type === 'rdp') this.configureRDP();
             if (type === 'localvm') this.configureLocalVM();
         },
@@ -1538,6 +1563,15 @@ computed: {
         truncatedClientName(value, len=18) {
             if (!value) return
             return value.length > len ? value.substr(0, len) + '...' : value;
+        },
+
+        // Strip last ".ext" segment for labels (same behavior as materialsList.vue).
+        getFilenameWithoutExtension(filename) {
+            if (!filename || typeof filename !== 'string') {
+                return filename || '';
+            }
+            const parts = filename.split('.');
+            return parts.length > 1 ? parts.slice(0, -1).join('.') : filename;
         },
 
         migrateServerStatus() {
@@ -2566,11 +2600,52 @@ computed: {
     height: 100%;
 }
 
+.sidebar-panel-bleed {
+    margin-left: -1rem;
+    margin-right: -1rem;
+    width: calc(100% + 2rem);
+    box-sizing: border-box;
+}
+
+.sidebar-info-strip {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sidebar-dropdown-inset {
+    padding-left: var(--bs-btn-padding-x, 0.75rem);
+    padding-right: var(--bs-btn-padding-x, 0.75rem);
+    box-sizing: border-box;
+}
+
+.sidebar-exammode-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.sidebar-exammode-dropdown-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.sidebar-exammode-toggle {
+    min-width: 0;
+}
+
+.sidebar-exammode-settings {
+    flex: 0 0 auto;
+}
+
 .infobutton{
-    width: 221px;
-    min-width: 221px;
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    border-radius: 0 !important;
     background-color: whitesmoke;
     cursor: help;
 }
@@ -3091,11 +3166,113 @@ hr {
     white-space: nowrap;
 }
 
+.materials-sidebar-block {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+    padding: 0.5rem var(--bs-btn-padding-x, 0.75rem);
+    border-width: 1px 0;
+    border-style: solid;
+    border-color: rgba(255, 255, 255, 0.14);
+    border-radius: 0;
+    background: rgba(0, 0, 0, 0.22);
+}
+
+.materials-sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 0.5rem;
+}
+
+.materials-panel-caption {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.055em;
+    color: rgba(255, 255, 255, 0.52);
+    line-height: 1.1;
+    min-width: 0;
+}
+
+.materials-plus {
+    flex: 0 0 auto;
+    margin: 0 !important;
+}
+
+.materials-sidebar-list {
+    margin: 0 !important;
+}
+
+/* Pick-row dashed buttons: activesheets + MaterialsList; flex aligns label/+ identically (grid+inline spans differed by subtree/font metrics) */
+.sidebar-pick-btn.btn {
+    --bs-btn-line-height: 1;
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex !important;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    height: 31px;
+    min-height: 31px;
+    max-height: 31px;
+    padding: 0 0.5rem !important;
+    font-size: 0.8rem;
+    line-height: 1 !important;
+    color: rgba(255, 255, 255, 0.55);
+    border: 1px dashed rgba(255, 255, 255, 0.28) !important;
+    border-radius: 0.25rem;
+    text-align: left;
+}
+
+.sidebar-pick-btn .sidebar-pick-btn__label {
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidebar-pick-btn .sidebar-pick-btn__plus {
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+    flex: 0 0 auto;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.68);
+    
+}
+
+.sidebar-pick-btn.btn-outline-secondary:hover,
+.sidebar-pick-btn.btn-outline-secondary:focus,
+.sidebar-pick-btn.btn-outline-secondary:active {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.22) !important;
+    color: rgba(255, 255, 255, 0.72);
+    box-shadow: none;
+}
+
+.sidebar-pick-btn.btn-outline-secondary:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.25);
+    outline-offset: 1px;
+}
+
 .activesheets-sidebar-block {
     margin-top: 0.35rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     padding: 0.5rem 0.55rem;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 6px;
+    border-width: 1px 0;
+    border-style: solid;
+    border-color: rgba(255, 255, 255, 0.14);
+    border-radius: 0;
     background: rgba(0, 0, 0, 0.22);
 }
 
@@ -3109,7 +3286,7 @@ hr {
 
 .activesheets-row {
     display: flex;
-    align-items: stretch;
+    align-items: center;
     gap: 6px;
     margin-bottom: 6px;
 }
@@ -3120,10 +3297,11 @@ hr {
 
 .activesheets-group-pill {
     flex: 0 0 30px;
+    height: 31px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.72rem;
+    font-size: 0.8rem;
     font-weight: 700;
     color: #fff;
     background: linear-gradient(165deg, #0dcaf0 0%, #0a9cb8 100%);
@@ -3138,40 +3316,60 @@ hr {
 }
 
 .activesheets-filename {
-    flex: 1 1 auto;
+    flex: 1 1 0%;
     min-width: 0;
     text-align: left;
 }
 
-.activesheets-remove {
-    flex: 0 0 auto;
-    padding: 0.2rem 0.4rem;
+.activesheets-filegroup {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: stretch;
+}
+
+.activesheets-filegroup .activesheets-filename {
+    flex: 1 1 0%;
+    min-width: 0;
+}
+
+.activesheets-filegroup > .activesheets-filename.btn {
+    --bs-btn-line-height: 1;
+    flex: 1 1 0%;
+    min-width: 0;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start;
+    min-height: 31px;
+    height: 31px;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    line-height: 1 !important;
+}
+
+.activesheets-filegroup > .activesheets-filename.btn .activesheets-filename-truncate {
+    display: block;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+}
+
+.activesheets-filegroup > .activesheets-remove.btn {
+    flex: 0 0 24px;
+    width: 24px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 31px;
+    height: 31px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     line-height: 1;
     font-size: 1.05rem;
     font-weight: 300;
-    opacity: 0.9;
 }
-
-.activesheets-placeholder {
-    flex: 1 1 auto;
-    min-width: 0;
-    font-size: 0.74rem;
-    color: rgba(255, 255, 255, 0.42);
-    border: 1px dashed rgba(255, 255, 255, 0.22);
-    border-radius: 4px;
-    padding: 0.4rem 0.5rem;
-    display: flex;
-    align-items: center;
-}
-
-.activesheets-hint {
-    margin-top: 0.55rem;
-    padding-top: 0.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    font-size: 0.72rem;
-    color: rgba(255, 255, 255, 0.55);
-    line-height: 1.35;
-}
-
 
 </style>

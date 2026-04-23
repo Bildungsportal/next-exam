@@ -1,4 +1,5 @@
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { textItemRunWidthPx } from './filters.js';
 
 // Rectangle and field detection utilities extracted from the PDF parser
 export const detectorMethods = {
@@ -179,12 +180,12 @@ export const detectorMethods = {
       } else if (op === this.OP_CODE.rectangle) {
         this.addBox(data[dIndex], data[dIndex + 1], data[dIndex + 2], data[dIndex + 3], ctm, viewport, boxFields);
         dIndex += 4;
-      } else if (op === 15) {
+      } else if (op === this.OP_CODE.curveTo) {
         // curveTo: skip 6 values (3 points), update current position to endpoint
         currentX = data[dIndex + 4];
         currentY = data[dIndex + 5];
         dIndex += 6;
-      } else if (op === 16 || op === 17) {
+      } else if (op === this.OP_CODE.curveTo2 || op === this.OP_CODE.curveTo3) {
         // curveTo1/curveTo2: skip 4 values
         currentX = data[dIndex + 2];
         currentY = data[dIndex + 3];
@@ -335,6 +336,28 @@ export const detectorMethods = {
     const opList = await page.getOperatorList();
     const OPS = pdfjsLib.OPS;
     const lineStore = { hLines: [], vLines: [] };
+    let loggedPathSample = false;
+
+    if (this.enableLogging && this.debugBoxExtraction) {
+      const fnCounts = opList.fnArray.reduce((acc, fn) => {
+        const k = String(fn);
+        acc[k] = (acc[k] || 0) + 1;
+        return acc;
+      }, {});
+      const topFns = Object.entries(fnCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 12);
+      console.log(
+        `pdfparser @ extractBoxFields: OPS ids ${JSON.stringify({
+          save: OPS.save,
+          restore: OPS.restore,
+          transform: OPS.transform,
+          rectangle: OPS.rectangle,
+          constructPath: OPS.constructPath,
+        })}`,
+      );
+      console.log(`pdfparser @ extractBoxFields: top fnArray values ${JSON.stringify(topFns)}`);
+    }
 
     let ctm = [1, 0, 0, 1, 0, 0];
     const transformStack = [];
@@ -361,10 +384,51 @@ export const detectorMethods = {
       } else if (fn === OPS.rectangle) {
         this.addBox(args[0], args[1], args[2], args[3], ctm, viewport, boxFields);
       } else if (fn === OPS.constructPath) {
-        const ops = args[0];
-        const data = args[1];
+        let pathOp = null;
+        let ops = null;
+        let data = null;
+        // pdf.js versions differ:
+        // - v4: args=[ops, data]
+        // - v5+: args=[pathOp, ops, data] or [pathOp, [dataView], opsView]
+        if (Array.isArray(args?.[0]) && Array.isArray(args?.[1])) {
+          ops = args[0];
+          data = args[1];
+        } else if (
+          typeof args?.[0] === 'number' &&
+          Array.isArray(args?.[1]) &&
+          args[1].length === 1 &&
+          ArrayBuffer.isView(args?.[1]?.[0]) &&
+          ArrayBuffer.isView(args?.[2])
+        ) {
+          pathOp = args[0];
+          ops = Array.from(args[1][0]);
+          data = Array.from(args[2]);
+        } else if (
+          typeof args?.[0] === 'number' &&
+          Array.isArray(args?.[1]) &&
+          (Array.isArray(args?.[2]) || ArrayBuffer.isView(args?.[2]))
+        ) {
+          pathOp = args[0];
+          ops = args[1];
+          data = args[2];
+        } else {
+          if (this.enableLogging && this.debugBoxExtraction && !loggedPathSample) {
+            loggedPathSample = true;
+            const shape = Array.isArray(args) ? args.map((a) => (Array.isArray(a) ? `array(${a.length})` : typeof a)) : typeof args;
+            console.log(`pdfparser @ extractBoxFields: constructPath args shape=${JSON.stringify(shape)}`);
+          }
+          continue;
+        }
         let dIndex = 0;
         let pathPoints = [];
+
+        if (!loggedPathSample && this.enableLogging && this.debugBoxExtraction) {
+          loggedPathSample = true;
+          const uniq = Array.isArray(ops) ? [...new Set(ops)].slice(0, 30) : [];
+          console.log(
+            `pdfparser @ extractBoxFields: OP_CODE ${JSON.stringify(this.OP_CODE)}; pathOp=${pathOp}; sample ops=${JSON.stringify(Array.isArray(ops) ? ops.slice(0, 40) : null)}; uniq=${JSON.stringify(uniq)}; dataLen=${data?.length ?? null}`,
+          );
+        }
 
         for (let j = 0; j < ops.length; j += 1) {
           const op = ops[j];
@@ -380,9 +444,9 @@ export const detectorMethods = {
           } else if (op === this.OP_CODE.lineTo) {
             pathPoints.push({ x: data[dIndex], y: data[dIndex + 1] });
             dIndex += 2;
-          } else if (op === 15) {
+          } else if (op === this.OP_CODE.curveTo) {
             dIndex += 6;
-          } else if (op === 16 || op === 17) {
+          } else if (op === this.OP_CODE.curveTo2 || op === this.OP_CODE.curveTo3) {
             dIndex += 4;
           }
         }
@@ -492,7 +556,7 @@ export const detectorMethods = {
       measureCtx.font = `${fontSize}px ${effectiveFontFamily}`;
 
       const measuredFullWidth = measureCtx.measureText(text).width || 0;
-      const actualFullWidthRaw = typeof item.width === 'number' ? Math.abs(item.width) : measuredFullWidth;
+      const actualFullWidthRaw = textItemRunWidthPx(tx, item, measureCtx, text);
       let widthScale = measuredFullWidth > 0 ? actualFullWidthRaw / measuredFullWidth : 1;
       if (!Number.isFinite(widthScale) || widthScale <= 0.2 || widthScale >= 3) {
         widthScale = 1;
@@ -505,7 +569,7 @@ export const detectorMethods = {
       // substitute font → positions drift.  Use item.width (PDF-native, always
       // reliable) to interpolate substring widths proportionally instead.
       const knownFont = !!customAdjust;
-      const itemWidthPdf = typeof item.width === 'number' ? Math.abs(item.width) : null;
+      const itemWidthPdf = typeof item.width === 'number' ? actualFullWidthRaw : null;
 
       const measureSubstringWidth = (subText) => {
         if (knownFont || !itemWidthPdf || !text.length) {
@@ -743,7 +807,7 @@ export const detectorMethods = {
             vLines.push({ x: (leftR[0] + leftR[2]) / 2, y1: Math.min(leftR[1], leftR[3]), y2: Math.max(leftR[1], leftR[3]), fromRect: true });
             const rightR = toVp(tr, br);
             vLines.push({ x: (rightR[0] + rightR[2]) / 2, y1: Math.min(rightR[1], rightR[3]), y2: Math.max(rightR[1], rightR[3]), fromRect: true });
-          } else if (op === 15) dIndex += 6;
+          } else if (op === this.OP_CODE.curveTo) dIndex += 6;
         }
       }
     }
@@ -865,7 +929,7 @@ export const detectorMethods = {
       measureCtx.font = `${fontSize}px ${effectiveFontFamily}`;
 
       const measuredFullWidth = measureCtx.measureText(text).width || 0;
-      const actualFullWidthRaw = typeof item.width === 'number' ? Math.abs(item.width) : measuredFullWidth;
+      const actualFullWidthRaw = textItemRunWidthPx(tx, item, measureCtx, text);
       let widthScale = measuredFullWidth > 0 ? actualFullWidthRaw / measuredFullWidth : 1;
       if (!Number.isFinite(widthScale) || widthScale <= 0.2 || widthScale >= 3) {
         widthScale = 1;
@@ -876,7 +940,7 @@ export const detectorMethods = {
 
       // Proportional substring measurement (same logic as extractClozeFields)
       const knownFontD = !!customAdjust;
-      const itemWidthPdfD = typeof item.width === 'number' ? Math.abs(item.width) : null;
+      const itemWidthPdfD = typeof item.width === 'number' ? actualFullWidthRaw : null;
       const measureSubstringWidthD = (subText) => {
         if (knownFontD || !itemWidthPdfD || !text.length) {
           return this.measureTextWidthWithMetrics(subText, measureCtx, fontSize, useScale, widthScale, fontScale, customAdjust);

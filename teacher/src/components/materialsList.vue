@@ -2,64 +2,115 @@
     <div class="file-buttons-container">
         <!-- Wenn Gruppen aktiviert sind -->
         <template v-if="examSection.groups">
-            <!-- Gruppe A -->
+            <!-- Gruppe A: first row = pill + choose or first item; no group title -->
             <div class="group-section">
-              <div class="group-label">{{$t('dashboard.groupA')}}</div>
-              <div v-for="(file, index) in examSection.groupA.examInstructionFiles" :key="'A' + index" class="input-group"  style="">
-                  <div class="btn btn-sm btn-secondary mt-1" @click="removeFile('A', index)" style="padding:4px 8px;">x</div>
-                  <div v-if="file.filetype == 'pdf'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click="showBase64FilePreview(file.filecontent, file.filename)"> {{ getFilenameWithoutExtension(file.filename) }} </div>   
-                  <div v-else-if="file.filetype == 'image'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click="showBase64ImagePreview(file.filecontent, file.filename)"> {{ getFilenameWithoutExtension(file.filename) }} </div> 
-                  <div v-else-if="file.filetype == 'audio'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click="playAudioFile(file.filecontent, file.filename)"> {{ getFilenameWithoutExtension(file.filename) }} </div> 
-                  <div v-else-if="file.filetype == 'ggb'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click=""> {{ getFilenameWithoutExtension(file.filename) }} </div> 
-                  <div v-else-if="file.filetype == 'docx'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click=""> {{ getFilenameWithoutExtension(file.filename) }} </div>
-                  <div v-else-if="file.filetype == 'bak'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click=""> {{ getFilenameWithoutExtension(file.filename) }} </div>
-
-                  <div class="btn btn-sm btn-teal mt-1 extension-button"> 
+              <div class="materials-group-stack">
+              <template v-if="groupAMaterialCount === 0">
+              <div class="materials-pick-row">
+                <span class="materials-group-pill">A</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="emitChooseMaterials('a')">
+                  <span class="sidebar-pick-btn__label">{{ $t('dashboard.materialsChoosePlaceholder') }}</span>
+                  <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                </button>
+              </div>
+              </template>
+              <template v-else>
+              <div v-for="(file, index) in examSection.groupA.examInstructionFiles" :key="'A' + index" class="materials-item-row materials-file-row">
+                  <span v-if="index === 0" class="materials-group-pill">A</span>
+                  <span v-else class="materials-pick-spacer" aria-hidden="true"></span>
+                  <div class="btn-group materials-filegroup" role="group">
+                  <div class="btn btn-sm btn-teal extension-button">
                     <div class="vertical-text">{{ getFileExtension(file.filename) }}</div>
                   </div>
-              </div>
-
-              <div v-for="(allowedUrl, index) in examSection.groupA.allowedUrls" :key="'allowedUrl' + index" class="input-group" style="">
-                  <div class="btn btn-sm btn-secondary mt-1" @click="removeAllowedUrl('A', index)" style="padding:4px 8px;">x</div>
-                  <div class="btn btn-sm btn-cyan mt-1 filename-button url-display-button" :title="getUrlTooltip(allowedUrl)" @click="openAllowedUrl(allowedUrl)"> {{ getUrlDisplay(allowedUrl) }} </div>
-                  <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">S<br>D</span></div>
-                  <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">S<br>F</span></div>
-                  <div class="btn btn-sm btn-teal mt-1 extension-button">
-                      <div class="vertical-text">URL</div>
+                  <div v-if="file.filetype == 'pdf'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click="showBase64FilePreview(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                  <div v-else-if="file.filetype == 'image'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click="showBase64ImagePreview(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                  <div v-else-if="file.filetype == 'audio'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click="playAudioFile(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                  <div v-else-if="file.filetype == 'ggb'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                  <div v-else-if="file.filetype == 'docx'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                  <div v-else-if="file.filetype == 'bak'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                  <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeFile('A', index)">&times;</button>
                   </div>
               </div>
 
+              <div v-for="(allowedUrl, index) in examSection.groupA.allowedUrls" :key="'allowedUrl' + index" class="materials-item-row materials-url-row">
+                  <span v-if="examSection.groupA.examInstructionFiles.length === 0 && index === 0" class="materials-group-pill">A</span>
+                  <span v-else class="materials-pick-spacer" aria-hidden="true"></span>
+                  <div class="btn-group materials-filegroup" role="group">
+                  <div class="btn btn-sm btn-teal extension-button">
+                      <div class="vertical-text">URL</div>
+                  </div>
+                  <div class="btn btn-sm btn-cyan filename-button url-display-button text-truncate" :title="getUrlTooltip(allowedUrl)" @click="openAllowedUrl(allowedUrl)"><span class="materials-filename-truncate">{{ getUrlDisplay(allowedUrl) }}</span></div>
+                  <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">S<br>D</span></div>
+                  <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">S<br>F</span></div>
+                  <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeAllowedUrl('A', index)">&times;</button>
+                  </div>
+              </div>
+
+              <div class="materials-pick-row">
+                <span class="materials-pick-spacer" aria-hidden="true"></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="emitChooseMaterials('a')">
+                  <span class="sidebar-pick-btn__label">{{ $t('dashboard.materialsChoosePlaceholder') }}</span>
+                  <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                </button>
+              </div>
+              </template>
+              </div>
 
             </div>
 
-            <!-- Gruppe B -->
+            <!-- Gruppe B: first row = pill + choose or first item; no group title -->
             <div class="group-section">
-              <div class="group-label">{{$t('dashboard.groupB')}}</div>
-              <div v-for="(file, index) in examSection.groupB.examInstructionFiles" :key="'B' + index" class="input-group" style="">
-                  <div class="btn btn-sm btn-secondary mt-1" @click="removeFile('B', index)" style="padding:4px 8px;">x</div>
-                  <div v-if="file.filetype == 'pdf'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click="showBase64FilePreview(file.filecontent, file.filename)"> {{ getFilenameWithoutExtension(file.filename) }} </div>   
-                  <div v-else-if="file.filetype == 'image'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click="showBase64ImagePreview(file.filecontent, file.filename)"> {{ getFilenameWithoutExtension(file.filename) }} </div> 
-                  <div v-else-if="file.filetype == 'audio'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click="playAudioFile(file.filecontent, file.filename)"> {{ getFilenameWithoutExtension(file.filename) }} </div> 
-                  <div v-else-if="file.filetype == 'ggb'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click=""> {{ getFilenameWithoutExtension(file.filename) }} </div> 
-                  <div v-else-if="file.filetype == 'docx'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click=""> {{ getFilenameWithoutExtension(file.filename) }} </div>
-                  <div v-else-if="file.filetype == 'bak'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click=""> {{ getFilenameWithoutExtension(file.filename) }} </div>
-                  
-                  <div class="btn btn-sm btn-teal mt-1 extension-button"> 
+              <div class="materials-group-stack">
+              <template v-if="groupBMaterialCount === 0">
+              <div class="materials-pick-row">
+                <span class="materials-group-pill materials-group-pill--b">B</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="emitChooseMaterials('b')">
+                  <span class="sidebar-pick-btn__label">{{ $t('dashboard.materialsChoosePlaceholder') }}</span>
+                  <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                </button>
+              </div>
+              </template>
+              <template v-else>
+              <div v-for="(file, index) in examSection.groupB.examInstructionFiles" :key="'B' + index" class="materials-item-row materials-file-row">
+                  <span v-if="index === 0" class="materials-group-pill materials-group-pill--b">B</span>
+                  <span v-else class="materials-pick-spacer" aria-hidden="true"></span>
+                  <div class="btn-group materials-filegroup" role="group">
+                  <div class="btn btn-sm btn-teal extension-button">
                     <div class="vertical-text">{{ getFileExtension(file.filename) }}</div>
                   </div>
-              </div>
-
-              <div v-for="(allowedUrl, index) in examSection.groupB.allowedUrls" :key="'allowedUrl' + index" class="input-group" style="">
-                  <div class="btn btn-sm btn-secondary mt-1" @click="removeAllowedUrl('B', index)" style="padding:4px 8px;">x</div>
-                  <div class="btn btn-sm btn-cyan mt-1 filename-button url-display-button" :title="getUrlTooltip(allowedUrl)" @click="openAllowedUrl(allowedUrl)"> {{ getUrlDisplay(allowedUrl) }} </div>
-                  <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">S<br>D</span></div>
-                  <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">S<br>F</span></div>
-                  <div class="btn btn-sm btn-teal mt-1 extension-button">
-                      <div class="vertical-text">URL</div>
+                  <div v-if="file.filetype == 'pdf'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click="showBase64FilePreview(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                  <div v-else-if="file.filetype == 'image'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click="showBase64ImagePreview(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                  <div v-else-if="file.filetype == 'audio'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click="playAudioFile(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                  <div v-else-if="file.filetype == 'ggb'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                  <div v-else-if="file.filetype == 'docx'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                  <div v-else-if="file.filetype == 'bak'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                  <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeFile('B', index)">&times;</button>
                   </div>
               </div>
 
+              <div v-for="(allowedUrl, index) in examSection.groupB.allowedUrls" :key="'allowedUrl' + index" class="materials-item-row materials-url-row">
+                  <span v-if="examSection.groupB.examInstructionFiles.length === 0 && index === 0" class="materials-group-pill materials-group-pill--b">B</span>
+                  <span v-else class="materials-pick-spacer" aria-hidden="true"></span>
+                  <div class="btn-group materials-filegroup" role="group">
+                  <div class="btn btn-sm btn-teal extension-button">
+                      <div class="vertical-text">URL</div>
+                  </div>
+                  <div class="btn btn-sm btn-cyan filename-button url-display-button text-truncate" :title="getUrlTooltip(allowedUrl)" @click="openAllowedUrl(allowedUrl)"><span class="materials-filename-truncate">{{ getUrlDisplay(allowedUrl) }}</span></div>
+                  <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">S<br>D</span></div>
+                  <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">S<br>F</span></div>
+                  <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeAllowedUrl('B', index)">&times;</button>
+                  </div>
+              </div>
 
+              <div class="materials-pick-row">
+                <span class="materials-pick-spacer" aria-hidden="true"></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="emitChooseMaterials('b')">
+                  <span class="sidebar-pick-btn__label">{{ $t('dashboard.materialsChoosePlaceholder') }}</span>
+                  <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                </button>
+              </div>
+              </template>
+              </div>
 
             </div>
         </template>
@@ -68,12 +119,12 @@
         <template v-else>
             <div v-for="(file, index) in examSection.groupA.examInstructionFiles" :key="index" class="input-group" style="">
                 <div class="btn btn-sm btn-secondary mt-1" @click="removeFile('A', index)" style="padding:4px 8px;">x</div>
-                <div v-if="file.filetype == 'pdf'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click="showBase64FilePreview(file.filecontent, file.filename)"> {{ getFilenameWithoutExtension(file.filename) }} </div>   
-                <div v-else-if="file.filetype == 'image'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click="showBase64ImagePreview(file.filecontent, file.filename)"> {{ getFilenameWithoutExtension(file.filename) }} </div> 
-                <div v-else-if="file.filetype == 'audio'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click="playAudioFile(file.filecontent, file.filename)"> {{ getFilenameWithoutExtension(file.filename) }} </div> 
-                <div v-else-if="file.filetype == 'ggb'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click=""> {{ getFilenameWithoutExtension(file.filename) }} </div> 
-                <div v-else-if="file.filetype == 'docx'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click=""> {{ getFilenameWithoutExtension(file.filename) }} </div>
-                <div v-else-if="file.filetype == 'bak'" class="btn btn-sm btn-cyan mt-1 filename-button" :title="file.filename" @click=""> {{ getFilenameWithoutExtension(file.filename) }} </div>
+                <div v-if="file.filetype == 'pdf'" class="btn btn-sm btn-cyan mt-1 filename-button text-truncate" :title="file.filename" @click="showBase64FilePreview(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                <div v-else-if="file.filetype == 'image'" class="btn btn-sm btn-cyan mt-1 filename-button text-truncate" :title="file.filename" @click="showBase64ImagePreview(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                <div v-else-if="file.filetype == 'audio'" class="btn btn-sm btn-cyan mt-1 filename-button text-truncate" :title="file.filename" @click="playAudioFile(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                <div v-else-if="file.filetype == 'ggb'" class="btn btn-sm btn-cyan mt-1 filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                <div v-else-if="file.filetype == 'docx'" class="btn btn-sm btn-cyan mt-1 filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                <div v-else-if="file.filetype == 'bak'" class="btn btn-sm btn-cyan mt-1 filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
 
               <div class="btn btn-sm btn-teal mt-1 extension-button"> 
                   <div class="vertical-text">{{ getFileExtension(file.filename) }}</div>
@@ -83,7 +134,7 @@
 
             <div v-for="(allowedUrl, index) in examSection.groupA.allowedUrls" :key="'allowedUrl' + index" class="input-group" style="">
                 <div class="btn btn-sm btn-secondary mt-1" @click="removeAllowedUrl('A', index)" style="padding:4px 8px;">x</div>
-                <div class="btn btn-sm btn-cyan mt-1 filename-button url-display-button" :title="getUrlTooltip(allowedUrl)" @click="openAllowedUrl(allowedUrl)"> {{ getUrlDisplay(allowedUrl) }} </div>
+                <div class="btn btn-sm btn-cyan mt-1 filename-button url-display-button text-truncate" :title="getUrlTooltip(allowedUrl)" @click="openAllowedUrl(allowedUrl)"><span class="materials-filename-truncate">{{ getUrlDisplay(allowedUrl) }}</span></div>
                 <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">S<br>D</span></div>
                 <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">S<br>F</span></div>
                 <div class="btn btn-sm btn-teal mt-1 extension-button">
@@ -117,6 +168,18 @@
         type: Boolean,
         default: false
       }
+    },
+    computed: {
+      groupAMaterialCount() {
+        const g = this.examSection?.groupA;
+        if (!g) return 0;
+        return (g.examInstructionFiles?.length || 0) + (g.allowedUrls?.length || 0);
+      },
+      groupBMaterialCount() {
+        const g = this.examSection?.groupB;
+        if (!g) return 0;
+        return (g.examInstructionFiles?.length || 0) + (g.allowedUrls?.length || 0);
+      },
     },
     methods: {
       getFileExtension(filename) {
@@ -177,6 +240,10 @@
 
       getUrlFlag(allowedUrl, flag) {
         return typeof allowedUrl === 'object' && allowedUrl[flag];
+      },
+
+      emitChooseMaterials(group) {
+        this.$emit('choose-materials', group);
       }
 
     }
@@ -211,7 +278,10 @@
 
 
   .file-buttons-container {
-    margin: 10px 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .filename-button {
@@ -219,6 +289,17 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  /* Ellipsis needs a block/flex child: raw text in .btn inline-flex does not truncate reliably */
+  .materials-filename-truncate {
+    display: block;
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
   }
 
   .url-display-button {
@@ -257,19 +338,160 @@
   }
   
   .group-section {
-    margin-bottom: 15px;
+    margin-bottom: 0.65rem;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
-  
-  .group-label {
-    font-weight: normal;
-    font-size: 0.9em;
+
+  .materials-group-pill {
+    flex: 0 0 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(165deg, #0dcaf0 0%, #0a9cb8 100%);
+    border-radius: 5px;
+    line-height: 1;
+    user-select: none;
+    height: 31px;
   }
-  
+
+  .materials-group-pill--b {
+    background: linear-gradient(165deg, #ffc107 0%, #d39e00 100%);
+    color: #212529;
+  }
+
+  .materials-group-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .materials-item-row {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .materials-filegroup {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    align-items: stretch;
+  }
+
+  .materials-filegroup .filename-button {
+    max-width: none;
+    flex: 1 1 0%;
+    min-width: 0;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .materials-filegroup > .btn.filename-button,
+  .materials-filegroup > .btn.url-display-button {
+    --bs-btn-line-height: 1;
+    flex: 1 1 0%;
+    min-width: 0;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start;
+    min-height: 31px;
+    height: 31px;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    line-height: 1 !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .materials-filegroup .url-display-button {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .materials-filegroup .sd-sf-btn {
+    flex-shrink: 0;
+  }
+
+  .materials-filegroup > .materials-remove.btn {
+    flex: 0 0 24px;
+    width: 24px;
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 31px;
+    height: 31px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-size: 1.05rem;
+    font-weight: 300;
+  }
+
+  /* btn-group gives children flex:1 1 auto — lock typ column to fixed narrow width */
+  .materials-filegroup > .extension-button.btn {
+    flex: 0 0 14px;
+    min-width: 14px;
+    max-width: 14px;
+    width: 14px;
+    box-sizing: border-box;
+  }
+
+  .materials-pick-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 0;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-y: visible;
+    box-sizing: border-box;
+  }
+
+  .materials-pick-spacer {
+    flex: 0 0 30px;
+    width: 30px;
+    height: 31px;
+    min-height: 31px;
+    align-self: center;
+  }
+
   .input-group {
     margin-right: 10px;
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
+  }
+
+  .input-group .filename-button.text-truncate,
+  .input-group .url-display-button.text-truncate {
+    flex: 1 1 0%;
+    min-width: 0;
+    max-width: 100%;
+    display: flex !important;
+    align-items: center;
+    overflow: hidden;
   }
   
   .btn-danger {

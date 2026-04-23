@@ -33,8 +33,19 @@ import { fontAdjustments, fontMethods } from './fonts.js';
  */
 class PdfParser {
     constructor(options = {}) {
-        // Manual lookup for op codes to be safe
-        this.OP_CODE = { moveTo: 13, lineTo: 14, rectangle: 19, transform: 12, save: 0, restore: 1 };
+        // Prefer PDF.js operator codes (they changed across majors); fallback to legacy numeric values.
+        const OPS = pdfjsLib?.OPS || {};
+        this.OP_CODE = {
+            moveTo: OPS.moveTo ?? 13,
+            lineTo: OPS.lineTo ?? 14,
+            curveTo: OPS.curveTo ?? 15,
+            curveTo2: OPS.curveTo2 ?? 16,
+            curveTo3: OPS.curveTo3 ?? 17,
+            rectangle: OPS.rectangle ?? 19,
+            transform: OPS.transform ?? 12,
+            save: OPS.save ?? 0,
+            restore: OPS.restore ?? 1,
+        };
         this.DUPLICATE_TOLERANCE_PX = 12; // px tolerance for duplicate boxes
         this.MIN_SIZE_PDF_UNITS = 5; // roughly ~10px at scale 1.5
         this.CHECKBOX_MAX_SIZE = 25; // px threshold to treat as small checkbox

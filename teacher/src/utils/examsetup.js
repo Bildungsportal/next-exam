@@ -193,169 +193,111 @@ async function configureMath(){
     
 }
 
+/** Returns picked PDF File[] or null if dialog cancelled (native input, no SweetAlert file step). */
+function pickPdfFilesFromUser() {
+    return new Promise((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.pdf,application/pdf';
+        input.multiple = true;
+        let settled = false;
+        const settle = (files) => {
+            if (settled) return;
+            settled = true;
+            window.removeEventListener('focus', onWinFocus);
+            input.remove();
+            resolve(files && files.length ? files : null);
+        };
+        const onWinFocus = () => {
+            setTimeout(() => {
+                if (!settled && (!input.files || input.files.length === 0)) settle(null);
+            }, 300);
+        };
+        input.addEventListener('change', () => {
+            settle(input.files?.length ? Array.from(input.files) : null);
+        });
+        document.body.appendChild(input);
+        window.addEventListener('focus', onWinFocus);
+        requestAnimationFrame(() => input.click());
+    });
+}
+
+function activesheetsIsPdfFile(file) {
+    return (file.type && file.type.includes('pdf')) || (file.name && file.name.toLowerCase().endsWith('.pdf'));
+}
 
 /**
- * Active Sheets (PDF Forms)
- * @param {boolean} forceDialog - If true, show dialog even if PDF already exists
+ * Active Sheets (PDF Forms): native file picker; group preset from sidebar or default when opening from exam-type menu.
+ * @param {'a'|'b'|'all'|undefined} presetGroup - With groups off, always "all"; with groups on, default "a" if omitted (call from sidebar with explicit preset).
  */
-async function configureActivesheets(forceDialog = false){
-    let htmlcontent = `<div class="my-content"> 
-        ${this.$t("dashboard.activesheetshint") || "Bitte wählen Sie eine PDF-Datei aus, die interaktive Formularfelder enthält."} <br>
-        <span style="font-size:0.8em;">(.pdf)</span>
-        </div>`
-
-    // Show group selection buttons only if groups are enabled
-    if (this.serverstatus.examSections[this.serverstatus.activeSection].groups) {
-        htmlcontent = `<div class="my-content"> 
-            ${this.$t("dashboard.activesheetshint") || "Bitte wählen Sie eine PDF-Datei aus, die interaktive Formularfelder enthält."} <br>
-            <span style="font-size:0.8em;">(.pdf)</span>
-            <br>  <br> 
-            Gruppe<br>
-            <button id="fbtnA" class="swal2-button btn btn-cyan m-2" style="width: 42px; height: 42px;">A</button>
-            <button id="fbtnB" class="swal2-button btn btn-warning m-2" style="width: 42px; height: 42px;filter: grayscale(90%);">B</button>
-            <button id="fbtnC" class="swal2-button btn btn-warning m-2" style="padding:0px;width: 42px; height: 42px;filter: grayscale(90%); background: linear-gradient(-60deg, #0dcaf0 50%, #ffc107 50%);">AB</button>
-        </div>`
+async function configureActivesheets(presetGroup) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    let activeGroup = 'all';
+    if (!section.groups) {
+        activeGroup = 'all';
+    } else if (presetGroup === 'a' || presetGroup === 'b' || presetGroup === 'all') {
+        activeGroup = presetGroup;
+    } else {
+        activeGroup = 'a';
     }
-         
-    let activeGroup = this.serverstatus.examSections[this.serverstatus.activeSection].groups ? "a" : "all"  // Default to group A if groups enabled, otherwise "all"
 
-    this.$swal.fire({
-        customClass: {
-            popup: 'my-popup',
-            title: 'my-title',
-            content: 'my-content',
-            input: 'my-custom-input',
-            inputLabel: 'my-input-label',
-            actions: 'my-swal2-actions',
-            htmlContainer: 'my-html-container'
-        },
-        title: this.$t("dashboard.activesheets") || "Active Sheets",
-        html: htmlcontent,
-        icon: "success",
-        input: 'file',
-        showCancelButton: true,
-        cancelButtonText: this.$t("dashboard.cancel"),
-        inputAttributes: {
-            type: "file",
-            name: "files",
-            id: "swalFile",
-            class: "form-control",
-            multiple: "multiple",
-            accept: ".pdf"
-        },
-        didRender: () => {
-            const btnA = document.getElementById('fbtnA');
-            const btnB = document.getElementById('fbtnB');
-            const btnC = document.getElementById('fbtnC');
-            if (btnA && !btnA.dataset.listenerAdded) {
-                btnA.addEventListener('click', () => {
-                    btnA.style.filter = "grayscale(0%)"
-                    btnB.style.filter = "grayscale(90%)"
-                    btnC.style.filter = "grayscale(90%)"
-                    activeGroup = "a"
+    const files = await pickPdfFilesFromUser();
+    if (!files || !files.length) return;
+
+    const bad = files.filter((f) => !activesheetsIsPdfFile(f));
+    if (bad.length) {
+        await this.$swal.fire({
+            customClass: { popup: 'my-popup', title: 'my-title', content: 'my-content', actions: 'my-swal2-actions' },
+            title: this.$t("dashboard.invalidpdf") || "Ungültige PDF-Datei!",
+            icon: 'error',
+            showConfirmButton: true,
+        });
+        return;
+    }
+
+    this.status(this.$t("dashboard.processingfiles") || "Dateien werden verarbeitet...");
+
+    let firstFileBase64 = null;
+    let firstFileName = null;
+    for (const file of files) {
+        try {
+            const maxSizeBytes = 8 * 1024 * 1024;
+            if (file.size > maxSizeBytes) {
+                const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                await this.$swal.fire({
+                    customClass: { popup: 'my-popup', title: 'my-title', content: 'my-content', actions: 'my-swal2-actions' },
+                    title: this.$t("dashboard.filesizewarning"),
+                    html: `<div style="text-align: left;">${this.$t("dashboard.filesizewarningtext", { filename: file.name, size: fileSizeMB })}</div>`,
+                    icon: 'warning',
+                    showConfirmButton: true,
+                    confirmButtonText: 'OK',
                 });
-                btnA.dataset.listenerAdded = 'true';
             }
-            if (btnB && !btnB.dataset.listenerAdded) {
-                btnB.addEventListener('click', () => {
-                    btnA.style.filter = "grayscale(90%)"
-                    btnB.style.filter = "grayscale(0%)"
-                    btnC.style.filter = "grayscale(90%)"
-                    activeGroup = "b"
-                });
-                btnB.dataset.listenerAdded = 'true';
-            }
-            if (btnC && !btnC.dataset.listenerAdded) {
-                btnC.addEventListener('click', () => {
-                    btnA.style.filter = "grayscale(90%)"
-                    btnB.style.filter = "grayscale(90%)"
-                    btnC.style.filter = "grayscale(0%)"
-                    activeGroup = "all"
-                });
-                btnC.dataset.listenerAdded = 'true';
-            }
-        },
-        inputValidator: (value) => {
-            if (!value) {
-                return this.$t("dashboard.nopdfselected") || "Bitte wählen Sie eine PDF-Datei aus!";
-            }
-            const files = value;
-            // Handle FileList (array-like object) or single File
-            const fileArray = files.length !== undefined ? Array.from(files) : [files];
-            for (const file of fileArray) {
-                if (!(file.type && file.type.includes("pdf")) && !file.name.toLowerCase().endsWith('.pdf')) {
-                    return this.$t("dashboard.invalidpdf") || "Ungültige PDF-Datei!";
-                }
-            }
-        },
-    })
-    .then(async (input) => {
-        if (!input.value) {   return;   } // no further processing if no files are selected
 
-        this.status(this.$t("dashboard.processingfiles") || "Dateien werden verarbeitet...");
-        // Handle FileList (array-like object) or single File or Array
-        const files = Array.isArray(input.value) 
-            ? input.value 
-            : input.value.length !== undefined 
-                ? Array.from(input.value) 
-                : [input.value];
-
-        // Process each file
-        let firstFileBase64 = null;
-        let firstFileName = null;
-        for (const file of files) {
-            try {
-                // Check file size and warn if larger than 8 MB
-                const maxSizeBytes = 8 * 1024 * 1024; // 8 MB in bytes
-                if (file.size > maxSizeBytes) {
-                    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-                    this.$swal.fire({
-                        customClass: {
-                            popup: 'my-popup',
-                            title: 'my-title',
-                            content: 'my-content',
-                            actions: 'my-swal2-actions'
-                        },
-                        title: this.$t("dashboard.filesizewarning"),
-                        html: `<div style="text-align: left;">${this.$t("dashboard.filesizewarningtext", { filename: file.name, size: fileSizeMB })}</div>`,
-                        icon: 'warning',
-                    
-                        showConfirmButton: true,
-                        confirmButtonText: 'OK'
-                    });
-                }
-
-                // Convert first file to Base64 for preview
-                if (!firstFileBase64) {
-                    firstFileBase64 = await readFileAsBase64(file);
-                    firstFileName = file.name;
-                }
-
-                // Use the shared function to add file as exam material with IsActiveSheet flag
-                await addFileAsExamMaterial(
-                    file,
-                    null, // filename not needed when using File object
-                    activeGroup,
-                    this.serverstatus,
-                    this.serverstatus.activeSection,
-                    true // isActiveSheet = true
-                );
-               
-            } catch (error) {
-                console.error(`examsetup @ configureActivesheets: Error processing file ${file.name}:`, error);
+            if (!firstFileBase64) {
+                firstFileBase64 = await readFileAsBase64(file);
+                firstFileName = file.name;
             }
+
+            await addFileAsExamMaterial(
+                file,
+                null,
+                activeGroup,
+                this.serverstatus,
+                this.serverstatus.activeSection,
+                true,
+            );
+        } catch (error) {
+            console.error(`examsetup @ configureActivesheets: Error processing file ${file.name}:`, error);
         }
+    }
 
-        this.setServerStatus()
-        
-        // Show PdfRenderer for the first file if available
-        if (firstFileBase64 && firstFileName) {
-            if (typeof this.showBase64PdfInRenderer === 'function') {
-                const previewGroup = activeGroup === 'b' ? 'B' : 'A';
-                this.showBase64PdfInRenderer(firstFileBase64, firstFileName, previewGroup);
-            }
-        }
-    });    
+    this.setServerStatus();
+
+    if (firstFileBase64 && firstFileName && typeof this.showBase64PdfInRenderer === 'function') {
+        const previewGroup = activeGroup === 'b' ? 'B' : 'A';
+        this.showBase64PdfInRenderer(firstFileBase64, firstFileName, previewGroup);
+    }
 }
 
 /**
@@ -970,16 +912,20 @@ function isValidFullDomainName(str) {
  * define materials for exam
  * für jeden prüfungsabschnitt können materialien festgelegt werden die während der prüfung verfügbar sein sollen
  * diese werden bei prüfungsbeginn auf die clients verteilt bzw. beim start des entsprechenden abschnitts auf die clients verteilt
- * @param {*} who ist in diesem fall immer "all"
+ * @param {string} who "all" (Gruppe wählen) | "a" | "b" (Zielgruppe vorgegeben)
  * @returns 
  */
 function defineMaterials(who) {
+    const hasGroups = !!this.serverstatus.examSections[this.serverstatus.activeSection].groups;
+    const whoNorm = String(who || 'all').toLowerCase();
+    const presetGroup = whoNorm === 'b' ? 'b' : whoNorm === 'a' ? 'a' : 'all';
+
     let htmlcontent = `<div class="my-content"> 
         ${this.$t("dashboard.filesendtext")} <br>
         <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
         </div>`
 
-    if (this.serverstatus.examSections[this.serverstatus.activeSection].groups && who == "all") {
+    if (hasGroups && presetGroup === "all") {
         htmlcontent = `<div class="my-content"> 
             ${this.$t("dashboard.filesendtext")} <br>
             <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
@@ -1004,7 +950,7 @@ function defineMaterials(who) {
         </div>
     </div>`
          
-    let activeGroup = "a"  // prinzipiell ist jeder user automatisch in der gruppe a
+    let activeGroup = hasGroups ? (presetGroup === "all" ? "a" : presetGroup) : "a"
     let savedAllowedUrl = ''; // Store allowedURL value before dialog closes (Electron 39 compatibility)
     let savedBlockSubdomains = false;
     let savedBlockSubfolders = false;
@@ -1039,27 +985,27 @@ function defineMaterials(who) {
             const btnC = document.getElementById('fbtnC');
             if (btnA && !btnA.dataset.listenerAdded) {
                 btnA.addEventListener('click', () => {
-                    btnA.style.filter = "grayscale(0%)"
-                    btnB.style.filter = "grayscale(90%)"
-                    btnC.style.filter = "grayscale(90%)"
+                    if (btnA) btnA.style.filter = "grayscale(0%)"
+                    if (btnB) btnB.style.filter = "grayscale(90%)"
+                    if (btnC) btnC.style.filter = "grayscale(90%)"
                     activeGroup = "a"
                 });
                 btnA.dataset.listenerAdded = 'true';
             }
             if (btnB && !btnB.dataset.listenerAdded) {
                 btnB.addEventListener('click', () => {
-                    btnA.style.filter = "grayscale(90%)"
-                    btnB.style.filter = "grayscale(0%)"
-                    btnC.style.filter = "grayscale(90%)"
+                    if (btnA) btnA.style.filter = "grayscale(90%)"
+                    if (btnB) btnB.style.filter = "grayscale(0%)"
+                    if (btnC) btnC.style.filter = "grayscale(90%)"
                     activeGroup = "b"
                 });
                 btnB.dataset.listenerAdded = 'true';
             }
             if (btnC && !btnC.dataset.listenerAdded) {
                 btnC.addEventListener('click', () => {
-                    btnA.style.filter = "grayscale(90%)"
-                    btnB.style.filter = "grayscale(90%)"
-                    btnC.style.filter = "grayscale(0%)"
+                    if (btnA) btnA.style.filter = "grayscale(90%)"
+                    if (btnB) btnB.style.filter = "grayscale(90%)"
+                    if (btnC) btnC.style.filter = "grayscale(0%)"
                     activeGroup = "all"
                 });
                 btnC.dataset.listenerAdded = 'true';
