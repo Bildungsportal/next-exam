@@ -186,6 +186,7 @@
         "printrequestshow": "Do you want to open the document and print it?",
         "processingfiles": "Processing Files",
         "rdp": "Web RDP",
+        "rdpChooseUrl": "Choose RDP URL",
         "rdpUrl": "RDP URL",
         "rdpconfig": "RDP Configuration",
         "rdpconfiginfo": "Please enter the domain (URL) of the RDP-Server",
@@ -234,6 +235,7 @@
         "sure": "Are you sure?",
         "templateChoose": "Choose template",
         "testUrl": "Test URL",
+        "testUrlChoose": "Choose Test URL",
         "texteditor": "Texteditor Settings",
         "unlock": "unlock displays",
         "uploadfiles": "uploading files",
@@ -242,6 +244,7 @@
         "vmFindingsBackend": "Backend detection:",
         "vmFindingsVendor": "Vendor",
         "vmFindingsWebgl": "WebGL detection:",
+        "chooseUrl": "Choose URL",
         "website": "Website URL",
         "workfolder": "Show Workfolder",
         "yes": "Yes"

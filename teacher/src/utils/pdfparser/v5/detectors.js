@@ -19,7 +19,7 @@ function mergeVerticalLineSegments(verticals, xTol = 4, yGapTol = 3) {
     let cur = deduped[0];
     for (let i = 1; i < deduped.length; i += 1) {
         const v = deduped[i];
-        if (Math.abs(v.x - cur.x) <= xTol && v.y1 <= cur.y2 + yGapTol) {
+        if (Math.abs(v.x - cur.x) <= xTol && v.y1 >= cur.y1 && v.y1 <= cur.y2 + yGapTol) {
             cur.y2 = Math.max(cur.y2, v.y2);
             cur.fromRect = cur.fromRect && !!v.fromRect;
         } else {
@@ -283,23 +283,18 @@ export const detectorMethods = {
     // Deduplicate H-lines: for each line, find all others within 10px y AND overlapping x-extent.
     // Keep only the longest. A short checkbox-border line near a long table line gets dropped.
     const deduplicateHLines = (lines) => {
-      const used = new Set();
-      const result = [];
-      const sorted = [...lines].sort((a, b) => (b.x2 - b.x1) - (a.x2 - a.x1)); // longest first
-      for (let i = 0; i < sorted.length; i++) {
-        if (used.has(i)) continue;
-        const a = sorted[i];
-        used.add(i);
-        for (let j = i + 1; j < sorted.length; j++) {
-          if (used.has(j)) continue;
-          const b = sorted[j];
-          if (Math.abs(a.y - b.y) > 10) continue;
-          if (Math.max(a.x1, b.x1) > Math.min(a.x2, b.x2)) continue; // no x-overlap
-          used.add(j); // a is longer (sorted), drop b
-        }
-        result.push(a);
-      }
-      return result;
+      // Drop a line if another line exists that: (a) x-contains it fully, and (b) is within 4px y.
+      // This removes checkbox-border duplicates that sit right next to a real table line.
+      // Lines that are merely nearby but NOT x-contained are kept (different table / checkbox row).
+      return lines.filter((b) => {
+        const bLen = b.x2 - b.x1;
+        return !lines.some((a) => {
+          if (a === b) return false;
+          if (Math.abs(a.y - b.y) > 4) return false;
+          if (a.x1 > b.x1 || a.x2 < b.x2) return false; // a must fully contain b
+          return (a.x2 - a.x1) > bLen; // a must be strictly longer
+        });
+      });
     };
 
     const deduplicateVLines = (lines) => {
@@ -334,7 +329,15 @@ export const detectorMethods = {
     let skippedTooSmall = 0;
     let skippedNoIntersection = 0;
 
-    const normHoriz = horizontals.sort((a, b) => a.y - b.y);
+    // Exclude checkbox-border H-lines from table cell construction.
+    // A line is a checkbox border if it is short AND there exist longer lines on the page.
+    // Exclude checkbox-border H-lines from table cell construction.
+    // If the page has long table lines, short lines (< 25% of max length) are checkbox borders.
+    const maxHLen = Math.max(...horizontals.map(h => h.x2 - h.x1));
+    const hLenThreshold = maxHLen * 0.25;
+    const tableHoriz = horizontals.filter(h => (h.x2 - h.x1) >= hLenThreshold);
+
+    const normHoriz = tableHoriz.sort((a, b) => a.y - b.y);
     const normVert = verticals.sort((a, b) => a.x - b.x);
 
 
@@ -1176,13 +1179,13 @@ export const detectorMethods = {
         return itemWidthPdfD * (measuredSub / measuredTotal);
       };
 
-      // Only A-F are valid MC answer labels; wider alphabet causes too many false positives
-      const capitalLetterRegex = /(?<![A-Za-z])([A-F])(?![A-Za-z0-9])/g;
+      // A-Z are valid MC answer labels
+      const capitalLetterRegex = /(?<![A-Za-z])([A-Z])(?![A-Za-z0-9])/g;
       let capitalMatch;
 
-      // Pre-scan: how many isolated A-F tokens exist in this text item?
+      // Pre-scan: how many isolated A-Z tokens exist in this text item?
       // Two or more is a strong signal that this is a genuine MC row.
-      const mcTokens = [...text.matchAll(/(?<![A-Za-z])([A-F])(?![A-Za-z0-9])/g)].map(m => m[1]);
+      const mcTokens = [...text.matchAll(/(?<![A-Za-z])([A-Z])(?![A-Za-z0-9])/g)].map(m => m[1]);
       const uniqueMcTokens = new Set(mcTokens);
       const isMcRow = uniqueMcTokens.size >= 2;
 
@@ -1207,9 +1210,14 @@ export const detectorMethods = {
         // letter is alone in the item, or surrounded by MC punctuation (.) () :
         if (!isMcRow) {
           const after3 = text.substring(startIndex + 1, startIndex + 4);
-          const hasMcPunctAfter  = /^[\s.\):,]/.test(after3) || startIndex + 1 >= text.length;
+          const hasMcPunctAfter  = /^[\s\):]/.test(after3) || startIndex + 1 >= text.length;
           const hasMcPunctBefore = startIndex === 0 || /[\s.\):(]$/.test(before5);
           if (!hasMcPunctAfter || !hasMcPunctBefore) continue;
+          // If followed by space, the next non-space char must be uppercase or digit (not a sentence continuation)
+          if (/^\s/.test(after3)) {
+            const rest = text.substring(startIndex + 1).trimStart();
+            if (rest.length > 0 && /[a-z]/.test(rest[0])) continue;
+          }
         }
 
         const prefixText = text.substring(0, startIndex);

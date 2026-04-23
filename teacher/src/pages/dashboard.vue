@@ -256,7 +256,7 @@
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureWebsite('a')">
-                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.website') }}</span>
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.chooseUrl') }}</span>
                                 <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
                             </button>
                         </div>
@@ -274,7 +274,7 @@
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureWebsite('b')">
-                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.website') }}</span>
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.chooseUrl') }}</span>
                                 <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
                             </button>
                         </div>
@@ -294,7 +294,7 @@
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureWebsite('all')">
-                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.website') }}</span>
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.chooseUrl') }}</span>
                                 <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
                             </button>
                         </div>
@@ -317,7 +317,7 @@
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureEduvidual('a')">
-                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.testUrl') }}</span>
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.testUrlChoose') }}</span>
                                 <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
                             </button>
                         </div>
@@ -333,7 +333,7 @@
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureEduvidual('b')">
-                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.testUrl') }}</span>
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.testUrlChoose') }}</span>
                                 <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
                             </button>
                         </div>
@@ -351,7 +351,7 @@
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureEduvidual('all')">
-                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.testUrl') }}</span>
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.testUrlChoose') }}</span>
                                 <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
                             </button>
                         </div>
@@ -374,7 +374,7 @@
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureRDP('a')">
-                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.rdpUrl') }}</span>
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.rdpChooseUrl') }}</span>
                                 <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
                             </button>
                         </div>
@@ -390,7 +390,7 @@
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureRDP('b')">
-                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.rdpUrl') }}</span>
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.rdpChooseUrl') }}</span>
                                 <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
                             </button>
                         </div>
@@ -408,7 +408,7 @@
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureRDP('all')">
-                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.rdpUrl') }}</span>
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.rdpChooseUrl') }}</span>
                                 <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
                             </button>
                         </div>
@@ -722,12 +722,12 @@
             <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.stopexam')}} </div>
         </div>
 
-        <div v-if="(!serverstatus.exammode && numberOfConnections == 1)" class="btn btn-teal m-1 mt-0 text-start ms-0"  @click="startExam();hideDescription();"  @mouseover="showDescription($t('dashboard.startexamdesc'))" @mouseout="hideDescription" :class="((serverstatus.examSections[serverstatus.activeSection].examtype === 'microsoft365' && (!this.config.accessToken || !hasMicrosoft365TemplateReady)) || (serverstatus.examSections[serverstatus.activeSection].examtype === 'activesheets' && !hasActiveSheetsPdf))? 'disabledgreen':''" style="width:128px; height:62px; display:inline-flex">
+        <div v-if="(!serverstatus.exammode && numberOfConnections == 1)" class="btn btn-teal m-1 mt-0 text-start ms-0"  @click="startExam();hideDescription();"  @mouseover="showDescription($t('dashboard.startexamdesc'))" @mouseout="hideDescription" :class="!hasMandatoryBasematerialReady ? 'disabledgreen':''" style="width:128px; height:62px; display:inline-flex">
             <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> 
             <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;">{{numberOfConnections}} {{$t('dashboard.startexamsingle')}}</div>
         </div>
 
-        <div v-if="(!serverstatus.exammode && numberOfConnections != 1)" class="btn btn-teal m-1 mt-0 text-start ms-0"  @click="startExam();hideDescription();"  @mouseover="showDescription($t('dashboard.startexamdesc'))" @mouseout="hideDescription" :class="((serverstatus.examSections[serverstatus.activeSection].examtype === 'microsoft365' && (!this.config.accessToken || !hasMicrosoft365TemplateReady)) || (serverstatus.examSections[serverstatus.activeSection].examtype === 'activesheets' && !hasActiveSheetsPdf))? 'disabledgreen':''" style="width:128px; height:62px; display:inline-flex">
+        <div v-if="(!serverstatus.exammode && numberOfConnections != 1)" class="btn btn-teal m-1 mt-0 text-start ms-0"  @click="startExam();hideDescription();"  @mouseover="showDescription($t('dashboard.startexamdesc'))" @mouseout="hideDescription" :class="!hasMandatoryBasematerialReady ? 'disabledgreen':''" style="width:128px; height:62px; display:inline-flex">
             <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> 
             <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;">{{numberOfConnections}} {{$t('dashboard.startexam')}}</div>
         </div>
@@ -1136,6 +1136,33 @@ computed: {
         const hasA = !!section.groupA?.examConfig?.microsoft365?.template?.filename;
         const hasB = !!section.groupB?.examConfig?.microsoft365?.template?.filename;
         return section.groups ? (hasA && hasB) : hasA;
+    },
+    hasMandatoryBasematerialReady() {
+        const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+        if (!section) return false;
+        const examType = section.examtype;
+        if (examType === 'microsoft365') {
+            return !!this.config.accessToken && this.hasMicrosoft365TemplateReady;
+        }
+        if (examType === 'activesheets') {
+            return this.hasActiveSheetsPdf;
+        }
+        if (examType === 'website') {
+            const hasA = !!section.groupA?.examConfig?.website?.url;
+            const hasB = !!section.groupB?.examConfig?.website?.url;
+            return section.groups ? (hasA && hasB) : hasA;
+        }
+        if (examType === 'eduvidual') {
+            const hasA = !!section.groupA?.examConfig?.eduvidual?.url;
+            const hasB = !!section.groupB?.examConfig?.eduvidual?.url;
+            return section.groups ? (hasA && hasB) : hasA;
+        }
+        if (examType === 'rdp') {
+            const hasA = !!section.groupA?.examConfig?.rdp?.domain;
+            const hasB = !!section.groupB?.examConfig?.rdp?.domain;
+            return section.groups ? (hasA && hasB) : hasA;
+        }
+        return true;
     },
     lockInExammode() {
         //if sections are disabled, return true if exammode is active
@@ -3775,6 +3802,16 @@ hr {
     border-color: rgba(255, 255, 255, 0.14);
     border-radius: 0;
     background: rgba(0, 0, 0, 0.22);
+}
+
+.basematerial-sidebar-block .sidebar-pick-btn.btn {
+    border-color: rgba(220, 53, 69, 0.55) !important;
+}
+
+.basematerial-sidebar-block .sidebar-pick-btn.btn-outline-secondary:hover,
+.basematerial-sidebar-block .sidebar-pick-btn.btn-outline-secondary:focus,
+.basematerial-sidebar-block .sidebar-pick-btn.btn-outline-secondary:active {
+    border-color: rgba(220, 53, 69, 0.75) !important;
 }
 
 .basematerial-panel-caption {
