@@ -2,14 +2,26 @@
 import CryptoJS from 'crypto-js';
 
 /**
- * Website
+ * Website: configure per group (A/B) or for all (AB when groups off).
+ * Stores settings in group.examConfig.website and removes legacy section.domainname/blockSub*.
+ * @param {'a'|'b'|'all'|undefined} presetGroup
  */
-function getTestURL(){
+async function configureWebsite(presetGroup) {
     const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-    let savedBlockSubdomains = false;
-    let savedBlockSubfolders = false;
+    const hasGroups = !!section.groups;
+    const whoNorm = String(presetGroup || 'all').toLowerCase();
+    const activeGroup = hasGroups ? (whoNorm === 'b' ? 'b' : whoNorm === 'a' ? 'a' : 'a') : 'all';
 
-    this.$swal.fire({
+    const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    const groupB = section.groupB || (section.groupB = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    if (!groupA.examConfig) groupA.examConfig = {};
+    if (!groupB.examConfig) groupB.examConfig = {};
+
+    const currentConfig = activeGroup === 'b' ? (groupB.examConfig.website || {}) : (groupA.examConfig.website || {});
+    let savedBlockSubdomains = !!currentConfig.blockSubdomains;
+    let savedBlockSubfolders = !!currentConfig.blockSubfolders;
+
+    const result = await this.$swal.fire({
         customClass: {
             popup: 'my-popup',
             title: 'my-title',
@@ -21,26 +33,22 @@ function getTestURL(){
         title: this.$t("dashboard.website"),
         icon: 'question',
         input: 'text',
+        inputValue: currentConfig.url || '',
+        inputPlaceholder: 'https://www.classtime.com',
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
         html: `
-            <div class="my-content">
-                zB.: https://www.classtime.com
-            </div>
             <div class="my-content" style="margin-top: 10px; text-align: left; display: inline-block;">
                 <label style="display: block; margin-bottom: 4px; font-size: 0.85em; cursor: pointer;" title="${this.$t("dashboard.blockSubdomainsInfo")}">
-                    <input type="checkbox" id="websiteBlockSubdomains" style="margin-right: 6px;"${section.blockSubdomains ? ' checked' : ''}> ${this.$t("dashboard.blockSubdomains")}
+                    <input type="checkbox" id="websiteBlockSubdomains" style="margin-right: 6px;"${savedBlockSubdomains ? ' checked' : ''}> ${this.$t("dashboard.blockSubdomains")}
                 </label>
                 <label style="display: block; font-size: 0.85em; cursor: pointer;" title="${this.$t("dashboard.blockSubfoldersInfo")}">
-                    <input type="checkbox" id="websiteBlockSubfolders" style="margin-right: 6px;"${section.blockSubfolders ? ' checked' : ''}> ${this.$t("dashboard.blockSubfolders")}
+                    <input type="checkbox" id="websiteBlockSubfolders" style="margin-right: 6px;"${savedBlockSubfolders ? ' checked' : ''}> ${this.$t("dashboard.blockSubfolders")}
                 </label>
             </div>
             `,
-        didOpen: () => {
-            document.getElementsByClassName('my-custom-input')[0].value = section.domainname || ''
-        },
         inputValidator: (value) => {
-            if (!isValidFullDomainName(value)) {return 'Ungültige Domain!'}
+            if (!isValidFullDomainName(value)) return 'Ungültige Domain!'
         },
         preConfirm: () => {
             const blockSubdomainsEl = document.getElementById('websiteBlockSubdomains');
@@ -48,26 +56,51 @@ function getTestURL(){
             savedBlockSubdomains = blockSubdomainsEl ? blockSubdomainsEl.checked : false;
             savedBlockSubfolders = blockSubfoldersEl ? blockSubfoldersEl.checked : false;
         }
-    })
-    .then((input) => {
-        let domainname = input.value
-        section.domainname = isValidFullDomainName(domainname) ? domainname : null
-        section.blockSubdomains = savedBlockSubdomains
-        section.blockSubfolders = savedBlockSubfolders
+    });
 
-        if (!section.domainname) { section.examtype = "math"}
-        else { this.backupinterval.stop(); this.autobackup = false;}  // no auto backup in this exam mode
-        this.setServerStatus()
-    })
+    if (!result.isConfirmed) return;
+
+    const url = String(result.value || '').trim();
+    if (!isValidFullDomainName(url)) return;
+
+    const nextConfig = { url, blockSubdomains: savedBlockSubdomains, blockSubfolders: savedBlockSubfolders };
+
+    if (!hasGroups) {
+        groupA.examConfig.website = nextConfig;
+        groupB.examConfig.website = nextConfig;
+    } else if (activeGroup === 'b') {
+        groupB.examConfig.website = nextConfig;
+    } else {
+        groupA.examConfig.website = nextConfig;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(section, 'domainname')) delete section.domainname;
+    if (Object.prototype.hasOwnProperty.call(section, 'blockSubdomains')) delete section.blockSubdomains;
+    if (Object.prototype.hasOwnProperty.call(section, 'blockSubfolders')) delete section.blockSubfolders;
+
+    this.setServerStatus();
 }
 
 
 /**
- * Eduvidual
+ * Eduvidual: configure per group (A/B) or for all (AB when groups off).
+ * Stores settings in group.examConfig.eduvidual and removes legacy section.moodle* fields.
+ * @param {'a'|'b'|'all'|undefined} presetGroup
  */
-async function getTestID(){
-    
-    this.$swal.fire({
+async function configureEduvidual(presetGroup) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    const hasGroups = !!section.groups;
+    const whoNorm = String(presetGroup || 'all').toLowerCase();
+    const activeGroup = hasGroups ? (whoNorm === 'b' ? 'b' : 'a') : 'all';
+
+    const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    const groupB = section.groupB || (section.groupB = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    if (!groupA.examConfig) groupA.examConfig = {};
+    if (!groupB.examConfig) groupB.examConfig = {};
+
+    const currentConfig = activeGroup === 'b' ? (groupB.examConfig.eduvidual || {}) : (groupA.examConfig.eduvidual || {});
+
+    const result = await this.$swal.fire({
         customClass: {
             popup: 'my-popup',
             title: 'my-title',
@@ -78,41 +111,42 @@ async function getTestID(){
         },
         title: this.$t("dashboard.eduvidualid"),
         icon: 'question',
+        input: 'url',
+        inputValue: currentConfig.url || '',
+        inputPlaceholder: 'https://www.eduvidual.at/mod/quiz/view.php?id=6153159',
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
-        input: 'url',
-        inputLabel: this.$t("dashboard.eduvidualidhint"),
-        inputPlaceholder: 'https://www.eduvidual.at/mod/quiz/view.php?id=6153159',
-        html: `                    
-            <div class="my-content" style="width: 150px; margin: auto auto;">
-                <img  width="24" height="24" src="data:image/png;base64,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"/>
-            </div>
-           
-        `,
-        didOpen: () => {
-            document.getElementById('swal2-input').value = this.serverstatus.examSections[this.serverstatus.activeSection].moodleURL
-        },
+        html: `<div class="my-content">Bitte geben Sie eine gültige Eduvidual Test-URL ein.</div>`,
         inputValidator: (value) => {
-            if (!value || !isValidMoodleDomainName(value) ) {return this.$t("dashboard.moodleInvalidDomain")}
-            let { moodledomain, testid } = extractDomainAndId(value);
-            if ( !testid) { return this.$t("dashboard.moodleInvalidId")}
+            if (!value || !isValidMoodleDomainName(value)) return this.$t("dashboard.moodleInvalidDomain");
+            const { testid } = extractDomainAndId(value);
+            if (!testid) return this.$t("dashboard.moodleInvalidId");
         }
-    }).then((input) => {
-        if (!input.value ) {
-            this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math";
-            return;
-        }
+    });
 
-        let { moodledomain, testid } = extractDomainAndId(input.value);
+    if (!result.isConfirmed) return;
+    const url = String(result.value || '').trim();
+    if (!url) return;
 
-        this.serverstatus.examSections[this.serverstatus.activeSection].moodleTestId = testid
-        this.serverstatus.examSections[this.serverstatus.activeSection].moodleDomain = moodledomain
-        this.serverstatus.examSections[this.serverstatus.activeSection].moodleURL = input.value
+    const { moodledomain, testid } = extractDomainAndId(url);
+    const nextConfig = { url, moodleDomain: moodledomain, moodleTestId: testid };
 
-        this.backupinterval.stop(); 
-        this.autobackup = false;  // no auto backup in this exam mode
-        this.setServerStatus()
-    })  
+    if (!hasGroups) {
+        groupA.examConfig.eduvidual = nextConfig;
+        groupB.examConfig.eduvidual = nextConfig;
+    } else if (activeGroup === 'b') {
+        groupB.examConfig.eduvidual = nextConfig;
+    } else {
+        groupA.examConfig.eduvidual = nextConfig;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(section, 'moodleURL')) delete section.moodleURL;
+    if (Object.prototype.hasOwnProperty.call(section, 'moodleTestId')) delete section.moodleTestId;
+    if (Object.prototype.hasOwnProperty.call(section, 'moodleDomain')) delete section.moodleDomain;
+
+    this.backupinterval.stop();
+    this.autobackup = false;
+    this.setServerStatus();
 }
 
 
@@ -1311,4 +1345,4 @@ function openAllowedUrl(allowedUrl){
 
 
 
-export { getTestURL, getTestID, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }
+export { configureWebsite, configureEduvidual, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }

@@ -40,8 +40,8 @@
                       <div class="vertical-text">URL</div>
                   </div>
                   <div class="btn btn-sm btn-cyan filename-button url-display-button text-truncate" :title="getUrlTooltip(allowedUrl)" @click="openAllowedUrl(allowedUrl)"><span class="materials-filename-truncate">{{ getUrlDisplay(allowedUrl) }}</span></div>
-                  <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">S<br>D</span></div>
-                  <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">S<br>F</span></div>
+                  <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">SD</span></div>
+                  <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">SF</span></div>
                   <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeAllowedUrl('A', index)">&times;</button>
                   </div>
               </div>
@@ -96,8 +96,8 @@
                       <div class="vertical-text">URL</div>
                   </div>
                   <div class="btn btn-sm btn-cyan filename-button url-display-button text-truncate" :title="getUrlTooltip(allowedUrl)" @click="openAllowedUrl(allowedUrl)"><span class="materials-filename-truncate">{{ getUrlDisplay(allowedUrl) }}</span></div>
-                  <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">S<br>D</span></div>
-                  <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">S<br>F</span></div>
+                  <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">SD</span></div>
+                  <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">SF</span></div>
                   <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeAllowedUrl('B', index)">&times;</button>
                   </div>
               </div>
@@ -135,8 +135,8 @@
             <div v-for="(allowedUrl, index) in examSection.groupA.allowedUrls" :key="'allowedUrl' + index" class="input-group" style="">
                 <div class="btn btn-sm btn-secondary mt-1" @click="removeAllowedUrl('A', index)" style="padding:4px 8px;">x</div>
                 <div class="btn btn-sm btn-cyan mt-1 filename-button url-display-button text-truncate" :title="getUrlTooltip(allowedUrl)" @click="openAllowedUrl(allowedUrl)"><span class="materials-filename-truncate">{{ getUrlDisplay(allowedUrl) }}</span></div>
-                <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">S<br>D</span></div>
-                <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">S<br>F</span></div>
+                <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">SD</span></div>
+                <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">SF</span></div>
                 <div class="btn btn-sm btn-teal mt-1 extension-button">
                     <div class="vertical-text">URL</div>
                 </div>
@@ -264,7 +264,7 @@
 
 .extension-button {
     width: 14px;
-    height: 31px;
+    height: 32px;
     padding: 0;
     display: flex;
     justify-content: center;
@@ -318,10 +318,14 @@
   }
 
   .sd-sf-btn {
-    width: 18px;
-    padding: 2px 0;
-    font-size: 0.65em;
-    min-height: 31px;
+    width: 14px;
+    min-width: 14px;
+    max-width: 14px;
+    padding: 0;
+    font-size: 0.6rem;
+    min-height: 32px;
+    height: 32px;
+    max-height: 32px;
     line-height: 1;
     background-color: #ffc107;
     border-color: #ffc107;
@@ -329,6 +333,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
+    cursor: default;
   }
 
   .sd-sf-btn:hover {
@@ -339,10 +345,12 @@
 
   .sd-sf-stack {
     display: block;
-    width: 100%;
-    line-height: 0.95;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    line-height: 1;
     text-align: center;
     font-size: 1em;
+    transform: translateX(-10%);
   }
   
   .group-section {
@@ -427,8 +435,8 @@
     display: flex !important;
     align-items: center !important;
     justify-content: flex-start;
-    min-height: 31px;
-    height: 31px;
+    min-height: 32px;
+    height: 32px;
     padding-top: 0 !important;
     padding-bottom: 0 !important;
     line-height: 1 !important;
@@ -448,12 +456,12 @@
   }
 
   .materials-filegroup > .materials-remove.btn {
-    flex: 0 0 24px;
-    width: 24px;
-    min-width: 24px;
-    max-width: 24px;
-    min-height: 31px;
-    height: 31px;
+    flex: 0 0 20px;
+    width: 20px;
+    min-width: 20px;
+    max-width: 20px;
+    min-height: 32px;
+    height: 32px;
     padding: 0;
     display: inline-flex;
     align-items: center;
@@ -488,8 +496,8 @@
   .materials-pick-spacer {
     flex: 0 0 30px;
     width: 30px;
-    height: 31px;
-    min-height: 31px;
+    height: 32px;
+    min-height: 32px;
     align-self: center;
   }
 

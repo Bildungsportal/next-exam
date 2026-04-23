@@ -43,9 +43,6 @@ export type Section = {
   sectionname: string,
   spellchecklang: string | null,
   suggestions: boolean | null,
-  moodleTestId: number | null,
-  moodleDomain: string | null,
-  moodleURL: string | null,
   cmargin: Margin[],
   formsUrl: string | null,
   msOfficeFile: boolean | null, // Remove?
@@ -54,9 +51,6 @@ export type Section = {
   fontfamily: string | null,
   fontsize: number | null,
   audioRepeat: number | null,
-  domainname: string | null,
-  blockSubdomains: boolean | null,
-  blockSubfolders: boolean | null,
   rdpConfig: null, // Remove?
   localVMConfig: any,
   groups: boolean,
@@ -73,6 +67,36 @@ export type Group = {
   users: number[],
   examInstructionFiles: File[],
   allowedUrls: Url[],
+  examConfig: ExamConfig,
+}
+
+export type ExamConfig = {
+  activeSheets: ActiveSheetsConfig,
+  editor: Record<string, unknown>,
+  eduvidual: EduvidualConfig,
+  gforms: Record<string, unknown>,
+  website: WebsiteConfig,
+  math: Record<string, unknown>,
+  microsoft365: Record<string, unknown>,
+  rdp: Record<string, unknown>,
+  localvm: Record<string, unknown>,
+}
+
+export type ActiveSheetsConfig = {
+  filename?: string,
+  filecontent?: string,
+}
+
+export type WebsiteConfig = {
+  url?: string,
+  blockSubdomains?: boolean,
+  blockSubfolders?: boolean,
+}
+
+export type EduvidualConfig = {
+  url?: string,
+  moodleDomain?: string | null,
+  moodleTestId?: number | null,
 }
 
 export type File = {

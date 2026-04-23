@@ -26,7 +26,7 @@
                 <div type="button" id="closePDF" class="nav-link btn btn-light btn-sm" :title="$t('dashboard.close')" @click.stop="closePane" style="width:40px; height:45px !important;text-align:center; font-weight:bold;">&times;</div> 
             </li>
         </ul>
-        <div class="activesheets-banner">
+        <div class="basematerial-banner">
             <div class="banner-pill" :class="{ 'banner-pill--warning': pdfHasWarning }">
                 {{ pdfHasWarning ? pdfWarningText : $t('pdf.activesheets') }}
             </div>
@@ -791,7 +791,7 @@ export default {
     color: #5a3c00;
 }
 
-.activesheets-banner {
+.basematerial-banner {
     position: fixed;
     top: 40px;
     left: 50%;

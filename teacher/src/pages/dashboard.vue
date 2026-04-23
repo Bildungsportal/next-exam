@@ -185,7 +185,7 @@
                 <li v-if="config.exammodes && config.exammodes.localvm"><a class="dropdown-item" @click="selectExamType('localvm')" :class="{ active: isExamType('localvm') }">LocalVM</a> </li>
             </ul>
             </div>
-            <button v-if="!isExamType('activesheets')" class="btn btn-sm btn-secondary p-0 sidebar-exammode-settings" :class="lockSettings ? 'disabledexam' : ''" style="width: 31px; height: 31px; display: inline-flex; vertical-align: middle; justify-content: center; align-items: center;" @click="selectExamType(serverstatus.examSections[serverstatus.activeSection].examtype)"  @mouseover="showDescription($t('dashboard.extendedsettings_mode'))"  @mouseout="hideDescription"> 
+            <button v-if="!isExamType('activesheets') && !isExamType('math') && !isExamType('website') && !isExamType('eduvidual')" class="btn btn-sm btn-secondary p-0 sidebar-exammode-settings" :class="lockSettings ? 'disabledexam' : ''" style="width: 31px; height: 31px; display: inline-flex; vertical-align: middle; justify-content: center; align-items: center;" @click="selectExamType(serverstatus.examSections[serverstatus.activeSection].examtype)"  @mouseover="showDescription($t('dashboard.extendedsettings_mode'))"  @mouseout="hideDescription">
                 <img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22">
             </button>
             </div>
@@ -197,24 +197,139 @@
                 Spellcheck: {{serverstatus.examSections[serverstatus.activeSection].spellchecklang}}
                 </div> 
 
-                <!-- Website Domain Info -->
-                <div v-if="isExamType('website') && serverstatus.examSections[serverstatus.activeSection].domainname" class="small text-white-50 text-truncate">
-                {{serverstatus.examSections[serverstatus.activeSection].domainname}}
+                <!-- Website Config -->
+                <div v-if="isExamType('website')" class="basematerial-sidebar-block mt-2">
+                    <div class="basematerial-panel-caption">{{ $t('dashboard.website') }}</div>
+
+                    <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill">A</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.website?.url">
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website.url" @click="openAllowedUrl(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website)">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website.url }}</span>
+                                    </button>
+                                    <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website.blockSubdomains" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">SD</span></div>
+                                    <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website.blockSubfolders" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">SF</span></div>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeWebsiteUrl('a')">&times;</button>
+                                </div>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureWebsite('a')">
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.website') }}</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill basematerial-group-pill--b">B</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.website?.url">
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.website.url" @click="openAllowedUrl(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.website)">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.website.url }}</span>
+                                    </button>
+                                    <div v-if="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.website.blockSubdomains" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">SD</span></div>
+                                    <div v-if="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.website.blockSubfolders" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">SF</span></div>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeWebsiteUrl('b')">&times;</button>
+                                </div>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureWebsite('b')">
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.website') }}</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill basematerial-group-pill--ab" aria-label="A/B">AB</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.website?.url">
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website.url" @click="openAllowedUrl(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website)">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website.url }}</span>
+                                    </button>
+                                    <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website.blockSubdomains" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">SD</span></div>
+                                    <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website.blockSubfolders" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">SF</span></div>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeWebsiteUrl('all')">&times;</button>
+                                </div>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureWebsite('all')">
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.website') }}</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Eduvidual Config -->
+                <div v-if="isExamType('eduvidual')" class="basematerial-sidebar-block mt-2">
+                    <div class="basematerial-panel-caption">{{ $t('dashboard.eduvidual') }}</div>
+
+                    <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill">A</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.eduvidual?.url">
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.eduvidual.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.eduvidual.url, blockSubdomains: false, blockSubfolders: false })">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.eduvidual.url }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeEduvidualUrl('a')">&times;</button>
+                                </div>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureEduvidual('a')">
+                                <span class="sidebar-pick-btn__label">Test URL</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill basematerial-group-pill--b">B</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.eduvidual?.url">
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.eduvidual.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.eduvidual.url, blockSubdomains: false, blockSubfolders: false })">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.eduvidual.url }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeEduvidualUrl('b')">&times;</button>
+                                </div>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureEduvidual('b')">
+                                <span class="sidebar-pick-btn__label">Test URL</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill basematerial-group-pill--ab" aria-label="A/B">AB</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.eduvidual?.url">
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.eduvidual.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.eduvidual.url, blockSubdomains: false, blockSubfolders: false })">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.eduvidual.url }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeEduvidualUrl('all')">&times;</button>
+                                </div>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureEduvidual('all')">
+                                <span class="sidebar-pick-btn__label">Test URL</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+                    </template>
                 </div>
 
 
                 <!-- Active Sheets: panel with group pills, filename, remove -->
-                <div v-if="isExamType('activesheets')" class="activesheets-sidebar-block">
-                    <div class="activesheets-panel-caption">{{ $t('dashboard.activesheetsPanelCaption') }}</div>
+                <div v-if="isExamType('activesheets')" class="basematerial-sidebar-block">
+                    <div class="basematerial-panel-caption">{{ $t('dashboard.activesheetsPanelCaption') }}</div>
                     <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
-                        <div class="activesheets-row">
-                            <span class="activesheets-group-pill">A</span>
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill">A</span>
                             <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.activeSheets?.filename">
-                                <div class="btn-group activesheets-filegroup" role="group">
-                                    <button type="button" class="btn btn-sm btn-teal activesheets-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
-                                        <span class="activesheets-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename), 22) }}</span>
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
+                                        <span class="basematerial-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename), 22) }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary activesheets-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('A')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('A')">&times;</button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureActivesheets('a')">
@@ -223,14 +338,14 @@
                             </button>
                         </div>
 
-                        <div class="activesheets-row">
-                            <span class="activesheets-group-pill activesheets-group-pill--b">B</span>
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill basematerial-group-pill--b">B</span>
                             <template v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.activeSheets?.filename">
-                                <div class="btn-group activesheets-filegroup" role="group">
-                                    <button type="button" class="btn btn-sm btn-teal activesheets-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename, 'B')">
-                                        <span class="activesheets-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename), 22) }}</span>
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename, 'B')">
+                                        <span class="basematerial-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename), 22) }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary activesheets-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('B')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('B')">&times;</button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureActivesheets('b')">
@@ -240,14 +355,14 @@
                         </div>
                     </template>
                     <template v-else>
-                        <div class="activesheets-row">
-                            <span class="activesheets-group-pill activesheets-group-pill--ab" aria-label="A/B">AB</span>
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill basematerial-group-pill--ab" aria-label="A/B">AB</span>
                             <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.activeSheets?.filename">
-                                <div class="btn-group activesheets-filegroup" role="group">
-                                    <button type="button" class="btn btn-sm btn-teal activesheets-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
-                                        <span class="activesheets-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename), 22) }}</span>
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
+                                        <span class="basematerial-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename), 22) }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary activesheets-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('A')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('A')">&times;</button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureActivesheets('all')">
@@ -665,7 +780,7 @@ import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile,
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
 import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer } from '../utils/filemanager'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore } from '../utils/exammanagement.js'
-import { getTestURL, getTestID, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
+import { configureWebsite, configureEduvidual, getFormsID, configureEditor, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
 import { Exam } from '../types/api'
 
 class EmptyWidget {
@@ -786,9 +901,6 @@ export default {
                         spellchecklang: 'de-DE', 
                         suggestions: false, 
 
-                        moodleTestId: null, 
-                        moodleDomain: 'eduvidual.at',
-                        moodleURL:null, 
                         cmargin: { side: 'right', size: 3 }, 
 
                         formsUrl: null,
@@ -798,9 +910,6 @@ export default {
                         fontfamily: "sans-serif", 
                         fontsize: '12pt',
                         audioRepeat: 0,
-                        domainname: false,
-                        blockSubdomains: false,
-                        blockSubfolders: false,
                         rdpConfig: null,
                         localVMConfig: null,
 
@@ -816,9 +925,6 @@ export default {
                         spellchecklang: 'de-DE', 
                         suggestions: false, 
 
-                        moodleTestId: null, 
-                        moodleDomain: 'eduvidual.at',
-                        moodleURL:null, 
                         cmargin: { side: 'right', size: 3 }, 
 
                         formsUrl: null,
@@ -828,9 +934,6 @@ export default {
                         fontfamily: "sans-serif", 
                         fontsize: '12pt',
                         audioRepeat: 0,
-                        domainname: false,
-                        blockSubdomains: false,
-                        blockSubfolders: false,
                         rdpConfig: null,
                         localVMConfig: null,
 
@@ -846,9 +949,6 @@ export default {
                         spellchecklang: 'de-DE', 
                         suggestions: false, 
 
-                        moodleTestId: null, 
-                        moodleDomain: 'eduvidual.at',
-                        moodleURL:null, 
                         cmargin: { side: 'right', size: 3 }, 
 
                         formsUrl: null,
@@ -858,7 +958,6 @@ export default {
                         fontfamily: "sans-serif", 
                         fontsize: '12pt',
                         audioRepeat: 0,
-                        domainname: false,  
                         rdpConfig: null,
                         localVMConfig: null,
 
@@ -874,9 +973,6 @@ export default {
                         spellchecklang: 'de-DE', 
                         suggestions: false, 
 
-                        moodleTestId: null, 
-                        moodleDomain: 'eduvidual.at',
-                        moodleURL:null, 
                         cmargin: { side: 'right', size: 3 }, 
 
                         formsUrl: null,
@@ -886,7 +982,6 @@ export default {
                         fontfamily: "sans-serif", 
                         fontsize: '12pt',
                         audioRepeat: 0,
-                        domainname: false,  
                         rdpConfig: null,
                         localVMConfig: null,
                         groups: false,
@@ -961,6 +1056,41 @@ computed: {
 
 },
     methods: {
+        removeWebsiteUrl(group) {
+            const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+            if (!section) return;
+            const clearCfg = (g) => {
+                if (!g || !g.examConfig) return;
+                g.examConfig.website = {};
+            };
+            if (!section.groups || group === 'all') {
+                clearCfg(section.groupA);
+                clearCfg(section.groupB);
+            } else if (group === 'b') {
+                clearCfg(section.groupB);
+            } else {
+                clearCfg(section.groupA);
+            }
+            this.setServerStatus();
+        },
+
+        removeEduvidualUrl(group) {
+            const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+            if (!section) return;
+            const clearCfg = (g) => {
+                if (!g || !g.examConfig) return;
+                g.examConfig.eduvidual = {};
+            };
+            if (!section.groups || group === 'all') {
+                clearCfg(section.groupA);
+                clearCfg(section.groupB);
+            } else if (group === 'b') {
+                clearCfg(section.groupB);
+            } else {
+                clearCfg(section.groupA);
+            }
+            this.setServerStatus();
+        },
         /**
          * Microsoft OneDrive API Authentication and File Handling
          */
@@ -1018,11 +1148,10 @@ computed: {
         /**
          * Exam Setup Functions
          */
-        getTestURL: getTestURL,
-        getTestID: getTestID,
+        configureWebsite: configureWebsite,
+        configureEduvidual: configureEduvidual,
         getFormsID: getFormsID,
         configureEditor: configureEditor,
-        configureMath: configureMath,
         configureActivesheets: configureActivesheets,
         configureRDP: configureRDP,
         configureLocalVM: configureLocalVM,
@@ -1243,10 +1372,10 @@ computed: {
             this.serverstatus.examSections[this.serverstatus.activeSection].examtype = type;
             // Call existing methods based on type
             if (type === 'editor') this.configureEditor();
-            if (type === 'eduvidual') this.getTestID();
+            if (type === 'eduvidual') {/* configured via sidebar */}
             if (type === 'forms') this.getFormsID();
-            if (type === 'website') this.getTestURL();
-            if (type === 'math') this.configureMath();
+            if (type === 'website') {/* configured via sidebar */}
+            if (type === 'math') {/* no dialog */}
             if (type === 'rdp') this.configureRDP();
             if (type === 'localvm') this.configureLocalVM();
         },
@@ -1596,6 +1725,35 @@ computed: {
                     if (!Array.isArray(group.allowedUrls)) group.allowedUrls = [];
                     if (!group.examConfig || typeof group.examConfig !== 'object') group.examConfig = {};
                     if (!group.examConfig.activeSheets || typeof group.examConfig.activeSheets !== 'object') group.examConfig.activeSheets = {};
+                    if (!group.examConfig.website || typeof group.examConfig.website !== 'object') group.examConfig.website = {};
+                    if (!group.examConfig.eduvidual || typeof group.examConfig.eduvidual !== 'object') group.examConfig.eduvidual = {};
+                }
+
+                if (section.domainname || section.blockSubdomains || section.blockSubfolders) {
+                    const url = section.domainname || '';
+                    const nextConfig = {
+                        url,
+                        blockSubdomains: !!section.blockSubdomains,
+                        blockSubfolders: !!section.blockSubfolders
+                    };
+                    section.groupA.examConfig.website = nextConfig;
+                    section.groupB.examConfig.website = nextConfig;
+                    if (Object.prototype.hasOwnProperty.call(section, 'domainname')) delete section.domainname;
+                    if (Object.prototype.hasOwnProperty.call(section, 'blockSubdomains')) delete section.blockSubdomains;
+                    if (Object.prototype.hasOwnProperty.call(section, 'blockSubfolders')) delete section.blockSubfolders;
+                }
+
+                if (section.moodleURL || section.moodleTestId || section.moodleDomain) {
+                    const nextConfig = {
+                        url: section.moodleURL || '',
+                        moodleDomain: section.moodleDomain || null,
+                        moodleTestId: section.moodleTestId || null
+                    };
+                    section.groupA.examConfig.eduvidual = nextConfig;
+                    section.groupB.examConfig.eduvidual = nextConfig;
+                    if (Object.prototype.hasOwnProperty.call(section, 'moodleURL')) delete section.moodleURL;
+                    if (Object.prototype.hasOwnProperty.call(section, 'moodleTestId')) delete section.moodleTestId;
+                    if (Object.prototype.hasOwnProperty.call(section, 'moodleDomain')) delete section.moodleDomain;
                 }
             }
         },
@@ -3263,7 +3421,7 @@ hr {
     outline-offset: 1px;
 }
 
-.activesheets-sidebar-block {
+.basematerial-sidebar-block {
     margin-top: 0.35rem;
     width: 100%;
     max-width: 100%;
@@ -3276,7 +3434,7 @@ hr {
     background: rgba(0, 0, 0, 0.22);
 }
 
-.activesheets-panel-caption {
+.basematerial-panel-caption {
     font-size: 0.65rem;
     text-transform: uppercase;
     letter-spacing: 0.055em;
@@ -3284,18 +3442,18 @@ hr {
     margin-bottom: 0.5rem;
 }
 
-.activesheets-row {
+.basematerial-row {
     display: flex;
     align-items: center;
     gap: 6px;
     margin-bottom: 6px;
 }
 
-.activesheets-row:last-of-type {
+.basematerial-row:last-of-type {
     margin-bottom: 0;
 }
 
-.activesheets-group-pill {
+.basematerial-group-pill {
     flex: 0 0 32px;
     height: 32px;
     display: flex;
@@ -3309,50 +3467,50 @@ hr {
     user-select: none;
 }
 
-.activesheets-group-pill--b {
+.basematerial-group-pill--b {
     background: linear-gradient(165deg, #ffc107 0%, #d39e00 100%);
     color: #212529;
 }
 
-.activesheets-group-pill--ab {
+.basematerial-group-pill--ab {
     background: linear-gradient(135deg, var(--bs-info) 0 50%, var(--bs-warning) 50% 100%);
     color: var(--bs-dark);
     border: 0px solid rgba(255, 255, 255, 0.12);
     text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
-.activesheets-filename {
+.basematerial-filename {
     flex: 1 1 0%;
     min-width: 0;
     text-align: left;
 }
 
-.activesheets-filegroup {
+.basematerial-filegroup {
     flex: 1 1 auto;
     min-width: 0;
     align-items: stretch;
 }
 
-.activesheets-filegroup .activesheets-filename {
+.basematerial-filegroup .basematerial-filename {
     flex: 1 1 0%;
     min-width: 0;
 }
 
-.activesheets-filegroup > .activesheets-filename.btn {
+.basematerial-filegroup > .basematerial-filename.btn {
     --bs-btn-line-height: 1;
     flex: 1 1 0%;
     min-width: 0;
     display: flex !important;
     align-items: center !important;
     justify-content: flex-start;
-    min-height: 31px;
-    height: 31px;
+    min-height: 32px;
+    height: 32px;
     padding-top: 0 !important;
     padding-bottom: 0 !important;
     line-height: 1 !important;
 }
 
-.activesheets-filegroup > .activesheets-filename.btn .activesheets-filename-truncate {
+.basematerial-filegroup > .basematerial-filename.btn .basematerial-filename-truncate {
     display: block;
     min-width: 0;
     flex: 1 1 auto;
@@ -3362,13 +3520,13 @@ hr {
     text-align: left;
 }
 
-.activesheets-filegroup > .activesheets-remove.btn {
-    flex: 0 0 24px;
-    width: 24px;
-    min-width: 24px;
-    max-width: 24px;
-    min-height: 31px;
-    height: 31px;
+.basematerial-filegroup > .basematerial-remove.btn {
+    flex: 0 0 20px;
+    width: 20px;
+    min-width: 20px;
+    max-width: 20px;
+    min-height: 32px;
+    height: 32px;
     padding: 0;
     display: inline-flex;
     align-items: center;
@@ -3377,5 +3535,33 @@ hr {
     font-size: 1.05rem;
     font-weight: 300;
 }
+
+.sd-sf-btn {
+    width: 14px;
+    min-width: 14px;
+    max-width: 14px;
+    padding: 0;
+    font-size: 0.6rem;
+    min-height: 32px;
+    height: 32px;
+    max-height: 32px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    cursor: default;
+}
+
+.sd-sf-stack {
+    display: block;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    line-height: 1;
+    text-align: center;
+    font-size: 1em;
+    transform: translateX(-10%);
+}
+
 
 </style>
