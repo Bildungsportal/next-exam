@@ -386,6 +386,18 @@ export const detectorMethods = {
         // Build only cells between ADJACENT x-sorted verticals (k,k+1).
         // Using all pairs C(V,2) generates spanning phantom hulls over real cells.
         const vSorted = [...intersectingVerticals].sort((a, b) => a.x - b.x);
+
+        // If H-lines extend further right than the last V-line, the right border is implicit
+        // (drawn as the H-line endpoint but no dedicated V segment). Synthesize it.
+        const lastVx = vSorted[vSorted.length - 1].x;
+        if (rightBound - lastVx > minSpan + tol) {
+            vSorted.push({ x: rightBound, y1: cellTop, y2: cellBottom, synthetic: true });
+        }
+        // Similarly for the left side.
+        const firstVx = vSorted[0].x;
+        if (firstVx - leftBound > minSpan + tol) {
+            vSorted.unshift({ x: leftBound, y1: cellTop, y2: cellBottom, synthetic: true });
+        }
         for (let k = 0; k < vSorted.length - 1; k += 1) {
           const leftVert = vSorted[k];
           const rightVert = vSorted[k + 1];
