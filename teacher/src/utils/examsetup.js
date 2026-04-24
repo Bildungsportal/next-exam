@@ -1,6 +1,21 @@
 
 import CryptoJS from 'crypto-js';
 
+function ensureGroupsAndExamConfig(section) {
+    const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    const groupB = section.groupB || (section.groupB = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    if (!groupA.examConfig) groupA.examConfig = {};
+    if (!groupB.examConfig) groupB.examConfig = {};
+    return { groupA, groupB };
+}
+
+function ensureEditorExamConfig(section) {
+    const { groupA, groupB } = ensureGroupsAndExamConfig(section);
+    if (!groupA.examConfig.editor) groupA.examConfig.editor = {};
+    if (!groupB.examConfig.editor) groupB.examConfig.editor = {};
+    return { groupA, groupB };
+}
+
 /**
  * Website: configure per group (A/B) or for all (AB when groups off).
  * Stores settings in group.examConfig.website and removes legacy section.domainname/blockSub*.
@@ -151,9 +166,23 @@ async function configureEduvidual(presetGroup) {
 
 
 /**
- * Forms (Google or Microsoft)
+ * Forms (Google or Microsoft): configure per group (A/B) or for all (AB when groups off).
+ * Stores settings in group.examConfig.gforms and removes legacy section.formsUrl.
+ * @param {'a'|'b'|'all'|undefined} presetGroup
  */
-async function getFormsID(){
+async function configureForms(presetGroup){
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    const hasGroups = !!section.groups;
+    const whoNorm = String(presetGroup || 'all').toLowerCase();
+    const activeGroup = hasGroups ? (whoNorm === 'b' ? 'b' : whoNorm === 'a' ? 'a' : 'a') : 'all';
+
+    const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    const groupB = section.groupB || (section.groupB = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    if (!groupA.examConfig) groupA.examConfig = {};
+    if (!groupB.examConfig) groupB.examConfig = {};
+
+    const currentConfig = activeGroup === 'b' ? (groupB.examConfig.gforms || {}) : (groupA.examConfig.gforms || {});
+
     this.$swal.fire({
         customClass: {
             popup: 'my-popup',
@@ -189,7 +218,8 @@ async function getFormsID(){
             </div>
         </div>`,
         didOpen: () => {
-            document.getElementsByClassName('my-custom-input')[0].value = this.serverstatus.examSections[this.serverstatus.activeSection]?.formsUrl
+            const el = document.getElementsByClassName('my-custom-input')[0];
+            if (el) el.value = currentConfig.url || this.serverstatus.examSections[this.serverstatus.activeSection]?.formsUrl || '';
         },
         inputValidator: (value) => {
             if (!value) {return this.$t("dashboard.moodleInvalidId")}
@@ -198,15 +228,40 @@ async function getFormsID(){
     }).then((input) => {
         const val = input.value ? input.value.trim() : "";
         if (!val) {
-            this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math"
+            return;
         }
         else {
-            this.serverstatus.examSections[this.serverstatus.activeSection].formsUrl = val
+            const url = val;
+            let provider = 'unknown';
+            try {
+                const u = new URL(url);
+                const host = (u.hostname || '').toLowerCase();
+                if (host.includes('google') || host.includes('forms.gle')) provider = 'google';
+                if (host.includes('office') || host.includes('microsoft')) provider = 'microsoft';
+            } catch (e) {
+                provider = 'unknown';
+            }
+            const nextConfig = { url, provider };
+
+            if (!hasGroups) {
+                groupA.examConfig.gforms = nextConfig;
+                groupB.examConfig.gforms = nextConfig;
+            } else if (activeGroup === 'b') {
+                groupB.examConfig.gforms = nextConfig;
+            } else {
+                groupA.examConfig.gforms = nextConfig;
+            }
+
+            if (Object.prototype.hasOwnProperty.call(section, 'formsUrl')) delete section.formsUrl;
             this.backupinterval.stop();
             this.autobackup = false;
         }
         this.setServerStatus()
     })  
+}
+
+async function getFormsID() {
+    return configureForms.call(this, 'all');
 }
 
 
@@ -412,6 +467,98 @@ async function configureMicrosoft365Template(presetGroup) {
     }
 
     if (Object.prototype.hasOwnProperty.call(section, 'msOfficeFile')) delete section.msOfficeFile;
+    this.setServerStatus();
+}
+
+function removeMicrosoft365Template(group) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
+    const clearCfg = (g) => {
+        if (!g || !g.examConfig) return;
+        if (!g.examConfig.microsoft365) g.examConfig.microsoft365 = {};
+        g.examConfig.microsoft365.template = {};
+    };
+    if (!section.groups || group === 'all') {
+        clearCfg(section.groupA);
+        clearCfg(section.groupB);
+    } else if (group === 'b') {
+        clearCfg(section.groupB);
+    } else {
+        clearCfg(section.groupA);
+    }
+    this.setStudentStatus({ msofficeshare: false }, 'all');
+    this.setServerStatus();
+}
+
+function removeWebsiteUrl(group) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
+    const clearCfg = (g) => {
+        if (!g || !g.examConfig) return;
+        g.examConfig.website = {};
+    };
+    if (!section.groups || group === 'all') {
+        clearCfg(section.groupA);
+        clearCfg(section.groupB);
+    } else if (group === 'b') {
+        clearCfg(section.groupB);
+    } else {
+        clearCfg(section.groupA);
+    }
+    this.setServerStatus();
+}
+
+function removeEduvidualUrl(group) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
+    const clearCfg = (g) => {
+        if (!g || !g.examConfig) return;
+        g.examConfig.eduvidual = {};
+    };
+    if (!section.groups || group === 'all') {
+        clearCfg(section.groupA);
+        clearCfg(section.groupB);
+    } else if (group === 'b') {
+        clearCfg(section.groupB);
+    } else {
+        clearCfg(section.groupA);
+    }
+    this.setServerStatus();
+}
+
+function removeRdp(group) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
+    const clearCfg = (g) => {
+        if (!g || !g.examConfig) return;
+        g.examConfig.rdp = {};
+    };
+    if (!section.groups || group === 'all') {
+        clearCfg(section.groupA);
+        clearCfg(section.groupB);
+    } else if (group === 'b') {
+        clearCfg(section.groupB);
+    } else {
+        clearCfg(section.groupA);
+    }
+    this.setServerStatus();
+}
+
+function removeFormsUrl(group) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
+    const clearCfg = (g) => {
+        if (!g || !g.examConfig) return;
+        g.examConfig.gforms = {};
+    };
+    if (!section.groups || group === 'all') {
+        clearCfg(section.groupA);
+        clearCfg(section.groupB);
+    } else if (group === 'b') {
+        clearCfg(section.groupB);
+    } else {
+        clearCfg(section.groupA);
+    }
     this.setServerStatus();
 }
 /**
@@ -960,8 +1107,190 @@ async function configureEditor(){
     this.setServerStatus()
 }   
 
+function migrateLegacyEditorExamConfig() {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
 
+    const { groupA, groupB } = ensureEditorExamConfig(section);
 
+    const legacyKeys = [
+        'spellchecklang',
+        'suggestions',
+        'languagetool',
+        'languagetoolhost',
+        'languagetoolport',
+        'cmargin',
+        'linespacing',
+        'fontfamily',
+        'fontsize',
+        'audioRepeat',
+    ];
+
+    const hasAnyLegacy = legacyKeys.some((k) => Object.prototype.hasOwnProperty.call(section, k));
+    if (!hasAnyLegacy) return;
+
+    const alreadyHasEditorCfg =
+        (groupA.examConfig.editor && Object.keys(groupA.examConfig.editor).length > 0) ||
+        (groupB.examConfig.editor && Object.keys(groupB.examConfig.editor).length > 0);
+
+    if (alreadyHasEditorCfg) {
+        for (const k of legacyKeys) {
+            if (Object.prototype.hasOwnProperty.call(section, k)) delete section[k];
+        }
+        this.setServerStatus();
+        return;
+    }
+
+    const next = {
+        audioRepeat: section.audioRepeat ?? '0',
+        cmargin: { side: 'right', size: section.cmargin?.size ?? 3 },
+        fontfamily: section.fontfamily ?? 'sans-serif',
+        fontsize: section.fontsize ?? '12pt',
+        languagetool: !!section.languagetool,
+        languagetoolhost: section.languagetoolhost ?? null,
+        languagetoolport: section.languagetoolport ?? null,
+        linespacing: section.linespacing ?? '2',
+        spellchecklang: section.spellchecklang ?? 'de-DE',
+        suggestions: !!section.suggestions,
+    };
+
+    groupA.examConfig.editor = { ...next };
+    groupB.examConfig.editor = { ...next };
+
+    for (const k of legacyKeys) {
+        if (Object.prototype.hasOwnProperty.call(section, k)) delete section[k];
+    }
+
+    this.setServerStatus();
+}
+
+function setEditorExamConfigPatch(patch) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
+
+    const { groupA, groupB } = ensureEditorExamConfig(section);
+    const prev = groupA.examConfig.editor || {};
+    const next = { ...prev, ...patch };
+    if (Object.prototype.hasOwnProperty.call(next, 'cmargin')) {
+        next.cmargin = { side: 'right', size: next.cmargin?.size ?? 3 };
+    }
+
+    groupA.examConfig.editor = next;
+    groupB.examConfig.editor = { ...next };
+
+    this.backupinterval.stop();
+    this.autobackup = false;
+    this.setServerStatus();
+}
+
+async function configureCustomLanguageToolHost() {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
+
+    const { groupA } = ensureEditorExamConfig(section);
+    const cfg = groupA.examConfig.editor || {};
+
+    let resolvedLtIp = null;
+    const inputHost = (cfg.languagetoolhost || '').toString();
+    const inputPort = (cfg.languagetoolport || '8088').toString();
+
+    const result = await this.$swal.fire({
+        title: this.$t('dashboard.customhost'),
+        icon: 'question',
+        html: `
+            <div class="my-content" style="text-align:left; margin:0 12px;">
+                <label class="form-label">${this.$t('dashboard.host')}</label>
+                <div style="position:relative;">
+                    <input id="ltHost" class="form-control" value="${inputHost || ''}" placeholder="http://host-or-ip">
+                    <span id="ltHostStatus" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-weight:bold; cursor:help;"></span>
+                </div>
+                <label class="form-label" style="margin-top:8px;">${this.$t('dashboard.port')}</label>
+                <input id="ltPort" class="form-control" value="${inputPort}" placeholder="8088">
+            </div>
+        `,
+        showCancelButton: true,
+        cancelButtonText: this.$t('dashboard.cancel'),
+        confirmButtonText: this.$t('dashboard.save'),
+        didOpen: () => {
+            const hostEl = document.getElementById('ltHost');
+            const statusEl = document.getElementById('ltHostStatus');
+            const setStatus = (state) => {
+                if (!statusEl) return;
+                if (state === 'ok') {
+                    statusEl.textContent = '✓';
+                    statusEl.style.color = '#28a745';
+                    statusEl.title = this.$t('dashboard.host_ok');
+                } else if (state === 'warn') {
+                    statusEl.textContent = '▲';
+                    statusEl.style.color = '#ffc107';
+                    statusEl.title = this.$t('dashboard.host_warn');
+                } else {
+                    statusEl.textContent = '';
+                    statusEl.removeAttribute('title');
+                }
+            };
+            let t = null;
+            const scheduleResolve = () => {
+                const raw = hostEl?.value || '';
+                if (!raw.trim()) {
+                    resolvedLtIp = null;
+                    setStatus('none');
+                    return;
+                }
+                if (t) clearTimeout(t);
+                t = setTimeout(async () => {
+                    try {
+                        const hostOnly = raw.trim().replace(/^https?:\/\//i, '').split('/')[0];
+                        const res = await window.ipcRenderer?.invoke?.('resolveHostToIp', hostOnly);
+                        if (!res || !res.ok || !res.ip) {
+                            resolvedLtIp = null;
+                            setStatus('warn');
+                            return;
+                        }
+                        resolvedLtIp = res.ip;
+                        setStatus('ok');
+                    } catch (e) {
+                        resolvedLtIp = null;
+                        setStatus('warn');
+                    }
+                }, 600);
+            };
+            hostEl?.addEventListener('input', scheduleResolve);
+            scheduleResolve();
+        },
+        preConfirm: () => {
+            const hostEl = document.getElementById('ltHost');
+            const portEl = document.getElementById('ltPort');
+            const rawHost = (hostEl?.value || '').trim();
+            const rawPort = (portEl?.value || '').trim();
+            if (!rawHost) return this.$t('dashboard.host_required');
+            if (rawPort && !/^\d+$/.test(rawPort)) return this.$t('dashboard.port_invalid');
+            return true;
+        },
+    });
+
+    if (!result.isConfirmed) return;
+
+    const hostEl = document.getElementById('ltHost');
+    const portEl = document.getElementById('ltPort');
+    const rawHost = (hostEl?.value || '').trim();
+    const rawPort = (portEl?.value || '').trim();
+    const protocolMatch = rawHost.match(/^(https?:\/\/)/i);
+    const protocol = protocolMatch ? protocolMatch[1] : 'http://';
+    const hostForConfig = resolvedLtIp ? `${protocol}${resolvedLtIp}` : rawHost;
+
+    setEditorExamConfigPatch.call(this, {
+        languagetoolhost: hostForConfig,
+        languagetoolport: rawPort || '8088',
+    });
+}
+
+function removeCustomLanguageToolHost() {
+    setEditorExamConfigPatch.call(this, {
+        languagetoolhost: null,
+        languagetoolport: null,
+    });
+}
 
 // Helper functions
 
@@ -1432,4 +1761,4 @@ function openAllowedUrl(allowedUrl){
 
 
 
-export { configureWebsite, configureEduvidual, configureMicrosoft365Template, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }
+export { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, getFormsID, configureEditor, migrateLegacyEditorExamConfig, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }

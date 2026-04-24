@@ -73,7 +73,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## 5. Project memory (`memory.md`)
 
-**Mandatory for all AI agents (Claude Code, Cursor Agent, etc.) in this repo.** `memory.md` at the repository root is a shared, **token-minimal machine index** of durable project facts: architecture, conventions, root-cause fixes, and gotchas. Humans are not the audience; optimize for **fewest characters per retrievable fact**.
+**Mandatory for all AI agents (Claude Code, Cursor Agent, etc.) in this repo.** `memory.md` at the repository root is a shared, **token-minimal machine index** of durable **project-level** facts: architecture, conventions, contracts, and cross-app relationships (especially `student/` ↔ `teacher/`). Humans are not the audience; optimize for **fewest characters per retrievable fact**.
 
 ### Read
 
@@ -81,7 +81,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ### Write / update
 
-- **After** you discover something **non-obvious and stable** (bug root cause, invariant, naming/IPC contract, “do not X”, verified fix): append or merge into `memory.md`.
+- **After** you discover something **non-obvious and stable** that helps future work at a project level: architecture locations (`PATH`), conventions (`RULE`), IPC/API contracts (`IPC`), or important cross-module relationships (`TECH`).
+- **Do NOT** put narrow implementation details or one-off bugfix notes in `memory.md`. If a bug is truly structural (recurs across modules / defines an invariant / impacts architecture), capture it as a high-level rule or contract instead of a step-by-step fix.
 - **One atomic fact per line** where possible; **no prose**, no markdown essays, no filler.
 - **Dedupe**: if a fact already exists, tighten the stronger line and remove the weaker duplicate.
 - **Prune**: delete or replace lines that are wrong after refactors; keep file **small** (if it grows past ~400–500 lines, aggressively compress or archive old atoms to a separate file only if the user asks).
@@ -104,7 +105,8 @@ KIND^TOPIC^KEY^VALUE^CTX
 ```
 RULE^agent^memRW^read memory.md before nontrivial task; write durable deltas after
 TECH^vue^api^Options API default teacher/src; no script setup unless user migrates
-BUG^print^firstCold^pdfjs+raster+silent hiddenWin;ipc+print cb ok;diff vs pre-umbau=PDF plugin→debug new pipeline not spooler-only
+RULE^i18n^alphabetical^keep keys in teacher/src/locales/de.json+en.json alphabetically sorted within each object
+PATH^pdfparser^root^pdf parser code lives in teacher/src/utils/pdfparser/ and student/src/utils/pdfparser/
 ```
 
 If a single line cannot fit, split into two atoms with the same `TOPIC^KEY` prefix rather than wrapping prose.

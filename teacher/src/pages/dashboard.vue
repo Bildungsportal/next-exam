@@ -200,7 +200,7 @@
         <div class="sidebar-info-strip">
         <div class="btn btn-light text-start infobutton" @click="showinfo()">{{$t('dashboard.name')}} <br><b> {{$route.params.servername}}</b> </div>
         <div class="btn btn-light text-start infobutton" @click="showinfo()">{{$t('dashboard.pin')}}<br><b> {{ serverstatus.pin }} </b>  </div>
-        <div class="btn btn-light mb-3 text-start infobutton" @click="showinfo()">{{$t('dashboard.server')}} <br><b>{{serverip}}</b> </div>
+        <div class="btn btn-light  text-start infobutton" @click="showinfo()" style="margin-bottom: 0.7rem;">{{$t('dashboard.server')}} <br><b>{{serverip}}</b> </div>
         </div>
 
         
@@ -233,13 +233,137 @@
             </div>
 
             <div class="mt-2">
-                <!-- Editor Spellcheck Info -->
-                <div v-if="isExamType('editor') && serverstatus.examSections[serverstatus.activeSection].languagetool" class="small text-white-50">
-                Spellcheck: {{serverstatus.examSections[serverstatus.activeSection].spellchecklang}}
-                </div> 
+                <!-- Editor / Sprachen Config -->
+                <div v-if="isExamType('editor')" class="basematerial-sidebar-block basematerial-sidebar-block--optional mt-3">
+                    <div class="basematerial-panel-caption">{{ $t('dashboard.texteditor') }}</div>
+
+                    <div class="basematerial-row">
+                        <span class="basematerial-group-pill basematerial-group-pill--ab" aria-label="A/B">AB</span>
+                        <select class="form-select form-select-sm"
+                                :value="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.spellchecklang || 'de-DE'"
+                                @change="setEditorExamConfigPatch({ spellchecklang: $event.target.value })">
+                            <option value="de-DE">{{ $t('dashboard.de') }}</option>
+                            <option value="en-GB">{{ $t('dashboard.en') }}</option>
+                            <option value="en-US">{{ $t('dashboard.en_us') }}</option>
+                            <option value="fr-FR">{{ $t('dashboard.fr') }}</option>
+                            <option value="es-ES">{{ $t('dashboard.es') }}</option>
+                            <option value="it-IT">{{ $t('dashboard.it') }}</option>
+                            <option value="sl-SI">{{ $t('dashboard.sl') }}</option>
+                            <option value="none">{{ $t('dashboard.none') }}</option>
+                        </select>
+                    </div>
+
+                    <div class="mt-2" style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button type="button"
+                                class="btn btn-sm"
+                                :class="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool ? 'btn-teal' : 'btn-outline-secondary'"
+                                @click="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool ? setEditorExamConfigPatch({ languagetool: false, languagetoolhost: null, languagetoolport: null, suggestions: false }) : setEditorExamConfigPatch({ languagetool: true })">
+                            LanguageTool
+                        </button>
+                        <button type="button"
+                                class="btn btn-sm"
+                                :disabled="!serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool"
+                                :class="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.suggestions ? 'btn-teal' : 'btn-outline-secondary'"
+                                @click="setEditorExamConfigPatch({ suggestions: !serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.suggestions })">
+                            {{ $t('dashboard.suggest') }}
+                        </button>
+                    </div>
+
+                    <div class="mt-2">
+                        <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetoolhost">
+                            <div class="btn-group basematerial-filegroup w-100" role="group">
+                                <button type="button"
+                                        class="btn btn-sm btn-teal basematerial-filename text-truncate"
+                                        :title="`${serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.editor.languagetoolhost}${(serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetoolport && !String(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.editor.languagetoolhost).match(/:\\d+$/)) ? `:${serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.editor.languagetoolport}` : ''}`"
+                                        @click="configureCustomLanguageToolHost()">
+                                    <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.editor.languagetoolhost }}{{ (serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetoolport && !String(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.editor.languagetoolhost).match(/:\d+$/)) ? `:${serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.editor.languagetoolport}` : '' }}</span>
+                                </button>
+                                <button type="button"
+                                        class="btn btn-sm btn-secondary basematerial-remove"
+                                        :title="$t('dashboard.removefile')"
+                                        @click="removeCustomLanguageToolHost()">
+                                    &times;
+                                </button>
+                            </div>
+                        </template>
+                        <button v-else type="button"
+                                class="btn btn-sm btn-outline-secondary sidebar-pick-btn w-100"
+                                :disabled="!serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool"
+                                @click="configureCustomLanguageToolHost()">
+                            <span class="sidebar-pick-btn__label">{{ $t('dashboard.customhost') }}</span>
+                            <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                        </button>
+                    </div>
+
+                    <div class="mt-3">
+                        <div class="smalltext text-white-50 mb-1">{{ $t('dashboard.cmargin-value') }}</div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <input type="range" class="form-range editor-cmargin-range"
+                                   min="2" max="5" step="0.5"
+                                   :value="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.cmargin?.size ?? 3"
+                                   @input="setEditorExamConfigPatch({ cmargin: { side: 'right', size: parseFloat($event.target.value) } })" />
+                            <div class="smalltext text-white-50" style="min-width:44px;">
+                                {{ (serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.cmargin?.size ?? 3) }}cm
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-2">
+                        <div class="smalltext text-white-50 mb-1">{{ $t('dashboard.linespacing') }}</div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <input type="range" class="form-range editor-linespacing-range"
+                                   min="1" max="3" step="1"
+                                   :value="Number(serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.linespacing || 2)"
+                                   @input="setEditorExamConfigPatch({ linespacing: String($event.target.value) })" />
+                            <div class="smalltext text-white-50" style="min-width:44px;">
+                                {{ String(serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.linespacing || '2') }}x
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-2">
+                        <div class="small text-white-50 mb-1">{{ $t('dashboard.fontfamily') }}</div>
+                        <div style="display:flex; gap:8px;">
+                            <button type="button" class="btn btn-sm"
+                                    :class="(serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.fontfamily || 'sans-serif') === 'serif' ? 'btn-teal' : 'btn-outline-secondary'"
+                                    @click="setEditorExamConfigPatch({ fontfamily: 'serif' })">serif</button>
+                            <button type="button" class="btn btn-sm"
+                                    :class="(serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.fontfamily || 'sans-serif') === 'sans-serif' ? 'btn-teal' : 'btn-outline-secondary'"
+                                    @click="setEditorExamConfigPatch({ fontfamily: 'sans-serif' })">sans-serif</button>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <div class="small text-white-50 mb-1">{{ $t('dashboard.fontsize') }}</div>
+                        <select class="form-select form-select-sm"
+                                :value="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.fontsize || '12pt'"
+                                @change="setEditorExamConfigPatch({ fontsize: $event.target.value })">
+                            <option value="8pt">8 pt</option>
+                            <option value="10pt">10 pt</option>
+                            <option value="12pt">12 pt</option>
+                            <option value="14pt">14 pt</option>
+                            <option value="16pt">16 pt</option>
+                            <option value="18pt">18 pt</option>
+                            <option value="20pt">20 pt</option>
+                        </select>
+                    </div>
+
+                    <div class="mt-2 mb-2">
+                        <div class="small text-white-50 mb-1">{{ $t('dashboard.audiorepeattitle') }}</div>
+                        <select class="form-select form-select-sm"
+                                :value="String(serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.audioRepeat ?? '0')"
+                                @change="setEditorExamConfigPatch({ audioRepeat: $event.target.value })">
+                            <option value="0">{{ $t('dashboard.audioallow') }}</option>
+                            <option value="1">1{{ $t('dashboard.audiorepeat1') }}</option>
+                            <option value="2">2{{ $t('dashboard.audiorepeat2') }}</option>
+                            <option value="3">3{{ $t('dashboard.audiorepeat2') }}</option>
+                            <option value="4">4{{ $t('dashboard.audiorepeat2') }}</option>
+                        </select>
+                    </div>
+                </div>
 
                 <!-- Website Config -->
-                <div v-if="isExamType('website')" class="basematerial-sidebar-block mt-2">
+                <div v-if="isExamType('website')" class="basematerial-sidebar-block mt-3">
                     <div class="basematerial-panel-caption">{{ $t('dashboard.website') }}</div>
 
                     <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
@@ -302,8 +426,8 @@
                 </div>
 
                 <!-- Eduvidual Config -->
-                <div v-if="isExamType('eduvidual')" class="basematerial-sidebar-block mt-2">
-                    <div class="basematerial-panel-caption">{{ $t('dashboard.eduvidual') }}</div>
+                <div v-if="isExamType('eduvidual')" class="basematerial-sidebar-block mt-3">
+                    <div class="basematerial-panel-caption">{{ $t('dashboard.testUrl') }}</div>
 
                     <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
                         <div class="basematerial-row">
@@ -358,8 +482,65 @@
                     </template>
                 </div>
 
+                <!-- Forms Config -->
+                <div v-if="isExamType('forms')" class="basematerial-sidebar-block mt-3">
+                    <div class="basematerial-panel-caption">{{ $t('dashboard.formsUrl') }}</div>
+
+                    <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill">A</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.gforms?.url">
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url, blockSubdomains: false, blockSubfolders: false })">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeFormsUrl('a')">&times;</button>
+                                </div>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureForms('a')">
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.formsChooseUrl') }}</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill basematerial-group-pill--b">B</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.gforms?.url">
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.gforms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.gforms.url, blockSubdomains: false, blockSubfolders: false })">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.gforms.url }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeFormsUrl('b')">&times;</button>
+                                </div>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureForms('b')">
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.formsChooseUrl') }}</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill basematerial-group-pill--ab" aria-label="A/B">AB</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.gforms?.url">
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url, blockSubdomains: false, blockSubfolders: false })">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeFormsUrl('all')">&times;</button>
+                                </div>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureForms('all')">
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.formsChooseUrl') }}</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+
                 <!-- RDP Config -->
-                <div v-if="isExamType('rdp')" class="basematerial-sidebar-block mt-2">
+                <div v-if="isExamType('rdp')" class="basematerial-sidebar-block mt-3">
                     <div class="basematerial-panel-caption">{{ $t('dashboard.rdp') }}</div>
 
                     <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
@@ -417,7 +598,7 @@
 
 
                 <!-- Active Sheets: panel with group pills, filename, remove -->
-                <div v-if="isExamType('activesheets')" class="basematerial-sidebar-block">
+                <div v-if="isExamType('activesheets')" class="basematerial-sidebar-block mt-3">
                     <div class="basematerial-panel-caption">{{ $t('dashboard.activesheetsPanelCaption') }}</div>
                     <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
                         <div class="basematerial-row">
@@ -489,7 +670,7 @@
                 </div>
 
                 <!-- Microsoft365 Template (docx/xlsx) -->
-                <div v-if="isExamType('microsoft365') && config.accessToken" class="basematerial-sidebar-block mt-2">
+                <div v-if="isExamType('microsoft365') && config.accessToken" class="basematerial-sidebar-block mt-3">
                     <div class="basematerial-panel-caption">{{ $t('dashboard.microsoft365') }}</div>
 
                     <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
@@ -549,7 +730,7 @@
 
 
         <!-- Files Section START -->
-        <div class="materials-sidebar-block mt-2 mb-2">
+        <div class="materials-sidebar-block mt-3 mb-2">
             <div class="materials-sidebar-header">
                 <div class="materials-panel-caption">{{ $t('dashboard.materials') }}</div>
             </div>
@@ -920,7 +1101,7 @@ import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile,
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
 import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer } from '../utils/filemanager'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore } from '../utils/exammanagement.js'
-import { configureWebsite, configureEduvidual, configureMicrosoft365Template, getFormsID, configureEditor, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
+import { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, migrateLegacyEditorExamConfig, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
 import { Exam } from '../types/api'
 
 class EmptyWidget {
@@ -1162,6 +1343,11 @@ computed: {
             const hasB = !!section.groupB?.examConfig?.rdp?.domain;
             return section.groups ? (hasA && hasB) : hasA;
         }
+        if (examType === 'forms') {
+            const hasA = !!section.groupA?.examConfig?.gforms?.url;
+            const hasB = !!section.groupB?.examConfig?.gforms?.url;
+            return section.groups ? (hasA && hasB) : hasA;
+        }
         return true;
     },
     lockInExammode() {
@@ -1284,78 +1470,11 @@ computed: {
             return new File([bytes], template.filename, { type });
         },
 
-        removeMicrosoft365Template(group) {
-            const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-            if (!section) return;
-            const clearCfg = (g) => {
-                if (!g || !g.examConfig) return;
-                if (!g.examConfig.microsoft365) g.examConfig.microsoft365 = {};
-                g.examConfig.microsoft365.template = {};
-            };
-            if (!section.groups || group === 'all') {
-                clearCfg(section.groupA);
-                clearCfg(section.groupB);
-            } else if (group === 'b') {
-                clearCfg(section.groupB);
-            } else {
-                clearCfg(section.groupA);
-            }
-            this.setStudentStatus({msofficeshare:false}, 'all');
-            this.setServerStatus();
-        },
-        removeWebsiteUrl(group) {
-            const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-            if (!section) return;
-            const clearCfg = (g) => {
-                if (!g || !g.examConfig) return;
-                g.examConfig.website = {};
-            };
-            if (!section.groups || group === 'all') {
-                clearCfg(section.groupA);
-                clearCfg(section.groupB);
-            } else if (group === 'b') {
-                clearCfg(section.groupB);
-            } else {
-                clearCfg(section.groupA);
-            }
-            this.setServerStatus();
-        },
-
-        removeEduvidualUrl(group) {
-            const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-            if (!section) return;
-            const clearCfg = (g) => {
-                if (!g || !g.examConfig) return;
-                g.examConfig.eduvidual = {};
-            };
-            if (!section.groups || group === 'all') {
-                clearCfg(section.groupA);
-                clearCfg(section.groupB);
-            } else if (group === 'b') {
-                clearCfg(section.groupB);
-            } else {
-                clearCfg(section.groupA);
-            }
-            this.setServerStatus();
-        },
-
-        removeRdp(group) {
-            const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-            if (!section) return;
-            const clearCfg = (g) => {
-                if (!g || !g.examConfig) return;
-                g.examConfig.rdp = {};
-            };
-            if (!section.groups || group === 'all') {
-                clearCfg(section.groupA);
-                clearCfg(section.groupB);
-            } else if (group === 'b') {
-                clearCfg(section.groupB);
-            } else {
-                clearCfg(section.groupA);
-            }
-            this.setServerStatus();
-        },
+        removeMicrosoft365Template: removeMicrosoft365Template,
+        removeWebsiteUrl: removeWebsiteUrl,
+        removeEduvidualUrl: removeEduvidualUrl,
+        removeRdp: removeRdp,
+        removeFormsUrl: removeFormsUrl,
         /**
          * Microsoft OneDrive API Authentication and File Handling
          */
@@ -1415,9 +1534,12 @@ computed: {
          */
         configureWebsite: configureWebsite,
         configureEduvidual: configureEduvidual,
+        configureForms: configureForms,
         configureMicrosoft365Template: configureMicrosoft365Template,
-        getFormsID: getFormsID,
-        configureEditor: configureEditor,
+        migrateLegacyEditorExamConfig: migrateLegacyEditorExamConfig,
+        setEditorExamConfigPatch: setEditorExamConfigPatch,
+        configureCustomLanguageToolHost: configureCustomLanguageToolHost,
+        removeCustomLanguageToolHost: removeCustomLanguageToolHost,
         configureActivesheets: configureActivesheets,
         configureRDP: configureRDP,
         configureLocalVM: configureLocalVM,
@@ -1639,9 +1761,9 @@ computed: {
             if (this.lockInExammode) return;
             this.serverstatus.examSections[this.serverstatus.activeSection].examtype = type;
             // Call existing methods based on type
-            if (type === 'editor') this.configureEditor();
+            if (type === 'editor') this.migrateLegacyEditorExamConfig();
             if (type === 'eduvidual') {/* configured via sidebar */}
-            if (type === 'forms') this.getFormsID();
+            if (type === 'forms') {/* configured via sidebar */}
             if (type === 'website') {/* configured via sidebar */}
             if (type === 'math') {/* no dialog */}
             if (type === 'rdp') {/* configured via sidebar */}
@@ -3093,12 +3215,13 @@ computed: {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
-    overflow-x: visible;
-    margin-right: -6px;
-    padding-right: 6px;
+    scrollbar-gutter: stable;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+
+    margin-right: -10px;
 }
+
 
 .sidebar-scroll::-webkit-scrollbar {
     width: 6px;
@@ -3391,6 +3514,27 @@ hr {
 .custom-slider {
     width: 345px; /* Feste Breite des Sliders */
     margin-right: 10px; /* Abstand zu anderen Elementen */
+}
+
+.editor-cmargin-range,
+.editor-linespacing-range {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.smalltext {
+    font-size: 0.825rem;
+}
+
+.editor-cmargin-range::-webkit-slider-thumb,
+.editor-linespacing-range::-webkit-slider-thumb {
+    background-color: #20c997;
+}
+
+.editor-cmargin-range::-moz-range-thumb,
+.editor-linespacing-range::-moz-range-thumb {
+    background-color: #20c997;
+    border-color: #20c997;
 }
 
 
@@ -3705,7 +3849,7 @@ hr {
     border-style: solid;
     border-color: rgba(255, 255, 255, 0.14);
     border-radius: 0;
-    background: rgba(0, 0, 0, 0.22);
+    background: rgba(90, 90, 90, 0.22);
 }
 
 .materials-sidebar-header {
@@ -3801,17 +3945,27 @@ hr {
     border-style: solid;
     border-color: rgba(255, 255, 255, 0.14);
     border-radius: 0;
-    background: rgba(0, 0, 0, 0.22);
+    background: rgba(90, 90, 90, 0.22);
 }
 
 .basematerial-sidebar-block .sidebar-pick-btn.btn {
-    border-color: rgba(220, 53, 69, 0.55) !important;
+    border-color: rgba(205, 53, 69, 0.9) !important;
+}
+
+.basematerial-sidebar-block--optional .sidebar-pick-btn.btn {
+    border-color: rgba(255, 255, 255, 0.28) !important;
 }
 
 .basematerial-sidebar-block .sidebar-pick-btn.btn-outline-secondary:hover,
 .basematerial-sidebar-block .sidebar-pick-btn.btn-outline-secondary:focus,
 .basematerial-sidebar-block .sidebar-pick-btn.btn-outline-secondary:active {
     border-color: rgba(220, 53, 69, 0.75) !important;
+}
+
+.basematerial-sidebar-block--optional .sidebar-pick-btn.btn-outline-secondary:hover,
+.basematerial-sidebar-block--optional .sidebar-pick-btn.btn-outline-secondary:focus,
+.basematerial-sidebar-block--optional .sidebar-pick-btn.btn-outline-secondary:active {
+    border-color: rgba(255, 255, 255, 0.22) !important;
 }
 
 .basematerial-panel-caption {
