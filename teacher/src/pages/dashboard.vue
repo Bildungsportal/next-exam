@@ -197,6 +197,10 @@
 
     <!-- SIDEBAR start -->
     <div :key="5" class=" text-white bg-dark d-flex flex-column sidebar-root mt-3" style="width: 240px; min-width: 240px;">
+        <div class="sidebar-overlays">
+            <div v-if="showDesc" id="description" class="btn sidebar-message w-100" style="white-space: pre-line;" v-html="currentDescription"></div>
+            <div id="statusdiv" class="btn btn-warning sidebar-message w-100"> {{$t('dashboard.connected')}}  </div>
+        </div>
         <div class="sidebar-info-strip">
         <div class="btn btn-light text-start infobutton" @click="showinfo()">{{$t('dashboard.name')}} <br><b> {{$route.params.servername}}</b> </div>
         <div class="btn btn-light text-start infobutton" @click="showinfo()">{{$t('dashboard.pin')}}<br><b> {{ serverstatus.pin }} </b>  </div>
@@ -765,9 +769,6 @@
         </div>
         <!-- BIP Section END -->
         
-        <div v-if="showDesc" id="description" class="btn sidebar-message w-100" style="white-space: pre-line;" v-html="currentDescription"></div>
-        <div id="statusdiv" class="btn btn-warning sidebar-message w-100"> {{$t('dashboard.connected')}}  </div>
-
         </div>
 
         <span @click="showCopyleft()" class="sidebar-footer mt-auto">
@@ -1011,7 +1012,7 @@
                             <div v-if="!student.focus && now - 20000 < student.timestamp" class="kioskwarning" @mouseover="showDescription($t('dashboard.leftkioskinfo'))" @mouseout="hideDescription">{{$t("dashboard.leftkiosk")}}</div>
                             <div v-if="student.status.sendexam && now - 20000 < student.timestamp" class="examrequest" @mouseover="showDescription($t('dashboard.examrequestinfo'))" @mouseout="hideDescription">{{$t("dashboard.examrequest")}}</div>
                             <div v-if="student.remoteassistant && now - 20000 < student.timestamp" class="remoteassistant" @mouseover="showDescription($t('dashboard.remoteassistantinfo'), student.remoteassistant)" @mouseout="hideDescription">{{$t("dashboard.remoteassistant")}}</div>
-                            <span class="rounded">   
+                            <span style="border-bottom-right-radius:5px">   
                                 <div v-if="now - 20000 < student.timestamp" style="display: inline-block; overflow: hidden; width: 140px; height: 22px" @mouseover="showDescription($t('dashboard.documentsinfo') + student.files)" @mouseout="hideDescription"> 
                                     <img v-for="file in student.files" style="width:22px; margin-left:-4px; position: relative; filter: sepia(10%) hue-rotate(306deg) brightness(0.3) saturate(75);" class="" src="/src/assets/img/svg/document.svg">
                                 </div>
@@ -2760,6 +2761,7 @@ computed: {
 
 #wrapper {
     height: calc(100vh - 63px);
+    overflow: hidden;
 }
 
 #aplayer {
@@ -3152,7 +3154,9 @@ computed: {
     padding-bottom: 0px !important;
     display: flex;
     flex-direction: column;
-    height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .sidebar-info-strip {
@@ -3200,6 +3204,29 @@ computed: {
     background-color: rgba(255, 255, 255, 0.35);
 }
 
+.sidebar-overlays {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    
+    width: 100%;
+  
+}
+
+.sidebar-overlays div{
+    min-height: 128px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    text-align: left;
+    font-size: 0.8em;
+    font-weight: normal;
+
+}
+
 .sidebar-footer {
     margin-top: 6px;
     font-size: 0.8em;
@@ -3225,6 +3252,7 @@ computed: {
 .sidebar-message {
     margin-bottom: 0.5rem;
     border-radius: 0 !important;
+    display: block;
 }
 
 .sidebar-dropdown-inset {
@@ -3268,11 +3296,31 @@ computed: {
     border-radius: 5px;
     width: 100%;
     flex: 1;
+    min-height: 0;
     /* border: 1px solid rgb(99, 187, 175); */
     padding-bottom:100px;
     padding-right: 30px;
+    margin-right: -30px;
     transition:0.1s;
     overflow-y:auto;
+    scrollbar-gutter: auto;
+}
+
+#studentslist::-webkit-scrollbar {
+    width: 6px;
+}
+
+#studentslist::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#studentslist::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.25);
+    border-radius: 6px;
+}
+
+#studentslist::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.35);
 }
 
 .disabledblue {
