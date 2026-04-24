@@ -316,11 +316,13 @@ export default {
 
             // update url/domain based on current locked section (respect allowSectionSwitch)
             const section = this.serverstatus?.examSections?.[sectionIndex]
-            if (section && typeof section.domainname === 'string') {
-                this.url = section.domainname
-                this.domain = section.domainname
-                this.blockSubdomains = !!section.blockSubdomains
-                this.blockSubfolders = !!section.blockSubfolders
+            const groupKey = section && section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA'
+            const websiteConfig = section?.[groupKey]?.examConfig?.website || null
+            if (websiteConfig && typeof websiteConfig.url === 'string') {
+                this.url = websiteConfig.url
+                this.domain = websiteConfig.url
+                this.blockSubdomains = !!websiteConfig.blockSubdomains
+                this.blockSubfolders = !!websiteConfig.blockSubfolders
                 try {
                     const urlObj = new URL(this.url);
                     this.allowedDomain = urlObj.hostname;

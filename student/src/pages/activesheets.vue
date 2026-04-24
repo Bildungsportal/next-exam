@@ -1,4 +1,5 @@
 <template>
+    <div class="activesheets-root">
     <!-- HEADER START -->
     <exam-header
     :serverstatus="serverstatus"
@@ -63,7 +64,7 @@
     
   
 
-    <div :class="splitview ? 'split-view-container' : ''">
+    <div class="activesheets-body" :class="splitview ? 'split-view-container' : ''">
         <div
             id="preview"
             :class="splitview ? ['p-0', 'split-pane', 'split-pane--left', 'splitback', { 'splitback--empty': !pdfPreviewState }] : 'p-4'"
@@ -123,6 +124,12 @@
     
         </div>
     </div>
+
+    <div id="statusbar" style="padding-left:15px;">
+        <img @click="zoomin();" src="/src/assets/img/svg/zoom-in.svg" class="zoombutton">
+        <img @click="zoomout();" src="/src/assets/img/svg/zoom-out.svg" class="zoombutton">
+    </div>
+    </div>
 </template>
 
 <script>
@@ -138,6 +145,11 @@ import {SignalBridge} from '../utils/signalBridge.js'
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
+
+// Default zoom for #content (screen); @media print hides zoom UI.
+const ACTIVESHEETS_ZOOM_INITIAL = 1.0
+const ACTIVESHEETS_ZOOM_MIN = 0.85
+const ACTIVESHEETS_ZOOM_MAX = 2.2
 
 export default {
     data() {
@@ -207,6 +219,7 @@ export default {
             splitview: false,
             splitLeftPct: 50,
             _splitResizing: false,
+            zoom: ACTIVESHEETS_ZOOM_INITIAL,
         }
     }, 
     components: { ExamHeader, PdfviewPaneRendered, WebviewPane, PdfOverlay },  
@@ -219,6 +232,16 @@ export default {
         gracefullyExit:gracefullyExit,
         showUrl:showUrl,
         reconnect:reconnect,
+        zoomin() {
+            if (this.zoom < ACTIVESHEETS_ZOOM_MAX) this.zoom = Math.min(ACTIVESHEETS_ZOOM_MAX, this.zoom + 0.1)
+            const el = document.getElementById(`content`)
+            if (el) el.style.zoom = this.zoom
+        },
+        zoomout() {
+            if (this.zoom > ACTIVESHEETS_ZOOM_MIN) this.zoom = Math.max(ACTIVESHEETS_ZOOM_MIN, this.zoom - 0.1)
+            const el = document.getElementById(`content`)
+            if (el) el.style.zoom = this.zoom
+        },
         getUrlDisplay(allowedUrl) {
             return typeof allowedUrl === 'object' ? allowedUrl.url : allowedUrl;
         },
@@ -760,8 +783,10 @@ export default {
         this.entrytime = new Date().getTime()  
     
         this.$nextTick(async () => { 
-
             await this.fetchInfo()  // Initial fetch for clientinfo, serverstatus and lockedSection
+
+            const content = document.getElementById(`content`)
+            if (content) content.style.zoom = this.zoom
 
             this.fetchinfointerval = new SchedulerService(5000);
             this.fetchinfointerval.addEventListener('action',  this.fetchInfo);
@@ -884,17 +909,42 @@ export default {
 
 <style scoped lang="scss">
 
-
-
 #toolbar {
     z-index: 10001;
     background-color: rgba(var(--bs-dark-rgb))
 }
 
+.activesheets-root {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
+.activesheets-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
 #content {
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: auto;
     height: 100%;
+    min-height: 0;
+    scrollbar-gutter: stable;
+    width: 100%;
+    overscroll-behavior: contain;
+    background-color: #eee;
+}
+
+:deep(.pdf-scroll-container) {
+    overflow: visible;
+    height: auto;
+    max-height: none;
+    min-height: fit-content;
 }
 
 .split-view-container {
@@ -910,8 +960,38 @@ export default {
     overflow: hidden;
 }
 
+.split-pane--right {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    overscroll-behavior: contain;
+}
+
 .split-pane--left {
     background-color: transparent;
+}
+
+#statusbar {
+    position: relative;
+    bottom: 0px;
+    width: 100%;
+    height: 28px;
+    background-color: #eeeefa;
+    padding: 2px;
+    padding-left: 6px;
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
+    font-size: 0.9em;
+}
+
+.zoombutton {
+    height: 24px;
+    float: right;
+    cursor: pointer;
+}
+
+.zoombutton:hover {
+    filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(82%) contrast(119%);
 }
 
 /* must integrate images this way otherwise they won't be integrated in the final build */

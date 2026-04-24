@@ -340,6 +340,27 @@ export default {
         }
     },
     methods: {
+        async ensurePdfOverlayFontsReady() {
+            // Ensure webfonts are loaded before canvas.measureText drives cloze positioning.
+            if (!document?.fonts) return;
+            try {
+                await Promise.all([
+                    document.fonts.load('16px hv'),
+                    document.fonts.load('16px carlito-regular'),
+                    document.fonts.load('16px carlito-bold'),
+                    document.fonts.load('16px carlito-italic'),
+                    document.fonts.load('16px carlito-bold-italic'),
+                    document.fonts.load('16px Latin-Modern-Math'),
+                    document.fonts.load('16px caladea'),
+                    document.fonts.load('16px dejavuserif'),
+                    document.fonts.load('16px notosanssymbols'),
+                    document.fonts.ready,
+                ]);
+            } catch (e) {
+                // If fonts fail to load, parsing still proceeds (fallback metrics may drift).
+                console.warn('PdfOverlay: font loading skipped', e?.message || e);
+            }
+        },
         async processPdf(base64Data) {
             if (!base64Data) {
                 this.parsedPages = [];
@@ -349,6 +370,7 @@ export default {
             this.isParsing = true;
             this.warningShown = false; // Reset warning flag for new PDF
             try {
+                await this.ensurePdfOverlayFontsReady();
                 const uint8 = this.base64ToUint8Array(base64Data);
                 this.parsedPages = await parsePdfToPages(uint8);
             } catch (error) {
