@@ -399,11 +399,13 @@ export default {
             this.lockedSection = sectionIndex
 
             const section = this.serverstatus.examSections?.[sectionIndex]
-            if (section) {
-                this.url = section.moodleURL
-                this.moodleDomain = section.moodleDomain
-                this.moodleTestType = section.moodleTestType
-                this.moodleTestId = section.moodleTestId
+            const groupKey = section && section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA'
+            const eduConfig = section?.[groupKey]?.examConfig?.eduvidual || null
+            if (eduConfig) {
+                this.url = eduConfig.url || null
+                this.moodleDomain = eduConfig.moodleDomain || null
+                this.moodleTestType = null
+                this.moodleTestId = eduConfig.moodleTestId || null
             }
 
             if (!this.focus) {
