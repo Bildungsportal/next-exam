@@ -853,7 +853,7 @@
                 <label class="form-check-label">{{$t('dashboard.bildungsportal')}}   </label><br>
             </div>
             <div class="form-check form-switch  m-1 mb-2">
-                <input v-model=directPrintAllowed @click="checkforDefaultprinter()" :title="$t('dashboard.allowdirectprint')" checked=false class="form-check-input" type="checkbox" id="directprint">
+                <input v-model="serverstatus.directPrintAllowed" @change="checkforDefaultprinter(); setServerStatus()" :title="$t('dashboard.allowdirectprint')" checked=false class="form-check-input" type="checkbox" id="directprint">
                 <label class="form-check-label">{{$t('dashboard.directprint')}}   </label><br>
                 <div v-if="defaultPrinter" class="ellipsis text-black-50"> {{ defaultPrinter }}</div>
                 <div v-if="!defaultPrinter" class="ellipsis text-black-50" style="max-width: 300px!important;"> {{$t('dashboard.noprinterChosen')}}</div>
@@ -997,7 +997,7 @@
                     <div v-if="student.clientname">
                         <div class="studentimage rounded" style="position: relative; height:132px;">  
                              
-                            <button v-if="serverstatus.examSections[serverstatus.activeSection].examtype === 'editor' && !this.serverstatus.examSections[serverstatus.activeSection].languagetool && this.serverstatus.examSections[serverstatus.activeSection].spellchecklang !== 'none'" 
+                            <button v-if="serverstatus.examSections[serverstatus.activeSection].examtype === 'editor' && !serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool && serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.spellchecklang !== 'none'" 
                                 @mouseover="showDescription($t('dashboard.allowspellcheck'))" 
                                 @mouseout="hideDescription" @click='activateSpellcheckForStudent(student.token,student.clientname)' 
                                 type="button" 
@@ -1101,7 +1101,7 @@ import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile,
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
 import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer } from '../utils/filemanager'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore } from '../utils/exammanagement.js'
-import { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, migrateLegacyEditorExamConfig, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
+import { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
 import { Exam } from '../types/api'
 
 class EmptyWidget {
@@ -1157,13 +1157,12 @@ export default {
             originalIndex: 20,
             futureIndex: 20,
             freeDiscspace: 1000,
-        replaceMSOfile: false,
+            replaceMSOfile: false,
             printrequest: false,
             showDesc: false,
             currentDescription: '',
             defaultPrinter: false,
             availablePrinters: [],
-            directPrintAllowed: false,
             visiblePrinter: null,
             audioSource:'',
             audioFilename: '',
@@ -1207,6 +1206,7 @@ export default {
                 backupintervalPause:6,
                 screenslocked: false,
                 screenshotocr: false,
+                directPrintAllowed: false,
                 examTeachers: [],
                 examSecurityKey: "oI9xGzHkUFe7Lg2iTXHkYp4pDab3Nvj4kFEOqA93cZE=",
                 useExamSections: false, //if false exam section 1 is used and no tabs are displayed
@@ -1536,7 +1536,6 @@ computed: {
         configureEduvidual: configureEduvidual,
         configureForms: configureForms,
         configureMicrosoft365Template: configureMicrosoft365Template,
-        migrateLegacyEditorExamConfig: migrateLegacyEditorExamConfig,
         setEditorExamConfigPatch: setEditorExamConfigPatch,
         configureCustomLanguageToolHost: configureCustomLanguageToolHost,
         removeCustomLanguageToolHost: removeCustomLanguageToolHost,
@@ -1761,7 +1760,6 @@ computed: {
             if (this.lockInExammode) return;
             this.serverstatus.examSections[this.serverstatus.activeSection].examtype = type;
             // Call existing methods based on type
-            if (type === 'editor') this.migrateLegacyEditorExamConfig();
             if (type === 'eduvidual') {/* configured via sidebar */}
             if (type === 'forms') {/* configured via sidebar */}
             if (type === 'website') {/* configured via sidebar */}
@@ -2100,6 +2098,7 @@ computed: {
             const status = this.serverstatus;
             if (!status || typeof status !== 'object') return;
             if (!status.examSections || typeof status.examSections !== 'object') status.examSections = {};
+            if (typeof status.directPrintAllowed !== 'boolean') status.directPrintAllowed = false;
 
             for (const section of Object.values(status.examSections)) {
                 if (!section || typeof section !== 'object') continue;
@@ -2119,47 +2118,7 @@ computed: {
                     if (!group.examConfig.eduvidual || typeof group.examConfig.eduvidual !== 'object') group.examConfig.eduvidual = {};
                     if (!group.examConfig.rdp || typeof group.examConfig.rdp !== 'object') group.examConfig.rdp = {};
                     if (!group.examConfig.microsoft365 || typeof group.examConfig.microsoft365 !== 'object') group.examConfig.microsoft365 = {};
-                }
-
-                if (section.domainname || section.blockSubdomains || section.blockSubfolders) {
-                    const url = section.domainname || '';
-                    const nextConfig = {
-                        url,
-                        blockSubdomains: !!section.blockSubdomains,
-                        blockSubfolders: !!section.blockSubfolders
-                    };
-                    section.groupA.examConfig.website = nextConfig;
-                    section.groupB.examConfig.website = nextConfig;
-                    if (Object.prototype.hasOwnProperty.call(section, 'domainname')) delete section.domainname;
-                    if (Object.prototype.hasOwnProperty.call(section, 'blockSubdomains')) delete section.blockSubdomains;
-                    if (Object.prototype.hasOwnProperty.call(section, 'blockSubfolders')) delete section.blockSubfolders;
-                }
-
-                if (section.moodleURL || section.moodleTestId || section.moodleDomain) {
-                    const nextConfig = {
-                        url: section.moodleURL || '',
-                        moodleDomain: section.moodleDomain || null,
-                        moodleTestId: section.moodleTestId || null
-                    };
-                    section.groupA.examConfig.eduvidual = nextConfig;
-                    section.groupB.examConfig.eduvidual = nextConfig;
-                    if (Object.prototype.hasOwnProperty.call(section, 'moodleURL')) delete section.moodleURL;
-                    if (Object.prototype.hasOwnProperty.call(section, 'moodleTestId')) delete section.moodleTestId;
-                    if (Object.prototype.hasOwnProperty.call(section, 'moodleDomain')) delete section.moodleDomain;
-                }
-
-                if (section.rdpConfig && section.rdpConfig.domain) {
-                    const nextConfig = { domain: section.rdpConfig.domain };
-                    section.groupA.examConfig.rdp = nextConfig;
-                    section.groupB.examConfig.rdp = nextConfig;
-                    if (Object.prototype.hasOwnProperty.call(section, 'rdpConfig')) delete section.rdpConfig;
-                }
-
-                if (section.msOfficeFile && section.msOfficeFile.name) {
-                    const nextConfig = { template: { filename: section.msOfficeFile.name } };
-                    section.groupA.examConfig.microsoft365 = { ...section.groupA.examConfig.microsoft365, ...nextConfig };
-                    section.groupB.examConfig.microsoft365 = { ...section.groupB.examConfig.microsoft365, ...nextConfig };
-                    if (Object.prototype.hasOwnProperty.call(section, 'msOfficeFile')) delete section.msOfficeFile;
+                    if (!group.examConfig.editor || typeof group.examConfig.editor !== 'object') group.examConfig.editor = {};
                 }
             }
         },
@@ -2171,6 +2130,7 @@ computed: {
             .then( async (response) => {
                 if (response.serverstatus === false) {
                     this.serverstatus.backupdirectory = this.config.backupdirectory || false
+                    this.migrateServerStatus()
                     this.setServerStatus()  // there is no serverstatus - we need to set it to default
                     return
                 }
@@ -2343,7 +2303,7 @@ computed: {
         selectPrinter(printer){
             this.defaultPrinter = printer.printerName
             console.log(`dashboard: selected default printer: ${this.defaultPrinter}`)
-            console.log(`dashboard: allow direct print: ${this.directPrintAllowed}`)
+            console.log(`dashboard: allow direct print: ${this.serverstatus.directPrintAllowed}`)
         },
 
         checkforDefaultprinter(){

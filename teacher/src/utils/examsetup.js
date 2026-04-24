@@ -729,6 +729,10 @@ async function configureEditor(){
         marginValueDisplay.textContent = marginValueInput.value;
     };
 
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    const { groupA } = ensureEditorExamConfig(section);
+    const cfg = groupA.examConfig.editor || {};
+
     const { value: language } = await this.$swal.fire({
         customClass: {
             popup: 'my-popup-sprachen',
@@ -744,8 +748,8 @@ async function configureEditor(){
             <div>
                 <label >
                     <h6>${this.$t("dashboard.cmargin-value")}</h6>
-                    <input style="width:100px" type="range" id="marginValue" name="margin_value" min="2" max="5" step="0.5" value="${this.serverstatus.examSections[this.serverstatus.activeSection].cmargin.size}" />
-                    <div style="width:32px; display: inline-block"  id="marginValueDisplay">${this.serverstatus.examSections[this.serverstatus.activeSection].cmargin.size}</div>(cm)
+                    <input style="width:100px" type="range" id="marginValue" name="margin_value" min="2" max="5" step="0.5" value="${cfg.cmargin?.size ?? 3}" />
+                    <div style="width:32px; display: inline-block"  id="marginValueDisplay">${cfg.cmargin?.size ?? 3}</div>(cm)
                 </label>
                 <br>
                 <label>
@@ -825,33 +829,33 @@ async function configureEditor(){
         didOpen: () => {
             const marginValueInput = document.getElementById('marginValue');
             marginValueInput.addEventListener('input', updateMarginValueDisplay);
-            document.getElementById('checkboxLT').checked = this.serverstatus.examSections[this.serverstatus.activeSection].languagetool
-            document.getElementById('checkboxsuggestions').checked = this.serverstatus.examSections[this.serverstatus.activeSection].suggestions
-            document.getElementById('audiorepeat').value = this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat
+            document.getElementById('checkboxLT').checked = !!cfg.languagetool
+            document.getElementById('checkboxsuggestions').checked = !!cfg.suggestions
+            document.getElementById('audiorepeat').value = String(cfg.audioRepeat ?? '0')
             
             // Setze den Radio-Button für linespacing
-            const linespacing = this.serverstatus.examSections[this.serverstatus.activeSection].linespacing;
+            const linespacing = String(cfg.linespacing ?? '2');
             const radioButton = document.querySelector(`input[name="linespacing"][value="${linespacing}"]`);
             if (radioButton) {
                 radioButton.checked = true;
             }
 
             // Setze den Radio-Button für fontfamily
-            const fontfamily = this.serverstatus.examSections[this.serverstatus.activeSection].fontfamily;
+            const fontfamily = String(cfg.fontfamily ?? 'sans-serif');
             const fontfamilyRadioButton = document.querySelector(`input[name="fontfamily"][value="${fontfamily}"]`);
             if (fontfamilyRadioButton) {
                 fontfamilyRadioButton.checked = true;
             }
 
             // Setze den Radio-Button für correction_margin
-            const correctionMargin = this.serverstatus.examSections[this.serverstatus.activeSection].cmargin.side;
+            const correctionMargin = String(cfg.cmargin?.side ?? 'right');
             const correctionMarginRadioButton = document.querySelector(`input[name="correction_margin"][value="${correctionMargin}"]`);
             if (correctionMarginRadioButton) {
                 correctionMarginRadioButton.checked = true;
             }
 
             // Setze den Wert für die Sprache
-            const language = this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang;
+            const language = String(cfg.spellchecklang ?? 'de-DE');
             const selectElement = document.querySelector('.swal2-select');
             if (selectElement) {
                 // Verzögerung beim Setzen des Werts
@@ -860,7 +864,7 @@ async function configureEditor(){
                 }, 100);
             }
 
-            const defaultFontSize = this.serverstatus.examSections[this.serverstatus.activeSection].fontsize || '12pt';
+            const defaultFontSize = String(cfg.fontsize || '12pt');
             // console.log("defaultFontSize:", defaultFontSize)
             const selectElement2 = document.getElementById('fontsize');
             if (selectElement2) {
@@ -879,8 +883,8 @@ async function configureEditor(){
             const hostStatus = document.getElementById('languagetoolhostStatus');
             
             // Initialize LanguageTool host and port fields
-            const savedHost = this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost;
-            const savedPort = this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolport;
+            const savedHost = cfg.languagetoolhost;
+            const savedPort = cfg.languagetoolport;
             
             // Set default values or saved values
             if (savedHost) {
@@ -1033,8 +1037,9 @@ async function configureEditor(){
             const audioRepeatElement = document.getElementById('audiorepeat');
             const fontSizeElement = document.getElementById('fontsize');
 
-            this.serverstatus.examSections[this.serverstatus.activeSection].suggestions = checkboxSuggestionsElement ? checkboxSuggestionsElement.checked : false; 
-            this.serverstatus.examSections[this.serverstatus.activeSection].languagetool = checkboxLTElement ? checkboxLTElement.checked : false;
+            const patch = {};
+            patch.suggestions = checkboxSuggestionsElement ? checkboxSuggestionsElement.checked : false;
+            patch.languagetool = checkboxLTElement ? checkboxLTElement.checked : false;
             
             // Save LanguageTool host (as resolved IP) and port values if custom host checkbox is checked
             if (checkboxCustomHostElement && checkboxCustomHostElement.checked && languagetoolhostElement) {
@@ -1042,15 +1047,15 @@ async function configureEditor(){
                 const protocolMatch = rawHost.match(/^(https?:\/\/)/i);
                 const protocol = protocolMatch ? protocolMatch[1] : 'http://';
                 const hostForConfig = resolvedLtIp ? `${protocol}${resolvedLtIp}` : rawHost;
-                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost = hostForConfig;
+                patch.languagetoolhost = hostForConfig;
                 if (languagetoolportElement && languagetoolportElement.value) {
-                    this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolport = languagetoolportElement.value;
+                    patch.languagetoolport = languagetoolportElement.value;
                 } else {
-                    this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolport = '8088';
+                    patch.languagetoolport = '8088';
                 }
             } else {
-                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost = null;
-                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolport = null;
+                patch.languagetoolhost = null;
+                patch.languagetoolport = null;
             } 
 
             const radioButtons = document.querySelectorAll('input[name="correction_margin"]');
@@ -1082,87 +1087,32 @@ async function configureEditor(){
             });
 
             if (marginValue && selectedMargin) {
-                this.serverstatus.examSections[this.serverstatus.activeSection].cmargin = {
+                patch.cmargin = {
                     side: selectedMargin,
                     size: parseFloat(marginValue)
                 }
-               // console.log( this.serverstatus.cmargin)
             }
 
+            patch.linespacing = selectedSpacing
+            patch.fontfamily = selectedFont
+            patch.fontsize = fontSize
+            patch.audioRepeat = audioRepeat
 
-            this.serverstatus.examSections[this.serverstatus.activeSection].linespacing = selectedSpacing
-            this.serverstatus.examSections[this.serverstatus.activeSection].fontfamily = selectedFont
-            this.serverstatus.examSections[this.serverstatus.activeSection].fontsize = fontSize
-            this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat = audioRepeat
+            const selectEl = document.querySelector('.swal2-select');
+            const spellchecklang = selectEl ? String(selectEl.value || '') : '';
+            patch.spellchecklang = spellchecklang || 'de-DE';
+            if (patch.spellchecklang === 'none') {
+                patch.languagetool = false;
+                patch.suggestions = false;
+                patch.languagetoolhost = null;
+                patch.languagetoolport = null;
+            }
+
+            setEditorExamConfigPatch.call(this, patch);
         }
     })
-    if (language) {
-        this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang = language
-        if (language === 'none'){this.serverstatus.examSections[this.serverstatus.activeSection].languagetool = false}
-    }  
-    else {
-        this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang = 'de-DE'
-    }
-
-    this.setServerStatus()
+    if (!language) return;
 }   
-
-function migrateLegacyEditorExamConfig() {
-    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-    if (!section) return;
-
-    const { groupA, groupB } = ensureEditorExamConfig(section);
-
-    const legacyKeys = [
-        'spellchecklang',
-        'suggestions',
-        'languagetool',
-        'languagetoolhost',
-        'languagetoolport',
-        'cmargin',
-        'linespacing',
-        'fontfamily',
-        'fontsize',
-        'audioRepeat',
-    ];
-
-    const hasAnyLegacy = legacyKeys.some((k) => Object.prototype.hasOwnProperty.call(section, k));
-    if (!hasAnyLegacy) return;
-
-    const alreadyHasEditorCfg =
-        (groupA.examConfig.editor && Object.keys(groupA.examConfig.editor).length > 0) ||
-        (groupB.examConfig.editor && Object.keys(groupB.examConfig.editor).length > 0);
-
-    if (alreadyHasEditorCfg) {
-        for (const k of legacyKeys) {
-            if (Object.prototype.hasOwnProperty.call(section, k)) delete section[k];
-        }
-        this.setServerStatus();
-        return;
-    }
-
-    const next = {
-        audioRepeat: section.audioRepeat ?? '0',
-        cmargin: { side: 'right', size: section.cmargin?.size ?? 3 },
-        fontfamily: section.fontfamily ?? 'sans-serif',
-        fontsize: section.fontsize ?? '12pt',
-        languagetool: !!section.languagetool,
-        languagetoolhost: section.languagetoolhost ?? null,
-        languagetoolport: section.languagetoolport ?? null,
-        linespacing: section.linespacing ?? '2',
-        spellchecklang: section.spellchecklang ?? 'de-DE',
-        suggestions: !!section.suggestions,
-    };
-
-    groupA.examConfig.editor = { ...next };
-    groupB.examConfig.editor = { ...next };
-
-    for (const k of legacyKeys) {
-        if (Object.prototype.hasOwnProperty.call(section, k)) delete section[k];
-    }
-
-    this.setServerStatus();
-}
 
 function setEditorExamConfigPatch(patch) {
     const section = this.serverstatus.examSections[this.serverstatus.activeSection];
@@ -1761,4 +1711,4 @@ function openAllowedUrl(allowedUrl){
 
 
 
-export { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, getFormsID, configureEditor, migrateLegacyEditorExamConfig, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }
+export { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, getFormsID, configureEditor, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }

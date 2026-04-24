@@ -290,7 +290,7 @@ async function getLatest(){
  */
 async function processPrintrequest(student){
 
-    if (this.directPrintAllowed){
+    if (this.serverstatus?.directPrintAllowed){
         log.info(`filemanager @ managePrintrequest: direct print from ${student.clientname} accepted`)
         this.status(`Druckauftrag von ${student.clientname} verarbeitet`)
        
