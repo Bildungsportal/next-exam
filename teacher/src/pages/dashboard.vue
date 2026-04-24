@@ -295,8 +295,8 @@
                         </button>
                     </div>
 
-                    <div class="mt-3">
-                        <div class="smalltext text-white-50 mb-1">{{ $t('dashboard.cmargin-value') }}</div>
+                    <div class="mt-2">
+                        <div class="smalltext text-white-50 mb-0">{{ $t('dashboard.cmargin-value') }}</div>
                         <div style="display:flex; gap:8px; align-items:center;">
                             <input type="range" class="form-range editor-cmargin-range"
                                    min="2" max="5" step="0.5"
@@ -308,8 +308,8 @@
                         </div>
                     </div>
 
-                    <div class="mt-2">
-                        <div class="smalltext text-white-50 mb-1">{{ $t('dashboard.linespacing') }}</div>
+                    <div class="mt-1">
+                        <div class="smalltext text-white-50 mb-0">{{ $t('dashboard.linespacing') }}</div>
                         <div style="display:flex; gap:8px; align-items:center;">
                             <input type="range" class="form-range editor-linespacing-range"
                                    min="1" max="3" step="1"
@@ -321,8 +321,8 @@
                         </div>
                     </div>
 
-                    <div class="mt-2">
-                        <div class="small text-white-50 mb-1">{{ $t('dashboard.fontfamily') }}</div>
+                    <div class="mt-1">
+                        <div class="smalltext text-white-50 mb-0">{{ $t('dashboard.fontfamily') }}</div>
                         <div style="display:flex; gap:8px;">
                             <button type="button" class="btn btn-sm"
                                     :class="(serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.fontfamily || 'sans-serif') === 'serif' ? 'btn-teal' : 'btn-outline-secondary'"
@@ -333,8 +333,8 @@
                         </div>
                     </div>
 
-                    <div class="mt-3">
-                        <div class="small text-white-50 mb-1">{{ $t('dashboard.fontsize') }}</div>
+                    <div class="mt-1">
+                        <div class="smalltext text-white-50 mb-0">{{ $t('dashboard.fontsize') }}</div>
                         <select class="form-select form-select-sm"
                                 :value="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.fontsize || '12pt'"
                                 @change="setEditorExamConfigPatch({ fontsize: $event.target.value })">
@@ -348,8 +348,8 @@
                         </select>
                     </div>
 
-                    <div class="mt-2 mb-2">
-                        <div class="small text-white-50 mb-1">{{ $t('dashboard.audiorepeattitle') }}</div>
+                    <div class="mt-1 mb-2">
+                        <div class="smalltext text-white-50 mb-0">{{ $t('dashboard.audiorepeattitle') }}</div>
                         <select class="form-select form-select-sm"
                                 :value="String(serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.audioRepeat ?? '0')"
                                 @change="setEditorExamConfigPatch({ audioRepeat: $event.target.value })">
@@ -765,8 +765,8 @@
         </div>
         <!-- BIP Section END -->
         
-        <div v-if="showDesc" id="description" class="btn sidebar-message" style="white-space: pre-line;" v-html="currentDescription"></div>
-        <div id="statusdiv" class="btn btn-warning sidebar-message"> {{$t('dashboard.connected')}}  </div>
+        <div v-if="showDesc" id="description" class="btn sidebar-message w-100" style="white-space: pre-line;" v-html="currentDescription"></div>
+        <div id="statusdiv" class="btn btn-warning sidebar-message w-100"> {{$t('dashboard.connected')}}  </div>
 
         </div>
 
@@ -995,7 +995,7 @@
             <draggable v-model="studentwidgets" :move="handleMoveItem" @end="handleDragEndItem" ghost-class="ghost">
                 <div v-for="student in studentwidgets" :key="student.token" style="cursor:auto" v-bind:class="(!student.focus)?'focuswarn':''" class="studentwidget btn rounded-3 btn-block">
                     <div v-if="student.clientname">
-                        <div class="studentimage rounded" style="position: relative; height:132px;">  
+                        <div class="studentimage rounded" style="position: relative; height:128px;">  
                              
                             <button v-if="serverstatus.examSections[serverstatus.activeSection].examtype === 'editor' && !serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool && serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.spellchecklang !== 'none'" 
                                 @mouseover="showDescription($t('dashboard.allowspellcheck'))" 
@@ -1006,12 +1006,12 @@
                                 <img src="/src/assets/img/svg/autocorrection.svg" class="widgetbutton" width="22" height="22" >
                             </button> 
      
-                            <div v-cloak :id="student.token" style="position: relative;background-size: cover; height: 132px;" v-bind:style="(student.imageurl && now - 20000 < student.timestamp)? `background-image: url('${student.imageurl}')`:'background-image: url(user-red.svg)'"></div>
+                            <div v-cloak :id="student.token" style="position: relative;background-size: cover; height: 128px;" v-bind:style="(student.imageurl && now - 20000 < student.timestamp)? `background-image: url('${student.imageurl}')`:'background-image: url(user-red.svg)'"></div>
                             <div v-if="student.virtualized && now - 20000 < student.timestamp" class="virtualizedinfo" @mouseover="showDescription($t('dashboard.virtualizedinfo'), { vmFindings: student.vmFindings, webglFindings: student.webglFindings })" @mouseout="hideDescription">{{$t("dashboard.virtualized")}}</div>
                             <div v-if="!student.focus && now - 20000 < student.timestamp" class="kioskwarning" @mouseover="showDescription($t('dashboard.leftkioskinfo'))" @mouseout="hideDescription">{{$t("dashboard.leftkiosk")}}</div>
                             <div v-if="student.status.sendexam && now - 20000 < student.timestamp" class="examrequest" @mouseover="showDescription($t('dashboard.examrequestinfo'))" @mouseout="hideDescription">{{$t("dashboard.examrequest")}}</div>
                             <div v-if="student.remoteassistant && now - 20000 < student.timestamp" class="remoteassistant" @mouseover="showDescription($t('dashboard.remoteassistantinfo'), student.remoteassistant)" @mouseout="hideDescription">{{$t("dashboard.remoteassistant")}}</div>
-                            <span>   
+                            <span class="rounded">   
                                 <div v-if="now - 20000 < student.timestamp" style="display: inline-block; overflow: hidden; width: 140px; height: 22px" @mouseover="showDescription($t('dashboard.documentsinfo') + student.files)" @mouseout="hideDescription"> 
                                     <img v-for="file in student.files" style="width:22px; margin-left:-4px; position: relative; filter: sepia(10%) hue-rotate(306deg) brightness(0.3) saturate(75);" class="" src="/src/assets/img/svg/document.svg">
                                 </div>

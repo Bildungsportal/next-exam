@@ -285,7 +285,7 @@ export default {
             config: this.$route.params.config,  // warning: config contains recursive elements, copied in ipchandler.copyConfig()
             buildDate: this.$route.params.config.buildDate,
             title: document.title,
-            servername : this.$route.params.config.development ? "5a-mathematik":"",
+            servername : this.$route.params.config.development ? "Test-Exam":"",
             password: "",   //we use this password to allow students to manually leave exam mode 
             prod : false,
             serverApiPort: this.$route.params.serverApiPort,

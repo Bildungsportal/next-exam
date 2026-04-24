@@ -48,7 +48,7 @@
         "audioallow": "Keine Einschränkung",
         "audiorepeat1": "x abspielen",
         "audiorepeat2": "x abspielen",
-        "audiorepeattitle": "Einschränkungen für Audiodateien",
+        "audiorepeattitle": "Audiodateien",
         "autoget": "Backup-Intervall",
         "backupauto": "Automatische Sicherung",
         "backupautohint": "(Zeitangabe in Minuten)",

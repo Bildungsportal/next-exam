@@ -1,4 +1,5 @@
 <template>
+    <div class="editor-root">
 
 
     <!-- HEADER START -->
@@ -489,7 +490,7 @@
     </div>
     <!-- Editor Container -->
     <div v-if="!splitview" id="editormaincontainer"
-         style="height: 100%; overflow-x:auto; overflow-y: scroll; background-color: #eeeefa;">
+         style="height: 100%; overflow-x:auto; overflow-y: auto; background-color: #eeeefa;">
         <div id="editorcontainer" class="shadow" style="">
             <!-- Wrapper with dynamic key so EditorContent is not hoisted and ref owner context is preserved -->
             <div v-if="editor" :key="'main-' + (editor ? 'ready' : '')">
@@ -503,8 +504,7 @@
 
 
     <!-- SPLITVIEW START -->
-    <div v-if="splitview" class="split-view-container"
-         style="overflow: hidden;">
+    <div v-if="splitview" class="split-view-container">
         <!-- PDF Preview Container -->
         <div
             id="preview"
@@ -541,10 +541,8 @@
             title="Ziehen zum Anpassen"
         ></div>
         <!-- Editor Container -->
-        <div id="editormaincontainer"
-             class="split-pane split-pane--right"
-             :style="{ flexBasis: (100 - splitLeftPct) + '%' }"
-             style="padding:10px; overflow-x: auto !important; overflow-y: scroll !important; background-color: #eeeefa !important;">
+        <div id="editormaincontainer" class="split-pane split-pane--right"
+             style="padding:10px; overflow-x: auto !important; overflow-y: auto !important; background-color: #eeeefa !important;">
             <div id="editorcontainer" class="shadow">
                 <!-- Wrapper with dynamic key so EditorContent is not hoisted and ref owner context is preserved -->
                 <div v-if="editor" :key="'split-' + (editor ? 'ready' : '')">
@@ -666,6 +664,7 @@
         <img @click="zoomout(); LTupdateHighlights();" src="/src/assets/img/svg/zoom-out.svg" class="zoombutton">
     </div>
     <!-- EDITOR END -->
+    </div>
 </template>
 
 <script>
@@ -757,6 +756,7 @@ export default {
                 activeSection = examSections[activeSectionIndex] || {};
             }
         }
+        const initialEditorCfg = activeSection?.groupA?.examConfig?.editor || {};
 
         return {
             index: 0,
@@ -843,9 +843,9 @@ export default {
             allowedUrls: [],
             lockedSection: 1,
             internetCheckCounter:0,
-            LThost: activeSection.languagetoolhost || "http://127.0.0.1",
-            LTport: activeSection.languagetoolport || "8088",
-            ltLanguage: activeSection.spellchecklang || "de-DE",
+            LThost: initialEditorCfg.languagetoolhost || "http://127.0.0.1",
+            LTport: initialEditorCfg.languagetoolport || "8088",
+            ltLanguage: initialEditorCfg.spellchecklang || "de-DE",
             clipboardHistory: [],
             showClipboardSidebar: false,
             clipboardTooltip: { text: '', shown: false, x: 0, y: 0 },
@@ -872,16 +872,8 @@ export default {
         showLanguageToolSidebar() {
             // returns true if LanguageTool sidebar should be visible
             if (this.privateSpellcheck?.activated) return true;
-            const status = this.serverstatus;
-            if (!status || !status.examSections) return false;
-            const allowSwitch = !!status.allowSectionSwitch;
-            const sectionIndex = status.useExamSections === false
-                ? 1
-                : (allowSwitch
-                    ? (this.clientinfo?.lockedSection ?? this.lockedSection ?? status.activeSection ?? 0)
-                    : (status.lockedSection ?? status.activeSection ?? 0));
-            const section = status.examSections[sectionIndex] || status.examSections[1] || {};
-            return !!section.languagetool;
+            const cfg = this.getEditorExamConfig();
+            return !!cfg?.languagetool;
         },
     },
 
@@ -900,6 +892,8 @@ export default {
 
 
     methods: {
+
+
         // from filehandler.js
         getExamMaterials: getExamMaterials,
         loadPDF: loadPDF,
@@ -927,6 +921,33 @@ export default {
         LTresetIgnorelist: LTresetIgnorelist,
         LTbuildOffsetMap: LTbuildOffsetMap,
         LTfindByOffsetMap: LTfindByOffsetMap,
+
+
+        getEditorExamConfig(sectionIndexIn = null) {
+            const status = this.serverstatus;
+            if (!status || !status.examSections) return {};
+            const allowSwitch = !!status.allowSectionSwitch;
+            const sectionIndex = sectionIndexIn != null
+                ? sectionIndexIn
+                : (status.useExamSections === false
+                    ? 1
+                    : (allowSwitch
+                        ? (this.clientinfo?.lockedSection ?? this.lockedSection ?? status.activeSection ?? 0)
+                        : (status.lockedSection ?? status.activeSection ?? 0)));
+            const section = status.examSections?.[sectionIndex] || status.examSections?.[1] || null;
+            const groupKey = section && section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA'
+            return section?.[groupKey]?.examConfig?.editor || {};
+        },
+
+        syncEditorLanguageSettings() {
+            const cfg = this.getEditorExamConfig(this.lockedSection);
+            this.LThost = cfg.languagetoolhost || "http://127.0.0.1";
+            this.LTport = cfg.languagetoolport || "8088";
+            this.ltLanguage = cfg.spellchecklang || "de-DE";
+        },
+
+
+
 
         startSplitResize(e) {
             // Use pointer events to support mouse + touch.
@@ -1105,6 +1126,8 @@ export default {
 
             this.lockedSection = sectionIndex
 
+            this.syncEditorLanguageSettings()
+
             // console.log(this.serverstatus)
             if (this.pincode !== "0000") {
                 this.localLockdown = false
@@ -1127,7 +1150,7 @@ export default {
                 this.serverstatus &&
                 this.serverstatus.examSections &&
                 this.serverstatus.examSections[this.lockedSection] &&
-                this.serverstatus.examSections[this.lockedSection].languagetool === false
+                this.getEditorExamConfig(this.lockedSection).languagetool === false
             ) {
                 if (this.privateSpellcheck.activate == false && this.LTactive) {
                     this.LTdisable()
@@ -1187,7 +1210,7 @@ export default {
                 sel.addRange(range);
             }
 
-            if (this.serverstatus.examSections[this.serverstatus.activeSection].languagetool || this.privateSpellcheck) {
+            if (this.getEditorExamConfig().languagetool || this.privateSpellcheck) {
                 this.LTupdateHighlights()
             }
 
@@ -1196,7 +1219,7 @@ export default {
             // bekommt ohne ersichtlichen grund ein deutsches oberes hochkomma wenn es das erste " in einer neuen zeile ist
             // Prüfen, ob wir vl gerade erst einen Code-Block erstellen (erstes zeichen auch erkennen)
 
-            if (this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang === 'de-DE') {
+            if (this.getEditorExamConfig().spellchecklang === 'de-DE') {
                 if (e.key === '"') {
                     const selection = window.getSelection();
                     const range = selection.getRangeAt(0);
@@ -1765,15 +1788,8 @@ export default {
             if (!this.serverstatus || !this.serverstatus.examSections) {
                 return false;
             }
-            const status = this.serverstatus;
-            const allowSwitch = !!status.allowSectionSwitch;
-            const sectionIndex = status.useExamSections === false
-                ? 1
-                : (allowSwitch
-                    ? (this.clientinfo?.lockedSection ?? this.lockedSection ?? status.activeSection ?? 0)
-                    : (status.lockedSection ?? status.activeSection ?? 0));
-            const section = status.examSections[sectionIndex] || status.examSections[1];
-            if (!section || !section.languagetool) {
+            const cfg = this.getEditorExamConfig();
+            if (!cfg || !cfg.languagetool) {
                 return false;
             }
             if (this.ltRunning && !force) {
@@ -2416,6 +2432,16 @@ audio::-webkit-media-controls-panel {
 Other Styles
 */
 
+.editor-root {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
 #editorcontainer {
     border-radius: 0;
     margin-top: 20px;
@@ -2448,10 +2474,22 @@ Other Styles
     //font-size: 10px;
 }
 
+#editormaincontainer {
+    box-sizing: border-box;
+    width: 100%;
+    scrollbar-gutter: stable;
+    padding-right: 0px;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.split-view-container #editormaincontainer {
+    padding-right: 0px !important;
+}
+
 
 #statusbar {
     position: relative;
-    bottom: 0px;
     width: 100%;
     height: 28px;
     background-color: #eeeefa;
@@ -2534,7 +2572,13 @@ Other Styles
 .split-pane {
     flex: 0 0 auto;
     min-width: 0;
+    box-sizing: border-box;
     overflow: hidden;
+}
+
+.split-pane--right {
+    flex: 1 1 auto;
+    overflow: visible;
 }
 
 .split-pane--left {
@@ -2577,7 +2621,10 @@ Other Styles
     user-select: none;
     display: flex ;
     flex-direction: row ;
+    flex: 1 1 auto;
+    min-height: 0;
     height: 100% ;
+    overflow: hidden;
 }
 
 /* Splitview must override overlay preview hidden state */
