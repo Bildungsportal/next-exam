@@ -117,37 +117,57 @@
     
         <!-- Wenn keine Gruppen aktiviert sind -->
         <template v-else>
-            <div v-for="(file, index) in examSection.groupA.examInstructionFiles" :key="index" class="input-group" style="">
-                <div class="btn btn-sm btn-secondary mt-1" @click="removeFile('A', index)" style="padding:4px 8px;">x</div>
-                <div v-if="file.filetype == 'pdf'" class="btn btn-sm btn-cyan mt-1 filename-button text-truncate" :title="file.filename" @click="showBase64FilePreview(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
-                <div v-else-if="file.filetype == 'image'" class="btn btn-sm btn-cyan mt-1 filename-button text-truncate" :title="file.filename" @click="showBase64ImagePreview(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
-                <div v-else-if="file.filetype == 'audio'" class="btn btn-sm btn-cyan mt-1 filename-button text-truncate" :title="file.filename" @click="playAudioFile(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
-                <div v-else-if="file.filetype == 'ggb'" class="btn btn-sm btn-cyan mt-1 filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
-                <div v-else-if="file.filetype == 'docx'" class="btn btn-sm btn-cyan mt-1 filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
-                <div v-else-if="file.filetype == 'bak'" class="btn btn-sm btn-cyan mt-1 filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
-
-              <div class="btn btn-sm btn-teal mt-1 extension-button"> 
-                  <div class="vertical-text">{{ getFileExtension(file.filename) }}</div>
-              </div>
-            </div>
-
-
-            <div v-for="(allowedUrl, index) in examSection.groupA.allowedUrls" :key="'allowedUrl' + index" class="input-group" style="">
-                <div class="btn btn-sm btn-secondary mt-1" @click="removeAllowedUrl('A', index)" style="padding:4px 8px;">x</div>
-                <div class="btn btn-sm btn-cyan mt-1 filename-button url-display-button text-truncate" :title="getUrlTooltip(allowedUrl)" @click="openAllowedUrl(allowedUrl)"><span class="materials-filename-truncate">{{ getUrlDisplay(allowedUrl) }}</span></div>
-                <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">SD</span></div>
-                <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning mt-1 sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">SF</span></div>
-                <div class="btn btn-sm btn-teal mt-1 extension-button">
-                    <div class="vertical-text">URL</div>
+            <div class="materials-group-stack">
+              <template v-if="groupAMaterialCount === 0">
+                <div class="materials-pick-row">
+                    <span class="materials-group-pill materials-group-pill--ab" aria-label="A/B">AB</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="emitChooseMaterials('all')">
+                      <span class="sidebar-pick-btn__label">{{ $t('dashboard.materialsChoosePlaceholder') }}</span>
+                      <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                    </button>
                 </div>
-            </div>
+              </template>
 
-            <div class="materials-pick-row">
-                <span class="materials-group-pill materials-group-pill--ab" aria-label="A/B">AB</span>
-                <button type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="emitChooseMaterials('all')">
-                  <span class="sidebar-pick-btn__label">{{ $t('dashboard.materialsChoosePlaceholder') }}</span>
-                  <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
-                </button>
+              <template v-else>
+                <div v-for="(file, index) in examSection.groupA.examInstructionFiles" :key="index" class="materials-item-row materials-file-row">
+                    <span v-if="index === 0" class="materials-group-pill materials-group-pill--ab" aria-label="A/B">AB</span>
+                    <span v-else class="materials-pick-spacer" aria-hidden="true"></span>
+                    <div class="btn-group materials-filegroup" role="group">
+                    <div class="btn btn-sm btn-teal extension-button">
+                      <div class="vertical-text">{{ getFileExtension(file.filename) }}</div>
+                    </div>
+                    <div v-if="file.filetype == 'pdf'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click="showBase64FilePreview(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                    <div v-else-if="file.filetype == 'image'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click="showBase64ImagePreview(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                    <div v-else-if="file.filetype == 'audio'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click="playAudioFile(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                    <div v-else-if="file.filetype == 'ggb'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                    <div v-else-if="file.filetype == 'docx'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                    <div v-else-if="file.filetype == 'bak'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                    <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeFile('A', index)">&times;</button>
+                    </div>
+                </div>
+
+                <div v-for="(allowedUrl, index) in examSection.groupA.allowedUrls" :key="'allowedUrl' + index" class="materials-item-row materials-url-row">
+                    <span v-if="examSection.groupA.examInstructionFiles.length === 0 && index === 0" class="materials-group-pill materials-group-pill--ab" aria-label="A/B">AB</span>
+                    <span v-else class="materials-pick-spacer" aria-hidden="true"></span>
+                    <div class="btn-group materials-filegroup" role="group">
+                    <div class="btn btn-sm btn-teal extension-button">
+                        <div class="vertical-text">URL</div>
+                    </div>
+                    <div class="btn btn-sm btn-cyan filename-button url-display-button text-truncate" :title="getUrlTooltip(allowedUrl)" @click="openAllowedUrl(allowedUrl)"><span class="materials-filename-truncate">{{ getUrlDisplay(allowedUrl) }}</span></div>
+                    <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">SD</span></div>
+                    <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">SF</span></div>
+                    <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeAllowedUrl('A', index)">&times;</button>
+                    </div>
+                </div>
+
+                <div class="materials-pick-row">
+                    <span class="materials-pick-spacer" aria-hidden="true"></span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="emitChooseMaterials('all')">
+                      <span class="sidebar-pick-btn__label">{{ $t('dashboard.materialsChoosePlaceholder') }}</span>
+                      <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                    </button>
+                </div>
+              </template>
             </div>
 
         </template>

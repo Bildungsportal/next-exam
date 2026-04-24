@@ -588,17 +588,86 @@ async function configureRDP(presetGroup){
         },
         title: this.$t("dashboard.rdp"),
         icon: 'question',
-        input: 'text',
-        inputValue: currentValue,
-        inputPlaceholder: 'rdweb.schule.lan',
+        html: `
+            <div class="my-content" style="text-align:left; margin:0 12px;">
+                <div>${this.$t("dashboard.rdpconfiginfo")}</div>
+                <label class="form-label" style="margin-top:10px;">${this.$t('dashboard.host')}</label>
+                <div style="position:relative;">
+                    <input id="rdpDomain" class="form-control" value="${currentValue}" placeholder="rdweb.schule.lan">
+                    <span id="rdpDomainStatus" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-weight:bold; cursor:help;"></span>
+                </div>
+            </div>
+        `,
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
-        html: `<div class="my-content">${this.$t("dashboard.rdpconfiginfo")}</div>`,
-        inputValidator: (value) => {
-            const raw = String(value || '').trim();
+        didOpen: () => {
+            const hostEl = document.getElementById('rdpDomain');
+            const statusEl = document.getElementById('rdpDomainStatus');
+            const confirmBtn = this.$swal.getConfirmButton();
+            if (confirmBtn) confirmBtn.disabled = true;
+            const setStatus = (state) => {
+                if (!statusEl) return;
+                if (state === 'ok') {
+                    statusEl.textContent = '✓';
+                    statusEl.style.color = '#28a745';
+                    statusEl.title = this.$t('dashboard.host_ok');
+                    if (confirmBtn) confirmBtn.disabled = false;
+                } else if (state === 'warn') {
+                    statusEl.textContent = '▲';
+                    statusEl.style.color = '#ffc107';
+                    statusEl.title = this.$t('dashboard.host_warn');
+                    if (confirmBtn) confirmBtn.disabled = true;
+                } else {
+                    statusEl.textContent = '';
+                    statusEl.removeAttribute('title');
+                    if (confirmBtn) confirmBtn.disabled = true;
+                }
+            };
+            let t = null;
+            const scheduleResolve = () => {
+                const raw = hostEl?.value || '';
+                if (!raw.trim()) {
+                    setStatus('none');
+                    return;
+                }
+                if (t) clearTimeout(t);
+                t = setTimeout(async () => {
+                    try {
+                        const rawTrimmed = raw.trim();
+                        const asUrl = rawTrimmed.includes('://') ? rawTrimmed : `https://${rawTrimmed}`;
+                        const u = new URL(asUrl);
+                        const port = u.port ? Number.parseInt(u.port, 10) : (u.protocol === 'http:' ? 80 : 443);
+                        const res = await window.ipcRenderer?.invoke?.('checkHostReachable', u.hostname, port, 1500);
+                        if (!res || !res.ok) {
+                            setStatus('warn');
+                            return;
+                        }
+                        setStatus('ok');
+                    } catch (e) {
+                        setStatus('warn');
+                    }
+                }, 600);
+            };
+            hostEl?.addEventListener('input', scheduleResolve);
+            scheduleResolve();
+        },
+        preConfirm: () => {
+            const hostEl = document.getElementById('rdpDomain');
+            const raw = String(hostEl?.value || '').trim();
             if (!raw) return this.$t("dashboard.invalidDomain");
-            return undefined;
-        }
+            return (async () => {
+                try {
+                    const asUrl = raw.includes('://') ? raw : `https://${raw}`;
+                    const u = new URL(asUrl);
+                    const port = u.port ? Number.parseInt(u.port, 10) : (u.protocol === 'http:' ? 80 : 443);
+                    const res = await window.ipcRenderer?.invoke?.('checkHostReachable', u.hostname, port, 1500);
+                    if (!res || !res.ok) return this.$t('dashboard.host_warn');
+                    return raw;
+                } catch (e) {
+                    return this.$t('dashboard.host_warn');
+                }
+            })();
+        },
     });
 
     if (!result.isConfirmed) return;
@@ -607,14 +676,17 @@ async function configureRDP(presetGroup){
     if (!raw) return;
 
     let domain = raw;
+    let protocol = 'https';
     try {
         const asUrl = raw.includes('://') ? raw : `https://${raw}`;
-        domain = new URL(asUrl).host;
+        const u = new URL(asUrl);
+        protocol = u.protocol === 'http:' ? 'http' : 'https';
+        domain = u.host;
     } catch (e) {
         domain = raw;
     }
 
-    const nextConfig = { domain };
+    const nextConfig = { domain, protocol };
 
     if (!hasGroups) {
         groupA.examConfig.rdp = nextConfig;

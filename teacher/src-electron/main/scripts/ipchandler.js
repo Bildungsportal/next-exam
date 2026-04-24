@@ -28,6 +28,7 @@ import { exec } from 'child_process';
 import { gateway4sync} from 'default-gateway';
 import ip from 'ip'
 import dns from 'dns'
+import net from 'node:net'
 
 import server from "../../server/src/server.js"
 import checkDiskSpace from 'check-disk-space';
@@ -717,6 +718,64 @@ class IpcHandler {
                 log.warn('teacher ipchandler @ resolveHostToIp: failed');
                 return { ok: false, ip: null, error: err?.message || 'lookup-failed' };
             }
+        })
+
+        /**
+         * Check whether a host is reachable on a TCP port (teacher app)
+         */
+        ipcMain.handle('checkHostReachable', async (_event, host, port = 443, timeoutMs = 1500) => {
+            if (!host || typeof host !== 'string') {
+                return { ok: false, error: 'invalid-host' };
+            }
+            const lookupHost = host.trim().replace(/^https?:\/\//i, '').split('/')[0];
+            if (!lookupHost) {
+                return { ok: false, error: 'empty-host' };
+            }
+            const p = typeof port === 'number' && Number.isFinite(port) ? port : 443;
+            const t = typeof timeoutMs === 'number' && Number.isFinite(timeoutMs) ? timeoutMs : 1500;
+            const tryConnect = async (targetHost) =>
+                await new Promise((resolve) => {
+                    let done = false;
+                    const finish = (ok, error) => {
+                        if (done) return;
+                        done = true;
+                        resolve({ ok, error: error || null });
+                    };
+                    try {
+                        const socket = net.connect({ host: targetHost, port: p });
+                        socket.setTimeout(t);
+                        socket.once('connect', () => {
+                            socket.end();
+                            finish(true, null);
+                        });
+                        socket.once('timeout', () => {
+                            socket.destroy();
+                            finish(false, 'timeout');
+                        });
+                        socket.once('error', (err) => {
+                            socket.destroy();
+                            finish(false, err?.code || err?.message || 'error');
+                        });
+                    } catch (err) {
+                        finish(false, err?.message || 'error');
+                    }
+                });
+
+            let addrs = null;
+            try {
+                addrs = await dns.promises.lookup(lookupHost, { all: true });
+            } catch (e) {
+                addrs = null;
+            }
+
+            const targets = Array.isArray(addrs) && addrs.length ? addrs.map((a) => a.address) : [lookupHost];
+            let lastErr = null;
+            for (const th of targets) {
+                const r = await tryConnect(th);
+                if (r.ok) return { ok: true, error: null };
+                lastErr = r.error || lastErr;
+            }
+            return { ok: false, error: lastErr || 'unreachable' };
         })
 
 

@@ -365,10 +365,11 @@ export default {
                 this.lockedSection = sectionIndex
 
                 const section = this.serverstatus.examSections?.[sectionIndex]
-                const groupKey = section && section.groups && this.clientinfo?.status?.group === 'b' ? 'groupB' : 'groupA'
+                const groupKey = section && section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA'
                 this.rdpConfig = section?.[groupKey]?.examConfig?.rdp || null
+                const protocol = this.rdpConfig?.protocol === 'http' ? 'http' : 'https'
                 this.rdpUrl = this.rdpConfig && this.rdpConfig.domain
-                    ? `https://${this.rdpConfig.domain}/RDWeb/webclient/index.html`
+                    ? `${protocol}://${this.rdpConfig.domain}/RDWeb/webclient/index.html`
                     : null
 
                 if (!this.focus) {

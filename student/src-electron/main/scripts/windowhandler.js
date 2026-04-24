@@ -569,8 +569,6 @@ class WindowHandler {
                 }
                 catch(e){ log.error("windowhandler @ did-finish-load: error in examwindow setup", e)}
             }
-
-            this.addBlurListener()  
         })
 
 
