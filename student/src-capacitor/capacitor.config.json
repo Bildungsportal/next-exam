@@ -1,5 +1,5 @@
 {
-  "appId": "org.capacitor.quasar.app",
+  "appId": "at.bip.nextexam",
   "appName": "next-exam-student",
   "webDir": "www"
 }
