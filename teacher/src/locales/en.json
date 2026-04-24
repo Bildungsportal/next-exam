@@ -38,6 +38,7 @@
         "activesheetsPanelCaption": "Form PDFs",
         "activesheetsPdfPill": "PDF",
         "activesheetshint": "Please select a PDF file that contains interactive form fields.",
+        "advanced": "Advanced",
         "allowdirectprint": "Allow direct print for students",
         "allowedURL": "Allowed URL",
         "allowedURLinfo": "Please enter a URL that is allowed during the exam",

@@ -264,16 +264,16 @@
                                 @click="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool ? setEditorExamConfigPatch({ languagetool: false, languagetoolhost: null, languagetoolport: null, suggestions: false }) : setEditorExamConfigPatch({ languagetool: true })">
                             LanguageTool
                         </button>
-                        <button type="button"
+                        <button v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool"
+                                type="button"
                                 class="btn btn-sm"
-                                :disabled="!serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool"
                                 :class="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.suggestions ? 'btn-teal' : 'btn-outline-secondary'"
                                 @click="setEditorExamConfigPatch({ suggestions: !serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.suggestions })">
                             {{ $t('dashboard.suggest') }}
                         </button>
                     </div>
 
-                    <div class="mt-2">
+                    <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool" class="mt-2">
                         <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetoolhost">
                             <div class="btn-group basematerial-filegroup w-100" role="group">
                                 <button type="button"
@@ -292,13 +292,33 @@
                         </template>
                         <button v-else type="button"
                                 class="btn btn-sm btn-outline-secondary sidebar-pick-btn w-100"
-                                :disabled="!serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool"
                                 @click="configureCustomLanguageToolHost()">
                             <span class="sidebar-pick-btn__label">{{ $t('dashboard.customhost') }}</span>
                             <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
                         </button>
                     </div>
 
+                    <div class="mt-1 mb-2">
+                        <div class="smalltext text-white-50 mb-0">{{ $t('dashboard.audiorepeattitle') }}</div>
+                        <select class="form-select form-select-sm"
+                                :value="String(serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.audioRepeat ?? '0')"
+                                @change="setEditorExamConfigPatch({ audioRepeat: $event.target.value })">
+                            <option value="0">{{ $t('dashboard.audioallow') }}</option>
+                            <option value="1">1{{ $t('dashboard.audiorepeat1') }}</option>
+                            <option value="2">2{{ $t('dashboard.audiorepeat2') }}</option>
+                            <option value="3">3{{ $t('dashboard.audiorepeat2') }}</option>
+                            <option value="4">4{{ $t('dashboard.audiorepeat2') }}</option>
+                        </select>
+                    </div>
+
+                    <button type="button"
+                            class="sidebar-advanced-toggle"
+                            @click="editorAdvancedOpen = !editorAdvancedOpen">
+                        <span class="sidebar-advanced-chevron" :class="editorAdvancedOpen ? 'open' : ''">›</span>
+                        <span class="sidebar-advanced-label">{{ $t('dashboard.advanced') }}</span>
+                    </button>
+
+                    <template v-if="editorAdvancedOpen">
                     <div class="mt-2">
                         <div class="smalltext text-white-50 mb-0">{{ $t('dashboard.cmargin-value') }}</div>
                         <div style="display:flex; gap:8px; align-items:center;">
@@ -351,19 +371,7 @@
                             <option value="20pt">20 pt</option>
                         </select>
                     </div>
-
-                    <div class="mt-1 mb-2">
-                        <div class="smalltext text-white-50 mb-0">{{ $t('dashboard.audiorepeattitle') }}</div>
-                        <select class="form-select form-select-sm"
-                                :value="String(serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.audioRepeat ?? '0')"
-                                @change="setEditorExamConfigPatch({ audioRepeat: $event.target.value })">
-                            <option value="0">{{ $t('dashboard.audioallow') }}</option>
-                            <option value="1">1{{ $t('dashboard.audiorepeat1') }}</option>
-                            <option value="2">2{{ $t('dashboard.audiorepeat2') }}</option>
-                            <option value="3">3{{ $t('dashboard.audiorepeat2') }}</option>
-                            <option value="4">4{{ $t('dashboard.audiorepeat2') }}</option>
-                        </select>
-                    </div>
+                    </template>
                 </div>
 
                 <!-- Website Config -->
@@ -1162,6 +1170,7 @@ export default {
             printrequest: false,
             showDesc: false,
             currentDescription: '',
+            editorAdvancedOpen: false,
             defaultPrinter: false,
             availablePrinters: [],
             visiblePrinter: null,
@@ -3982,6 +3991,37 @@ hr {
     letter-spacing: 0.055em;
     color: rgba(255, 255, 255, 0.52);
     margin-bottom: 0.5rem;
+}
+
+.sidebar-advanced-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 0;
+    margin-top: 6px;
+    border: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.75rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.sidebar-advanced-toggle:hover {
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.sidebar-advanced-chevron {
+    display: inline-block;
+    width: 12px;
+    opacity: 0.75;
+    transform: rotate(0deg);
+    transition: transform 0.12s ease-in-out;
+}
+
+.sidebar-advanced-chevron.open {
+    transform: rotate(90deg);
 }
 
 .basematerial-row {
