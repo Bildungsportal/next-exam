@@ -136,6 +136,7 @@
         "groupA": "Group A",
         "groupB": "Group B",
         "groupinfo": "Divide students in two groups",
+        "groupSwitch": "Switch group",
         "groups": "Activate groups",
         "host": "Host",
         "host_ok": "Host resolved successfully",
