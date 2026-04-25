@@ -171,11 +171,19 @@
                                                                              name="register" class="btn btn-sm btn-info"
                                                                              :value="$t('student.register')"
                                                                              @click="registerClient(server.serverip,server.servername)">
-                                <!-- not logged in, bip server      --> <input v-if="server.bip" style="width:200px;"
-                                                                               :id="server.servername" type="button"
-                                                                               name="register" class="btn btn-sm"
-                                                                               :value="server.examStatus ? server.examStatus : 'restricted'"
-                                                                               :class="{'btn-teal': server.examStatus == 'open', 'btn-warning': server.examStatus == 'closed' || !server.examStatus, 'btn-secondary': server.examStatus == 'offline' }"/>
+                                <!-- not logged in, bip server, BiP required --> <input v-if="server.bip && server.requireBiP" style="width:200px;"
+                                                                                       :id="server.servername" type="button"
+                                                                                       name="register" class="btn btn-sm btn-secondary"
+                                                                                       value="restricted"/>
+                                <!-- not logged in, bip server, exam closed/offline (only if not restricted) --> <input v-if="server.bip && !server.requireBiP && server.examStatus && server.examStatus !== 'open'" style="width:200px;"
+                                                                                                                      :id="server.servername" type="button"
+                                                                                                                      name="register" class="btn btn-sm btn-secondary"
+                                                                                                                      :value="server.examStatus"/>
+                                <!-- not logged in, bip server, BiP NOT required --> <input v-if="server.bip && !server.requireBiP && (!server.examStatus || server.examStatus === 'open')" style="width:200px;"
+                                                                                           :id="server.servername" type="button"
+                                                                                           name="register" class="btn btn-sm btn-info"
+                                                                                           :value="$t('student.register')"
+                                                                                           @click="registerClient(server.serverip,server.servername)">
                             </div>
                             <div v-if="token" style="margin-top:2px; padding:0px;">
                                 <!-- logged in, not on this server --> <input
@@ -183,14 +191,11 @@
                                 :id="server.servername" disabled type="button" name="register"
                                 class="btn btn-sm btn-secondary"
                                 :value="server.examStatus ? server.examStatus : $t('student.register')"/>
-                                <!-- logged in, not on this server, bip server, restricted --> <input
-                                v-if="clientinfo.servername !== server.servername && server.bip && !server.examStatus"
+                                <!-- logged in, not on this server, bip server --> <input
+                                v-if="clientinfo.servername !== server.servername && server.bip"
                                 style="width:200px;" :id="server.servername" disabled type="button" name="register"
-                                class="btn btn-sm btn-secondary" value="restricted"/>
-                                <!-- logged in, not on this server, bip server  --> <input
-                                v-if="clientinfo.servername !== server.servername && server.bip && server.examStatus"
-                                style="width:200px;" :id="server.servername" disabled type="button" name="register"
-                                class="btn btn-sm btn-secondary" :value="server.examStatus"/>
+                                class="btn btn-sm btn-secondary"
+                                :value="server.examStatus ? server.examStatus : (server.requireBiP ? 'restricted' : $t('student.register'))"/>
                                 <!-- logged in, on this server       --> <input
                                 v-if="clientinfo.servername === server.servername" style="width:200px;"
                                 :id="server.servername" disabled type="button" name="register"
@@ -772,6 +777,7 @@ export default {
                 (server1.id || server1.servername) === (server2.id || server2.servername) &&
                 server1.examStatus === server2.examStatus &&
                 server1.bip === server2.bip &&
+                !!server1.requireBiP === !!server2.requireBiP &&
                 server1.reachable === server2.reachable &&
                 server1.serverip === server2.serverip
             );
@@ -842,10 +848,14 @@ export default {
                     if (existingInNewList.examStatus !== exam.examStatus) {
                         existingInNewList.examStatus = exam.examStatus;
                     }
+                    if (typeof exam.requireBiP !== 'undefined' && !!existingInNewList.requireBiP !== !!exam.requireBiP) {
+                        existingInNewList.requireBiP = !!exam.requireBiP;
+                    }
                 } else if (existingInCurrentList) {
                     const updatedServer = {
                         ...existingInCurrentList,
                         examStatus: exam.examStatus,
+                        ...(typeof exam.requireBiP !== 'undefined' ? { requireBiP: !!exam.requireBiP } : {}),
                     };
                     newServerlist.push(updatedServer);
                 } else {
@@ -857,6 +867,7 @@ export default {
                         timestamp: Date.now(),
                         bip: true,
                         examStatus: exam.examStatus,
+                        requireBiP: typeof exam.requireBiP !== 'undefined' ? !!exam.requireBiP : false,
                         version: exam.version
                     };
                     newServerlist.push(newServer);

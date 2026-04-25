@@ -141,8 +141,8 @@ class MulticastClient {
     isNewExamInstance (obj) {
         for (let i = 0; i < this.examServerList.length; i++) {
             if (this.examServerList[i].id === obj.id) {
-                //log.info('existing server - updating timestamp')
-                this.examServerList[i].timestamp = obj.timestamp // existing server - update timestamp
+                // Existing server - update the stored entry with latest fields (e.g. requireBiP toggles).
+                this.examServerList[i] = { ...this.examServerList[i], ...obj, timestamp: obj.timestamp }
                 return false
             }
         }

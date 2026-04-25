@@ -859,7 +859,7 @@
 
             <div v-if="config.bipIntegration && bipToken" class="form-check form-switch  m-1 mb-2" >
                 <input v-model=serverstatus.requireBiP :title="$t('control.biprequired')" checked=false class="form-check-input" type="checkbox" id="activatebip">
-                <label class="form-check-label">{{$t('dashboard.bildungsportal')}}   </label><br>
+                <label class="form-check-label">{{$t('dashboard.bildungsportalLoginEnforce')}}   </label><br>
             </div>
             <div class="form-check form-switch  m-1 mb-2">
                 <input v-model="serverstatus.directPrintAllowed" @change="checkforDefaultprinter(); setServerStatus()" :title="$t('dashboard.allowdirectprint')" checked=false class="form-check-input" type="checkbox" id="directprint">
@@ -1201,6 +1201,7 @@ export default {
 
             serverstatus:{   // this object contains all neccessary information for students about the current exam settings
                 bip: false,
+                bipStatus: "closed",
                 id: this.$route.params.id,
                 nextexamVersion: this.$route.params.version,
                 examName: this.$route.params.servername,
@@ -2383,6 +2384,8 @@ computed: {
                                 this.updateBiPServerInfo(newStatus);
                             }
                             this.bipStatus = newStatus;
+                            this.serverstatus.bipStatus = newStatus;
+                            this.setServerStatus();
                         });
                         btnA.dataset.listenerAdded = 'true';
                     }
@@ -2397,6 +2400,8 @@ computed: {
                 this.updateBiPServerInfo(newStatus);
             }
             this.bipStatus = newStatus;
+            this.serverstatus.bipStatus = newStatus;
+            this.setServerStatus();
         },
 
         getBiPUrl(): string {

@@ -2,6 +2,7 @@
     "control": {
         "actiondenied": "action denied",
         "alreadyregistered": "student already registered",
+        "bipclosed": "This BiP exam is currently closed.",
         "biprequired": "Bildungsportal authentification mandatory!",
         "correctpw": "Password OK",
         "examrequest": "Exams requested",
@@ -57,6 +58,7 @@
         "backuprequest": "Requesting files from all students",
         "bildungsportal": "Bildungsportal",
         "bildungsportalactivate": "Activate Bildungsportal",
+        "bildungsportalLoginEnforce": "Enforce Bildungsportal login",
         "bildungsportalsettings": "Extended Settings for Bildungsportal",
         "bipinfo": "BiP-Status defines if authenticated clients can connect",
         "blockSubdomains": "Block subdomains",

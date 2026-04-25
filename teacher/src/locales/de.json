@@ -2,6 +2,7 @@
     "control": {
         "actiondenied": "Aktion verboten",
         "alreadyregistered": "Schüler:in unter diesem Namen bereits angemeldet",
+        "bipclosed": "Die BiP-Prüfung ist derzeit geschlossen.",
         "biprequired": "Dies erzwingt die Authentifizierung der Schüler:innen durch das Bildungsportal.",
         "correctpw": "Passwort OK",
         "examrequest": "Sicherungen wurden angefordert",
@@ -57,6 +58,7 @@
         "backuprequest": "Arbeiten werden geholt",
         "bildungsportal": "Bildungsportal",
         "bildungsportalactivate": "Bildungsportal aktivieren",
+        "bildungsportalLoginEnforce": "Bildungsportal Login erzwingen",
         "bildungsportalsettings": "Erweiterte Einstellungen zum Bildungsportal",
         "bipinfo": "BiP-Status gibt an ob sich authentifizierte Clients verbinden können",
         "blockSubdomains": "Subdomains blockieren",

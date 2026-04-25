@@ -88,6 +88,8 @@ class MulticastServer {
             id: this.serverinfo.id,
             ip: this.serverinfo.ip,
             bip: this.serverinfo.bip,
+            requireBiP: !!this.serverstatus?.requireBiP,
+            examStatus: this.serverinfo.bip ? (this.serverstatus?.bipStatus || 'closed') : undefined,
             version: config.version
         }
         const preparedMessage = new Buffer.from(JSON.stringify(message))

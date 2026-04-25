@@ -253,7 +253,17 @@ router.get('/msauth', async (req, res) => {
 router.get('/serverlist', function (req, res, next) {
     let serverlist = []
     Object.values(config.examServerList).forEach( server => {
-        serverlist.push({servername: server.serverinfo.servername, id: server.serverinfo.id, serverip: server.serverinfo.ip, reachable: true, password: server.serverinfo.password, version: server.serverinfo.version}) 
+        serverlist.push({
+            servername: server.serverinfo.servername,
+            id: server.serverinfo.id,
+            serverip: server.serverinfo.ip,
+            reachable: true,
+            password: server.serverinfo.password,
+            version: server.serverinfo.version,
+            bip: !!server.serverinfo.bip,
+            requireBiP: !!server.serverstatus?.requireBiP,
+            examStatus: server.serverinfo.bip ? (server.serverstatus?.bipStatus || 'closed') : undefined,
+        }) 
     });
     res.send({serverlist:serverlist, status: "success"})
 })
@@ -339,6 +349,10 @@ for (let i = 0; i<16; i++ ){
     if (!pin || !clientname || !clientip || !hostname || !version) { return res.send({sender: "server", message:"Invalid registration payload", status: "error"} ) }
     if (`${versionteacher}` !== versionstudent ) {  return res.send({sender: "server", message:t("control.versionmismatch"), status: "error", version: config.version, versioninfo: config.info} )  }  
     
+    if (mcServer.serverinfo?.bip && (mcServer.serverstatus?.bipStatus || 'closed') !== 'open') {
+        return res.send({sender: "server", message:t("control.bipclosed"), status: "error"} )
+    }
+
     if (mcServer.serverstatus.requireBiP && (bipuserID === false || bipuserID === 'false' || !bipuserID)){ // allow old string values and strict false
         return res.send({sender: "server", message:t("control.biprequired"), status: "error"} ) 
     }

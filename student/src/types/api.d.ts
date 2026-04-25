@@ -4,6 +4,7 @@ export type Exam = {
   examdate: string, // Scheduled start of the exam.
   examDurationMinutes: number, // Duration of the exam in minutes.
   examStatus: string,
+  requireBiP?: boolean,
   examPin: number,
   examTeachers: Teacher[],
   version: string,
