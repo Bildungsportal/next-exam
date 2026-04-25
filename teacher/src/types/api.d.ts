@@ -1,12 +1,12 @@
 export type Exam = {
   lastUpdate: number,
   bip: boolean,
-  id: number, // Eindeutige ID im BiP.
+  id: number, // Unique ID in BiP.
   nextexamVersion: string,
-  examName: string, // Name der Prüfung wie sie am Client dargstellt werden soll.
+  examName: string, // Name of the exam as displayed to the client.
   examPassword: number, // Remove?
-  examDate: string, // Geplanter Beginn der Prüfung.
-  examDurationMinutes: number, // Dauer der Prüfung in Minuten.
+  examDate: string, // Scheduled start of the exam.
+  examDurationMinutes: number, // Duration of the exam in minutes.
   pin: number,
   requireBiP: boolean, // Remove?
   exammode: boolean, // Remove?
@@ -31,8 +31,8 @@ export type Student = {
 }
 
 export type Teacher = {
-  teacherID: number, // BiP-ID der Lehrperson.
-  teacherIP: string | null, // Automatisch gesetzt sobald der Lehrer eine Prüfung im BiP startet.
+  teacherID: number, // BiP ID of the teacher.
+  teacherIP: string | null, // Automatically set when the teacher starts an exam in BiP.
   manager: boolean,
 }
 

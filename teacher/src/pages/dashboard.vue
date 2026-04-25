@@ -286,7 +286,7 @@
                                         class="btn btn-sm btn-secondary basematerial-remove"
                                         :title="$t('dashboard.removefile')"
                                         @click="removeCustomLanguageToolHost()">
-                                    &times;
+                                    <span class="remove-x">&times;</span>
                                 </button>
                             </div>
                         </template>
@@ -388,7 +388,7 @@
                                     </button>
                                     <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website.blockSubdomains" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">SD</span></div>
                                     <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website.blockSubfolders" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">SF</span></div>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeWebsiteUrl('a')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeWebsiteUrl('a')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureWebsite('a')">
@@ -406,7 +406,7 @@
                                     </button>
                                     <div v-if="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.website.blockSubdomains" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">SD</span></div>
                                     <div v-if="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.website.blockSubfolders" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">SF</span></div>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeWebsiteUrl('b')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeWebsiteUrl('b')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureWebsite('b')">
@@ -426,7 +426,7 @@
                                     </button>
                                     <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website.blockSubdomains" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">SD</span></div>
                                     <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website.blockSubfolders" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">SF</span></div>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeWebsiteUrl('all')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeWebsiteUrl('all')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureWebsite('all')">
@@ -449,7 +449,7 @@
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.eduvidual.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.eduvidual.url, blockSubdomains: false, blockSubfolders: false })">
                                         <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.eduvidual.url }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeEduvidualUrl('a')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeEduvidualUrl('a')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureEduvidual('a')">
@@ -465,7 +465,7 @@
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.eduvidual.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.eduvidual.url, blockSubdomains: false, blockSubfolders: false })">
                                         <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.eduvidual.url }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeEduvidualUrl('b')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeEduvidualUrl('b')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureEduvidual('b')">
@@ -483,7 +483,7 @@
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.eduvidual.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.eduvidual.url, blockSubdomains: false, blockSubfolders: false })">
                                         <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.eduvidual.url }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeEduvidualUrl('all')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeEduvidualUrl('all')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureEduvidual('all')">
@@ -506,7 +506,7 @@
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url, blockSubdomains: false, blockSubfolders: false })">
                                         <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeFormsUrl('a')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeFormsUrl('a')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureForms('a')">
@@ -522,7 +522,7 @@
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.gforms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.gforms.url, blockSubdomains: false, blockSubfolders: false })">
                                         <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.gforms.url }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeFormsUrl('b')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeFormsUrl('b')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureForms('b')">
@@ -540,7 +540,7 @@
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url, blockSubdomains: false, blockSubfolders: false })">
                                         <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeFormsUrl('all')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeFormsUrl('all')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureForms('all')">
@@ -563,7 +563,7 @@
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.rdp.domain">
                                         <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.rdp.domain }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeRdp('a')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeRdp('a')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureRDP('a')">
@@ -579,7 +579,7 @@
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.rdp.domain">
                                         <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.rdp.domain }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeRdp('b')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeRdp('b')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureRDP('b')">
@@ -597,7 +597,7 @@
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.rdp.domain">
                                         <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.rdp.domain }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeRdp('all')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeRdp('all')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureRDP('all')">
@@ -620,7 +620,7 @@
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
                                         <span class="basematerial-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename), 22) }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('A')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('A')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureActivesheets('a')">
@@ -636,7 +636,7 @@
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename, 'B')">
                                         <span class="basematerial-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.activeSheets.filename), 22) }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('B')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('B')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureActivesheets('b')">
@@ -653,7 +653,7 @@
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename" @click="showBase64PdfInRenderer(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filecontent, serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename, 'A')">
                                         <span class="basematerial-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.activeSheets.filename), 22) }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('A')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeActiveSheet('A')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureActivesheets('all')">
@@ -693,7 +693,7 @@
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.microsoft365.template.filename" @click="configureMicrosoft365Template('a')">
                                         <span class="basematerial-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.microsoft365.template.filename), 22) }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeMicrosoft365Template('a')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeMicrosoft365Template('a')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureMicrosoft365Template('a')">
@@ -709,7 +709,7 @@
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.microsoft365.template.filename" @click="configureMicrosoft365Template('b')">
                                         <span class="basematerial-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.microsoft365.template.filename), 22) }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeMicrosoft365Template('b')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeMicrosoft365Template('b')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureMicrosoft365Template('b')">
@@ -727,7 +727,7 @@
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.microsoft365.template.filename" @click="configureMicrosoft365Template('all')">
                                         <span class="basematerial-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.microsoft365.template.filename), 22) }}</span>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeMicrosoft365Template('all')">&times;</button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeMicrosoft365Template('all')"><span class="remove-x">&times;</span></button>
                                 </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureMicrosoft365Template('all')">
@@ -875,7 +875,7 @@
             <div v-for="printer in availablePrinters" :key="printer.printerName" style="position: relative;">
                 <button @click="selectPrinter(printer)" :class="{'btn-cyan': defaultPrinter === printer.printerName}" class="printerbutton btn btn-secondary mt-1 mb-0" @mouseenter="visiblePrinter = printer" @mouseleave="visiblePrinter = null"><img src="/src/assets/img/svg/print.svg" alt="print" width="22" height="22" /> {{ printer.printerName }} </button>
                 <div v-if="visiblePrinter === printer" class="tooltip-content"> {{ printer.printerName }} </div>
-                <!-- Icon für den Standarddrucker -->
+                <!-- Icon for the default printer -->
                 <img v-if="printer.printerName === defaultPrinter" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" />
             </div>
 
@@ -1192,7 +1192,7 @@ export default {
             serverlogActive: false,
             serverlogReload: true,
 
-            bipToken:this.$route.params.bipToken === 'false' ?  false : this.$route.params.bipToken,   // parameter werden immer als string "false" übergeben, convert to bool
+            bipToken:this.$route.params.bipToken === 'false' ?  false : this.$route.params.bipToken,   // parameters are always passed as string "false", convert to bool
             bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
             bipUsername:this.$route.params.bipUsername === 'false' ?  false : this.$route.params.bipUsername,
             bipStatus: "closed", // "open" or "closed" or "offline"
@@ -1623,7 +1623,7 @@ computed: {
                         }
                     }
                     if (student.printrequest){  // student sent a printrequest to the teacher
-                        //printrequest sollte am client auch sofort auf false gesetzt werden sobald abgeschickt jedoch könnte der client genau hier ja disconnecten
+                        //printrequest should also be set to false on the client immediately after sending, but the client could disconnect right here
                         if (student.clientname !== this.printrequest)  {  //this.printrequest contains the name of the student who requested
                             this.processPrintrequest(student) //do not trigger twice from same student
                         } 
@@ -1655,10 +1655,10 @@ computed: {
                                     focusAudio.play();
                                 }
 
-                                // Überschreibe das studentwidget, aber korrigiere die Gruppenzugehörigkeit basierend auf der aktuellen Section
+                                // Overwrite the studentwidget, but correct the group assignment based on the current section
                                 this.studentwidgets[i] = student;
-                                
-                                // Korrigiere die Gruppenzugehörigkeit basierend auf der aktuellen Section
+
+                                // Correct the group assignment based on the current section
                                 if (this.serverstatus.examSections[this.serverstatus.activeSection].groups) {
                                     const groupA = this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users;
                                     const groupB = this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users;
@@ -1678,11 +1678,11 @@ computed: {
                             if (!this.studentwidgets[i].clientname){ //clientname == false in an emptyWidget so we found one
                                 this.studentwidgets[i] = student; // replace emptywidget
                                 
-                                // Korrigiere die Gruppenzugehörigkeit basierend auf der aktuellen Section
+                                // Correct the group assignment based on the current section
                                 if (this.serverstatus.examSections[this.serverstatus.activeSection].groups) {
                                     const groupA = this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users;
                                     const groupB = this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users;
-                                    
+
                                     if (groupB.includes(student.clientname)) {
                                         this.studentwidgets[i].status.group = "b";
                                     } else if (groupA.includes(student.clientname)) {
@@ -1807,7 +1807,7 @@ computed: {
             this.serverstatus.activeSection = section
             this.setServerStatus()
 
-            // Zeige die für diese Section konfigurierten Gruppen an (ohne Schüler zu informieren)
+            // Show the groups configured for this section (without notifying students)
             this.restoreGroupAssignments(false)
 
             if (this.serverstatus.allowSectionSwitch) return
@@ -1844,7 +1844,7 @@ computed: {
                             // set studentstatus for every student to group a for the clients
                             this.setStudentStatus({group:"a"}, 'all')
                         } else {
-                            // Gruppen sind aktiviert - informiere Schüler über ihre Gruppenzugehörigkeit
+                            // Groups are activated - notify students about their group assignment
                             this.restoreGroupAssignments(true)
                         }
 
@@ -1888,9 +1888,9 @@ computed: {
                 this.autoscreenshot = false;
             } else {
                 console.log("dashboard @ updateScreenshotInterval: setting screenshot interval to", interval);
-                this.autoscreenshot = true; // Screenshots aktivieren
+                this.autoscreenshot = true; // enable screenshots
             }
-            this.setServerStatus(); // Änderungen speichern
+            this.setServerStatus(); // save changes
         },
       
         async showDescription(description, info=false, isHtml=false) {
@@ -2223,10 +2223,10 @@ computed: {
             this.setServerStatus()
         },
 
-        // Stelle Gruppenzuordnungen aus den gespeicherten Arrays wieder her
-        // informStudents: wenn true, werden die Schüler über ihre Gruppenzugehörigkeit informiert
+        // Restore group assignments from the stored arrays
+        // informStudents: if true, students are notified about their group assignment
         restoreGroupAssignments(informStudents = false) {
-            // Prüfe ob Gruppen für diese Section aktiviert sind
+            // Check whether groups are activated for this section
             if (!this.serverstatus.examSections[this.serverstatus.activeSection].groups) {
                 return;
             }
@@ -2235,7 +2235,7 @@ computed: {
             const groupB = this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users;
 
             if (!informStudents) {
-                // Nur lokale Anzeige aktualisieren, Schüler nicht informieren
+                // Only update local display, do not notify students
                 for (let widget of this.studentwidgets) {
                     if (widget.clientname && widget.status) {
                         if (groupB.includes(widget.clientname)) {
@@ -2248,7 +2248,7 @@ computed: {
                 return;
             }
 
-            // Schüler über ihre Gruppenzugehörigkeit informieren
+            // Notify students about their group assignment
             for (let student of this.studentlist) {
                 if (groupB.includes(student.clientname)) {
                     this.setStudentStatus({group:"b"}, student.token);
@@ -2268,9 +2268,9 @@ computed: {
             
             let studentWidget = this.studentwidgets.find(el => el.token === student.token);
 
-            // Prüfe ob Schüler informiert werden sollen:
-            // - Wenn keine Sections aktiviert sind (immer informieren)
-            // - Wenn die aktuelle Section die locked Section ist (Schüler sind in dieser Section)
+            // Check whether students should be notified:
+            // - When no sections are activated (always notify)
+            // - When the current section is the locked section (students are in this section)
             const shouldInformStudents = !this.serverstatus.useExamSections || 
                                        this.serverstatus.activeSection === this.serverstatus.lockedSection;
 
@@ -2409,7 +2409,7 @@ computed: {
             }
         },
 
-        // Überprüfen, ob der String Base64-codiert ist
+        // Check whether the string is Base64-encoded
         isBase64(str) {
             try {
                 return btoa(atob(str)) === str;
@@ -2418,13 +2418,13 @@ computed: {
             }
         },
         
-        // Base64-String dekodieren und mögliche Tokens extrahieren
+        // Decode base64 string and extract possible tokens
         decodeBase64AndExtractTokens(base64Str) {
             if (base64Str == null || !this.isBase64(base64Str)) {
                 return null;
             }
             const decodedStr = atob(base64Str);
-            const tokens = decodedStr.split(/[:\s,]+/); // Trennzeichen anpassen, falls nötig
+            const tokens = decodedStr.split(/[:\s,]+/); // adjust separator if needed
             return tokens;
         },
 
@@ -2459,11 +2459,11 @@ computed: {
                // console.log(data.message, data.data);
             })
             .catch(error => {
-                console.error("Fehler beim API-Aufruf:", error.message);
+                console.error("Error during API call:", error.message);
                 if (this.bipPhase === 'completed') {
                     this.$swal.fire({
                         title: this.$t("dashboard.attention"),
-                        text: `Bildungsportal aktuell nicht erreichbar, bitte setzen Sie selbst zu einem späteren Zeitpunkt die Prüfungsphase im Bildungsportal auf Abgeschlossen!`,
+                        text: `Bildungsportal currently unreachable, please manually set the exam phase to Completed in the Bildungsportal at a later time!`,
                         icon: "warn"
                     })
                 }
@@ -2474,7 +2474,7 @@ computed: {
             document.querySelector("#aplayer").style.display = 'block';
             this.audioSource = filecontent;
             this.audioFilename = filename
-            audioPlayer.load(); // Lädt die neue Quelle
+            audioPlayer.load(); // loads the new source
 
         },
 
@@ -2625,14 +2625,14 @@ computed: {
                 this.updateBiPServerInfo(this.bipStatus);
             }
 
-            // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
+            // do not use setInterval() for intervals as it keeps all objects of the callbacks including fetch() responses in memory until the interval is stopped
             this.fetchinterval = new SchedulerService(4000);
-            this.fetchinterval.addEventListener('action',  this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.fetchinterval.addEventListener('action',  this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.fetchinterval.start();
 
-            this.backupintervalCallback = () => this.getFiles('all');  //selbst wenn 'all' default ist.. über den eventlistener wird das erste attribut zu "event"
+            this.backupintervalCallback = () => this.getFiles('all');  //even if 'all' is the default.. via the eventlistener the first argument becomes "event"
             this.backupinterval = new SchedulerService(60000 * this.serverstatus.backupintervalPause);
-            this.backupinterval.addEventListener('action',  this.backupintervalCallback);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.backupinterval.addEventListener('action',  this.backupintervalCallback);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.backupinterval.start();
 
             if (this.backupintervalPause == 0 ) { this.backupinterval.stop() }
@@ -2927,14 +2927,14 @@ computed: {
 
 
 #setupdiv {
-    position: absolute;        /* Fixiert den div über allem anderen */
-    top: 50%;               /* Zentriert vertikal */
-    left: 50%;              /* Zentriert horizontal */
-    display: flex;          /* Flex-Container für die Buttons */
-    flex-direction: column; /* Buttons vertikal anordnen */
-    align-items: flex-start;    /* Zentriert die Buttons im Container */
-    padding: 20px;          /* Innenabstand */
-    border-radius: 5px;    /* Abgerundete Ecken */
+    position: absolute;        /* positions the div above everything else */
+    top: 50%;               /* centers vertically */
+    left: 50%;              /* centers horizontally */
+    display: flex;          /* flex container for the buttons */
+    flex-direction: column; /* arrange buttons vertically */
+    align-items: flex-start;    /* centers buttons within the container */
+    padding: 20px;          /* inner padding */
+    border-radius: 5px;    /* rounded corners */
     background-color: white;
     box-shadow: 0 0 1em rgba(0, 0, 0, 0.5);
     width: 400px;
@@ -3004,12 +3004,12 @@ computed: {
 
 #setupdiv button {
     display: inline-block;
-    max-width: 320px; /* oder eine gewünschte feste Breite */
+    max-width: 320px; /* or any desired fixed width */
     overflow: hidden;
     text-overflow: ellipsis;
     text-align: left;
     white-space: nowrap;
-    margin-bottom: 10px; /* Abstand zwischen den Buttons */
+    margin-bottom: 10px; /* spacing between buttons */
     border:0;
 }
 
@@ -3030,10 +3030,10 @@ computed: {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.4); /* Abdunkeln des Hintergrunds */
-    backdrop-filter: blur(2px); /* Unscharf-Effekt */
-    z-index: 111999; /* Unter dem Dialog */
-    display: none; /* Standardmäßig nicht angezeigt */
+    background-color: rgba(0, 0, 0, 0.4); /* darken the background */
+    backdrop-filter: blur(2px); /* blur effect */
+    z-index: 111999; /* below the dialog */
+    display: none; /* hidden by default */
    transition: 0.3s;
 }
 
@@ -3521,16 +3521,16 @@ hr {
 
 .ellipsis {
     display: inline-block;
-    white-space: nowrap; /* Verhindert Zeilenumbrüche */
-    overflow: hidden;    /* Versteckt überlaufenden Text */
-    text-overflow: ellipsis; /* Fügt "..." am Ende des überlaufenden Texts hinzu */
-    max-width: 170px;    /* Maximale Breite, anpassbar nach Ihren Bedürfnissen */
+    white-space: nowrap; /* prevents line breaks */
+    overflow: hidden;    /* hides overflowing text */
+    text-overflow: ellipsis; /* adds "..." at the end of overflowing text */
+    max-width: 170px;    /* maximum width, adjust as needed */
 }
 
 
 .custom-slider {
-    width: 345px; /* Feste Breite des Sliders */
-    margin-right: 10px; /* Abstand zu anderen Elementen */
+    width: 345px; /* fixed width of the slider */
+    margin-right: 10px; /* spacing to other elements */
 }
 
 .editor-cmargin-range,
@@ -3789,7 +3789,7 @@ hr {
     width: 80% !important;
     margin-left: 1.9em !important;
     margin-right: 1.9em !important;
-    justify-content: flex-start !important; /* Richtet die Buttons linksbündig aus */
+    justify-content: flex-start !important; /* aligns buttons to the left */
 }
 
 
@@ -4110,12 +4110,21 @@ hr {
     min-height: 32px;
     height: 32px;
     padding: 0;
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
     font-size: 1.05rem;
     font-weight: 300;
+}
+
+.remove-x {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    line-height: 1;
+    transform: translate(-50%, -55%);
 }
 
 .sd-sf-btn {

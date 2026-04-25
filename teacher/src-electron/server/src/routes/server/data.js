@@ -60,11 +60,11 @@ import pdf from '@bingsjs/pdf-parse';
                     folders.push({ path: filepath, name: file, type: "dir", ext: "", parent: dir });
                 }
                 else if (stats.isFile() && !omitExtensions.includes(ext)) {
-                    folders.push({ path: filepath, name: file, type: "file", ext: ext, parent: dir }); // Korrigiert `parent: ''` zu `parent: dir` für Konsistenz
+                    folders.push({ path: filepath, name: file, type: "file", ext: ext, parent: dir }); // Fixed `parent: ''` to `parent: dir` for consistency
                 }
             } catch (innerErr) {
-                // Behandeln Sie Fehler, die von fs.promises.stat geworfen werden
-                console.error("data @ getfiles: Fehler beim Zugriff auf Datei oder Verzeichnis: ", innerErr);
+                // Handle errors thrown by fs.promises.stat
+                console.error("data @ getfiles: Error accessing file or directory: ", innerErr);
             }
         }
     } catch (err) {
@@ -153,16 +153,16 @@ import pdf from '@bingsjs/pdf-parse';
 
 
 function isValidPdf(data) {
-    const header = new Uint8Array(data, 0, 5); // Lese die ersten 5 Bytes für "%PDF-"
-    // Umwandlung der Bytes in Hexadezimalwerte für den Vergleich
+    const header = new Uint8Array(data, 0, 5); // read the first 5 bytes for "%PDF-"
+    // Convert bytes to hex values for comparison
     const pdfHeader = [0x25, 0x50, 0x44, 0x46, 0x2D]; // "%PDF-" in Hex
     for (let i = 0; i < pdfHeader.length; i++) {
         if (header[i] !== pdfHeader[i]) {
             log.warn('data @ isValidPdf: invalid PDF processed')
-            return false; // Früher Abbruch, wenn ein Byte nicht übereinstimmt
+            return false; // early exit if a byte does not match
         }
     }
-    return true; // Alle Bytes stimmen mit dem PDF-Header überein
+    return true; // all bytes match the PDF header
 }
 
 async function countCharsOfPDF(pdfPath, studentname, servername){
@@ -178,7 +178,7 @@ async function countCharsOfPDF(pdfPath, studentname, servername){
                 let header = ` ${servername} | 10.10.24, 10:10 `
                 let footer = ` Zeichen: 10 | Wörter: 10  1/1 `   //approximately
 
-                numberOfCharacters = numberOfCharacters // - header.length - studentname.length - footer.length // -5 for average name length  // für msword option - hier gibts keinen header
+                numberOfCharacters = numberOfCharacters // - header.length - studentname.length - footer.length // -5 for average name length  // for msword option - there is no header here
 
 
                 //we try to filter out the important part of the document that shows the actual number of chars
@@ -378,7 +378,7 @@ router.post('/getpdf/:servername/:token', function (req, res, next) {
     const { token, servername } = req.params;
     const mcServer = config.examServerList[servername];
 
-    // Prüfen, ob mcServer existiert und der Token übereinstimmt
+    // Check whether mcServer exists and the token matches
     if (!mcServer || token !== mcServer.serverinfo?.servertoken) {
         return res.json({ status: t("data.tokennotvalid") });
     }

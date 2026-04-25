@@ -16,13 +16,13 @@ function startExam(){
     this.serverstatus.examSections[this.serverstatus.activeSection].locked = true;   // starting exammode locks the current active section
     this.serverstatus.lockedSection = this.serverstatus.activeSection;
     
-    // Gruppenzuordnungen setzen und Schüler informieren
+    // Set group assignments and notify students
     if (!this.serverstatus.examSections[this.serverstatus.activeSection].groups) {
-        // Keine Gruppen aktiviert - alle in Gruppe A
+        // No groups activated - all in group A
         this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users = this.studentlist.map(student => student.clientname);
         this.setStudentStatus({group:"a"}, 'all');
     } else {
-        // Gruppen aktiviert - Schüler gemäß gespeicherter Zuordnung informieren
+        // Groups activated - notify students according to stored assignment
         this.restoreGroupAssignments(true);
     }
 
@@ -229,9 +229,9 @@ function getFiles(who='all', feedback=false, quiet=false){
         })
         .then(data => {
             
-            if (feedback) { this.visualfeedback(data.message, 2000);  } // Visuelles Feedback, wenn erwünscht
+            if (feedback) { this.visualfeedback(data.message, 2000);  } // visual feedback if requested
             else {
-                if (!quiet) {this.status(data.message);   }// Statusnachricht anzeigen, wenn nicht im "quiet"-Modus
+                if (!quiet) {this.status(data.message);   }// show status message if not in "quiet" mode
             }
         })
         .catch(error => {  log.error(error);   });
@@ -416,8 +416,8 @@ function delfolderquestion(event, token="all"){
 
 /**
  * Spellcheck for specific student
- * workflow:  es wird durch einen api call an control.js der studentstatus.allowspellcheck gesetzt (object {spellchecklang, suggestions})
- * beim nächsten update holt sich der student den studentstatus und sollte allowspellcheck true sein wird
+ * workflow:  an api call to control.js sets studentstatus.allowspellcheck (object {spellchecklang, suggestions})
+ * on the next update the student fetches the studentstatus and if allowspellcheck is true
  * clientinfo.allowspellcheck (communicationhandler.js) gesetzt,  clientinfo holt sich das frontend alle 4 sek.
  * der editor (frontend) sieht dann allowspellcheck und aktiviert mittels IPC invoke (ipchandler.js) dann nodehun() und macht den spellcheckbutton sichtbar
  */

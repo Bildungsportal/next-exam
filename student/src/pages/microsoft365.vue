@@ -198,17 +198,17 @@ export default {
 
         this.$nextTick(async () => { // Code that will run only after the entire view has been rendered
 
-            // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
+            // do not use setInterval() for intervals as it keeps all objects of the callbacks including fetch() responses in memory until the interval is stopped
             this.fetchinfointerval = new SchedulerService(5000);
-            this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.fetchinfointerval.start();
 
             this.clockinterval = new SchedulerService(1000);
-            this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.clockinterval.start();
 
             this.loadfilelistinterval = new SchedulerService(10000);
-            this.loadfilelistinterval.addEventListener('action', this.loadFilelist);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.loadfilelistinterval.addEventListener('action', this.loadFilelist);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.loadfilelistinterval.start();
 
             document.body.addEventListener('mouseleave', this.sendFocuslost);
@@ -311,15 +311,15 @@ export default {
 
         //checks if arraybuffer contains a valid pdf file
         isValidPdf(data) {
-            const header = new Uint8Array(data, 0, 5); // Lese die ersten 5 Bytes für "%PDF-"
-            // Umwandlung der Bytes in Hexadezimalwerte für den Vergleich
+            const header = new Uint8Array(data, 0, 5); // read the first 5 bytes for "%PDF-"
+            // Convert bytes to hex values for comparison
             const pdfHeader = [0x25, 0x50, 0x44, 0x46, 0x2D]; // "%PDF-" in Hex
             for (let i = 0; i < pdfHeader.length; i++) {
                 if (header[i] !== pdfHeader[i]) {
-                    return false; // Früher Abbruch, wenn ein Byte nicht übereinstimmt
+                    return false; // early exit if a byte does not match
                 }
             }
-            return true; // Alle Bytes stimmen mit dem PDF-Header überein
+            return true; // all bytes match the PDF header
         },
 
         // implementing a sleep (wait) function
@@ -464,10 +464,10 @@ export default {
 #preview {
     display: none;
     position: absolute;
-    top: 0;
+    top: var(--nx-preview-top-offset, var(--nx-apphead-h, 60px));
     left: 0;
     width: 100vw;
-    height: 100vh;
+    height: calc(100vh - var(--nx-preview-top-offset, var(--nx-apphead-h, 60px)));
     background-color: rgba(0, 0, 0, 0.4);
     z-index: 100000;
 }

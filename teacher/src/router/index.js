@@ -77,12 +77,12 @@ function extractServername(path) {
     const segments = path.split('/');
     const dashboardIndex = segments.indexOf('dashboard');
     const passwordIndex = segments.indexOf('password');
-    if (dashboardIndex !== -1 && passwordIndex !== -1 && passwordIndex > dashboardIndex) { // Sicherstellen, dass beide Schlüsselwörter vorhanden sind und 'password' nach 'dashboard' kommt
-        if (dashboardIndex + 1 < passwordIndex) {    // Gibt das Segment direkt nach 'dashboard' zurück, falls vorhanden
+    if (dashboardIndex !== -1 && passwordIndex !== -1 && passwordIndex > dashboardIndex) { // ensure both keywords are present and 'password' comes after 'dashboard'
+        if (dashboardIndex + 1 < passwordIndex) {    // return the segment directly after 'dashboard' if present
             return segments[dashboardIndex + 1];
         }
     }
-    return null; // Rückgabe von null, wenn keine gültige Struktur gefunden wurde
+    return null; // return null if no valid structure was found
 }
 
 
@@ -94,13 +94,13 @@ export function createRouter() {
     });
 
     router.beforeEach(async (to, from) => {
-        if (from.name == "dashboard") {  // wir kommen aus einem exam server - blockiere verlassen sofern im exam mode
+        if (from.name == "dashboard") {  // coming from an exam server - block navigation while in exam mode
             let servername = extractServername(from.path)
             const serverstatus = await window.ipcRenderer?.invoke("getserverstatus", servername)
 
             // if (serverstatus && serverstatus.exammode) {
-            if (serverstatus) {     // blockiere immer sofern der server noch läuft - "Exam beenden" Button killt den server - dann ist serverstatus = false
-                console.warn("router @ createRouter: Der Exam-Modus ist aktiv. Keyboard/Mouse Hotkey Navigation ist nicht erlaubt.");
+            if (serverstatus) {     // always block while the server is still running - "End Exam" button kills the server - then serverstatus = false
+                console.warn("router @ createRouter: Exam mode is active. Keyboard/mouse hotkey navigation is not allowed.");
                 return false
             }
         }

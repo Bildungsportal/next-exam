@@ -17,20 +17,20 @@ let languageToolConfigPath = path.join(publicBase(), 'LanguageTool/server.proper
 
 class LanguageToolServer {
      constructor() {
-         this.languageToolProcess = null; // Initialisiert die Prozessvariable
+         this.languageToolProcess = null; // Initializes the process variable
          this.port = 8088
      }
  
      startServer() {
          if (this.languageToolProcess && !this.languageToolProcess.killed) {
              log.warn('lt-server @ startserver: LanguageTool server is already running.');
-             return; // Verhindert das erneute Starten, wenn der Server bereits läuft
+             return; // Prevents restarting when the server is already running
          }
          try {
             this.languageToolProcess = JreHandler.jSpawn(
-                [languageToolJarPath], // Klassenpfad
-                'org.languagetool.server.HTTPServer', // Hauptklasse der LanguageTool API
-                ['--port', this.port,'--config',languageToolConfigPath, '--allow-origin', "'*'" ] // Zusätzliche Argumente, z.B. Port und CORS-Erlaubnis
+                [languageToolJarPath], // Classpath
+                'org.languagetool.server.HTTPServer', // Main class of the LanguageTool API
+                ['--port', this.port,'--config',languageToolConfigPath, '--allow-origin', "'*'" ] // Additional arguments, e.g. port and CORS permission
             );
             //console.log( this.languageToolProcess)
             log.info('lt-server @ startserver: LanguageTool API running at localhost:8088');
@@ -79,7 +79,7 @@ class LanguageToolServer {
     
             this.languageToolProcess.on('exit', code => {
                 log.warn(`lt-server @ startserver: LanguageTool server exited with code ${code}`);
-                this.languageToolProcess = null; // Setzt den Prozess zurück, wenn er beendet wird
+                this.languageToolProcess = null; // Resets the process reference when it exits
             });
         }
         catch(err){

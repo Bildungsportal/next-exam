@@ -430,19 +430,19 @@
             </div>
             <div v-if="localLockdown" class="mt-2">
                 <div class="input-group">
-                    <span class="input-group-text">Passwort</span>
+                    <span class="input-group-text">Password</span>
                     <input
                         ref="localUnlockInput"
                         v-model="localUnlockPassword"
                         class="form-control"
                         type="password"
                         autocomplete="current-password"
-                        placeholder="Passwort"
+                        placeholder="Password"
                         @input="localUnlockError = false"
                         @keyup.enter="tryUnlockLocalLockdown"
                     >
                     <button class="btn btn-outline-dark" type="button" :disabled="localUnlockBusy" @click="tryUnlockLocalLockdown">
-                        Freischalten
+                        Unlock
                     </button>
                 </div>
                 <div v-if="localUnlockError" class="mt-2 text-dark">
@@ -538,7 +538,7 @@
             aria-valuemin="20"
             aria-valuemax="80"
             @pointerdown.prevent="startSplitResize"
-            title="Ziehen zum Anpassen"
+            title="Drag to resize"
         ></div>
         <!-- Editor Container -->
         <div id="editormaincontainer" class="split-pane split-pane--right"
@@ -594,7 +594,7 @@
                      style=" display: inline-block; text-align: center;  margin-left:10px;"> {{ $t('editor.update') }}
                 </div>
                 <div class="" style=" width:100%;display: inline-block; text-align:right;  "
-                     @click="LTresetIgnorelist();LTcheckAllWordsAndHighlight(false);" title="IgnoreList löschen">
+                     @click="LTresetIgnorelist();LTcheckAllWordsAndHighlight(false);" title="Clear ignore list">
                     <span v-if="ignoreList.size > 0" class="text-mini"> ({{ ignoreList.size }}) ignored</span>
                     <img class="white" width=20 height=20 src="/src/assets/img/svg/edit-delete.svg"
                          style=" cursor: pointer; margin-left:3px; vertical-align: middle;">
@@ -653,7 +653,7 @@
 
 
     <div id="statusbar" style="padding-left:15px;">
-        <!-- Statischer Text mit v-once, um das Neurendern zu verhindern da $t offenbar jedesmal performance measures durchführt die zu memory bloat führen -->
+        <!-- Static text with v-once to prevent re-rendering since $t apparently performs performance measures each time causing memory bloat -->
         <span v-once>{{ $t("editor.words") }}:</span> <span>{{ wordcount }}</span> | <span v-once>{{
             $t("editor.chars")
         }}:</span> <span>{{ charcount }}</span>
@@ -1011,13 +1011,13 @@ export default {
                 caretRange.setStart(range.startContainer, range.startOffset);
                 caretRange.setEnd(range.startContainer, range.startOffset);
 
-                // Setze den Auswahlbereich (Selection) auf den Anfang des Range-Objekts
+                // Set the selection to the beginning of the range object
                 const selection = window.getSelection();
-                selection.removeAllRanges(); // Entferne alle bestehenden Bereiche aus der aktuellen Auswahl
-                selection.addRange(caretRange); // Fügt die neue Range hinzu, die den Caret positioniert
+                selection.removeAllRanges(); // remove all existing ranges from the current selection
+                selection.addRange(caretRange); // add the new range that positions the caret
 
-                // Optional: Scroll das Element in die Sicht, falls nötig
-                editableElement.focus(); // Richtet den Fokus auf das editierbare Element
+                // Optional: scroll the element into view if needed
+                editableElement.focus(); // focus the editable element
                 caretRange.startContainer.parentNode.scrollIntoView({
                     block: 'center',
                     inline: 'nearest',
@@ -1028,27 +1028,27 @@ export default {
 
         isValidFullDomainName(str) {
             try {
-                // Füge https:// hinzu, wenn kein Protokoll angegeben ist
+                // Add https:// if no protocol is specified
                 const urlString = str.includes('://') ? str : 'https://' + str;
                 const url = new URL(urlString);
 
-                // Prüfe ob Protokoll korrekt ist
+                // Check whether the protocol is correct
                 if (url.protocol !== 'http:' && url.protocol !== 'https:') {
                     return false;
                 }
 
-                // Prüfe ob Host vorhanden und gültig ist
+                // Check whether host is present and valid
                 if (!url.hostname || url.hostname.length < 1) {
                     return false;
                 }
 
-                // Prüfe ob Host mindestens einen gültigen Domain-Teil enthält
+                // Check whether host contains at least one valid domain part
                 const parts = url.hostname.split('.');
                 if (parts.length < 2) {
                     return false;
                 }
 
-                // Prüfe ob jeder Domain-Teil gültig ist
+                // Check whether every domain part is valid
                 const validPart = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/;
                 return parts.every(part =>
                     part.length > 0 &&
@@ -1154,7 +1154,7 @@ export default {
             ) {
                 if (this.privateSpellcheck.activate == false && this.LTactive) {
                     this.LTdisable()
-                    this.privateSpellcheck.activated = false   // das wird eigentlich eh im communication handler für clientinfo bereits auf false gesetzt und bei fetchinfo() übernommen
+                    this.privateSpellcheck.activated = false   // this is already set to false in the communication handler for clientinfo and picked up via fetchinfo()
                 }
             }
 
@@ -1214,10 +1214,10 @@ export default {
                 this.LTupdateHighlights()
             }
 
-            // Prüfen, ob der Cursor direkt innerhalb eines <code>-Elements ist oder ob gerade ein Code-Block erstellt wird
-            // ohne diesen block wird auch im code durch deutsche " ersetzt. hier gibt es einen bug und ein neuer codeblock
-            // bekommt ohne ersichtlichen grund ein deutsches oberes hochkomma wenn es das erste " in einer neuen zeile ist
-            // Prüfen, ob wir vl gerade erst einen Code-Block erstellen (erstes zeichen auch erkennen)
+            // Check whether the cursor is directly inside a <code> element or a code block is being created
+            // without this block, German " is also substituted inside code. there is a bug where a new code block
+            // gets a German upper quotation mark for no apparent reason when it is the first " in a new line
+            // Check whether we might be just creating a code block (also detect the first character)
 
             if (this.getEditorExamConfig().spellchecklang === 'de-DE') {
                 if (e.key === '"') {
@@ -1851,7 +1851,7 @@ export default {
                 await this.startLanguageTool({silent: true, force: true});
 
                 this.spellcheckFallback = false;
-                this.LTinfo = "LanguageTool gestartet. Erneut prüfen...";
+                this.LTinfo = "LanguageTool started. Checking again...";
                 await this.sleep(1000);
                 await this.LTcheckAllWords(false);
 
@@ -1916,9 +1916,9 @@ export default {
                             addKeyboardShortcuts() {
                                 return {
                                     '"': () => {
-                                        // Verhindere Ersetzung in Code-Blöcken
+                                        // Prevent substitution inside code blocks
                                         if (this.editor.isActive('code')) {
-                                            return this.editor.commands.insertContent('"')  // dieser ersetungscode garantiert dass im codeblock zusammen mit dem keydown event check keine ersetzungen stattfinden
+                                            return this.editor.commands.insertContent('"')  // this substitution code ensures that no replacements happen in code blocks together with the keydown event check
                                         }
                                         return false
                                     }
@@ -2128,7 +2128,7 @@ export default {
             this.style.display = 'none';
             this.setAttribute("src", "about:blank");
             URL.revokeObjectURL(this.currentpreview);
-            // this.classList.add('fadeinfast');  // wird entfernt sobald pdf sichtbar ist um flickering zu vermeiden und hier wieder hinzugefügt
+            // this.classList.add('fadeinfast');  // removed once the pdf is visible to avoid flickering, then added back here
         });
 
         document.querySelector("#mugshotpreview").addEventListener("click", function () {
@@ -2151,18 +2151,18 @@ export default {
         this.currentFile = this.clientname
         this.entrytime = new Date().getTime()
 
-        // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
+        // do not use setInterval() for intervals as it keeps all objects of the callbacks including fetch() responses in memory until the interval is stopped
         this.fetchinfointerval = new SchedulerService(5000);
-        this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+        this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
         this.fetchinfointerval.start();
 
-        this.saveContentCallback = () => this.saveContent(true, 'auto');  // wegs 2 parameter muss dieser umweg genommen werden sonst kann ich den eventlistener nicht mehr entfernen
+        this.saveContentCallback = () => this.saveContent(true, 'auto');  // this detour is needed because of 2 parameters, otherwise the event listener cannot be removed
         this.saveinterval = new SchedulerService(20000);
-        this.saveinterval.addEventListener('action', this.saveContentCallback);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+        this.saveinterval.addEventListener('action', this.saveContentCallback);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
         this.saveinterval.start();
 
         this.clockinterval = new SchedulerService(1000);
-        this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+        this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
         this.clockinterval.start();
 
 
@@ -2303,7 +2303,7 @@ export default {
         height: auto !important;
         overflow: visible !important;
     }
-    //body ist "fixed" um beim autoscrollen nicht zu verscheben - mehrseitiger print wird dadurch aber auf 1seite beschränkt
+    //body is "fixed" to prevent shifting during auto-scroll - but this limits multi-page print to 1 page
 
     #statusbar {
         position: relative !important;

@@ -98,7 +98,7 @@
             aria-valuemin="20"
             aria-valuemax="80"
             @pointerdown.prevent="startSplitResize"
-            title="Ziehen zum Anpassen"
+            title="Drag to resize"
         ></div>
         <div
             id="content"
@@ -409,7 +409,7 @@ export default {
                 if (!skipDialog) {
                     const result = await this.$swal.fire({
                         title: this.$t('editor.backupfound') || 'Backup gefunden',
-                        html: `${this.$t('editor.replacecontent1') || 'Möchten Sie die aktuellen Eingaben wirklich durch die gesicherten Werte aus'} <b>${filename}</b> ${this.$t('editor.replacecontent2') || 'ersetzen?'}`,
+                        html: `${this.$t('editor.replacecontent1') || 'Do you really want to replace the current input with the saved values from'} <b>${filename}</b> ${this.$t('editor.replacecontent2') || '?'}`,
                         icon: "question",
                         showCancelButton: true,
                         cancelButtonText: this.$t("editor.cancel") || "Abbrechen",
@@ -797,14 +797,14 @@ export default {
             this.loadfilelistinterval.start();
             
             this.clockinterval = new SchedulerService(1000);
-            this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.clockinterval.start();
                 
 
 
             this.saveContentCallback = () => this.saveContent(true, 'auto');  // wegs 2 parameter muss dieser umweg genommen werden sonst kann ich den eventlistener nicht mehr entfernen
             this.saveinterval = new SchedulerService(20000);
-            this.saveinterval.addEventListener('action', this.saveContentCallback );  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.saveinterval.addEventListener('action', this.saveContentCallback );  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.saveinterval.start();
 
 
@@ -1040,10 +1040,10 @@ export default {
 #preview {
     display: none;
     position: absolute;
-    top:0;
+    top: var(--nx-preview-top-offset, var(--nx-apphead-h, 60px));
     left: 0;
     width:100vw;
-    height: 100vh;
+    height: calc(100vh - var(--nx-preview-top-offset, var(--nx-apphead-h, 60px)));
     background-color: rgba(0, 0, 0, 0.4);
     z-index:100001;
     backdrop-filter: blur(2px);

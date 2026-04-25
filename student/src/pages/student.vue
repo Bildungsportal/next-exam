@@ -619,16 +619,16 @@ export default {
                     // Initial: suggestions-Checkbox deaktivieren, falls LT nicht gecheckt ist
                     checkboxSuggestions.disabled = !checkboxLT.checked;
 
-                    // Event Listener für checkboxLT, um den Status von checkboxsuggestions anzupassen
+                    // Event listener for checkboxLT to adjust the state of checkboxsuggestions
                     checkboxLT.addEventListener('change', () => {
                         checkboxSuggestions.disabled = !checkboxLT.checked;
-                        // Wenn checkboxLT abgewählt wird, soll suggestions zusätzlich zurückgesetzt werden:
+                        // When checkboxLT is unchecked, suggestions should also be reset:
                         if (!checkboxLT.checked) {
                             checkboxSuggestions.checked = false;
                         }
                     });
 
-                    // Event Listener für Radio-Buttons, um Spellcheck-Sektion ein/auszublenden
+                    // Event listener for radio buttons to show/hide the spellcheck section
                     editorRadio.addEventListener('change', toggleSpellcheckSection);
                     mathRadio.addEventListener('change', toggleSpellcheckSection);
 
@@ -937,7 +937,7 @@ export default {
                         this.safeAssign('validip', true);
                         // Give some user feedback here
                         if (this.serverlistAdvanced.length == 0) {
-                            this.status("Suche nach Prüfungen...")
+                            this.status("Searching for exams...")
                         }
                         fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/serverlist`)
                             .then(response => response.json()) // Parse JSON response
@@ -1264,10 +1264,10 @@ export default {
 //   if (delta > 200) { // Threshold for macOS occlusion/suspension
    
 //     this.$swal({
-//       title: 'Ausbruch erkannt!',
-//       text: `Die App wurde für ${Math.round(delta)}ms unterbrochen.`,
+//       title: 'Breakout detected!',
+//       text: `The app was suspended for ${Math.round(delta)}ms.`,
 //       icon: 'warning',
-//       confirmButtonText: 'Verstanden'
+//       confirmButtonText: 'Understood'
 //     });
 //   }
 

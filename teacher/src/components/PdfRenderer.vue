@@ -17,7 +17,7 @@
                     :disabled="localCustomFields.length === 0"
                     @click.stop="undoLastField"
                     style="  margin-left: 5px;"
-                    title="Rückgängig"
+                    title="Undo"
                 >
                     ↶
                 </button>
@@ -36,7 +36,7 @@
                 type="button"
                 :class="['btn btn-sm edit-tool-btn', drawMode === 'textarea' ? 'edit-tool-active' : 'edit-tool-inactive']"
                 @click.stop="setDrawMode('textarea')"
-                title="Textfeld zeichnen"
+                title="Draw text field"
             >
                 <span class="edit-tool-icon edit-tool-icon-rect">▭</span>
                 <span class="edit-tool-label">Textarea</span>
@@ -45,7 +45,7 @@
                 type="button"
                 :class="['btn btn-sm edit-tool-btn', drawMode === 'checkbox' ? 'edit-tool-active' : 'edit-tool-inactive']"
                 @click.stop="setDrawMode('checkbox')"
-                title="Checkbox platzieren"
+                title="Place checkbox"
             >
                 <span class="edit-tool-icon">☑</span>
                 <span class="edit-tool-label">Checkbox</span>
@@ -63,7 +63,7 @@
                 type="button"
                 :class="['btn btn-sm edit-tool-btn', drawMode === 'textinput' ? 'edit-tool-active' : 'edit-tool-inactive']"
                 @click.stop="setDrawMode('textinput')"
-                title="Textfeld (1 Zeile) zeichnen"
+                title="Draw text input (1 line)"
             >
                 <span class="edit-tool-icon">─</span>
                 <span class="edit-tool-label">Text</span>
@@ -72,10 +72,10 @@
                 type="button"
                 :class="['btn btn-sm edit-tool-btn', drawMode === 'delete' ? 'edit-tool-active edit-tool-delete-active' : 'edit-tool-inactive']"
                 @click.stop="setDrawMode('delete')"
-                title="Feld löschen"
+                title="Delete field"
             >
                 <span class="edit-tool-icon">✕</span>
-                <span class="edit-tool-label">Löschen</span>
+                <span class="edit-tool-label">Delete</span>
             </button>
         </div>
         <div v-if="effectiveLoading" class="overlay">

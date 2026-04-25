@@ -129,9 +129,9 @@ class WindowHandler {
 
         this.bipwindow.webContents.on('will-redirect', (event, url) => {
             log.info('Redirecting to:', url);
-            // Prüfen, ob die URL das gewünschte Format hat
+            // Check whether the URL has the expected format
             if (url.startsWith('bildungsportal://')) {
-                event.preventDefault(); // Verhindert den Standard-Redirect
+                event.preventDefault(); // Prevents the default redirect
                 const prefix = 'bildungsportal://token=';
 
                 const token = url.substring(prefix.length);
@@ -256,10 +256,10 @@ class WindowHandler {
                 log.info("windowhandler @ close: do not close running exam this way"); e.preventDefault(); 
                 dialog.showMessageBoxSync(this.mainwindow, {
                     type: 'info', 
-                    buttons: ['OK'], // Nur ein Button
+                    buttons: ['OK'], // Single button only
                     defaultId: 0,
-                    title: 'Prüfung läuft',
-                    message: 'Beenden Sie zuerst die laufende Prüfung!'
+                    title: 'Exam running',
+                    message: 'Please end the running exam first!'
                 });
                 return
             }

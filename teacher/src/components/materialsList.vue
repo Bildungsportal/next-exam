@@ -28,7 +28,7 @@
                   <div v-else-if="file.filetype == 'ggb'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                   <div v-else-if="file.filetype == 'docx'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                   <div v-else-if="file.filetype == 'bak'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
-                  <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeFile('A', index)">&times;</button>
+                  <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeFile('A', index)"><span class="remove-x">&times;</span></button>
                   </div>
               </div>
 
@@ -42,7 +42,7 @@
                   <div class="btn btn-sm btn-cyan filename-button url-display-button text-truncate" :title="getUrlTooltip(allowedUrl)" @click="openAllowedUrl(allowedUrl)"><span class="materials-filename-truncate">{{ getUrlDisplay(allowedUrl) }}</span></div>
                   <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">SD</span></div>
                   <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">SF</span></div>
-                  <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeAllowedUrl('A', index)">&times;</button>
+                  <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeAllowedUrl('A', index)"><span class="remove-x">&times;</span></button>
                   </div>
               </div>
 
@@ -84,7 +84,7 @@
                   <div v-else-if="file.filetype == 'ggb'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                   <div v-else-if="file.filetype == 'docx'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                   <div v-else-if="file.filetype == 'bak'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
-                  <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeFile('B', index)">&times;</button>
+                  <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeFile('B', index)"><span class="remove-x">&times;</span></button>
                   </div>
               </div>
 
@@ -98,7 +98,7 @@
                   <div class="btn btn-sm btn-cyan filename-button url-display-button text-truncate" :title="getUrlTooltip(allowedUrl)" @click="openAllowedUrl(allowedUrl)"><span class="materials-filename-truncate">{{ getUrlDisplay(allowedUrl) }}</span></div>
                   <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">SD</span></div>
                   <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">SF</span></div>
-                  <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeAllowedUrl('B', index)">&times;</button>
+                  <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeAllowedUrl('B', index)"><span class="remove-x">&times;</span></button>
                   </div>
               </div>
 
@@ -142,7 +142,7 @@
                     <div v-else-if="file.filetype == 'ggb'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                     <div v-else-if="file.filetype == 'docx'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                     <div v-else-if="file.filetype == 'bak'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
-                    <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeFile('A', index)">&times;</button>
+                    <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeFile('A', index)"><span class="remove-x">&times;</span></button>
                     </div>
                 </div>
 
@@ -156,7 +156,7 @@
                     <div class="btn btn-sm btn-cyan filename-button url-display-button text-truncate" :title="getUrlTooltip(allowedUrl)" @click="openAllowedUrl(allowedUrl)"><span class="materials-filename-truncate">{{ getUrlDisplay(allowedUrl) }}</span></div>
                     <div v-if="getUrlFlag(allowedUrl, 'blockSubdomains')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubdomainsInfo')"><span class="sd-sf-stack">SD</span></div>
                     <div v-if="getUrlFlag(allowedUrl, 'blockSubfolders')" class="btn btn-sm btn-warning sd-sf-btn" :title="$t('dashboard.blockSubfoldersInfo')"><span class="sd-sf-stack">SF</span></div>
-                    <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeAllowedUrl('A', index)">&times;</button>
+                    <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeAllowedUrl('A', index)"><span class="remove-x">&times;</span></button>
                     </div>
                 </div>
 
@@ -372,6 +372,14 @@
     font-size: 1em;
     transform: translateX(-10%);
   }
+
+  .remove-x {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    line-height: 1;
+    transform: translate(-50%, -55%);
+  }
   
   .group-section {
     margin-bottom: 0.65rem;
@@ -483,6 +491,7 @@
     min-height: 32px;
     height: 32px;
     padding: 0;
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -514,8 +523,8 @@
   }
 
   .materials-pick-spacer {
-    flex: 0 0 30px;
-    width: 30px;
+    flex: 0 0 32px;
+    width: 32px;
     height: 32px;
     min-height: 32px;
     align-self: center;

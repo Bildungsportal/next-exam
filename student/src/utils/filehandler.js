@@ -42,9 +42,9 @@ export async function loadPDF(file, base64 = false, zoom=180, submission=false, 
     let fallbackUrl = '';
     
     if (base64){
-        const response = await fetch(file.filecontent); // lade die Data-URL  //filecontent contains a url data:application/pdf;base64,b23d342dsn2....
-        const blob = await response.blob(); // konvertiere in Blob
-        this.currentpreview = URL.createObjectURL(blob); // erzeuge Object URL
+        const response = await fetch(file.filecontent); // load the data URL  //filecontent contains a url data:application/pdf;base64,b23d342dsn2....
+        const blob = await response.blob(); // convert to blob
+        this.currentpreview = URL.createObjectURL(blob); // create object URL
         this.currentpreviewBase64 = file.filecontent.split(',')[1];  // we only need the base64 data not the complete url
         fallbackUrl = file.filecontent || '';
     }
@@ -93,15 +93,15 @@ export async function loadPDF(file, base64 = false, zoom=180, submission=false, 
 
 //checks if arraybuffer contains a valid pdf file
 function isValidPdf(data) {
-    const header = new Uint8Array(data, 0, 5); // Lese die ersten 5 Bytes für "%PDF-"
-    // Umwandlung der Bytes in Hexadezimalwerte für den Vergleich
+    const header = new Uint8Array(data, 0, 5); // read the first 5 bytes for "%PDF-"
+    // Convert bytes to hex values for comparison
     const pdfHeader = [0x25, 0x50, 0x44, 0x46, 0x2D]; // "%PDF-" in Hex
     for (let i = 0; i < pdfHeader.length; i++) {
         if (header[i] !== pdfHeader[i]) {
-            return false; // Früher Abbruch, wenn ein Byte nicht übereinstimmt
+            return false; // early exit if a byte does not match
         }
     }
-    return true; // Alle Bytes stimmen mit dem PDF-Header überein
+    return true; // all bytes match the PDF header
 }
 
 
@@ -199,7 +199,7 @@ export async function loadDOCX(file, base64=false){
                 .then(result => {
                     const html = result.value; // HTML-Ergebnis erhalten
                     this.editor.commands.clearContent(true); // Editor-Inhalt leeren
-                    this.editor.commands.insertContent(html); // HTML einfügen
+                    this.editor.commands.insertContent(html); // insert HTML
                 })
                 .catch(error => console.error(error)); // Fehler ausgeben
 
@@ -234,9 +234,9 @@ export async function loadImage(file, base64=false){
     const filename = typeof file === 'string' ? file : (file?.filename || file?.name || file?.originalname || '');
 
     if (base64){
-        const response = await fetch(file.filecontent); // lade die Data-URL  //filecontent contains a url data:application/pdf;base64,b23d342dsn2....
-        const blob = await response.blob(); // konvertiere in Blob
-        this.currentpreview = URL.createObjectURL(blob); // erzeuge Object URL
+        const response = await fetch(file.filecontent); // load the data URL  //filecontent contains a url data:application/pdf;base64,b23d342dsn2....
+        const blob = await response.blob(); // convert to blob
+        this.currentpreview = URL.createObjectURL(blob); // create object URL
         this.currentpreviewBase64 = file.filecontent.split(',')[1];  // we only need the base64 data not the complete url
     }
     else {
@@ -315,7 +315,7 @@ export async function playAudio(file, base64=false) {
                         
                         if (base64Data) {
                             this.audioSource = `data:audio/mp3;base64,${base64Data}`;
-                            audioPlayer.load(); // Lädt die neue Quelle
+                            audioPlayer.load(); // loads the new source
                             audioPlayer.play().then(() => { 
                                 console.log('filehandler @ playAudio: Playback started');
                                 audioFile.playbacks -= 1
@@ -335,7 +335,7 @@ export async function playAudio(file, base64=false) {
 
             if (base64Data) {
                 this.audioSource = `data:audio/mpeg;base64,${base64Data}`;
-                audioPlayer.load(); // Lädt die neue Quelle
+                audioPlayer.load(); // loads the new source
             } else { console.error('filehandler @ playAudio: Keine Daten empfangen'); }
         } catch (error) { console.error('filehandler @ playAudio: Fehler beim Empfangen der MP3-Datei:', error); } 
     }
@@ -353,7 +353,7 @@ async function soundtest(context){
             }
             
             context.audioSource = `data:audio/mp3;base64,${base64Data}`;
-            audioPlayer.load(); // Lädt die neue Quelle
+            audioPlayer.load(); // loads the new source
             audioPlayer.play().then(async () => { 
                 await context.sleep(2000)
                 if (soundtest){
@@ -384,18 +384,28 @@ export async function loadGGB(file, base64=false){
     .then(async (result) => {
         if (result.isConfirmed) {
 
-            const geogebraWebview = document.getElementById('geogebraframe');
-            if (!geogebraWebview) {
-                console.error('filehandler @ loadGGB: geogebra webview not found'); // one line comment
-                return;
+            const applyBase64ToGgb = (base64GgbFile) => {
+                if (typeof window !== 'undefined' && window.ggbApplet && typeof window.ggbApplet.setBase64 === 'function') {
+                    window.ggbApplet.setBase64(base64GgbFile)
+                    return true
+                }
+                const geogebraWebview = document.getElementById('geogebraframe');
+                if (geogebraWebview && typeof geogebraWebview.executeJavaScript === 'function') {
+                    const safeBase64 = JSON.stringify(base64GgbFile);
+                    geogebraWebview.executeJavaScript(`window.loadBase64FromHost(${safeBase64})`);
+                    return true
+                }
+                return false
             }
 
             if (!base64){
-                const result = await signalBridge.invoke('loadGGB', file);
-                if (result.status === "success") {
-                    const base64GgbFile = result.content;
-                    const safeBase64 = JSON.stringify(base64GgbFile);
-                    geogebraWebview.executeJavaScript(`window.loadBase64FromHost(${safeBase64})`);
+                const loadResult = await signalBridge.invoke('loadGGB', file);
+                if (loadResult.status === "success") {
+                    const base64GgbFile = loadResult.content;
+                    if (!applyBase64ToGgb(base64GgbFile)) {
+                        console.error('filehandler @ loadGGB: no GeoGebra surface (applet or webview) found'); // one line comment
+                        return
+                    }
                     this.currentFile = filename
                 } else {
                     console.error('filehandler @ loadGGB: Error loading file');
@@ -403,8 +413,10 @@ export async function loadGGB(file, base64=false){
             }
             else {
                 const base64GgbFile = file.filecontent.split(',')[1];
-                const safeBase64 = JSON.stringify(base64GgbFile);
-                geogebraWebview.executeJavaScript(`window.loadBase64FromHost(${safeBase64})`);
+                if (!applyBase64ToGgb(base64GgbFile)) {
+                    console.error('filehandler @ loadGGB: no GeoGebra surface (applet or webview) found'); // one line comment
+                    return
+                }
                 this.currentFile = filename
             }
         } 

@@ -159,9 +159,9 @@ class WindowHandler {
 
         this.bipwindow.webContents.on('will-redirect', (event, url) => {
             log.info('windowhandler @ createBiPLoginWin: Redirecting to:', url);
-            // Prüfen, ob die URL das gewünschte Format hat
+            // Check whether the URL has the expected format
             if (url.startsWith('bildungsportal://')) {
-                event.preventDefault(); // Verhindert den Standard-Redirect
+                event.preventDefault(); // Prevents the default redirect
                 const prefix = 'bildungsportal://token=';
 
                 const token = url.substring(prefix.length);
@@ -277,7 +277,7 @@ class WindowHandler {
         if (process.platform ==='darwin') { 
             blockwin.setFullScreen(true);
             blockwin.on('leave-full-screen', () => {
-                blockwin.setFullScreen(true); // sofort wieder zurücksetzen
+                blockwin.setFullScreen(true); // immediately reset to full screen
             }); 
         }  
         else {   
@@ -860,8 +860,8 @@ class WindowHandler {
             height: windowHeight,
             minWidth: 850,
             minHeight: 600,
-            resizable: false, // verhindert das Ändern der Größe  
-            fullscreenable: false, // verhindert den Vollbildmodus - wichtig für macos denn wenn auf macos das mainwindow auf fullscreen ist greift beim examwindow der kiosk mode nicht  - electron bug (needs example code): >> https://github.com/electron/electron/issues/44755
+            resizable: false, // prevents resizing
+            fullscreenable: false, // prevents fullscreen mode - important for macOS: when the mainwindow is fullscreen on macOS the kiosk mode does not take effect on the examwindow - electron bug (needs example code): >> https://github.com/electron/electron/issues/44755
             show: true,
             //visibleOnAllWorkspaces: true,
             
@@ -1070,7 +1070,7 @@ class WindowHandler {
         if (!winhandler.focusTargetAllowed){ 
             winhandler.examwindow.moveTop();
             winhandler.examwindow.show(); 
-            winhandler.examwindow.focus(); //trotzdem focus zurück auf die app
+            winhandler.examwindow.focus(); // still return focus to the app
             log.warn(`windowhandler @ blurevent: blurevent was triggered but target is allowed`)
             return
         } 

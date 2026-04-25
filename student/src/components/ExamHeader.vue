@@ -126,7 +126,8 @@
     props: ['serverstatus','clientinfo','online', 'clientname', 'exammode', 'servername', 'pincode', 'battery', 'currenttime','timesinceentry','componentName','localLockdown','wlanInfo','hostip'],
     data() {
       return {
-        lastShownMessage: null
+        lastShownMessage: null,
+        _nxHeaderResizeObs: null
       };
     },
     computed: {
@@ -135,6 +136,21 @@
       },
       hostipDisplay() {
         return this.hostip && (typeof this.hostip === 'object' ? this.hostip.hostip : this.hostip);
+      }
+    },
+    mounted() {
+      this._nxSetHeaderHeightVar(); // keep --nx-apphead-h synced for overlays
+      if (typeof ResizeObserver !== 'undefined') {
+        this._nxHeaderResizeObs = new ResizeObserver(() => this._nxSetHeaderHeightVar());
+        this._nxHeaderResizeObs.observe(this.$el);
+      }
+      window.addEventListener('resize', this._nxSetHeaderHeightVar);
+    },
+    beforeUnmount() {
+      window.removeEventListener('resize', this._nxSetHeaderHeightVar);
+      if (this._nxHeaderResizeObs) {
+        this._nxHeaderResizeObs.disconnect();
+        this._nxHeaderResizeObs = null;
       }
     },
     watch: {
@@ -147,6 +163,12 @@
       }
     },
     methods: {
+      _nxSetHeaderHeightVar() {
+        this.$nextTick(() => {
+          const h = Math.max(0, Math.round(this.$el?.offsetHeight || 0));
+          document.documentElement.style.setProperty('--nx-apphead-h', `${h || 60}px`);
+        });
+      },
       reconnect() {
         // Restore connection
         this.$emit('reconnect');

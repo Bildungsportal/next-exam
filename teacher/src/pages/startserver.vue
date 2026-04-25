@@ -73,7 +73,7 @@
     <div id="content" class="fadeinslow p-3 d-flex flex-column flex-grow-1" style="min-height: 0;">
         <div class="col8 d-flex flex-column flex-grow-1" style="min-height: 0;">
 
-            <!-- Prüfung anlegen START -->
+            <!-- Create exam START -->
             <div v-if="activeTab === 'pruefung'" class="d-flex flex-column flex-grow-1" style="min-height: 0;">
                 <div class="flex-shrink-0">
                 <div class="input-group  mb-1 mt-0">
@@ -102,7 +102,7 @@
                 <button @click="startServer()" :class="(!hostip) ? 'disabledstart':''" id="examstart" class="ps-1 pe-1 mb-3 btn btn-cyan" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
                 </div><!-- /flex-shrink-0 -->
 
-                <!-- Lokale Prüfungen Widget-Grid START -->
+                <!-- Local exams widget grid START -->
                 <div class="flex-grow-1 exam-list-scroll">
                 <div v-if="previousLocalExams && previousLocalExams.length > 0" class="text-secondary" style="margin-left: 2px; margin-top: 12px;">
                     <span>{{$t("startserver.previousexams")}}</span>
@@ -144,10 +144,10 @@
                         </div>
                     </div>
                 </div>
-                <!-- Lokale Prüfungen Widget-Grid END -->
+                <!-- Local exams widget grid END -->
                 </div><!-- /exam-list-scroll -->
             </div>
-            <!-- Prüfung anlegen END -->
+            <!-- Create exam END -->
 
             <!-- Bildungsportal START -->
             <div v-if="activeTab === 'bildungsportal'" class="d-flex flex-column flex-grow-1" style="min-height: 0;">
@@ -178,7 +178,7 @@
                 <button @click="startServer()" :class="(!hostip || !bipToken || !servername) ? 'disabledstart':''" id="examstart" class="ps-1 pe-1 mb-3 btn btn-success" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
                 </div><!-- /flex-shrink-0 -->
 
-                <!-- BiP Prüfungen START -->
+                <!-- BiP exams START -->
                 <div class="flex-grow-1 exam-list-scroll">
                 <div v-if="bipToken" class="text-secondary " style=" margin-left: 2px; margin-top: 6px;">
                     <span>{{$t("startserver.onlineexams")}}</span>
@@ -285,7 +285,7 @@ export default {
             config: this.$route.params.config,  // warning: config contains recursive elements, copied in ipchandler.copyConfig()
             buildDate: this.$route.params.config.buildDate,
             title: document.title,
-            servername : this.$route.params.config.development ? "Test-Exam":"",
+            servername : this.$route.params.config.development ? "test-exam":"",
             password: "",   //we use this password to allow students to manually leave exam mode 
             prod : false,
             serverApiPort: this.$route.params.serverApiPort,
@@ -529,7 +529,7 @@ export default {
                 }
             }) 
 
-            // keep button state consistent with "Lokale Prüfung" tab
+            // keep button state consistent with "Local Exam" tab
             await this.checkExistingExam()
         },
 
@@ -796,10 +796,11 @@ export default {
         async checkExistingExam(){
             const examstart = document.getElementById('examstart')
             const examPasswordDiv = document.getElementById('examPassword')
+            const servernameLower = (this.servername || '').toLowerCase()
 
             for (let i = 0; i < this.previousExams.length; i++) {
                 const previousExam = this.previousExams[i] // current exam object
-                if (previousExam.examName === this.servername) {
+                if ((previousExam.examName || '').toLowerCase() === servernameLower) {
 
                     // BiP exam with same name: block if we are in the local tab
                     if (previousExam.bip && this.activeTab !== 'bildungsportal') {
@@ -905,18 +906,19 @@ export default {
             // }
             else {
                 // Block if a BiP exam with this name exists locally but we're in the local tab
-                const conflictingBipExam = this.previousExams.find(e => e.examName === this.servername && e.bip)
+                const servernameLower = (this.servername || '').toLowerCase()
+                const conflictingBipExam = this.previousExams.find(e => (e.examName || '').toLowerCase() === servernameLower && e.bip)
                 if (conflictingBipExam && this.activeTab !== 'bildungsportal') {
                     this.status(this.$t("startserver.bipNameConflictInfo"))
                     return
                 }
 
-                let isBip = this.selectedExam && this.selectedExam.bip && this.servername === this.selectedExam.examName ? true : false
+                let isBip = this.selectedExam && this.selectedExam.bip && (this.selectedExam.examName || '').toLowerCase() === servernameLower ? true : false
                 let bipId = this.selectedExam && this.selectedExam.id ? this.selectedExam.id : null
 
                 // Enforce tab separation: local exams only in local tab, bip exams only in bip tab
-                if (isBip && this.activeTab !== 'bildungsportal') { this.status("BiP-Prüfungen können nur im Tab Bildungsportal gestartet werden."); return; }
-                if (!isBip && this.activeTab === 'bildungsportal') { this.status("Lokale Prüfungen können nur im Tab Lokale Prüfung gestartet werden."); return; }
+                if (isBip && this.activeTab !== 'bildungsportal') { this.status("BiP exams can only be started in the Bildungsportal tab."); return; }
+                if (!isBip && this.activeTab === 'bildungsportal') { this.status("Local exams can only be started in the Local Exam tab."); return; }
 
                 if (isBip && !this.bipToken){
                     this.status(this.$t("startserver.bipnotloggedin")); 
@@ -924,8 +926,8 @@ export default {
                 }
                 
                 // check if the servername equals a previous exam
-                if (this.previousExams.some(exam => exam.examName === this.servername)){
-                    this.selectedExam = this.previousExams.find(exam => exam.examName === this.servername)
+                if (this.previousExams.some(exam => (exam.examName || '').toLowerCase() === servernameLower)){
+                    this.selectedExam = this.previousExams.find(exam => (exam.examName || '').toLowerCase() === servernameLower)
                 }
                 else {
                     this.selectedExam = null
@@ -1060,9 +1062,9 @@ export default {
 
 
 
-        // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
+        // do not use setInterval() for intervals as it keeps all objects of the callbacks including fetch() responses in memory until the interval is stopped
         this.fetchinterval = new SchedulerService(4000);
-        this.fetchinterval.addEventListener('action',  this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+        this.fetchinterval.addEventListener('action',  this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
         this.fetchinterval.start(); 
 
 

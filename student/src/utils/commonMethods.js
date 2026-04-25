@@ -84,7 +84,7 @@ export function gracefullyExit() {
             const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/; // Simple IP regex
 
             if (!ip || !ipRegex.test(ip)) {
-                this.$swal.showValidationMessage("Ungültige IP-Adresse."); // Show IP error message
+                this.$swal.showValidationMessage("Invalid IP address."); // Show IP error message
                 return false;
             }
             if (!pin) {

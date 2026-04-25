@@ -18,7 +18,7 @@
 'use strict'
 import {disableRestrictions, enableRestrictions} from './platformrestrictions.js';
 import fs from 'fs' 
-import archiver from 'archiver'   // das macht krasseste racecoditions mit electron eigenen versionen - unbedingt die selbe version behalten wie electron
+import archiver from 'archiver'   // causes severe race conditions with electron's own versions - always keep the same version as electron
 import extract from 'extract-zip'
 import { join } from 'path'
 import { screen, ipcMain, app, BrowserWindow, webContents } from 'electron'
@@ -123,11 +123,11 @@ import { switchExamSection } from './switchExamSection.js';
                     }   // student got kicked - we handle this differently now. teacher stores "kicked" for student to collect. student is removed from server when collecting kicked info. student closes exam and cleans up.
                     else {                                     log.warn(`communicationhandler @ requestUpdate: ${this.multicastClient.beaconsLost} Heartbeat lost..`);              this.multicastClient.beaconsLost += 1;}   // heartbeat lost server not reachable
                 } else if (data.status === "success") {
-                    this.multicastClient.beaconsLost = 0; // Dies zählt ebenfalls als erfolgreicher Heartbeat - Verbindung halten
+                    this.multicastClient.beaconsLost = 0; // This also counts as a successful heartbeat - keep connection alive
                     this.multicastClient.clientinfo.printrequest = false  //set this to false after the request left the client to prevent double triggering
                     const serverStatusDeepCopy = JSON.parse(JSON.stringify(data.serverstatus));
                     const studentStatusDeepCopy = JSON.parse(JSON.stringify(data.studentstatus)); 
-                    this.processUpdatedServerstatus(serverStatusDeepCopy, studentStatusDeepCopy);// Verarbeitung der empfangenen Daten
+                    this.processUpdatedServerstatus(serverStatusDeepCopy, studentStatusDeepCopy);// Process received data
                 }
             })
             .catch(error => {
@@ -215,7 +215,7 @@ import { switchExamSection } from './switchExamSection.js';
                             else { fs.unlinkSync(filePath); }
                         }
                         catch (error) {
-                            log.error(`communicationhandler @ processUpdatedServerstatus: (delfolder) Fehler beim Löschen der Datei/Verzeichnis: ${filePath}`, error);
+                            log.error(`communicationhandler @ processUpdatedServerstatus: (delfolder) Error deleting file/directory: ${filePath}`, error);
                         }
                     });
                 }
@@ -620,11 +620,11 @@ import { switchExamSection } from './switchExamSection.js';
             try { 
                 // destroy devtools window
                 if (this.config.development || this.config.showdevtools){
-                    const allWebContents = webContents.getAllWebContents()                        // alle WebViews des Childs
+                    const allWebContents = webContents.getAllWebContents()                        // all WebViews of the child
                     for (const wc of allWebContents) {
                         if (WindowHandler.examwindow && wc.hostWebContents?.id === WindowHandler.examwindow.webContents.id && wc.isDevToolsOpened?.()){
                             log.info("communicationhandler @ endExam: destroying devtools window")
-                            wc.closeDevTools()                                                 // DT des WebViews schließen (auch detached)
+                            wc.closeDevTools()                                                 // Close DevTools of the WebView (also when detached)
                         }
                     }
                     // Wait for all DevTools to be closed before closing the exam window
@@ -713,9 +713,9 @@ import { switchExamSection } from './switchExamSection.js';
 
 
     /**
-     * diese methode holt sich, die vom teacher zum download bereitgelegten dateien
-     * über das update interval wird der trigger zum download und die filelist erhalten
-     * @param {*} files 
+     * fetches files made available for download by the teacher
+     * the trigger and file list are received via the update interval
+     * @param {*} files
      */
     requestFileFromServer(files){
         let servername = this.multicastClient.clientinfo.servername
@@ -729,10 +729,10 @@ import { switchExamSection } from './switchExamSection.js';
         }
         
 
-        // Daten für den POST-Request vorbereiten
+        // Prepare data for the POST request
         let data = JSON.stringify({ 'files': files, 'type': 'studentfilerequest' });
 
-        // Fetch-Request mit den entsprechenden Optionen
+        // Fetch request with the corresponding options
         fetch(`https://${serverip}:${this.config.serverApiPort}/server/data/download/${servername}/${token}`, {
             method: "POST",
             body: data,
@@ -742,12 +742,12 @@ import { switchExamSection } from './switchExamSection.js';
         .then(buffer => {
             let absoluteFilepath = join(this.config.tempdirectory, token.concat('.zip'));
             fs.writeFile(absoluteFilepath, Buffer.from(buffer), (err) => {
-                if (err) { log.error(err);  } 
+                if (err) { log.error(err);  }
                 else {
-                    extract(absoluteFilepath, { dir: this.config.examdirectory }) 
+                    extract(absoluteFilepath, { dir: this.config.examdirectory })
                     .then(() => {
                         log.info("CommunicationHandler @ requestFileFromServer: files received and extracted");
-                        return fs.promises.unlink(absoluteFilepath); // Verwendung der Promise-basierten API von fs
+                        return fs.promises.unlink(absoluteFilepath); // Using the promise-based fs API
                     })
                     .then(() => {
                         if (backupfile && WindowHandler.examwindow) {

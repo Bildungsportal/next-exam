@@ -103,13 +103,13 @@ class IpcHandler {
                 return false
             }
             else{
-                // Fetch-Request mit den entsprechenden Optionen
+                // Fetch request with the corresponding options
                 examMaterials = await fetch(`https://${serverip}:${this.config.serverApiPort}/server/data/getexammaterials/${servername}/${token}`, {
                     method: "POST",
                     body: JSON.stringify(payload),
                     headers: { 'Content-Type': 'application/json' },
                 })
-                .then(response => response.json()) // Antwort als ArrayBuffer erhalten
+                .then(response => response.json()) // Receive response as JSON
                 .then(data => {
                     // log.info("ipchandler @ getExamMaterials: received data", data)
                     return data
@@ -162,7 +162,7 @@ class IpcHandler {
             const guest = webContents.fromId(Number(guestId));
             if (!guest || guest.isDestroyed?.()) return false;
 
-            // Entferne alte Listener, um Doppel-Registrierungen zu vermeiden
+            // Remove old listeners to prevent duplicate registrations
             guest.removeAllListeners('will-navigate');
 
             // Normalize allowedUrls to object format for webFilter compatibility
@@ -894,9 +894,9 @@ class IpcHandler {
          */ 
         ipcMain.handle('getinfoasync', async (event) => {   
             let serverstatus = false   
-            // serverstatus objekt wird nur bei beginn des exams an das exam window durchgereicht für basis einstellungen
-            // alle weiteren updates über das serverstatus object werden im communication handler gelesen und ggf. auf das clientinfo object gelegt
-            // dieser kommunikationsfluss muss in 2.0 gestreamlined werden #FIXME
+            // serverstatus object is only passed to the exam window at the start of the exam for base settings
+            // all further updates via the serverstatus object are read in the communication handler and applied to the clientinfo object as needed
+            // this communication flow needs to be streamlined in 2.0 #FIXME
             
             if (this.WindowHandler.examwindow) { serverstatus = this.multicastClient.serverstatus }
 
@@ -904,7 +904,7 @@ class IpcHandler {
             if (!this.multicastClient.clientinfo.exammode){
                 const workdir = path.join(config.examdirectory, "/")
                 try {
-                    await fs.promises.mkdir(workdir, { recursive: true })  // erstellt falls nötig
+                    await fs.promises.mkdir(workdir, { recursive: true })  // creates if missing
                     const filelist = (await fs.promises.readdir(workdir, { withFileTypes: true }))
                         .filter(dirent => dirent.isFile())
                         .map(dirent => dirent.name)
@@ -1009,7 +1009,7 @@ class IpcHandler {
             const version = this.config.version
             const bipuserID = args.bipuserID
 
-            if (this.multicastClient.clientinfo.token){ //#FIXME das sollte eigentlich vom server kommen 
+            if (this.multicastClient.clientinfo.token){ //#FIXME this should actually come from the server
                 event.returnValue = { sender: "client", message: t("control.alreadyregistered"), status:"error" }
             }
 
@@ -1018,7 +1018,7 @@ class IpcHandler {
             // Encrypt the registration payload and derive sessionRef from the pin.
             let payload = { pin, clientname, clientip, hostname, version, bipuserID }
             const url = `https://${serverip}:${this.config.serverApiPort}/server/control/registerclient/${servername}`;
-            const signal = AbortSignal.timeout(8000); // 8000 Millisekunden = 8 Sekunden AbortSignal mit einem Timeout
+            const signal = AbortSignal.timeout(8000); // 8000 milliseconds = 8 second AbortSignal timeout
 
 
             this.prepareSecurePayload(payload, pin)
@@ -1029,7 +1029,7 @@ class IpcHandler {
             .then(response => response.json()) 
             .then(data => {
                 if (data && data.status == "success") {  // registration successfull otherwise data would be "false"
-                    // Erfolgreiche Registrierung
+                    // Successful registration
                     this.multicastClient.clientinfo.name = clientname;
                     this.multicastClient.clientinfo.serverip = serverip;
                     this.multicastClient.clientinfo.servername = servername;
@@ -1061,17 +1061,17 @@ class IpcHandler {
                     if (data.version){
                         // compare versions and display message (teacher needs upgrade.. client needs upgrade)
                         const comparisonResult = this.compareSoftware(config.version, config.info , data.version, data.versioninfo ) //serverVersion, serverStatus, localVersion, localStatus
-                        if (comparisonResult > 0) {       event.returnValue = { status: "error", message: "Ihre Version von Next-Exam ist neuer als die der Lehrperson!" };   } 
-                        else if (comparisonResult < 0) {  event.returnValue = { status: "error", message: "Ihre Version von Next-Exam ist zu alt. Laden sie sich eine aktuelle Version herunter!" };   } 
-                        else {                            event.returnValue = { status: "error", message: "Unbekannter Fehler beim Verbindungsaufbau." };    }
+                        if (comparisonResult > 0) {       event.returnValue = { status: "error", message: "Your version of Next-Exam is newer than the teacher's!" };   }
+                        else if (comparisonResult < 0) {  event.returnValue = { status: "error", message: "Your version of Next-Exam is too old. Please download a current version!" };   }
+                        else {                            event.returnValue = { status: "error", message: "Unknown error during connection." };    }
                     }
                     event.returnValue = { status: "error", message: data.message };
                 }
             })
             .catch(async error => {
-                // Fehlerbehandlung
+                // Error handling
                 let errorMessage = error.message;
-                if (error.name === 'AbortError') { errorMessage = "The request timed out";   } // Timeout-Nachricht anpassen 
+                if (error.name === 'AbortError') { errorMessage = "The request timed out";   }
                 log.error(`ipchandler @ register: ${errorMessage}`);
              
                 // on macos the permission settings in rare cases mess up the ability to fetch the teacher api 
@@ -1085,7 +1085,7 @@ class IpcHandler {
                 }
                 
                 // show warning message if the user does not want to reset the permissions
-                event.returnValue = { sender: "client", message: "Es gibt ein Problem mit dem Netzwerk, den Firewallregeln oder den Netzwerkberechtigungen! Bitte beheben sie dieses Problem und starten Sie Next-Exam neu!", status: "error" };
+                event.returnValue = { sender: "client", message: "There is a problem with the network, firewall rules, or network permissions! Please resolve this issue and restart Next-Exam!", status: "error" };
                 return;  
                     
                 
@@ -1397,7 +1397,7 @@ class IpcHandler {
         const partsB = versionB.split('.').map(Number);
     
         for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
-            const numA = partsA[i] || 0; // Fallback auf 0, falls kein Wert vorhanden
+            const numA = partsA[i] || 0; // fallback to 0 if no value present
             const numB = partsB[i] || 0;
     
             if (numA < numB) return -1;

@@ -164,15 +164,15 @@ function loadPDF(filepath, filename){
 }
 
 function isValidPdf(data) {
-    const header = new Uint8Array(data, 0, 5); // Lese die ersten 5 Bytes für "%PDF-"
-    // Umwandlung der Bytes in Hexadezimalwerte für den Vergleich
+    const header = new Uint8Array(data, 0, 5); // read the first 5 bytes for "%PDF-"
+    // Convert bytes to hex values for comparison
     const pdfHeader = [0x25, 0x50, 0x44, 0x46, 0x2D]; // "%PDF-" in Hex
     for (let i = 0; i < pdfHeader.length; i++) {
         if (header[i] !== pdfHeader[i]) {
-            return false; // Früher Abbruch, wenn ein Byte nicht übereinstimmt
+            return false; // early exit if a byte does not match
         }
     }
-    return true; // Alle Bytes stimmen mit dem PDF-Header überein
+    return true; // all bytes match the PDF header
 }
 
 
@@ -337,7 +337,7 @@ async function processPrintrequest(student){
         
             this.currentpreviewBase64 = student.printrequest
             this.currentpreview = `data:application/pdf;base64,${this.currentpreviewBase64}`;
-            this.currentpreviewname = `${student.clientname}.pdf`;  // Wird für die Vorschau-Buttons benötigt
+            this.currentpreviewname = `${student.clientname}.pdf`;  // needed for the preview buttons
             this.currentpreviewType = "pdf";
             
             // PDF in das Embed-Element laden
@@ -541,7 +541,7 @@ async function printBase64(documentBase64 = this.currentpreviewBase64, type = th
     const title = (jobTitle != null && String(jobTitle).trim() !== '')
         ? String(jobTitle).trim()
         : (this.currentpreviewname && String(this.currentpreviewname).trim()) || 'Next-Exam'
-    this.visualfeedback(`Druckauftrag an Drucker übertragen`)
+    this.visualfeedback(`Print job sent to printer`)
     try {
         await ipcRenderer.invoke('printBase64', documentBase64, this.defaultPrinter, type, title)
     } catch (e) {

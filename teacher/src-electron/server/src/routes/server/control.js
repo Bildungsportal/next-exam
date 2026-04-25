@@ -38,7 +38,7 @@ const __dirname = import.meta.dirname;
 const fsp = fs.promises 
 
 /**
- * this route generates the nessesary codeVerifier and codeChallenge für PKCE 
+ * this route generates the necessary codeVerifier and codeChallenge for PKCE
  * authorization flow for the microsoft onedrive graph API
  * it receives a code and then redirects to /msauth which will aquire an
  * accesstoken
@@ -383,9 +383,9 @@ for (let i = 0; i<16; i++ ){
             
                 try {
                     await fs.promises.access(studentfolder); // Check if directory exists
-                    // das verzeichnis für diesen student existiert 
-                    // auf unix ist der ordnername 100% ident - auf windows könnte es aber in der gross/kleinschreibung unterschiede geben
-                    // prüfe ob es EXAKT gleich geschrieben wurde (case-sensitiv)
+                    // the directory for this student exists
+                    // on unix the folder name is 100% identical - on windows there could be differences in upper/lower case
+                    // check if it was written EXACTLY the same (case-sensitive)
                     
                     const parentDir = path.dirname(studentfolder);
                     const targetDirName = path.basename(studentfolder);
@@ -394,13 +394,13 @@ for (let i = 0; i<16; i++ ){
                                         .map(dirent => dirent.name);
 
 
-                    if (!directories.includes(targetDirName)) {  // wir haben windows ertappt.. der dateiname ist nicht 100% ident "Test" !== "test"
+                    if (!directories.includes(targetDirName)) {  // caught windows... the filename is not 100% identical "Test" !== "test"
                         
                         const existingDir = directories.find(dir => dir.toLowerCase() === targetDirName.toLowerCase());
                         if (existingDir) {
                             const oldPath = path.join(parentDir, existingDir);
                             const newPath = path.join(parentDir, `backup-${existingDir}`);
-                            await fs.promises.rename(oldPath, newPath);  // Umbenennen des alten Verzeichnisses
+                            await fs.promises.rename(oldPath, newPath);  // rename the old directory
                             log.warn(`control @ registerclient: Renaming ${oldPath} to ${newPath} - thx bill gates for the worst operating system otw`)
                         }
                     }
@@ -408,7 +408,7 @@ for (let i = 0; i<16; i++ ){
                         log.warn(`control @ registerclient: Using already existing directory: ${targetDirName}`)
                     }
                 } catch (err) {
-                    // Das Verzeichnis existiert nicht, erstelle es
+                    // The directory does not exist, create it
                     try {
                         await fs.promises.mkdir(studentfolder, { recursive: true });
                         log.info(`control @ registerclient: Creating ${studentfolder}`);
@@ -900,10 +900,10 @@ router.post('/updatescreenshot', async function (req, res, next) {
     if ( !student ) {return res.send({ sender: "server", message:"removed from server", status: "error" }) } //check if the student is registered on this server
   
     if (req.body.screenshot ) {
-        const screenshotBase64 = req.body.screenshot;   // Der Base64-String muss nicht konvertiert werden, er kann direkt verwendet werden
-        //let hash = crypto.createHash('md5').update(Buffer.from(screenshotBase64, 'base64')).digest("hex");  // Berechnen des MD5-Hashs des Base64-Strings
-        
-            student.imageurl = 'data:image/jpeg;base64,' + screenshotBase64; // oder 'data:image/png;base64,' je nach tatsächlichem Bildformat  
+        const screenshotBase64 = req.body.screenshot;   // the base64 string does not need to be converted, it can be used directly
+        //let hash = crypto.createHash('md5').update(Buffer.from(screenshotBase64, 'base64')).digest("hex");  // compute MD5 hash of the base64 string
+
+            student.imageurl = 'data:image/jpeg;base64,' + screenshotBase64; // or 'data:image/png;base64,' depending on actual image format
 
             // only scan screenshot in exam mode and NOT if a restoring/unlocking operation is already in process (otherwise it will lock the unlocked again)
             if (mcServer.serverstatus.exammode && mcServer.serverstatus.screenshotocr && !student.status.restorefocusstate && student.focus){

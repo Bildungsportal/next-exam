@@ -38,7 +38,7 @@ class MulticastClient {
             name: "DemoUser",
             token: false,
             lockedSection: 1,
-            ip: false,  // ip address wird vom multicastserver teacher mit geschickt
+            ip: false,  // ip address is sent along by the teacher multicast server
             hostname: false,
             serverip: false,   // wird lokal gesetzt (ist aber logischerweise gleich der ip des multicastservers)
             servername: false,
@@ -68,7 +68,7 @@ class MulticastClient {
      */
     init (gateway) {
         this.gateway = gateway
-        this.client = dgram.createSocket({ type: 'udp4', reuseAddr: true }) // reuseAddr ist wichtig für Windows
+        this.client = dgram.createSocket({ type: 'udp4', reuseAddr: true }) // reuseAddr is important for Windows
 
 
         this.client.on('error', (err) => {
@@ -78,7 +78,7 @@ class MulticastClient {
 
         try {
 
-            // Auf Windows binden wir direkt an die gewählte Host-IP statt an 0.0.0.0 //
+            // On Windows we bind directly to the chosen host IP instead of 0.0.0.0 //
             const bindAddr = process.platform === 'win32' ? config.hostip : '0.0.0.0';
 
             this.client.bind(this.PORT, bindAddr, () => {

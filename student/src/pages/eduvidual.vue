@@ -197,9 +197,9 @@ export default {
         this.$nextTick(async () => { // Code that will run only after the entire view has been rendered
                   
 
-            // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
+            // do not use setInterval() for intervals as it keeps all objects of the callbacks including fetch() responses in memory until the interval is stopped
             this.fetchinfointerval = new SchedulerService(5000);
-            this.fetchinfointerval.addEventListener('action',  this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.fetchinfointerval.addEventListener('action',  this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.fetchinfointerval.start();
             await this.fetchInfo(); // initial sync for clientinfo, serverstatus and moodle url
                 
@@ -208,9 +208,9 @@ export default {
             this.loadfilelistinterval.start();
             
             this.clockinterval = new SchedulerService(1000);
-            this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.clockinterval.start();
-                
+
             document.body.addEventListener('mouseleave', this.sendFocuslost);
             
             
@@ -304,8 +304,8 @@ export default {
                 };
                 webview.addEventListener('did-finish-load', this._onDidFinishLoad);
                 
-                this._onDidStartLoading = () => { this.isLoading = true;   }; // Zeige das Overlay während des Ladens
-                this._onDidStopLoading = () => {   this.isLoading = false;  };           // Verberge das Overlay, wenn das Laden gestoppt ist
+                this._onDidStartLoading = () => { this.isLoading = true;   }; // show the overlay while loading
+                this._onDidStopLoading = () => {   this.isLoading = false;  };           // hide the overlay when loading stops
                 webview.addEventListener('did-start-loading', this._onDidStartLoading);
                 webview.addEventListener('did-stop-loading', this._onDidStopLoading);
             }
@@ -553,10 +553,10 @@ iframe{
 #preview {
     display: none;
     position: absolute;
-    top:0;
+    top: var(--nx-preview-top-offset, var(--nx-apphead-h, 60px));
     left: 0;
     width:100vw;
-    height: 100vh;
+    height: calc(100vh - var(--nx-preview-top-offset, var(--nx-apphead-h, 60px)));
     background-color: rgba(0, 0, 0, 0.4);
     z-index:100001;
     backdrop-filter: blur(2px);

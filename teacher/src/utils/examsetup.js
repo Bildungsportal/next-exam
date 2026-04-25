@@ -63,7 +63,7 @@ async function configureWebsite(presetGroup) {
             </div>
             `,
         inputValidator: (value) => {
-            if (!isValidFullDomainName(value)) return 'Ungültige Domain!'
+            if (!isValidFullDomainName(value)) return 'Invalid domain!'
         },
         preConfirm: () => {
             const blockSubdomainsEl = document.getElementById('websiteBlockSubdomains');
@@ -728,7 +728,7 @@ async function configureLocalVM(){
         this.$swal.fire({
             icon: 'warning',
             title: 'LocalVM',
-            text: 'Keine VirtualBox-VMs gefunden. Bitte prüfen Sie die VBoxManage-Installation.'
+            text: 'No VirtualBox VMs found. Please check the VBoxManage installation.'
         });
         return;
     }
@@ -761,7 +761,7 @@ async function configureLocalVM(){
         preConfirm: (value) => {
             selectedVmName = value || '';
             if (!selectedVmName) {
-                return 'Bitte wählen Sie eine VM aus.';
+                return 'Please select a VM.';
             }
             return true;
         }
@@ -905,32 +905,32 @@ async function configureEditor(){
             document.getElementById('checkboxsuggestions').checked = !!cfg.suggestions
             document.getElementById('audiorepeat').value = String(cfg.audioRepeat ?? '0')
             
-            // Setze den Radio-Button für linespacing
+            // Set the radio button for linespacing
             const linespacing = String(cfg.linespacing ?? '2');
             const radioButton = document.querySelector(`input[name="linespacing"][value="${linespacing}"]`);
             if (radioButton) {
                 radioButton.checked = true;
             }
 
-            // Setze den Radio-Button für fontfamily
+            // Set the radio button for fontfamily
             const fontfamily = String(cfg.fontfamily ?? 'sans-serif');
             const fontfamilyRadioButton = document.querySelector(`input[name="fontfamily"][value="${fontfamily}"]`);
             if (fontfamilyRadioButton) {
                 fontfamilyRadioButton.checked = true;
             }
 
-            // Setze den Radio-Button für correction_margin
+            // Set the radio button for correction_margin
             const correctionMargin = String(cfg.cmargin?.side ?? 'right');
             const correctionMarginRadioButton = document.querySelector(`input[name="correction_margin"][value="${correctionMargin}"]`);
             if (correctionMarginRadioButton) {
                 correctionMarginRadioButton.checked = true;
             }
 
-            // Setze den Wert für die Sprache
+            // Set the value for the language
             const language = String(cfg.spellchecklang ?? 'de-DE');
             const selectElement = document.querySelector('.swal2-select');
             if (selectElement) {
-                // Verzögerung beim Setzen des Werts
+                // delay when setting the value
                 setTimeout(() => {
                     selectElement.value = language;
                 }, 100);
@@ -1011,11 +1011,11 @@ async function configureEditor(){
                 }
             }
             
-            // Event Listener für checkboxLT, um den Status von checkboxsuggestions und checkboxCustomHost anzupassen
+            // Event listener for checkboxLT to adjust the state of checkboxsuggestions and checkboxCustomHost
             checkboxLT.addEventListener('change', () => {
                 checkboxSuggestions.disabled = !checkboxLT.checked;
                 checkboxCustomHost.disabled = !checkboxLT.checked;
-                // Wenn checkboxLT abgewählt wird, sollen suggestions und custom host zusätzlich zurückgesetzt werden:
+                // When checkboxLT is unchecked, suggestions and custom host should also be reset:
                 if (!checkboxLT.checked) {
                     checkboxSuggestions.checked = false;
                     checkboxCustomHost.checked = false;
@@ -1028,7 +1028,7 @@ async function configureEditor(){
                 }
             });
             
-            // Event Listener für checkboxCustomHost, um das Textinput zu aktivieren/deaktivieren
+            // Event listener for checkboxCustomHost to enable/disable the text input
             checkboxCustomHost.addEventListener('change', () => {
                 const enabled = checkboxCustomHost.checked;
                 languagetoolhostInput.disabled = !enabled;
@@ -1043,7 +1043,7 @@ async function configureEditor(){
                 }
             });
 
-            // DNS-Check während der Dialog offen ist (debounced)
+            // DNS check while the dialog is open (debounced)
             let ltResolveTimeout = null;
             const scheduleResolve = () => {
                 if (!checkboxCustomHost.checked || languagetoolhostInput.disabled) {
@@ -1080,7 +1080,7 @@ async function configureEditor(){
 
             if (languagetoolhostInput) {
                 languagetoolhostInput.addEventListener('input', scheduleResolve);
-                // Initialen Check für Default-Wert nur, wenn Custom Host aktiv ist
+                // Initial check for default value only when custom host is active
                 if (checkboxCustomHost.checked) {
                     scheduleResolve();
                 }
@@ -1343,27 +1343,27 @@ function isValidMoodleDomainName(url) {
 
 function isValidFullDomainName(str) {
     try {
-        // const urlString = str.includes('://') ? str : 'https://' + str; // Entfernt: Kein automatisches Hinzufügen von https://
-        const urlString = str; // Nutzt den String direkt
-        const url = new URL(urlString); // Erzeugt einen Fehler, wenn das Protokoll fehlt
-        
-        // Prüfe ob Protokoll korrekt ist
+        // const urlString = str.includes('://') ? str : 'https://' + str; // Removed: no automatic prepending of https://
+        const urlString = str; // use the string directly
+        const url = new URL(urlString); // throws an error if the protocol is missing
+
+        // Check whether the protocol is correct
         if (url.protocol !== 'http:' && url.protocol !== 'https:') {
             return false;
         }
 
-        // Prüfe ob Host vorhanden und gültig ist
+        // Check whether host is present and valid
         if (!url.hostname || url.hostname.length < 1) {
             return false;
         }
 
-        // Prüfe ob Host mindestens einen gültigen Domain-Teil enthält
+        // Check whether host contains at least one valid domain part
         const parts = url.hostname.split('.');
         if (parts.length < 2) {
             return false;
         }
 
-        // Prüfe ob jeder Domain-Teil gültig ist
+        // Check whether every domain part is valid
         const validPart = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/;
         return parts.every(part => 
             part.length > 0 && 
@@ -1372,7 +1372,7 @@ function isValidFullDomainName(str) {
         );
 
     } catch (e) {
-        // Fängt den Fehler der new URL(urlString) ab, wenn das Protokoll fehlt (z.B. bei 'classtime.com')
+        // Catches the error from new URL(urlString) when the protocol is missing (e.g. 'classtime.com')
         return false;
     }
 }
@@ -1382,9 +1382,9 @@ function isValidFullDomainName(str) {
 
 /**
  * define materials for exam
- * für jeden prüfungsabschnitt können materialien festgelegt werden die während der prüfung verfügbar sein sollen
- * diese werden bei prüfungsbeginn auf die clients verteilt bzw. beim start des entsprechenden abschnitts auf die clients verteilt
- * @param {string} who "all" (Gruppe wählen) | "a" | "b" (Zielgruppe vorgegeben)
+ * materials can be defined for each exam section that should be available during the exam
+ * these are distributed to clients at the start of the exam or at the start of the corresponding section
+ * @param {string} who "all" (select group) | "a" | "b" (target group predefined)
  * @returns 
  */
 function defineMaterials(who) {

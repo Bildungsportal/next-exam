@@ -159,7 +159,7 @@ export default {
       if (this.clientinfo.localVMState === 'starting') {
         this.vmStateText = 'Status: startet …';
       } else if (this.clientinfo.localVMState === 'running') {
-        this.vmStateText = 'Status: läuft';
+        this.vmStateText = 'Status: running';
       } else {
         this.vmStateText = '';
       }

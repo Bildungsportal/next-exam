@@ -23,19 +23,19 @@
 
         <!-- annotation tools -->
         <li v-show="toolingVisible && !isSubmissionPreview" class="nav-item ">
-            <button type="button" class="btn btn-light pdf-tool-btn " :class="{ active: tool === 'highlight-yellow' }" @click.stop="setTool('highlight-yellow')" title="Highlight gelb">
+            <button type="button" class="btn btn-light pdf-tool-btn " :class="{ active: tool === 'highlight-yellow' }" @click.stop="setTool('highlight-yellow')" title="Highlight yellow">
             <span class="tool-swatch tool-swatch--yellow"></span>
             </button>
-            <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'highlight-green' }" @click.stop="setTool('highlight-green')" title="Highlight grün">
+            <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'highlight-green' }" @click.stop="setTool('highlight-green')" title="Highlight green">
             <span class="tool-swatch tool-swatch--green"></span>
             </button>
-            <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'highlight-blue' }" @click.stop="setTool('highlight-blue')" title="Highlight blau">
+            <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'highlight-blue' }" @click.stop="setTool('highlight-blue')" title="Highlight blue">
             <span class="tool-swatch tool-swatch--blue"></span>
             </button>
-            <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'underline-red' }" @click.stop="setTool('underline-red')" title="Unterstreichen rot">
+            <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'underline-red' }" @click.stop="setTool('underline-red')" title="Underline red">
             <span class="tool-underline tool-underline--red"></span>
             </button>
-            <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'delete' }" @click.stop="setTool('delete')" title="Löschen">
+            <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'delete' }" @click.stop="setTool('delete')" title="Delete">
             ✕
             </button>
         </li>
