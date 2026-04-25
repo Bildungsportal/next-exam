@@ -81,7 +81,7 @@ export default {
       wlanInfo: null,
       hostip: null,
       internetCheckCounter: 0,
-      statusMessage: 'Warte auf virtuelle Maschine …',
+      statusMessage: '',
       connectAttempts: 0,
       maxAttempts: 10,
       showRetry: false,
@@ -148,23 +148,23 @@ export default {
       this.connectAttempts += 1;
 
       if (!this.clientinfo || !this.clientinfo.localVMHost) {
-        this.statusMessage = `Warte auf virtuelle Maschine … (Versuch ${this.connectAttempts}/${this.maxAttempts})`;
+        this.statusMessage = this.$t('student.vmConnecting', { attempt: this.connectAttempts, max: this.maxAttempts });
         if (this.connectAttempts >= this.maxAttempts) {
-          this.statusMessage = 'Virtuelle Maschine konnte nicht erreicht werden.';
+          this.statusMessage = this.$t('student.vmFailed');
           this.showRetry = true;
         }
         return;
       }
 
       if (this.clientinfo.localVMState === 'starting') {
-        this.vmStateText = 'Status: startet …';
+        this.vmStateText = this.$t('student.vmStarting');
       } else if (this.clientinfo.localVMState === 'running') {
-        this.vmStateText = 'Status: running';
+        this.vmStateText = this.$t('student.vmRunning');
       } else {
         this.vmStateText = '';
       }
 
-      this.statusMessage = `Verbinde zur virtuellen Maschine … (Versuch ${this.connectAttempts}/${this.maxAttempts})`;
+      this.statusMessage = this.$t('student.vmConnecting', { attempt: this.connectAttempts, max: this.maxAttempts });
       await this.connectVnc();
     },
 
@@ -249,21 +249,21 @@ export default {
 
     onConnectError() {
       if (this.connectAttempts >= this.maxAttempts) {
-        this.statusMessage = 'Virtuelle Maschine konnte nicht erreicht werden.';
+        this.statusMessage = this.$t('student.vmFailed');
         this.showRetry = true;
         if (this.connectScheduler) {
           this.connectScheduler.removeEventListener('action', this.tryConnectLoop);
           this.connectScheduler.stop();
         }
       } else {
-        this.statusMessage = `Verbindungsfehler, neuer Versuch ${this.connectAttempts + 1}/${this.maxAttempts} …`;
+        this.statusMessage = this.$t('student.vmRetrying', { attempt: this.connectAttempts + 1, max: this.maxAttempts });
       }
     },
 
     retryConnect() {
       this.connectAttempts = 0;
       this.showRetry = false;
-      this.statusMessage = 'Warte auf virtuelle Maschine …';
+      this.statusMessage = this.$t('student.vmWaiting');
       if (!this.connectScheduler) {
         this.connectScheduler = new SchedulerService(2000);
         this.connectScheduler.addEventListener('action', this.tryConnectLoop);

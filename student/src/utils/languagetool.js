@@ -80,19 +80,19 @@ async function LTcheckAllWords(closeLT = true){
 
 
 
-    if (this.text.length == 0) { 
-        this.LTinfo = "No errors found"
+    if (this.text.length == 0) {
+        this.LTinfo = this.$t('editor.ltNoErrors')
         this.spellcheckFallback = false
         return; 
     }
 
     //request LanguageTool API
-    this.LTinfo = "searching..."
+    this.LTinfo = this.$t('editor.ltSearching')
 
     try {
         const ltStatus = await signalBridge.invoke('isLanguageToolRunning')
         if (!ltStatus?.running) {
-            this.LTinfo = "The LT server is not reachable"
+            this.LTinfo = this.$t('editor.ltUnreachable')
             console.warn('languagetool.js @ LTcheckAllwords (status check): LT server is not reachable')
             this.spellcheckFallback = true
             this.ltRunning = false
@@ -104,7 +104,7 @@ async function LTcheckAllWords(closeLT = true){
         }
     } catch (statusError) {
         console.warn('languagetool.js @ LTcheckAllwords (status check):', statusError.message)
-        this.LTinfo = "Der LT-Server ist nicht erreichbar"
+        this.LTinfo = this.$t('editor.ltUnreachable')
         this.spellcheckFallback = true
         this.ltRunning = false
         this.misspelledWords = []
@@ -142,7 +142,7 @@ async function LTcheckAllWords(closeLT = true){
   
         this.LThandleMisspelled(data.matches)   //prepares the list - removes duplicates
         if (!this.misspelledWords.length) {
-            this.LTinfo = "No errors found"
+            this.LTinfo = this.$t('editor.ltNoErrors')
             return;
         }
             
@@ -150,7 +150,7 @@ async function LTcheckAllWords(closeLT = true){
 
     } catch (error) {
         console.warn('languagetool.js @ LTcheckAllwords (catch):', error.message)  
-        this.LTinfo = "Der LT-Server ist nicht erreichbar"
+        this.LTinfo = this.$t('editor.ltUnreachable')
         this.spellcheckFallback = true
         this.ltRunning = false
         this.misspelledWords = []
@@ -201,7 +201,7 @@ function LThandleMisspelled(matches){
 
 async function LTfindWordPositions() {
     if (!this.misspelledWords || !this.textContainer || this.misspelledWords.length === 0) {
-        this.LTinfo = "No errors found"
+        this.LTinfo = this.$t('editor.ltNoErrors')
         return [];
     }
 

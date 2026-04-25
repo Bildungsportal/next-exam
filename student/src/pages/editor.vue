@@ -430,19 +430,19 @@
             </div>
             <div v-if="localLockdown" class="mt-2">
                 <div class="input-group">
-                    <span class="input-group-text">Password</span>
+                    <span class="input-group-text">{{ $t('student.password') }}</span>
                     <input
                         ref="localUnlockInput"
                         v-model="localUnlockPassword"
                         class="form-control"
                         type="password"
                         autocomplete="current-password"
-                        placeholder="Password"
+                        :placeholder="$t('student.password')"
                         @input="localUnlockError = false"
                         @keyup.enter="tryUnlockLocalLockdown"
                     >
                     <button class="btn btn-outline-dark" type="button" :disabled="localUnlockBusy" @click="tryUnlockLocalLockdown">
-                        Unlock
+                        {{ $t('editor.unlock') }}
                     </button>
                 </div>
                 <div v-if="localUnlockError" class="mt-2 text-dark">

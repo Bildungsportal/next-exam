@@ -191,6 +191,7 @@
         "port_invalid": "Port must be a number!",
         "preview": "preview",
         "print": "print",
+        "printJobSent": "Print job sent to printer",
         "printrequest": "printrequest received",
         "printrequestshow": "Do you want to open the document and print it?",
         "processingfiles": "Processing Files",

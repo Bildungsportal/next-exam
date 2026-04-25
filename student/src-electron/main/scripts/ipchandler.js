@@ -1061,9 +1061,9 @@ class IpcHandler {
                     if (data.version){
                         // compare versions and display message (teacher needs upgrade.. client needs upgrade)
                         const comparisonResult = this.compareSoftware(config.version, config.info , data.version, data.versioninfo ) //serverVersion, serverStatus, localVersion, localStatus
-                        if (comparisonResult > 0) {       event.returnValue = { status: "error", message: "Your version of Next-Exam is newer than the teacher's!" };   }
-                        else if (comparisonResult < 0) {  event.returnValue = { status: "error", message: "Your version of Next-Exam is too old. Please download a current version!" };   }
-                        else {                            event.returnValue = { status: "error", message: "Unknown error during connection." };    }
+                        if (comparisonResult > 0) {       event.returnValue = { status: "error", message: t("student.versionNewer") };   }
+                        else if (comparisonResult < 0) {  event.returnValue = { status: "error", message: t("student.versionOld") };   }
+                        else {                            event.returnValue = { status: "error", message: t("student.versionUnknown") };    }
                     }
                     event.returnValue = { status: "error", message: data.message };
                 }
@@ -1085,7 +1085,7 @@ class IpcHandler {
                 }
                 
                 // show warning message if the user does not want to reset the permissions
-                event.returnValue = { sender: "client", message: "There is a problem with the network, firewall rules, or network permissions! Please resolve this issue and restart Next-Exam!", status: "error" };
+                event.returnValue = { sender: "client", message: t("student.networkError"), status: "error" };
                 return;  
                     
                 

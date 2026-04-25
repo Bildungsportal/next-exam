@@ -191,6 +191,7 @@
         "port_invalid": "Port muss eine Zahl sein!",
         "preview": "ansehen",
         "print": "drucken",
+        "printJobSent": "Druckauftrag an Drucker gesendet",
         "printrequest": "Druckanfrage erhalten",
         "printrequestshow": "Wollen Sie das Dokument ansehen und drucken?",
         "processingfiles": "Materialien werden verarbeitet",

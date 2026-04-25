@@ -541,7 +541,7 @@ async function printBase64(documentBase64 = this.currentpreviewBase64, type = th
     const title = (jobTitle != null && String(jobTitle).trim() !== '')
         ? String(jobTitle).trim()
         : (this.currentpreviewname && String(this.currentpreviewname).trim()) || 'Next-Exam'
-    this.visualfeedback(`Print job sent to printer`)
+    this.visualfeedback(this.$t('dashboard.printJobSent'))
     try {
         await ipcRenderer.invoke('printBase64', documentBase64, this.defaultPrinter, type, title)
     } catch (e) {

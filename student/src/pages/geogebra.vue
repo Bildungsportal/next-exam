@@ -213,7 +213,7 @@ function loadGgbDeployScript() {
 
 function ggbHtml5CodebaseUrl() {
     const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/')
-    return `${base}GeoGebra/HTML5/5.0/web/`
+    return `${base}GeoGebra/HTML5/5.0/web3d/`
 }
 
 
@@ -542,8 +542,7 @@ export default {
             const params = {
                 "appName": appName,
                 "language": "de",
-                "show3D": false,
-                "enable3D": false,
+              
                 "width": w,
                 "height": h,
                 "showToolBar": true,
