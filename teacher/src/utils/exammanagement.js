@@ -1,4 +1,5 @@
 import log from 'electron-log/renderer';
+import examEventBus from './examEventBus.js'
 
 
 
@@ -28,7 +29,10 @@ function startExam(){
 
     this.lockscreens(false, false); // deactivate lockscreen
     this.serverstatus.exammode = true;
+    examEventBus.examStart = new Date().toLocaleString('de-DE')
+    examEventBus._scheduleSave()
     log.info("exammanagment @ startExam: starting exammode")
+    this.studentlist.forEach(s => examEventBus.push('examstart', s))
     this.visualfeedback(this.$t("dashboard.startexam"))
     this.setServerStatus()
 }
@@ -69,10 +73,13 @@ function endExam(){
         if (result.isConfirmed) {
             Object.values(this.serverstatus.examSections).forEach(section => {   section.locked = false    })
             this.serverstatus.exammode = false;
+            examEventBus.examEnd = new Date().toLocaleString('de-DE')
+            examEventBus._scheduleSave()
+            this.studentlist.forEach(s => examEventBus.push('examend', s))
             this.lockscreens(false, false); // deactivate lockscreen
             this.setServerStatus()
-        } 
-    }); 
+        }
+    });
 }
 
 
@@ -123,6 +130,8 @@ function stopserver(){
                 await this.updateBiPServerInfo("offline");
             }
 
+            examEventBus.push('serverstop', { clientname: '', hostname: '', clientip: '' })
+            await examEventBus._save()  // save synchronously before navigation
             await ipcRenderer.invoke("stopserver", this.servername)  // need to stop server first otherwise router.js won't route back
 
             this.$router.push({  // for some reason this doesn't work on mobile
@@ -181,16 +190,18 @@ function kick(studenttoken, studentip){
     })
     .then(async (result) => {
         if (result.isConfirmed) {
- 
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${studenttoken}`, { 
+            const kickedStudent = this.studentlist.find(s => s.token === studenttoken)
+            console.log('[examlog] kick:', kickedStudent?.clientname, 'events before:', examEventBus.events.length)
+            if (kickedStudent) examEventBus.push('kick', kickedStudent)
+            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${studenttoken}`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json' },
                 body: JSON.stringify({ delfolder : delfolderonexit, kick : true } )
             })
             .then( res => res.json() )
             .then( result => { log.info("exammanagment @ kick:", result.message)});
-        } 
-    });  
+        }
+    });
 }
 
 

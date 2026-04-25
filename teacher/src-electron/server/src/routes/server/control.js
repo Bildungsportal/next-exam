@@ -1032,6 +1032,7 @@ router.post('/printrequest/:servername/:studenttoken', async function (req, res,
         await fsp.writeFile(absoluteFilename, pdfBuffer)                                       // write main
       
         log.info(`control @ printrequest: Received and stored submission file for user: ${student.clientname}`)
+        WindowHandler.mainwindow.webContents.send('submission', { clientname: student.clientname, clientip: student.clientip, hostname: student.hostname, printrequest: !!printrequest })
         // create backup of abgabe
         let backupStatus = 'skipped'                                                           // default backup status
         if (config.backupdirectory) {                                                          // optional backup

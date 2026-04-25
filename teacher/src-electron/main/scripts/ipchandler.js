@@ -340,6 +340,34 @@ class IpcHandler {
 
 
         /**
+         * Save exam event log to <workdir>/<servername>/examlog.json
+         */
+        ipcMain.handle('saveExamLog', async (event, servername, payload) => {
+            const filePath = join(config.workdirectory, servername, 'examlog.json')
+            try {
+                await fs.promises.writeFile(filePath, JSON.stringify(payload, null, 2))
+                return true
+            } catch (err) {
+                log.error(`ipchandler @ saveExamLog: ${err}`)
+                return false
+            }
+        })
+
+        /**
+         * Load exam event log from <workdir>/<servername>/examlog.json
+         */
+        ipcMain.handle('loadExamLog', async (event, servername) => {
+            const filePath = join(config.workdirectory, servername, 'examlog.json')
+            try {
+                const raw = await fs.promises.readFile(filePath, 'utf-8')
+                return JSON.parse(raw)
+            } catch (err) {
+                return null  // file not found or invalid — start fresh
+            }
+        })
+
+
+        /**
          * returns old exam folders in workdirectory
          */
 

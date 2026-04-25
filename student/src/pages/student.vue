@@ -909,16 +909,16 @@ export default {
             let getinfo = await signalBridge.invoke('getinfoasync')  // gets serverlist and clientinfo from multicastclient
 
 
-            if (getinfo.clientinfo.exammode) {
-                return;
-            }  // do not stress ui updates if exammode is active
-
             // Only update if clientinfo has actually changed
             const clientInfoStr = JSON.stringify(getinfo.clientinfo);
             const currentClientInfoStr = JSON.stringify(this.clientinfo);
             if (clientInfoStr !== currentClientInfoStr) {
                 this.clientinfo = getinfo.clientinfo;
             }
+
+            if (getinfo.clientinfo.exammode) {
+                return;
+            }  // do not stress ui updates if exammode is active
 
             // Only set token if changed
             const newToken = this.clientinfo.token;
@@ -1392,7 +1392,7 @@ body {
 
 
 .disabledbutton {
-    /* intentionally left blank: class kept for compatibility */
+    display: inherit;
 }
 
 .disabledexam {

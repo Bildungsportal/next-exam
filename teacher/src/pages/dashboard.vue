@@ -111,46 +111,61 @@
     <!-- dashboard EXPLORER start -->
     <div :key="2" id=preview class=" ">
         <div id=workfolder style="overflow-y:hidden">
-            <button id="closefilebrowser" type="button" class=" btn-close pt-2 pe-2 float-end" title="close"></button>
-            <h4>{{$t('dashboard.filesfolder')}}: </h4> 
-            <div class="ms-0 mb-3"><strong>{{currentdirectory}}</strong>  </div> 
-            <div class="btn btn-dark pe-3 ps-3 me-1 mb-3 btn-sm" @click="loadFilelist(workdirectory) "><img src="/src/assets/img/svg/go-home.svg" class="" width="22" height="22" > </div>
-            
-            <!-- top navigation and tools -->
-            <div v-if="submissionsNumber == 0" class="btn btn-warning pe-3 ps-3 me-1 mb-3 btn-sm" style="float: right;" @click="fetchSubmissions(true)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" > {{ $t('control.submissions') }}: {{submissionsNumber}} / {{ submissions.length }}</div>
-            <div v-if="submissionsNumber > 0" class="btn btn-success pe-3 ps-3 me-1 mb-3 btn-sm" style="float: right;" @click="fetchSubmissions(true)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" > {{ $t('control.submissions') }}: {{submissionsNumber}} / {{ submissions.length }}</div>
-            <div :class="lockPdfSummary ? 'disabledexam':''" class="btn btn-primary pe-3 ps-3 me-1 mb-3 btn-sm" style="float: right;" :title="$t('dashboard.summarizepdf')" @click="getLatest() "><img src="/src/assets/img/svg/edit-copy.svg" class="" width="22" height="22" >{{$t('dashboard.summarizepdfshort')}}</div>
-            <div  v-if="(currentdirectory !== workdirectory)" class="btn btn-dark pe-3 ps-3 me-1 mb-3 btn-sm" @click="loadFilelist(currentdirectoryparent) "><img src="/src/assets/img/svg/edit-undo.svg" class="" width="22" height="22" >up </div>
-            <!-- top navigation and tools END -->
 
+            <!-- Header -->
+            <div class="wf-header">
+                <div class="wf-header-title">
+                    <img src="/src/assets/img/svg/folder-open.svg" class="me-2" width="20" height="20">
+                    <span>{{$t('dashboard.filesfolder')}}</span>
+                </div>
+                <div class="wf-header-actions">
+                    <div v-if="submissionsNumber == 0" class="btn btn-warning btn-sm d-flex align-items-center gap-1" @click="fetchSubmissions(true)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="16" height="16">{{ $t('control.submissions') }}: {{submissionsNumber}} / {{ submissions.length }}</div>
+                    <div v-if="submissionsNumber > 0" class="btn btn-success btn-sm d-flex align-items-center gap-1" @click="fetchSubmissions(true)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="16" height="16">{{ $t('control.submissions') }}: {{submissionsNumber}} / {{ submissions.length }}</div>
+                    <div :class="lockPdfSummary ? 'disabledexam':''" class="btn btn-secondary btn-sm d-flex align-items-center gap-1" :title="$t('dashboard.summarizepdf')" @click="getLatest()"><img src="/src/assets/img/svg/edit-copy.svg" width="16" height="16">{{$t('dashboard.summarizepdfshort')}}</div>
+                    <button id="closefilebrowser" type="button" class="btn-close btn-close-white" title="close" @click="closeFileBrowser()"></button>
+                </div>
+            </div>
 
-            <div :key="3" style="height: 76vh; overflow-y:auto;">
-                <div v-for="file in localfiles" :key="file.path" class="d-inline">
-                    <hr v-if="(file.type == 'file' || file.type == 'dir')">
-                    
-                    <!-- open folder (folder listing on the left side) -->
-                    <div v-if="(file.type == 'dir')" class="btn btn-success pe-3 ps-3 me-3 mb-2 btn-sm" @click="loadFilelist(file.path)"><img src="/src/assets/img/svg/folder-open.svg" class="" width="22" height="22" > {{file.name}} </div>
-                    <!-- pdf -->
-                    <div v-if="(file.type == 'file' && file.ext === '.pdf')" class="btn btn-primary pe-3 ps-3 me-3 mb-2 btn-sm" @click="loadPDF(file.path, file.name)" style="max-width: 500px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><img src="/src/assets/img/svg/document.svg" class="" width="22" height="22" > {{file.name}} </div>
-                    <!-- images -->
-                    <div v-if="(file.type == 'file' && (file.ext === '.png'|| file.ext === '.jpg'|| file.ext === '.webp'|| file.ext === '.jpeg' ) )" class="btn btn-primary pe-3 ps-3 me-3 mb-2 btn-sm" @click="loadImage(file.path)" style=" max-width: 500px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><img src="/src/assets/img/svg/document.svg" class="" width="22" height="22" > {{file.name}} </div>
-                    <!-- other files -->
-                    <div v-if="(file.type == 'file' && !(file.ext === '.pdf' || file.ext === '.png'|| file.ext === '.jpg'|| file.ext === '.webp'|| file.ext === '.jpeg' )  )" class="btn btn-info pe-3 ps-3 me-3 mb-2 btn-sm"  style=" max-width: 500px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default;"><img src="/src/assets/img/svg/document.svg" class="" width="22" height="22" > {{file.name}} </div>
+            <!-- Path + nav -->
+            <div class="wf-path">
+                <div class="btn btn-sm btn-dark d-flex align-items-center" @click="loadFilelist(workdirectory)"><img src="/src/assets/img/svg/go-home.svg" width="16" height="16"></div>
+                <div v-if="currentdirectory !== workdirectory" class="btn btn-sm btn-dark d-flex align-items-center" @click="loadFilelist(currentdirectoryparent)"><img src="/src/assets/img/svg/edit-undo.svg" width="16" height="16"></div>
+                <span class="wf-path-text">{{ currentdirectory }}</span>
+            </div>
 
-                    <!-- delete file -->
-                    <div v-if="(file.type == 'file' || file.type == 'dir')" class="btn btn-dark me-1 mb-2 btn-sm" style="float: right;" @click="fdelete(file)" :title="$t('dashboard.delete')"><img src="/src/assets/img/svg/edit-delete.svg" class="" width="22" height="22" ></div>
-                    <!-- download file -->
-                    <div v-if="(file.type == 'file')" class="btn btn-dark  me-1 mb-2 btn-sm " style="float: right;" @click="downloadFile(file)" :title="$t('dashboard.download')"><img src="/src/assets/img/svg/edit-download.svg" class="" width="22" height="22" ></div>
-                    <!-- send file -->
-                    <div v-if="(file.type == 'file')" :class="lockSendFile ? 'disabledexam':''"    class="btn btn-dark  me-1 mb-2 btn-sm " style="float: right;" @click="dashboardExplorerSendFile(file)" :title="$t('dashboard.send')"><img src="/src/assets/img/svg/document-send.svg" class="" width="22" height="22" ></div>
-                    <!-- preview pdf -->
-                    <div v-if="(file.type == 'file' && file.ext === '.pdf')" class="btn btn-dark me-1 mb-2 btn-sm" style="float: right;" @click="loadPDF(file.path, file.name)" :title="$t('dashboard.preview')"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" ></div>
-                    <!-- preview image -->
-                    <div v-if="(file.type == 'file' && (file.ext === '.png'|| file.ext === '.jpg'|| file.ext === '.webp'|| file.ext === '.jpeg' ))" class="btn btn-dark me-1 mb-2 btn-sm" style="float: right;" @click="loadImage(file.path)" :title="$t('dashboard.preview')"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" ></div>
-                    
-                    <!-- download folder -->
-                    <div v-if="(file.type == 'dir')" class="btn btn-dark  me-1 mb-2 btn-sm " style="float: right;" @click="downloadFile(file)" :title="$t('dashboard.download')"><img src="/src/assets/img/svg/edit-download.svg" class="" width="22" height="22" ></div>
-                
+            <!-- File list -->
+            <div :key="3" class="wf-filelist">
+                <div v-for="file in (localfiles || []).filter(f => f.type === 'file' || f.type === 'dir')" :key="file.path" class="wf-row">
+
+                    <!-- name / open action -->
+                    <div class="wf-name">
+                        <div v-if="file.type === 'dir'" class="wf-entry wf-dir" @click="loadFilelist(file.path)">
+                            <img src="/src/assets/img/svg/folder-open.svg" width="18" height="18">
+                            <span>{{file.name}}</span>
+                        </div>
+                        <div v-else-if="file.ext === '.pdf'" class="wf-entry wf-pdf" @click="loadPDF(file.path, file.name)">
+                            <img src="/src/assets/img/svg/document.svg" width="18" height="18">
+                            <span>{{file.name}}</span>
+                        </div>
+                        <div v-else-if="['.png','.jpg','.webp','.jpeg'].includes(file.ext)" class="wf-entry wf-img" @click="loadImage(file.path)">
+                            <img src="/src/assets/img/svg/document.svg" width="18" height="18">
+                            <span>{{file.name}}</span>
+                        </div>
+                        <div v-else class="wf-entry wf-other">
+                            <img src="/src/assets/img/svg/document.svg" width="18" height="18">
+                            <span>{{file.name}}</span>
+                        </div>
+                    </div>
+
+                    <!-- actions -->
+                    <div class="wf-actions">
+                        <div v-if="file.type === 'file' && file.ext === '.pdf'" class="btn btn-sm btn-dark" @click="loadPDF(file.path, file.name)" :title="$t('dashboard.preview')"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="16" height="16"></div>
+                        <div v-if="file.type === 'file' && ['.png','.jpg','.webp','.jpeg'].includes(file.ext)" class="btn btn-sm btn-dark" @click="loadImage(file.path)" :title="$t('dashboard.preview')"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="16" height="16"></div>
+                        <div v-if="file.type === 'file'" :class="lockSendFile ? 'disabledexam':''" class="btn btn-sm btn-dark" @click="dashboardExplorerSendFile(file)" :title="$t('dashboard.send')"><img src="/src/assets/img/svg/document-send.svg" width="16" height="16"></div>
+                        <div class="btn btn-sm btn-dark" @click="downloadFile(file)" :title="$t('dashboard.download')"><img src="/src/assets/img/svg/edit-download.svg" width="16" height="16"></div>
+                        <div class="btn btn-sm btn-dark" @click="fdelete(file)" :title="$t('dashboard.delete')"><img src="/src/assets/img/svg/edit-delete.svg" width="16" height="16"></div>
+                    </div>
+
                 </div>
            </div>
         </div>
@@ -198,8 +213,6 @@
     <!-- SIDEBAR start -->
     <div :key="5" class=" text-white bg-dark d-flex flex-column sidebar-root mt-3" style="width: 240px; min-width: 240px;">
         <div class="sidebar-overlays">
-            <div v-if="showDesc" id="description" class="btn sidebar-message w-100" style="white-space: pre-line;" v-html="currentDescription"></div>
-            <div id="statusdiv" class="btn btn-warning sidebar-message w-100"> {{$t('dashboard.connected')}}  </div>
         </div>
         <div class="sidebar-info-strip">
         <div class="btn btn-light text-start infobutton" @click="showinfo()">{{$t('dashboard.name')}} <br><b> {{$route.params.servername}}</b> </div>
@@ -763,9 +776,6 @@
         <!-- Files Section END -->
 
 
-        <!-- Section name: moved to tabs (pencil icon) -->
-        
-
 
         <!-- BIP Section START -->
         <div v-if="bipToken && this.serverstatus.bip" class="mb-4">
@@ -931,10 +941,14 @@
             <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;">{{$t('dashboard.workfolder')}}</div>
         </div>
         <div v-if="bipToken && serverstatus.bip" @mouseover="showDescription($t('dashboard.bipinfo'))" @mouseout="hideDescription" class="btn m-1 mt-0 ms-0 text-start p-1 pt-2 ps-2" :class="bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'" @click="toggleBipStatus" style="width:128px; height:62px; display:inline-flex">
-            <img src="/src/assets/img/svg/globe.svg" class=" mt-1" width="32" height="32" style="vertical-align: top;"> 
+            <img src="/src/assets/img/svg/globe.svg" class=" mt-1" width="32" height="32" style="vertical-align: top;">
             <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;" class="">BiP-Status {{bipStatus}}</div>
-        </div>       
-        </div>  
+        </div>
+        <div @mouseover="showDescription($t('examlog.buttondesc'))" @mouseout="hideDescription" class="btn btn-dark m-1 mt-0 ms-0 text-start p-1 pt-2 ps-2" @click="showExamLog = true" style="width:128px; height:62px; display:inline-flex">
+            <img src="/src/assets/img/icons/log.png" class="mt-1" width="32" height="32" style="vertical-align: top;">
+            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;">{{ $t('examlog.button') }}</div>
+        </div>
+        </div>
 
  
 
@@ -1083,9 +1097,24 @@
 
     <!-- sort student widgets button -->
     <div style="position: fixed; bottom:20px; right: 20px; filter:opacity(50%)" class="col d-inlineblock btn " @click="sortStudentWidgets()">
-        <img src="/src/assets/img/svg/view-sort-ascending-name.svg" class="white" title="sort" width="24" height="24" >  
+        <img src="/src/assets/img/svg/view-sort-ascending-name.svg" class="white" title="sort" width="24" height="24" >
     </div>
     <!-- sort student widgets button end -->
+
+    <!-- Exam Log Modal -->
+    <ExamLog
+        :visible="showExamLog"
+        :examName="servername"
+        :examStart="examLogStart"
+        :examEnd="examLogEnd"
+        :events="examLogEvents"
+        @close="showExamLog = false"
+    />
+
+    <div id="statusbar" class="bg-dark text-white">
+        <div v-if="showDesc" id="description" style="white-space: pre-line;" v-html="currentDescription"></div>
+        <div id="statusdiv">{{ $t('dashboard.connected') }}</div>
+    </div>
 </div>
 </template>
 
@@ -1105,6 +1134,8 @@ import MaterialsList from '../components/materialsList.vue'
 import WebviewPane from '../components/WebviewPane.vue'
 import PdfviewPane from '../components/PdfviewPane.vue'
 import PdfRenderer from '../components/PdfRenderer.vue'
+import ExamLog from '../components/ExamLog.vue'
+import examEventBus from '../utils/examEventBus.js'
 
 import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile, createSharingLink, fileExistsInAppFolder, downloadFilesFromOneDrive} from '../msalutils/onedrive'
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
@@ -1127,7 +1158,8 @@ export default {
         MaterialsList: MaterialsList,
         WebviewPane: WebviewPane,
         PdfviewPane: PdfviewPane,
-        PdfRenderer: PdfRenderer
+        PdfRenderer: PdfRenderer,
+        ExamLog: ExamLog
     },
     data() {
         return {
@@ -1191,6 +1223,8 @@ export default {
             serverlog: [],
             serverlogActive: false,
             serverlogReload: true,
+
+            showExamLog: false,
 
             bipToken:this.$route.params.bipToken === 'false' ?  false : this.$route.params.bipToken,   // parameters are always passed as string "false", convert to bool
             bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
@@ -1322,6 +1356,10 @@ export default {
     },
 
 computed: {
+    examLogEvents()    { return examEventBus.events.length ? examEventBus.events.slice() : [] },
+    examLogStart()     { return examEventBus.examStart },
+    examLogEnd()       { return examEventBus.examEnd },
+
     hasMicrosoft365TemplateReady() {
         const section = this.serverstatus.examSections[this.serverstatus.activeSection];
         if (!section) return false;
@@ -1627,7 +1665,7 @@ computed: {
                         //printrequest should also be set to false on the client immediately after sending, but the client could disconnect right here
                         if (student.clientname !== this.printrequest)  {  //this.printrequest contains the name of the student who requested
                             this.processPrintrequest(student) //do not trigger twice from same student
-                        } 
+                        }
                         this.setStudentStatus({removeprintrequest:true}, student.token)  //request received.. remove it from the servers student object
                     }   
                 });
@@ -1654,6 +1692,16 @@ computed: {
                                     console.log(`dashboard @ fetchInfo: student ${student.clientname} lost focus`)
                                     const focusAudio = new Audio('dialog-warning.oga');
                                     focusAudio.play();
+                                    examEventBus.push('focuslost', student)
+                                }
+
+                                // log once when student enters secure exam mode
+                                if (student.exammode && !this.studentwidgets[i].exammode) {
+                                    examEventBus.push('secured', student)
+                                }
+                                // log once when student leaves secure exam mode
+                                if (!student.exammode && this.studentwidgets[i].exammode) {
+                                    examEventBus.push('unsecured', student)
                                 }
 
                                 // Overwrite the studentwidget, but correct the group assignment based on the current section
@@ -1675,6 +1723,7 @@ computed: {
                     }
                     else {
                         //replace empty widget with student
+                        examEventBus.push('login', student)
                         for (let i = 0; i < this.studentwidgets.length; i++){  // we cant use (for .. of) or forEach because it creates a workingcopy of the original object
                             if (!this.studentwidgets[i].clientname){ //clientname == false in an emptyWidget so we found one
                                 this.studentwidgets[i] = student; // replace emptywidget
@@ -1983,6 +2032,9 @@ computed: {
             this.activestudent = false
         },
         // hide pdf preview
+        closeFileBrowser() {
+            document.querySelector("#preview").style.display = "none";
+        },
         hidepreview() {
             document.querySelector("#pdfpreview").style.display = 'none';
         },
@@ -2623,6 +2675,9 @@ computed: {
         
             await this.getPreviousServerStatus()
 
+            await examEventBus.init(ipcRenderer, this.servername)
+            examEventBus.push('serverstart', { clientname: '', hostname: '', clientip: '' })
+
             this.fetchInfo()
             this.initializeStudentwidgets()
 
@@ -2647,6 +2702,7 @@ computed: {
 
             // Add event listener to #closefilebrowser  (only once - do not accumulate event listeners)
             document.querySelector("#closefilebrowser").addEventListener("click", this.fileBrowserEventlistenerCallback);
+            document.querySelector("#preview").addEventListener("click", this.fileBrowserEventlistenerCallback);
             document.querySelector('#workfolder').addEventListener("click", function(e) { e.stopPropagation(); }); // Prevent event propagation for clicks on #workfolder
             document.getElementById('setupdiv').addEventListener('click', function(e) { e.stopPropagation();});
             document.querySelector("#pdfpreview").addEventListener("click", this.pdfPreviewEventlisterenCallback); // Set the event listener for #pdfpreview
@@ -2674,7 +2730,12 @@ computed: {
         
   
 
-        ipcRenderer.on('reconnected', async (event, student) => {  
+        ipcRenderer.on('submission', (event, student) => {
+            examEventBus.push(student.printrequest ? 'printrequest' : 'submission', student)
+        })
+
+        ipcRenderer.on('reconnected', async (event, student) => {
+            examEventBus.push('relogin', student)
             //lookup latest bak file of reconnected student
             const bakResult = await this.getLatestBakFile(student.clientname)
             
@@ -2926,8 +2987,44 @@ computed: {
 
 
 #statusdiv {
-    display: block !important;
     cursor: help;
+}
+
+#statusbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 0.5rem;
+    z-index: 1500;
+    box-sizing: border-box;
+}
+
+#statusbar #description {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 1.5rem;
+    line-height: 1.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 0;
+    padding: 0;
+}
+
+#statusbar #statusdiv {
+    flex: 0 0 auto;
+    height: 1.5rem;
+    line-height: 1.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 0;
+    padding: 0;
 }
 
 
@@ -3171,6 +3268,8 @@ computed: {
     flex: 1 1 auto;
     min-height: 0;
     overflow: hidden;
+    border-bottom-left-radius: 16px;
+    margin-bottom: 1.5rem;
 }
 
 .sidebar-info-strip {
@@ -3312,7 +3411,7 @@ computed: {
     flex: 1;
     min-height: 0;
     /* border: 1px solid rgb(99, 187, 175); */
-    padding-bottom:100px;
+    padding-bottom:30px;
     padding-right: 30px;
     margin-right: -30px;
     transition:0.1s;
@@ -3436,25 +3535,105 @@ computed: {
 
 #preview {
     display: none;
-    position: absolute;
-    top:0;
-    left: 0;
-    width:100vw;
-    height: 100vh;
-    background-color: rgba(0, 0, 0, 0.4);
-    z-index:1002;
-}
-#workfolder { 
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    padding: 20px;
-    background-color: rgba(255, 255, 255, 0.8);
-    z-index:1003;
-    backdrop-filter: blur(3px);
+    background-color: rgba(0, 0, 0, 0.75);
+    z-index: 1002;
+    align-items: center;
+    justify-content: center;
+}
+#workfolder {
+    position: relative;
+    width: 92vw;
+    max-width: 1100px;
+    max-height: 88vh;
+    background-color: rgb(33, 37, 41);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.wf-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: rgb(20, 23, 26);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    flex-shrink: 0;
+    gap: 12px;
+}
+.wf-header-title {
+    display: flex;
+    align-items: center;
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+.wf-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.wf-path {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: rgb(27, 30, 33);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    flex-shrink: 0;
+}
+.wf-path-text {
+    color: rgba(255,255,255,0.4);
+    font-size: 0.75rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.wf-filelist {
     overflow-y: auto;
+    flex: 1;
+    padding: 8px 0;
+}
+.wf-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    gap: 8px;
+}
+.wf-row:hover { background: rgba(255,255,255,0.04); }
+.wf-name { flex: 1; overflow: hidden; }
+.wf-entry {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    max-width: 100%;
+    overflow: hidden;
+}
+.wf-entry span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 0.85rem;
+}
+.wf-dir  span { color: var(--bs-success); }
+.wf-pdf  span { color: var(--bs-info); }
+.wf-img  span { color: var(--bs-info); }
+.wf-other span { color: rgba(255,255,255,0.5); cursor: default; }
+.wf-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
 }
 
 
