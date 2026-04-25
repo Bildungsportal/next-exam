@@ -174,16 +174,10 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
             const wmKeys = [...gnomeShortcutConfig.wm.critical, ...gnomeShortcutConfig.wm.niceToHave];
             for (const binding of wmKeys) {
                 logGsettingsValue(gnomeShortcutConfig.wm.schema, binding, 'enable-gnome-wm-before-set');
-                childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.wm.schema, binding, `['']`]);
+                childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.wm.schema, binding, `[]`]);
                 logGsettingsValue(gnomeShortcutConfig.wm.schema, binding, 'enable-gnome-wm-after-set');
             }
             childProcess.exec('gsettings set org.gnome.desktop.wm.preferences num-workspaces 1');
-            if (!platformDispatcher.isWayland) {
-                configStore.linux.srvrkeysNoneSet = true;
-                childProcess.exec('setxkbmap -option srvrkeys:none', (err) => {
-                    if (err) log.warn('platformrestrictions @ enableRestrictions (GNOME/Unity): setxkbmap srvrkeys:none failed', err.message);
-                });
-            }
         } catch (err) {
             log.error(`platformrestrictions @ enableRestrictions (gsettings/wm): ${err}`);
         }
@@ -194,32 +188,32 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
                 const waylandKeys = [...gnomeShortcutConfig.mutterWayland.critical, ...gnomeShortcutConfig.mutterWayland.niceToHave];
                 for (const binding of waylandKeys) {
                     logGsettingsValue(gnomeShortcutConfig.mutterWayland.schema, binding, 'enable-gnome-wayland-before-set');
-                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.mutterWayland.schema, binding, `['']`]);
-                    childProcess.execFile('dconf', ['write', `/org/gnome/mutter/wayland/keybindings/${binding}`, `['']`]);
+                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.mutterWayland.schema, binding, `[]`]);
+                    childProcess.execFile('dconf', ['write', `/org/gnome/mutter/wayland/keybindings/${binding}`, `[]`]);
                     logGsettingsValue(gnomeShortcutConfig.mutterWayland.schema, binding, 'enable-gnome-wayland-after-set');
                 }
                 const shellKeys = [...gnomeShortcutConfig.shell.critical, ...gnomeShortcutConfig.shell.niceToHave];
                 for (const binding of shellKeys) {
                     logGsettingsValue(gnomeShortcutConfig.shell.schema, binding, 'enable-gnome-shell-before-set');
-                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.shell.schema, binding, `['']`]);
+                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.shell.schema, binding, `[]`]);
                     logGsettingsValue(gnomeShortcutConfig.shell.schema, binding, 'enable-gnome-shell-after-set');
                 }
                 const mutterKeys = [...gnomeShortcutConfig.mutter.critical, ...gnomeShortcutConfig.mutter.niceToHave];
                 for (const binding of mutterKeys) {
                     logGsettingsValue(gnomeShortcutConfig.mutter.schema, binding, 'enable-gnome-mutter-before-set');
-                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.mutter.schema, binding, `['']`]);
+                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.mutter.schema, binding, `[]`]);
                     logGsettingsValue(gnomeShortcutConfig.mutter.schema, binding, 'enable-gnome-mutter-after-set');
                 }
                 const dockKeys = [...gnomeShortcutConfig.dashToDock.critical, ...gnomeShortcutConfig.dashToDock.niceToHave];
                 for (const binding of dockKeys) {
                     logGsettingsValue(gnomeShortcutConfig.dashToDock.schema, binding, 'enable-gnome-dock-before-set');
-                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.dashToDock.schema, binding, `['']`]);
+                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.dashToDock.schema, binding, `[]`]);
                     logGsettingsValue(gnomeShortcutConfig.dashToDock.schema, binding, 'enable-gnome-dock-after-set');
                 }
                 // Ubuntu Tiling Assistant (Super+Arrow) – overrides mutter when present
                 const tilingKeys = [...gnomeShortcutConfig.tilingAssistant.critical, ...gnomeShortcutConfig.tilingAssistant.niceToHave];
                 for (const binding of tilingKeys) {
-                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.tilingAssistant.schema, binding, `['']`], () => {});
+                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.tilingAssistant.schema, binding, `[]`], () => {});
                 }
                 childProcess.execFile('gsettings', ['set', 'org.gnome.mutter', 'overlay-key', `''`]);
                 childProcess.exec('gsettings set org.gnome.mutter dynamic-workspaces false');
@@ -262,6 +256,13 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
                 }
             });
         }
+    }
+
+    if (!platformDispatcher.isWayland) {
+        configStore.linux.srvrkeysNoneSet = true;
+        childProcess.exec('setxkbmap -option srvrkeys:none', (err) => {
+            if (err) log.warn('platformrestrictions @ enableRestrictions (linux): setxkbmap srvrkeys:none failed', err.message);
+        });
     }
 
     try {
