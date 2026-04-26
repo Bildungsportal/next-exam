@@ -1,0 +1,568 @@
+<template>
+    <div v-if="visible" class="examlog-overlay" @click.self="$emit('close')">
+        <div class="examlog-modal" @click.stop>
+
+            <!-- Header -->
+            <div class="examlog-header">
+                <div class="examlog-title">
+                    <img src="/src/assets/img/svg/speedometer.svg" class="white" width="18" height="18" style="vertical-align: -3px; margin-right: 6px;">
+                    {{ $t('examlog.title') }}
+                </div>
+                <button type="button" class="btn-close btn-close-white" @click="$emit('close')"></button>
+            </div>
+
+            <!-- Info bar -->
+            <div class="examlog-infobar">
+                <div class="examlog-chip">
+                    <span class="examlog-chip-label">{{ $t('examlog.server') }}</span>
+                    <span class="examlog-chip-value">{{ examName }}</span>
+                </div>
+                <div class="examlog-chip">
+                    <span class="examlog-chip-label">{{ $t('examlog.start') }}</span>
+                    <span class="examlog-chip-value">{{ examStart || '–' }}</span>
+                </div>
+                <div class="examlog-chip">
+                    <span class="examlog-chip-label">{{ $t('examlog.end') }}</span>
+                    <span class="examlog-chip-value">{{ examEnd || '–' }}</span>
+                </div>
+                <div class="examlog-chip">
+                    <span class="examlog-chip-label">{{ $t('examlog.students') }}</span>
+                    <span class="examlog-chip-value">{{ studentSummaries.length }}</span>
+                </div>
+                <div class="ms-auto d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-teal" @click="showPrintPreview">
+                        <img src="/src/assets/img/svg/print.svg" class="white" width="15" height="15" style="vertical-align: -2px;">
+                        {{ $t('examlog.print') }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Empty state -->
+            <div v-if="!events || events.length === 0" class="examlog-empty">
+                {{ $t('examlog.nodata') }}
+            </div>
+
+            <!-- Content -->
+            <div v-else class="examlog-content">
+
+                <!-- Server events strip -->
+                <div v-if="serverEvents.length" class="examlog-server-strip">
+                    <div v-for="(ev, idx) in serverEvents" :key="idx" class="examlog-server-event">
+                        <span class="examlog-server-time">{{ ev.time }}</span>
+                        <span class="examlog-server-label">{{ typeLabel(ev.type) }}</span>
+                    </div>
+                </div>
+
+                <!-- Student cards -->
+                <div class="examlog-cards">
+                    <div v-for="s in studentSummaries" :key="s.name" class="examlog-card">
+
+                        <!-- Card header -->
+                        <div class="examlog-card-header">
+                            <div class="examlog-card-name">{{ s.name }}</div>
+                            <div class="examlog-card-badges">
+                                <span class="badge" :class="s.secured ? 'bg-danger' : 'bg-secondary'">
+                                    {{ s.secured ? $t('examlog.secured') : $t('examlog.ev_unsecured') }}
+                                </span>
+                                <span v-if="s.kicked" class="badge bg-warning text-dark">
+                                    {{ $t('examlog.kicked') }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Card meta -->
+                        <div class="examlog-card-meta">
+                            <span v-if="s.hostname" class="examlog-meta-item">{{ s.hostname }}</span>
+                            <span v-if="s.hostname && s.ip" class="examlog-meta-sep">|</span>
+                            <span v-if="s.ip" class="examlog-meta-item">{{ s.ip }}</span>
+                            <span v-if="s.virtualized || s.vmFindings?.isVM || s.webglFindings?.detected" class="examlog-meta-sep">|</span>
+                            <span v-if="s.virtualized || s.vmFindings?.isVM || s.webglFindings?.detected" class="examlog-meta-item examlog-meta-warn" :title="vmDetails(s)">
+                                {{ $t('dashboard.virtualized') }}
+                            </span>
+                            <span v-if="s.remoteassistant" class="examlog-meta-sep">|</span>
+                            <span v-if="s.remoteassistant" class="examlog-meta-item examlog-meta-warn" :title="remoteDetails(s)">
+                                {{ $t('dashboard.remoteassistant') }}
+                            </span>
+                        </div>
+
+                        <!-- Stats row -->
+                        <div class="examlog-stats">
+                            <div class="examlog-stat">
+                                <span class="examlog-stat-label">{{ $t('examlog.submissions') }}</span>
+                                <span class="examlog-stat-value" :class="s.submissionCount > 0 ? 'text-teal' : ''">{{ s.submissionCount }}</span>
+                            </div>
+                            <div class="examlog-stat">
+                                <span class="examlog-stat-label">{{ $t('examlog.focuslost') }}</span>
+                                <span class="examlog-stat-value" :class="s.focusLostCount > 0 ? 'text-warning' : ''">{{ s.focusLostCount }}</span>
+                            </div>
+                            <div class="examlog-stat">
+                                <span class="examlog-stat-label">{{ $t('examlog.relogins') }}</span>
+                                <span class="examlog-stat-value" :class="s.reloginCount > 0 ? 'text-warning' : ''">{{ s.reloginCount }}</span>
+                            </div>
+                            <div class="examlog-stat">
+                                <span class="examlog-stat-label">{{ $t('examlog.printrequests') }}</span>
+                                <span class="examlog-stat-value" :class="s.printRequests > 0 ? 'text-warning' : ''">{{ s.printRequests }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Timeline -->
+                        <div class="examlog-timeline">
+                            <div v-for="(ev, idx) in s.events" :key="idx" class="examlog-timeline-entry">
+                                <span class="examlog-tl-time">{{ ev.time }}</span>
+                                <span class="examlog-tl-dot" :class="dotClass(ev.type)"></span>
+                                <span class="examlog-tl-label" :class="labelClass(ev.type)">{{ typeLabel(ev.type) }}</span>
+                                <span v-if="idx + 1 < s.events.length" class="examlog-tl-sep">›</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Print preview overlay -->
+    <div v-if="printPreviewVisible" class="examlog-overlay-print" @click.self="printPreviewVisible = false">
+        <div class="examlog-modal-print" @click.stop>
+            <div class="examlog-print-header">
+                <span>{{ $t('examlog.title') }} – {{ examName }}</span>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-teal" @click="triggerPrint">
+                        <img src="/src/assets/img/svg/print.svg" class="white" width="15" height="15" style="vertical-align: -2px;">
+                        {{ $t('examlog.print') }}
+                    </button>
+                    <button type="button" class="btn-close btn-close-white" @click="printPreviewVisible = false"></button>
+                </div>
+            </div>
+            <iframe ref="printFrame" :srcdoc="printHtml" style="width:100%; flex:1; border:none; background:#fff;"></iframe>
+        </div>
+    </div>
+</template>
+
+<script>
+export default {
+    name: 'ExamLog',
+    props: {
+        visible:   { type: Boolean, default: false },
+        examName:  { type: String,  default: '' },
+        examStart: { type: String,  default: null },
+        examEnd:   { type: String,  default: null },
+        events:    { type: Array,   default: () => [] },
+    },
+
+    data() {
+        return {
+            printPreviewVisible: false,
+            printHtml: '',
+        }
+    },
+
+    computed: {
+        SERVER_TYPES() {
+            return ['serverstart', 'serverstop', 'examstart', 'examend']
+        },
+
+        serverEvents() {
+            return (this.events || []).filter(ev =>
+                this.SERVER_TYPES.includes(ev.type) || !ev.student
+            )
+        },
+
+        studentSummaries() {
+            const students = {}
+            const SERVER_TYPES = this.SERVER_TYPES
+
+            for (const ev of (this.events || [])) {
+                if (SERVER_TYPES.includes(ev.type) || !ev.student) continue
+
+                const name = ev.student
+                if (!students[name]) {
+                    students[name] = {
+                        name,
+                        hostname: ev.hostname || '',
+                        ip: ev.ip || '',
+                        secured: false,
+                        kicked: false,
+                        submissionCount: 0,
+                        focusLostCount: 0,
+                        reloginCount: 0,
+                        printRequests: 0,
+                        virtualized: false,
+                        vmFindings: null,
+                        webglFindings: null,
+                        remoteassistant: null,
+                        events: [],
+                    }
+                }
+                const s = students[name]
+                s.events.push(ev)
+
+                // pick up security findings from any event that carries them
+                if (ev.virtualized)     s.virtualized = true
+                if (ev.vmFindings)      s.vmFindings = ev.vmFindings
+                if (ev.webglFindings)   s.webglFindings = ev.webglFindings
+                if (ev.remoteassistant) s.remoteassistant = ev.remoteassistant
+
+                if (ev.type === 'login') {
+                    if (s.kicked) {
+                        s.reloginCount++
+                        s.kicked = false
+                    }
+                }
+                if (ev.type === 'relogin')    { s.reloginCount++ }
+                if (ev.type === 'focuslost')  { s.focusLostCount++ }
+                if (ev.type === 'submission') { s.submissionCount++ }
+                if (ev.type === 'printrequest') { s.printRequests++ }
+                if (ev.type === 'secured')    { s.secured = true }
+                if (ev.type === 'unsecured')  { s.secured = false }
+                if (ev.type === 'kick')       { s.kicked = true }
+            }
+
+            return Object.values(students)
+        },
+    },
+
+    methods: {
+        vmDetails(s) {
+            const parts = []
+            if (s.vmFindings?.reasons?.length) parts.push(...s.vmFindings.reasons)
+            if (s.vmFindings?.vendor) parts.push('Vendor: ' + s.vmFindings.vendor)
+            if (s.webglFindings?.vendor) parts.push('WebGL Vendor: ' + s.webglFindings.vendor)
+            if (s.webglFindings?.renderer) parts.push('WebGL Renderer: ' + s.webglFindings.renderer)
+            return parts.join(' | ') || '–'
+        },
+
+        remoteDetails(s) {
+            const parts = []
+            if (s.remoteassistant?.keywords?.length) parts.push('Keywords: ' + s.remoteassistant.keywords.join(', '))
+            if (s.remoteassistant?.ports?.length) parts.push('Ports: ' + s.remoteassistant.ports.join(', '))
+            return parts.join(' | ') || '–'
+        },
+
+        typeLabel(type) {
+            if (!type) return ''
+            const key = `examlog.ev_${type}`
+            const translated = this.$t(key)
+            return translated === key ? type : translated
+        },
+
+        dotClass(type) {
+            if (type === 'login' || type === 'relogin') return 'dot-success'
+            if (type === 'focuslost')  return 'dot-danger'
+            if (type === 'submission') return 'dot-teal'
+            if (type === 'printrequest') return 'dot-warning'
+            if (type === 'kick')       return 'dot-warning'
+            if (type === 'secured')    return 'dot-danger'
+            if (type === 'unsecured')  return 'dot-secondary'
+            return 'dot-secondary'
+        },
+
+        labelClass(type) {
+            if (type === 'login' || type === 'relogin') return 'tl-success'
+            if (type === 'focuslost')    return 'tl-danger'
+            if (type === 'submission')   return 'tl-teal'
+            if (type === 'printrequest') return 'tl-warning'
+            if (type === 'kick')         return 'tl-warning'
+            if (type === 'secured')      return 'tl-danger'
+            return ''
+        },
+
+        showPrintPreview() {
+            this.printHtml = this.buildPrintHtml()
+            this.printPreviewVisible = true
+        },
+
+        triggerPrint() {
+            this.$refs.printFrame?.contentWindow?.print()
+        },
+
+        buildPrintHtml() {
+            const tl = (type) => {
+                const key = `examlog.ev_${type}`
+                const t = this.$t(key)
+                return t === key ? type : t
+            }
+
+            const sevs = this.serverEvents
+            const times = (type) => sevs.filter(e => e.type === type).map(e => e.time).join(', ') || '–'
+            const serverSummaryRow = `<tr>
+                <td>${times('serverstart')}</td>
+                <td>${times('serverstop')}</td>
+                <td>${times('examstart')}</td>
+                <td>${times('examend')}</td>
+            </tr>`
+
+            const countWithTimes = (count, events, type) => {
+                const times = events.filter(e => e.type === type).map(e => e.time).join(', ')
+                return count > 0
+                    ? `<b>${count}</b> <span style="color:#666;">${times}</span>`
+                    : `<span style="color:#aaa;">0</span>`
+            }
+
+            const studentRows = this.studentSummaries.map(s => {
+                const loginEvents = s.events.filter(e => e.type === 'login' || e.type === 'relogin')
+                const loginTimes  = loginEvents.map(e => e.time).join(', ') || '–'
+                const vmText = (s.virtualized || s.vmFindings?.isVM || s.webglFindings?.detected)
+                    ? `<b style="color:#c77700;">Ja</b> <span style="color:#666;">${this.vmDetails(s)}</span>`
+                    : 'Nein'
+                const raText = s.remoteassistant
+                    ? `<b style="color:#c77700;">Ja</b> <span style="color:#666;">${this.remoteDetails(s)}</span>`
+                    : 'Nein'
+                return `<tr>
+                    <td>${s.name}</td>
+                    <td>${s.hostname || '–'}${s.ip ? ' | ' + s.ip : ''}</td>
+                    <td>${loginTimes}</td>
+                    <td>${countWithTimes(s.submissionCount, s.events, 'submission')}</td>
+                    <td>${countWithTimes(s.focusLostCount, s.events, 'focuslost')}</td>
+                    <td>${countWithTimes(s.printRequests, s.events, 'printrequest')}</td>
+                    <td>${countWithTimes(s.events.filter(e => e.type === 'kick').length, s.events, 'kick')}</td>
+                    <td>${vmText}</td>
+                    <td>${raText}</td>
+                </tr>`
+            }).join('')
+
+            return `<!DOCTYPE html><html><head><meta charset="utf-8">
+            <style>
+                @page { size: A4 landscape; margin: 12mm; }
+                * { box-sizing: border-box; }
+                body { font-family: sans-serif; font-size: 9px; color: #111; margin: 8mm; }
+                h2 { font-size: 12px; margin-bottom: 3px; }
+                h3 { font-size: 9px; margin: 8px 0 3px 0; color: #444; text-transform: uppercase; letter-spacing: 0.05em; }
+                table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+                th, td { border: 1px solid #ccc; padding: 2px 4px; text-align: left; vertical-align: top; word-break: break-word; white-space: normal; }
+                th { background: #eee; font-size: 8px; }
+                .server-table td { color: #555; }
+            </style></head><body>
+            <h2>${this.$t('examlog.title')} – ${this.examName}</h2>
+            <div style="font-size:11px; margin-bottom:10px; color:#666;">
+                ${this.$t('examlog.start')}: ${this.examStart || '–'} &nbsp;|&nbsp;
+                ${this.$t('examlog.end')}: ${this.examEnd || '–'} &nbsp;|&nbsp;
+                ${this.$t('examlog.students')}: <b>${this.studentSummaries.length}</b>
+            </div>
+
+            <h3>${this.$t('examlog.server')}</h3>
+            <table class="server-table">
+                <thead>
+                    <tr>
+                        <th>${this.$t('examlog.ev_serverstart')}</th>
+                        <th>${this.$t('examlog.ev_serverstop')}</th>
+                        <th>${this.$t('examlog.ev_examstart')} (${this.$t('examlog.secured')})</th>
+                        <th>${this.$t('examlog.ev_examend')} (${this.$t('examlog.ev_unsecured')})</th>
+                    </tr>
+                </thead>
+                <tbody>${serverSummaryRow}</tbody>
+            </table>
+
+            <h3>${this.$t('examlog.students')}</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>${this.$t('examlog.students')}</th>
+                        <th>Host / IP</th>
+                        <th>Login</th>
+                        <th>${this.$t('examlog.submissions')}</th>
+                        <th>${this.$t('examlog.focuslost')}</th>
+                        <th>${this.$t('examlog.printrequests')}</th>
+                        <th>${this.$t('examlog.kicked')}</th>
+                        <th>${this.$t('dashboard.virtualized')}</th>
+                        <th>${this.$t('dashboard.remoteassistant')}</th>
+                    </tr>
+                </thead>
+                <tbody>${studentRows}</tbody>
+            </table>
+            </body></html>`
+        },
+    },
+}
+</script>
+
+<style scoped>
+/* Overlay & modal */
+.examlog-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.65);
+    z-index: 4000;
+    display: flex; align-items: center; justify-content: center;
+}
+.examlog-modal {
+    width: 92vw; max-width: 1200px;
+    height: 92vh; max-height: 92vh;
+    background: rgb(33, 37, 41);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+    display: flex; flex-direction: column;
+}
+
+/* Header */
+.examlog-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    background: rgb(20, 23, 26);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
+}
+.examlog-title { color: #fff; font-weight: 600; font-size: 1.05rem; }
+
+/* Info bar */
+.examlog-infobar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    padding: 8px 16px;
+    background: rgb(20, 23, 26);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+}
+.examlog-chip {
+    display: inline-flex; align-items: baseline; gap: 5px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 6px;
+    padding: 3px 8px;
+}
+.examlog-chip-label {
+    color: rgba(255,255,255,0.45);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.examlog-chip-value {
+    color: #fff;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+/* Empty */
+.examlog-empty { padding: 24px 16px; color: rgba(255,255,255,0.5); }
+
+/* Content scroll area */
+.examlog-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+}
+
+/* Server strip */
+.examlog-server-strip {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+.examlog-server-event {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 0.78rem; color: rgba(255,255,255,0.55);
+}
+.examlog-server-time { color: rgba(255,255,255,0.35); }
+
+/* Cards grid */
+.examlog-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.examlog-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+/* Card header */
+.examlog-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 4px;
+}
+.examlog-card-name {
+    color: #fff; font-weight: 600; font-size: 0.9rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.examlog-card-badges { display: flex; gap: 4px; flex-shrink: 0; }
+
+/* Card meta */
+.examlog-card-meta {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 6px;
+}
+.examlog-meta-item { color: rgba(255,255,255,0.4); font-size: 0.73rem; }
+.examlog-meta-sep { color: rgba(255,255,255,0.15); font-size: 0.73rem; }
+.examlog-meta-warn { color: var(--bs-warning) !important; cursor: default; }
+
+/* Stats + Timeline share the same 4-column grid so columns align */
+.examlog-stats,
+.examlog-timeline {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+}
+.examlog-stats {
+    margin-bottom: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+.examlog-stat {
+    display: flex; flex-direction: column; align-items: flex-start;
+    padding: 4px 10px 4px 12px;
+    border-right: 1px solid rgba(255,255,255,0.06);
+}
+.examlog-stat:last-child { border-right: none; }
+.examlog-stat-label { color: rgba(255,255,255,0.4); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.examlog-stat-value { font-size: 1rem; font-weight: 700; color: rgba(255,255,255,0.75); }
+.text-teal   { color: var(--bs-teal) !important; }
+.text-warning{ color: var(--bs-warning) !important; }
+
+/* Timeline */
+.examlog-timeline {
+    padding: 4px 0;
+}
+.examlog-timeline-entry {
+    display: flex; align-items: center; gap: 3px;
+    padding: 2px 6px 2px 12px;
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.55);
+    white-space: nowrap;
+    border-right: 1px solid rgba(255,255,255,0.06);
+}
+.examlog-timeline-entry:last-child { border-right: none; }
+.examlog-tl-time { color: rgba(255,255,255,0.3); margin-right: 2px; }
+.examlog-tl-dot {
+    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+.dot-success   { background: var(--bs-success); }
+.dot-danger    { background: var(--bs-danger); }
+.dot-warning   { background: var(--bs-warning); }
+.dot-teal      { background: var(--bs-teal); }
+.dot-secondary { background: var(--bs-secondary); }
+.examlog-tl-sep { color: rgba(255,255,255,0.2); margin-left: 3px; }
+.tl-success { color: var(--bs-success); }
+.tl-danger  { color: var(--bs-danger); }
+.tl-warning { color: var(--bs-warning); }
+.tl-teal    { color: var(--bs-teal); }
+
+/* Print preview */
+.examlog-overlay-print {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 9100;
+    display: flex; align-items: center; justify-content: center;
+}
+.examlog-modal-print {
+    width: 88vw; max-width: 1100px;
+    height: 80vh;
+    background: rgb(33,37,41);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+}
+.examlog-print-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px;
+    background: rgb(20,23,26);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    color: #fff; font-size: 0.9rem; font-weight: 600;
+    flex-shrink: 0;
+}
+</style>

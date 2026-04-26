@@ -32,7 +32,7 @@ function startExam(){
     examEventBus.examStart = new Date().toLocaleString('de-DE')
     examEventBus._scheduleSave()
     log.info("exammanagment @ startExam: starting exammode")
-    this.studentlist.forEach(s => examEventBus.push('examstart', s))
+    examEventBus.push('examstart')
     this.visualfeedback(this.$t("dashboard.startexam"))
     this.setServerStatus()
 }
@@ -75,7 +75,7 @@ function endExam(){
             this.serverstatus.exammode = false;
             examEventBus.examEnd = new Date().toLocaleString('de-DE')
             examEventBus._scheduleSave()
-            this.studentlist.forEach(s => examEventBus.push('examend', s))
+            examEventBus.push('examend')
             this.lockscreens(false, false); // deactivate lockscreen
             this.setServerStatus()
         }
@@ -130,7 +130,7 @@ function stopserver(){
                 await this.updateBiPServerInfo("offline");
             }
 
-            examEventBus.push('serverstop', { clientname: '', hostname: '', clientip: '' })
+            examEventBus.push('serverstop')
             await examEventBus._save()  // save synchronously before navigation
             await ipcRenderer.invoke("stopserver", this.servername)  // need to stop server first otherwise router.js won't route back
 

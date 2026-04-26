@@ -243,9 +243,7 @@
                 <li v-if="config.exammodes && config.exammodes.localvm"><a class="dropdown-item" @click="selectExamType('localvm')" :class="{ active: isExamType('localvm') }">LocalVM</a> </li>
             </ul>
             </div>
-            <button v-if="!isExamType('activesheets') && !isExamType('math') && !isExamType('website') && !isExamType('eduvidual') && !isExamType('rdp') && !isExamType('microsoft365')" class="btn btn-sm btn-secondary p-0 sidebar-exammode-settings" :class="lockSettings ? 'disabledexam' : ''" style="width: 31px; height: 31px; display: inline-flex; vertical-align: middle; justify-content: center; align-items: center;" @click="selectExamType(serverstatus.examSections[serverstatus.activeSection].examtype)"  @mouseover="showDescription($t('dashboard.extendedsettings_mode'))"  @mouseout="hideDescription">
-                <img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22">
-            </button>
+     
             </div>
             </div>
 
@@ -932,10 +930,6 @@
             <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;">{{numberOfConnections}} {{$t('dashboard.startexam')}}</div>
         </div>
 
-        <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="getFiles('all', true); hideDescription();"  @mouseover="showDescription($t('dashboard.getfile'))" @mouseout="hideDescription"  :class="lockDownload ? 'disabledexam':''"  style="width:128px; height:62px;display:inline-flex" >
-            <img src="/src/assets/img/svg/edit-download.svg" class="mt-2" width="32" height="32" style="vertical-align: top;">
-            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;">{{$t('dashboard.getfiles')}}</div>
-        </div>
         <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="fetchSubmissions(); loadFilelist(workdirectory);hideDescription();"  @mouseover="showDescription($t('dashboard.showworkfolder'))" @mouseout="hideDescription"  style="width: 128px; height:62px; display:inline-flex">
             <img src="/src/assets/img/svg/folder-open.svg" class="mt-2" width="32" height="32" style="vertical-align: top;" >
             <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;">{{$t('dashboard.workfolder')}}</div>
@@ -958,6 +952,14 @@
                 @mouseover="showDescription($t('dashboard.sendfile'))" 
                 @mouseout="hideDescription">
                 <img src="/src/assets/img/svg/document-send.svg" width="24" height="24">
+            </div>
+
+            <div class="btn btn-cyan tab-button"
+                :class="lockDownload ? 'disabledexam' : ''"
+                @click="getFiles('all', true); hideDescription();"
+                @mouseover="showDescription($t('dashboard.getfile'))"
+                @mouseout="hideDescription">
+                <img src="/src/assets/img/svg/edit-download.svg" width="24" height="24">
             </div>
 
             <div v-if="serverstatus.screenslocked" 
@@ -2679,7 +2681,7 @@ computed: {
             await this.getPreviousServerStatus()
 
             await examEventBus.init(ipcRenderer, this.servername)
-            examEventBus.push('serverstart', { clientname: '', hostname: '', clientip: '' })
+            examEventBus.push('serverstart')
 
             this.fetchInfo()
             this.initializeStudentwidgets()
@@ -2869,7 +2871,7 @@ computed: {
 .tab-buttons-container {
     position: fixed;
     right: 0;
-    top: 244px;
+    top: 198px; /* 244px minus one tab row (42px + gap) after 5th sidebar icon */
    
     display: flex;
     flex-direction: column;
@@ -3027,7 +3029,7 @@ computed: {
     white-space: nowrap;
     text-align: right;
     margin: 0;
-    font-size: 0.7em;
+    font-size: 0.8rem;
 }
 
 

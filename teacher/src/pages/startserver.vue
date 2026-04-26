@@ -704,8 +704,8 @@ export default {
         },
 
         async fetchInfo() {
-            this.hostip = ipcRenderer.sendSync('checkhostip')
-            if (this.hostip && this.hostip.availableInterfaces.length > 1 && !this.hostip.preferredInterface){
+            this.hostip = await ipcRenderer.invoke('checkhostip')
+            if (this.hostip?.availableInterfaces?.length > 1 && !this.hostip.preferredInterface){
                 this.selectPreferredInterface()
             }
         },
