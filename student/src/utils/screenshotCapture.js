@@ -127,6 +127,13 @@ function stopSharedStream(sharedRef) {
   sharedRef.video = null;
 }
 
+/** Reset display stream state so it can be re-acquired on next connect (e.g. after kick/disconnect) */
+export function resetDisplayStream() {
+  stopSharedStream(sharedRef);
+  initAttempted = false;
+  log.info('screenshotCapture @ resetDisplayStream: stream reset, will re-acquire on next connect');
+}
+
 let intervalId = null;
 let sharedRef = { stream: null, video: null };
 let consecutiveFailures = 0;

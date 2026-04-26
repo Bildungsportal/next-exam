@@ -11,7 +11,7 @@
     <div style="flex-shrink: 0; text-align: right;">
         <div class="btn btn-sm btn-cyan m-0 me-1 mt-0" style=" padding:3px; height:32px; width:32px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22" > </div>
         <div class="btn btn-sm btn-danger m-0 me-1 mt-0" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style=" height:32px;"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" >&nbsp; {{$t('dashboard.stopserver')}}&nbsp; </div>
-        <div v-if="!hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 me-1 " style="cursor: unset;">{{ $t("general.offline") }}</div>
+        <div v-if="!hostip?.hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 me-1 " style="cursor: unset;">{{ $t("general.offline") }}</div>
         <span class="align-middle ms-3" style="font-size:23px;">Dashboard</span>
     </div>
     
@@ -962,6 +962,8 @@
 
             <div v-if="serverstatus.screenslocked" 
                 class="btn btn-danger tab-button" 
+                @mouseover="showDescription($t('dashboard.unlock'))"
+                @mouseout="hideDescription"
                 @click="lockscreens(false);hideDescription();">
                 <img src="/src/assets/img/svg/eye-fill.svg" class="white" width="24" height="24">
             </div>
@@ -986,7 +988,7 @@
 
         <!-- LOG START -->
         <div id="loginfo">
-            <div id="logcheck" @click="fetchLOG();"> <div id="eye" class="darkgreen eyeopen"></div> &nbsp;Server Log</div>
+            <div id="logcheck" @click="fetchLOG();" @mouseover="showDescription($t('dashboard.serverlogdesc'))" @mouseout="hideDescription"> <div id="eye" class="darkgreen eyeopen"></div> &nbsp;Server Log</div>
             
             <div class="logscrollarea" id="logscrollarea">     
                 
@@ -1034,7 +1036,7 @@
                             <div v-if="!student.focus && now - 20000 < student.timestamp" class="kioskwarning" @mouseover="showDescription($t('dashboard.leftkioskinfo'))" @mouseout="hideDescription">{{$t("dashboard.leftkiosk")}}</div>
                             <div v-if="student.status.sendexam && now - 20000 < student.timestamp" class="examrequest" @mouseover="showDescription($t('dashboard.examrequestinfo'))" @mouseout="hideDescription">{{$t("dashboard.examrequest")}}</div>
                             <div v-if="student.remoteassistant && now - 20000 < student.timestamp" class="remoteassistant" @mouseover="showDescription($t('dashboard.remoteassistantinfo'), student.remoteassistant)" @mouseout="hideDescription">{{$t("dashboard.remoteassistant")}}</div>
-                            <span style="border-bottom-right-radius:5px">   
+                            <span >   
                                 <div v-if="now - 20000 < student.timestamp" style="display: inline-block; overflow: hidden; width: 140px; height: 22px" @mouseover="showDescription($t('dashboard.documentsinfo') + student.files)" @mouseout="hideDescription"> 
                                     <img v-for="file in student.files" style="width:22px; margin-left:-4px; position: relative; filter: sepia(10%) hue-rotate(306deg) brightness(0.3) saturate(75);" class="" src="/src/assets/img/svg/document.svg">
                                 </div>
@@ -1111,10 +1113,9 @@
         @close="showExamLog = false"
     />
 
-    <div id="statusbar" class="bg-dark text-white">
-        <div v-if="showDesc" id="description" style="white-space: pre-line;" v-html="currentDescription"></div>
-        <div id="statusdiv">{{ $t('dashboard.connected') }}</div>
-    </div>
+        <div v-if="showDesc" id="description" class="bg-dark text-white" v-html="currentDescription"></div>
+        <div id="statusdiv" class="bg-dark text-white">{{ $t('dashboard.connected') }}</div>
+    
 </div>
 </template>
 
@@ -1136,6 +1137,7 @@ import PdfviewPane from '../components/PdfviewPane.vue'
 import PdfRenderer from '../components/PdfRenderer.vue'
 import ExamLog from '../components/ExamLog.vue'
 import examEventBus from '../utils/examEventBus.js'
+import { STUDENT_HEARTBEAT_STALE_MS, isStudentReachable, countReachableStudents } from '../utils/studentPresence.js'
 
 import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile, createSharingLink, fileExistsInAppFolder, downloadFilesFromOneDrive} from '../msalutils/onedrive'
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
@@ -1432,7 +1434,7 @@ computed: {
     
     lockSendFile() {
         const examType = this.serverstatus.examSections[this.serverstatus.activeSection].examtype;
-        return this.studentlist.length === 0 || examType === 'eduvidual' || examType === 'microsoft365';
+        return countReachableStudents(this.studentlist) === 0 || examType === 'eduvidual' || examType === 'microsoft365';
     },
 
     lockSettings() {
@@ -1615,8 +1617,8 @@ computed: {
             }
             this.now = new Date().getTime()
 
-            this.hostip = ipcRenderer.sendSync('checkhostip')
-            if (!this.hostip) return;
+            this.hostip = await ipcRenderer.invoke('checkhostip')
+            if (!this.hostip?.hostip) return;
 
             if (this.bipToken && this.serverstatus.bip) {
                 this.updateBiPServerInfo(this.bipStatus);
@@ -1677,7 +1679,7 @@ computed: {
                         for (let i = 0; i < this.studentwidgets.length; i++){  // we cant use (for .. of) or forEach because it creates a workingcopy of the original object
                             if (student.token == this.studentwidgets[i].token){ 
                                 //now update the entry in the original widgets object and check if the student is online
-                                if (this.now - 20000 > student.timestamp){
+                                if (this.now - STUDENT_HEARTBEAT_STALE_MS > student.timestamp){
                                     if (this.studentwidgets[i].online && !this.muteAudio){ // play short soundfile on the first time the student timestamp is older than 20 seconds
                                         console.log(`dashboard @ fetchInfo: student ${student.clientname} just went offline`)
                                         const audio = new Audio('dialog-warning.oga');
@@ -1723,6 +1725,7 @@ computed: {
                     }
                     else {
                         //replace empty widget with student
+                        student.online = isStudentReachable(student, this.now)
                         examEventBus.push('login', student)
                         for (let i = 0; i < this.studentwidgets.length; i++){  // we cant use (for .. of) or forEach because it creates a workingcopy of the original object
                             if (!this.studentwidgets[i].clientname){ //clientname == false in an emptyWidget so we found one
@@ -1945,28 +1948,28 @@ computed: {
       
         async showDescription(description, info=false, isHtml=false) {
             if (info) {
-                description += '\n';
+                description += ' | ';
                 // remoteassistant: keywords and ports
                 if (info.keywords?.length > 0) {
-                    description += '\n';
+                    
                     description += `Keywords: ${info.keywords.join(', ')}`;
                 }
                 if (info.ports?.length > 0) {
-                    description += '\n';
+                    description += '|';
                     description += `Ports: ${info.ports.join(', ')}`;
                 }
                 // virtualized: vmFindings (backend) and webglFindings (frontend)
                 const vm = info.vmFindings;
                 const webgl = info.webglFindings;
                 if (vm?.isVM && vm?.reasons?.length > 0) {
-                    description += '\n\n' + this.$t('dashboard.vmFindingsBackend') + '\n';
-                    description += vm.reasons.map(r => '• ' + r).join('\n');
-                    if (vm.vendor) description += '\n' + this.$t('dashboard.vmFindingsVendor') + ': ' + vm.vendor;
+                    description += ' ||' + this.$t('dashboard.vmFindingsBackend') + '|';
+                    description += vm.reasons.map(r => '• ' + r).join('|');
+                    if (vm.vendor) description += '|' + this.$t('dashboard.vmFindingsVendor') + ': ' + vm.vendor;
                 }
                 if (webgl?.detected) {
-                    description += '\n\n' + this.$t('dashboard.vmFindingsWebgl');
-                    if (webgl.vendor) description += '\n• Vendor: ' + webgl.vendor;
-                    if (webgl.renderer) description += '\n• Renderer: ' + webgl.renderer;
+                    description += ' ||' + this.$t('dashboard.vmFindingsWebgl');
+                    if (webgl.vendor) description += '|• Vendor: ' + webgl.vendor;
+                    if (webgl.renderer) description += '|• Renderer: ' + webgl.renderer;
                 }
             }
             this.currentDescription = isHtml ? description : description.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
@@ -2730,6 +2733,8 @@ computed: {
         
   
 
+        // fired by the express server (control.js) via webContents.send after a PDF is successfully written to disk
+        // distinguishes between a plain submission (file saved only) and a printrequest (file saved + teacher print dialog)
         ipcRenderer.on('submission', (event, student) => {
             examEventBus.push(student.printrequest ? 'printrequest' : 'submission', student)
         })
@@ -2986,45 +2991,43 @@ computed: {
 
 
 
-#statusdiv {
-    cursor: help;
-}
-
-#statusbar {
+#description {
     position: fixed;
-    left: 0;
+    left: 250px;
     right: 0;
     bottom: 0;
     height: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0 0.5rem;
+    line-height: 1.5rem;
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-right: 6rem;
     z-index: 1500;
     box-sizing: border-box;
-}
-
-#statusbar #description {
-    flex: 1 1 auto;
     min-width: 0;
-    height: 1.5rem;
-    line-height: 1.5rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-size: 0.8em;
+    text-align: left !important;
     margin: 0;
-    padding: 0;
 }
 
-#statusbar #statusdiv {
-    flex: 0 0 auto;
+#statusdiv {
+    position: fixed;
+    right: 0;
+    bottom: 0;
     height: 1.5rem;
     line-height: 1.5rem;
+    padding: 0 0.5rem;
+    z-index: 1501;
+    box-sizing: border-box;
+    cursor: help;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-align: right;
     margin: 0;
-    padding: 0;
+    font-size: 0.7em;
 }
 
 
@@ -3341,12 +3344,12 @@ computed: {
 }
 
 .sidebar-footer {
-    margin-top: 6px;
     font-size: 0.8em;
     cursor: pointer;
     user-select: none;
     padding-left: 6px;
-    padding-right: 6px;
+    padding-bottom: 6px;
+    height:1.4rem;
 }
 
 .sidebar-narrow {
@@ -3522,13 +3525,6 @@ computed: {
 
 
 
-#description {
-    font-size: 0.8em;
-    border-bottom-left-radius:5px;
-    border-bottom-right-radius:5px;
-    border-radius: 5px;
-    text-align: left !important;
-}
 
 
 
@@ -3549,6 +3545,7 @@ computed: {
     position: relative;
     width: 92vw;
     max-width: 1100px;
+    min-height: 60vh;
     max-height: 88vh;
     background-color: rgb(33, 37, 41);
     border: 1px solid rgba(255,255,255,0.1);

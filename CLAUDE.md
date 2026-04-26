@@ -35,6 +35,7 @@ When editing existing code:
 - Don't refactor things that aren't broken.
 - Match existing style, even if you'd do it differently.
 - If you notice unrelated dead code, mention it - don't delete it.
+- Never run git restore/reset/clean/rebase/stash/pop/checkout/switch unless the user explicitly requests it.
 
 **Match the repo, not the tutorial (mandatory for new or touched UI/logic):**
 

@@ -595,7 +595,7 @@ class IpcHandler {
         /**
          * re-check hostip and enable multicast client
          */ 
-        ipcMain.on('checkhostip', async (event) => { 
+        const checkHostIpAsync = async () => {
             // Collect all available network interfaces with IP addresses
             const interfaces = networkInterfaces()
             this.availableInterfaces = null
@@ -604,8 +604,8 @@ class IpcHandler {
             Object.keys(interfaces).forEach((interfaceName) => {
                 interfaces[interfaceName].forEach((iface) => {
                     // Filter out loopback and local addresses
-                    if (iface.family === 'IPv4' && 
-                        !iface.address.startsWith('127.') && 
+                    if (iface.family === 'IPv4' &&
+                        !iface.address.startsWith('127.') &&
                         !iface.address.startsWith('169.254.')) {
                         if (!this.availableInterfaces) {
                             this.availableInterfaces = []
@@ -629,16 +629,16 @@ class IpcHandler {
                     this.config.interface = preferred.name
                     // Check if a gateway exists for the preferred interface
                     try {
-                        const {gateway, version, int} = gateway4sync(preferred.name)
+                        const { gateway, version, int } = gateway4sync(preferred.name)
                         this.config.gateway = int === this.preferredInterface
                     } catch (e) {
                         this.config.gateway = false
                     }
                 }
-            } 
+            }
             else {
-                try { 
-                    const {gateway, version, int} =  gateway4sync()
+                try {
+                    const { gateway, version, int } = gateway4sync()
                     this.config.hostip = ip.address(int)
                     this.config.interface = int
                     this.config.gateway = true
@@ -655,7 +655,7 @@ class IpcHandler {
                         const interfaceName = Object.keys(interfaces).find(key => interfaces[key].some(iface => iface.address === this.config.hostip))
                         this.config.interface = interfaceName
 
-                    }  
+                    }
                     catch (e) {
                         log.error("ipcHandler @ checkhostip: Unable to determine ip address")
                         this.config.hostip = false
@@ -664,7 +664,7 @@ class IpcHandler {
                     }
                 }
             }
-           
+
             // check if multicast client is running - otherwise start it
             if (this.config.hostip == "127.0.0.1") { this.config.hostip = false }
 
@@ -678,7 +678,7 @@ class IpcHandler {
                         await this.multicastClient.stop()
                         this.multicastClient.init(this.config.gateway)
                         log.info('main: Multicast client reinitialized')
-                    } 
+                    }
                     catch (e) {
                         log.error('main: Failed to reinitialize multicast client:', e)
                     }
@@ -693,24 +693,31 @@ class IpcHandler {
                                 log.info(`main: Express server restarted on https://${config.hostip}:${config.serverApiPort}`)
                             })
                         })
-                    } 
+                    }
                     else {
                         server.listen(config.serverApiPort, () => {
                             log.info(`main: Express server started on https://${config.hostip}:${config.serverApiPort}`)
                         })
                     }
                 }
-            } 
-            // else if (this.config.hostip && this.multicastClient && !this.multicastClient.client.address()) {  // If no IP change but multicast client is not running
-            //     this.multicastClient.init(this.config.gateway)
-            // }
-              
-            event.returnValue = { 
-                hostip: this.config.hostip, 
+            }
+
+            return {
+                hostip: this.config.hostip,
                 interface: this.config.interface,
                 availableInterfaces: this.availableInterfaces,
-                preferredInterface: this.preferredInterface 
+                preferredInterface: this.preferredInterface
             }
+        }
+
+        // async (invoke) API
+        ipcMain.handle('checkhostip', async () => {
+            return await checkHostIpAsync()
+        })
+
+        // legacy sync (sendSync) API
+        ipcMain.on('checkhostip', async (event) => {
+            event.returnValue = await checkHostIpAsync()
         })
 
         // does what it says..  if more than one interface is found this will set the preferred interface

@@ -702,11 +702,16 @@ import { switchExamSection } from './switchExamSection.js';
         this.multicastClient.clientinfo.ip = false
         this.multicastClient.clientinfo.serverip = false
         this.multicastClient.clientinfo.servername = false
-        this.multicastClient.clientinfo.focus = true  // we are focused 
+        this.multicastClient.clientinfo.focus = true  // we are focused
         //this.multicastClient.clientinfo.exammode = false   // do not set to false until exam window is actually closed  (this is done in endExam())
         this.multicastClient.clientinfo.timestamp = false
         this.multicastClient.clientinfo.localLockdown = false
         //this.multicastClient.clientinfo.virtualized = false  // this check happens only at the application start.. do not reset once set
+        try {
+            WindowHandler.mainwindow?.webContents?.send('reset-screenshot-stream');
+        } catch (e) {
+            log.debug('communicationhandler @ resetConnection: reset-screenshot-stream send', e?.message);
+        }
     }
  
 
