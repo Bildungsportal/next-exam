@@ -274,7 +274,7 @@
         "tokennotvalid": "das token ist ungültig"
     },
     "examlog": {
-        "button": "Exam Log",
+        "button": "Exam Log öffnen",
         "buttondesc": "Detailliertes Prüfungsprotokoll anzeigen",
         "end": "Ende",
         "ev_examend": "Prüfung beendet",
@@ -288,7 +288,9 @@
         "ev_online": "Wieder online",
         "ev_relogin": "Neu verbunden",
         "ev_secured": "Abgesicherter Modus aktiv",
+        "ev_remoteassistant": "Fernunterstützung erkannt",
         "ev_unsecured": "Freigegeben",
+        "ev_virtualized": "Virtualisierung erkannt",
         "ev_submission": "Abgabe eingegangen",
         "ev_printrequest": "Druckanfrage eingegangen",
         "examEnded": "Prüfung beendet",
@@ -298,6 +300,7 @@
         "printrequests": "Druckanfragen",
         "nodata": "Noch keine Ereignisse aufgezeichnet.",
         "print": "Drucken",
+        "printpreview": "Druckvorschau",
         "relogins": "Re-Logins",
         "secured": "Abgesichert",
         "server": "Prüfung",

@@ -274,7 +274,7 @@
         "tokennotvalid": "the token is not valid"
     },
     "examlog": {
-        "button": "Exam Log",
+        "button": "Open exam log",
         "buttondesc": "Show detailed exam protocol",
         "end": "End",
         "ev_examend": "Exam ended",
@@ -288,7 +288,9 @@
         "ev_online": "Back online",
         "ev_relogin": "Reconnected",
         "ev_secured": "Secure mode active",
+        "ev_remoteassistant": "Remote assistance detected",
         "ev_unsecured": "Released",
+        "ev_virtualized": "Virtualization detected",
         "ev_submission": "Submission received",
         "ev_printrequest": "Print request received",
         "examEnded": "Exam ended",
@@ -298,6 +300,7 @@
         "printrequests": "Print requests",
         "nodata": "No events recorded yet.",
         "print": "Print",
+        "printpreview": "Print Preview",
         "relogins": "Re-logins",
         "secured": "Secured",
         "server": "Exam",

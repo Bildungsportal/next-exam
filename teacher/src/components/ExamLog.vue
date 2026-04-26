@@ -30,7 +30,11 @@
                     <span class="examlog-chip-value">{{ studentSummaries.length }}</span>
                 </div>
                 <div class="ms-auto d-flex align-items-center gap-2">
-                    <button class="btn btn-sm btn-teal" @click="showPrintPreview">
+                    <button class="btn btn-sm btn-secondary" @click="showPrintPreview">
+                        <img src="/src/assets/img/svg/print.svg" class="white" width="15" height="15" style="vertical-align: -2px;">
+                        {{ $t('examlog.printpreview') }}
+                    </button>
+                    <button class="btn btn-sm btn-teal" @click="directPrint">
                         <img src="/src/assets/img/svg/print.svg" class="white" width="15" height="15" style="vertical-align: -2px;">
                         {{ $t('examlog.print') }}
                     </button>
@@ -49,7 +53,8 @@
                 <div v-if="serverEvents.length" class="examlog-server-strip">
                     <div v-for="(ev, idx) in serverEvents" :key="idx" class="examlog-server-event">
                         <span class="examlog-server-time">{{ ev.time }}</span>
-                        <span class="examlog-server-label">{{ typeLabel(ev.type) }}</span>
+                        <span class="examlog-server-dot" :class="serverDotClass(ev.type)"></span>
+                        <span class="examlog-server-label" :class="serverLabelClass(ev.type)">{{ typeLabel(ev.type) }}</span>
                     </div>
                 </div>
 
@@ -76,12 +81,14 @@
                             <span v-if="s.hostname && s.ip" class="examlog-meta-sep">|</span>
                             <span v-if="s.ip" class="examlog-meta-item">{{ s.ip }}</span>
                             <span v-if="s.virtualized || s.vmFindings?.isVM || s.webglFindings?.detected" class="examlog-meta-sep">|</span>
-                            <span v-if="s.virtualized || s.vmFindings?.isVM || s.webglFindings?.detected" class="examlog-meta-item examlog-meta-warn" :title="vmDetails(s)">
+                            <span v-if="s.virtualized || s.vmFindings?.isVM || s.webglFindings?.detected" class="examlog-meta-item examlog-meta-warn">
                                 {{ $t('dashboard.virtualized') }}
+                                <span class="examlog-meta-details" v-if="vmDetails(s)"> ({{ vmDetails(s) }})</span>
                             </span>
                             <span v-if="s.remoteassistant" class="examlog-meta-sep">|</span>
-                            <span v-if="s.remoteassistant" class="examlog-meta-item examlog-meta-warn" :title="remoteDetails(s)">
+                            <span v-if="s.remoteassistant" class="examlog-meta-item examlog-meta-warn">
                                 {{ $t('dashboard.remoteassistant') }}
+                                <span class="examlog-meta-details" v-if="remoteDetails(s)"> ({{ remoteDetails(s) }})</span>
                             </span>
                         </div>
 
@@ -122,11 +129,14 @@
         </div>
     </div>
 
+    <!-- Hidden iframe for direct print -->
+    <iframe ref="silentPrintFrame" :srcdoc="silentPrintHtml" style="position:fixed; width:0; height:0; border:none; opacity:0; pointer-events:none;" @load="onSilentFrameLoad"></iframe>
+
     <!-- Print preview overlay -->
     <div v-if="printPreviewVisible" class="examlog-overlay-print" @click.self="printPreviewVisible = false">
         <div class="examlog-modal-print" @click.stop>
             <div class="examlog-print-header">
-                <span>{{ $t('examlog.title') }} – {{ examName }}</span>
+                <span>{{ $t('examlog.printpreview') }}</span>
                 <div class="d-flex align-items-center gap-2">
                     <button class="btn btn-sm btn-teal" @click="triggerPrint">
                         <img src="/src/assets/img/svg/print.svg" class="white" width="15" height="15" style="vertical-align: -2px;">
@@ -151,10 +161,14 @@ export default {
         events:    { type: Array,   default: () => [] },
     },
 
+    emits: ['close'], // required: fragment root cannot inherit listeners (Vue 3)
+
     data() {
         return {
             printPreviewVisible: false,
             printHtml: '',
+            silentPrintHtml: '',
+            _silentPrintPending: false,
         }
     },
 
@@ -214,9 +228,11 @@ export default {
                 if (ev.type === 'focuslost')  { s.focusLostCount++ }
                 if (ev.type === 'submission') { s.submissionCount++ }
                 if (ev.type === 'printrequest') { s.printRequests++ }
-                if (ev.type === 'secured')    { s.secured = true }
-                if (ev.type === 'unsecured')  { s.secured = false }
-                if (ev.type === 'kick')       { s.kicked = true }
+                if (ev.type === 'secured')        { s.secured = true }
+                if (ev.type === 'unsecured')      { s.secured = false }
+                if (ev.type === 'kick')           { s.kicked = true }
+                if (ev.type === 'virtualized')    { s.virtualized = true; if (ev.vmFindings) s.vmFindings = ev.vmFindings; if (ev.webglFindings) s.webglFindings = ev.webglFindings }
+                if (ev.type === 'remoteassistant') { s.remoteassistant = ev.remoteassistant || true }
             }
 
             return Object.values(students)
@@ -224,6 +240,18 @@ export default {
     },
 
     methods: {
+        serverDotClass(type) {
+            if (type === 'serverstart' || type === 'examstart') return 'sdot-success'
+            if (type === 'serverstop'  || type === 'examend')   return 'sdot-danger'
+            return 'sdot-secondary'
+        },
+
+        serverLabelClass(type) {
+            if (type === 'serverstart' || type === 'examstart') return 'tl-success'
+            if (type === 'serverstop'  || type === 'examend')   return 'tl-white'
+            return ''
+        },
+
         vmDetails(s) {
             const parts = []
             if (s.vmFindings?.reasons?.length) parts.push(...s.vmFindings.reasons)
@@ -249,22 +277,26 @@ export default {
 
         dotClass(type) {
             if (type === 'login' || type === 'relogin') return 'dot-success'
-            if (type === 'focuslost')  return 'dot-danger'
-            if (type === 'submission') return 'dot-teal'
-            if (type === 'printrequest') return 'dot-warning'
-            if (type === 'kick')       return 'dot-warning'
-            if (type === 'secured')    return 'dot-danger'
-            if (type === 'unsecured')  return 'dot-secondary'
+            if (type === 'focuslost')       return 'dot-danger'
+            if (type === 'submission')      return 'dot-teal'
+            if (type === 'printrequest')    return 'dot-warning'
+            if (type === 'kick')            return 'dot-warning'
+            if (type === 'secured')         return 'dot-danger'
+            if (type === 'unsecured')       return 'dot-secondary'
+            if (type === 'virtualized')     return 'dot-warning'
+            if (type === 'remoteassistant') return 'dot-warning'
             return 'dot-secondary'
         },
 
         labelClass(type) {
             if (type === 'login' || type === 'relogin') return 'tl-success'
-            if (type === 'focuslost')    return 'tl-danger'
-            if (type === 'submission')   return 'tl-teal'
-            if (type === 'printrequest') return 'tl-warning'
-            if (type === 'kick')         return 'tl-warning'
-            if (type === 'secured')      return 'tl-danger'
+            if (type === 'focuslost')       return 'tl-danger'
+            if (type === 'submission')      return 'tl-teal'
+            if (type === 'printrequest')    return 'tl-warning'
+            if (type === 'kick')            return 'tl-warning'
+            if (type === 'secured')         return 'tl-white'
+            if (type === 'virtualized')     return 'tl-warning'
+            if (type === 'remoteassistant') return 'tl-warning'
             return ''
         },
 
@@ -275,6 +307,17 @@ export default {
 
         triggerPrint() {
             this.$refs.printFrame?.contentWindow?.print()
+        },
+
+        directPrint() {
+            this._silentPrintPending = true
+            this.silentPrintHtml = this.buildPrintHtml()
+        },
+
+        onSilentFrameLoad() {
+            if (!this._silentPrintPending) return
+            this._silentPrintPending = false
+            this.$refs.silentPrintFrame?.contentWindow?.print()
         },
 
         buildPrintHtml() {
@@ -334,7 +377,7 @@ export default {
                 th { background: #eee; font-size: 8px; }
                 .server-table td { color: #555; }
             </style></head><body>
-            <h2>${this.$t('examlog.title')} – ${this.examName}</h2>
+            <h2>${this.$t('examlog.title')} | ${this.examName}</h2>
             <div style="font-size:11px; margin-bottom:10px; color:#666;">
                 ${this.$t('examlog.start')}: ${this.examStart || '–'} &nbsp;|&nbsp;
                 ${this.$t('examlog.end')}: ${this.examEnd || '–'} &nbsp;|&nbsp;
@@ -410,7 +453,7 @@ export default {
 .examlog-infobar {
     display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
     padding: 8px 16px;
-    background: rgb(20, 23, 26);
+    background: rgb(27, 30, 33);
     border-bottom: 1px solid rgba(255,255,255,0.06);
     flex-shrink: 0;
 }
@@ -442,11 +485,15 @@ export default {
     flex: 1;
     overflow-y: auto;
     padding: 12px 16px;
+    /* Row typography tokens; marker uses whole px so layout rounding cannot vary per cell */
+    --examlog-row-font-size: 0.75rem;
+    --examlog-row-line-height: 1.4;
+    --examlog-marker: 7px;
 }
 
 /* Server strip */
 .examlog-server-strip {
-    display: flex; flex-wrap: wrap; gap: 6px;
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
     margin-bottom: 12px;
     padding: 8px 10px;
     background: rgba(255,255,255,0.04);
@@ -454,10 +501,50 @@ export default {
     border: 1px solid rgba(255,255,255,0.06);
 }
 .examlog-server-event {
-    display: flex; align-items: center; gap: 5px;
-    font-size: 0.78rem; color: rgba(255,255,255,0.55);
+    display: inline-grid;
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    align-items: center;
+    column-gap: 5px;
+    font-size: var(--examlog-row-font-size);
+    line-height: var(--examlog-row-line-height);
+    font-family: inherit;
+    font-weight: 400;
+    color: rgba(255,255,255,0.55);
 }
 .examlog-server-time { color: rgba(255,255,255,0.35); }
+.examlog-server-time,
+.examlog-server-label,
+.examlog-tl-time,
+.examlog-tl-label,
+.examlog-tl-sep {
+    font-size: inherit;
+    line-height: inherit;
+    font-family: inherit;
+    font-weight: inherit;
+}
+/* Marker row: grid centers empty spans; slight -em shift matches optical center to text cap height */
+.examlog-server-dot,
+.examlog-tl-dot {
+    display: block;
+    flex: none;
+    width: var(--examlog-marker);
+    height: var(--examlog-marker);
+    min-width: var(--examlog-marker);
+    min-height: var(--examlog-marker);
+    max-width: var(--examlog-marker);
+    max-height: var(--examlog-marker);
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 50%;
+    box-sizing: border-box;
+    place-self: center;
+    transform: translateY(-0.05em);
+}
+.sdot-success  { background: var(--bs-success); }
+.sdot-danger   { background: var(--bs-danger); }
+.sdot-secondary { background: var(--bs-secondary); }
 
 /* Cards grid */
 .examlog-cards {
@@ -491,6 +578,7 @@ export default {
 .examlog-meta-item { color: rgba(255,255,255,0.4); font-size: 0.73rem; }
 .examlog-meta-sep { color: rgba(255,255,255,0.15); font-size: 0.73rem; }
 .examlog-meta-warn { color: var(--bs-warning) !important; cursor: default; }
+.examlog-meta-details { color: rgba(255,255,255,0.45); font-size: 0.68rem; }
 
 /* Stats + Timeline share the same 4-column grid so columns align */
 .examlog-stats,
@@ -516,30 +604,37 @@ export default {
 /* Timeline */
 .examlog-timeline {
     padding: 4px 0;
+    align-items: start;
 }
 .examlog-timeline-entry {
-    display: flex; align-items: center; gap: 3px;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    align-items: center;
+    align-self: start;
+    column-gap: 5px;
     padding: 2px 6px 2px 12px;
-    font-size: 0.72rem;
+    font-size: var(--examlog-row-font-size);
+    line-height: var(--examlog-row-line-height);
+    font-family: inherit;
+    font-weight: 400;
     color: rgba(255,255,255,0.55);
     white-space: nowrap;
     border-right: 1px solid rgba(255,255,255,0.06);
 }
 .examlog-timeline-entry:last-child { border-right: none; }
-.examlog-tl-time { color: rgba(255,255,255,0.3); margin-right: 2px; }
-.examlog-tl-dot {
-    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
-}
+.examlog-tl-time { color: rgba(255,255,255,0.3); }
 .dot-success   { background: var(--bs-success); }
 .dot-danger    { background: var(--bs-danger); }
 .dot-warning   { background: var(--bs-warning); }
 .dot-teal      { background: var(--bs-teal); }
 .dot-secondary { background: var(--bs-secondary); }
-.examlog-tl-sep { color: rgba(255,255,255,0.2); margin-left: 3px; }
+.examlog-tl-sep { color: rgba(255,255,255,0.2); }
 .tl-success { color: var(--bs-success); }
 .tl-danger  { color: var(--bs-danger); }
 .tl-warning { color: var(--bs-warning); }
 .tl-teal    { color: var(--bs-teal); }
+.tl-white   { color: rgba(255,255,255,0.9); }
 
 /* Print preview */
 .examlog-overlay-print {

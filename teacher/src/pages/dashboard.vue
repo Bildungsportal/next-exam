@@ -939,7 +939,7 @@
             <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;" class="">BiP-Status {{bipStatus}}</div>
         </div>
         <div @mouseover="showDescription($t('examlog.buttondesc'))" @mouseout="hideDescription" class="btn btn-dark m-1 mt-0 ms-0 text-start p-1 pt-2 ps-2" @click="showExamLog = true" style="width:128px; height:62px; display:inline-flex">
-            <img src="/src/assets/img/icons/log.png" class="mt-1" width="32" height="32" style="vertical-align: top;">
+            <img src="/src/assets/img/icons/log.png" class="white mt-1" width="32" height="32" style="vertical-align: top;">
             <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;">{{ $t('examlog.button') }}</div>
         </div>
         </div>
@@ -1706,6 +1706,14 @@ computed: {
                                 // log once when student leaves secure exam mode
                                 if (!student.exammode && this.studentwidgets[i].exammode) {
                                     examEventBus.push('unsecured', student)
+                                }
+                                // log once when virtualization is first detected
+                                if (student.virtualized && !this.studentwidgets[i].virtualized) {
+                                    examEventBus.push('virtualized', student)
+                                }
+                                // log once when remote assistant is first detected
+                                if (student.remoteassistant && !this.studentwidgets[i].remoteassistant) {
+                                    examEventBus.push('remoteassistant', student)
                                 }
 
                                 // Overwrite the studentwidget, but correct the group assignment based on the current section
