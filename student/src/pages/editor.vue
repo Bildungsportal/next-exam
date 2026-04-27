@@ -474,6 +474,7 @@
             :src="urlForWebview"
             :visible="webviewVisible"
             :splitview="splitview"
+            :showClose="!splitview"
             :allowed-url="urlForWebview"
             :block-external="true"
             @close="hidepreview"
@@ -518,6 +519,7 @@
                 :src="urlForWebview"
                 :visible="webviewVisible"
                 :splitview="splitview"
+                :showClose="!splitview"
                 :allowed-url="urlForWebview"
                 :block-external="true"
             />

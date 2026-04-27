@@ -69,7 +69,7 @@
       </li>
 
 
-      <li class="nav-item ms-auto d-flex">  <div
+      <li v-if="showClose" class="nav-item ms-auto d-flex">  <div
         type="button"
         class="nav-link btn btn-light btn-sm webview-toolbar-btn"
         @click.stop="closePane"
@@ -104,6 +104,7 @@ export default {
     allowedUrl: { type: String, default: '' },
     blockExternal: { type: Boolean, default: false },
     splitview: { type: Boolean, default: false },
+    showClose: { type: Boolean, default: true },
   },
 
 
@@ -284,6 +285,7 @@ export default {
   justify-content: center;
   align-self: stretch;
   margin-bottom: 0;
+  cursor: pointer !important;
 }
 
 /* Gray compact zoom label; overrides Bootstrap .nav-link blue */
