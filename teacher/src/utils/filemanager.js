@@ -430,8 +430,10 @@ function loadFilelist(directory){
     .then( response => response.json() )
     .then( filelist => {
         //log.error(filelist)
-        filelist.sort()
-        filelist.reverse()
+        filelist.sort((a, b) => {
+            if (a.type === b.type) return a.name.localeCompare(b.name)
+            return a.type === 'dir' ? -1 : 1
+        })
         this.localfiles = filelist;
         this.currentdirectory = directory
         this.currentdirectoryparent = filelist[filelist.length-1].parentdirectory // the currentdirectory and parentdirectory properties are always on [0]
