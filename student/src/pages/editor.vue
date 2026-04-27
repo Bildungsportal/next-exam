@@ -1586,20 +1586,49 @@ export default {
             if (!html || html.trim() === '') return;
             this.clipboardHistory = [html, ...this.clipboardHistory.filter(item => item !== html)].slice(0, 10);
         },
-        copySelection() {
+        async copySelection() {
             const selection = window.getSelection();
-            if (!selection.rangeCount) return;
-            const range = selection.getRangeAt(0);
-            const div = document.createElement('div');
-            div.appendChild(range.cloneContents());
-            const html = div.innerHTML;
-            this.selectedText = html;
-            this.addToClipboardHistory(html);
+            if (selection?.rangeCount) {
+                const range = selection.getRangeAt(0);
+                const div = document.createElement('div');
+                div.appendChild(range.cloneContents());
+                const html = div.innerHTML;
+                this.selectedText = html;
+                this.addToClipboardHistory(html);
+                return;
+            }
+
+            if (!this.webviewVisible) return;
+            const webview = document.getElementById('safebrowser');
+            if (!webview || typeof webview.executeJavaScript !== 'function') return;
+
+            try {
+                const result = await webview.executeJavaScript(`
+                    (() => {
+                        const sel = window.getSelection?.();
+                        if (!sel || sel.rangeCount === 0) return { html: '', text: '' };
+                        const range = sel.getRangeAt(0);
+                        const div = document.createElement('div');
+                        div.appendChild(range.cloneContents());
+                        return { html: div.innerHTML || '', text: sel.toString() || '' };
+                    })()
+                `, true);
+
+                const html = (result && typeof result.html === 'string') ? result.html : '';
+                const text = (result && typeof result.text === 'string') ? result.text : '';
+                const payload = html && html.trim() ? html : (text && text.trim() ? `<p>${text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</p>` : '');
+                if (!payload) return;
+
+                this.selectedText = payload;
+                this.addToClipboardHistory(payload);
+            } catch (err) {
+                console.log('editor @ copySelection: webview selection failed:', err?.message || err);
+            }
         },
-        cutSelection() {
+        async cutSelection() {
             const selection = window.getSelection();
-            if (!selection.rangeCount) return;
-            this.copySelection();
+            if (!selection?.rangeCount) return;
+            await this.copySelection();
             this.editor.chain().focus().deleteSelection().run();
         },
         toggleClipboardSidebar() {
