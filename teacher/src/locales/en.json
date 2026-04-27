@@ -349,7 +349,7 @@
     "startserver": {
         "advanced": "advanced",
         "backupfolder": "Backup-Directory",
-        "backupfolderinfo": "Please provide a path for the backup directory",
+        "backupfolderinfo": "A copy of the working directory will be created in this backup directory.",
         "bipExamListFailedBody": "Could not load the exam list. If exams exist but none appear, the Moodle web service often returns an invalid_response validation error — that must be fixed in the BiP server plugin (return shape vs externallib).",
         "bipExamListFailedTitle": "Bildungsportal",
         "bipNameConflictInfo": "A BiP exam with this name already exists locally. Switch to the 'Bildungsportal' tab to resume it.",
@@ -370,6 +370,9 @@
         "onlineexams": "BiP Exams",
         "previousexams": "Local Exams",
         "pwd": "Password",
+        "pwdconfirm": "Confirm Password",
+        "pwdinfo": "Students cannot leave Exam Mode without this password, even after a connection loss.",
+        "pwdmismatch": "Passwords do not match",
         "resume": "Resume Exam",
         "select": "Select Workdirectory",
         "selectinterface": "Select Network Interface",

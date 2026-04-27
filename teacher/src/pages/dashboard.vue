@@ -3537,7 +3537,7 @@ computed: {
     align-items: center;
     gap: 6px;
     filter: opacity(50%);
-    z-index: 1003;
+    z-index: 800;
 }
 
 .studentslist-controls-btn {

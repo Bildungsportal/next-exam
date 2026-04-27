@@ -536,14 +536,18 @@ export default {
                             <input class="form-check-input"  name=etesttype type="radio" id="math" value="math">
                             <label class="form-check-label" for="math"> ${this.$t("student.math")} </label>
                     </div>
-                    <div class=" m-2 mt-4"> 
-                        <div class="input-group  m-1 mb-1"> 
-                            <span class="input-group-text col-3" style="width:140px;">${this.$t("student.username")} </span>
-                            <input class="form-control" type=text id=localuser placehoder='Username'>
+                    <div class=" m-2 mt-4">
+                        <div class="input-group  m-1 mb-1">
+                            <span class="input-group-text col-3" style="width:175px;">${this.$t("student.username")} </span>
+                            <input class="form-control" type=text id=localuser placehoder='Username' style="width:200px;">
                         </div>
-                        <div class="input-group m-1 mb-1"> 
-                            <span class="input-group-text col-3" style="width:140px;">${this.$t("student.password")}</span>
-                            <input class="form-control" type=password id=localpassword placehoder='Password'>
+                        <div class="input-group m-1 mb-1">
+                            <span class="input-group-text col-3" style="width:175px;">${this.$t("student.password")}</span>
+                            <input class="form-control" type=password id=localpassword placeholder='Passwort' style="width:200px;">
+                        </div>
+                        <div class="input-group m-1 mb-1">
+                            <span class="input-group-text col-3" style="width:175px;">${this.$t("student.passwordconfirm")}</span>
+                            <input class="form-control" type=password id=localpasswordconfirm placeholder='Passwort' style="width:200px;">
                         </div>
                     </div>
                     <hr id="spellcheckSeparator" style="display: block;">
@@ -565,7 +569,8 @@ export default {
                 didOpen:() => {
                     const localUserElement = document.getElementById("localuser");
                     const localPasswordElement = document.getElementById("localpassword");
-                    
+                    const localPasswordConfirmElement = document.getElementById("localpasswordconfirm");
+
                     localUserElement.addEventListener("keypress", function(e) {
                          // var lettersOnly = /^[a-zA-Z ]+$/;
                         var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
@@ -589,11 +594,13 @@ export default {
                     // Add listener directly to input fields to catch Enter when focused
                     localUserElement.addEventListener('keydown', handleEnterKey);
                     localPasswordElement.addEventListener('keydown', handleEnterKey);
-                    
+                    localPasswordConfirmElement.addEventListener('keydown', handleEnterKey);
+
                     // Store handler reference for cleanup (will be cleaned up when dialog closes)
                     this._enterKeyHandler = handleEnterKey;
                     this._enterKeyHandlerUser = handleEnterKey;
                     this._enterKeyHandlerPassword = handleEnterKey;
+                    this._enterKeyHandlerPasswordConfirm = handleEnterKey;
                     
                     const checkboxLT = document.getElementById('checkboxLT');
                     const checkboxSuggestions = document.getElementById('checkboxsuggestions');
@@ -656,6 +663,7 @@ export default {
                     // Remove listeners from input fields if they still exist
                     const localUserElement = document.getElementById("localuser");
                     const localPasswordElement = document.getElementById("localpassword");
+                    const localPasswordConfirmElement = document.getElementById("localpasswordconfirm");
                     if (localUserElement && this._enterKeyHandlerUser) {
                         localUserElement.removeEventListener('keydown', this._enterKeyHandlerUser);
                         this._enterKeyHandlerUser = null;
@@ -664,17 +672,23 @@ export default {
                         localPasswordElement.removeEventListener('keydown', this._enterKeyHandlerPassword);
                         this._enterKeyHandlerPassword = null;
                     }
+                    if (localPasswordConfirmElement && this._enterKeyHandlerPasswordConfirm) {
+                        localPasswordConfirmElement.removeEventListener('keydown', this._enterKeyHandlerPasswordConfirm);
+                        this._enterKeyHandlerPasswordConfirm = null;
+                    }
                 },
                 preConfirm: () => {
                     // Save all input values before dialog closes (Electron 39 compatibility)
                     const localUserElement = document.getElementById('localuser');
                     const localPasswordElement = document.getElementById('localpassword');
+                    const localPasswordConfirmElement = document.getElementById('localpasswordconfirm');
                     const checkboxLTElement = document.getElementById('checkboxLT');
                     const checkboxSuggestionsElement = document.getElementById('checkboxsuggestions');
                     const radioButtons = document.querySelectorAll('input[name="etesttype"]');
-                    
+
                     savedUsername = localUserElement ? localUserElement.value.trim() : '';
                     savedPassword = localPasswordElement ? localPasswordElement.value : '';
+                    const passwordConfirm = localPasswordConfirmElement ? localPasswordConfirmElement.value : '';
                     savedLanguagetool = checkboxLTElement ? checkboxLTElement.checked : false;
                     savedSuggestions = checkboxSuggestionsElement ? checkboxSuggestionsElement.checked : false;
 
@@ -683,14 +697,18 @@ export default {
                             savedExammode = radio.value;
                         }
                     });
-                    
+
                     // Validate mandatory fields
                     if (!savedUsername || savedUsername === '') {
                         this.$swal.showValidationMessage(this.$t("student.nouser") || 'Username is required');
                         return false;
                     }
                     if (!savedPassword || savedPassword === '') {
-                        this.$swal.showValidationMessage(this.$t("student.nopin") || 'Password is required');
+                        this.$swal.showValidationMessage(this.$t("student.nopassword") || 'Password is required');
+                        return false;
+                    }
+                    if (savedPassword !== passwordConfirm) {
+                        this.$swal.showValidationMessage(this.$t("student.pwdmismatch") || 'Passwords do not match');
                         return false;
                     }
                 }

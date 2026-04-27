@@ -349,7 +349,7 @@
     "startserver": {
         "advanced": "fortgeschritten",
         "backupfolder": "Backupverzeichnis",
-        "backupfolderinfo": "Bitte geben Sie einen Pfad für das Backup-Verzeichnis ein",
+        "backupfolderinfo": "Eine Kopie des Arbeitsverzeichnisses wird in diesem Backupverzeichnis angelegt.",
         "bipExamListFailedBody": "Die Prüfungsliste konnte nicht geladen werden. Wenn Prüfungen existieren, aber keine angezeigt werden, liegt oft ein Validierungsfehler in der Moodle-Webservice-Antwort vor (invalid_response) — das muss serverseitig in der BiP-Erweiterung behoben werden.",
         "bipExamListFailedTitle": "Bildungsportal",
         "bipNameConflictInfo": "Eine BiP-Prüfung mit diesem Namen existiert bereits lokal. Wechseln Sie zum Tab 'Bildungsportal' um sie fortzusetzen.",
@@ -370,6 +370,9 @@
         "onlineexams": "BiP Prüfungen",
         "previousexams": "Lokale Prüfungen",
         "pwd": "Passwort",
+        "pwdconfirm": "Passwort bestätigen",
+        "pwdinfo": "Schüler:innen können den Exam Mode ohne dieses Passwort auch bei Verbindungsverlust nicht verlassen.",
+        "pwdmismatch": "Passwörter stimmen nicht überein",
         "resume": "Prüfung fortsetzen",
         "select": "Arbeitsverzeichnis wählen",
         "selectinterface": "Netzwerk-Schnittstelle wählen",

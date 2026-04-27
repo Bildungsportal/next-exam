@@ -19,11 +19,11 @@
     <!-- sidebar -->
     <div id="sidebar" class="p-3 text-white bg-dark h-100 d-flex flex-column position-relative overflow-hidden" style="width: 240px; min-width: 240px;">
         <div class="flex-shrink-0">
-        <div class="btn btn-light ms-1 text-start infobutton" @click="activeTab = 'pruefung'; selectedExam = null; servername = ''; password = ''; advanced = false; checkExistingExam();" :style="activeTab !== 'pruefung' ? 'border-right: 2px solid #aaa; box-shadow: -6px -3px 10px -12px inset #000; color: #666;' : ''">
+        <div class="btn btn-light ms-1 text-start infobutton" @click="activeTab = 'pruefung'; selectedExam = null; servername = ''; password = ''; passwordConfirm = ''; advanced = false; checkExistingExam();" :style="activeTab !== 'pruefung' ? 'border-right: 2px solid #aaa; box-shadow: -6px -3px 10px -12px inset #000; color: #666;' : ''">
             <img src='/src/assets/img/svg/server.svg' class="me-2"  width="16" height="16" :style="activeTab !== 'pruefung' ? 'opacity: 0.5;' : ''">
             {{$t("general.startserver")}}
         </div>
-        <div v-if="config.bipIntegration" class="btn btn-light ms-1 mt-1 text-start infobutton" @click="activeTab = 'bildungsportal'; selectedExam = null; servername = ''; password = ''; advanced = false; checkExistingExam();" :style="activeTab !== 'bildungsportal' ? 'border-right: 2px solid #aaa; box-shadow: -6px 0px 10px -12px inset #000; color: #666;' : ''">
+        <div v-if="config.bipIntegration" class="btn btn-light ms-1 mt-1 text-start infobutton" @click="activeTab = 'bildungsportal'; selectedExam = null; servername = ''; password = ''; passwordConfirm = ''; advanced = false; checkExistingExam();" :style="activeTab !== 'bildungsportal' ? 'border-right: 2px solid #aaa; box-shadow: -6px 0px 10px -12px inset #000; color: #666;' : ''">
             <img src='/src/assets/img/svg/shield-lock-fill.svg' class="me-2 "  width="16" height="16"  :style="activeTab !== 'bildungsportal' ? 'opacity: 0.5;' : ''">
             {{$t("dashboard.bildungsportal")}}
         </div><br v-if="config.bipIntegration">
@@ -75,15 +75,20 @@
                 </div>
 
                 <!-- could be used to set an ESCAPE PASSWORD for students to make it harder to leave on connection loss -->
-                <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content">
+                <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content" @mouseover="showDescription($t('startserver.pwdinfo'))" @mouseout="hideDescription">
                     <span id="pwd" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.pwd")}}</span>
                     <input v-model="password" :type="showPassword ? 'text' : 'password'" class="form-control" id="examPassword" style="width:200px;">
                     <button @click="togglePasswordVisibility" class="password-visibility-btn" type="button">
                         <img :src="showPassword ? '/src/assets/img/svg/eye-slash-fill.svg' : '/src/assets/img/svg/eye-fill.svg'" class="password-visibility-icon" width="16" height="16">
                     </button>
                 </div>
+                <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content" @mouseover="showDescription($t('startserver.pwdinfo'))" @mouseout="hideDescription">
+                    <span class="input-group-text col-2 grayback" style="width:170px;">{{$t("startserver.pwdconfirm")}}</span>
+                    <input v-model="passwordConfirm" :type="showPassword ? 'text' : 'password'" class="form-control" :class="passwordMismatch ? 'is-invalid' : (passwordConfirm !== '' ? 'is-valid' : '')" style="width:200px;">
+                    <span v-if="passwordMismatch" class="text-danger ms-2 align-self-center" style="font-size:0.8em;">⚠ {{$t("startserver.pwdmismatch")}}</span>
+                </div>
 
-                <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content">
+                <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content" @mouseover="showDescription($t('startserver.backupfolderinfo'))" @mouseout="hideDescription">
                     <span id="backupdir" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.backupfolder")}}</span>
                     <span class="form-control text-truncate" style="width:360px;  font-size: 0.9em; padding-top: 8px; white-space: pre;">{{ backupdir }}</span>
                     <button @click="setBackupdir()" id="backupdirbutton" class="btn btn-cyan p-0" style="width:40px;" :title="$t('startserver.backupfolderinfo')" >
@@ -91,7 +96,7 @@
                     </button>
                 </div>
 
-                <button @click="startServer()" :class="(!hostip) ? 'disabledstart':''" id="examstart" class="ps-1 pe-1 mb-3 btn btn-cyan" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
+                <button @click="startServer()" :class="(!hostip || passwordMismatch) ? 'disabledstart':''" id="examstart" class="ps-1 pe-1 mb-3 btn btn-cyan" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
                 </div><!-- /flex-shrink-0 -->
 
                 <!-- Local exams widget grid START -->
@@ -151,15 +156,20 @@
                     <span>{{$t("startserver.bipwelcome")}} {{bipUsername}}!</span>
                 </div>
 
-                <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content">
+                <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content" @mouseover="showDescription($t('startserver.pwdinfo'))" @mouseout="hideDescription">
                     <span id="pwd" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.pwd")}}</span>
                     <input v-model="password" :type="showPassword ? 'text' : 'password'" class="form-control" id="examPassword" style="width:200px;">
                     <button @click="togglePasswordVisibility" class="password-visibility-btn" type="button">
                         <img :src="showPassword ? '/src/assets/img/svg/eye-slash-fill.svg' : '/src/assets/img/svg/eye-fill.svg'" class="password-visibility-icon" width="16" height="16">
                     </button>
                 </div>
+                <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content" @mouseover="showDescription($t('startserver.pwdinfo'))" @mouseout="hideDescription">
+                    <span class="input-group-text col-2 grayback" style="width:170px;">{{$t("startserver.pwdconfirm")}}</span>
+                    <input v-model="passwordConfirm" :type="showPassword ? 'text' : 'password'" class="form-control" :class="passwordMismatch ? 'is-invalid' : (passwordConfirm !== '' ? 'is-valid' : '')" style="width:200px;">
+                    <span v-if="passwordMismatch" class="text-danger ms-2 align-self-center" style="font-size:0.8em;">⚠ {{$t("startserver.pwdmismatch")}}</span>
+                </div>
 
-                <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content">
+                <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content" @mouseover="showDescription($t('startserver.backupfolderinfo'))" @mouseout="hideDescription">
                     <span id="backupdir" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.backupfolder")}}</span>
                     <span class="form-control text-truncate" style="width:360px;  font-size: 0.9em; padding-top: 8px; white-space: pre;">{{ backupdir }}</span>
                     <button @click="setBackupdir()" id="backupdirbutton" class="btn btn-info p-0" style="width:40px;" :title="$t('startserver.backupfolderinfo')" >
@@ -167,7 +177,7 @@
                     </button>
                 </div>
 
-                <button @click="startServer()" :class="(!hostip || !bipToken || !servername) ? 'disabledstart':''" id="examstart" class="ps-1 pe-1 mb-3 btn btn-success" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
+                <button @click="startServer()" :class="(!hostip || !bipToken || !servername || passwordMismatch) ? 'disabledstart':''" id="examstart" class="ps-1 pe-1 mb-3 btn btn-success" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
                 </div><!-- /flex-shrink-0 -->
 
                 <!-- BiP exams START -->
@@ -231,9 +241,10 @@
 
 
  <span @click="showCopyleft()" id="release" class="bg-dark text-white">
-    <span style="display:inline-block; transform: scaleX(-1);font-size:1.2em;">&copy;</span>
-    <span style="vertical-align: text-bottom;">&nbsp;{{version}} {{ info }}</span>
+    <span style="display:inline-block; transform: scaleX(-1); font-size:1.2em; vertical-align: middle;">&copy;</span>
+    <span >&nbsp;{{version}} {{ info }}</span>
 </span>
+<div v-if="showDesc" id="description" class="bg-dark text-white">{{ currentDescription }}</div>
 <div id="statusdiv" class="bg-dark text-white">{{$t("startserver.connected")}}</div>
 
  <!-- BIB Infos START -->
@@ -284,7 +295,8 @@ export default {
             buildDate: this.$route.params.config.buildDate,
             title: document.title,
             servername : this.$route.params.config.development ? "test-exam":"",
-            password: "",   //we use this password to allow students to manually leave exam mode 
+            password: "",   //we use this password to allow students to manually leave exam mode
+            passwordConfirm: "",
             prod : false,
             serverApiPort: this.$route.params.serverApiPort,
             electron: this.$route.params.electron,
@@ -308,7 +320,9 @@ export default {
 
             bipnews: [],
             BipInfoActive: false,
-            activeTab: 'pruefung'
+            activeTab: 'pruefung',
+            showDesc: false,
+            currentDescription: ''
         };
     },
     components: {},
@@ -343,6 +357,9 @@ export default {
         },
         previousBipExams() {
             return (this.previousExams || []).filter(exam => !!exam?.bip);
+        },
+        passwordMismatch() {
+            return this.advanced && this.passwordConfirm !== '' && this.password !== this.passwordConfirm;
         }
     },
 
@@ -811,6 +828,7 @@ export default {
 
                     this.bipNameConflict = false
                     this.password = ""
+                    this.passwordConfirm = ""
                     this.advanced = false
                     this.backupdir = previousExam.backupdirectory || ''
                     let hasExamPassword = typeof previousExam.examPassword === 'string' && previousExam.examPassword.trim() !== ''
@@ -818,6 +836,7 @@ export default {
                     if (hasExamPassword) {
                         // make password field visible to signal the user that a password is set
                         this.password = previousExam.examPassword
+                        this.passwordConfirm = previousExam.examPassword
                         this.advanced = true
                         await this.$nextTick();
 
@@ -887,6 +906,7 @@ export default {
         toggleAdvanced(){
             if (!this.advanced){
                 this.password = ""
+                this.passwordConfirm = ""
                 this.showPassword = false
             }
         },
@@ -1032,6 +1052,14 @@ export default {
         fadeOut(element) {
             element.classList.add('fade-out');
             element.classList.remove('fade-in');
+        },
+
+        showDescription(description) {
+            this.currentDescription = description;
+            this.showDesc = true;
+        },
+        hideDescription() {
+            this.showDesc = false;
         }
 
 
@@ -1124,6 +1152,28 @@ export default {
    
 }
 
+#description {
+    position: fixed;
+    left: 240px;
+    right: 0;
+    bottom: 0;
+    height: 1.5rem;
+    line-height: 1.5rem;
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-right: 6rem;
+    z-index: 1500;
+    box-sizing: border-box;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.8em;
+    text-align: left;
+    margin: 0;
+    padding-left: 0.5rem;
+}
+
 #release {
     position: fixed;
     left: 0;
@@ -1182,6 +1232,8 @@ export default {
 #content {
     background-color: whitesmoke;
     min-width: 680px;
+    margin-bottom: 1.5rem;
+    border-bottom-left-radius: 16px;
 }
 
 
@@ -1326,14 +1378,15 @@ export default {
     position: fixed;
     z-index: 100; 
     width: 480px;
-    height: 100%;
+    height: calc(100% - 1.5rem - 62px);
     right: -482px;
-    top: 65px;
+    top: 62px;
     background-color: var(--bs-gray-100);
     box-shadow: -2px 1px 2px rgba(0, 0, 0, 0);
     transition: 0.3s;
     padding: 6px;
     padding-bottom: 100px;
+
 }
 
 #bipcheck {
@@ -1384,7 +1437,7 @@ export default {
 
 
 #bipinfo .bipscrollarea {
-    height: calc(100vh - 52px);
+    height: calc(100vh - 1.5rem - 62px);
     width: 468px;
     overflow-x: hidden;
     overflow-y: auto;
@@ -1476,6 +1529,10 @@ export default {
 
 .password-visibility-icon {
     opacity: 0.55;
+}
+
+#sidebar-bottom {
+    margin-bottom: 10px;
 }
 
 
