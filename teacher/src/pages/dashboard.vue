@@ -116,6 +116,7 @@
         :workdirectory="workdirectory"
         :currentdirectoryparent="currentdirectoryparent"
         :lockSendFile="lockSendFile"
+        :backupdirectory="serverstatus.backupdirectory || ''"
         @close="showExplorer = false"
         @load-filelist="(path) => loadFilelist(path)"
         @load-pdf="({ path, name }) => loadPDF(path, name)"
@@ -2256,7 +2257,8 @@ computed: {
         },
 
         // we save serverstatus everytime we start an exam - therefore exams can be resumed easily by the teacher if something wicked happens
-        getPreviousServerStatus(){
+        async getPreviousServerStatus(){
+            this.config = await ipcRenderer.invoke('getconfigasync')
             let result = fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/getserverstatus/${this.servername}/${this.servertoken}`, { method: 'POST', headers: {'Content-Type': 'application/json' },})
             .then( res => res.json())
             .then( async (response) => {

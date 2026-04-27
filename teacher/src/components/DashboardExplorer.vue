@@ -70,6 +70,12 @@
                 </div>
             </div>
 
+            <!-- Status bar -->
+            <div class="wf-statusbar">
+                <span class="wf-statusbar-label">Backup:</span>
+                <span class="wf-statusbar-value">{{ backupdirectory.trim() || '-' }}</span>
+            </div>
+
         </div>
     </div>
 </template>
@@ -85,6 +91,7 @@ export default {
         workdirectory:        { type: String,  default: '' },
         currentdirectoryparent: { type: String, default: '' },
         lockSendFile:         { type: Boolean, default: false },
+        backupdirectory:      { type: String, default: '' },
     },
 
     emits: ['close', 'load-filelist', 'load-pdf', 'load-image', 'send-file', 'download-file', 'delete-file'],
@@ -160,6 +167,7 @@ export default {
 .wf-filelist {
     overflow-y: auto;
     flex: 1;
+    min-height: 0;
     padding: 8px 0;
 }
 .wf-row {
@@ -196,4 +204,25 @@ export default {
     flex-shrink: 0;
 }
 .disabledexam { opacity: 0.4; pointer-events: none; }
+.wf-statusbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    background: rgb(20, 23, 26);
+    border-top: 1px solid rgba(255,255,255,0.07);
+    flex-shrink: 0;
+}
+.wf-statusbar-label {
+    color: rgba(255,255,255,0.35);
+    font-size: 0.72rem;
+    flex-shrink: 0;
+}
+.wf-statusbar-value {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.72rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 </style>
