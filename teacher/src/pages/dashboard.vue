@@ -900,7 +900,7 @@
             <div class="control-button-label">{{ $t('examlog.button') }}</div>
         </div>
         <div @mouseover="showDescription($t('submissionsview.buttondesc'))" @mouseout="hideDescription" class="btn btn-gray-dark control-button m-1 mt-0 ms-0 text-start" @click="showSubmissionsView = true">
-            <img src="/src/assets/img/svg/dialog-ok-apply.svg" class="control-button-icon me-1" width="32" height="32">
+            <img src="/src/assets/img/svg/dialog-ok-apply.svg" class="control-button-icon me-1" width="32" height="32" style="filter: invert(55%) sepia(40%) saturate(300%) hue-rotate(140deg) brightness(1.1)">
             <div class="control-button-label">{{ $t('submissionsview.button') }}</div>
         </div>
         </div>
@@ -982,7 +982,7 @@
         <div id="studentslist">        
             <div class="studentslist-zoom" :style="studentsZoomStyle">
                 <draggable v-model="studentwidgets" :move="handleMoveItem" @end="handleDragEndItem" ghost-class="ghost">
-                    <div v-for="student in studentwidgets" :key="student.token" style="cursor:auto" v-bind:class="(!student.focus)?'focuswarn':''" class="studentwidget btn rounded-3 btn-block">
+                    <div v-for="student in studentwidgets" :key="student.token" style="cursor:auto" v-bind:class="[(!student.focus)?'focuswarn':'', (!student.clientname)?'studentwidget-empty':'']" class="studentwidget btn rounded-3 btn-block">
                         <div v-if="student.clientname">
                             <div class="studentimage rounded" style="position: relative; height:128px;">  
                                  
@@ -3213,6 +3213,10 @@ computed: {
     transition: 0.5s;
 }
 
+
+.studentwidget-empty {
+    border: 1px solid rgba(255, 255, 255, 0.7) !important;
+}
 
 .studentwidget span {
     margin:0;
