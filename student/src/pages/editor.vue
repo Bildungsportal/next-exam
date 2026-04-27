@@ -1593,9 +1593,13 @@ export default {
                 const div = document.createElement('div');
                 div.appendChild(range.cloneContents());
                 const html = div.innerHTML;
-                this.selectedText = html;
-                this.addToClipboardHistory(html);
-                return;
+                const text = selection.toString ? selection.toString() : '';
+                const hasPayload = (!selection.isCollapsed) && ((html && html.trim()) || (text && text.trim()));
+                if (hasPayload) {
+                    this.selectedText = html;
+                    this.addToClipboardHistory(html);
+                    return;
+                }
             }
 
             if (!this.webviewVisible) return;
@@ -1603,7 +1607,26 @@ export default {
             if (!webview || typeof webview.executeJavaScript !== 'function') return;
 
             try {
-                const result = await webview.executeJavaScript(`
+                const waitForDomReady = (timeoutMs = 750) => {
+                    if (typeof webview.getWebContentsId === 'function') {
+                        const id = webview.getWebContentsId();
+                        if (id) return Promise.resolve();
+                    }
+                    return new Promise((resolve) => {
+                        let done = false;
+                        const cleanup = () => {
+                            if (done) return;
+                            done = true;
+                            try { webview.removeEventListener('dom-ready', onReady); } catch (_) {}
+                            resolve();
+                        };
+                        const onReady = () => cleanup();
+                        try { webview.addEventListener('dom-ready', onReady, { once: true }); } catch (_) { /* ignore */ }
+                        setTimeout(cleanup, timeoutMs);
+                    });
+                };
+
+                const readSelection = () => webview.executeJavaScript(`
                     (() => {
                         const sel = window.getSelection?.();
                         if (!sel || sel.rangeCount === 0) return { html: '', text: '' };
@@ -1613,6 +1636,12 @@ export default {
                         return { html: div.innerHTML || '', text: sel.toString() || '' };
                     })()
                 `, true);
+
+                let result = await readSelection();
+                if (!result || (!result.html && !result.text)) {
+                    await waitForDomReady();
+                    result = await readSelection();
+                }
 
                 const html = (result && typeof result.html === 'string') ? result.html : '';
                 const text = (result && typeof result.text === 'string') ? result.text : '';

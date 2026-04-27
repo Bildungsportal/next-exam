@@ -56,16 +56,8 @@
         <!-- BIP Section END -->
         </div>
         
-        <div id="statusdiv" class="m-0 ms-1 btn btn-warning" style="bottom: 0; left: 0; width: 206px;">{{$t("startserver.connected")}}</div>
-
         <div id="sidebar-bottom" class="flex-shrink-0 mt-auto position-relative">
             <button class="btn btn-outline-secondary btn-sm ms-1 mt-2 mb-1" @click="toggleLocale">{{ inactivelocale }}</button>
-            <div class="small mt-1 ms-1">
-                <span @click="showCopyleft()" style="font-size:0.8em; cursor: pointer;">
-                    <span style="display:inline-block; transform: scaleX(-1);font-size:1.2em;">&copy;</span> 
-                    <span style="vertical-align: text-bottom;">&nbsp;{{version}} {{ info }}</span>
-                </span>
-            </div>
         </div>
     </div>
 
@@ -237,6 +229,12 @@
 </div>
 
 
+
+ <span @click="showCopyleft()" id="release" class="bg-dark text-white">
+    <span style="display:inline-block; transform: scaleX(-1);font-size:1.2em;">&copy;</span>
+    <span style="vertical-align: text-bottom;">&nbsp;{{version}} {{ info }}</span>
+</span>
+<div id="statusdiv" class="bg-dark text-white">{{$t("startserver.connected")}}</div>
 
  <!-- BIB Infos START -->
  <div id="bipinfo">
@@ -1126,9 +1124,37 @@ export default {
    
 }
 
+#release {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    height: 1.5rem;
+    line-height: 1.5rem;
+    padding: 0 0.5rem;
+    z-index: 1500;
+    box-sizing: border-box;
+    font-size: 0.8em;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
 #statusdiv {
-    display: block !important;
-    width: 200px;
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    height: 1.5rem;
+    line-height: 1.5rem;
+    padding: 0 0.5rem;
+    z-index: 1501;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
+    margin: 0;
+    font-size: 0.8rem;
 }
 
 /* minimal scrollbar: thumb only, no track, no arrows */
