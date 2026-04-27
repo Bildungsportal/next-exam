@@ -259,7 +259,9 @@
         "vmFindingsWebgl": "WebGL detection:",
         "website": "Website URL",
         "workfolder": "Show Workfolder",
-        "yes": "Yes"
+        "yes": "Yes",
+        "zoomIn": "Zoom in",
+        "zoomOut": "Zoom out"
     },
     "data": {
         "couldnotstore": "student could not store file",
@@ -272,6 +274,17 @@
         "nofilereceived": "no files received",
         "nofiles": "no files were uploaded",
         "tokennotvalid": "the token is not valid"
+    },
+    "submissionsview": {
+        "button": "Submissions Overview",
+        "buttondesc": "Show submissions of all students",
+        "date": "Date",
+        "file": "File",
+        "nodata": "No submissions yet.",
+        "section": "Section",
+        "student": "Student",
+        "title": "Submissions Overview",
+        "total": "Submissions"
     },
     "examlog": {
         "button": "Open exam log",

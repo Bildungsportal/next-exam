@@ -259,7 +259,9 @@
         "vmFindingsWebgl": "WebGL-Erkennung:",
         "website": "Website-URL",
         "workfolder": "Ordner öffnen",
-        "yes": "Ja"
+        "yes": "Ja",
+        "zoomIn": "Vergrößern",
+        "zoomOut": "Verkleinern"
     },
     "data": {
         "couldnotstore": "Schüler:in konnte die Datei nicht speichern",
@@ -272,6 +274,17 @@
         "nofilereceived": "Keine Dateien erhalten",
         "nofiles": "Es wurden keine Dateien hochgeladen",
         "tokennotvalid": "das token ist ungültig"
+    },
+    "submissionsview": {
+        "button": "Abgaben Übersicht",
+        "buttondesc": "Abgaben aller Schüler:innen anzeigen",
+        "date": "Datum",
+        "file": "Datei",
+        "nodata": "Noch keine Abgaben vorhanden.",
+        "section": "Abschnitt",
+        "student": "Schüler:in",
+        "title": "Abgaben Übersicht",
+        "total": "Abgaben"
     },
     "examlog": {
         "button": "Exam Log öffnen",

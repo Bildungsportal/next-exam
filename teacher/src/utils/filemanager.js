@@ -139,26 +139,14 @@ function loadPDF(filepath, filename){
         log.info("filemanager @ loadPDF: pdf is valid: ", isvalid)
 
         this.currentpreviewBase64 = Buffer.from(data).toString('base64');
-        this.currentpreview = URL.createObjectURL(new Blob([data], {type: "application/pdf"})) 
+        this.currentpreview = URL.createObjectURL(new Blob([data], {type: "application/pdf"}))
         this.currentpreviewname = filename   //needed for preview buttons
         this.currentpreviewPath = filepath
         this.currentpreviewType = "pdf"
 
-        const pdfEmbed = document.querySelector("#pdfembed");
-        pdfEmbed.style.backgroundImage = '';
-        pdfEmbed.style.height = "85vh";
-        pdfEmbed.style.width = "60vw";
-        pdfEmbed.style.display = 'block';
-        
+        this.activesheetsPreviewPdf = null;
         this.webviewVisible = false;
-
-        document.querySelector("#pdfembed").setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=160`);
         document.querySelector("#pdfpreview").style.display = 'block';
-        document.querySelector("#openPDF").style.display = 'block';
-        document.querySelector("#downloadPDF").style.display = 'block';
-        document.querySelector("#printPDF").style.display = 'block';
-        document.querySelector("#closePDF").style.display = 'block';
-        document.querySelector("#pdfrenderer").style.display = 'none';
 
     }).catch(err => { log.error(err) });     
 }
@@ -193,46 +181,10 @@ function loadImage(file){
 
             this.currentpreviewBase64 = Buffer.from(data).toString('base64');
             this.currentpreviewType = "image"
-            this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "image/jpeg"})) 
-            // wanted to save code here but images need to be presented in a different way than pdf.. so...
-            const pdfEmbed = document.querySelector("#pdfembed");
-            
-            // clear the pdf viewer
-            pdfEmbed.setAttribute("src", "about:blank");
-            
-            const img = new window.Image();
-            img.onload = function() {
-                const width = img.width;
-                const height = img.height;
-                const aspectRatio = width / height;
-
-                const containerWidth = window.innerWidth * 0.8;
-                const containerHeight = window.innerHeight * 0.8;
-                const containerAspectRatio = containerWidth / containerHeight;
-
-                if (aspectRatio > containerAspectRatio) {
-                    pdfEmbed.style.width = '80vw';
-                    pdfEmbed.style.height = `calc(80vw / ${aspectRatio})`;
-                } else {
-                    pdfEmbed.style.height = '80vh';
-                    pdfEmbed.style.width = `calc(80vh * ${aspectRatio})`;
-                }
-
-          
-                pdfEmbed.style.backgroundImage = `url(${this.currentpreview})`;
-
-            }.bind(this);
-            img.src = this.currentpreview;
-            
-            pdfEmbed.style.display = 'block';
+            this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "image/jpeg"}))
+            this.activesheetsPreviewPdf = null;
             this.webviewVisible = false;
-        
-            document.querySelector("#pdfpreview").style.display = 'block'; 
-            document.querySelector("#openPDF").style.display = 'block';
-            document.querySelector("#downloadPDF").style.display = 'block';
-            document.querySelector("#printPDF").style.display = 'block'; 
-            document.querySelector("#closePDF").style.display = 'block';
-            document.querySelector("#pdfrenderer").style.display = 'none';
+            document.querySelector("#pdfpreview").style.display = 'block';
         }).catch(err => { log.error(err)});     
 }
 
@@ -340,22 +292,9 @@ async function processPrintrequest(student){
             this.currentpreviewname = `${student.clientname}.pdf`;  // needed for the preview buttons
             this.currentpreviewType = "pdf";
             
-            // PDF in das Embed-Element laden
-            const pdfEmbed = document.querySelector("#pdfembed");
-            pdfEmbed.style.backgroundImage = '';
-            pdfEmbed.style.height = "95vh";
-            pdfEmbed.style.width = "60vw";
-            pdfEmbed.style.display = 'block';
-            
+            this.activesheetsPreviewPdf = null;
             this.webviewVisible = false;
-
-            pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=160`);
             document.querySelector("#pdfpreview").style.display = 'block';
-            document.querySelector("#openPDF").style.display = 'none';
-            document.querySelector("#downloadPDF").style.display = 'block';
-            document.querySelector("#printPDF").style.display = 'block';
-            document.querySelector("#closePDF").style.display = 'block';
-            document.querySelector("#pdfrenderer").style.display = 'none';
         }
         else {
             this.setStudentStatus({printdenied:true}, student.token)  //inform student that request was denied
@@ -399,19 +338,8 @@ function showBase64FilePreview(base64, filename){
         this.currentpreview = base64;
     }
 
-    const pdfEmbed = document.querySelector("#pdfembed");
-    pdfEmbed.style.backgroundImage = '';
-    pdfEmbed.style.height = "85vh";
-    pdfEmbed.style.width = "60vw";
-    
-    pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=160`);
+    this.activesheetsPreviewPdf = null;
     document.querySelector("#pdfpreview").style.display = 'block';
-    document.querySelector("#openPDF").style.display = 'none';
-    document.querySelector("#downloadPDF").style.display = 'none';
-    document.querySelector("#pdfembed").style.display = 'block';
-    document.querySelector("#printPDF").style.display = 'none';
-    document.querySelector("#pdfrenderer").style.display = 'none';
-    document.querySelector("#closePDF").style.display = 'block';
 }
 
 
@@ -428,36 +356,9 @@ function showBase64PdfInRenderer(base64, filename, group){
 
     this.activesheetsPreviewFilename = filename;
     this.activesheetsPreviewPdf = base64;
-    
-    // Hide other preview components
+    this.currentpreview = null;
     this.webviewVisible = false;
-    const pdfEmbed = document.querySelector("#pdfembed");
-    if (pdfEmbed) {
-        pdfEmbed.setAttribute("src", "about:blank");
-        pdfEmbed.style.display = 'none';
-    }
-    
-    // Hide other preview buttons
-    const openPDF = document.querySelector("#openPDF");
-    const downloadPDF = document.querySelector("#downloadPDF");
-    const printPDF = document.querySelector("#printPDF");
-    const closePDF = document.querySelector("#closePDF");
-    const pdfRenderer = document.querySelector("#pdfrenderer");
-    if (pdfRenderer) {
-        pdfRenderer.style.display = 'flex';
-    }
-
-
-    if (openPDF) openPDF.style.display = 'none';
-    if (downloadPDF) downloadPDF.style.display = 'none';
-    if (printPDF) printPDF.style.display = 'none';
-    if (closePDF) closePDF.style.display = 'none';
-    
-    // Show the PDF preview pane (PdfRenderer will be shown if activesheetsPreviewPdf is set)
-    const pdfPreview = document.querySelector("#pdfpreview");
-    if (pdfPreview) {
-        pdfPreview.style.display = 'block';
-    }
+    document.querySelector("#pdfpreview").style.display = 'block';
 }
 
 // show base64 encoded image in preview panel
@@ -466,45 +367,13 @@ function showBase64ImagePreview(base64, filename){
     this.urlForWebview = null;
     this.webviewVisible = false;
 
-    const pdfEmbed = document.querySelector("#pdfembed");
-    pdfEmbed.setAttribute("src", "about:blank"); // clear the pdf viewer
-
     this.currentpreviewBase64 = base64
     this.currentpreview = `${this.currentpreviewBase64}`;
     this.currentpreviewType = "image";
     this.currentpreviewname = filename
-
-    // create demo image object to calculate width and height
-    const img = new window.Image();
-    img.onload = function() {
-        const width = img.width;
-        const height = img.height;
-        const aspectRatio = width / height;
-
-        const containerWidth = window.innerWidth * 0.8;
-        const containerHeight = window.innerHeight * 0.8;
-        const containerAspectRatio = containerWidth / containerHeight;
-
-        if (aspectRatio > containerAspectRatio) {
-            pdfEmbed.style.width = '80vw';
-            pdfEmbed.style.height = `calc(80vw / ${aspectRatio})`;
-        } else {
-            pdfEmbed.style.height = '80vh';
-            pdfEmbed.style.width = `calc(80vh * ${aspectRatio})`;
-        }
-        pdfEmbed.style.backgroundImage = `url(${this.currentpreview})`;
-
-    }.bind(this);
-    img.src = this.currentpreview;
     
-    //hide show some buttons
-    document.querySelector("#pdfembed").style.display = 'block';
+    this.activesheetsPreviewPdf = null;
     document.querySelector("#pdfpreview").style.display = 'block';
-    document.querySelector("#openPDF").style.display = 'none';
-    document.querySelector("#downloadPDF").style.display = 'none';
-    document.querySelector("#printPDF").style.display = 'none';
-    document.querySelector("#closePDF").style.display = 'block';
-    document.querySelector("#pdfrenderer").style.display = 'none';
 }
 
 

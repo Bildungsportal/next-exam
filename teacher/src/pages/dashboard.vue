@@ -119,9 +119,6 @@
                     <span>{{$t('dashboard.filesfolder')}}</span>
                 </div>
                 <div class="wf-header-actions">
-                    <div v-if="submissionsNumber == 0" class="btn btn-warning btn-sm d-flex align-items-center gap-1" @click="fetchSubmissions(true)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="16" height="16">{{ $t('control.submissions') }}: {{submissionsNumber}} / {{ submissions.length }}</div>
-                    <div v-if="submissionsNumber > 0" class="btn btn-success btn-sm d-flex align-items-center gap-1" @click="fetchSubmissions(true)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="16" height="16">{{ $t('control.submissions') }}: {{submissionsNumber}} / {{ submissions.length }}</div>
-                    <div :class="lockPdfSummary ? 'disabledexam':''" class="btn btn-secondary btn-sm d-flex align-items-center gap-1" :title="$t('dashboard.summarizepdf')" @click="getLatest()"><img src="/src/assets/img/svg/edit-copy.svg" width="16" height="16">{{$t('dashboard.summarizepdfshort')}}</div>
                     <button id="closefilebrowser" type="button" class="btn-close btn-close-white" title="close" @click="closeFileBrowser()"></button>
                 </div>
             </div>
@@ -185,16 +182,20 @@
             :block-external="true"
             @close="hidepreview"
         />
-        <PdfviewPane
-            :src=currentpreview
-            :currentpreviewPath=currentpreviewPath
-            :currentpreviewBase64=currentpreviewBase64
-            @close="hidepreview"
-            @printBase64="printBase64"
-            @downloadFile="downloadFile"
-            @openFileExternal="openFileExternal"
-        />
+        <div v-if="currentpreview" class="pdfpreview-centered">
+            <PdfviewPaneRendered
+                :src=currentpreview
+                :currentpreviewPath=currentpreviewPath
+                :currentpreviewBase64=currentpreviewBase64
+                :currentpreviewType="currentpreviewType"
+                @close="hidepreview"
+                @printBase64="printBase64"
+                @downloadFile="downloadFile"
+                @openFileExternal="openFileExternal"
+            />
+        </div>
         <PdfRenderer
+            v-if="activesheetsPreviewPdf"
             :pdfBase64="activesheetsPreviewPdf"
             :loading="false"
             :customFields="activesheetsPreviewCustomFields"
@@ -942,6 +943,10 @@
             <img src="/src/assets/img/icons/log.png" class="white mt-1" width="32" height="32" style="vertical-align: top;">
             <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;">{{ $t('examlog.button') }}</div>
         </div>
+        <div @mouseover="showDescription($t('submissionsview.buttondesc'))" @mouseout="hideDescription" class="btn btn-dark m-1 mt-0 ms-0 text-start p-1 pt-2 ps-2" @click="showSubmissionsView = true" style="width:128px; height:62px; display:inline-flex">
+            <img src="/src/assets/img/svg/eye-fill.svg" class="white mt-1" width="32" height="32" style="vertical-align: top;">
+            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;">{{ $t('submissionsview.button') }}</div>
+        </div>
         </div>
 
  
@@ -954,7 +959,7 @@
                 <img src="/src/assets/img/svg/document-send.svg" width="24" height="24">
             </div>
 
-            <div class="btn btn-cyan tab-button"
+            <div class="btn btn-dark tab-button"
                 :class="lockDownload ? 'disabledexam' : ''"
                 @click="getFiles('all', true); hideDescription();"
                 @mouseover="showDescription($t('dashboard.getfile'))"
@@ -1018,7 +1023,7 @@
 
 
         <!-- studentlist start -->
-        <div id="studentslist" class="pt-1">        
+        <div id="studentslist">        
             <draggable v-model="studentwidgets" :move="handleMoveItem" @end="handleDragEndItem" ghost-class="ghost">
                 <div v-for="student in studentwidgets" :key="student.token" style="cursor:auto" v-bind:class="(!student.focus)?'focuswarn':''" class="studentwidget btn rounded-3 btn-block">
                     <div v-if="student.clientname">
@@ -1115,6 +1120,17 @@
         @close="showExamLog = false"
     />
 
+    <!-- Submissions View Modal -->
+    <SubmissionsView
+        :visible="showSubmissionsView"
+        :submissions="submissions"
+        :submissionsNumber="submissionsNumber"
+        :lockPdfSummary="lockPdfSummary"
+        @close="showSubmissionsView = false"
+        @get-latest="getLatest()"
+        @open-pdf="({ path, name }) => loadPDF(path, name)"
+    />
+
         <div v-if="showDesc" id="description" class="bg-dark text-white" v-html="currentDescription"></div>
         <div id="statusdiv" class="bg-dark text-white">{{ $t('dashboard.connected') }}</div>
     
@@ -1135,9 +1151,10 @@ import { v4 as uuidv4 } from 'uuid'
 import {SchedulerService} from '../utils/schedulerservice.js'
 import MaterialsList from '../components/materialsList.vue'
 import WebviewPane from '../components/WebviewPane.vue'
-import PdfviewPane from '../components/PdfviewPane.vue'
+import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import PdfRenderer from '../components/PdfRenderer.vue'
 import ExamLog from '../components/ExamLog.vue'
+import SubmissionsView from '../components/SubmissionsView.vue'
 import examEventBus from '../utils/examEventBus.js'
 import { STUDENT_HEARTBEAT_STALE_MS, isStudentReachable, countReachableStudents } from '../utils/studentPresence.js'
 
@@ -1161,9 +1178,10 @@ export default {
         draggable: VueDraggableNext,
         MaterialsList: MaterialsList,
         WebviewPane: WebviewPane,
-        PdfviewPane: PdfviewPane,
+        PdfviewPaneRendered: PdfviewPaneRendered,
         PdfRenderer: PdfRenderer,
-        ExamLog: ExamLog
+        ExamLog: ExamLog,
+        SubmissionsView: SubmissionsView
     },
     data() {
         return {
@@ -1229,6 +1247,7 @@ export default {
             serverlogReload: true,
 
             showExamLog: false,
+            showSubmissionsView: false,
 
             bipToken:this.$route.params.bipToken === 'false' ?  false : this.$route.params.bipToken,   // parameters are always passed as string "false", convert to bool
             bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
@@ -2050,6 +2069,11 @@ computed: {
         },
         hidepreview() {
             document.querySelector("#pdfpreview").style.display = 'none';
+            URL.revokeObjectURL(this.currentpreview);
+            this.currentpreview = null;
+            this.currentpreviewBase64 = null;
+            this.currentpreviewPath = null;
+            this.currentpreviewname = null;
         },
         // discard activesheets PDF
         discardActivesheetsPdf() {
@@ -2710,7 +2734,7 @@ computed: {
 
             if (this.backupintervalPause == 0 ) { this.backupinterval.stop() }
 
-            this.pdfPreviewEventlisterenCallback = () => { document.querySelector("#pdfpreview").style.display = 'none';  document.querySelector("#pdfembed").setAttribute("src", "about:blank"); URL.revokeObjectURL(this.currentpreview);  } //unload pdf
+            this.pdfPreviewEventlisterenCallback = () => { this.hidepreview(); } //unload pdf
             this.fileBrowserEventlistenerCallback = () => { document.querySelector("#preview").style.display = "none"; }
 
             // Add event listener to #closefilebrowser  (only once - do not accumulate event listeners)
@@ -3471,6 +3495,21 @@ computed: {
     pointer-events: none;
 }
 
+
+.pdfpreview-centered {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 1200px;
+    height: 90vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+}
 
 #pdfpreview {
     display: none;

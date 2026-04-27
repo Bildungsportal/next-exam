@@ -1764,7 +1764,6 @@ function openAllowedUrl(allowedUrl){
     document.querySelector("#downloadPDF").style.display = 'none';
     document.querySelector("#printPDF").style.display = 'none';
     document.querySelector("#closePDF").style.display = 'none';
-    document.querySelector("#pdfembed").style.display = 'none';
     document.querySelector("#pdfrenderer").style.display = 'none';
 }
 
