@@ -1751,6 +1751,43 @@ computed: {
                         //replace empty widget with student
                         student.online = isStudentReachable(student, this.now)
                         examEventBus.push('login', student)
+                        this.getLatestBakFile(student.clientname).then(bakResult => {
+                            if (bakResult.status === "success") {
+                                const fileName = bakResult.filepath.split('/').pop()
+                                const filePath = bakResult.filepath
+                                swalQueued({
+                                    customClass: {
+                                        popup: 'my-popup',
+                                        title: 'my-title',
+                                        content: 'my-content',
+                                        actions: 'my-swal2-actions',
+                                        htmlContainer: 'my-html-container'
+                                    },
+                                    title: this.$t("dashboard.attention"),
+                                    html: `<div class="my-content">
+                                        <p><b>${student.clientname}</b> hat sich verbunden!</p>
+                                        <p>Backup-Datei gefunden: <b>${fileName}</b></p>
+                                    </div>`,
+                                    icon: "info",
+                                    showCancelButton: true,
+                                    confirmButtonText: this.$t("dashboard.sendfileSingle"),
+                                    cancelButtonText: this.$t("dashboard.cancel"),
+                                    confirmButtonColor: '#0aa2c0',
+                                })
+                                .then(sendResult => {
+                                    if (sendResult.isConfirmed) {
+                                        fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/sendtoclient/${this.servername}/${this.servertoken}/${student.token}`, {
+                                            method: 'POST',
+                                            headers: {'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ files: [{ name: fileName, path: filePath }] })
+                                        })
+                                        .then(res => res.json())
+                                        .then(result => { console.log("dashboard @ login bakCheck:", result.message) })
+                                        .catch(err => { console.error("dashboard @ login bakCheck:", err) })
+                                    }
+                                })
+                            }
+                        })
                         for (let i = 0; i < this.studentwidgets.length; i++){  // we cant use (for .. of) or forEach because it creates a workingcopy of the original object
                             if (!this.studentwidgets[i].clientname){ //clientname == false in an emptyWidget so we found one
                                 this.studentwidgets[i] = student; // replace emptywidget
