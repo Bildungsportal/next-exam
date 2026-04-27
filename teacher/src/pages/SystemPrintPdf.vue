@@ -9,7 +9,7 @@
 <script>
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
-const PRINT_RENDER_SCALE = 1.5;
+const PRINT_RENDER_SCALE = 3;
 
 export default {
     name: 'SystemPrintPdf',
@@ -50,7 +50,7 @@ export default {
                 canvas.width = viewport.width;
                 canvas.height = viewport.height;
                 await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-                pages.push({ width: viewport.width, height: viewport.height, imgSrc: canvas.toDataURL('image/jpeg', 0.92) });
+                pages.push({ width: viewport.width, height: viewport.height, imgSrc: canvas.toDataURL('image/png') });
             }
             return pages;
         },

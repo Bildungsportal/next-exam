@@ -81,7 +81,7 @@
     <!-- single student view  -->
     <div :key="1" id="studentinfocontainer" class="fadeinslow p-4">
         <div v-if="activestudent!= null" id="studentinfodiv">
-            <div v-cloak><img style="position: absolute; height: 100%" :src="(activestudent.imageurl && now - 20000 < activestudent.timestamp)? `${activestudent.imageurl}`:'user-red.svg'"></div>
+            <div v-cloak><img style="position: absolute; height: 100%" :src="(activestudent.imageurl && isStudentReachable(activestudent, now))? `${activestudent.imageurl}`:'user-red.svg'"></div>
             <div style="height:100%">
                 <div id="controlbuttons" style="text-align: center;">
                     <button class="btn btn-close  btn-close-white align-right" @click="hideStudentview()"  style="width: 110px"></button>
@@ -912,23 +912,23 @@
 
         <!-- CONTROL BUTTONS START -->
        <div class="control-buttons-container">
-        <div v-if="(serverstatus.exammode && numberOfConnections == 1)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:128px; height:62px; display:inline-flex" @click="endExam();hideDescription();"  @mouseover="showDescription($t('dashboard.exitkiosk'))" @mouseout="hideDescription"  >
+        <div v-if="(serverstatus.exammode && reachableConnections == 1)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:128px; height:62px; display:inline-flex" @click="endExam();hideDescription();"  @mouseover="showDescription($t('dashboard.exitkiosk'))" @mouseout="hideDescription"  >
             <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> 
-            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.stopexamsingle')}} </div>
+            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;"> {{reachableConnections}} {{$t('dashboard.stopexamsingle')}} </div>
         </div>
-        <div v-if="(serverstatus.exammode && numberOfConnections != 1)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:128px; height:62px; display:inline-flex" @click="endExam();hideDescription();"  @mouseover="showDescription($t('dashboard.exitkiosk'))" @mouseout="hideDescription"  >
+        <div v-if="(serverstatus.exammode && reachableConnections != 1)" class="btn btn-danger m-1 mt-0 text-start ms-0 " style="width:128px; height:62px; display:inline-flex" @click="endExam();hideDescription();"  @mouseover="showDescription($t('dashboard.exitkiosk'))" @mouseout="hideDescription"  >
             <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> 
-            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;"> {{numberOfConnections}} {{$t('dashboard.stopexam')}} </div>
-        </div>
-
-        <div v-if="(!serverstatus.exammode && numberOfConnections == 1)" class="btn btn-teal m-1 mt-0 text-start ms-0"  @click="startExam();hideDescription();"  @mouseover="showDescription($t('dashboard.startexamdesc'))" @mouseout="hideDescription" :class="!hasMandatoryBasematerialReady ? 'disabledgreen':''" style="width:128px; height:62px; display:inline-flex">
-            <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> 
-            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;">{{numberOfConnections}} {{$t('dashboard.startexamsingle')}}</div>
+            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;"> {{reachableConnections}} {{$t('dashboard.stopexam')}} </div>
         </div>
 
-        <div v-if="(!serverstatus.exammode && numberOfConnections != 1)" class="btn btn-teal m-1 mt-0 text-start ms-0"  @click="startExam();hideDescription();"  @mouseover="showDescription($t('dashboard.startexamdesc'))" @mouseout="hideDescription" :class="!hasMandatoryBasematerialReady ? 'disabledgreen':''" style="width:128px; height:62px; display:inline-flex">
+        <div v-if="(!serverstatus.exammode && reachableConnections == 1)" class="btn btn-teal m-1 mt-0 text-start ms-0"  @click="startExam();hideDescription();"  @mouseover="showDescription($t('dashboard.startexamdesc'))" @mouseout="hideDescription" :class="!hasMandatoryBasematerialReady ? 'disabledgreen':''" style="width:128px; height:62px; display:inline-flex">
             <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> 
-            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;">{{numberOfConnections}} {{$t('dashboard.startexam')}}</div>
+            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;">{{reachableConnections}} {{$t('dashboard.startexamsingle')}}</div>
+        </div>
+
+        <div v-if="(!serverstatus.exammode && reachableConnections != 1)" class="btn btn-teal m-1 mt-0 text-start ms-0"  @click="startExam();hideDescription();"  @mouseover="showDescription($t('dashboard.startexamdesc'))" @mouseout="hideDescription" :class="!hasMandatoryBasematerialReady ? 'disabledgreen':''" style="width:128px; height:62px; display:inline-flex">
+            <img src="/src/assets/img/svg/shield-lock.svg" class="white mt-2" width="28" height="28" style="vertical-align: top;"> 
+            <div style="display:inline-block; margin-top:4px; margin-left:4px; width:70px; font-size:0.8em;">{{reachableConnections}} {{$t('dashboard.startexam')}}</div>
         </div>
 
         <div class="btn btn-cyan m-1 mt-0 text-start ms-0" @click="fetchSubmissions(); loadFilelist(workdirectory);hideDescription();"  @mouseover="showDescription($t('dashboard.showworkfolder'))" @mouseout="hideDescription"  style="width: 128px; height:62px; display:inline-flex">
@@ -1038,16 +1038,16 @@
                                 <img src="/src/assets/img/svg/autocorrection.svg" class="widgetbutton" width="22" height="22" >
                             </button> 
      
-                            <div v-cloak :id="student.token" style="position: relative;background-size: cover; height: 128px;" v-bind:style="(student.imageurl && now - 20000 < student.timestamp)? `background-image: url('${student.imageurl}')`:'background-image: url(user-red.svg)'"></div>
-                            <div v-if="student.virtualized && now - 20000 < student.timestamp" class="virtualizedinfo" @mouseover="showDescription($t('dashboard.virtualizedinfo'), { vmFindings: student.vmFindings, webglFindings: student.webglFindings })" @mouseout="hideDescription">{{$t("dashboard.virtualized")}}</div>
-                            <div v-if="!student.focus && now - 20000 < student.timestamp" class="kioskwarning" @mouseover="showDescription($t('dashboard.leftkioskinfo'))" @mouseout="hideDescription">{{$t("dashboard.leftkiosk")}}</div>
-                            <div v-if="student.status.sendexam && now - 20000 < student.timestamp" class="examrequest" @mouseover="showDescription($t('dashboard.examrequestinfo'))" @mouseout="hideDescription">{{$t("dashboard.examrequest")}}</div>
-                            <div v-if="student.remoteassistant && now - 20000 < student.timestamp" class="remoteassistant" @mouseover="showDescription($t('dashboard.remoteassistantinfo'), student.remoteassistant)" @mouseout="hideDescription">{{$t("dashboard.remoteassistant")}}</div>
+                            <div v-cloak :id="student.token" style="position: relative;background-size: cover; height: 128px;" v-bind:style="(student.imageurl && isStudentReachable(student, now))? `background-image: url('${student.imageurl}')`:'background-image: url(user-red.svg)'"></div>
+                            <div v-if="student.virtualized && isStudentReachable(student, now)" class="virtualizedinfo" @mouseover="showDescription($t('dashboard.virtualizedinfo'), { vmFindings: student.vmFindings, webglFindings: student.webglFindings })" @mouseout="hideDescription">{{$t("dashboard.virtualized")}}</div>
+                            <div v-if="!student.focus && isStudentReachable(student, now)" class="kioskwarning" @mouseover="showDescription($t('dashboard.leftkioskinfo'))" @mouseout="hideDescription">{{$t("dashboard.leftkiosk")}}</div>
+                            <div v-if="student.status.sendexam && isStudentReachable(student, now)" class="examrequest" @mouseover="showDescription($t('dashboard.examrequestinfo'))" @mouseout="hideDescription">{{$t("dashboard.examrequest")}}</div>
+                            <div v-if="student.remoteassistant && isStudentReachable(student, now)" class="remoteassistant" @mouseover="showDescription($t('dashboard.remoteassistantinfo'), student.remoteassistant)" @mouseout="hideDescription">{{$t("dashboard.remoteassistant")}}</div>
                             <span >   
-                                <div v-if="now - 20000 < student.timestamp" style="display: inline-block; overflow: hidden; width: 140px; height: 22px" @mouseover="showDescription($t('dashboard.documentsinfo') + student.files)" @mouseout="hideDescription"> 
+                                <div v-if="isStudentReachable(student, now)" style="display: inline-block; overflow: hidden; width: 140px; height: 22px" @mouseover="showDescription($t('dashboard.documentsinfo') + student.files)" @mouseout="hideDescription"> 
                                     <img v-for="file in student.files" style="width:22px; margin-left:-4px; position: relative; filter: sepia(10%) hue-rotate(306deg) brightness(0.3) saturate(75);" class="" src="/src/assets/img/svg/document.svg">
                                 </div>
-                                <div v-if="now - 20000 < student.timestamp" style="display: inline-block; margin: 0px; position: absolute; right: 4px;" >
+                                <div v-if="isStudentReachable(student, now)" style="display: inline-block; margin: 0px; position: absolute; right: 4px;" >
                                     <img src="/src/assets/img/svg/edit-delete.svg" width="22" height="22" class="delfolderstudent" @click="delfolderquestion(student.token)"  @mouseover="showDescription($t('dashboard.delsingle'))" @mouseout="hideDescription" >
                                 </div>
                                 <br>
@@ -1058,19 +1058,19 @@
 
                         <!-- bottom buttons START-->
                         <div class="btn-group pt-0" role="group" style="">
-                            <button v-if="(now - 20000 < student.timestamp)" @click="showStudentview(student)" @mouseover="showDescription(getStudentInfoText(student), false, true)" @mouseout="hideDescription" type="button" :class="['btn btn-sm', isVersionMismatch(student) ? 'btn-warning' : 'btn-cyan']" style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">
+                            <button v-if="isStudentReachable(student, now)" @click="showStudentview(student)" @mouseover="showDescription(getStudentInfoText(student), false, true)" @mouseout="hideDescription" type="button" :class="['btn btn-sm', isVersionMismatch(student) ? 'btn-warning' : 'btn-cyan']" style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">
                                 <img :src="isVersionMismatch(student) ? '/src/assets/img/svg/exclamation-triangle-fill.svg' : '/src/assets/img/svg/eye-fill.svg'" :class="isVersionMismatch(student) ? 'text-dark' : 'white'" width="18" height="18" >
                             </button>
-                            <button v-if="(now - 20000 > student.timestamp)" type="button" class="btn btn-outline-danger btn-sm " style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">{{$t('dashboard.offline')}} </button>
-                            <button v-if="(now - 20000 < student.timestamp) && student.exammode && student.focus" @mouseover="showDescription($t('dashboard.secureinfo'))" @mouseout="hideDescription"  @click='' type="button" 
+                            <button v-if="!isStudentReachable(student, now)" type="button" class="btn btn-outline-danger btn-sm " style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">{{$t('dashboard.offline')}} </button>
+                            <button v-if="isStudentReachable(student, now) && student.exammode && student.focus" @mouseover="showDescription($t('dashboard.secureinfo'))" @mouseout="hideDescription"  @click='' type="button" 
                                 class="btn btn-danger btn-sm" style=" cursor:default; border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px; border-bottom-right-radius: 5px;" >
                                 <img src="/src/assets/img/svg/shield-lock.svg" class="white" width="18" height="18" >
                             </button>
-                            <button v-if="(now - 20000 < student.timestamp) && !student.focus" @mouseover="showDescription($t('dashboard.resumeinfo'))" @mouseout="hideDescription"   @click='restore(student.token)' type="button" class="btn btn-warning btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px; border-bottom-right-radius: 5px;"> {{$t('dashboard.restore')}} </button>
+                            <button v-if="isStudentReachable(student, now) && !student.focus" @mouseover="showDescription($t('dashboard.resumeinfo'))" @mouseout="hideDescription"   @click='restore(student.token)' type="button" class="btn btn-warning btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px; border-bottom-right-radius: 5px;"> {{$t('dashboard.restore')}} </button>
                             
                             <!-- group buttons START -->
-                            <button v-if="(now - 20000 < student.timestamp) && serverstatus.examSections[serverstatus.activeSection].groups && student.status.group == 'a' " @mouseover="showDescription($t('dashboard.groupSwitch'))" @mouseout="hideDescription" @click='quickSetGroup(student)' type="button" class="btn-click-feedback2 btn btn-info btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> A  </button>
-                            <button v-if="(now - 20000 < student.timestamp) && serverstatus.examSections[serverstatus.activeSection].groups && student.status.group == 'b' " @mouseover="showDescription($t('dashboard.groupSwitch'))" @mouseout="hideDescription" @click='quickSetGroup(student)' type="button" class="btn-click-feedback1 btn btn-warning btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> B  </button>
+                            <button v-if="isStudentReachable(student, now) && serverstatus.examSections[serverstatus.activeSection].groups && student.status.group == 'a' " @mouseover="showDescription($t('dashboard.groupSwitch'))" @mouseout="hideDescription" @click='quickSetGroup(student)' type="button" class="btn-click-feedback2 btn btn-info btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> A  </button>
+                            <button v-if="isStudentReachable(student, now) && serverstatus.examSections[serverstatus.activeSection].groups && student.status.group == 'b' " @mouseover="showDescription($t('dashboard.groupSwitch'))" @mouseout="hideDescription" @click='quickSetGroup(student)' type="button" class="btn-click-feedback1 btn btn-warning btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> B  </button>
                             <!-- group buttons END -->
                         </div>
                        
@@ -1156,7 +1156,7 @@ import PdfRenderer from '../components/PdfRenderer.vue'
 import ExamLog from '../components/ExamLog.vue'
 import SubmissionsView from '../components/SubmissionsView.vue'
 import examEventBus from '../utils/examEventBus.js'
-import { STUDENT_HEARTBEAT_STALE_MS, isStudentReachable, countReachableStudents } from '../utils/studentPresence.js'
+import { isStudentReachable, countReachableStudents } from '../utils/studentPresence.js'
 
 import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile, createSharingLink, fileExistsInAppFolder, downloadFilesFromOneDrive} from '../msalutils/onedrive'
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
@@ -1382,6 +1382,10 @@ computed: {
     examLogEvents()    { return examEventBus.events.length ? examEventBus.events.slice() : [] },
     examLogStart()     { return examEventBus.examStart },
     examLogEnd()       { return examEventBus.examEnd },
+
+    reachableConnections() {
+        return countReachableStudents(this.studentlist, this.now);
+    },
 
     hasMicrosoft365TemplateReady() {
         const section = this.serverstatus.examSections[this.serverstatus.activeSection];
@@ -1700,7 +1704,8 @@ computed: {
                         for (let i = 0; i < this.studentwidgets.length; i++){  // we cant use (for .. of) or forEach because it creates a workingcopy of the original object
                             if (student.token == this.studentwidgets[i].token){ 
                                 //now update the entry in the original widgets object and check if the student is online
-                                if (this.now - STUDENT_HEARTBEAT_STALE_MS > student.timestamp){
+                                const isReachable = isStudentReachable(student, this.now);
+                                if (!isReachable){
                                     if (this.studentwidgets[i].online && !this.muteAudio){ // play short soundfile on the first time the student timestamp is older than 20 seconds
                                         console.log(`dashboard @ fetchInfo: student ${student.clientname} just went offline`)
                                         const audio = new Audio('dialog-warning.oga');
