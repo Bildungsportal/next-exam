@@ -169,6 +169,21 @@ export default {
     flex: 1;
     min-height: 0;
     padding: 8px 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+.wf-filelist::-webkit-scrollbar {
+    width: 6px;
+}
+.wf-filelist::-webkit-scrollbar-track {
+    background: transparent;
+}
+.wf-filelist::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.15);
+    border-radius: 3px;
+}
+.wf-filelist::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.28);
 }
 .wf-row {
     display: flex;

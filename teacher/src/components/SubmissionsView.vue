@@ -163,6 +163,21 @@ export default {
     flex: 1;
     overflow-y: auto;
     padding: 12px 16px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+.sv-content::-webkit-scrollbar {
+    width: 6px;
+}
+.sv-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+.sv-content::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.15);
+    border-radius: 3px;
+}
+.sv-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.28);
 }
 .sv-table {
     width: 100%;

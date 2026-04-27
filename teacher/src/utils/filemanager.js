@@ -430,9 +430,12 @@ function loadFilelist(directory){
     .then( response => response.json() )
     .then( filelist => {
         //log.error(filelist)
+        const pinnedDirs = ['ABGABE', 'screenshots'];
         filelist.sort((a, b) => {
-            if (a.type === b.type) return a.name.localeCompare(b.name)
-            return a.type === 'dir' ? -1 : 1
+            const aPin = a.type === 'dir' && pinnedDirs.includes(a.name) ? 0 : (a.type === 'dir' ? 1 : 2);
+            const bPin = b.type === 'dir' && pinnedDirs.includes(b.name) ? 0 : (b.type === 'dir' ? 1 : 2);
+            if (aPin !== bPin) return aPin - bPin;
+            return a.name.localeCompare(b.name);
         })
         this.localfiles = filelist;
         this.currentdirectory = directory
