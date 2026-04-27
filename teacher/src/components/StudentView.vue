@@ -7,7 +7,7 @@
                         <button type="button" class="btn btn-sm btn-info stv-action" @click="$emit('send-files', student?.token)" :disabled="!student?.token">
                             {{ $t('dashboard.sendfileSingle') }}
                         </button>
-                        <button type="button" class="btn btn-sm btn-info stv-action" @click="$emit('get-files', { token: student?.token, force: true })" :class="lockDownload ? 'disabledexam' : ''" :disabled="!student?.token">
+                        <button type="button" class="btn btn-sm btn-info stv-action" @click="$emit('get-files', { token: student?.token, force: true })" :disabled="!student?.token">
                             {{ $t('dashboard.getfileSingle') }}
                         </button>
                         <button type="button" class="btn btn-sm btn-teal stv-action" @click="$emit('download-screenshot', student)" :disabled="!canSaveScreenshot">
@@ -47,7 +47,6 @@ export default {
         visible:      { type: Boolean, default: false },
         student:      { type: Object,  default: null },
         reachable:    { type: Boolean, default: false },
-        lockDownload: { type: Boolean, default: false },
         screenshotSidebarHint: { type: String, default: '' },
     },
 

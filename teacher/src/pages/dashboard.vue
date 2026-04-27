@@ -82,7 +82,6 @@
         :visible="showStudentView && !!activestudent"
         :student="activestudent"
         :reachable="!!(activestudent && isStudentReachable(activestudent, now))"
-        :lockDownload="lockDownload"
         :screenshot-sidebar-hint="screenshotSidebarHint"
         @close="hideStudentview()"
         @send-files="(token) => sendFiles(token)"
@@ -912,7 +911,6 @@
             </div>
 
             <div class="btn btn-dark tab-button"
-                :class="lockDownload ? 'disabledexam' : ''"
                 @click="getFiles('all', true, false, true); hideDescription();"
                 @mouseover="showDescription($t('dashboard.getfile'))"
                 @mouseout="hideDescription">
@@ -1423,12 +1421,6 @@ computed: {
         return this.serverstatus.exammode && Object.values(this.serverstatus.examSections).some(s => s.locked)
     },
 
-    lockDownload() {
-        const examType = this.serverstatus.examSections[this.serverstatus.activeSection].examtype;
-        const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-        return examType === 'eduvidual' || examType === 'forms' || examType === 'website' || (examType === 'microsoft365' && !this.hasMicrosoft365TemplateReady);
-    },
-    
     lockPdfSummary() {
         const examType = this.serverstatus.examSections[this.serverstatus.activeSection].examtype;
         return examType === 'eduvidual' || examType === 'website' || examType === 'math' || examType === 'microsoft365';

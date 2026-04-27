@@ -1,5 +1,6 @@
 import log from 'electron-log/renderer';
 import examEventBus from './examEventBus.js'
+import { countReachableStudents, isStudentReachable } from './studentPresence.js'
 
 
 
@@ -27,7 +28,7 @@ function startExam(){
         this.restoreGroupAssignments(true);
     }
 
-    this.lockscreens(false, false); // deactivate lockscreen
+    this.lockscreens(false, false, true); // deactivate lockscreen (bypass reachable gate; exam start must update server state)
     this.serverstatus.exammode = true;
     examEventBus.examStart = new Date().toLocaleString('de-DE')
     examEventBus._scheduleSave()
@@ -76,7 +77,7 @@ function endExam(){
             examEventBus.examEnd = new Date().toLocaleString('de-DE')
             examEventBus._scheduleSave()
             examEventBus.push('examend')
-            this.lockscreens(false, false); // deactivate lockscreen
+            this.lockscreens(false, false, true); // deactivate lockscreen (bypass reachable gate; exam end must update server state)
             this.setServerStatus()
         }
     });
@@ -256,9 +257,14 @@ function getFiles(who='all', feedback=false, quiet=false, includeStudentLog=fals
 
 
 
-// temporarily lock screens
-function lockscreens(state, feedback=true){
-    if (this.studentlist.length === 0) { this.status(this.$t("dashboard.noclients")); return;}
+// temporarily lock screens (bypassReachableGate: start/end exam must toggle flags even if heartbeats are stale)
+function lockscreens(state, feedback=true, bypassReachableGate=false){
+    const now = Date.now();
+    if (bypassReachableGate) {
+        if (this.studentlist.length === 0) { this.status(this.$t("dashboard.noclients")); return; }
+    } else if (countReachableStudents(this.studentlist, now) === 0) {
+        this.status(this.$t("dashboard.noclients")); return;
+    }
     if (state === false) { this.serverstatus.screenslocked = false; if (feedback) { this.visualfeedback(this.$t("dashboard.unlock")); } }   // the feedback interferes with endexam screen
     else { this.serverstatus.screenslocked = true; this.visualfeedback(this.$t("dashboard.lock"))} 
     this.setServerStatus()
@@ -269,7 +275,13 @@ function lockscreens(state, feedback=true){
 
 //upload files to all students
 function sendFiles(who) {
-    if (this.studentlist.length === 0) { this.status(this.$t("dashboard.noclients")); return;}
+    const now = Date.now();
+    if (who === 'all') {
+        if (countReachableStudents(this.studentlist, now) === 0) { this.status(this.$t("dashboard.noclients")); return; }
+    } else {
+        const st = this.studentlist.find((s) => s.token === who);
+        if (!isStudentReachable(st, now)) { this.status(this.$t("dashboard.noclients")); return; }
+    }
     let htmlcontent = `<div class="my-content"> 
         ${this.$t("dashboard.filesendtext")} <br>
         <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
@@ -386,12 +398,19 @@ function sendFiles(who) {
 
 
 
-        // show warning
+        // show warning (widget calls delfolderquestion(token) so first arg is the token string, not a DOM event)
 function delfolderquestion(event, token="all"){
-    if (this.studentlist.length === 0) { this.status(this.$t("dashboard.noclients")); return;}
+    const effectiveToken = typeof event === 'string' ? event : token;
+    const now = Date.now();
+    if (effectiveToken === 'all') {
+        if (countReachableStudents(this.studentlist, now) === 0) { this.status(this.$t("dashboard.noclients")); return; }
+    } else {
+        const st = this.studentlist.find((s) => s.token === effectiveToken);
+        if (!isStudentReachable(st, now)) { this.status(this.$t("dashboard.noclients")); return; }
+    }
     let text =  this.$t("dashboard.delsure")
 
-    if (token !== "all"){ 
+    if (effectiveToken !== "all"){
         text = this.$t("dashboard.delsinglesure")
     }
     this.$swal.fire({
@@ -412,7 +431,7 @@ function delfolderquestion(event, token="all"){
     .then((result) => {
         if (result.isConfirmed) {
                 // inform student that folder needs to be deleted
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${token}`, { 
+            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${effectiveToken}`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json' },
                 body: JSON.stringify({ delfolder : true } )
