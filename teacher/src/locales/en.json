@@ -206,7 +206,7 @@
         "rdpChooseUrl": "Choose RDP URL",
         "rdpUrl": "RDP URL",
         "rdpconfig": "RDP Configuration",
-        "rdpconfiginfo": "Please enter the domain (URL) of the RDP-Server",
+        "rdpconfiginfo": "Please enter the domain of the RDP-Server",
         "reallykick": "remove student from server",
         "remoteassistant": "Remote Assistant",
         "remoteassistantinfo": "Remote Assistant Software is possibly running on the client device",

@@ -589,10 +589,9 @@ async function configureRDP(presetGroup){
         title: this.$t("dashboard.rdp"),
         icon: 'question',
         html: `
-            <div class="my-content" style="text-align:left; margin:0 12px;">
+            <div class="my-content">
                 <div>${this.$t("dashboard.rdpconfiginfo")}</div>
-                <label class="form-label" style="margin-top:10px;">${this.$t('dashboard.host')}</label>
-                <div style="position:relative;">
+                <div style="position:relative; margin-top:10px;">
                     <input id="rdpDomain" class="form-control" value="${currentValue}" placeholder="rdweb.schule.lan">
                     <span id="rdpDomainStatus" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-weight:bold; cursor:help;"></span>
                 </div>
