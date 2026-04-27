@@ -181,20 +181,30 @@ const initialViewport = page.getViewport({ scale: 1.5 });
             return `${fields.length} total  TC:${tc}  cb:${cb}  cloze:${Math.max(0,cl)}`;
         };
 
-        console.log(`[PIPE p${pageNum}] raw:`, rawBoxFields.map(b=>`${b.id}[${b.type}${b.isTableCell?'/TC':''}] ${parseFloat(b.style.left).toFixed(0)},${parseFloat(b.style.top).toFixed(0)} ${parseFloat(b.style.width).toFixed(0)}x${parseFloat(b.style.height).toFixed(0)}`));
+        if (this.enableLogging) {
+            console.log(`[PIPE p${pageNum}] raw:`, rawBoxFields.map(b=>`${b.id}[${b.type}${b.isTableCell?'/TC':''}] ${parseFloat(b.style.left).toFixed(0)},${parseFloat(b.style.top).toFixed(0)} ${parseFloat(b.style.width).toFixed(0)}x${parseFloat(b.style.height).toFixed(0)}`));
+        }
         let boxFields = this.enableFilterAndMerge ? this.filterAndMergeBoxes(rawBoxFields) : rawBoxFields;
-        console.log(`[PIPE p${pageNum}] raw=${rawBoxFields.length} → filterAndMerge → ${fmt(boxFields)}`);
+        if (this.enableLogging) {
+            console.log(`[PIPE p${pageNum}] raw=${rawBoxFields.length} → filterAndMerge → ${fmt(boxFields)}`);
+        }
 
         const boxFieldsWithoutText = this.enableFilterBoxesWithText ? await this.filterBoxesWithText(boxFields, page, viewport, textContent) : boxFields;
-        console.log(`[PIPE p${pageNum}] filterBoxesWithText     → ${fmt(boxFieldsWithoutText)}`);
+        if (this.enableLogging) {
+            console.log(`[PIPE p${pageNum}] filterBoxesWithText     → ${fmt(boxFieldsWithoutText)}`);
+        }
 
         const boxFieldsPreciseFilter = this.enableFilterBoxesWithTextPrecise ? await this.filterBoxesWithTextPrecise(boxFieldsWithoutText, page, viewport, textContent) : boxFieldsWithoutText;
-        console.log(`[PIPE p${pageNum}] filterBoxesWithTextPrec → ${fmt(boxFieldsPreciseFilter)}`);
+        if (this.enableLogging) {
+            console.log(`[PIPE p${pageNum}] filterBoxesWithTextPrec → ${fmt(boxFieldsPreciseFilter)}`);
+        }
 
         const clozePruned = this.filterClozeAgainstBoxFields(clozeFields, boxFieldsPreciseFilter);
         const allFields = [...clozePruned, ...boxFieldsPreciseFilter];
         const filteredAllFields = this.enableFilterAndMerge ? this.filterAndMergeBoxes(allFields) : allFields;
-        console.log(`[PIPE p${pageNum}] +cloze(${clozePruned.length}) → 2.filterAndMerge → ${fmt(filteredAllFields)}`);
+        if (this.enableLogging) {
+            console.log(`[PIPE p${pageNum}] +cloze(${clozePruned.length}) → 2.filterAndMerge → ${fmt(filteredAllFields)}`);
+        }
 
         const filteredClozeFields = filteredAllFields.filter(field => clozePruned.some(cf => cf.id === field.id));
         const filteredBoxFields = filteredAllFields.filter(field => boxFieldsPreciseFilter.some(bf => bf.id === field.id));
@@ -202,7 +212,9 @@ const initialViewport = page.getViewport({ scale: 1.5 });
         const clozeIdSet = new Set(filteredClozeFields.map((f) => f.id));
         const boxIdSet = new Set(filteredBoxFields.map((f) => f.id));
         const overlapResolved = this.resolveSmallerWinsAmongOverlappingFields([...filteredClozeFields, ...filteredBoxFields]);
-        console.log(`[PIPE p${pageNum}] resolveSmallerWins      → ${fmt(overlapResolved)}`);
+        if (this.enableLogging) {
+            console.log(`[PIPE p${pageNum}] resolveSmallerWins      → ${fmt(overlapResolved)}`);
+        }
 
         const filteredClozeFieldsOut = this.filterDegenerateInteractiveFields(
             overlapResolved.filter((f) => clozeIdSet.has(f.id)),
@@ -215,7 +227,9 @@ const initialViewport = page.getViewport({ scale: 1.5 });
             viewport,
         );
         const formFieldsFiltered = this.filterDegenerateInteractiveFields(formFields, textContent, viewport);
-        console.log(`[PIPE p${pageNum}] filterDegenerate        → box:${filteredBoxFieldsOut.length}  cloze:${filteredClozeFieldsOut.length}  form:${formFieldsFiltered.length}`);
+        if (this.enableLogging) {
+            console.log(`[PIPE p${pageNum}] filterDegenerate        → box:${filteredBoxFieldsOut.length}  cloze:${filteredClozeFieldsOut.length}  form:${formFieldsFiltered.length}`);
+        }
 
         const totalFields = formFieldsFiltered.length + filteredClozeFieldsOut.length + filteredBoxFieldsOut.length;
         const warnings = [];
