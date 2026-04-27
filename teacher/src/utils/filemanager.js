@@ -164,6 +164,84 @@ function isValidPdf(data) {
     return true; // all bytes match the PDF header
 }
 
+function escapeHtml(s){
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+}
+
+// fetch file from disc - show as text (e.g. .log)
+function loadTextFile(filepath, filename){
+    const form = new FormData()
+    form.append("filename", filepath)
+    const titleText = buildLogViewerTitle(this.workdirectory, filepath, filename)
+    fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/getpdf/${this.servername}/${this.servertoken}`, { method: 'POST', body: form })
+        .then((response) => response.arrayBuffer())
+        .then((data) => {
+            const decoder = new TextDecoder('utf-8')
+            let text = decoder.decode(data)
+            const maxChars = 200000
+            if (text.length > maxChars) {
+                text = text.slice(0, maxChars) + `\n\n... truncated (${text.length - maxChars} chars)`
+            }
+
+            const htmlLines = String(text).split('\n').map((line) => {
+                const level = detectLogLevel(line)
+                const cls = level ? `log-line log-${level}` : 'log-line'
+                return `<span class="${cls}">${escapeHtml(line)}</span>`
+            }).join('\n')
+
+            this.$swal.fire({
+                title: titleText,
+                html: `<style>
+                    .log-view-popup{ background:#3a3f44 !important; color: rgba(255,255,255,0.92); }
+                    .log-title{ text-align:left; width:100%; font-size:1.3rem !important; line-height:1.15 !important; font-weight:600; word-break:break-all; }
+                    .log-pre{ text-align:left; white-space:pre-wrap; max-height:70vh; overflow:auto; background:#1b1e21; border:1px solid rgba(255,255,255,0.08); padding:12px; border-radius:8px; margin:0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.9rem; line-height: 0.9; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) rgba(0,0,0,0); }
+                    .log-pre::-webkit-scrollbar{ width: 8px; height: 8px; }
+                    .log-pre::-webkit-scrollbar-track{ background: rgba(0,0,0,0); }
+                    .log-pre::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.18); border-radius: 8px; border: 2px solid #1b1e21; }
+                    .log-pre::-webkit-scrollbar-thumb:hover{ background: rgba(255,255,255,0.28); }
+                    .log-line{ display:block; color: rgba(255,255,255,0.82); }
+                    .log-info{ color: #22c55e; }
+                    .log-warn{ color: #eab308; }
+                    .log-error{ color: #ef4444; }
+                    .log-debug{ color: #3b82f6; }
+                    .log-verbose{ color: #d946ef; }
+                </style><pre class="log-pre">${htmlLines}</pre>`,
+                width: '80vw',
+                customClass: { popup: 'log-view-popup', title: 'log-title' },
+                showCloseButton: true,
+                showConfirmButton: false,
+                showCancelButton: false,
+            })
+        })
+        .catch((err) => { log.error(err) })
+}
+
+function normalizeFsPath(p){
+    return String(p || '').replace(/\\/g, '/').replace(/\/+$/, '')
+}
+
+function buildLogViewerTitle(workdirectory, filepath, filename){
+    const wd = normalizeFsPath(workdirectory)
+    const fp = normalizeFsPath(filepath)
+    const base = filename || (fp ? fp.split('/').pop() : 'log')
+    if (wd && fp.startsWith(`${wd}/`)) {
+        return fp.slice(wd.length + 1)
+    }
+    return base
+}
+
+function detectLogLevel(line){
+    const s = String(line || '')
+    const m = s.match(/\b(info|warn|error|debug|verbose)\b/i)
+    if (!m) return null
+    return m[1].toLowerCase()
+}
+
 
 
 
@@ -430,7 +508,7 @@ function loadFilelist(directory){
     .then( response => response.json() )
     .then( filelist => {
         //log.error(filelist)
-        const pinnedDirs = ['ABGABE', 'screenshots'];
+        const pinnedDirs = ['ABGABE', 'logfiles', 'screenshots'];
         filelist.sort((a, b) => {
             const aPin = a.type === 'dir' && pinnedDirs.includes(a.name) ? 0 : (a.type === 'dir' ? 1 : 2);
             const bPin = b.type === 'dir' && pinnedDirs.includes(b.name) ? 0 : (b.type === 'dir' ? 1 : 2);
@@ -444,4 +522,4 @@ function loadFilelist(directory){
     }).catch(err => { log.error(err)});
 }
  
-export {loadFilelist, getLatest, processPrintrequest, loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer}
+export {loadFilelist, getLatest, processPrintrequest, loadImage, loadPDF, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer}

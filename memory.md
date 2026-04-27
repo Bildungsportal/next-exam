@@ -13,3 +13,4 @@ TECH^build^protectMain^main bundle path=teacher/dist/electron/UnPackaged/electro
 PATH^platform^dispatcher^teacher/src-electron/main/scripts/platformDispatcher.js used by teacher main startup logs^teacher/src-electron/electron-main.js
 PATH^pdfparser^root^pdf parser code lives in teacher/src/utils/pdfparser/ and student/src/utils/pdfparser/ (versioned subdirs)
 IPC^teacher^saveStudentScreenshot^invoke({servername,clientname,imageDataUrl}) writes workdir/<server>/<student>/screenshots/screenshot-YYYYMMDD_HH_MM_SS.ext^teacher/src-electron/main/scripts/ipchandler.js
+IPC^exam^studentLog^GET /server/control/fetch/...?log=true sets sendlog; student POST /server/data/studentlog/:server/:token {file,clientname} -> workdir/<server>/<client>/logfiles/next-exam-student.log^teacher/src-electron/server/src/routes/server/control.js+data.js;student communicationhandler.js

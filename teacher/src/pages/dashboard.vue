@@ -115,6 +115,7 @@
         @load-filelist="(path) => loadFilelist(path)"
         @load-pdf="({ path, name }) => loadPDF(path, name)"
         @load-image="(path) => loadImage(path)"
+        @load-text="({ path, name }) => loadTextFile(path, name)"
         @send-file="(file) => dashboardExplorerSendFile(file)"
         @download-file="(file) => downloadFile(file)"
         @delete-file="(file) => fdelete(file)"
@@ -912,7 +913,7 @@
 
             <div class="btn btn-dark tab-button"
                 :class="lockDownload ? 'disabledexam' : ''"
-                @click="getFiles('all', true); hideDescription();"
+                @click="getFiles('all', true, false, true); hideDescription();"
                 @mouseover="showDescription($t('dashboard.getfile'))"
                 @mouseout="hideDescription">
                 <img src="/src/assets/img/svg/edit-download.svg" width="24" height="24">
@@ -1120,7 +1121,7 @@ import { isStudentReachable, countReachableStudents } from '../utils/studentPres
 
 import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile, createSharingLink, fileExistsInAppFolder, downloadFilesFromOneDrive} from '../msalutils/onedrive'
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
-import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer } from '../utils/filemanager'
+import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer } from '../utils/filemanager'
 import { swalQueued } from '../utils/swalQueue.js'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore } from '../utils/exammanagement.js'
 import { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
@@ -1571,6 +1572,7 @@ computed: {
         processPrintrequest:processPrintrequest,  // handles a print request and first fetches the latest version from a specific student
         loadImage:loadImage,                        // displays an image in the preview panel
         loadPDF:loadPDF,                            // displays a pdf in the preview panel
+        loadTextFile:loadTextFile,                  // shows plain text / .log in a modal (DashboardExplorer)
         dashboardExplorerSendFile:dashboardExplorerSendFile,        // sends a given file to the selected student
         downloadFile:downloadFile,                                  // store the selected file to a local folder
         showWorkfolder:showWorkfolder,                              // makes the dashboard explorer visible

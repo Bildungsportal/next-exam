@@ -254,6 +254,9 @@ import { switchExamSection } from './switchExamSection.js';
         if (studentstatus.sendexam === true){
             this.sendExamToTeacher();
         }
+        if (studentstatus.sendlog === true){
+            this.sendStudentLogToTeacher();
+        }
         if (studentstatus.fetchfiles === true){
             this.requestFileFromServer(studentstatus.files);
         }
@@ -829,6 +832,35 @@ import { switchExamSection } from './switchExamSection.js';
         .then(data => { log.info(`communicationhandler @ sendExamToTeacher: teacher response: ${data.message}`); })
         .catch(error => {log.error(`communicationhandler @ sendExamToTeacher: ${error}`); });
      }
+
+    // Upload next-exam-student.log from workdirectory root when teacher requests log snapshot (separate from ZIP backup).
+    sendStudentLogToTeacher(){
+        const logPath = platformDispatcher.logfile
+        if (!fs.existsSync(logPath)) {
+            log.warn(`communicationhandler @ sendStudentLogToTeacher: missing ${logPath}`)
+            return
+        }
+        let base64File
+        try {
+            base64File = fs.readFileSync(logPath).toString('base64')
+        } catch (e) {
+            log.error(`communicationhandler @ sendStudentLogToTeacher: read failed ${e}`)
+            return
+        }
+        const servername = this.multicastClient.clientinfo.servername
+        const serverip = this.multicastClient.clientinfo.serverip
+        const token = this.multicastClient.clientinfo.token
+        const clientname = this.multicastClient.clientinfo.name
+        const url = `https://${serverip}:${this.config.serverApiPort}/server/data/studentlog/${servername}/${token}`
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ file: base64File, clientname }),
+        })
+            .then((response) => response.json())
+            .then((data) => { log.info(`communicationhandler @ sendStudentLogToTeacher: ${data.message || data.status}`) })
+            .catch((error) => { log.error(`communicationhandler @ sendStudentLogToTeacher: ${error}`) })
+    }
 
 
 

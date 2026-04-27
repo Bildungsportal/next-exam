@@ -218,7 +218,7 @@ function restore(studenttoken){
 
 
 // get finished exams (ABGABE) from students
-function getFiles(who='all', feedback=false, quiet=false){
+function getFiles(who='all', feedback=false, quiet=false, includeStudentLog=false){
     this.checkDiscspace()
     if ( this.studentlist.length <= 0 ) { this.status(this.$t("dashboard.noclients")); return; }
 
@@ -233,7 +233,8 @@ function getFiles(who='all', feedback=false, quiet=false){
     else { 
         log.info(`exammanagment @ getFiles: requesting files from ${who}`)
         // fetch files from clients - this basically just sets studentstatus (we have setstudentstatus/ for that now) to inform the client(s) to send their exam
-        fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/fetch/${this.servername}/${this.servertoken}/${who}`)  // who is either all or token
+        const logQuery = includeStudentLog ? '?log=true' : ''
+        fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/fetch/${this.servername}/${this.servertoken}/${who}${logQuery}`)  // who is either all or token; ?log=true sets sendlog for next-exam-student.log upload
         .then(response => {
             if (!response.ok) {  throw new Error('Network response was not ok');  }
             return response.json(); 

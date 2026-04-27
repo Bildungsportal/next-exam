@@ -292,7 +292,7 @@
         "total": "Submissions"
     },
     "examlog": {
-        "button": "Open exam log",
+        "button": "Open event log",
         "buttondesc": "Show detailed exam protocol",
         "end": "End",
         "ev_examend": "Exam ended",

@@ -138,7 +138,7 @@
         "formshint": "Bitte fügen Sie den Schüler-Link zu Ihrem Formular ein (Google Forms oder Microsoft Forms).",
         "fr": "Französisch",
         "freespacewarning": "Freier Speicherplatz zu gering!",
-        "getfile": "Sicherungen von allen Schüler:innen holen",
+        "getfile": "Sicherungskopien und Log-Dateien von allen Schüler:innen holen",
         "getfileSingle": "Sicherung holen",
         "getfiles": "Sicherung holen",
         "groupA": "Gruppe A",
@@ -292,7 +292,7 @@
         "total": "Abgaben"
     },
     "examlog": {
-        "button": "Exam Log öffnen",
+        "button": "Event Log öffnen",
         "buttondesc": "Detailliertes Prüfungsprotokoll anzeigen",
         "end": "Ende",
         "ev_examend": "Prüfung beendet",

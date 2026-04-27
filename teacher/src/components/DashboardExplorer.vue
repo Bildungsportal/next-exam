@@ -42,6 +42,10 @@
                             <img src="/src/assets/img/svg/document.svg" width="18" height="18">
                             <span>{{ file.name }}</span>
                         </div>
+                        <div v-else-if="file.ext === '.log'" class="wf-entry wf-log" @click="$emit('load-text', { path: file.path, name: file.name })">
+                            <img src="/src/assets/img/svg/document.svg" width="18" height="18">
+                            <span>{{ file.name }}</span>
+                        </div>
                         <div v-else class="wf-entry wf-other">
                             <img src="/src/assets/img/svg/document.svg" width="18" height="18">
                             <span>{{ file.name }}</span>
@@ -54,6 +58,9 @@
                             <img src="/src/assets/img/svg/eye-fill.svg" class="white" width="16" height="16">
                         </div>
                         <div v-if="file.type === 'file' && ['.png','.jpg','.webp','.jpeg'].includes(file.ext)" class="btn btn-sm btn-dark" @click="$emit('load-image', file.path)" :title="$t('dashboard.preview')">
+                            <img src="/src/assets/img/svg/eye-fill.svg" class="white" width="16" height="16">
+                        </div>
+                        <div v-if="file.type === 'file' && file.ext === '.log'" class="btn btn-sm btn-dark" @click="$emit('load-text', { path: file.path, name: file.name })" :title="$t('dashboard.preview')">
                             <img src="/src/assets/img/svg/eye-fill.svg" class="white" width="16" height="16">
                         </div>
                         <div v-if="file.type === 'file'" class="btn btn-sm btn-dark" :class="lockSendFile ? 'disabledexam' : ''" @click="$emit('send-file', file)" :title="$t('dashboard.send')">
@@ -94,7 +101,7 @@ export default {
         backupdirectory:      { type: String, default: '' },
     },
 
-    emits: ['close', 'load-filelist', 'load-pdf', 'load-image', 'send-file', 'download-file', 'delete-file'],
+    emits: ['close', 'load-filelist', 'load-pdf', 'load-image', 'load-text', 'send-file', 'download-file', 'delete-file'],
 }
 </script>
 
@@ -212,6 +219,7 @@ export default {
 .wf-dir  span { color: var(--bs-success); }
 .wf-pdf  span { color: var(--bs-info); }
 .wf-img  span { color: var(--bs-info); }
+.wf-log  span { color: var(--bs-warning); }
 .wf-other span { color: rgba(255,255,255,0.5); cursor: default; }
 .wf-actions {
     display: flex;

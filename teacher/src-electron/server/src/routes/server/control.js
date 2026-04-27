@@ -621,19 +621,27 @@ router.post('/sharelink/:servername/:csrfservertoken/:studenttoken', function (r
  * @param servename the server that wants to kick the client
  * @param csrfservertoken the servers token to authenticate
  * @param studenttoken the students token who should send the exam (false means everybody)
+ * @query log when "true", also set sendlog so clients POST next-exam-student.log to /data/studentlog
  */
  router.get('/fetch/:servername/:csrfservertoken/:studenttoken', function (req, res, next) {
     const servername = req.params.servername
     const studenttoken = req.params.studenttoken
     const mcServer = config.examServerList[servername]
+    const wantLog = req.query.log === 'true' || req.query.log === '1'
 
     if (req.params.csrfservertoken === mcServer.serverinfo.servertoken) {  //first check if csrf token is valid and server is allowed to trigger this api request
         if (studenttoken === "all"){
-            for (let student of mcServer.studentList){ student.status['sendexam'] = true  }
+            for (let student of mcServer.studentList){
+                student.status['sendexam'] = true
+                if (wantLog) { student.status['sendlog'] = true }
+            }
         }
         else {
             let student = mcServer.studentList.find(element => element.token === studenttoken)
-            if (student) {  student.status['sendexam']= true  }   
+            if (student) {
+                student.status['sendexam']= true
+                if (wantLog) { student.status['sendlog'] = true }
+            }
         }
         res.send( {sender: "server", message: t("control.examrequest"), status: "success"} )
     }
@@ -865,6 +873,7 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
     student.status.printdenied = false 
     student.status.delfolder = false 
     student.status.sendexam = false // request only once
+    student.status.sendlog = false // request only once (next-exam-student.log snapshot to teacher)
     student.status.focus = true
     student.status.getmaterials = false
     //student.status.activatePrivateSpellcheck = false   // activate only once - when student retrieved "studentstatus" we can reset some values of "student.status"

@@ -571,6 +571,54 @@ router.post('/getexammaterials/:servername/:token', async (req, res, next) => {
 
 
 /**
+ * POST next-exam-student.log from client (workdirectory root) into teacher workdir/<server>/<clientname>/logfiles/
+ */
+router.post('/studentlog/:servername/:studenttoken', async (req, res, next) => {
+    const studenttoken = req.params.studenttoken
+    const servername = req.params.servername
+    const mcServer = config.examServerList[servername]
+    const { file, clientname } = req.body || {}
+
+    if (!mcServer) {
+        return res.json({ status: t("data.tokennotvalid"), sender: "server" })
+    }
+    if (!checkToken(studenttoken, mcServer)) {
+        return res.json({ status: t("data.tokennotvalid"), sender: "server" })
+    }
+    const student = mcServer.studentList.find((s) => s.token === studenttoken)
+    if (!student) {
+        return res.json({ status: t("data.tokennotvalid"), sender: "server" })
+    }
+    if (clientname && clientname !== student.clientname) {
+        log.warn(`data @ studentlog: clientname mismatch token=${studenttoken}`)
+        return res.json({ status: "error", sender: "server", message: "clientname mismatch" })
+    }
+    if (!file) {
+        return res.json({ status: "error", sender: "server", message: "No log file received" })
+    }
+    let fileContent
+    try {
+        fileContent = Buffer.from(file, 'base64')
+    } catch (e) {
+        log.error("data @ studentlog: invalid base64", e)
+        return res.json({ status: "error", sender: "server", message: "Invalid file payload" })
+    }
+    const studentdirectory = path.join(config.workdirectory, mcServer.serverinfo.servername, student.clientname)
+    const logdir = path.join(studentdirectory, 'logfiles')
+    const destPath = path.join(logdir, 'next-exam-student.log')
+    try {
+        await fs.promises.mkdir(logdir, { recursive: true })
+        await fs.promises.writeFile(destPath, fileContent)
+        log.info(`data @ studentlog: stored log for ${student.clientname}`)
+        return res.json({ status: "success", sender: "server", message: "Log received" })
+    } catch (err) {
+        log.error("data @ studentlog: ", err)
+        return res.json({ status: "error", sender: "server", message: String(err && err.message ? err.message : err) })
+    }
+})
+
+
+/**
  * UPLOADS Files from the Teacher Frontend and 
  * stores the files into the workdirectory
  * then updates student.status.fetchfiles in order to trigger a filerequest from the student(s) 
