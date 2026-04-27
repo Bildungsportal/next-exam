@@ -381,9 +381,9 @@ export default {
                     return
                 }
                 preview.style.display = 'none'
-                const wv = document.querySelector("#webview")
+                const wv = document.querySelector('#preview webview')
                 if (wv && typeof wv.setAttribute === 'function') {
-                    wv.setAttribute("src", "about:blank")
+                    wv.setAttribute('src', 'about:blank')
                 }
                 URL.revokeObjectURL(this.currentpreview)
             }

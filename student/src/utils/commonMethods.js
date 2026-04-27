@@ -120,6 +120,22 @@ export function gracefullyExit() {
 }
 
 
+export function applyPreviewWebviewHostLayout(splitview) {
+    const webview = document.querySelector('#preview #webview') || document.querySelector('#webview');
+    if (!webview) return;
+    if (!splitview) {
+        webview.style.height = '80vh';
+        webview.style.width = '80vw';
+        webview.style.position = 'relative';
+        webview.style.top = '10%';
+    } else {
+        webview.style.height = '100%';
+        webview.style.width = '100%';
+        webview.style.position = 'relative';
+        webview.style.top = '0%';
+    }
+}
+
 export function showUrl(url){
     this.webviewVisible = true;
     this.urlForWebview = url;
@@ -129,19 +145,9 @@ export function showUrl(url){
     }
 
     const applyDomChanges = () => {
-        const webview = document.querySelector("#webview");
-        if (webview) {
-            if (!this.splitview){
-                webview.style.height = "80vh";
-                webview.style.width = "80vw";
-                webview.style.position = "relative";
-                webview.style.top = "10%";
-            } else {
-                webview.style.height = "100%";
-                webview.style.width = "100%";
-                webview.style.position = "relative";
-                webview.style.top = "0%";
-            }
+        const preview = document.querySelector('#preview');
+        if (preview) {
+            preview.style.display = 'block';
         }
 
         const embedcontainer = document.querySelector('#preview .embed-container');
@@ -149,10 +155,7 @@ export function showUrl(url){
             embedcontainer.style.display = 'none';
         }
 
-        const preview = document.querySelector("#preview");
-        if (preview) {
-            preview.style.display = 'block';
-        }
+        applyPreviewWebviewHostLayout(this.splitview);
     };
 
     this.$nextTick(() => applyDomChanges());

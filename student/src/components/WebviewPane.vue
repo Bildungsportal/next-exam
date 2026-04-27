@@ -1,35 +1,35 @@
 <template>
-  <div v-show="visible" :id="id" class="position-relative w-100" style="height: 100%; min-height: 0;">
-    
+  <div v-show="visible" :id="id" class="position-relative nx-webview-pane-host">
+    <div class="nx-webview-pane-fill">
       <ul
-      class="nav nav-tabs position-absolute top-0 start-0 end-0 w-100 bg-white"
+      class="nav nav-tabs d-flex align-items-stretch flex-nowrap position-absolute top-0 start-0 end-0 w-100 bg-white"
       style="z-index:2000; pointer-events:auto; font-size:1.1rem;"
       @mousedown.stop
       @click.stop
     >
 
-      <li class="nav-item">
+      <li class="nav-item d-flex">
         <div
           type="button"
-          class="nav-link btn btn-light btn-sm"
+          class="nav-link btn btn-light btn-sm webview-toolbar-btn"
           @click.stop="goHome"
           style="width:40px; text-align:center;"
         >⌂</div>
       </li>
-      <li class="nav-item">
+      <li class="nav-item d-flex">
         <div
           type="button"
-          class="nav-link btn btn-light btn-sm"
+          class="nav-link btn btn-light btn-sm webview-toolbar-btn"
           :disabled="!canGoBack"
           :class="{ disabled: !canGoBack }"
           @click.stop="goBack"
           style="width:40px; text-align:center;"
         >◀</div>
       </li>
-      <li class="nav-item">
+      <li class="nav-item d-flex">
         <div
           type="button"
-          class="nav-link btn btn-light btn-sm"
+          class="nav-link btn btn-light btn-sm webview-toolbar-btn"
           :disabled="!canGoForward"
           :class="{ disabled: !canGoForward }"
           @click.stop="goForward"
@@ -37,10 +37,41 @@
         >▶</div>
       </li>
 
+      <li class="nav-item d-flex">
+        <div
+          type="button"
+          class="nav-link btn btn-light btn-sm webview-toolbar-btn"
+          :disabled="zoomPercent <= zoomMin"
+          :class="{ disabled: zoomPercent <= zoomMin }"
+          :title="$t('webview.zoomout')"
+          @click.stop="zoomOut"
+          style="width:40px; text-align:center;"
+        >−</div>
+      </li>
+      <li class="nav-item d-flex">
+        <div
+          type="button"
+          class="nav-link btn btn-light btn-sm webview-toolbar-btn"
+          :disabled="zoomPercent >= zoomMax"
+          :class="{ disabled: zoomPercent >= zoomMax }"
+          :title="$t('webview.zoomin')"
+          @click.stop="zoomIn"
+          style="width:40px; text-align:center;"
+        >+</div>
+      </li>
+      <li class="nav-item d-flex">
+        <div
+          type="button"
+          class="nav-link btn btn-light btn-sm webview-toolbar-btn webview-zoom-pct"
+          :title="$t('webview.zoomreset')"
+          @click.stop="zoomReset"
+        >{{ zoomPercent }}%</div>
+      </li>
 
-      <li class="nav-item ms-auto">  <div
+
+      <li class="nav-item ms-auto d-flex">  <div
         type="button"
-        class="nav-link btn btn-light btn-sm"
+        class="nav-link btn btn-light btn-sm webview-toolbar-btn"
         @click.stop="closePane"
         style="width:40px; text-align:center; font-weight:bold;"
       >&times;</div> </li>
@@ -52,15 +83,18 @@
       ref="wv"
       id="safebrowser"
       :src="src || ''"
-      class="position-absolute start-0 w-100 "
-      style="top:42px; z-index:10000; height:calc(100% - 42px);"
+      class="position-absolute start-0 end-0 w-100"
+      style="top:42px; z-index:10000; height:calc(100% - 42px); border:0; min-width:0;"
     />
+    </div>
   </div>
 </template>
 
 
 
 <script>
+import { applyPreviewWebviewHostLayout } from '../utils/commonMethods.js'
+
 export default {
   name: 'WebviewPane',
   props: {
@@ -69,11 +103,16 @@ export default {
     visible: { type: Boolean, default: false },
     allowedUrl: { type: String, default: '' },
     blockExternal: { type: Boolean, default: false },
+    splitview: { type: Boolean, default: false },
   },
 
 
   data() {
     return {
+      zoomPercent: 100,            // guest zoom via webview.setZoomFactor (percent / 100)
+      zoomMin: 70,
+      zoomMax: 160,
+      zoomStep: 10,
       canGoBack: false,            // nav state
       canGoForward: false,         // nav state
       lastAllowedUrl: '',          // track last allowedUrl
@@ -138,6 +177,7 @@ export default {
 
       // open links in same WebView (target="_blank")
       this._onDomReady = () => {
+        this.applyWebviewZoom()
         this.wv?.executeJavaScript(`
           document.addEventListener('click', (e) => {
             const a = e.target.closest('a[target="_blank"]');
@@ -171,7 +211,17 @@ export default {
     }
   },
   watch: {
-  
+    visible(v) {
+      if (!v) return
+      this.$nextTick(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            this.applyWebviewZoom()
+            applyPreviewWebviewHostLayout(this.splitview)
+          })
+        })
+      })
+    },
   },
   methods: {
     goHome() {
@@ -179,7 +229,68 @@ export default {
       },   // go to home URL
     goBack() { if (this.wv?.canGoBack?.()) this.wv?.goBack() },      // history back
     goForward() { if (this.wv?.canGoForward?.()) this.wv?.goForward() }, // history forward
+    applyWebviewZoom() {
+      const factor = this.zoomPercent / 100
+      if (!this.wv || typeof this.wv.setZoomFactor !== 'function') return
+      try {
+        this.wv.setZoomFactor(factor)
+      } catch {
+        return
+      }
+    },
+    zoomIn() {
+      this.zoomPercent = Math.min(this.zoomMax, this.zoomPercent + this.zoomStep)
+      this.$nextTick(() => {
+        this.applyWebviewZoom()
+        applyPreviewWebviewHostLayout(this.splitview)
+      })
+    },
+    zoomOut() {
+      this.zoomPercent = Math.max(this.zoomMin, this.zoomPercent - this.zoomStep)
+      this.$nextTick(() => {
+        this.applyWebviewZoom()
+        applyPreviewWebviewHostLayout(this.splitview)
+      })
+    },
+    zoomReset() {
+      this.zoomPercent = 100
+      this.$nextTick(() => {
+        this.applyWebviewZoom()
+        applyPreviewWebviewHostLayout(this.splitview)
+      })
+    },
     closePane() { this.$emit('close'); }                                // send 'close' Event
   }
 }
 </script>
+
+<style scoped>
+/* Host #webview must not use Vue-bound inline style or showUrl 80vw/80vh is wiped on re-render */
+.nx-webview-pane-host {
+  min-height: 0;
+}
+
+.nx-webview-pane-fill {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+/* Same vertical stretch as nav row so −/+/% align with ⌂◀▶ */
+.webview-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  margin-bottom: 0;
+}
+
+/* Gray compact zoom label; overrides Bootstrap .nav-link blue */
+.webview-zoom-pct {
+  color: #6c757d !important;
+  min-width: 48px;
+  font-size: 0.72rem;
+  line-height: 1;
+}
+</style>

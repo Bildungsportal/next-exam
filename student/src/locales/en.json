@@ -231,6 +231,11 @@
         "wlanNopermissionsText": "Windows requires location permissions to retrieve WLAN information. Please enable location services in Privacy & Security settings.",
         "wlanNopermissionsTitle": "Location permission required"
     },
+    "webview": {
+        "zoomin": "Zoom in",
+        "zoomout": "Zoom out",
+        "zoomreset": "Reset zoom (100%)"
+    },
     "website": {
         "reloadwebview": "Reload webview"
     }

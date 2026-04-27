@@ -231,6 +231,11 @@
         "wlanNopermissionsText": "Windows benötigt Standortberechtigungen, um WLAN-Informationen abzurufen. Bitte aktivieren Sie die Positionsdienste in den Datenschutz- und Sicherheitseinstellungen.",
         "wlanNopermissionsTitle": "Standortberechtigung erforderlich"
     },
+    "webview": {
+        "zoomin": "Vergrößern",
+        "zoomout": "Verkleinern",
+        "zoomreset": "Zoom zurücksetzen (100%)"
+    },
     "website": {
         "reloadwebview": "Webview neu laden"
     }
