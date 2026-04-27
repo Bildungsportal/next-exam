@@ -8,8 +8,8 @@ class IpcRenderer {
     private handles = new Map<string, PluginListenerHandle[]>();
 
     /** Web → Native */
-    async send(channel: string, payload?: unknown): Promise<void> {
-        await IPC.send({ channel, payload });
+    send(channel: string, payload?: unknown): void {
+        void IPC.send({ channel, payload });
     }
 
     /** Native → Web (persistent) */
@@ -24,10 +24,11 @@ class IpcRenderer {
 
     /** Web → Native */
     async invoke(channel: string, ...data: unknown[]): Promise<unknown> {
+        //loggingBridge.info(`IpcRenderer ${channel} invoked with: `, data);
         let promise = IPC.invoke({ channel, payload: data });
         const result = await promise;
         if ('result' in result) {
-            loggingBridge.info(`IpcRenderer ${channel} invoked: `, result);
+            //loggingBridge.info(`IpcRenderer ${channel} invoked: `, result);
             return result.result;
         } else if ('error' in result) {
             loggingBridge.error(`IpcRenderer ${channel} failed to invoke result:`, result.error);
