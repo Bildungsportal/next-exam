@@ -24,8 +24,7 @@
 
 import {isElectronWindow, isIOS} from '../types/platform.ts'
 import IosTaskDispatcher from './ios/iosTaskDispatcher.js'
-import config from './config.js';
-
+import loggingBridge from "./loggingBridge.js";
 
 // class wraps ipcRenderer methods with platform checks
 export class SignalBridge {
@@ -33,8 +32,14 @@ export class SignalBridge {
     constructor(targetWindow = window) {
         this.targetWindow = targetWindow
         this.iosTaskDispatcher = IosTaskDispatcher
-        this.iosTaskDispatcher.init(config)
     }
+
+    // Some functionally still needs to be used like implemented in iosTaskDispatcher to test other functionality,
+    // e.g. getinfoasync is needed to test checkhostip, therefore the empty object fallback of
+    // Swift fallback is not enough
+    pluginList = [
+        'checkhostip'
+    ]
 
     // send forwards all params to electron or leaves hook for ios
     send(channel, ...args) {
@@ -74,17 +79,16 @@ export class SignalBridge {
     async invoke(channel, ...args) {
         const win = this.targetWindow
 
-        if (isElectronWindow(win) && win.ipcRenderer && typeof win.ipcRenderer.invoke === 'function') {
-            loggingBridge.info('signalBridge invoke electron call', channel, ...args)
-            const response = await win.ipcRenderer.invoke(channel, ...args);
-            loggingBridge.info(`signalBridge invoke electron ${channel}, got response: `, response)
-            return response
+        if (isElectronWindow(win) && win.ipcRenderer && typeof win.ipcRenderer.on === 'function') {
+            return await win.ipcRenderer.invoke(channel, ...args);
         }
 
         if (isIOS()) {
-            let response = await this.iosTaskDispatcher.dispatch(channel, ...args);
-            loggingBridge.info(`signalBridge invoke ios ${channel}, got response: `, response)
-            return response
+            if (this.pluginList.includes(channel)) {
+                return await win.ipcRenderer.invoke(channel, ...args)
+            } else {
+                return await this.iosTaskDispatcher.dispatch(channel, ...args)
+            }
         }
 
         // log unsupported platform information

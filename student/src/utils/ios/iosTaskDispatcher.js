@@ -20,15 +20,13 @@
  * IosTaskDispatcher is a class that dispatches tasks to the ios capacitor plugin
  */
 
-import {Device} from '@capacitor/device';
+//import {Device} from '@capacitor/device';
 import i18n from "../../locales/locales.js";
-import {Directory, Encoding, Filesystem as fs} from "@capacitor/filesystem";
-import {Clipboard} from "@capacitor/clipboard";
+//import {Directory, Encoding, Filesystem as fs} from "@capacitor/filesystem";
+//import {Clipboard} from "@capacitor/clipboard";
 import path from "path";
 import mammoth from "mammoth";
 import config from "../config.js"
-import { Network } from '@capacitor/network';
-import { registerPlugin } from '@capacitor/core';
 
 class IosTaskDispatcher {
 
@@ -44,12 +42,6 @@ class IosTaskDispatcher {
         this.loggingBridge = loggingBridge
         this.navigationHandler = navigationHandler
         this.multicastclient = mc
-
-        Network.addListener('networkStatusChange', status => {
-            console.log('Network status changed', status);
-        });
-
-        this.NetworkInfo = registerPlugin('NetworkInfo');
     }
 
     async dispatch(signal, payload) {
@@ -84,8 +76,6 @@ class IosTaskDispatcher {
                 return this.getwlaninfo()
             case 'set-new-locale':
                 return this.setnewlocale(payload);
-            case 'checkhostip':
-                return await this.checkhostip();
             case 'loginBiP':
                 return this.loginbip(payload);
             case 'reload-url':
@@ -164,27 +154,6 @@ class IosTaskDispatcher {
             clientinfo: this.multicastclient.clientinfo,
             serverstatus: serverstatus
         }
-    }
-
-    async checkhostip() {
-        try {
-            const networkStatus = await Network.getStatus();
-            this.loggingBridge.info("checkhostip networkStatus", networkStatus);
-            if (networkStatus.connected) {
-                try {
-                    const { ip } = await this.NetworkInfo.getWifiIP()
-                    this.loggingBridge.info("checkhostip ip", ip)
-                    return ip
-                } catch (e) {
-                    this.loggingBridge.error('Could not get IP:', e)
-                    return false
-                }
-            }
-        } catch (err) {
-            this.loggingBridge.error("checkhostip networkStatus error", err)
-            return false
-        }
-
     }
 
     /**
