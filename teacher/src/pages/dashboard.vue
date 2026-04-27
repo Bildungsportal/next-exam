@@ -1125,6 +1125,7 @@ import { isStudentReachable, countReachableStudents } from '../utils/studentPres
 import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile, createSharingLink, fileExistsInAppFolder, downloadFilesFromOneDrive} from '../msalutils/onedrive'
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
 import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer } from '../utils/filemanager'
+import { swalQueued } from '../utils/swalQueue.js'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore } from '../utils/exammanagement.js'
 import { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
 import { Exam } from '../types/api'
@@ -2772,7 +2773,7 @@ computed: {
                 const fileName = bakResult.filepath.split('/').pop()
                 const filePath = bakResult.filepath
                 
-                this.$swal.fire({
+                swalQueued({
                     customClass: {
                         popup: 'my-popup',
                         title: 'my-title',
@@ -2789,6 +2790,7 @@ computed: {
                     showCancelButton: true,
                     confirmButtonText: this.$t("dashboard.sendfileSingle"),
                     cancelButtonText: this.$t("dashboard.cancel"),
+                    confirmButtonColor: '#0aa2c0',
                 })
                 .then((sendResult) => {
                     if (sendResult.isConfirmed) {
@@ -2815,10 +2817,17 @@ computed: {
                 .catch(err => { console.error("dashboard @ ipcRenderer.on('reconnected'):", err) })
             } else {
                 // No BAK file found - show simple reconnect message
-                this.$swal.fire({
+                swalQueued({
+                    customClass: {
+                        popup: 'my-popup',
+                        title: 'my-title',
+                        content: 'my-content',
+                        actions: 'my-swal2-actions',
+                    },
                     title: this.$t("dashboard.attention"),
                     text: `${student.clientname} hat sich neu verbunden!`,
-                    icon: "info"
+                    icon: "info",
+                    confirmButtonColor: '#0aa2c0',
                 })
             }
         }); 

@@ -62,8 +62,12 @@
 
         <div v-else class="pdf-scroll-container">
         <div
-            v-for="(page, pageIndex) in parsedPages"
-            :key="pageIndex"
+        v-for="(page, pageIndex) in parsedPages"
+        :key="pageIndex"
+        class="pdf-page-layout"
+        :style="{ width: (page.width * zoom) + 'px', height: (page.height * zoom) + 'px' }"
+        >
+        <div
             class="pdf-page-wrapper"
             :style="{ width: page.width + 'px', height: page.height + 'px', transform: `scale(${zoom})` }"
             @mousedown="tool !== 'delete' ? startDraw($event, pageIndex) : null"
@@ -71,7 +75,7 @@
             @mouseup="isDrawing ? finishDraw($event, pageIndex) : null"
             @mouseleave="isDrawing ? cancelDraw() : null"
         >
-            <img :src="page.imgSrc" class="pdf-bg-image" draggable="false" />
+        <img :src="page.imgSrc" class="pdf-bg-image" draggable="false" />
 
             <template v-if="!isSubmissionPreview">
             <div
@@ -106,6 +110,7 @@
             <svg v-if="draftLine && draftLine.pageIndex === pageIndex" class="draft-line" :style="{ position:'absolute', left:0, top:0, width: page.width + 'px', height: page.height + 'px' }">
             <line :x1="draftLine.x1" :y1="draftLine.y1" :x2="draftLine.x2" :y2="draftLine.y2" stroke="rgba(220,53,69,0.95)" stroke-width="3" stroke-linecap="round" />
             </svg>
+        </div>
         </div>
         </div>
     </div>
@@ -579,11 +584,22 @@
     padding: 16px;
     background: rgba(33, 37, 41, 0.92);
     border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+    }
+    .pdf-page-layout {
+    flex-shrink: 0;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
     }
     .pdf-page-wrapper {
     position: relative;
-    margin: 0 auto 16px auto;
-    transform-origin: top left;
+    transform-origin: top center;
+    flex-shrink: 0;
     }
     .pdf-bg-image {
     width: 100%;

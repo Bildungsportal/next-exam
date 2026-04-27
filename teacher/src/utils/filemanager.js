@@ -1,5 +1,6 @@
 import log from 'electron-log/renderer';
 import { Buffer } from 'buffer';
+import { swalQueued } from './swalQueue.js'
 
 
 // DASHBOARD EXPLORER
@@ -265,7 +266,7 @@ async function processPrintrequest(student){
     log.info(`filemanager @ managePrintrequest: print request from ${student.clientname} accepted`)
     
 
-    this.$swal.fire({
+    swalQueued({
         customClass: {
             popup: 'my-popup',
             title: 'my-title',
@@ -280,6 +281,7 @@ async function processPrintrequest(student){
         icon: "question",
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
+        confirmButtonColor: '#0aa2c0',
     })
     .then((result) => {
         this.printrequest = false // allow new requests
