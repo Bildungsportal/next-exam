@@ -42,7 +42,7 @@ function fdelete(file){
 
 // show workfloder  TODO:  the whole workfolder thing is getting to complex.. this should be a standalone vue.js component thats embedded here
 function showWorkfolder(){
-    document.querySelector("#preview").style.display = "flex";
+    this.showExplorer = true;
 }
 
 
