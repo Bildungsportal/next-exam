@@ -980,70 +980,72 @@
 
         <!-- studentlist start -->
         <div id="studentslist">        
-            <draggable v-model="studentwidgets" :move="handleMoveItem" @end="handleDragEndItem" ghost-class="ghost">
-                <div v-for="student in studentwidgets" :key="student.token" style="cursor:auto" v-bind:class="(!student.focus)?'focuswarn':''" class="studentwidget btn rounded-3 btn-block">
-                    <div v-if="student.clientname">
-                        <div class="studentimage rounded" style="position: relative; height:128px;">  
-                             
-                            <button v-if="serverstatus.examSections[serverstatus.activeSection].examtype === 'editor' && !serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool && serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.spellchecklang !== 'none'" 
-                                @mouseover="showDescription($t('dashboard.allowspellcheck'))" 
-                                @mouseout="hideDescription" @click='activateSpellcheckForStudent(student.token,student.clientname)' 
+            <div class="studentslist-zoom" :style="studentsZoomStyle">
+                <draggable v-model="studentwidgets" :move="handleMoveItem" @end="handleDragEndItem" ghost-class="ghost">
+                    <div v-for="student in studentwidgets" :key="student.token" style="cursor:auto" v-bind:class="(!student.focus)?'focuswarn':''" class="studentwidget btn rounded-3 btn-block">
+                        <div v-if="student.clientname">
+                            <div class="studentimage rounded" style="position: relative; height:128px;">  
+                                 
+                                <button v-if="serverstatus.examSections[serverstatus.activeSection].examtype === 'editor' && !serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool && serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.spellchecklang !== 'none'" 
+                                    @mouseover="showDescription($t('dashboard.allowspellcheck'))" 
+                                    @mouseout="hideDescription" @click='activateSpellcheckForStudent(student.token,student.clientname)' 
+                                    type="button" 
+                                    class="btn btn-sm pt-0 mt-0 pe-0 float-end" 
+                                    style="z-index:100; position:relative;">
+                                    <img src="/src/assets/img/svg/autocorrection.svg" class="widgetbutton" width="22" height="22" >
+                                </button> 
+         
+                                <div v-cloak :id="student.token" style="position: relative;background-size: cover; height: 128px;" v-bind:style="(student.imageurl && isStudentReachable(student, now))? `background-image: url('${student.imageurl}')`:'background-image: url(user-red.svg)'"></div>
+                                <div v-if="student.virtualized && isStudentReachable(student, now)" class="virtualizedinfo" @mouseover="showDescription($t('dashboard.virtualizedinfo'), { vmFindings: student.vmFindings, webglFindings: student.webglFindings })" @mouseout="hideDescription">{{$t("dashboard.virtualized")}}</div>
+                                <div v-if="!student.focus && isStudentReachable(student, now)" class="kioskwarning" @mouseover="showDescription($t('dashboard.leftkioskinfo'))" @mouseout="hideDescription">{{$t("dashboard.leftkiosk")}}</div>
+                                <div v-if="student.status.sendexam && isStudentReachable(student, now)" class="examrequest" @mouseover="showDescription($t('dashboard.examrequestinfo'))" @mouseout="hideDescription">{{$t("dashboard.examrequest")}}</div>
+                                <div v-if="student.remoteassistant && isStudentReachable(student, now)" class="remoteassistant" @mouseover="showDescription($t('dashboard.remoteassistantinfo'), student.remoteassistant)" @mouseout="hideDescription">{{$t("dashboard.remoteassistant")}}</div>
+                                <span >   
+                                    <div v-if="isStudentReachable(student, now)" style="display: inline-block; overflow: hidden; width: 140px; height: 22px" @mouseover="showDescription($t('dashboard.documentsinfo') + student.files)" @mouseout="hideDescription"> 
+                                        <img v-for="file in student.files" style="width:22px; margin-left:-4px; position: relative; filter: sepia(10%) hue-rotate(306deg) brightness(0.3) saturate(75);" class="" src="/src/assets/img/svg/document.svg">
+                                    </div>
+                                    <div v-if="isStudentReachable(student, now)" style="display: inline-block; margin: 0px; position: absolute; right: 4px;" >
+                                        <img src="/src/assets/img/svg/edit-delete.svg" width="22" height="22" class="delfolderstudent" @click="delfolderquestion(student.token)"  @mouseover="showDescription($t('dashboard.delsingle'))" @mouseout="hideDescription" >
+                                    </div>
+                                    <br>
+                                    {{ truncatedClientName(student.clientname) }}  
+                                    <button  @click='kick(student.token,student.clientip)'  @mouseover="showDescription($t('dashboard.kick'))" @mouseout="hideDescription" type="button" class=" btn-close  btn-close-white pt-1 pe-2 float-end"></button> 
+                                </span>
+                            </div>
+
+                            <!-- bottom buttons START-->
+                            <div class="btn-group pt-0" role="group" style="">
+                                <button v-if="isStudentReachable(student, now)" @click="showStudentview(student)" @mouseover="showDescription(getStudentInfoText(student), false, true)" @mouseout="hideDescription" type="button" :class="['btn btn-sm', isVersionMismatch(student) ? 'btn-warning' : 'btn-cyan']" style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">
+                                    <img :src="isVersionMismatch(student) ? '/src/assets/img/svg/exclamation-triangle-fill.svg' : '/src/assets/img/svg/eye-fill.svg'" :class="isVersionMismatch(student) ? 'text-dark' : 'white'" width="18" height="18" >
+                                </button>
+                                <button v-if="!isStudentReachable(student, now)" type="button" class="btn btn-outline-danger btn-sm " style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">{{$t('dashboard.offline')}} </button>
+                                <button v-if="isStudentReachable(student, now) && student.exammode && student.focus" @mouseover="showDescription($t('dashboard.secureinfo'))" @mouseout="hideDescription"  @click='' type="button" 
+                                    class="btn btn-danger btn-sm" style=" cursor:default; border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px; border-bottom-right-radius: 5px;" >
+                                    <img src="/src/assets/img/svg/shield-lock.svg" class="white" width="18" height="18" >
+                                </button>
+                                <button v-if="isStudentReachable(student, now) && !student.focus" @mouseover="showDescription($t('dashboard.resumeinfo'))" @mouseout="hideDescription"   @click='restore(student.token)' type="button" class="btn btn-warning btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px; border-bottom-right-radius: 5px;"> {{$t('dashboard.restore')}} </button>
+                                
+                                <!-- group buttons START -->
+                                <button v-if="isStudentReachable(student, now) && serverstatus.examSections[serverstatus.activeSection].groups && student.status.group == 'a' " @mouseover="showDescription($t('dashboard.groupSwitch'))" @mouseout="hideDescription" @click='quickSetGroup(student)' type="button" class="btn-click-feedback2 btn btn-info btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> A  </button>
+                                <button v-if="isStudentReachable(student, now) && serverstatus.examSections[serverstatus.activeSection].groups && student.status.group == 'b' " @mouseover="showDescription($t('dashboard.groupSwitch'))" @mouseout="hideDescription" @click='quickSetGroup(student)' type="button" class="btn-click-feedback1 btn btn-warning btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> B  </button>
+                                <!-- group buttons END -->
+                            </div>
+                           
+
+                            <button v-if="submissions.find(s => s.studentName === student.clientname)?.sections[serverstatus.activeSection]?.path"  
+                                @click='getSpecificSubmissionBase64(submissions.find(s => s.studentName === student.clientname).sections[serverstatus.activeSection].path)' 
+                                @mouseover="showDescription($t('dashboard.showsubmission'))" 
+                                @mouseout="hideDescription" 
                                 type="button" 
-                                class="btn btn-sm pt-0 mt-0 pe-0 float-end" 
-                                style="z-index:100; position:relative;">
-                                <img src="/src/assets/img/svg/autocorrection.svg" class="widgetbutton" width="22" height="22" >
-                            </button> 
-     
-                            <div v-cloak :id="student.token" style="position: relative;background-size: cover; height: 128px;" v-bind:style="(student.imageurl && isStudentReachable(student, now))? `background-image: url('${student.imageurl}')`:'background-image: url(user-red.svg)'"></div>
-                            <div v-if="student.virtualized && isStudentReachable(student, now)" class="virtualizedinfo" @mouseover="showDescription($t('dashboard.virtualizedinfo'), { vmFindings: student.vmFindings, webglFindings: student.webglFindings })" @mouseout="hideDescription">{{$t("dashboard.virtualized")}}</div>
-                            <div v-if="!student.focus && isStudentReachable(student, now)" class="kioskwarning" @mouseover="showDescription($t('dashboard.leftkioskinfo'))" @mouseout="hideDescription">{{$t("dashboard.leftkiosk")}}</div>
-                            <div v-if="student.status.sendexam && isStudentReachable(student, now)" class="examrequest" @mouseover="showDescription($t('dashboard.examrequestinfo'))" @mouseout="hideDescription">{{$t("dashboard.examrequest")}}</div>
-                            <div v-if="student.remoteassistant && isStudentReachable(student, now)" class="remoteassistant" @mouseover="showDescription($t('dashboard.remoteassistantinfo'), student.remoteassistant)" @mouseout="hideDescription">{{$t("dashboard.remoteassistant")}}</div>
-                            <span >   
-                                <div v-if="isStudentReachable(student, now)" style="display: inline-block; overflow: hidden; width: 140px; height: 22px" @mouseover="showDescription($t('dashboard.documentsinfo') + student.files)" @mouseout="hideDescription"> 
-                                    <img v-for="file in student.files" style="width:22px; margin-left:-4px; position: relative; filter: sepia(10%) hue-rotate(306deg) brightness(0.3) saturate(75);" class="" src="/src/assets/img/svg/document.svg">
-                                </div>
-                                <div v-if="isStudentReachable(student, now)" style="display: inline-block; margin: 0px; position: absolute; right: 4px;" >
-                                    <img src="/src/assets/img/svg/edit-delete.svg" width="22" height="22" class="delfolderstudent" @click="delfolderquestion(student.token)"  @mouseover="showDescription($t('dashboard.delsingle'))" @mouseout="hideDescription" >
-                                </div>
-                                <br>
-                                {{ truncatedClientName(student.clientname) }}  
-                                <button  @click='kick(student.token,student.clientip)'  @mouseover="showDescription($t('dashboard.kick'))" @mouseout="hideDescription" type="button" class=" btn-close  btn-close-white pt-1 pe-2 float-end"></button> 
-                            </span>
-                        </div>
-
-                        <!-- bottom buttons START-->
-                        <div class="btn-group pt-0" role="group" style="">
-                            <button v-if="isStudentReachable(student, now)" @click="showStudentview(student)" @mouseover="showDescription(getStudentInfoText(student), false, true)" @mouseout="hideDescription" type="button" :class="['btn btn-sm', isVersionMismatch(student) ? 'btn-warning' : 'btn-cyan']" style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">
-                                <img :src="isVersionMismatch(student) ? '/src/assets/img/svg/exclamation-triangle-fill.svg' : '/src/assets/img/svg/eye-fill.svg'" :class="isVersionMismatch(student) ? 'text-dark' : 'white'" width="18" height="18" >
+                                class="btn btn-teal btn-sm " 
+                                style="float:right; border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px; border-bottom-right-radius:5px; border-bottom-left-radius:5px;"> 
+                                <img src="/src/assets/img/icon-checkmark.png" class="white-100" width="18" height="18" > 
                             </button>
-                            <button v-if="!isStudentReachable(student, now)" type="button" class="btn btn-outline-danger btn-sm " style="border-top:0px; border-top-left-radius:0px; border-top-right-radius:0px; ">{{$t('dashboard.offline')}} </button>
-                            <button v-if="isStudentReachable(student, now) && student.exammode && student.focus" @mouseover="showDescription($t('dashboard.secureinfo'))" @mouseout="hideDescription"  @click='' type="button" 
-                                class="btn btn-danger btn-sm" style=" cursor:default; border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px; border-bottom-right-radius: 5px;" >
-                                <img src="/src/assets/img/svg/shield-lock.svg" class="white" width="18" height="18" >
-                            </button>
-                            <button v-if="isStudentReachable(student, now) && !student.focus" @mouseover="showDescription($t('dashboard.resumeinfo'))" @mouseout="hideDescription"   @click='restore(student.token)' type="button" class="btn btn-warning btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px; border-bottom-right-radius: 5px;"> {{$t('dashboard.restore')}} </button>
-                            
-                            <!-- group buttons START -->
-                            <button v-if="isStudentReachable(student, now) && serverstatus.examSections[serverstatus.activeSection].groups && student.status.group == 'a' " @mouseover="showDescription($t('dashboard.groupSwitch'))" @mouseout="hideDescription" @click='quickSetGroup(student)' type="button" class="btn-click-feedback2 btn btn-info btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> A  </button>
-                            <button v-if="isStudentReachable(student, now) && serverstatus.examSections[serverstatus.activeSection].groups && student.status.group == 'b' " @mouseover="showDescription($t('dashboard.groupSwitch'))" @mouseout="hideDescription" @click='quickSetGroup(student)' type="button" class="btn-click-feedback1 btn btn-warning btn-sm " style="border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px;"> B  </button>
-                            <!-- group buttons END -->
+                            <!-- bottom buttons END -->
                         </div>
-                       
-
-                        <button v-if="submissions.find(s => s.studentName === student.clientname)?.sections[serverstatus.activeSection]?.path"  
-                            @click='getSpecificSubmissionBase64(submissions.find(s => s.studentName === student.clientname).sections[serverstatus.activeSection].path)' 
-                            @mouseover="showDescription($t('dashboard.showsubmission'))" 
-                            @mouseout="hideDescription" 
-                            type="button" 
-                            class="btn btn-teal btn-sm " 
-                            style="float:right; border-top:0px;border-top-left-radius:0px; border-top-right-radius:0px; border-bottom-right-radius:5px; border-bottom-left-radius:5px;"> 
-                            <img src="/src/assets/img/icon-checkmark.png" class="white-100" width="18" height="18" > 
-                        </button>
-                        <!-- bottom buttons END -->
-                    </div>
-                </div> 
-            </draggable>  
+                    </div> 
+                </draggable>
+            </div>
         </div>
         <!-- studentlist end -->
 
@@ -1060,11 +1062,16 @@
 
 
 
-    <!-- sort student widgets button -->
-    <div style="position: fixed; bottom:20px; right: 20px; filter:opacity(50%)" class="col d-inlineblock btn " @click="sortStudentWidgets()">
-        <img src="/src/assets/img/svg/view-sort-ascending-name.svg" class="white" title="sort" width="24" height="24" >
+    <!-- sort + zoom student widgets controls -->
+    <div class="studentslist-controls">
+        <button type="button" class="btn btn-sm btn-gray studentslist-controls-btn" @click="studentsZoomOut" title="Zoom out">−</button>
+        <button type="button" class="btn btn-sm btn-gray studentslist-controls-btn studentslist-controls-label" @click="studentsZoomReset" title="Zoom reset">{{ Math.round(studentsZoom * 100) }}%</button>
+        <button type="button" class="btn btn-sm btn-gray studentslist-controls-btn" @click="studentsZoomIn" title="Zoom in">+</button>
+        <button type="button" class="btn btn-sm btn-gray studentslist-controls-btn" @click="sortStudentWidgets()" title="Sort">
+            <img src="/src/assets/img/svg/view-sort-ascending-name.svg" class="" width="20" height="20" >
+        </button>
     </div>
-    <!-- sort student widgets button end -->
+    <!-- sort + zoom student widgets controls end -->
 
     <!-- Exam Log Modal -->
     <ExamLog
@@ -1205,6 +1212,7 @@ export default {
             serverlogReload: true,
 
             showExamLog: false,
+            studentsZoom: 1,
             showSubmissionsView: false,
             showExplorer: false,
 
@@ -1341,6 +1349,14 @@ computed: {
     examLogEvents()    { return examEventBus.events.length ? examEventBus.events.slice() : [] },
     examLogStart()     { return examEventBus.examStart },
     examLogEnd()       { return examEventBus.examEnd },
+
+    studentsZoomStyle() {
+        const z = Number(this.studentsZoom) || 1
+        return {
+            transform: `scale(${z})`,
+            width: z < 1 ? '100%' : `calc(100% / ${z})`,
+        }
+    },
 
     reachableConnections() {
         return countReachableStudents(this.studentlist, this.now);
@@ -1530,6 +1546,19 @@ computed: {
         handleMoveItem:handleMoveItem,
         sortStudentWidgets:sortStudentWidgets,
         initializeStudentwidgets:initializeStudentwidgets,
+
+        studentsZoomClamp(value) {
+            return Math.min(1.5, Math.max(0.5, Number(value) || 1))
+        },
+        studentsZoomIn() {
+            this.studentsZoom = this.studentsZoomClamp(this.studentsZoom + 0.1)
+        },
+        studentsZoomOut() {
+            this.studentsZoom = this.studentsZoomClamp(this.studentsZoom - 0.1)
+        },
+        studentsZoomReset() {
+            this.studentsZoom = 1
+        },
 
         /**
          * Dashboard Explorer (Filemanager)
@@ -3439,7 +3468,38 @@ computed: {
     margin-right: -30px;
     transition:0.1s;
     overflow-y:auto;
+    overflow-x: hidden;
     scrollbar-gutter: auto;
+}
+
+.studentslist-zoom {
+    transform-origin: top left;
+    will-change: transform;
+}
+
+.studentslist-controls {
+    position: fixed;
+    bottom: 28px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    filter: opacity(50%);
+    z-index: 1003;
+}
+
+.studentslist-controls-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    padding: 0 10px;
+    line-height: 1;
+}
+
+.studentslist-controls-label {
+    min-width: 64px;
+    font-variant-numeric: tabular-nums;
 }
 
 #studentslist::-webkit-scrollbar {
