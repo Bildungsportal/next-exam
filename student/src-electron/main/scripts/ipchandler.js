@@ -507,19 +507,22 @@ class IpcHandler {
         ipcMain.handle('focuslost', (event, ctrlalt=false) => { 
             let answer = false 
             if (this.config.development || !this.multicastClient.exammode) { 
+                log.info(`ipchandler @ focuslost: focuslost event was triggered but development mode is enabled or exammode is false`)
                 answer = { sender: "client", focus: true}
                 
             }
-            else if (this.WindowHandler.screenlockwindows.length > 0) { 
-                answer = { sender: "client", focus: true }
+            // else if (this.WindowHandler.screenlockwindows.length > 0) { 
+            //     log.info(`ipchandler @ focuslost: focuslost event was triggered but screenlockwindows is not empty`)
+            //     answer = { sender: "client", focus: true }
                 
-            }
+            // }
             else if (this.WindowHandler.focusTargetAllowed && ctrlalt == false){ 
                 log.warn(`ipchandler @ focuslost: mouseleave event was triggered but target is allowed`)
                 answer = { sender: "client", focus: true }
                 
             } 
             else {
+                log.warn(`ipchandler @ focuslost: focuslost event was triggered - locking down`)
                 this.WindowHandler.examwindow.moveTop();
                 this.WindowHandler.examwindow.setKiosk(true);
                 this.WindowHandler.examwindow.show();  
@@ -531,6 +534,27 @@ class IpcHandler {
            
             return answer
         } )
+
+        /**
+         * Force FOCUS state to false (security incident)
+         */
+        ipcMain.handle('securityFocusLost', (event, payload = {}) => {
+            const reason = payload?.reason || 'unknown';
+            log.warn(`ipchandler @ securityFocusLost: forcing lockdown (reason=${reason})`);
+
+            if (this.WindowHandler?.examwindow && !this.config.development) {
+                this.WindowHandler.examwindow.moveTop();
+                this.WindowHandler.examwindow.setKiosk(true);
+                this.WindowHandler.examwindow.show();
+                this.WindowHandler.examwindow.focus();
+            }
+
+            if (this.multicastClient?.clientinfo) {
+                this.multicastClient.clientinfo.focus = false;
+            }
+
+            return { sender: "client", focus: false, reason };
+        })
 
         /**
          * Restore focus state locally (LocalLockdown unlock)

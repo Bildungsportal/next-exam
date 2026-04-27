@@ -425,6 +425,7 @@
         <div id="focuswarning" class="infodiv p-4 d-block focuswarning">
             <div class="mb-3 row">
                 <div class="mb-3 "> {{ $t('editor.leftkiosk') }} <br> {{ $t('editor.tellsomeone') }}</div>
+                <div v-if="focusLostMessage" class="mb-3 text-dark fw-bold">{{ focusLostMessage }}</div>
                 <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32">
                 <div class="mt-3"> {{ timesinceentry }}</div>
             </div>
@@ -763,6 +764,7 @@ export default {
             componentName: 'Writer',
             online: true,
             focus: true,
+            focusLostMessage: '',
             exammode: false,
             examtype: this.$route.params.examtype,
             selectedFile: null,
@@ -804,6 +806,7 @@ export default {
             currentRange: 0,
             word: "",
             editorcontentcontainer: null,
+            editorContent: null,
             serverstatus: status,
             linespacing: activeSection.linespacing || '2',
             fontfamily: activeSection.fontfamily || "sans",
@@ -851,6 +854,8 @@ export default {
             clipboardTooltip: { text: '', shown: false, x: 0, y: 0 },
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
             pdfPreviewState: null,
+            typingRhythm: { lastTs: 0, deltas: [], lastLogTs: 0 },
+            typingRhythmKeydownListener: null,
         }
     },
     computed: {
@@ -886,13 +891,14 @@ export default {
                 if (this.localLockdown) {
                     this.$nextTick(() => this.$refs.localUnlockInput?.focus());
                 }
+                return;
             }
+            this.focusLostMessage = '';
         },
     },
 
 
     methods: {
-
 
         // from filehandler.js
         getExamMaterials: getExamMaterials,
@@ -1787,14 +1793,33 @@ export default {
                 }
             });
         },
-        async sendFocuslost(ctrlalt = false) {
-            let response = await signalBridge.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
-            if (response && !this.config.development && !response.focus) {  //immediately block frontend
-                this.focus = false
+        async sendFocuslost(ctrlalt = false, options = {}) {
+            const { instantBlock = false, forceBackendLock = false, message = '' } = options;
+            if (message) this.focusLostMessage = message;
+            if (instantBlock && !this.config.development) {
+                this.focus = false;
                 const editorcontentcontainer = document.getElementById('editorcontent');
-                if (!editorcontentcontainer) return;
-                const editableDiv = editorcontentcontainer.firstElementChild;
-                if (editableDiv) editableDiv.blur()  // remove text cursor (carret)
+                const editableDiv = editorcontentcontainer?.firstElementChild;
+                if (editableDiv) editableDiv.blur(); // remove text cursor (caret)
+            }
+
+            const response = forceBackendLock
+                ? await signalBridge.invoke('securityFocusLost', { reason: 'typingRhythm', message, ctrlalt })
+                : await signalBridge.invoke('focuslost', ctrlalt); // refocus, go back to kiosk, inform teacher
+
+            if (forceBackendLock) {
+                this.focus = false;
+                const editorcontentcontainer = document.getElementById('editorcontent');
+                const editableDiv = editorcontentcontainer?.firstElementChild;
+                if (editableDiv) editableDiv.blur(); // remove text cursor (caret)
+                return;
+            }
+
+            if (response && !this.config.development && !response.focus) { // immediately block frontend
+                this.focus = false;
+                const editorcontentcontainer = document.getElementById('editorcontent');
+                const editableDiv = editorcontentcontainer?.firstElementChild;
+                if (editableDiv) editableDiv.blur(); // remove text cursor (caret)
             }
         },
         async tryUnlockLocalLockdown() {
@@ -2057,6 +2082,38 @@ export default {
             event.stopPropagation();
         },
 
+        handleTypingRhythmKeydown(e) {
+            if (e.isComposing) return;
+            const now = Date.now();
+            const s = this.typingRhythm;
+            if (s.lastTs > 0) {
+                const dt = now - s.lastTs;
+                if (dt >= 0 && dt <= 2000) {
+                    s.deltas.push(dt);
+                    if (s.deltas.length > 10) s.deltas.shift();
+                } else {
+                    s.deltas = [];
+                }
+            }
+            s.lastTs = now;
+
+            if (s.deltas.length !== 10) return;
+            const mean = s.deltas.reduce((a, b) => a + b, 0) / s.deltas.length;
+            const variance = s.deltas.reduce((acc, v) => acc + (v - mean) ** 2, 0) / s.deltas.length;
+            const stdev = Math.sqrt(variance);
+            const tooFast = mean < 45;
+            const tooRegular = stdev < 6;
+
+            if ((tooFast || tooRegular) && now - s.lastLogTs > 2000) {
+                s.lastLogTs = now;
+                console.log('editor @ typingRhythm: suspicious typing rhythm', { meanMs: mean, stdevMs: stdev, deltasMs: [...s.deltas] });
+                if (this.focus) {
+                    this.sendFocuslost(false, { instantBlock: true, forceBackendLock: true, message: 'Automatische Texteingabe erkannt. Student Computer kompromittiert.' });
+                }
+            }
+        },
+
+
     },
 
 
@@ -2262,6 +2319,8 @@ export default {
             if (this.editorContent) {
                 this.editorContent.addEventListener('paste', this.handlePaste, true);
                 this.editorContent.addEventListener('drop', this.handleDrop, true);
+                this.typingRhythmKeydownListener = this.handleTypingRhythmKeydown.bind(this);
+                this.editorContent.addEventListener('keydown', this.typingRhythmKeydownListener, true);
             }
             console.log(`editor @ mounted: Calling loadBackupFile`)
             this.loadBackupFile()
@@ -2284,6 +2343,9 @@ export default {
         if (this.editorContent) {
             this.editorContent.removeEventListener('paste', this.handlePaste, true);
             this.editorContent.removeEventListener('drop', this.handleDrop, true);
+            if (this.typingRhythmKeydownListener) {
+                this.editorContent.removeEventListener('keydown', this.typingRhythmKeydownListener, true);
+            }
         }
         //document.removeEventListener('input', this.checkAllWordsOnSpacebar)
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
