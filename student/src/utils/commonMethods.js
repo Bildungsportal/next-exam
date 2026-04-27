@@ -21,11 +21,9 @@ export function gracefullyExit() {
       showCancelButton: true,                              // show cancel button
       cancelButtonText: this.$t("editor.cancel"),                // cancel button text
       html: needsPw ? `
-        <div class="m-2 mt-4">
-          <div class="input-group m-1 mb-1">
-            <span class="input-group-text col-3" style="width:140px;">Passwort</span>
-            <input class="form-control" type="password" id="localpassword" placeholder="Passwort">
-          </div>
+        <div class="m-2 mt-4 text-start">
+          <label for="localpassword" class="form-label mb-1">${this.$t("student.password")}</label>
+          <input class="form-control" type="password" id="localpassword" placeholder="${this.$t("student.password")}">
         </div>
       ` : "",
       didOpen: (popup) => {
@@ -72,11 +70,16 @@ export function gracefullyExit() {
         title: this.$t("editor.reconnect"), // Dialog title
         icon: 'info', // Info icon
         showCancelButton: true, // Show cancel button
-        confirmButtonText: "OK", // Confirm button text
+        confirmButtonText: this.$t("general.ok"), // Confirm button text
+        cancelButtonText: this.$t("editor.cancel"), // Cancel button text
         // Use HTML for multiple inputs
         html: `
-            <input id="swal-input-ip" class="swal2-input" type="text" value="${this.serverip}" placeholder="IP-Adresse">
-            <input id="swal-input-pin" class="swal2-input" type="number" value="${this.pincode}" placeholder="PIN">
+            <div class="nx-swal-form text-start">
+                <label for="swal-input-ip" class="form-label mb-1">${this.$t("student.ip")}</label>
+                <input id="swal-input-ip" class="swal2-input nx-swal-input" type="text" value="${this.serverip}" placeholder="${this.$t("student.ip")}">
+                <label for="swal-input-pin" class="form-label mb-1 mt-2">${this.$t("student.pin")}</label>
+                <input id="swal-input-pin" class="swal2-input nx-swal-input" type="number" value="${this.pincode}" placeholder="${this.$t("student.pin")}">
+            </div>
         `,
         preConfirm: () => {
             const ip = document.getElementById('swal-input-ip').value.trim();    // Get IP value

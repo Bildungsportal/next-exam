@@ -137,6 +137,7 @@
         "reload_title": "Formular neu laden?"
     },
     "general": {
+        "ok": "OK",
         "error": "Fehler",
         "nopdf": "Keine gültige PDF Datei",
         "wrongpassword": "Falsches Passwort"

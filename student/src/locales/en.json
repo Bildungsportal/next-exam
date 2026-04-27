@@ -137,6 +137,7 @@
         "reload_title": "Reload form?"
     },
     "general": {
+        "ok": "OK",
         "error": "Error",
         "nopdf": "No valid PDF File",
         "wrongpassword": "Wrong password"
