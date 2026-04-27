@@ -78,25 +78,19 @@
 
 <div id="wrapper" class="w-100 h-100 d-flex"  style="z-index: 100;">
     
-    <!-- single student view  -->
-    <div :key="1" id="studentinfocontainer" class="fadeinslow p-4">
-        <div v-if="activestudent!= null" id="studentinfodiv">
-            <div v-cloak><img style="position: absolute; height: 100%" :src="(activestudent.imageurl && isStudentReachable(activestudent, now))? `${activestudent.imageurl}`:'user-red.svg'"></div>
-            <div style="height:100%">
-                <div id="controlbuttons" style="text-align: center;">
-                    <button class="btn btn-close  btn-close-white align-right" @click="hideStudentview()"  style="width: 110px"></button>
-                    <b>{{truncatedClientName(activestudent.clientname,12)}}</b><br>
-                    <div style="font-size: 0.6em; margin-bottom: 0px;">{{activestudent.clientip}}</div>
-                    <div style="font-size: 0.6em; margin-top: 0px;">{{activestudent.hostname}}</div>
-                    <div class="col d-inlineblock btn btn-info m-1 btn-sm"      @click="sendFiles(activestudent.token)" style="width: 110px">{{$t('dashboard.sendfileSingle')}}</div>
-                    <div class="col d-inlineblock btn btn-info m-1 btn-sm"      @click="getFiles(activestudent.token, true)" :class="lockDownload ? 'disabledexam':''" style="width: 110px">{{$t('dashboard.getfileSingle')}}</div>
-                    <div class="col d-inlineblock btn btn-dark m-1 btn-sm "     @click="openLatestFolder(activestudent)"  style="width: 110px;">{{$t('dashboard.shownewestfolder')}} </div>
-                    <div class="col d-inlineblock btn btn-warning m-1 btn-sm"   @click='kick(activestudent.token,activestudent.clientip);hideStudentview()'  style="width: 110px">{{$t('dashboard.kick')}}</div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- single student view END -->
+    <StudentView
+        :visible="showStudentView && !!activestudent"
+        :student="activestudent"
+        :reachable="!!(activestudent && isStudentReachable(activestudent, now))"
+        :lockDownload="lockDownload"
+        :screenshot-sidebar-hint="screenshotSidebarHint"
+        @close="hideStudentview()"
+        @send-files="(token) => sendFiles(token)"
+        @get-files="({ token, force }) => getFiles(token, force)"
+        @download-screenshot="(student) => downloadStudentScreenshot(student)"
+        @open-latest-folder="(student) => openLatestFolder(student)"
+        @kick="({ token, ip }) => kick(token, ip)"
+    />
 
 
 
@@ -1120,6 +1114,7 @@ import PdfRenderer from '../components/PdfRenderer.vue'
 import ExamLog from '../components/ExamLog.vue'
 import SubmissionsView from '../components/SubmissionsView.vue'
 import DashboardExplorer from '../components/DashboardExplorer.vue'
+import StudentView from '../components/StudentView.vue'
 import examEventBus from '../utils/examEventBus.js'
 import { isStudentReachable, countReachableStudents } from '../utils/studentPresence.js'
 
@@ -1148,7 +1143,8 @@ export default {
         PdfRenderer: PdfRenderer,
         ExamLog: ExamLog,
         SubmissionsView: SubmissionsView,
-        DashboardExplorer: DashboardExplorer
+        DashboardExplorer: DashboardExplorer,
+        StudentView: StudentView
     },
     data() {
         return {
@@ -1176,6 +1172,9 @@ export default {
             autobackup: true,
             autoscreenshot: true,
             activestudent: null,
+            showStudentView: false,
+            screenshotSidebarHint: '',
+            screenshotSidebarHintTimer: null,
             localfiles: null,
             currentpreview: null,
             currentpreviewname: null,
@@ -2089,12 +2088,42 @@ computed: {
         },
         //display student specific actions
         showStudentview(student) {
-            document.querySelector("#studentinfocontainer").style.display = 'block';
+            this.clearScreenshotSidebarHint()
             this.activestudent = student
+            this.showStudentView = true
         },
         hideStudentview() {
-            document.querySelector("#studentinfocontainer").style.display = 'none';
-            this.activestudent = false
+            this.clearScreenshotSidebarHint()
+            this.showStudentView = false
+            this.activestudent = null
+        },
+        clearScreenshotSidebarHint() {
+            if (this.screenshotSidebarHintTimer) {
+                clearTimeout(this.screenshotSidebarHintTimer)
+                this.screenshotSidebarHintTimer = null
+            }
+            this.screenshotSidebarHint = ''
+        },
+        async downloadStudentScreenshot(student) {
+            if (!student?.clientname || !student?.imageurl || !String(student.imageurl).startsWith('data:image/')) {
+                await this.$swal.fire({ icon: 'warning', text: this.$t('dashboard.downloadScreenshotNoImage') })
+                return
+            }
+            const res = await ipcRenderer.invoke('saveStudentScreenshot', {
+                servername: this.servername,
+                clientname: student.clientname,
+                imageDataUrl: student.imageurl,
+            })
+            if (res?.ok) {
+                this.clearScreenshotSidebarHint()
+                this.screenshotSidebarHint = this.$t('dashboard.downloadScreenshotSidebarOk')
+                this.screenshotSidebarHintTimer = setTimeout(() => {
+                    this.screenshotSidebarHint = ''
+                    this.screenshotSidebarHintTimer = null
+                }, 2800)
+            } else {
+                await this.$swal.fire({ icon: 'error', text: this.$t('dashboard.downloadScreenshotFail') + (res?.error ? ` (${res.error})` : '') })
+            }
         },
         // hide pdf preview
         closeFileBrowser() {
@@ -3678,41 +3707,6 @@ computed: {
 
 
 
-
-
-#studentinfocontainer {
-    display: none;
-    position: absolute;
-    top:0;
-    left: 0;
-    width:100vw;
-    height: 100vh;
-    z-index:1001;
-}
-#studentinfodiv {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width:100%;
-    height: 100vh;
-    background-size:cover;
-    background-repeat: no-repeat;
-    overflow:hidden;
-    background-color: #343a40;
- 
-}
-#controlbuttons {
-    backdrop-filter: blur(3px);
-    position: absolute;
-    right: 0px;
-    width: 132px; 
-    height: 100%; 
-    top: 0px;  
-    background:  rgba(97, 97, 97, 0.693);
-    color: white; 
-    font-size: 1.4em; 
-    padding: 2px;
-}
 
 
 hr {

@@ -12,3 +12,4 @@ TECH^teacherCli^examModes^--exam-modes=csv overrides config.exammodes at runtime
 TECH^build^protectMain^main bundle path=teacher/dist/electron/UnPackaged/electron-main.js;run protect via electron-builder beforePack^teacher/scripts/protect-main.mjs+teacher/quasar.config.ts
 PATH^platform^dispatcher^teacher/src-electron/main/scripts/platformDispatcher.js used by teacher main startup logs^teacher/src-electron/electron-main.js
 PATH^pdfparser^root^pdf parser code lives in teacher/src/utils/pdfparser/ and student/src/utils/pdfparser/ (versioned subdirs)
+IPC^teacher^saveStudentScreenshot^invoke({servername,clientname,imageDataUrl}) writes workdir/<server>/<student>/screenshots/screenshot-YYYYMMDD_HH_MM_SS.ext^teacher/src-electron/main/scripts/ipchandler.js

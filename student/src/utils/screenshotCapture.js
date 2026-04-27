@@ -7,7 +7,7 @@ import { isElectronWindow } from '../types/platform';
 
 const log = { info: (...a) => console.log(...a), warn: (...a) => console.warn(...a), error: (...a) => console.error(...a) };
 
-const SCREENSHOT_MAX_WIDTH = 1024;
+const SCREENSHOT_MAX_WIDTH = 1200;
 const HEADER_CROP_HEIGHT = 150;
 
 /** Check if image data (RGBA) is effectively all black */

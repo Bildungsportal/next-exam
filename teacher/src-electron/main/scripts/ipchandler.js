@@ -110,6 +110,55 @@ class IpcHandler {
             }
         }) 
 
+        /** Persist current student screenshot (data URL) into workdir/<server>/<student>/screenshots/ */
+        ipcMain.handle('saveStudentScreenshot', async (_event, payload) => {
+            try {
+                const servername = typeof payload?.servername === 'string' ? payload.servername.trim() : ''
+                const clientname = typeof payload?.clientname === 'string' ? payload.clientname.trim() : ''
+                const imageDataUrl = typeof payload?.imageDataUrl === 'string' ? payload.imageDataUrl : ''
+                if (!servername || !clientname || !imageDataUrl) {
+                    return { ok: false, error: 'invalid_arguments' }
+                }
+                if (clientname.includes('..') || clientname.includes('/') || clientname.includes('\\')) {
+                    return { ok: false, error: 'invalid_clientname' }
+                }
+                const mcServer = this.config.examServerList[servername]
+                if (!mcServer) {
+                    return { ok: false, error: 'server_not_found' }
+                }
+                const comma = imageDataUrl.indexOf(',')
+                if (comma < 12 || !imageDataUrl.startsWith('data:image/')) {
+                    return { ok: false, error: 'invalid_image_dataurl' }
+                }
+                const header = imageDataUrl.slice(0, comma).toLowerCase()
+                const b64 = imageDataUrl.slice(comma + 1)
+                if (!header.includes(';base64')) {
+                    return { ok: false, error: 'invalid_image_dataurl' }
+                }
+                let ext = '.jpg'
+                if (header.includes('image/png')) ext = '.png'
+                else if (header.includes('image/webp')) ext = '.webp'
+                else if (header.includes('image/jpeg') || header.includes('image/jpg')) ext = '.jpg'
+                const buf = Buffer.from(b64, 'base64')
+                if (!buf.length) {
+                    return { ok: false, error: 'empty_image' }
+                }
+                const now = new Date()
+                const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
+                const timeStr = now.toISOString().substr(11, 8).replace(/:/g, '_')
+                const screenshotsDir = join(this.config.workdirectory, servername, clientname, 'screenshots')
+                await fs.promises.mkdir(screenshotsDir, { recursive: true })
+                const filename = `screenshot-${dateStr}-${timeStr}${ext}`
+                const absoluteFilename = join(screenshotsDir, filename)
+                await fs.promises.writeFile(absoluteFilename, buf)
+                log.info(`ipchandler @ saveStudentScreenshot: wrote ${absoluteFilename}`)
+                return { ok: true, path: absoluteFilename }
+            } catch (e) {
+                log.error('ipchandler @ saveStudentScreenshot', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
+
 
 
 
