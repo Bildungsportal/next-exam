@@ -1759,12 +1759,13 @@ function openAllowedUrl(allowedUrl){
     this.urlForWebview = url;        // this is used to open the allowed url in the webview pane
     this.webviewVisible = true;             // this is used to show the webview pane
 
-    document.querySelector("#pdfpreview").style.display = 'block';
-    document.querySelector("#openPDF").style.display = 'none';
-    document.querySelector("#downloadPDF").style.display = 'none';
-    document.querySelector("#printPDF").style.display = 'none';
-    document.querySelector("#closePDF").style.display = 'none';
-    document.querySelector("#pdfrenderer").style.display = 'none';
+    const pdfPreview = document.querySelector("#pdfpreview");
+    if (pdfPreview) pdfPreview.style.display = 'block';
+    // Toolbar/renderer nodes are absent until PdfviewPaneRendered / PdfRenderer mount (dashboard v-if).
+    for (const sel of ['#openPDF', '#downloadPDF', '#printPDF', '#closePDF', '#pdfrenderer']) {
+        const el = document.querySelector(sel);
+        if (el) el.style.display = 'none';
+    }
 }
 
 
