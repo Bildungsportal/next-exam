@@ -2,24 +2,24 @@
     <div v-if="src" class="embed-container pdfview-pane-rendered" @click.stop>
         <ul class="nav nav-tabs bg-white pdf-toolbar">
             <li class="nav-item">
-                <div class="nav-link btn btn-light btn-sm unstyled" id="printPDF" style="display: inline-flex; height:45px !important;" @click="printBase64()" :title="$t('dashboard.print')">
+                <button type="button" class="btn btn-light pdf-tool-btn" id="printPDF" @click="printBase64()" :title="$t('dashboard.print')">
                     <img src="/src/assets/img/svg/print.svg" class="white">
-                </div>
+                </button>
             </li>
 
             <li class="nav-item">
-                <div class="nav-link btn btn-light btn-sm unstyled" id="downloadPDF" style="display: inline-flex; height:45px !important;" @click="downloadFile('current')" :title="$t('dashboard.save')">
+                <button type="button" class="btn btn-light pdf-tool-btn" id="downloadPDF" @click="downloadFile('current')" :title="$t('dashboard.save')">
                     <img src="/src/assets/img/svg/edit-download.svg" class="white">
-                </div>
+                </button>
             </li>
 
             <li class="nav-item">
-                <div class="nav-link btn btn-light btn-sm unstyled" id="openPDF" style="display: inline-flex; height:45px !important;" @click="openFileExternal(currentpreviewPath)" :title="$t('dashboard.open')">
+                <button type="button" class="btn btn-light pdf-tool-btn" id="openPDF" @click="openFileExternal(currentpreviewPath)" :title="$t('dashboard.open')">
                     <img src="/src/assets/img/svg/stock_exit_up.svg" class="white">
-                </div>
+                </button>
             </li>
 
-            <li v-show="toolingVisible" class="nav-item ms-2">
+            <li v-show="false" class="nav-item ms-2">
                 <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'highlight-yellow' }" @click.stop="setTool('highlight-yellow')" title="Highlight yellow">
                     <span class="tool-swatch tool-swatch--yellow"></span>
                 </button>
@@ -44,7 +44,7 @@
             </li>
 
             <li class="nav-item ms-auto">
-                <div type="button" id="closePDF" class="nav-link btn btn-light btn-sm" :title="$t('dashboard.close')" @click.stop="closePane" style="width:40px; height:45px !important;text-align:center; font-weight:bold;">&times;</div>
+                <button type="button" id="closePDF" class="btn btn-light pdf-tool-btn" :title="$t('dashboard.close')" @click.stop="closePane" style="font-weight:bold;">&times;</button>
             </li>
         </ul>
 
@@ -401,6 +401,12 @@
         align-items: center !important;
         justify-content: center !important;
         border-radius: 6px !important;
+    }
+    .pdf-tool-btn img {
+        width: 20px !important;
+        height: 20px !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
     .pdf-tool-btn.active {

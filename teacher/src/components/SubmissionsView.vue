@@ -201,14 +201,11 @@ export default {
 .sv-file-link {
     color: var(--bs-info);
     cursor: pointer;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    text-decoration-color: rgba(13,202,240,0.35);
-    transition: color 0.15s, text-decoration-color 0.15s;
+    text-decoration: none;
+    transition: color 0.15s;
 }
 .sv-file-link:hover {
     color: #fff;
-    text-decoration-color: rgba(255,255,255,0.5);
 }
 .sv-td-date {
     white-space: nowrap;
