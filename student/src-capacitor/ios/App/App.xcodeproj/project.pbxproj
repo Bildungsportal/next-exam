@@ -35,6 +35,8 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		551E69822FA0B5CE004C06DD /* DTO */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = DTO; sourceTree = "<group>"; };
+		551E69A12FA0B7DB004C06DD /* Error */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Error; sourceTree = "<group>"; };
 		55D6E0A42F9A7A86001C57AC /* IPC */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = IPC; sourceTree = "<group>"; };
 		55D6E0A52F9A7A99001C57AC /* Plugins */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Plugins; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -80,6 +82,8 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				551E69A12FA0B7DB004C06DD /* Error */,
+				551E69822FA0B5CE004C06DD /* DTO */,
 				55D6E0A52F9A7A99001C57AC /* Plugins */,
 				55D6E0A42F9A7A86001C57AC /* IPC */,
 				550D8C8D2F97D28900614704 /* MainViewController.swift */,
@@ -122,6 +126,8 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				551E69822FA0B5CE004C06DD /* DTO */,
+				551E69A12FA0B7DB004C06DD /* Error */,
 				55D6E0A42F9A7A86001C57AC /* IPC */,
 				55D6E0A52F9A7A99001C57AC /* Plugins */,
 			);

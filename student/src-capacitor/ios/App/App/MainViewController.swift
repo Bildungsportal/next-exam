@@ -4,6 +4,7 @@ import Capacitor
 class MainViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(IPCPlugin())
-        bridge?.registerPluginInstance(CheckHostIPPlugin())
+        bridge?.registerPluginInstance(NetworkPlugin())
+        bridge?.registerPluginInstance(MulticastClientPlugin())
     }
 }

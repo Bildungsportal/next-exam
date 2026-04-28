@@ -52,11 +52,12 @@ export default defineBoot(async ( { app, router } ) => {
             }, 300);
         }
     })
-    LoggingBridge.init(window);
-    NavigationHandler.init(LoggingBridge, multicastclient, config, router);
-    IosTaskDispatcher.init(LoggingBridge, multicastclient, NavigationHandler);
 
     if (isIOS()) {
         window.ipcRenderer = capacitorIpcRenderer
     }
+
+    LoggingBridge.init(window);
+    NavigationHandler.init(LoggingBridge, multicastclient, config, router);
+    IosTaskDispatcher.init(LoggingBridge, multicastclient, NavigationHandler);
 })

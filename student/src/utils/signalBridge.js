@@ -38,7 +38,7 @@ export class SignalBridge {
     // e.g. getinfoasync is needed to test checkhostip, therefore the empty object fallback of
     // Swift fallback is not enough
     pluginList = [
-        'checkhostip', 'setPreferredInterface'
+        'checkhostip', 'setPreferredInterface', 'getinfoasync'
     ]
 
     // send forwards all params to electron or leaves hook for ios

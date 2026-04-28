@@ -3,64 +3,24 @@ import CapacitorNetwork
 import Foundation
 import Network
 
-enum CheckHostIPError: LocalizedError {
-    case notConnected
-    case ipUnavailable
-
-    var errorDescription: String? {
-        switch self {
-            case .notConnected:  return "Not connected to the Internet"
-            case .ipUnavailable: return "IP address unavailable"
-        }
-    }
-}
-
-struct NetworkInterfaceInfo: Equatable {
-    let name: String
-    let address: String
-
-    var asDictionary: [String: String] {
-        ["name": name, "address": address]
-    }
-}
-
-struct HostIPResult {
-    let hostIP: String               // IP of the preferred interface
-    let interface: String            // Name of the preferred interface
-    let availableInterfaces: [NetworkInterfaceInfo]
-    let preferredInterface: String   // NWPath-determined best interface
-
-    // ── Serialized form returned to JS / IPC callers ──────────────────────────
-    var asDictionary: [String: Any] {
-        [
-            "hostip":               hostIP,
-            "interface":            interface,
-            "availableInterfaces":  availableInterfaces.map { $0.asDictionary },
-            "preferredInterface":   preferredInterface
-        ]
-    }
-}
-
-@objc(CheckHostIPPlugin)
-public class CheckHostIPPlugin: CAPPlugin, CAPBridgedPlugin {
-    public let identifier      = "CheckHostIPPlugin"
-    public let jsName          = "checkhostip"
+@objc(NetworkPlugin)
+public class NetworkPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier      = "NetworkPlugin"
+    public let jsName          = "network"
     public let pluginMethods: [CAPPluginMethod] = []
 
     private let wifiMonitor  = NWPathMonitor(requiredInterfaceType: .wifi)
-    private let monitorQueue = DispatchQueue(label: "com.checkhostip.wifi", qos: .utility)
-    private var latestPath: NWPath?
     
     private var interfaces: [NetworkInterfaceInfo] = []
     private var preferredInterface: NetworkInterfaceInfo? = nil
 
     public override func load() {
         IPCBridge.shared.onInvoke("checkhostip") { [weak self] _ throws -> Any? in
-            guard let self else { throw CheckHostIPError.notConnected }
+            guard let self else { throw PluginError.notInitialized }
             return try self.getNetworkInfo().asDictionary
         }
         IPCBridge.shared.onInvoke("setPreferredInterface") { [weak self] payload in
-            guard let self else { throw CheckHostIPError.notConnected }
+            guard let self else { throw PluginError.notInitialized }
             guard let payloadArray = payload as? [String],
                   let preferredName = payloadArray.first else {
                 throw IPCError.noHandler("Invalid payload for channel: setPreferredInterface")
@@ -72,7 +32,7 @@ public class CheckHostIPPlugin: CAPPlugin, CAPBridgedPlugin {
 
     deinit { wifiMonitor.cancel() }
 
-    private func getNetworkInfo() throws -> HostIPResult {
+    private func getNetworkInfo() throws -> CheckHostIP {
         let path = wifiMonitor.currentPath
 
         // ── Preferred interface: first WiFi interface NWPath is aware of ──────
@@ -83,7 +43,7 @@ public class CheckHostIPPlugin: CAPPlugin, CAPBridgedPlugin {
         self.interfaces = []
         var ifaddr: UnsafeMutablePointer<ifaddrs>?
 
-        guard getifaddrs(&ifaddr) == 0 else { throw CheckHostIPError.ipUnavailable }
+        guard getifaddrs(&ifaddr) == 0 else { throw NetworkError.ipUnavailable }
         defer { freeifaddrs(ifaddr) }
 
         var ptr = ifaddr
@@ -113,7 +73,7 @@ public class CheckHostIPPlugin: CAPPlugin, CAPBridgedPlugin {
             ))
         }
 
-        guard !self.interfaces.isEmpty else { throw CheckHostIPError.ipUnavailable }
+        guard !self.interfaces.isEmpty else { throw NetworkError.ipUnavailable }
 
     
         let preferred: NetworkInterfaceInfo
@@ -126,7 +86,7 @@ public class CheckHostIPPlugin: CAPPlugin, CAPBridgedPlugin {
             self.preferredInterface = preferred
         }
 
-        return HostIPResult(
+        return CheckHostIP(
             hostIP:               preferred.address,
             interface:            preferred.name,
             availableInterfaces:  interfaces,          // all non-loopback IPv4
@@ -135,6 +95,7 @@ public class CheckHostIPPlugin: CAPPlugin, CAPBridgedPlugin {
     }
     
     private func setPerferredInterface(preferredName: String) {
+        print("setPerferredInterface \(preferredName)")
         if let preferredInterface = self.interfaces.first(where: { $0.name == preferredName }) {
             self.preferredInterface = preferredInterface
         }
