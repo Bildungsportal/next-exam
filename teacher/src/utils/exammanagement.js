@@ -15,13 +15,16 @@ function startExam(){
         this.setStudentStatus({msofficeshare: false}, 'all');
     }
 
-    this.serverstatus.examSections[this.serverstatus.activeSection].locked = true;   // starting exammode locks the current active section
-    this.serverstatus.lockedSection = this.serverstatus.activeSection;
+    const now = Date.now()
+    const sectionIndex = (this.serverstatus.useExamSections && this.serverstatus.allowSectionSwitch) ? 1 : this.serverstatus.activeSection
+    this.serverstatus.examSections[sectionIndex].locked = true;   // starting exammode locks the current active section
+    this.serverstatus.lockedSection = sectionIndex;
+    this.serverstatus.examSections[sectionIndex].startTs = now
     
     // Set group assignments and notify students
-    if (!this.serverstatus.examSections[this.serverstatus.activeSection].groups) {
+    if (!this.serverstatus.examSections[sectionIndex].groups) {
         // No groups activated - all in group A
-        this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users = this.studentlist.map(student => student.clientname);
+        this.serverstatus.examSections[sectionIndex].groupA.users = this.studentlist.map(student => student.clientname);
         this.setStudentStatus({group:"a"}, 'all');
     } else {
         // Groups activated - notify students according to stored assignment
@@ -35,6 +38,24 @@ function startExam(){
     log.info("exammanagment @ startExam: starting exammode")
     examEventBus.push('examstart')
     this.visualfeedback(this.$t("dashboard.startexam"))
+    this.setServerStatus()
+}
+
+function lockSectionForAll(sectionIndex){
+    const now = Date.now()
+    Object.values(this.serverstatus.examSections).forEach(section => { section.locked = false })
+    this.serverstatus.examSections[sectionIndex].locked = true
+    this.serverstatus.lockedSection = sectionIndex
+    this.serverstatus.examSections[sectionIndex].startTs = now
+
+    if (!this.serverstatus.examSections[sectionIndex].groups) {
+        this.serverstatus.examSections[sectionIndex].groupA.users = this.studentlist.map(student => student.clientname)
+        this.setStudentStatus({group:"a"}, 'all')
+    } else {
+        this.restoreGroupAssignments(true)
+    }
+
+    this.setStudentStatus({msofficeshare:false}, 'all')
     this.setServerStatus()
 }
 
@@ -544,4 +565,4 @@ async function activateSpellcheckForStudent(token, clientname){
 
 
 
-export {activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore  }
+export {activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, lockSectionForAll, endExam, kick, restore  }

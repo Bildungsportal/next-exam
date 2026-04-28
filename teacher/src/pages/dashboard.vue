@@ -69,15 +69,7 @@
         </div>
     </div>
 
-    <!-- when sections are disabled, section 1 is always active -->
-    <div v-if="!serverstatus.useExamSections" style="position: absolute; left:257px; bottom: 0; min-width: 550px; z-index: 0;">
-        <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm sectionbuttonactive">
-            <span class="sectionbutton-label">{{ serverstatus.examSections[1].sectionname }}</span>
-            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(1)" @mouseover="showDescription($t('dashboard.sectionSettingsDesc'))" @mouseout="hideDescription">
-                <img src="/src/assets/img/svg/settings-symbolic.svg"  width="14" height="14">
-            </button>
-        </div>
-    </div>
+    <!-- when sections are disabled, tabs are hidden (legacy behavior) -->
 
 
     
@@ -817,6 +809,43 @@
                 <label class="form-check-label">{{$t('dashboard.allowsectionswitchshort')}}   </label><br>
             </div>
 
+            <div v-if="!serverstatus.useExamSections" class="form-check form-switch  m-1 mb-2">
+                <input
+                    v-model="serverstatus.examSections[1].groups"
+                    @change="serverstatus.examSections[1].groups ? setupGroups(1) : setServerStatus()"
+                    :title="$t('dashboard.groupinfo')"
+                    class="form-check-input"
+                    type="checkbox"
+                    id="activategroups">
+                <label class="form-check-label">{{$t('dashboard.groups')}}   </label><br>
+            </div>
+            <div v-else class="m-1 mb-2 text-black-50" style="font-size:0.9em;">
+                {{$t('dashboard.sectionSettingsMovedHint')}}
+            </div>
+
+            <div v-if="!serverstatus.useExamSections" class="m-1 mb-2">
+                <label for="timelimitInput" class="form-check-label"> {{$t('dashboard.timelimit')}} </label>
+                <input
+                    id="timelimitInput"
+                    type="number"
+                    min="1"
+                    step="1"
+                    v-model.number="serverstatus.examSections[1].timelimit"
+                    class="form-control mt-1"
+                    @change="setServerStatus()">
+            </div>
+            <div v-else class="m-1 mb-2">
+                <label for="timelimitInputDisabled" class="form-check-label text-muted"> {{$t('dashboard.timelimit')}} </label>
+                <input
+                    id="timelimitInputDisabled"
+                    type="number"
+                    min="1"
+                    step="1"
+                    :value="serverstatus.examSections[1].timelimit"
+                    class="form-control mt-1"
+                    disabled>
+            </div>
+
             <div class="form-check form-switch  m-1 mb-2">
                 <input v-model=muteAudio @click="" :title="$t('dashboard.muteaudiointro')" checked=false class="form-check-input" type="checkbox" id="muteaudio">
                 <label class="form-check-label">{{$t('dashboard.muteaudio')}}   </label><br>
@@ -1127,7 +1156,7 @@ import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile,
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
 import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer } from '../utils/filemanager'
 import { swalQueued } from '../utils/swalQueue.js'
-import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore } from '../utils/exammanagement.js'
+import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, lockSectionForAll, endExam, kick, restore } from '../utils/exammanagement.js'
 import { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
 import { Exam } from '../types/api'
 
@@ -1222,6 +1251,8 @@ export default {
             showSubmissionsView: false,
             showExplorer: false,
 
+            timelimitWarnedByStartTs: {},
+
             bipToken:this.$route.params.bipToken === 'false' ?  false : this.$route.params.bipToken,   // parameters are always passed as string "false", convert to bool
             bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
             bipUsername:this.$route.params.bipUsername === 'false' ?  false : this.$route.params.bipUsername,
@@ -1257,9 +1288,9 @@ export default {
                 examSections: {
                     1: {
                         examtype: 'math',   
-                        timelimit: 60,
+                        timelimit: 600,
                         locked: false,  // if true, the current section is locked and no changes can be made - this means its currently active for students
-                        sectionname: "Übersicht",
+                        sectionname: "Abschnitt 1",
                         spellchecklang: 'de-DE', 
                         suggestions: false, 
 
@@ -1280,7 +1311,7 @@ export default {
                     },
                     2: {
                         examtype: 'math',   
-                        timelimit: 60,
+                        timelimit: 600,
                         locked: false,
                         sectionname: "Abschnitt 2",
                         spellchecklang: 'de-DE', 
@@ -1303,7 +1334,7 @@ export default {
                     },
                     3: {
                         examtype: 'math',   
-                        timelimit: 60,
+                        timelimit: 600,
                         locked: false,
                         sectionname: "Abschnitt 3",
                         spellchecklang: 'de-DE', 
@@ -1326,7 +1357,7 @@ export default {
                     },
                     4: {
                         examtype: 'math',   
-                        timelimit: 60,
+                        timelimit: 600,
                         locked: false,
                         sectionname: "Abschnitt 4",
                         spellchecklang: 'de-DE', 
@@ -1615,6 +1646,7 @@ computed: {
          * Exam Managment functions
          */
         startExam:startExam,                         // enable exam mode 
+        lockSectionForAll: lockSectionForAll,
         endExam:endExam,                             // disable exammode 
         kick: kick,                                  //remove student from exam
         restore: restore,                            //restore focus state for specific student -- we tell the client that his status is restored which will then (on the next update) update it's focus state on the server 
@@ -1852,8 +1884,53 @@ computed: {
                     }
                 } 
             }
+
+            this.checkSectionTimelimit()
            
         }, 
+
+        getTrackedTimelimitSectionIndex() {
+            if (!this.serverstatus?.exammode) return null
+            if (!this.serverstatus.useExamSections || this.serverstatus.allowSectionSwitch) return 1
+            return this.serverstatus.lockedSection || 1
+        },
+
+        checkSectionTimelimit() {
+            if (!this.serverstatus?.exammode) {
+                this.timelimitWarnedByStartTs = {}
+                return
+            }
+
+            const sectionIndex = this.getTrackedTimelimitSectionIndex()
+            if (!sectionIndex) return
+            const section = this.serverstatus?.examSections?.[sectionIndex]
+            if (!section) return
+
+            const startTs = Number(section.startTs || 0)
+            const minutes = Number(section.timelimit || 0)
+            if (!startTs || !minutes || minutes < 1) return
+
+            const warnedForStartTs = Number(this.timelimitWarnedByStartTs?.[sectionIndex] || 0)
+            if (warnedForStartTs === startTs) return
+
+            const deadlineTs = startTs + (minutes * 60 * 1000)
+            const now = Date.now()
+            if (now < deadlineTs) return
+
+            this.timelimitWarnedByStartTs = { ...this.timelimitWarnedByStartTs, [sectionIndex]: startTs }
+            this.$swal.fire({
+                customClass: {
+                    popup: 'my-popup',
+                    title: 'my-title',
+                    content: 'my-content',
+                    actions: 'my-swal2-actions'
+                },
+                title: this.$t('dashboard.timelimitExpiredTitle'),
+                html: `<div class="my-content">${this.$t('dashboard.timelimitExpiredText', { section: section.sectionname || String(sectionIndex), minutes: minutes })}</div>`,
+                icon: 'warning',
+                confirmButtonText: this.$t('general.ok')
+            })
+        },
 
 
         async getLatestBakFile(studentName) {
@@ -1974,31 +2051,7 @@ computed: {
                     confirmButtonText: this.$t("dashboard.yes"),
                 }).then(async (result) => {
                     if (result.isConfirmed) {
-                        //inform all students to save current work
-                        //inform all students to archive/send current work
-                        //wait for all students to finish
-                        //activate new section for all student
-                        Object.values(this.serverstatus.examSections).forEach(section => {   section.locked = false    })
-                        this.serverstatus.examSections[this.serverstatus.activeSection].locked = true
-                        this.serverstatus.lockedSection = section
-
-                        //check if groups are activated and if NOT put every student into group a
-                        if (!this.serverstatus.examSections[this.serverstatus.activeSection].groups) {  
-                            // prepopulate group A on the server
-                            this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users = this.studentlist.map(student => student.clientname)
-                            // set studentstatus for every student to group a for the clients
-                            this.setStudentStatus({group:"a"}, 'all')
-                        } else {
-                            // Groups are activated - notify students about their group assignment
-                            this.restoreGroupAssignments(true)
-                        }
-
-
-                        // set msofficeshare to false for every student to trigger a new upload of the msOfficeFile
-                        this.setStudentStatus({msofficeshare:false}, 'all')
-
-
-                        this.setServerStatus()
+                        await this.lockSectionForAll(section)
                     }
                 })    
             }
