@@ -771,121 +771,163 @@
     <div :key="6" id="setupoverlay" class="" @click="hideSetup()">
         <div id="setupdiv">
             <!-- <div class="swal2-icon swal2-question swal2-icon-show" style="display: flex;"><div class="swal2-icon-content">?</div></div> -->
-            <div class="mb-3"><h5 style="display: inline">{{ $t('dashboard.extendedsettings') }}</h5></div>
-            <div class="m-1 mb-2">
-                <label for="backupintervalSlider" class="form-check-label"> {{$t('dashboard.autoget')}} </label>
-                <span v-if="serverstatus.backupintervalPause > 0" class="ms-2 text-black-50">| {{serverstatus.backupintervalPause}}min </span>
-                <span v-else class="ms-2 text-black-50">| {{$t('dashboard.disabled')}}</span>
-                <input id="backupintervalSlider" type="range" 
-                    v-model="serverstatus.backupintervalPause" 
-                    :title="$t('dashboard.backupautoquestion')"
-                    :min="0" :max="20" step="1" 
-                    class="form-range custom-slider" 
-                    @input="updateBackupInterval">
+            <div class="setup-header">
+                <div class="setup-title">{{ $t('dashboard.extendedsettings') }}</div>
             </div>
-            <div class="m-1 mb-2">
-                <label for="screenshotIntervalSlider" class="form-check-label"> {{$t('dashboard.screenshot')}} </label>
-                <span v-if="serverstatus.screenshotinterval > 0" class="ms-2 text-black-50">| {{serverstatus.screenshotinterval}}s</span>
-                <span v-else class="ms-2 text-black-50">| {{$t('dashboard.disabled')}}</span>
-                <div class="d-flex align-items-center">
-                    <input id="screenshotIntervalSlider" type="range"
-                        v-model="serverstatus.screenshotinterval"
-                        :title="$t('dashboard.screenshotquestion')"
-                        :min="0" :max="60" step="2"
-                        class="form-range custom-slider"
-                        @input="updateScreenshotInterval">
+
+            <div class="setup-scroll">
+                <div class="setup-grid">
+                    <div class="setup-card">
+                        <div class="setup-row">
+                            <div class="form-check form-switch m-0">
+                                <input v-model="serverstatus.useExamSections" @change="onToggleExamSections" :disabled="sectionsLocked" class="form-check-input" type="checkbox" id="activatesections" @mouseenter="setSetupStatus(sectionsLocked ? $t('dashboard.sectionslocked') : $t('dashboard.activatesections'))" @mouseleave="clearSetupStatus">
+                                <label class="form-check-label" :class="{'text-muted': sectionsLocked}" for="activatesections">{{$t('dashboard.activatesections')}}</label>
+                            </div>
+                        </div>
+
+                        <div class="setup-row" v-if="serverstatus.useExamSections">
+                            <div class="form-check form-switch m-0">
+                                <input v-model="serverstatus.allowSectionSwitch" class="form-check-input" type="checkbox" id="allowsectionswitch" @mouseenter="setSetupStatus($t('dashboard.allowsectionswitch'))" @mouseleave="clearSetupStatus">
+                                <label class="form-check-label" for="allowsectionswitch">{{$t('dashboard.allowsectionswitchshort')}}</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setup-card">
+                        <div
+                            class="setup-row setup-row-split"
+                            :class="serverstatus.useExamSections ? 'setup-row-disabled' : ''"
+                            @mouseenter="serverstatus.useExamSections ? setSetupStatus($t('dashboard.sectionSettingsRequiredHint')) : null"
+                            @mouseleave="serverstatus.useExamSections ? clearSetupStatus() : null">
+                            <div class="setup-field-label">{{$t('dashboard.groups')}}</div>
+                            <div class="form-check form-switch m-0">
+                                <input
+                                    id="activategroups"
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    v-model="serverstatus.examSections[1].groups"
+                                    :disabled="serverstatus.useExamSections"
+                                    @mouseenter="setSetupStatus($t('dashboard.groupinfo'))"
+                                    @mouseleave="clearSetupStatus"
+                                    @change="serverstatus.useExamSections ? null : (serverstatus.examSections[1].groups ? setupGroups(1) : setServerStatus())">
+                            </div>
+                        </div>
+                        <div
+                            class="setup-row setup-row-split"
+                            :class="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? 'setup-row-disabled' : ''"
+                            @mouseenter="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? setSetupStatus($t('dashboard.sectionSettingsRequiredHint')) : null"
+                            @mouseleave="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? clearSetupStatus() : null">
+                            <div class="setup-field-label">{{$t('dashboard.timelimit')}}</div>
+                            <div class="setup-inline">
+                                <input
+                                    id="timelimitInput"
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    v-model.number="serverstatus.examSections[1].timelimit"
+                                    class="form-control form-control-sm setup-timelimit"
+                                    :disabled="serverstatus.useExamSections && !serverstatus.allowSectionSwitch"
+                                    @mouseenter="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? setSetupStatus($t('dashboard.sectionSettingsRequiredHint')) : setSetupStatus($t('dashboard.timelimitInfo'))"
+                                    @mouseleave="clearSetupStatus"
+                                    @change="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? null : setServerStatus()">
+                                <span class="setup-unit">min</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setup-card">
+                        <div class="setup-row">
+                            <div class="setup-field-label">{{$t('dashboard.screenshot')}}</div>
+                            <div class="setup-inline setup-inline-fill">
+                                <input id="screenshotIntervalSlider" type="range"
+                                    v-model="serverstatus.screenshotinterval"
+                                    :min="0" :max="60" step="2"
+                                    class="form-range custom-slider setup-range"
+                                    @input="updateScreenshotInterval"
+                                    @mouseenter="setSetupStatus($t('dashboard.screenshotquestion'))"
+                                    @mouseleave="clearSetupStatus">
+                                <span class="setup-value text-black-50" v-if="serverstatus.screenshotinterval > 0">{{serverstatus.screenshotinterval}}s</span>
+                                <span class="setup-value text-black-50" v-else>{{$t('dashboard.disabled')}}</span>
+                            </div>
+                        </div>
+                        <div class="setup-divider"></div>
+                        <div class="setup-row">
+                            <div class="setup-field-label">{{$t('dashboard.autoget')}}</div>
+                            <div class="setup-inline setup-inline-fill">
+                                <input id="backupintervalSlider" type="range"
+                                    v-model="serverstatus.backupintervalPause"
+                                    :min="0" :max="20" step="1"
+                                    class="form-range custom-slider setup-range"
+                                    @input="updateBackupInterval"
+                                    @mouseenter="setSetupStatus($t('dashboard.backupautoquestion'))"
+                                    @mouseleave="clearSetupStatus">
+                                <span class="setup-value text-black-50" v-if="serverstatus.backupintervalPause > 0">{{serverstatus.backupintervalPause}}min</span>
+                                <span class="setup-value text-black-50" v-else>{{$t('dashboard.disabled')}}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="setup-card">
+                        <div class="setup-row">
+                            <div class="form-check form-switch m-0">
+                                <input v-model="muteAudio" class="form-check-input" type="checkbox" id="muteaudio" @mouseenter="setSetupStatus($t('dashboard.muteaudiointro'))" @mouseleave="clearSetupStatus">
+                                <label class="form-check-label" for="muteaudio">{{$t('dashboard.muteaudio')}}</label>
+                            </div>
+                        </div>
+                        <div class="setup-row">
+                            <div class="form-check form-switch m-0">
+                                <input id="screenshotOcr" type="checkbox" v-model="serverstatus.screenshotocr" class="form-check-input" @change="updateScreenshotInterval" @mouseenter="setSetupStatus($t('dashboard.ocrinfo'))" @mouseleave="clearSetupStatus">
+                                <label for="screenshotOcr" class="form-check-label">{{$t('dashboard.ocr')}}</label>
+                            </div>
+                        </div>
+                        <div class="setup-divider"></div>
+                        <div class="setup-row">
+                            <div class="form-check form-switch m-0">
+                                <input v-model="serverstatus.directPrintAllowed" @change="checkforDefaultprinter(); setServerStatus()" class="form-check-input" type="checkbox" id="directprint" @mouseenter="setSetupStatus($t('dashboard.allowdirectprint'))" @mouseleave="clearSetupStatus">
+                                <label class="form-check-label" for="directprint">{{$t('dashboard.directprint')}}</label>
+                            </div>
+                            <div class="setup-switch-details ellipsis text-black-50 setup-hint" v-if="defaultPrinter">{{ defaultPrinter }}</div>
+                            <div class="setup-switch-details ellipsis text-black-50 setup-hint" v-if="!defaultPrinter">{{$t('dashboard.noprinterChosen')}}</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="form-check form-switch m-1 mb-2">
-                <input id="screenshotOcr" type="checkbox" :title="$t('dashboard.ocrinfo')" v-model="serverstatus.screenshotocr" class="form-check-input" @change="updateScreenshotInterval">
-                <label for="screenshotOcr" class="form-check-label">{{$t('dashboard.ocr')}}</label>
-            </div>
-            <div class="form-check form-switch  m-1 mb-2">
-                <input v-model=serverstatus.useExamSections @change="onToggleExamSections" :disabled="sectionsLocked" :title="sectionsLocked ? $t('dashboard.sectionslocked') : $t('dashboard.activatesections')" checked=false class="form-check-input" type="checkbox" id="activatesections">
-                <label class="form-check-label" :class="{'text-muted': sectionsLocked}">{{$t('dashboard.activatesections')}}   </label><br>
-            </div>
-            <div v-if="serverstatus.useExamSections" class="form-check form-switch  m-1 mb-2 ms-3">
-                <input v-model=serverstatus.allowSectionSwitch @click="" :title="$t('dashboard.allowsectionswitch')" checked=false class="form-check-input" type="checkbox" id="allowsectionswitch">
-                <label class="form-check-label">{{$t('dashboard.allowsectionswitchshort')}}   </label><br>
-            </div>
 
-            <div v-if="!serverstatus.useExamSections" class="form-check form-switch  m-1 mb-2">
-                <input
-                    v-model="serverstatus.examSections[1].groups"
-                    @change="serverstatus.examSections[1].groups ? setupGroups(1) : setServerStatus()"
-                    :title="$t('dashboard.groupinfo')"
-                    class="form-check-input"
-                    type="checkbox"
-                    id="activategroups">
-                <label class="form-check-label">{{$t('dashboard.groups')}}   </label><br>
-            </div>
-            <div v-else class="m-1 mb-2 text-black-50" style="font-size:0.9em;">
-                {{$t('dashboard.sectionSettingsMovedHint')}}
-            </div>
+                <div v-if="config.bipIntegration && bipToken" class="setup-card mt-2">
+                    <div class="setup-row">
+                        <div class="form-check form-switch m-0">
+                            <input v-model="serverstatus.requireBiP" class="form-check-input" type="checkbox" id="activatebip" @mouseenter="setSetupStatus($t('control.biprequired'))" @mouseleave="clearSetupStatus">
+                            <label class="form-check-label" for="activatebip">{{$t('dashboard.bildungsportalLoginEnforce')}}</label>
+                        </div>
+                    </div>
+                </div>
 
-            <div v-if="!serverstatus.useExamSections" class="m-1 mb-2">
-                <label for="timelimitInput" class="form-check-label"> {{$t('dashboard.timelimit')}} </label>
-                <input
-                    id="timelimitInput"
-                    type="number"
-                    min="1"
-                    step="1"
-                    v-model.number="serverstatus.examSections[1].timelimit"
-                    class="form-control mt-1"
-                    @change="setServerStatus()">
-            </div>
-            <div v-else class="m-1 mb-2">
-                <label for="timelimitInputDisabled" class="form-check-label text-muted"> {{$t('dashboard.timelimit')}} </label>
-                <input
-                    id="timelimitInputDisabled"
-                    type="number"
-                    min="1"
-                    step="1"
-                    :value="serverstatus.examSections[1].timelimit"
-                    class="form-control mt-1"
-                    disabled>
-            </div>
-
-            <div class="form-check form-switch  m-1 mb-2">
-                <input v-model=muteAudio @click="" :title="$t('dashboard.muteaudiointro')" checked=false class="form-check-input" type="checkbox" id="muteaudio">
-                <label class="form-check-label">{{$t('dashboard.muteaudio')}}   </label><br>
-            </div>
-
-
-            <div v-if="config.bipIntegration && bipToken" class="form-check form-switch  m-1 mb-2" >
-                <input v-model=serverstatus.requireBiP :title="$t('control.biprequired')" checked=false class="form-check-input" type="checkbox" id="activatebip">
-                <label class="form-check-label">{{$t('dashboard.bildungsportalLoginEnforce')}}   </label><br>
-            </div>
-            <div class="form-check form-switch  m-1 mb-2">
-                <input v-model="serverstatus.directPrintAllowed" @change="checkforDefaultprinter(); setServerStatus()" :title="$t('dashboard.allowdirectprint')" checked=false class="form-check-input" type="checkbox" id="directprint">
-                <label class="form-check-label">{{$t('dashboard.directprint')}}   </label><br>
-                <div v-if="defaultPrinter" class="ellipsis text-black-50"> {{ defaultPrinter }}</div>
-                <div v-if="!defaultPrinter" class="ellipsis text-black-50" style="max-width: 300px!important;"> {{$t('dashboard.noprinterChosen')}}</div>
-            </div>
-            <hr>
-            <span><h6 style="display: inline">{{ $t('dashboard.defaultprinter') }}</h6></span>
+                <div class="setup-divider"></div>
+                <div class="setup-field-label">{{ $t('dashboard.defaultprinter') }}</div>
             <div v-if="(availablePrinters.length < 1)">
                 <button class="btn btn-secondary mt-1 mb-0"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" >  no printer found </button>
             </div>
             <div v-for="printer in availablePrinters" :key="printer.printerName" style="position: relative;">
                 <button @click="selectPrinter(printer)" :class="{'btn-cyan': defaultPrinter === printer.printerName}" class="printerbutton btn btn-secondary mt-1 mb-0" @mouseenter="visiblePrinter = printer" @mouseleave="visiblePrinter = null"><img src="/src/assets/img/svg/print.svg" alt="print" width="22" height="22" /> {{ printer.printerName }} </button>
-                <div v-if="visiblePrinter === printer" class="tooltip-content"> {{ printer.printerName }} </div>
                 <!-- Icon for the default printer -->
                 <img v-if="printer.printerName === defaultPrinter" src="/src/assets/img/svg/games-solve.svg" class="printercheck" width="22" height="22" />
             </div>
 
-       
-       
+            </div>
 
+            <div class="setup-status-fixed">
+                {{ setupStatusText || visiblePrinter?.printerName || '' }}
+            </div>
 
-
-            <div v-if="currentpreviewPath && defaultPrinter">
-                <button id="printButton" class="btn btn-dark mt-1 mb-0" @click="printBase64();hideSetup()"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" > Print: {{ currentpreviewname }} </button>
-            </div> 
-            <div>  <!-- ok button resets currentpreviewPath / print button only appears if currentpreviewPath is set and defaultprinter is set -->
-                <div id="okButton" class="btn mt-3 btn-success" @click="hideSetup(); this.currentpreviewPath=null;">{{$t('general.ok')}}</div> 
-        <!-- ok button resets currentpreviewPath / print button only appears if currentpreviewPath is set and defaultprinter is set -->
-                <div id="cancelButton" class="btn mt-3 ms-1 btn-danger" @click="hideSetup(false); this.currentpreviewPath=null;">{{$t('dashboard.cancel')}}</div>
+            <div class="setup-footer">
+                <button v-if="currentpreviewPath && defaultPrinter" id="printButton" class="btn btn-dark" @click="printBase64();hideSetup()">
+                    <img src="/src/assets/img/svg/print.svg" width="22" height="22"> Print: {{ currentpreviewname }}
+                </button>
+                <div class="setup-footer-right">
+                    <div class="setup-footer-actions">
+                        <button id="okButton" class="btn btn-success" @click="hideSetup(); this.currentpreviewPath=null;">{{$t('general.ok')}}</button>
+                        <button id="cancelButton" class="btn btn-danger" @click="hideSetup(false); this.currentpreviewPath=null;">{{$t('dashboard.cancel')}}</button>
+                    </div>
+                </div>
             </div>
         </div>
        
@@ -1252,6 +1294,7 @@ export default {
             showExplorer: false,
 
             timelimitWarnedByStartTs: {},
+            setupStatusText: '',
 
             bipToken:this.$route.params.bipToken === 'false' ?  false : this.$route.params.bipToken,   // parameters are always passed as string "false", convert to bool
             bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
@@ -1495,6 +1538,12 @@ computed: {
 },
     methods: {
         isStudentReachable: isStudentReachable,
+        setSetupStatus(text) {
+            this.setupStatusText = String(text || '')
+        },
+        clearSetupStatus() {
+            this.setupStatusText = ''
+        },
         isSectionTabActive(sectionIndex) {
             return this.serverstatus?.activeSection === sectionIndex;
         },
@@ -1516,7 +1565,7 @@ computed: {
                     </div>
                     <div class="mt-3 text-start">
                         <label class="form-label mb-1" for="nx-section-timelimit">${this.$t('dashboard.timelimit')}</label>
-                        <input id="nx-section-timelimit" class="form-control" type="number" min="1" step="1" value="${Number(section.timelimit ?? 60)}">
+                        <input id="nx-section-timelimit" class="form-control" type="number" min="1" step="1" value="${Number(section.timelimit ?? 60)}" ${this.serverstatus?.allowSectionSwitch ? 'disabled' : ''}>
                     </div>
                 `,
                 showCancelButton: true,
@@ -1539,7 +1588,9 @@ computed: {
                     const groupsEl = document.getElementById('nx-section-groups');
                     const nextGroups = !!groupsEl?.checked;
                     const tlEl = document.getElementById('nx-section-timelimit');
-                    const nextTimelimit = Number.parseInt(String(tlEl?.value ?? ''), 10);
+                    const nextTimelimit = this.serverstatus?.allowSectionSwitch
+                        ? Number(section.timelimit ?? 60)
+                        : Number.parseInt(String(tlEl?.value ?? ''), 10);
                     if (!Number.isFinite(nextTimelimit) || nextTimelimit < 1) return false;
                     return { nextName, nextGroups, nextTimelimit };
                 },
@@ -3254,11 +3305,250 @@ computed: {
     border-radius: 5px;    /* rounded corners */
     background-color: white;
     box-shadow: 0 0 1em rgba(0, 0, 0, 0.5);
-    width: 400px;
+    width: 800px;
+    max-width: calc(100vw - 80px);
     max-height: 700px;      /* limit dialog height */
-    overflow-y: auto;       /* enable scrolling if content is taller */
-    overflow-x: hidden;     /* prevent horizontal scrolling */
+    overflow: hidden;       /* scrolling is handled by .setup-scroll */
     z-index: 1000000;
+    border: 1px solid rgba(0,0,0,0.08);
+}
+
+.setup-title {
+    color: rgba(0,0,0,0.8);
+}
+
+.setup-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.setup-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.setup-card {
+    width: 100%;
+    background: #fafafa;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+}
+
+.setup-grid .setup-card {
+    margin-bottom: 0;
+    height: 100%;
+}
+
+.setup-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-items: stretch;
+}
+
+@media (max-width: 860px) {
+    .setup-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.setup-scroll {
+    width: 100%;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 2px;
+}
+
+.setup-footer {
+    width: 100%;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 12px;
+    margin-top: 6px;
+    border-top: 1px solid rgba(0,0,0,0.08);
+    background: #fff;
+}
+
+.setup-footer-actions {
+    display: inline-flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.setup-footer-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.setup-status-fixed {
+    position: absolute;
+    right: 20px;
+    bottom: 4px;
+    max-width: calc(100% - 40px);
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    text-align: right;
+    font-size: 0.8rem;
+    color: rgba(0,0,0,0.85);
+    pointer-events: none;
+}
+
+/* setup-card-title removed by design (avoid box headers) */
+
+.setup-row {
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.setup-row:last-child {
+    margin-bottom: 0;
+}
+
+.setup-row-indent {
+    padding-left: 22px;
+}
+
+.setup-row-split {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.setup-field-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.setup-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.setup-inline-fill {
+    width: 100%;
+}
+
+.setup-inline-fill {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    column-gap: 10px;
+}
+
+.setup-inline-fill input[type="range"] {
+    width: 100%;
+    min-width: 180px;
+    max-width:270px;
+}
+
+.setup-inline-fill .setup-value {
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.setup-unit {
+    font-size: 0.85rem;
+    color: rgba(0,0,0,0.55);
+    min-width: 26px;
+}
+
+.setup-value {
+    font-size: 0.85rem;
+    min-width: 0;
+    text-align: right;
+}
+
+.setup-range {
+    width: 100%;
+}
+
+.setup-inline-fill .setup-range {
+    width: 100%;
+}
+
+.setup-timelimit {
+    width: 88px;
+}
+
+.setup-hint {
+    font-size: 0.85rem;
+    color: rgba(0,0,0,0.55);
+    margin-top: -4px;
+    margin-bottom: 8px;
+}
+
+.setup-divider {
+    width: 100%;
+    height: 1px;
+    background: rgba(0,0,0,0.08);
+    margin: 10px 0;
+}
+
+.setup-row-disabled {
+    cursor: not-allowed;
+}
+.setup-row-disabled * {
+    cursor: not-allowed;
+}
+
+.setup-switch-details {
+    padding-left: 3em;
+}
+
+/* Teal accents for setup sliders (match editor sidebar vibe) */
+#setupdiv input[type="range"].custom-slider {
+    accent-color: var(--bs-teal, #20c997);
+}
+#setupdiv input[type="range"].custom-slider::-webkit-slider-thumb {
+    background: var(--bs-teal, #20c997);
+}
+#setupdiv input[type="range"].custom-slider::-moz-range-thumb {
+    background: var(--bs-teal, #20c997);
+    border: none;
+}
+
+/* Teal accents for setup switches/checkboxes */
+#setupdiv .form-check-input {
+    accent-color: var(--bs-teal, #20c997);
+}
+#setupdiv .form-check-input:disabled {
+    accent-color: rgba(0,0,0,0.25);
+}
+
+#setupdiv input[type="range"].custom-slider::-webkit-slider-runnable-track {
+    background: color-mix(in srgb, var(--bs-teal, #20c997) 25%, transparent);
+    height: 6px;
+    border-radius: 99px;
+}
+#setupdiv input[type="range"].custom-slider::-moz-range-track {
+    background: color-mix(in srgb, var(--bs-teal, #20c997) 25%, transparent);
+    height: 6px;
+    border-radius: 99px;
+}
+
+/* Bootstrap switches ignore accent-color in some cases; force teal when checked */
+#setupdiv .form-check-input:checked {
+    background-color: var(--bs-teal, #20c997);
+    border-color: var(--bs-teal, #20c997);
+}
+#setupdiv .form-check-input:focus {
+    box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--bs-teal, #20c997) 25%, transparent);
+    border-color: var(--bs-teal, #20c997);
 }
 
 
