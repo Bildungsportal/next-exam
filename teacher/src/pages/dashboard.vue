@@ -18,26 +18,26 @@
     <div v-if="serverstatus.useExamSections && !serverstatus.allowSectionSwitch" style="position: absolute; left:256px; bottom: 0; min-width: 550px; z-index: 0;">
         <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 1 && !serverstatus.examSections[1].locked, 'sectionbuttonactivered': serverstatus.activeSection == 1 && serverstatus.examSections[1].locked, 'btn-secondary': serverstatus.activeSection != 1,'btn-danger': serverstatus.examSections[1].locked}">
             <span class="sectionbutton-label">{{ serverstatus.examSections[1].sectionname }}</span>
-            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(1)">
-                <img src="/src/assets/img/svg/document-edit.svg" :class="isSectionTabActive(1) ? 'white' : ''" width="14" height="14">
+            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(1)" @mouseover="showDescription($t('dashboard.sectionSettingsDesc'))" @mouseout="hideDescription">
+                <img src="/src/assets/img/svg/settings-symbolic.svg" :class="isSectionTabActive(1) ? '' : 'white'" width="14" height="14">
             </button>
         </div>
         <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 2 && !serverstatus.examSections[2].locked, 'sectionbuttonactivered': serverstatus.activeSection == 2 && serverstatus.examSections[2].locked, 'btn-secondary': serverstatus.activeSection != 2,'btn-danger': serverstatus.examSections[2].locked}">
             <span class="sectionbutton-label">{{ serverstatus.examSections[2].sectionname }}</span>
-            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(2)">
-                <img src="/src/assets/img/svg/document-edit.svg" :class="isSectionTabActive(2) ? 'white' : ''" width="14" height="14">
+            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(2)" @mouseover="showDescription($t('dashboard.sectionSettingsDesc'))" @mouseout="hideDescription">
+                <img src="/src/assets/img/svg/settings-symbolic.svg" :class="isSectionTabActive(2) ? '' : 'white'" width="14" height="14">
             </button>
         </div>
         <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 3 && !serverstatus.examSections[3].locked, 'sectionbuttonactivered': serverstatus.activeSection == 3 && serverstatus.examSections[3].locked, 'btn-secondary': serverstatus.activeSection != 3,'btn-danger': serverstatus.examSections[3].locked}">
             <span class="sectionbutton-label">{{ serverstatus.examSections[3].sectionname }}</span>
-            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(3)">
-                <img src="/src/assets/img/svg/document-edit.svg" :class="isSectionTabActive(3) ? 'white' : ''" width="14" height="14">
+            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(3)" @mouseover="showDescription($t('dashboard.sectionSettingsDesc'))" @mouseout="hideDescription">
+                <img src="/src/assets/img/svg/settings-symbolic.svg" :class="isSectionTabActive(3) ? '' : 'white'" width="14" height="14">
             </button>
         </div>
         <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="{'sectionbuttonactive': serverstatus.activeSection == 4 && !serverstatus.examSections[4].locked, 'sectionbuttonactivered': serverstatus.activeSection == 4 && serverstatus.examSections[4].locked, 'btn-secondary': serverstatus.activeSection != 4,'btn-danger': serverstatus.examSections[4].locked}">
             <span class="sectionbutton-label">{{ serverstatus.examSections[4].sectionname }}</span>
-            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(4)">
-                <img src="/src/assets/img/svg/document-edit.svg" :class="isSectionTabActive(4) ? 'white' : ''" width="14" height="14">
+            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(4)" @mouseover="showDescription($t('dashboard.sectionSettingsDesc'))" @mouseout="hideDescription">
+                <img src="/src/assets/img/svg/settings-symbolic.svg" :class="isSectionTabActive(4) ? '' : 'white'" width="14" height="14">
             </button>
         </div>
     </div>
@@ -45,26 +45,36 @@
     <div v-if="serverstatus.useExamSections && serverstatus.allowSectionSwitch" style="position: absolute; left:257px; bottom: 0; min-width: 550px; z-index: 0;">
         <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 1 ? 'sectionbuttonactive' : 'btn-secondary'">
             <span class="sectionbutton-label">{{ serverstatus.examSections[1].sectionname }}</span>
-            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(1)">
-                <img src="/src/assets/img/svg/document-edit.svg" :class="isSectionTabActive(1) ? 'white' : ''" width="14" height="14">
+            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(1)" @mouseover="showDescription($t('dashboard.sectionSettingsDesc'))" @mouseout="hideDescription">
+                <img src="/src/assets/img/svg/settings-symbolic.svg" :class="isSectionTabActive(1) ? '' : 'white'" width="14" height="14">
             </button>
         </div>
         <div id="section2" v-if="serverstatus.examSections[2]" @click="activateSection(2)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 2 ? 'sectionbuttonactive' : 'btn-secondary'">
             <span class="sectionbutton-label">{{ serverstatus.examSections[2].sectionname }}</span>
-            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(2)">
-                <img src="/src/assets/img/svg/document-edit.svg" :class="isSectionTabActive(2) ? 'white' : ''" width="14" height="14">
+            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(2)" @mouseover="showDescription($t('dashboard.sectionSettingsDesc'))" @mouseout="hideDescription">
+                <img src="/src/assets/img/svg/settings-symbolic.svg" :class="isSectionTabActive(2) ? '' : 'white'" width="14" height="14">
             </button>
         </div>
         <div id="section3" v-if="serverstatus.examSections[3]" @click="activateSection(3)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 3 ? 'sectionbuttonactive' : 'btn-secondary'">
             <span class="sectionbutton-label">{{ serverstatus.examSections[3].sectionname }}</span>
-            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(3)">
-                <img src="/src/assets/img/svg/document-edit.svg" :class="isSectionTabActive(3) ? 'white' : ''" width="14" height="14">
+            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(3)" @mouseover="showDescription($t('dashboard.sectionSettingsDesc'))" @mouseout="hideDescription">
+                <img src="/src/assets/img/svg/settings-symbolic.svg" :class="isSectionTabActive(3) ? '' : 'white'" width="14" height="14">
             </button>
         </div>
         <div id="section4" v-if="serverstatus.examSections[4]" @click="activateSection(4)" class="sectionbutton btn btn-sm" :class="serverstatus.activeSection == 4 ? 'sectionbuttonactive' : 'btn-secondary'">
             <span class="sectionbutton-label">{{ serverstatus.examSections[4].sectionname }}</span>
-            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(4)">
-                <img src="/src/assets/img/svg/document-edit.svg" :class="isSectionTabActive(4) ? 'white' : ''" width="14" height="14">
+            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(4)" @mouseover="showDescription($t('dashboard.sectionSettingsDesc'))" @mouseout="hideDescription">
+                <img src="/src/assets/img/svg/settings-symbolic.svg" :class="isSectionTabActive(4) ? '' : 'white'" width="14" height="14">
+            </button>
+        </div>
+    </div>
+
+    <!-- when sections are disabled, section 1 is always active -->
+    <div v-if="!serverstatus.useExamSections" style="position: absolute; left:257px; bottom: 0; min-width: 550px; z-index: 0;">
+        <div id="section1" v-if="serverstatus.examSections[1]" @click="activateSection(1)" class="sectionbutton btn btn-sm sectionbuttonactive">
+            <span class="sectionbutton-label">{{ serverstatus.examSections[1].sectionname }}</span>
+            <button type="button" class="sectionbutton-edit" :title="$t('dashboard.sectionname')" @click.stop="editSectionName(1)" @mouseover="showDescription($t('dashboard.sectionSettingsDesc'))" @mouseout="hideDescription">
+                <img src="/src/assets/img/svg/settings-symbolic.svg"  width="14" height="14">
             </button>
         </div>
     </div>
@@ -806,10 +816,6 @@
                 <input v-model=serverstatus.allowSectionSwitch @click="" :title="$t('dashboard.allowsectionswitch')" checked=false class="form-check-input" type="checkbox" id="allowsectionswitch">
                 <label class="form-check-label">{{$t('dashboard.allowsectionswitchshort')}}   </label><br>
             </div>
-            <div class="form-check form-switch  m-1 mb-2">
-                <input v-model=serverstatus.examSections[serverstatus.activeSection].groups @click="setupGroups()" :title="$t('dashboard.groupinfo')" checked=false class="form-check-input" type="checkbox" id="activategroups">
-                <label class="form-check-label">{{$t('dashboard.groups')}}   </label><br>
-            </div>
 
             <div class="form-check form-switch  m-1 mb-2">
                 <input v-model=muteAudio @click="" :title="$t('dashboard.muteaudiointro')" checked=false class="form-check-input" type="checkbox" id="muteaudio">
@@ -1253,7 +1259,7 @@ export default {
                         examtype: 'math',   
                         timelimit: 60,
                         locked: false,  // if true, the current section is locked and no changes can be made - this means its currently active for students
-                        sectionname: "Abschnitt 1",
+                        sectionname: "Übersicht",
                         spellchecklang: 'de-DE', 
                         suggestions: false, 
 
@@ -1467,10 +1473,21 @@ computed: {
             if (!section) return;
 
             const result = await this.$swal.fire({
-                title: this.$t('dashboard.sectionname'),
-                html: `<div class="my-content">${this.$t('dashboard.sectionnameinfo')}</div>`,
-                input: 'text',
-                inputValue: section.sectionname || '',
+                title: this.$t('dashboard.sectionSettings'),
+                html: `
+                    <div class="mt-3 text-start">
+                        <label class="form-label mb-1" for="nx-section-name">${this.$t('dashboard.sectionname')}</label>
+                        <input id="nx-section-name" class="form-control" type="text" value="${String(section.sectionname || '').replaceAll('"', '&quot;')}">
+                    </div>
+                    <div class="form-check form-switch mt-3 text-start">
+                        <input id="nx-section-groups" class="form-check-input" type="checkbox" ${section.groups ? 'checked' : ''}>
+                        <label class="form-check-label" for="nx-section-groups">${this.$t('dashboard.groups')}</label>
+                    </div>
+                    <div class="mt-3 text-start">
+                        <label class="form-label mb-1" for="nx-section-timelimit">${this.$t('dashboard.timelimit')}</label>
+                        <input id="nx-section-timelimit" class="form-control" type="number" min="1" step="1" value="${Number(section.timelimit ?? 60)}">
+                    </div>
+                `,
                 showCancelButton: true,
                 cancelButtonText: this.$t('dashboard.cancel'),
                 confirmButtonText: this.$t('dashboard.save'),
@@ -1478,16 +1495,36 @@ computed: {
                     popup: 'my-popup',
                     title: 'my-title',
                     content: 'my-content',
-                    input: 'my-custom-input',
                     actions: 'my-swal2-actions'
-                }
+                },
+                didOpen: () => {
+                    const nameEl = document.getElementById('nx-section-name');
+                    if (nameEl && typeof nameEl.focus === 'function') nameEl.focus();
+                },
+                preConfirm: () => {
+                    const nameEl = document.getElementById('nx-section-name');
+                    const nextName = String(nameEl?.value || '').trim();
+                    if (!nextName) return false;
+                    const groupsEl = document.getElementById('nx-section-groups');
+                    const nextGroups = !!groupsEl?.checked;
+                    const tlEl = document.getElementById('nx-section-timelimit');
+                    const nextTimelimit = Number.parseInt(String(tlEl?.value ?? ''), 10);
+                    if (!Number.isFinite(nextTimelimit) || nextTimelimit < 1) return false;
+                    return { nextName, nextGroups, nextTimelimit };
+                },
             });
 
             if (!result.isConfirmed) return;
-            const nextName = String(result.value || '').trim();
+            const { nextName, nextGroups, nextTimelimit } = result.value || {};
             if (!nextName) return;
 
+            const groupsChanged = !!section.groups !== !!nextGroups;
             section.sectionname = nextName;
+            section.groups = !!nextGroups;
+            section.timelimit = Number(nextTimelimit);
+            if (groupsChanged && section.groups) {
+                await this.setupGroups(sectionIndex);
+            }
             this.setServerStatus();
         },
 
@@ -2356,14 +2393,16 @@ computed: {
 
         // setup groups
         // every user is automatically in group a (see control /registerclient) - this function resets group arrangement and pushes every user into group a
-        async setupGroups(){
-            this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users = []
-            this.serverstatus.examSections[this.serverstatus.activeSection].groupB.users = []
+        async setupGroups(sectionIndex = this.serverstatus.activeSection){
+            this.serverstatus.examSections[sectionIndex].groupA.users = []
+            this.serverstatus.examSections[sectionIndex].groupB.users = []
             // prepopulate group A
             for (let student of this.studentlist) {
-                student.status.group = "a"
-                if (!this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.includes(student.clientname)) {
-                    this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users.push(student.clientname)
+                if (sectionIndex === this.serverstatus.activeSection) {
+                    student.status.group = "a"
+                }
+                if (!this.serverstatus.examSections[sectionIndex].groupA.users.includes(student.clientname)) {
+                    this.serverstatus.examSections[sectionIndex].groupA.users.push(student.clientname)
                 } 
             } 
             await this.sleep(1000)
@@ -3922,8 +3961,14 @@ hr {
     animation: none !important;
     -webkit-transition: none !important;
     -webkit-animation: none !important;
+    
 } 
 
+
+.swal2-html-container {
+    padding: 4px !important;
+    overflow:visible !important;
+}
 
 
 .my-html-container {
