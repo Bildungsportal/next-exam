@@ -3644,6 +3644,11 @@ computed: {
    transition: 0.3s;
 }
 
+/* match swal2: green button with white label */
+#setupdiv #okButton.btn-success {
+    color: #fff;
+}
+
 
 
 
