@@ -38,6 +38,7 @@ import { ensureNetworkOrReset } from './testpermissionsMac.js';
 import { getWlanInfo } from './getwlaninfo.js';
 import { switchExamSection } from './switchExamSection.js';
 import { startProxy } from './vncproxy.js';
+import qemuService from './qemuService.js';
 import { getVMFindings } from './vmDetection.js';
 
 const __dirname = import.meta.dirname;
@@ -130,6 +131,67 @@ class IpcHandler {
             } catch (err) {
                 log.error('ipchandler @ start-proxy:', err);
                 return { port: null, error: err.message };
+            }
+        });
+
+        ipcMain.handle('qemu-start-headless', async (_event, payload = {}) => {
+            try {
+                const { qcow2Name, vncPort, overlayName } = payload || {};
+                const vncDisplay = Number(vncPort) === 5901 ? ':1' : ':1';
+                const result = await qemuService.startHeadless({
+                    workdirectory: this.config.workdirectory,
+                    qcow2Name,
+                    vncDisplay,
+                    overlayName,
+                });
+                if (this.multicastClient?.clientinfo) {
+                    this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
+                    this.multicastClient.clientinfo.localVMPort = Number(vncPort) || 5901;
+                    this.multicastClient.clientinfo.localVMState = 'starting';
+                }
+                return { ok: true, result };
+            } catch (err) {
+                log.error('ipchandler @ qemu-start-headless', err);
+                if (this.multicastClient?.clientinfo) {
+                    this.multicastClient.clientinfo.localVMHost = null;
+                    this.multicastClient.clientinfo.localVMState = 'error';
+                }
+                return { ok: false, error: String(err?.message || err) };
+            }
+        });
+
+        ipcMain.handle('qemu-stop', async () => {
+            try {
+                qemuService.stopVm();
+                return { ok: true };
+            } catch (err) {
+                log.error('ipchandler @ qemu-stop', err);
+                return { ok: false, error: String(err?.message || err) };
+            }
+        });
+
+        ipcMain.handle('qemu-download-disk', async (_event, payload = {}) => {
+            try {
+                const { serverip, serverApiPort, servername, token, filename, expectedSha256 } = payload || {};
+                const result = await qemuService.downloadDiskFromTeacher({
+                    serverip,
+                    serverApiPort,
+                    servername,
+                    token,
+                    filename,
+                    workdirectory: this.config.workdirectory,
+                });
+                const verify = expectedSha256
+                    ? await qemuService.verifyDiskSha256({
+                        workdirectory: this.config.workdirectory,
+                        qcow2Name: filename,
+                        expectedSha256,
+                    })
+                    : { ok: false, match: false, error: 'missing expected hash' };
+                return { ok: true, result, verify };
+            } catch (err) {
+                log.error('ipchandler @ qemu-download-disk', err);
+                return { ok: false, error: String(err?.message || err) };
             }
         });
 

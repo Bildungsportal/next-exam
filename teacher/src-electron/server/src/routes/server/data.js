@@ -444,6 +444,43 @@ router.post('/getpdf/:servername/:token', function (req, res, next) {
  
 })
 
+/**
+ * Download a QEMU qcow2 disk from teacher workdir/QEMU (student only).
+ * URL is used by students to fetch missing LocalVM disk.
+ */
+router.get('/qemu/:servername/:token/:filename', async (req, res) => {
+    const token = req.params.token
+    const servername = req.params.servername
+    const filenameRaw = req.params.filename
+    const mcServer = config.examServerList[servername]
+    if (!mcServer) { return res.status(404).json({ status: "error", sender: "server", message: "server not found" }) }
+    if (token !== mcServer.serverinfo.servertoken && !checkToken(token, mcServer)) { return res.status(403).json({ status: t("data.tokennotvalid") }) }
+
+    const filename = path.basename(String(filenameRaw || ''))
+    if (!filename || filename !== String(filenameRaw || '')) {
+        return res.status(400).json({ status: "error", sender: "server", message: "invalid filename" })
+    }
+    if (!filename.toLowerCase().endsWith('.qcow2')) {
+        return res.status(400).json({ status: "error", sender: "server", message: "invalid file type" })
+    }
+
+    const qemuDir = path.join(config.workdirectory, 'QEMU')
+    const resolvedDir = path.resolve(qemuDir)
+    const filePath = path.resolve(path.join(qemuDir, filename))
+    if (!filePath.startsWith(resolvedDir + path.sep)) {
+        return res.status(400).json({ status: "error", sender: "server", message: "invalid path" })
+    }
+
+    try {
+        await fs.promises.access(filePath, fs.constants.R_OK)
+    } catch (e) {
+        return res.status(404).json({ status: "error", sender: "server", message: "file not found" })
+    }
+
+    res.setHeader('Content-disposition', 'attachment; filename=' + filename)
+    return res.download(filePath)
+})
+
 
 
 

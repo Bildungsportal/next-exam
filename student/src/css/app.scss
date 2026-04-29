@@ -127,6 +127,11 @@ html, body {
   justify-content: flex-start !important;
 }
 
+.swal2-actions .swal2-loader {
+  margin-left: 10px !important;
+  margin-right: auto !important;
+}
+
 .swal2-actions .swal2-confirm,
 .swal2-actions .swal2-cancel {
   min-width: 140px !important;

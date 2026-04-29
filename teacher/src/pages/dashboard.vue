@@ -573,6 +573,59 @@
                     </template>
                 </div>
 
+                <div v-if="isExamType('localvm')" class="basematerial-sidebar-block mt-3">
+                    <div class="basematerial-panel-caption">LocalVM (QEMU)</div>
+
+                    <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill">A</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.localvm?.qcow2Name">
+                                <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate"
+                                    :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.localvm.qcow2Name"
+                                    @click="configureLocalVM('a')">
+                                    <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.localvm.qcow2Name }}</span>
+                                </button>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureLocalVM('a')">
+                                <span class="sidebar-pick-btn__label">QEMU VM wählen</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill basematerial-group-pill--b">B</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.localvm?.qcow2Name">
+                                <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate"
+                                    :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.localvm.qcow2Name"
+                                    @click="configureLocalVM('b')">
+                                    <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.localvm.qcow2Name }}</span>
+                                </button>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureLocalVM('b')">
+                                <span class="sidebar-pick-btn__label">QEMU VM wählen</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill basematerial-group-pill--ab" aria-label="A/B">AB</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.localvm?.qcow2Name">
+                                <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate"
+                                    :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.localvm.qcow2Name"
+                                    @click="configureLocalVM('all')">
+                                    <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.localvm.qcow2Name }}</span>
+                                </button>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureLocalVM('all')">
+                                <span class="sidebar-pick-btn__label">QEMU VM wählen</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+
 
                 <!-- Active Sheets: panel with group pills, filename, remove -->
                 <div v-if="isExamType('activesheets')" class="basematerial-sidebar-block mt-3">
@@ -2048,7 +2101,7 @@ computed: {
             if (type === 'website') {/* configured via sidebar */}
             if (type === 'math') {/* no dialog */}
             if (type === 'rdp') {/* configured via sidebar */}
-            if (type === 'localvm') this.configureLocalVM();
+            if (type === 'localvm') {/* configured via sidebar */}
         },
 
         // get label for the current exam type

@@ -5,7 +5,7 @@ import { countReachableStudents, isStudentReachable } from './studentPresence.js
 
 
 // enable exam mode 
-function startExam(){
+async function startExam(){
  
     setTimeout(() => {
         this.getFiles('all'); //  trigger this one immediately to figure out if there are write problems on student pcs 
@@ -17,6 +17,36 @@ function startExam(){
 
     const now = Date.now()
     const sectionIndex = (this.serverstatus.useExamSections && this.serverstatus.allowSectionSwitch) ? 1 : this.serverstatus.activeSection
+
+    // LocalVM/QEMU hash is computed when selecting the disk (configureLocalVM).
+    try {
+        const examSection = this.serverstatus.examSections[sectionIndex]
+        if (examSection?.examtype === 'localvm') {
+            const hasGroups = !!examSection.groups
+            const cfgA = examSection?.groupA?.examConfig?.localvm || {}
+            const cfgB = examSection?.groupB?.examConfig?.localvm || {}
+            if (!hasGroups) {
+                if (cfgA.qcow2Name && !cfgA.qcow2Sha256) {
+                    this.status('LocalVM: Hash fehlt – bitte VM-Disk erneut wählen.')
+                    return
+                }
+            } else {
+                if (cfgA.qcow2Name && !cfgA.qcow2Sha256) {
+                    this.status('LocalVM: Hash fehlt (Gruppe A) – bitte VM-Disk erneut wählen.')
+                    return
+                }
+                if (cfgB.qcow2Name && !cfgB.qcow2Sha256) {
+                    this.status('LocalVM: Hash fehlt (Gruppe B) – bitte VM-Disk erneut wählen.')
+                    return
+                }
+            }
+        }
+    } catch (e) {
+        log.error('exammanagement @ startExam: localvm hash missing check failed', e)
+        this.status('LocalVM: Konfiguration ungültig.')
+        return
+    }
+
     this.serverstatus.examSections[sectionIndex].locked = true;   // starting exammode locks the current active section
     this.serverstatus.lockedSection = sectionIndex;
     this.serverstatus.examSections[sectionIndex].startTs = now

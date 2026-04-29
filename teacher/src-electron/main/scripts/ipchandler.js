@@ -29,6 +29,7 @@ import { gateway4sync} from 'default-gateway';
 import ip from 'ip'
 import dns from 'dns'
 import net from 'node:net'
+import qemuService from './qemuService.js'
 
 import server from "../../server/src/server.js"
 import checkDiskSpace from 'check-disk-space';
@@ -178,27 +179,63 @@ class IpcHandler {
         })  
 
 
-        // returns a list of available VirtualBox VMs on the teacher machine
-        ipcMain.handle('get-vm-list', async () => {
-            return await new Promise((resolve) => {
-                exec('VBoxManage list vms', { encoding: 'utf8' }, (error, stdout) => {
-                    if (error) {
-                        log.error('ipchandler @ get-vm-list: VBoxManage failed', error);
-                        resolve([]);
-                        return;
-                    }
-                    const lines = stdout.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-                    const names = [];
-                    for (const line of lines) {
-                        const match = line.match(/\"(.+?)\"/);
-                        if (match && match[1]) {
-                            names.push(match[1]);
-                        }
-                    }
-                    resolve(names);
-                });
-            });
-        })  
+        /**
+         * QEMU integration (LocalVM, qcow2 in workdir/QEMU)
+         */
+        ipcMain.handle('qemu-list-disks', async () => {
+            try {
+                return await qemuService.listDisks({ workdirectory: config.workdirectory })
+            } catch (e) {
+                log.error('ipchandler @ qemu-list-disks', e)
+                return []
+            }
+        })
+
+        ipcMain.handle('qemu-install-default', async () => {
+            try {
+                return await qemuService.installDefaultVm({ workdirectory: config.workdirectory })
+            } catch (e) {
+                log.error('ipchandler @ qemu-install-default', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
+
+        ipcMain.handle('qemu-hash-disk', async (_event, payload = {}) => {
+            try {
+                const { qcow2Name } = payload || {}
+                const sha256 = await qemuService.hashDisk({ workdirectory: config.workdirectory, qcow2Name })
+                return { ok: true, sha256 }
+            } catch (e) {
+                log.error('ipchandler @ qemu-hash-disk', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
+
+        ipcMain.handle('qemu-boot-disk', async (_event, payload = {}) => {
+            try {
+                const { qcow2Name } = payload || {}
+                return await qemuService.bootDisk({ workdirectory: config.workdirectory, qcow2Name })
+            } catch (e) {
+                log.error('ipchandler @ qemu-boot-disk', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
+
+        ipcMain.handle('qemu-pick-import-disk', async () => {
+            try {
+                const result = await dialog.showOpenDialog(this.WindowHandler.mainwindow, {
+                    properties: ['openFile'],
+                    filters: [{ name: 'QEMU Disk', extensions: ['qcow2'] }],
+                })
+                if (result.canceled || !result.filePaths || !result.filePaths[0]) {
+                    return { ok: false, cancelled: true }
+                }
+                return await qemuService.importDisk({ workdirectory: config.workdirectory, sourcePath: result.filePaths[0] })
+            } catch (e) {
+                log.error('ipchandler @ qemu-pick-import-disk', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
 
 
         // log out of microsoft 365

@@ -32,7 +32,7 @@ import platformDispatcher from './platformDispatcher.js';
 import { runRemoteCheck } from './remoteCheck.js'
 import { getVMFindings } from './vmDetection.js'
 import languageToolServer from './lt-server.js';
-import virtualBoxService from './virtualBoxService.js';
+import qemuService from './qemuService.js';
 import { stopProxy } from './vncproxy.js';
 const __dirname = import.meta.dirname; 
 import { switchExamSection } from './switchExamSection.js';
@@ -54,6 +54,49 @@ import { switchExamSection } from './switchExamSection.js';
         this.config = config
         this.updateScheduler = new SchedulerService(this.requestUpdate.bind(this), 5000)
         this.updateScheduler.start()
+    }
+
+    // Mirror securityFocusLost: kiosk exam window + focus=false so teacher sees focus loss.
+    applyLocalVmSecurityLockdown() {
+        this.multicastClient.clientinfo.focus = false;
+        if (WindowHandler.examwindow && !this.config.development) {
+            WindowHandler.examwindow.moveTop();
+            WindowHandler.examwindow.setKiosk(true);
+            WindowHandler.examwindow.show();
+            WindowHandler.examwindow.focus();
+        }
+    }
+
+    // Async SHA-256 of base qcow2 after QEMU start; mismatch keeps VM, applies lockdown only.
+    async runLocalVmPostStartVerify(qcow2Name, expectedSha256) {
+        try {
+            const verify = await qemuService.verifyDiskSha256({
+                workdirectory: this.config.workdirectory,
+                qcow2Name,
+                expectedSha256,
+            });
+            if (!verify.ok) {
+                if (verify.error === 'disk not found') {
+                    this.multicastClient.clientinfo.localVMHost = null;
+                    this.multicastClient.clientinfo.localVMState = 'missing';
+                    qemuService.stopVm();
+                } else {
+                    this.multicastClient.clientinfo.localVMState = 'error';
+                    this.applyLocalVmSecurityLockdown();
+                }
+                return;
+            }
+            if (!verify.match) {
+                this.multicastClient.clientinfo.localVMState = 'hash_mismatch';
+                this.applyLocalVmSecurityLockdown();
+                return;
+            }
+            this.multicastClient.clientinfo.localVMState = 'running';
+        } catch (e) {
+            log.error('communicationhandler @ runLocalVmPostStartVerify', e);
+            this.multicastClient.clientinfo.localVMState = 'error';
+            this.applyLocalVmSecurityLockdown();
+        }
     }
 
     
@@ -534,22 +577,67 @@ import { switchExamSection } from './switchExamSection.js';
 
             if (examtype === 'localvm') {
                 try {
-                    const vmConfig = serverstatus.examSections[effectiveSection].localVMConfig || {};
-                    const vmName = vmConfig.vmName;
-                    if (!vmName) {
-                        log.error("communicationhandler @ startExam: no vmName configured for localvm examtype");
-                        this.multicastClient.clientinfo.exammode = false;
-                        return;
+                    const examSection = serverstatus.examSections[effectiveSection];
+                    const hasGroups = !!examSection?.groups;
+                    let group = this.multicastClient.clientinfo.group || 'a';
+                    if (hasGroups) {
+                        const clientname = this.multicastClient.clientinfo.name;
+                        const groupA = examSection.groupA?.users ?? [];
+                        const groupB = examSection.groupB?.users ?? [];
+                        if (groupB.includes(clientname)) group = 'b';
+                        else if (groupA.includes(clientname)) group = 'a';
+                        else group = 'a';
+                    } else {
+                        group = 'a';
                     }
-                    this.multicastClient.clientinfo.localVMHost = null;
-                    this.multicastClient.clientinfo.localVMState = null;
-                    const vmResult = await virtualBoxService.startVmAndResolveHost(vmName);
-                    this.multicastClient.clientinfo.localVMHost = vmResult.ip;
-                    this.multicastClient.clientinfo.localVMState = vmResult.state;
+
+                    const vmConfig = group === 'b'
+                        ? (examSection?.groupB?.examConfig?.localvm || {})
+                        : (examSection?.groupA?.examConfig?.localvm || {});
+
+                    const qcow2Name = vmConfig.qcow2Name;
+                    const vncPort = Number(vmConfig.vncPort || 5901);
+                    const expectedSha256 = vmConfig.qcow2Sha256;
+                    if (!qcow2Name) {
+                        log.error("communicationhandler @ startExam: no qcow2Name configured for localvm examtype");
+                        this.multicastClient.clientinfo.localVMHost = null;
+                        this.multicastClient.clientinfo.localVMPort = vncPort;
+                        this.multicastClient.clientinfo.localVMState = 'missing';
+                    } else {
+                        this.multicastClient.clientinfo.localVMHost = null;
+                        this.multicastClient.clientinfo.localVMState = null;
+                        this.multicastClient.clientinfo.localVMPort = vncPort;
+                        if (!expectedSha256) {
+                            log.warn("communicationhandler @ startExam: no qcow2Sha256 – starting VM without base-image hash verify");
+                        }
+                        try {
+                            await qemuService.startHeadless({
+                                workdirectory: this.config.workdirectory,
+                                qcow2Name,
+                                vncDisplay: ':1',
+                                overlayName: `${qcow2Name}.overlay.${this.multicastClient.clientinfo.servername || 'exam'}.${this.multicastClient.clientinfo.pin || '0'}.qcow2`,
+                            });
+                            this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
+                            if (expectedSha256) {
+                                this.multicastClient.clientinfo.localVMState = 'verifying_hash';
+                                void this.runLocalVmPostStartVerify(qcow2Name, expectedSha256);
+                            } else {
+                                this.multicastClient.clientinfo.localVMState = 'unverified_hash';
+                            }
+                        } catch (e) {
+                            this.multicastClient.clientinfo.localVMHost = null;
+                            const msg = String(e?.message || e);
+                            if (msg.toLowerCase().includes('disk not found')) {
+                                this.multicastClient.clientinfo.localVMState = 'missing';
+                            } else {
+                                this.multicastClient.clientinfo.localVMState = 'error';
+                            }
+                        }
+                    }
                 } catch (err) {
                     log.error("communicationhandler @ startExam: LocalVM start failed", err);
-                    this.multicastClient.clientinfo.exammode = false;
-                    return;
+                    this.multicastClient.clientinfo.localVMHost = null;
+                    this.multicastClient.clientinfo.localVMState = 'error';
                 }
             }
 
@@ -600,6 +688,7 @@ import { switchExamSection } from './switchExamSection.js';
         
         WindowHandler.removeBlurListener();
         stopProxy();
+        qemuService.stopVm();
       
         //only disable restrictions if not in exam mode ( seriosuly.. how could this ever happen? )
         if (this.multicastClient.clientinfo.exammode){

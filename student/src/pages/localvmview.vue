@@ -22,14 +22,52 @@
     <div id="content" class="column q-pa-none" style="flex: 1; overflow: hidden;">
       <div class="vnc-wrapper">
         <div ref="vncContainer" class="vnc-container"></div>
-        <div class="vnc-overlay" v-if="statusMessage || showRetry">
+        <div class="vnc-overlay" v-if="showVmOverlay">
           <div class="status-text q-mb-sm">
             <div>{{ statusMessage }}</div>
             <div v-if="vmStateText" class="text-subtitle2 text-grey-5 q-mt-xs">
               {{ vmStateText }}
             </div>
           </div>
-          <div v-if="showRetry" class="q-mt-sm">
+          <div v-if="clientinfo && clientinfo.localVMState === 'missing'" class="q-mt-sm">
+            <div class="text-subtitle2 text-grey-5 q-mb-sm">
+              VM-Disk nicht gefunden. Download vom Teacher kann ~10GB sein und lange dauern.
+            </div>
+            <button class="btn btn-primary btn-sm q-mr-sm" @click="downloadVm">
+              VM herunterladen (~10GB)
+            </button>
+            <button class="btn btn-danger btn-sm" @click="gracefullyExit">
+              {{ $t('editor.unlock') }}
+            </button>
+          </div>
+          <div v-else-if="clientinfo && clientinfo.localVMState === 'hash_mismatch'" class="q-mt-sm">
+            <div class="text-subtitle2 text-grey-5 q-mb-sm">
+              {{ $t('student.vmHashMismatchLock') }}
+            </div>
+            <button class="btn btn-danger btn-sm" @click="gracefullyExit">
+              {{ $t('editor.unlock') }}
+            </button>
+          </div>
+          <div v-else-if="clientinfo && clientinfo.localVMState === 'unverified_hash'" class="q-mt-sm">
+            <div class="text-subtitle2 text-grey-5 q-mb-sm">
+              {{ $t('student.vmUnverifiedHash') }}
+            </div>
+            <button class="btn btn-danger btn-sm" @click="gracefullyExit">
+              {{ $t('editor.unlock') }}
+            </button>
+          </div>
+          <div v-else-if="clientinfo && clientinfo.localVMState === 'error'" class="q-mt-sm">
+            <div class="text-subtitle2 text-grey-5 q-mb-sm">
+              VM konnte nicht gestartet werden. Du kannst es erneut versuchen.
+            </div>
+            <button class="btn btn-primary btn-sm q-mr-sm" @click="retryStartVm">
+              VM-Start erneut versuchen
+            </button>
+            <button class="btn btn-danger btn-sm" @click="gracefullyExit">
+              {{ $t('editor.unlock') }}
+            </button>
+          </div>
+          <div v-else-if="showRetry" class="q-mt-sm">
             <button class="btn btn-primary btn-sm q-mr-sm" @click="retryConnect">
               {{ $t('dashboard.retry') || 'Erneut versuchen' }}
             </button>
@@ -87,8 +125,21 @@ export default {
       showRetry: false,
       vmStateText: '',
       rfb: null,
-      connectScheduler: null
+      connectScheduler: null,
+      isUnmounted: false
     };
+  },
+  computed: {
+    showVmOverlay() {
+      if (this.showRetry) {
+        return true;
+      }
+      const st = this.clientinfo?.localVMState;
+      if (st && ['missing', 'hash_mismatch', 'missing_hash', 'error', 'verifying_hash', 'unverified_hash'].includes(st)) {
+        return true;
+      }
+      return !!(this.statusMessage && String(this.statusMessage).trim().length);
+    }
   },
   mounted() {
     this.entrytime = new Date().getTime();
@@ -104,6 +155,7 @@ export default {
     this.tryConnectLoop();
   },
   beforeUnmount() {
+    this.isUnmounted = true;
     if (this.fetchinfointerval) {
       this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
       this.fetchinfointerval.stop();
@@ -115,6 +167,7 @@ export default {
     if (this.connectScheduler) {
       this.connectScheduler.removeEventListener('action', this.tryConnectLoop);
       this.connectScheduler.stop();
+      this.connectScheduler = null;
     }
     document.body.removeEventListener('mouseleave', this.sendFocuslost);
     this.teardownRfb();
@@ -122,6 +175,18 @@ export default {
   methods: {
     gracefullyExit,
     reconnect,
+
+    ensureConnectLoopRunning() {
+      if (this.connectScheduler) {
+        return;
+      }
+      this.connectAttempts = 0;
+      this.showRetry = false;
+      this.statusMessage = this.$t('student.vmWaiting');
+      this.connectScheduler = new SchedulerService(2000);
+      this.connectScheduler.addEventListener('action', this.tryConnectLoop);
+      this.connectScheduler.start();
+    },
 
     teardownRfb() {
       if (this.rfb) {
@@ -135,6 +200,9 @@ export default {
     },
 
     async tryConnectLoop() {
+      if (this.isUnmounted) {
+        return;
+      }
       if (!this.connectScheduler) {
         this.connectScheduler = new SchedulerService(2000);
         this.connectScheduler.addEventListener('action', this.tryConnectLoop);
@@ -143,6 +211,18 @@ export default {
 
       if (this.showRetry) {
         return;
+      }
+
+      if (this.clientinfo && !this.clientinfo.localVMHost) {
+        const st = this.clientinfo.localVMState;
+        if (st === 'missing' || (st === 'error' && !this.clientinfo.localVMHost)) {
+          if (this.connectScheduler) {
+            this.connectScheduler.removeEventListener('action', this.tryConnectLoop);
+            this.connectScheduler.stop();
+            this.connectScheduler = null;
+          }
+          return;
+        }
       }
 
       this.connectAttempts += 1;
@@ -156,7 +236,11 @@ export default {
         return;
       }
 
-      if (this.clientinfo.localVMState === 'starting') {
+      if (this.clientinfo.localVMState === 'verifying_hash') {
+        this.vmStateText = this.$t('student.vmVerifyingHash');
+      } else if (this.clientinfo.localVMState === 'unverified_hash') {
+        this.vmStateText = this.$t('student.vmUnverifiedHash');
+      } else if (this.clientinfo.localVMState === 'starting') {
         this.vmStateText = this.$t('student.vmStarting');
       } else if (this.clientinfo.localVMState === 'running') {
         this.vmStateText = this.$t('student.vmRunning');
@@ -164,21 +248,34 @@ export default {
         this.vmStateText = '';
       }
 
-      this.statusMessage = this.$t('student.vmConnecting', { attempt: this.connectAttempts, max: this.maxAttempts });
+      if (this.clientinfo.localVMState === 'verifying_hash') {
+        this.statusMessage = '';
+      } else {
+        this.statusMessage = this.$t('student.vmConnecting', { attempt: this.connectAttempts, max: this.maxAttempts });
+      }
       await this.connectVnc();
     },
 
     async connectVnc() {
+      if (this.isUnmounted) {
+        return;
+      }
       this.teardownRfb();
 
       const host = this.clientinfo?.localVMHost;
       if (!host) {
         return;
       }
+      const target = this.$refs?.vncContainer;
+      if (!target) {
+        // transient during re-render/unmount; don't escalate retry state
+        return;
+      }
 
       let proxyInfo = null;
       try {
-        proxyInfo = await signalBridge.invoke('start-proxy', { host, port: 5900 });
+        const port = this.clientinfo?.localVMPort ? Number(this.clientinfo.localVMPort) : 5901;
+        proxyInfo = await signalBridge.invoke('start-proxy', { host, port });
       } catch (err) {
         console.error('localvmview @ connectVnc: start-proxy failed', err);
         proxyInfo = null;
@@ -212,7 +309,7 @@ export default {
       const RFB = RFBModule && (RFBModule.default || RFBModule.RFB || RFBModule);
 
       try {
-        this.rfb = new RFB(this.$refs.vncContainer, url, options);
+        this.rfb = new RFB(target, url, options);
       } catch (err) {
         console.error('localvmview @ connectVnc: RFB constructor failed', err);
         this.onConnectError();
@@ -220,15 +317,21 @@ export default {
       }
 
       this.rfb.addEventListener('connect', () => {
-        // Verbindung steht – Overlay ausblenden
-        this.statusMessage = '';
-        this.vmStateText = '';
+        const st = this.clientinfo?.localVMState;
         this.showRetry = false;
         this.connectAttempts = 0;
         if (this.connectScheduler) {
           this.connectScheduler.removeEventListener('action', this.tryConnectLoop);
           this.connectScheduler.stop();
           this.connectScheduler = null;
+        }
+        if (st === 'hash_mismatch' || st === 'unverified_hash') {
+          this.statusMessage = '';
+        } else {
+          this.statusMessage = '';
+          if (st !== 'verifying_hash') {
+            this.vmStateText = '';
+          }
         }
       });
       this.rfb.addEventListener('disconnect', (event) => {
@@ -268,6 +371,95 @@ export default {
         this.connectScheduler = new SchedulerService(2000);
         this.connectScheduler.addEventListener('action', this.tryConnectLoop);
         this.connectScheduler.start();
+      }
+    },
+
+    async retryStartVm() {
+      try {
+        const section = this.serverstatus?.examSections?.[this.clientinfo?.lockedSection || 1] || {};
+        const group = this.clientinfo?.group === 'b' ? 'b' : 'a';
+        const cfg = group === 'b' ? (section?.groupB?.examConfig?.localvm || {}) : (section?.groupA?.examConfig?.localvm || {});
+        const filename = cfg.qcow2Name;
+        if (!filename) {
+          this.statusMessage = 'Keine VM konfiguriert.';
+          return;
+        }
+
+        this.statusMessage = 'VM startet...';
+        this.showRetry = false;
+        this.connectAttempts = 0;
+
+        await signalBridge.invoke('qemu-start-headless', {
+          qcow2Name: filename,
+          vncPort: 5901,
+          overlayName: `${filename}.overlay.${this.servername}.${this.pincode}.qcow2`
+        });
+        if (this.clientinfo) {
+          this.clientinfo.localVMHost = '127.0.0.1';
+          this.clientinfo.localVMPort = 5901;
+          this.clientinfo.localVMState = 'starting';
+        }
+        this.ensureConnectLoopRunning();
+      } catch (e) {
+        console.error('localvmview @ retryStartVm', e);
+        this.statusMessage = 'VM-Start fehlgeschlagen.';
+        this.showRetry = false;
+      }
+    },
+
+    async downloadVm() {
+      try {
+        this.statusMessage = 'Download läuft... (kann lange dauern)';
+        const section = this.serverstatus?.examSections?.[this.clientinfo?.lockedSection || 1] || {};
+        const group = this.clientinfo?.group === 'b' ? 'b' : 'a';
+        const cfg = group === 'b' ? (section?.groupB?.examConfig?.localvm || {}) : (section?.groupA?.examConfig?.localvm || {});
+        const filename = cfg.qcow2Name;
+        const expectedSha256 = cfg.qcow2Sha256;
+        if (!filename) {
+          this.statusMessage = 'Keine VM konfiguriert.';
+          return;
+        }
+        if (!expectedSha256) {
+          this.statusMessage = 'Kein Hash vorhanden.';
+          this.showRetry = true;
+          return;
+        }
+        const res = await signalBridge.invoke('qemu-download-disk', {
+          serverip: this.serverip,
+          serverApiPort: this.serverApiPort,
+          servername: this.servername,
+          token: this.token,
+          filename,
+          expectedSha256
+        });
+        if (!res || !res.ok) {
+          this.statusMessage = 'Download fehlgeschlagen.';
+          this.showRetry = true;
+          return;
+        }
+        if (!res.verify || !res.verify.ok || !res.verify.match) {
+          this.statusMessage = 'Hash stimmt nicht. VM wird nicht gestartet.';
+          this.showRetry = true;
+          return;
+        }
+        await signalBridge.invoke('qemu-start-headless', {
+          qcow2Name: filename,
+          vncPort: 5901,
+          overlayName: `${filename}.overlay.${this.servername}.${this.pincode}.qcow2`
+        });
+        this.statusMessage = 'VM startet...';
+        this.showRetry = false;
+        this.connectAttempts = 0;
+        if (this.clientinfo) {
+          this.clientinfo.localVMHost = '127.0.0.1';
+          this.clientinfo.localVMPort = 5901;
+          this.clientinfo.localVMState = 'starting';
+        }
+        this.ensureConnectLoopRunning();
+      } catch (e) {
+        console.error('localvmview @ downloadVm', e);
+        this.statusMessage = 'Download fehlgeschlagen.';
+        this.showRetry = true;
       }
     },
 
