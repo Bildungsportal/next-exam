@@ -5,6 +5,9 @@ struct ServerInfo: Codable {
     var ip: String
     var bip: Bool
     var version: String
+    var serverip: String?
+    var serverport: Int?
+    var reachable: Bool?
     
     var asDictionary: [String: Any] {
         return [
@@ -13,7 +16,10 @@ struct ServerInfo: Codable {
             "id": id,
             "ip": ip,
             "bip": bip,
-            "version": version
+            "version": version,
+            "serverip": serverip!,
+            "serverport": serverport!,
+            "reachable": reachable!
         ]
     }
 }

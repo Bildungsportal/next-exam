@@ -359,7 +359,12 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
         
-        //print("messageReceived \(info) \(senderIP) \(senderPort)")
+        info.serverip = senderIP
+        info.serverport = senderPort
+        info.reachable = true
+        info.timestamp = Int64(Date().timeIntervalSince1970 * 1000)
+        
+        print("messageReceived \(info) \(senderIP) \(senderPort)")
 
         // Populate network fields (mirrors JS: serverInfo.serverip = rinfo.address)
         /*info.serverip   = senderIP
