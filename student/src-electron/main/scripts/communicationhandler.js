@@ -67,10 +67,13 @@ import { switchExamSection } from './switchExamSection.js';
         }
     }
 
-    // Async SHA-256 of base qcow2 after QEMU start; mismatch keeps VM, applies lockdown only.
-    async runLocalVmPostStartVerify(qcow2Name, expectedSha256) {
+    // SHA-256 of base qcow2 before QEMU start (full read while VM runs starves guest disk I/O).
+    async runLocalVmPreStartVerify(qcow2Name, expectedSha256) {
+        if (!expectedSha256) {
+            return { allowStart: true };
+        }
         try {
-            log.info(`communicationhandler @ runLocalVmPostStartVerify: starting sha256 verify for ${qcow2Name}`);
+            log.info(`communicationhandler @ runLocalVmPreStartVerify: sha256 before start for ${qcow2Name}`);
             const verify = await qemuService.verifyDiskSha256({
                 workdirectory: this.config.workdirectory,
                 qcow2Name,
@@ -80,25 +83,28 @@ import { switchExamSection } from './switchExamSection.js';
                 if (verify.error === 'disk not found') {
                     this.multicastClient.clientinfo.localVMHost = null;
                     this.multicastClient.clientinfo.localVMState = 'missing';
-                    await qemuService.stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
                 } else {
+                    this.multicastClient.clientinfo.localVMHost = null;
                     this.multicastClient.clientinfo.localVMState = 'error';
                     this.applyLocalVmSecurityLockdown();
                 }
-                return;
+                return { allowStart: false };
             }
             if (!verify.match) {
-                log.warn(`communicationhandler @ runLocalVmPostStartVerify: hash mismatch for ${qcow2Name}`);
+                log.warn(`communicationhandler @ runLocalVmPreStartVerify: hash mismatch for ${qcow2Name}`);
+                this.multicastClient.clientinfo.localVMHost = null;
                 this.multicastClient.clientinfo.localVMState = 'hash_mismatch';
                 this.applyLocalVmSecurityLockdown();
-                return;
+                return { allowStart: false };
             }
-            log.info(`communicationhandler @ runLocalVmPostStartVerify: hash OK for ${qcow2Name}`);
-            this.multicastClient.clientinfo.localVMState = 'running';
+            log.info(`communicationhandler @ runLocalVmPreStartVerify: hash OK for ${qcow2Name}`);
+            return { allowStart: true };
         } catch (e) {
-            log.error('communicationhandler @ runLocalVmPostStartVerify', e);
+            log.error('communicationhandler @ runLocalVmPreStartVerify', e);
+            this.multicastClient.clientinfo.localVMHost = null;
             this.multicastClient.clientinfo.localVMState = 'error';
             this.applyLocalVmSecurityLockdown();
+            return { allowStart: false };
         }
     }
 
@@ -130,7 +136,10 @@ import { switchExamSection } from './switchExamSection.js';
 
         }
 
-        if (this.multicastClient.clientinfo.localLockdown){return}
+        if (this.multicastClient.clientinfo.localLockdown
+            && (this.multicastClient.clientinfo.serverip === '127.0.0.1' || this.multicastClient.clientinfo.servername === 'localhost')) {
+            return;
+        }
 
         // connection lost reset triggered  no serversignal for 20 seconds
         if (this.multicastClient.beaconsLost >= 5 ){  
@@ -212,7 +221,12 @@ import { switchExamSection } from './switchExamSection.js';
     async processUpdatedServerstatus(serverstatus, studentstatus){
         this.multicastClient.serverstatus = serverstatus;
 
-        const kicked = await this.handleStudentStatusUpdates(studentstatus);
+        let kicked = false;
+        try {
+            kicked = await this.handleStudentStatusUpdates(studentstatus);
+        } catch (e) {
+            log.error('communicationhandler @ processUpdatedServerstatus: handleStudentStatusUpdates failed (continuing with server sync)', e);
+        }
         if (kicked) {
             return;
         }
@@ -226,7 +240,7 @@ import { switchExamSection } from './switchExamSection.js';
             return false;
         }
 
-        if (studentstatus.printdenied) {
+        if (studentstatus.printdenied && WindowHandler.examwindow) {
             WindowHandler.examwindow.webContents.send('denied');
         }
 
@@ -245,7 +259,9 @@ import { switchExamSection } from './switchExamSection.js';
                 }
             } catch (error) { 
                 delfolder = false;
-                WindowHandler.examwindow.webContents.send('fileerror', error);
+                if (WindowHandler.examwindow) {
+                    WindowHandler.examwindow.webContents.send('fileerror', error);
+                }
                 log.error(`communicationhandler @ processUpdatedServerstatus: Can not delete directory - ${error} `);
             }
 
@@ -610,24 +626,38 @@ import { switchExamSection } from './switchExamSection.js';
                         this.multicastClient.clientinfo.localVMState = 'missing';
                     } else {
                         this.multicastClient.clientinfo.localVMHost = null;
-                        this.multicastClient.clientinfo.localVMState = null;
                         this.multicastClient.clientinfo.localVMPort = vncPort;
                         if (!expectedSha256) {
                             log.warn("communicationhandler @ startExam: no qcow2Sha256 – starting VM without base-image hash verify");
                         }
                         try {
-                            await qemuService.startHeadless({
-                                workdirectory: this.config.workdirectory,
-                                qcow2Name,
-                                vncDisplay: ':1',
-                                overlayName: `${qcow2Name}.overlay.${this.multicastClient.clientinfo.servername || 'exam'}.${this.multicastClient.clientinfo.pin || '0'}.qcow2`,
-                                blockInternet,
-                            });
-                            this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
                             if (expectedSha256) {
                                 this.multicastClient.clientinfo.localVMState = 'verifying_hash';
-                                void this.runLocalVmPostStartVerify(qcow2Name, expectedSha256);
+                                log.info('communicationhandler @ startExam: open exam window before pre-start hash verify (VM starts only after allowStart)');
+                                WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+                                const pre = await this.runLocalVmPreStartVerify(qcow2Name, expectedSha256);
+                                if (!pre.allowStart) {
+                                    /* state set inside verify; exam window already open for localvmview feedback */
+                                } else {
+                                    await qemuService.startHeadless({
+                                        workdirectory: this.config.workdirectory,
+                                        qcow2Name,
+                                        vncDisplay: ':1',
+                                        overlayName: `${qcow2Name}.overlay.${this.multicastClient.clientinfo.servername || 'exam'}.${this.multicastClient.clientinfo.pin || '0'}.qcow2`,
+                                        blockInternet,
+                                    });
+                                    this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
+                                    this.multicastClient.clientinfo.localVMState = 'running';
+                                }
                             } else {
+                                await qemuService.startHeadless({
+                                    workdirectory: this.config.workdirectory,
+                                    qcow2Name,
+                                    vncDisplay: ':1',
+                                    overlayName: `${qcow2Name}.overlay.${this.multicastClient.clientinfo.servername || 'exam'}.${this.multicastClient.clientinfo.pin || '0'}.qcow2`,
+                                    blockInternet,
+                                });
+                                this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
                                 this.multicastClient.clientinfo.localVMState = 'unverified_hash';
                             }
                         } catch (e) {
@@ -647,7 +677,9 @@ import { switchExamSection } from './switchExamSection.js';
                 }
             }
 
-            WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+            if (!WindowHandler.examwindow) {
+                WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+            }
         }
         else if (WindowHandler.examwindow){  //reconnect into active exam session with exam window already open
             log.error("communicationhandler @ startExam: found existing Examwindow..")
@@ -756,6 +788,11 @@ import { switchExamSection } from './switchExamSection.js';
         } catch (e) {
             log.warn('communicationhandler @ endExam: shutdown failed, killing VM');
             await qemuService.stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
+        }
+        try {
+            await qemuService.killAllLocalQemu(this.config.workdirectory);
+        } catch (e) {
+            log.warn('communicationhandler @ endExam: killAllLocalQemu sweep', e);
         }
 
         if (languageToolServer.languageToolProcess){

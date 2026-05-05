@@ -77,6 +77,24 @@ async function runToCompletion(cmd, args, options = {}) {
     });
 }
 
+function sleepMs(ms) {
+    return new Promise((r) => setTimeout(r, ms));
+}
+
+async function killQemuProcessesUsingWorkdir(qemuDir) {
+    if (process.platform === 'win32') {
+        const r = await runToCompletion('taskkill', ['/F', '/IM', 'qemu-system-x86_64.exe']);
+        log.info(`qemuService @ killQemuProcessesUsingWorkdir: taskkill exit=${r.exitCode}`);
+        return;
+    }
+    log.warn(`qemuService @ killQemuProcessesUsingWorkdir: killall qemu-system-x86_64 (TERM then KILL) cwdRef=${qemuDir}`);
+    const term = await runToCompletion('killall', ['-TERM', 'qemu-system-x86_64']);
+    log.info(`qemuService @ killQemuProcessesUsingWorkdir: killall -TERM exit=${term.exitCode}`);
+    await sleepMs(600);
+    const kill = await runToCompletion('killall', ['-KILL', 'qemu-system-x86_64']);
+    log.info(`qemuService @ killQemuProcessesUsingWorkdir: killall -KILL exit=${kill.exitCode}`);
+}
+
 async function waitForTcpPortOpen({ host = '127.0.0.1', port, timeoutMs = 15000, stepMs = 250 }) {
     const started = Date.now();
     while (Date.now() - started < timeoutMs) {
@@ -279,16 +297,8 @@ async function startHeadless({ workdirectory, qcow2Name, vncDisplay = ':1', over
         throw new Error('disk not found');
     }
 
-    const same =
-        vmProc &&
-        !vmProc.killed &&
-        vmDisk === disk &&
-        vmVncDisplay === vncDisplay;
-    if (same) {
-        return { ok: true, reused: true, disk: qcow2Name, vncDisplay };
-    }
-
     log.info(`qemuService @ startHeadless: starting (disk=${qcow2Name}, vnc=${vncDisplay}, blockInternet=${blockInternet})`);
+    await killQemuProcessesUsingWorkdir(qemuDir);
     await stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
 
     const overlayFilename = overlayName && isSafeFilename(overlayName) ? overlayName : `${qcow2Name}.overlay.qcow2`;
@@ -316,8 +326,10 @@ async function startHeadless({ workdirectory, qcow2Name, vncDisplay = ':1', over
         '-cpu', 'host',
         '-m', '8192',
         '-smp', '4',
-        '-drive', `file=${overlayPath},if=virtio,cache=none,aio=native`,
-        '-vga', 'std',
+        // writeback+threads avoids long stalls many hosts show with cache=none+aio=native on large Windows images
+        '-drive', `file=${overlayPath},if=virtio,cache=writeback,aio=threads`,
+        // virtio GPU needs virtio-win display driver in guest; use qxl or std if the screen stays black.
+        '-vga', 'virtio',
         '-display', 'none',
         '-vnc', vncDisplay,
         '-qmp', `unix:${path.join(qemuDir, 'qmp.sock')},server=on,wait=off`,
@@ -332,8 +344,7 @@ async function startHeadless({ workdirectory, qcow2Name, vncDisplay = ':1', over
         // same commands for now (linux first); platform-specific tuning later
     }
 
-    const proc = spawnLogged('qemu-system-x86_64', args, { cwd: qemuDir, detached: true, stdio: 'ignore' });
-    try { proc.unref(); } catch (e) {}
+    const proc = spawnLogged('qemu-system-x86_64', args, { cwd: qemuDir, stdio: 'ignore' });
 
     const vncPort = vncDisplayToPort(vncDisplay);
     log.info(`qemuService @ startHeadless: waiting for VNC 127.0.0.1:${vncPort}`);
@@ -424,12 +435,17 @@ async function downloadDiskFromTeacher({ serverip, serverApiPort, servername, to
     });
 }
 
+async function killAllLocalQemu(workdirectory) {
+    return await killQemuProcessesUsingWorkdir(getQemuDir(workdirectory));
+}
+
 export default {
     getQemuDir,
     startHeadless,
     shutdownVmGracefully,
     stopVm,
     stopVmAsync,
+    killAllLocalQemu,
     downloadDiskFromTeacher,
     verifyDiskSha256,
     importDisk,

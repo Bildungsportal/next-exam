@@ -97,3 +97,12 @@ $theme-colors: (
 .snowwhite {
     filter: invert(100%) brightness(200%);
 }
+
+// SweetAlert2: left-align title + html/text body globally (overrides sweetalert2.css centering)
+.swal2-html-container {
+    text-align: left !important;
+}
+
+.swal2-title {
+    text-align: left !important;
+}

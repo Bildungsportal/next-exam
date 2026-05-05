@@ -1532,6 +1532,17 @@ computed: {
             const hasB = !!section.groupB?.examConfig?.gforms?.url;
             return section.groups ? (hasA && hasB) : hasA;
         }
+        if (examType === 'localvm') {
+            if (!section.groups) {
+                const c = section.groupA?.examConfig?.localvm || {};
+                return !!(c.qcow2Name && c.qcow2Sha256);
+            }
+            const cfgA = section.groupA?.examConfig?.localvm || {};
+            const cfgB = section.groupB?.examConfig?.localvm || {};
+            const okA = !cfgA.qcow2Name || !!cfgA.qcow2Sha256;
+            const okB = !cfgB.qcow2Name || !!cfgB.qcow2Sha256;
+            return !!(cfgA.qcow2Name || cfgB.qcow2Name) && okA && okB;
+        }
         return true;
     },
     lockInExammode() {
@@ -2538,14 +2549,24 @@ computed: {
          * this should be the goTo function from now on to update the backend in a single request
         */
         setServerStatus(){
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setserverstatus/${this.servername}/${this.servertoken}`, { 
+            return fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setserverstatus/${this.servername}/${this.servertoken}`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json' },
                 body: JSON.stringify({ serverstatus: this.serverstatus })
             })
-            .then( res => res.json())
-            .then( response => { /*console.log(response.message)*/  })
-            .catch(err => { console.warn(err) })
+                .then((res) => res.json())
+                .then((response) => {
+                    if (response.status === 'error') {
+                        console.error('dashboard @ setServerStatus:', response.message);
+                        this.status(response.message || 'Serverstatus speichern fehlgeschlagen.');
+                    }
+                    return response;
+                })
+                .catch((err) => {
+                    console.error('dashboard @ setServerStatus:', err);
+                    this.status('Server nicht erreichbar (Serverstatus).');
+                    throw err;
+                });
         },
 
         // setup groups

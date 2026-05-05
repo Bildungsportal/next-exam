@@ -226,6 +226,7 @@
         "vmStarting": "Status: starting …",
         "vmUnverifiedHash": "No reference hash from teacher – base image integrity was not verified.",
         "vmVerifyingHash": "Verifying SHA-256 of base image …",
+        "vmVerifyingHashHint": "This may take a few minutes.",
         "vmWaiting": "Waiting for virtual machine …",
         "versionNewer": "Your version of Next-Exam is newer than the teacher's!",
         "versionOld": "Your version of Next-Exam is too old. Please download a current version!",

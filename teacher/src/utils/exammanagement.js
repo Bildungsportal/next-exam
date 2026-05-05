@@ -16,7 +16,8 @@ async function startExam(){
     }
 
     const now = Date.now()
-    const sectionIndex = (this.serverstatus.useExamSections && this.serverstatus.allowSectionSwitch) ? 1 : this.serverstatus.activeSection
+    const rawSection = Number(this.serverstatus.activeSection) || 1
+    const sectionIndex = Math.min(Math.max(1, rawSection), 4)
 
     // LocalVM/QEMU hash is computed when selecting the disk (configureLocalVM).
     try {
@@ -68,7 +69,16 @@ async function startExam(){
     log.info("exammanagment @ startExam: starting exammode")
     examEventBus.push('examstart')
     this.visualfeedback(this.$t("dashboard.startexam"))
-    this.setServerStatus()
+    try {
+        const resp = await this.setServerStatus()
+        if (resp && resp.status === 'error') {
+            log.error('exammanagement @ startExam: setServerStatus rejected', resp.message)
+            this.status(resp.message || 'Serverstatus konnte nicht gespeichert werden.')
+        }
+    } catch (e) {
+        log.error('exammanagement @ startExam: setServerStatus failed', e)
+        this.status('Server nicht erreichbar (Serverstatus speichern).')
+    }
 }
 
 function lockSectionForAll(sectionIndex){
