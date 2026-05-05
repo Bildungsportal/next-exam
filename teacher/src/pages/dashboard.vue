@@ -4399,8 +4399,8 @@ hr {
 .my-content {
    
     margin-bottom: 0px;
-    overflow:hidden;
-    padding-left: 4px !important;
+    overflow:visible;
+
     display: block !important;
     text-align: left !important;
 }
@@ -4419,6 +4419,20 @@ hr {
     justify-content: flex-start !important;
     justify-items: flex-start !important;
 
+}
+
+/* SweetAlert2: use more horizontal space inside our popups */
+.my-popup.swal2-popup {
+    padding-left: 0.9em !important;
+    padding-right: 0.9em !important;
+}
+
+.my-popup .swal2-html-container {
+    width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-left: 1.9em !important;
+    padding-right: 1.9em !important;
 }
 .my-popup-sprachen {
     justify-content: flex-start !important;

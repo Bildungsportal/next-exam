@@ -70,6 +70,7 @@ import { switchExamSection } from './switchExamSection.js';
     // Async SHA-256 of base qcow2 after QEMU start; mismatch keeps VM, applies lockdown only.
     async runLocalVmPostStartVerify(qcow2Name, expectedSha256) {
         try {
+            log.info(`communicationhandler @ runLocalVmPostStartVerify: starting sha256 verify for ${qcow2Name}`);
             const verify = await qemuService.verifyDiskSha256({
                 workdirectory: this.config.workdirectory,
                 qcow2Name,
@@ -87,10 +88,12 @@ import { switchExamSection } from './switchExamSection.js';
                 return;
             }
             if (!verify.match) {
+                log.warn(`communicationhandler @ runLocalVmPostStartVerify: hash mismatch for ${qcow2Name}`);
                 this.multicastClient.clientinfo.localVMState = 'hash_mismatch';
                 this.applyLocalVmSecurityLockdown();
                 return;
             }
+            log.info(`communicationhandler @ runLocalVmPostStartVerify: hash OK for ${qcow2Name}`);
             this.multicastClient.clientinfo.localVMState = 'running';
         } catch (e) {
             log.error('communicationhandler @ runLocalVmPostStartVerify', e);
@@ -598,6 +601,8 @@ import { switchExamSection } from './switchExamSection.js';
                     const qcow2Name = vmConfig.qcow2Name;
                     const vncPort = Number(vmConfig.vncPort || 5901);
                     const expectedSha256 = vmConfig.qcow2Sha256;
+                    const blockInternet = !!vmConfig.blockInternet;
+                    log.info(`communicationhandler @ startExam: localvm cfg (disk=${qcow2Name || '-'}, port=${vncPort}, blockInternet=${blockInternet}, hasHash=${!!expectedSha256})`);
                     if (!qcow2Name) {
                         log.error("communicationhandler @ startExam: no qcow2Name configured for localvm examtype");
                         this.multicastClient.clientinfo.localVMHost = null;
@@ -616,6 +621,7 @@ import { switchExamSection } from './switchExamSection.js';
                                 qcow2Name,
                                 vncDisplay: ':1',
                                 overlayName: `${qcow2Name}.overlay.${this.multicastClient.clientinfo.servername || 'exam'}.${this.multicastClient.clientinfo.pin || '0'}.qcow2`,
+                                blockInternet,
                             });
                             this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
                             if (expectedSha256) {
@@ -687,8 +693,6 @@ import { switchExamSection } from './switchExamSection.js';
     async endExam(serverstatus){
         
         WindowHandler.removeBlurListener();
-        stopProxy();
-        qemuService.stopVm();
       
         //only disable restrictions if not in exam mode ( seriosuly.. how could this ever happen? )
         if (this.multicastClient.clientinfo.exammode){
@@ -743,6 +747,16 @@ import { switchExamSection } from './switchExamSection.js';
         this.multicastClient.clientinfo.msofficeshare = false
         this.multicastClient.clientinfo.focus = true
         this.multicastClient.clientinfo.localLockdown = false;
+
+        // stop VNC proxy + shutdown VM after window teardown to avoid reconnect loops
+        stopProxy();
+        try {
+            log.info('communicationhandler @ endExam: requesting VM shutdown');
+            await qemuService.shutdownVmGracefully({ timeoutMs: 8000 });
+        } catch (e) {
+            log.warn('communicationhandler @ endExam: shutdown failed, killing VM');
+            qemuService.stopVm();
+        }
 
         if (languageToolServer.languageToolProcess){
             languageToolServer.stopServer(); // Kill LanguageTool server when exam window is closed

@@ -4,11 +4,13 @@ import https from 'https';
 import { spawn } from 'child_process';
 import log from 'electron-log';
 import crypto from 'crypto';
+import net from 'net';
 
 let vmProc = null;
 let vmDisk = null;
 let vmVncDisplay = null;
 let vmOverlayPath = null;
+let vmQmpPath = null;
 
 function getQemuDir(workdirectory) {
     return path.join(workdirectory, 'QEMU');
@@ -34,6 +36,25 @@ function spawnLogged(cmd, args, options = {}) {
     return proc;
 }
 
+async function importDisk({ workdirectory, sourcePath }) {
+    const qemuDir = getQemuDir(workdirectory);
+    await ensureDir(qemuDir);
+    const src = String(sourcePath || '');
+    const filename = path.basename(src);
+    if (!filename || !filename.toLowerCase().endsWith('.qcow2')) {
+        throw new Error('invalid qcow2 source');
+    }
+    const dest = path.join(qemuDir, filename);
+    if (fs.existsSync(dest)) {
+        log.info(`qemuService @ importDisk: already exists: ${filename}`);
+        return { ok: true, skipped: true, filename };
+    }
+    log.info(`qemuService @ importDisk: copying ${src} -> ${dest}`);
+    await fs.promises.copyFile(src, dest);
+    log.info(`qemuService @ importDisk: copied: ${filename}`);
+    return { ok: true, skipped: false, filename };
+}
+
 async function sha256File(filePath) {
     return await new Promise((resolve, reject) => {
         const hash = crypto.createHash('sha256');
@@ -56,9 +77,108 @@ async function runToCompletion(cmd, args, options = {}) {
     });
 }
 
+async function waitForTcpPortOpen({ host = '127.0.0.1', port, timeoutMs = 15000, stepMs = 250 }) {
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+        const ok = await new Promise((resolve) => {
+            const socket = new net.Socket();
+            const done = (result) => {
+                try { socket.destroy(); } catch (e) {}
+                resolve(result);
+            };
+            socket.setTimeout(Math.min(stepMs, 1000));
+            socket.once('connect', () => done(true));
+            socket.once('timeout', () => done(false));
+            socket.once('error', () => done(false));
+            try {
+                socket.connect(port, host);
+            } catch (e) {
+                done(false);
+            }
+        });
+        if (ok) return true;
+        await new Promise((r) => setTimeout(r, stepMs));
+    }
+    return false;
+}
+
+function vncDisplayToPort(vncDisplay) {
+    const s = String(vncDisplay || ':1').trim();
+    const m = s.match(/^:(\d+)$/);
+    const displayNum = m ? Number(m[1]) : 1;
+    return 5900 + (Number.isFinite(displayNum) ? displayNum : 1);
+}
+
+async function qmpExecute(qmpPath, cmd) {
+    const socketPath = String(qmpPath || '');
+    if (!socketPath) {
+        throw new Error('missing qmp socket');
+    }
+    return await new Promise((resolve, reject) => {
+        const sock = net.createConnection({ path: socketPath });
+        let buffer = '';
+        let greeted = false;
+        const done = (result) => {
+            try { sock.end(); } catch (e) {}
+            resolve(result);
+        };
+        sock.on('error', reject);
+        sock.on('data', (d) => {
+            buffer += String(d);
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed) continue;
+                let msg = null;
+                try { msg = JSON.parse(trimmed); } catch (e) { continue; }
+                if (msg.QMP && !greeted) {
+                    greeted = true;
+                    sock.write(`${JSON.stringify({ execute: 'qmp_capabilities' })}\n`);
+                    sock.write(`${JSON.stringify({ execute: cmd })}\n`);
+                    continue;
+                }
+                if (msg.return != null || msg.error != null) {
+                    done(msg);
+                    return;
+                }
+            }
+        });
+    });
+}
+
+async function shutdownVmGracefully({ timeoutMs = 8000 } = {}) {
+    if (!vmProc || vmProc.killed) {
+        log.info('qemuService @ shutdownVmGracefully: no running VM');
+        return { ok: true, alreadyStopped: true };
+    }
+
+    try {
+        if (vmQmpPath && fs.existsSync(vmQmpPath)) {
+            log.info('qemuService @ shutdownVmGracefully: sending ACPI powerdown via QMP');
+            await qmpExecute(vmQmpPath, 'system_powerdown');
+        }
+    } catch (e) {
+        log.warn('qemuService: qmp system_powerdown failed', e);
+    }
+
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+        if (!vmProc || vmProc.killed || vmProc.exitCode != null) {
+            return { ok: true, alreadyStopped: false, graceful: true };
+        }
+        await new Promise((r) => setTimeout(r, 250));
+    }
+
+    log.warn('qemuService @ shutdownVmGracefully: timeout, killing VM');
+    stopVm();
+    return { ok: true, alreadyStopped: false, graceful: false };
+}
+
 function stopVm() {
     if (vmProc && !vmProc.killed) {
         try {
+            log.warn('qemuService @ stopVm: killing QEMU process');
             vmProc.kill();
         } catch (e) {
             log.error('qemuService: stopVm kill failed', e);
@@ -77,10 +197,18 @@ function stopVm() {
         }
     }
     vmOverlayPath = null;
+    if (vmQmpPath) {
+        try {
+            if (fs.existsSync(vmQmpPath)) {
+                fs.unlinkSync(vmQmpPath);
+            }
+        } catch (e) {}
+    }
+    vmQmpPath = null;
     return true;
 }
 
-async function startHeadless({ workdirectory, qcow2Name, vncDisplay = ':1', overlayName = null }) {
+async function startHeadless({ workdirectory, qcow2Name, vncDisplay = ':1', overlayName = null, blockInternet = false }) {
     const qemuDir = getQemuDir(workdirectory);
     await ensureDir(qemuDir);
 
@@ -102,16 +230,22 @@ async function startHeadless({ workdirectory, qcow2Name, vncDisplay = ':1', over
         return { ok: true, reused: true, disk: qcow2Name, vncDisplay };
     }
 
+    log.info(`qemuService @ startHeadless: starting (disk=${qcow2Name}, vnc=${vncDisplay}, blockInternet=${blockInternet})`);
     stopVm();
 
     const overlayFilename = overlayName && isSafeFilename(overlayName) ? overlayName : `${qcow2Name}.overlay.qcow2`;
     const overlayPath = path.join(qemuDir, overlayFilename);
     if (!fs.existsSync(overlayPath)) {
+        log.info(`qemuService @ startHeadless: creating overlay ${overlayFilename}`);
         const res = await runToCompletion('qemu-img', ['create', '-f', 'qcow2', '-F', 'qcow2', '-b', disk, overlayPath], { cwd: qemuDir });
         if (res.exitCode !== 0) {
             throw new Error(`qemu-img overlay failed: ${res.stderr || res.stdout}`);
         }
     }
+
+    const netArgs = blockInternet
+        ? ['-netdev', 'user,id=net0,restrict=on', '-device', 'virtio-net,netdev=net0']
+        : ['-netdev', 'user,id=n0', '-device', 'virtio-net-pci,netdev=n0'];
 
     const args = [
         '-enable-kvm',
@@ -122,8 +256,8 @@ async function startHeadless({ workdirectory, qcow2Name, vncDisplay = ':1', over
         '-vga', 'std',
         '-display', 'none',
         '-vnc', vncDisplay,
-        '-netdev', 'user,id=n0',
-        '-device', 'virtio-net-pci,netdev=n0',
+        '-qmp', `unix:${path.join(qemuDir, 'qmp.sock')},server=on,wait=off`,
+        ...netArgs,
         '-device', 'usb-ehci',
         '-device', 'usb-tablet',
         '-boot', 'order=c',
@@ -137,10 +271,20 @@ async function startHeadless({ workdirectory, qcow2Name, vncDisplay = ':1', over
     const proc = spawnLogged('qemu-system-x86_64', args, { cwd: qemuDir, detached: true, stdio: 'ignore' });
     try { proc.unref(); } catch (e) {}
 
+    const vncPort = vncDisplayToPort(vncDisplay);
+    log.info(`qemuService @ startHeadless: waiting for VNC 127.0.0.1:${vncPort}`);
+    const ready = await waitForTcpPortOpen({ host: '127.0.0.1', port: vncPort, timeoutMs: 15000, stepMs: 250 });
+    if (!ready) {
+        try { proc.kill(); } catch (e) {}
+        throw new Error(`qemu vnc not ready on 127.0.0.1:${vncPort}`);
+    }
+    log.info(`qemuService @ startHeadless: VNC ready on 127.0.0.1:${vncPort}`);
+
     vmProc = proc;
     vmDisk = disk;
     vmVncDisplay = vncDisplay;
     vmOverlayPath = overlayPath;
+    vmQmpPath = path.join(qemuDir, 'qmp.sock');
     return { ok: true, reused: false, disk: qcow2Name, vncDisplay };
 }
 
@@ -216,8 +360,10 @@ async function downloadDiskFromTeacher({ serverip, serverApiPort, servername, to
 export default {
     getQemuDir,
     startHeadless,
+    shutdownVmGracefully,
     stopVm,
     downloadDiskFromTeacher,
     verifyDiskSha256,
+    importDisk,
 };
 

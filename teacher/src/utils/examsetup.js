@@ -745,7 +745,7 @@ async function configureLocalVM(presetGroup){
                 confirmButton: 'btn btn-cyan',
                 denyButton: 'btn btn-cyan',
             },
-            title: 'LocalVM (QEMU)',
+            title: 'LocalVM',
             icon: 'warning',
             html: `<div style="text-align:left;">
                 <div><b>Keine QEMU-VM gefunden</b> im Workdirectory unter <code>EXAM-TEACHER/QEMU</code>.</div>
@@ -772,7 +772,7 @@ async function configureLocalVM(presetGroup){
             if (!Array.isArray(disks) || disks.length === 0) {
                 await this.$swal.fire({
                     icon: 'error',
-                    title: 'LocalVM (QEMU)',
+                    title: 'LocalVM',
                     text: 'Keine qcow2 Disk gefunden.'
                 });
                 return;
@@ -793,7 +793,7 @@ async function configureLocalVM(presetGroup){
             if (!Array.isArray(disks) || disks.length === 0) {
                 await this.$swal.fire({
                     icon: 'error',
-                    title: 'LocalVM (QEMU)',
+                    title: 'LocalVM',
                     text: 'Installation gestartet, aber es wurde noch keine qcow2 Disk gefunden. Bitte später erneut versuchen.'
                 });
                 return;
@@ -807,6 +807,10 @@ async function configureLocalVM(presetGroup){
         activeGroup === 'b'
             ? (groupB.examConfig.localvm.qcow2Name || '')
             : (groupA.examConfig.localvm.qcow2Name || '');
+    const currentBlockInternet =
+        activeGroup === 'b'
+            ? !!groupB.examConfig.localvm.blockInternet
+            : !!groupA.examConfig.localvm.blockInternet;
 
     let selectedDisk =
         preferredDisk && disks.includes(preferredDisk)
@@ -832,8 +836,8 @@ async function configureLocalVM(presetGroup){
         </div>`;
     }).join('');
 
-    const html = `<div class="my-content" style="text-align:left;">
-        <div style="padding:10px 12px; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(255,255,255,0.03);">
+    const html = `<div class="my-content" style="text-align:left; padding:0px!important;">
+        <div style="padding:0px; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(255,255,255,0.03);">
             <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:10px;">
                 <div>
                     <div style="font-weight:700; margin-bottom:2px;">QEMU Disks</div>
@@ -846,9 +850,21 @@ async function configureLocalVM(presetGroup){
             </div>
         </div>
 
-        <div style="margin:10px 0; height:1px; background:rgba(255,255,255,0.08);"></div>
+        <div style="margin:4px 0; height:1px; background:rgba(255,255,255,0.08);"></div>
 
-        <div style="padding:10px 12px; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(255,255,255,0.03);">
+        <div style="padding:0; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(255,255,255,0.03);">
+            <div style="font-weight:700; margin-bottom:8px;">Erweitert</div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                <label for="qemuBlockInternet" style="margin:0; font-size:0.85em;">Internet in der VM blockieren</label>
+                <label class="form-check form-switch" style="margin:0;">
+                    <input class="form-check-input" type="checkbox" role="switch" id="qemuBlockInternet" ${currentBlockInternet ? 'checked' : ''}>
+                </label>
+            </div>
+        </div>
+
+        <div style="margin:4px 0; height:1px; background:rgba(255,255,255,0.08);"></div>
+
+        <div style="padding:0; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(255,255,255,0.03);">
             <div style="font-weight:700; margin-bottom:8px;">Aktionen</div>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
                 <button type="button" class="btn btn-sm btn-cyan" id="qemuBrowseBtn">Dateisystem durchsuchen…</button>
@@ -865,14 +881,16 @@ async function configureLocalVM(presetGroup){
             content: 'my-content',
             actions: 'my-swal2-actions'
         },
-        title: hasGroups ? `LocalVM (QEMU) – Gruppe ${activeGroup.toUpperCase()}` : 'LocalVM (QEMU) – Gruppe AB',
+        title: hasGroups ? `LocalVM – Gruppe ${activeGroup.toUpperCase()}` : 'LocalVM – Gruppe AB',
         icon: 'question',
         html,
         showCancelButton: true,
         cancelButtonText: this.$t('dashboard.cancel'),
         showLoaderOnConfirm: true,
+        backdrop: true,
         allowOutsideClick: () => !this.$swal.isLoading(),
         preConfirm: async () => {
+            const blockInternet = !!document.getElementById('qemuBlockInternet')?.checked;
             try {
                 const statusEl = document.getElementById('qemuHashStatus');
                 if (statusEl) statusEl.textContent = 'Berechne SHA-256…';
@@ -895,7 +913,7 @@ async function configureLocalVM(presetGroup){
                 if (!sha256) {
                     return 'Konnte SHA-256 Hash der qcow2 Disk nicht berechnen.';
                 }
-                return { selectedDisk, sha256 };
+                return { selectedDisk, sha256, blockInternet };
             } catch (e) {
                 return 'Konnte SHA-256 Hash der qcow2 Disk nicht berechnen.';
             }
@@ -933,32 +951,56 @@ async function configureLocalVM(presetGroup){
             const browseBtn = document.getElementById('qemuBrowseBtn');
             browseBtn?.addEventListener('click', async () => {
                 let imported = null;
+                const statusEl = document.getElementById('qemuHashStatus');
+                if (statusEl) statusEl.textContent = 'Importiere qcow2…';
                 try {
                     const importRes = await ipc.invoke('qemu-pick-import-disk');
                     if (importRes && importRes.ok && importRes.filename) {
                         imported = importRes.filename;
                     }
                 } catch (e) {}
-                try { this.$swal.close(); } catch (e) {}
-                setTimeout(() => {
-                    if (imported) {
-                        const section2 = this.serverstatus.examSections[this.serverstatus.activeSection];
-                        const hasGroups2 = !!section2.groups;
-                        const whoNorm2 = String(presetGroup || 'all').toLowerCase();
-                        const activeGroup2 = hasGroups2 ? (whoNorm2 === 'b' ? 'b' : 'a') : 'all';
-                        if (!section2.groupA?.examConfig?.localvm) section2.groupA.examConfig.localvm = {};
-                        if (!section2.groupB?.examConfig?.localvm) section2.groupB.examConfig.localvm = {};
-                        if (!hasGroups2) {
-                            section2.groupA.examConfig.localvm.qcow2Name = imported;
-                            section2.groupB.examConfig.localvm.qcow2Name = imported;
-                        } else if (activeGroup2 === 'b') {
-                            section2.groupB.examConfig.localvm.qcow2Name = imported;
-                        } else {
-                            section2.groupA.examConfig.localvm.qcow2Name = imported;
-                        }
-                    }
-                    configureLocalVM.call(this, presetGroup);
-                }, 50);
+                if (!imported) {
+                    if (statusEl) statusEl.textContent = '';
+                    return;
+                }
+                try {
+                    disks = await ipc.invoke('qemu-list-disks');
+                } catch (e) {
+                    disks = [];
+                }
+
+                if (!Array.isArray(disks) || disks.length === 0) {
+                    if (statusEl) statusEl.textContent = 'Import abgeschlossen, aber keine qcow2 Disk gefunden.';
+                    return;
+                }
+
+                selectedDisk = disks.includes(imported) ? imported : (disks[0] || imported);
+
+                const listEl = document.getElementById('qemuDiskList');
+                if (listEl) {
+                    const rows = disks.map((d) => {
+                        const raw = String(d);
+                        const safeLabel = raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+                        const encoded = encodeURIComponent(raw);
+                        const isActive = raw === selectedDisk;
+                        return `<div class="qemu-row" style="display:flex; align-items:center; gap:8px; margin:6px 0;">
+                            <button
+                                type="button"
+                                class="btn btn-sm ${isActive ? 'btn-teal' : 'btn-outline-secondary'} qemu-select"
+                                data-qemu-select="${encoded}"
+                                title="${safeLabel}"
+                                style="flex:1; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
+                            >
+                                ${safeLabel}
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-qemu-boot="${encoded}">Boot</button>
+                        </div>`;
+                    }).join('');
+                    listEl.innerHTML = rows || '<div class="text-muted">Keine Disks gefunden.</div>';
+                }
+                const label = document.getElementById('qemuSelectedLabel');
+                if (label) label.textContent = selectedDisk;
+                if (statusEl) statusEl.textContent = '';
             });
             const installBtn = document.getElementById('qemuInstallBtn');
             installBtn?.addEventListener('click', async () => {
@@ -972,16 +1014,17 @@ async function configureLocalVM(presetGroup){
 
     const finalDisk = pick.value?.selectedDisk || selectedDisk;
     const sha256 = pick.value?.sha256 || null;
+    const blockInternet = !!pick.value?.blockInternet;
     if (!finalDisk || !sha256) {
         await this.$swal.fire({
             icon: 'error',
-            title: 'LocalVM (QEMU)',
+            title: 'LocalVM',
             text: 'Konnte SHA-256 Hash der qcow2 Disk nicht berechnen.'
         });
         return;
     }
 
-    const nextCfg = { qcow2Name: finalDisk, vncPort: 5901, qcow2Sha256: sha256 };
+    const nextCfg = { qcow2Name: finalDisk, vncPort: 5901, qcow2Sha256: sha256, blockInternet };
     if (!hasGroups) {
         groupA.examConfig.localvm = nextCfg;
         groupB.examConfig.localvm = { ...nextCfg };

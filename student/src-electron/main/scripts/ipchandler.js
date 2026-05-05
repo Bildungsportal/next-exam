@@ -23,7 +23,7 @@ import net from 'net'
 import dns from 'dns'
 import i18n from '../../../src/locales/locales.js'
 const {t} = i18n.global
-import{ipcMain, clipboard,app, webContents} from 'electron'
+import{ipcMain, clipboard,app, webContents, dialog} from 'electron'
 import { gateway4sync } from 'default-gateway';
 import os, { networkInterfaces } from 'os'
 import log from 'electron-log';
@@ -136,18 +136,24 @@ class IpcHandler {
 
         ipcMain.handle('qemu-start-headless', async (_event, payload = {}) => {
             try {
-                const { qcow2Name, vncPort, overlayName } = payload || {};
+                const { qcow2Name, vncPort, overlayName, blockInternet, expectedSha256 } = payload || {};
+                log.info(`ipchandler @ qemu-start-headless: start requested (disk=${qcow2Name}, port=${vncPort}, blockInternet=${!!blockInternet}, hasHash=${!!expectedSha256})`);
                 const vncDisplay = Number(vncPort) === 5901 ? ':1' : ':1';
                 const result = await qemuService.startHeadless({
                     workdirectory: this.config.workdirectory,
                     qcow2Name,
                     vncDisplay,
                     overlayName,
+                    blockInternet: !!blockInternet,
                 });
                 if (this.multicastClient?.clientinfo) {
                     this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
                     this.multicastClient.clientinfo.localVMPort = Number(vncPort) || 5901;
-                    this.multicastClient.clientinfo.localVMState = 'starting';
+                    this.multicastClient.clientinfo.localVMState = expectedSha256 ? 'verifying_hash' : 'starting';
+                }
+                if (expectedSha256 && this.CommunicationHandler?.runLocalVmPostStartVerify) {
+                    log.info(`ipchandler @ qemu-start-headless: starting post-start hash verify for ${qcow2Name}`);
+                    void this.CommunicationHandler.runLocalVmPostStartVerify(qcow2Name, expectedSha256);
                 }
                 return { ok: true, result };
             } catch (err) {
@@ -170,9 +176,29 @@ class IpcHandler {
             }
         });
 
+        ipcMain.handle('qemu-pick-import-disk', async () => {
+            try {
+                log.info('ipchandler @ qemu-pick-import-disk: selecting qcow2 via filepicker');
+                const result = await dialog.showOpenDialog(this.WindowHandler.mainwindow, {
+                    properties: ['openFile'],
+                    filters: [{ name: 'QEMU Disk', extensions: ['qcow2'] }],
+                });
+                if (result.canceled || !result.filePaths || !result.filePaths[0]) {
+                    log.info('ipchandler @ qemu-pick-import-disk: cancelled');
+                    return { ok: false, cancelled: true };
+                }
+                log.info(`ipchandler @ qemu-pick-import-disk: selected ${result.filePaths[0]}`);
+                return await qemuService.importDisk({ workdirectory: this.config.workdirectory, sourcePath: result.filePaths[0] });
+            } catch (err) {
+                log.error('ipchandler @ qemu-pick-import-disk', err);
+                return { ok: false, error: String(err?.message || err) };
+            }
+        });
+
         ipcMain.handle('qemu-download-disk', async (_event, payload = {}) => {
             try {
-                const { serverip, serverApiPort, servername, token, filename, expectedSha256 } = payload || {};
+                const { serverip, serverApiPort, servername, token, filename } = payload || {};
+                log.info(`ipchandler @ qemu-download-disk: downloading ${filename} from teacher ${servername}@${serverip}:${serverApiPort}`);
                 const result = await qemuService.downloadDiskFromTeacher({
                     serverip,
                     serverApiPort,
@@ -181,14 +207,8 @@ class IpcHandler {
                     filename,
                     workdirectory: this.config.workdirectory,
                 });
-                const verify = expectedSha256
-                    ? await qemuService.verifyDiskSha256({
-                        workdirectory: this.config.workdirectory,
-                        qcow2Name: filename,
-                        expectedSha256,
-                    })
-                    : { ok: false, match: false, error: 'missing expected hash' };
-                return { ok: true, result, verify };
+                log.info(`ipchandler @ qemu-download-disk: download finished (skipped=${!!result?.skipped}) ${filename}`);
+                return { ok: true, result };
             } catch (err) {
                 log.error('ipchandler @ qemu-download-disk', err);
                 return { ok: false, error: String(err?.message || err) };
