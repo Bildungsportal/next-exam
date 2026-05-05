@@ -170,41 +170,99 @@ async function shutdownVmGracefully({ timeoutMs = 8000 } = {}) {
         await new Promise((r) => setTimeout(r, 250));
     }
 
-    log.warn('qemuService @ shutdownVmGracefully: timeout, killing VM');
-    stopVm();
+    log.warn('qemuService @ shutdownVmGracefully: timeout waiting for graceful shutdown');
     return { ok: true, alreadyStopped: false, graceful: false };
 }
 
-function stopVm() {
+function _unlinkIfExists(p) {
+    const filePath = String(p || '');
+    if (!filePath) {
+        return;
+    }
+    try {
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+    } catch (e) {
+        log.error(`qemuService: failed to delete ${filePath}`, e);
+    }
+}
+
+async function _waitForVmExit(timeoutMs = 8000) {
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+        if (!vmProc || vmProc.killed || vmProc.exitCode != null) {
+            return true;
+        }
+        await new Promise((r) => setTimeout(r, 50));
+    }
+    return false;
+}
+
+async function _killVmProcessAndWait(killTimeoutMs = 8000) {
     if (vmProc && !vmProc.killed) {
         try {
-            log.warn('qemuService @ stopVm: killing QEMU process');
-            vmProc.kill();
+            log.warn('qemuService @ _killVmProcessAndWait: killing QEMU process');
+            vmProc.kill('SIGKILL');
         } catch (e) {
-            log.error('qemuService: stopVm kill failed', e);
+            log.error('qemuService: kill failed', e);
         }
     }
+    return await _waitForVmExit(killTimeoutMs);
+}
+
+async function stopVmAsync({ graceful = true, shutdownTimeoutMs = 8000, killTimeoutMs = 8000 } = {}) {
+    if (!vmProc || vmProc.killed) {
+        const overlayToDelete = vmOverlayPath;
+        const qmpToDelete = vmQmpPath;
+        vmProc = null;
+        vmDisk = null;
+        vmVncDisplay = null;
+        vmOverlayPath = null;
+        vmQmpPath = null;
+        _unlinkIfExists(overlayToDelete);
+        _unlinkIfExists(qmpToDelete);
+        return { ok: true, alreadyStopped: true };
+    }
+
+    let gracefulOk = false;
+    if (graceful) {
+        try {
+            const sd = await shutdownVmGracefully({ timeoutMs: shutdownTimeoutMs });
+            gracefulOk = !!sd?.graceful;
+        } catch (e) {
+            log.warn('qemuService @ stopVmAsync: graceful shutdown failed', e);
+        }
+    }
+
+    let exited = false;
+    if (vmProc && !vmProc.killed && vmProc.exitCode == null) {
+        exited = await _killVmProcessAndWait(killTimeoutMs);
+    } else {
+        exited = await _waitForVmExit(250);
+    }
+    if (!exited) {
+        log.error('qemuService @ stopVmAsync: QEMU did not exit in time');
+    }
+
+    const overlayToDelete = vmOverlayPath;
+    const qmpToDelete = vmQmpPath;
     vmProc = null;
     vmDisk = null;
     vmVncDisplay = null;
-    if (vmOverlayPath) {
-        try {
-            if (fs.existsSync(vmOverlayPath)) {
-                fs.unlinkSync(vmOverlayPath);
-            }
-        } catch (e) {
-            log.error('qemuService: failed to delete overlay', e);
-        }
-    }
     vmOverlayPath = null;
-    if (vmQmpPath) {
-        try {
-            if (fs.existsSync(vmQmpPath)) {
-                fs.unlinkSync(vmQmpPath);
-            }
-        } catch (e) {}
-    }
     vmQmpPath = null;
+
+    // Delete overlay/socket only after process is gone to avoid file locks on qcow2/qmp.
+    _unlinkIfExists(overlayToDelete);
+    _unlinkIfExists(qmpToDelete);
+
+    return { ok: true, exited: !!exited, graceful: gracefulOk };
+}
+
+function stopVm() {
+    // Sync wrapper for legacy callers; prefer stopVmAsync in async IPC paths.
+    void stopVmAsync({ graceful: false, killTimeoutMs: 2000 });
     return true;
 }
 
@@ -231,7 +289,7 @@ async function startHeadless({ workdirectory, qcow2Name, vncDisplay = ':1', over
     }
 
     log.info(`qemuService @ startHeadless: starting (disk=${qcow2Name}, vnc=${vncDisplay}, blockInternet=${blockInternet})`);
-    stopVm();
+    await stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
 
     const overlayFilename = overlayName && isSafeFilename(overlayName) ? overlayName : `${qcow2Name}.overlay.qcow2`;
     const overlayPath = path.join(qemuDir, overlayFilename);
@@ -371,6 +429,7 @@ export default {
     startHeadless,
     shutdownVmGracefully,
     stopVm,
+    stopVmAsync,
     downloadDiskFromTeacher,
     verifyDiskSha256,
     importDisk,

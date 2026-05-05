@@ -169,7 +169,7 @@ class IpcHandler {
 
         ipcMain.handle('qemu-stop', async () => {
             try {
-                qemuService.stopVm();
+                await qemuService.stopVmAsync({ graceful: true, shutdownTimeoutMs: 8000, killTimeoutMs: 8000 });
                 return { ok: true };
             } catch (err) {
                 log.error('ipchandler @ qemu-stop', err);

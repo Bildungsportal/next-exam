@@ -80,7 +80,7 @@ import { switchExamSection } from './switchExamSection.js';
                 if (verify.error === 'disk not found') {
                     this.multicastClient.clientinfo.localVMHost = null;
                     this.multicastClient.clientinfo.localVMState = 'missing';
-                    qemuService.stopVm();
+                    await qemuService.stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
                 } else {
                     this.multicastClient.clientinfo.localVMState = 'error';
                     this.applyLocalVmSecurityLockdown();
@@ -752,10 +752,10 @@ import { switchExamSection } from './switchExamSection.js';
         stopProxy();
         try {
             log.info('communicationhandler @ endExam: requesting VM shutdown');
-            await qemuService.shutdownVmGracefully({ timeoutMs: 8000 });
+            await qemuService.stopVmAsync({ graceful: true, shutdownTimeoutMs: 8000, killTimeoutMs: 8000 });
         } catch (e) {
             log.warn('communicationhandler @ endExam: shutdown failed, killing VM');
-            qemuService.stopVm();
+            await qemuService.stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
         }
 
         if (languageToolServer.languageToolProcess){
