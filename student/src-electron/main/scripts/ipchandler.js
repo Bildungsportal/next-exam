@@ -136,7 +136,7 @@ class IpcHandler {
 
         ipcMain.handle('qemu-start-headless', async (_event, payload = {}) => {
             try {
-                const { qcow2Name, vncPort, overlayName, blockInternet, expectedSha256 } = payload || {};
+                const { qcow2Name, vncPort, overlayName, blockInternet, expectedSha256, forceFreshOverlay } = payload || {};
                 log.info(`ipchandler @ qemu-start-headless: start requested (disk=${qcow2Name}, port=${vncPort}, blockInternet=${!!blockInternet}, hasHash=${!!expectedSha256})`);
                 const vncDisplay = Number(vncPort) === 5901 ? ':1' : ':1';
                 const result = await qemuService.startHeadless({
@@ -145,6 +145,7 @@ class IpcHandler {
                     vncDisplay,
                     overlayName,
                     blockInternet: !!blockInternet,
+                    forceFreshOverlay: !!forceFreshOverlay,
                 });
                 if (this.multicastClient?.clientinfo) {
                     this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
@@ -197,7 +198,7 @@ class IpcHandler {
 
         ipcMain.handle('qemu-download-disk', async (_event, payload = {}) => {
             try {
-                const { serverip, serverApiPort, servername, token, filename } = payload || {};
+                const { serverip, serverApiPort, servername, token, filename, overwrite } = payload || {};
                 log.info(`ipchandler @ qemu-download-disk: downloading ${filename} from teacher ${servername}@${serverip}:${serverApiPort}`);
                 const result = await qemuService.downloadDiskFromTeacher({
                     serverip,
@@ -206,6 +207,7 @@ class IpcHandler {
                     token,
                     filename,
                     workdirectory: this.config.workdirectory,
+                    overwrite: !!overwrite,
                 });
                 log.info(`ipchandler @ qemu-download-disk: download finished (skipped=${!!result?.skipped}) ${filename}`);
                 return { ok: true, result };
@@ -588,8 +590,9 @@ class IpcHandler {
          */ 
         ipcMain.handle('focuslost', (event, ctrlalt=false) => { 
             let answer = false 
-            if (this.config.development || !this.multicastClient.exammode) { 
+            if (this.config.development || !this.multicastClient.clientinfo.exammode) { 
                 log.info(`ipchandler @ focuslost: focuslost event was triggered but development mode is enabled or exammode is false`)
+          
                 answer = { sender: "client", focus: true}
                 
             }
@@ -598,11 +601,11 @@ class IpcHandler {
             //     answer = { sender: "client", focus: true }
                 
             // }
-            else if (this.WindowHandler.focusTargetAllowed && ctrlalt == false){ 
-                log.warn(`ipchandler @ focuslost: mouseleave event was triggered but target is allowed`)
-                answer = { sender: "client", focus: true }
+            // else if (this.WindowHandler.focusTargetAllowed && ctrlalt == false){ 
+            //     log.warn(`ipchandler @ focuslost: mouseleave event was triggered but target is allowed`)
+            //     answer = { sender: "client", focus: true }
                 
-            } 
+            // } 
             else {
                 log.warn(`ipchandler @ focuslost: focuslost event was triggered - locking down`)
                 this.WindowHandler.examwindow.moveTop();

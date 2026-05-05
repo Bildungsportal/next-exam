@@ -208,7 +208,7 @@ function stopVm() {
     return true;
 }
 
-async function startHeadless({ workdirectory, qcow2Name, vncDisplay = ':1', overlayName = null, blockInternet = false }) {
+async function startHeadless({ workdirectory, qcow2Name, vncDisplay = ':1', overlayName = null, blockInternet = false, forceFreshOverlay = false }) {
     const qemuDir = getQemuDir(workdirectory);
     await ensureDir(qemuDir);
 
@@ -235,6 +235,12 @@ async function startHeadless({ workdirectory, qcow2Name, vncDisplay = ':1', over
 
     const overlayFilename = overlayName && isSafeFilename(overlayName) ? overlayName : `${qcow2Name}.overlay.qcow2`;
     const overlayPath = path.join(qemuDir, overlayFilename);
+    if (forceFreshOverlay && fs.existsSync(overlayPath)) {
+        try {
+            log.warn(`qemuService @ startHeadless: deleting existing overlay ${overlayFilename} (forceFreshOverlay)`);
+            await fs.promises.unlink(overlayPath);
+        } catch (e) {}
+    }
     if (!fs.existsSync(overlayPath)) {
         log.info(`qemuService @ startHeadless: creating overlay ${overlayFilename}`);
         const res = await runToCompletion('qemu-img', ['create', '-f', 'qcow2', '-F', 'qcow2', '-b', disk, overlayPath], { cwd: qemuDir });
@@ -300,7 +306,7 @@ async function verifyDiskSha256({ workdirectory, qcow2Name, expectedSha256 }) {
     return { ok: true, match: actual.toLowerCase() === expectedSha256.toLowerCase(), actual };
 }
 
-async function downloadDiskFromTeacher({ serverip, serverApiPort, servername, token, filename, workdirectory }) {
+async function downloadDiskFromTeacher({ serverip, serverApiPort, servername, token, filename, workdirectory, overwrite = false }) {
     if (!serverip || !serverApiPort || !servername || !token) {
         throw new Error('invalid download args');
     }
@@ -312,7 +318,7 @@ async function downloadDiskFromTeacher({ serverip, serverApiPort, servername, to
     await ensureDir(qemuDir);
 
     const dest = path.join(qemuDir, filename);
-    if (fs.existsSync(dest)) {
+    if (!overwrite && fs.existsSync(dest)) {
         return { ok: true, skipped: true, path: dest };
     }
     const tmp = `${dest}.part`;
@@ -340,6 +346,9 @@ async function downloadDiskFromTeacher({ serverip, serverApiPort, servername, to
             file.on('finish', () => {
                 file.close(async () => {
                     try {
+                        if (overwrite && fs.existsSync(dest)) {
+                            try { await fs.promises.unlink(dest); } catch (e) {}
+                        }
                         await fs.promises.rename(tmp, dest);
                         resolve({ ok: true, skipped: false, path: dest });
                     } catch (e) {

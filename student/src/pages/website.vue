@@ -364,6 +364,14 @@ export default {
             this.fetchinfointerval.addEventListener('action',  this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.fetchinfointerval.start();
             await this.fetchInfo(); // initial sync for clientinfo, serverstatus and url
+
+            try {
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+                this.hostip = await signalBridge.invoke('checkhostip')
+                this.internetCheckCounter = 0
+            } catch (err) {
+                console.error('website @ mounted: initial wlan/host ip error', err)
+            }
                 
             this.loadfilelistinterval = new SchedulerService(20000);
             this.loadfilelistinterval.addEventListener('action',  this.loadFilelist);

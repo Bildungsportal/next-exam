@@ -20,13 +20,25 @@
     ></exam-header>
 
     <div id="content" class="column q-pa-none" style="flex: 1; overflow: hidden;">
+      <!-- focus warning start -->
+      <div v-if="!focus" class="focus-container">
+        <div v-if="!showVmOverlay" id="focuswarning" class="infodiv p-4 d-block focuswarning">
+          <div class="mb-3 row">
+            <div class="mb-3 "> {{ $t('editor.leftkiosk') }} <br> {{ $t('editor.tellsomeone') }}</div>
+            <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32">
+            <div class="mt-3"> {{ timesinceentry }}</div>
+          </div>
+        </div>
+      </div>
+      <!-- focuswarning end  -->
       <div class="vnc-wrapper">
         <div ref="vncContainer" class="vnc-container"></div>
         <div class="vnc-overlay" v-if="showVmOverlay">
           <div class="status-text q-mb-sm">
-            <div v-if="!isMissingVm">{{ statusMessage }}</div>
-            <div v-else>VM-Disk nicht gefunden</div>
-            <div v-if="vmStateText" class="text-subtitle2 text-grey-5 q-mt-xs">
+            <div v-if="isMissingVm">VM-Disk nicht gefunden</div>
+            <div v-else-if="isHashMismatch">SHA-256 Hash Missmatch</div>
+            <div v-else>{{ statusMessage }}</div>
+            <div v-if="vmStateText && !isHashMismatch" class="text-subtitle2 text-grey-5 q-mt-xs">
               {{ vmStateText }}
             </div>
           </div>
@@ -35,12 +47,12 @@
               <div><b>{{ expectedVmDiskName || '—' }}</b></div>
               <div>Der Direkt-Download vom Teacher kann 5-10 Minuten dauern</div>
             </div>
+            <div v-if="vmDownloadInProgress" class="text-subtitle2 text-grey-5 q-mb-sm">
+              {{ statusMessage }}
+            </div>
             <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
-              <button class="btn btn-primary btn-sm" @click="browseVm">
-                Dateisystem durchsuchen…
-              </button>
-              <button class="btn btn-primary btn-sm" @click="downloadVm">
-                VM von Teacher holen
+              <button class="btn btn-primary btn-sm" @click="downloadVm" :disabled="vmDownloadInProgress">
+                {{ vmDownloadInProgress ? 'Download läuft…' : 'VM von Teacher holen' }}
               </button>
               <button class="btn btn-danger btn-sm" @click="gracefullyExit">
                 {{ $t('editor.unlock') }}
@@ -49,11 +61,20 @@
           </div>
           <div v-else-if="clientinfo && clientinfo.localVMState === 'hash_mismatch'" class="q-mt-sm">
             <div class="text-subtitle2 text-grey-5 q-mb-sm">
-              {{ $t('student.vmHashMismatchLock') }}
+              <div><b>{{ expectedVmDiskName || '—' }}</b></div>
+              <div>Der Hash des Images weicht von der Lehrkraft-Vorgabe ab. Der Zugriff auf die VM wurde gesperrt und die Lehrkraft informiert.</div>
             </div>
-            <button class="btn btn-danger btn-sm" @click="gracefullyExit">
-              {{ $t('editor.unlock') }}
-            </button>
+            <div v-if="vmDownloadInProgress" class="text-subtitle2 text-grey-5 q-mb-sm">
+              {{ statusMessage }}
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+              <button class="btn btn-primary btn-sm" @click="downloadVm" :disabled="vmDownloadInProgress">
+                {{ vmDownloadInProgress ? 'Download läuft…' : 'VM von Teacher holen' }}
+              </button>
+              <button class="btn btn-danger btn-sm" @click="gracefullyExit">
+                {{ $t('editor.unlock') }}
+              </button>
+            </div>
           </div>
           <div v-else-if="clientinfo && clientinfo.localVMState === 'unverified_hash'" class="q-mt-sm">
             <div class="text-subtitle2 text-grey-5 q-mb-sm">
@@ -134,7 +155,10 @@ export default {
       vmStateText: '',
       rfb: null,
       connectScheduler: null,
-      isUnmounted: false
+      lastLocalVmState: null,
+      lastFocusState: true,
+      isUnmounted: false,
+      vmDownloadInProgress: false
     };
   },
   computed: {
@@ -152,6 +176,9 @@ export default {
     isMissingVm() {
       return this.clientinfo?.localVMState === 'missing';
     },
+    isHashMismatch() {
+      return this.clientinfo?.localVMState === 'hash_mismatch';
+    },
     expectedVmDiskName() {
       const sectionIndex = this.clientinfo?.lockedSection || 1;
       const section = this.serverstatus?.examSections?.[sectionIndex] || {};
@@ -165,6 +192,15 @@ export default {
     this.fetchinfointerval = new SchedulerService(5000);
     this.fetchinfointerval.addEventListener('action', this.fetchInfo);
     this.fetchinfointerval.start();
+    this.$nextTick(async () => {
+      try {
+        this.wlanInfo = await signalBridge.invoke('get-wlan-info');
+        this.hostip = await signalBridge.invoke('checkhostip');
+        this.internetCheckCounter = 0;
+      } catch (err) {
+        console.error('localvmview @ mounted: initial wlan/host ip error', err);
+      }
+    });
     this.clockinterval = new SchedulerService(1000);
     this.clockinterval.addEventListener('action', this.clock);
     this.clockinterval.start();
@@ -194,6 +230,22 @@ export default {
   methods: {
     gracefullyExit,
     reconnect,
+
+    shouldBlockVnc() {
+      if (this.vmDownloadInProgress) {
+        return true;
+      }
+      const st = this.clientinfo?.localVMState;
+      return st === 'hash_mismatch';
+    },
+
+    stopConnectLoop() {
+      if (this.connectScheduler) {
+        this.connectScheduler.removeEventListener('action', this.tryConnectLoop);
+        this.connectScheduler.stop();
+        this.connectScheduler = null;
+      }
+    },
 
     ensureConnectLoopRunning() {
       if (this.connectScheduler) {
@@ -228,6 +280,11 @@ export default {
         this.connectScheduler.start();
       }
 
+      if (this.shouldBlockVnc()) {
+        this.stopConnectLoop();
+        return;
+      }
+
       if (this.showRetry) {
         return;
       }
@@ -235,11 +292,7 @@ export default {
       if (this.clientinfo && !this.clientinfo.localVMHost) {
         const st = this.clientinfo.localVMState;
         if (st === 'missing' || (st === 'error' && !this.clientinfo.localVMHost)) {
-          if (this.connectScheduler) {
-            this.connectScheduler.removeEventListener('action', this.tryConnectLoop);
-            this.connectScheduler.stop();
-            this.connectScheduler = null;
-          }
+          this.stopConnectLoop();
           return;
         }
       }
@@ -277,6 +330,10 @@ export default {
 
     async connectVnc() {
       if (this.isUnmounted) {
+        return;
+      }
+      if (this.shouldBlockVnc()) {
+        this.teardownRfb();
         return;
       }
       this.teardownRfb();
@@ -356,11 +413,11 @@ export default {
       });
       this.rfb.addEventListener('disconnect', (event) => {
         const detail = event?.detail || null;
-        console.error('localvmview @ RFB disconnect', {
-          clean: detail?.clean,
-          reason: detail?.reason,
-          code: detail?.code
-        });
+        console.error('localvmview @ RFB disconnect: VNC Connection disabled');
+        if (this.shouldBlockVnc()) {
+          this.teardownRfb();
+          return;
+        }
         this.onConnectError();
         // Nach einer Trennung erneut Verbindungsversuche starten, solange maxAttempts nicht erreicht und kein manueller Retry-Bildschirm aktiv ist
         if (!this.showRetry && !this.connectScheduler && this.connectAttempts < this.maxAttempts) {
@@ -441,7 +498,10 @@ export default {
     async downloadVm() {
       try {
         console.info(`${logPrefix} @ downloadVm: requested`);
-        this.statusMessage = 'Download läuft... (kann lange dauern)';
+        this.vmDownloadInProgress = true;
+        this.stopConnectLoop();
+        this.teardownRfb();
+        this.statusMessage = 'VM-Disk wird vom Teacher heruntergeladen… (kann lange dauern)';
         const section = this.serverstatus?.examSections?.[this.clientinfo?.lockedSection || 1] || {};
         const group = this.clientinfo?.group === 'b' ? 'b' : 'a';
         const cfg = group === 'b' ? (section?.groupB?.examConfig?.localvm || {}) : (section?.groupA?.examConfig?.localvm || {});
@@ -450,12 +510,19 @@ export default {
         const blockInternet = !!cfg.blockInternet;
         if (!filename) {
           this.statusMessage = 'Keine VM konfiguriert.';
+          this.vmDownloadInProgress = false;
           return;
         }
         if (!expectedSha256) {
           this.statusMessage = 'Kein Hash vorhanden.';
           this.showRetry = true;
+          this.vmDownloadInProgress = false;
           return;
+        }
+        const overwrite = this.clientinfo?.localVMState === 'hash_mismatch';
+        if (overwrite) {
+          console.warn(`${logPrefix} @ downloadVm: hash mismatch -> stopping VM and overwriting qcow2`);
+          try { await signalBridge.invoke('qemu-stop'); } catch (e) {}
         }
         const res = await signalBridge.invoke('qemu-download-disk', {
           serverip: this.serverip,
@@ -463,22 +530,29 @@ export default {
           servername: this.servername,
           token: this.token,
           filename,
+          overwrite
         });
         if (!res || !res.ok) {
           this.statusMessage = 'Download fehlgeschlagen.';
           this.showRetry = true;
+          this.vmDownloadInProgress = false;
           return;
         }
+        const diskActuallyDownloaded = !res.result?.skipped;
         console.info(`${logPrefix} @ downloadVm: downloaded (disk=${filename})`);
+        this.statusMessage = diskActuallyDownloaded
+          ? 'Download fertig. VM wird mit neuem Overlay gestartet…'
+          : 'VM wird mit neuem Overlay gestartet…';
         await signalBridge.invoke('qemu-start-headless', {
           qcow2Name: filename,
           vncPort: 5901,
           overlayName: `${filename}.overlay.${this.servername}.${this.pincode}.qcow2`,
           blockInternet,
-          expectedSha256
+          expectedSha256,
+          forceFreshOverlay: diskActuallyDownloaded || overwrite
         });
         console.info(`${logPrefix} @ downloadVm: start requested (disk=${filename}, blockInternet=${blockInternet}, hasHash=${!!expectedSha256})`);
-        this.statusMessage = 'VM startet...';
+        this.statusMessage = 'VM startet…';
         this.showRetry = false;
         this.connectAttempts = 0;
         if (this.clientinfo) {
@@ -486,11 +560,13 @@ export default {
           this.clientinfo.localVMPort = 5901;
           this.clientinfo.localVMState = expectedSha256 ? 'verifying_hash' : 'unverified_hash';
         }
+        this.vmDownloadInProgress = false;
         this.ensureConnectLoopRunning();
       } catch (e) {
         console.error('localvmview @ downloadVm', e);
         this.statusMessage = 'Download fehlgeschlagen.';
         this.showRetry = true;
+        this.vmDownloadInProgress = false;
       }
     },
 
@@ -559,14 +635,28 @@ export default {
       if (!getinfo) return;
 
       this.clientinfo = getinfo.clientinfo;
+      const nextVmState = this.clientinfo?.localVMState || null;
+      const prevVmState = this.lastLocalVmState;
+      this.lastLocalVmState = nextVmState;
       this.token = this.clientinfo.token;
+      const prevFocus = this.lastFocusState;
       this.focus = this.clientinfo.focus;
+      this.lastFocusState = !!this.focus;
       this.clientname = this.clientinfo.name;
       this.exammode = this.clientinfo.exammode;
       this.pincode = this.clientinfo.pin;
       this.serverstatus = getinfo.serverstatus;
 
-      if (!this.focus){
+      if (nextVmState === 'hash_mismatch' && prevVmState !== 'hash_mismatch') {
+        console.warn(`${logPrefix} @ fetchInfo: hash mismatch -> blocking VNC UI`);
+        this.showRetry = false;
+        this.statusMessage = '';
+        this.vmStateText = '';
+        this.stopConnectLoop();
+        this.teardownRfb();
+      }
+
+      if (prevFocus && !this.focus) {
         this.entrytime = new Date().getTime();
       }
       this.online = !!(this.clientinfo && this.clientinfo.token);
@@ -613,12 +703,17 @@ export default {
   transform: translate(-50%, -50%);
   min-width: 260px;
   max-width: 480px;
+  z-index: 1000;
   padding: 16px 20px;
   border-radius: 8px;
   background: rgba(15, 23, 42, 0.9); /* dark slate with slight transparency */
   color: #e5e7eb;
   text-align: center;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+}
+
+.focus-container {
+  z-index: 900 !important;
 }
 
 .status-text {

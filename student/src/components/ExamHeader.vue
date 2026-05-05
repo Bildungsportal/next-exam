@@ -43,24 +43,7 @@
             <div v-if="wlanInfo && wlanInfo?.ssid && !wlanInfo.ssid.includes('redacted') && !wlanInfo.ssid.includes('<') " style="font-size: 0.8rem;" class="me-1"> {{ wlanInfo.ssid }}  </div>
 
 
-            <!-- Shows WIFI ICON if IP is available and no WLAN info available-->
-
-            <!-- WLAN quality not available and SSID set to <redacted>  (happens on MacOS >= sequoia) -->
-            <div v-if="wlanInfo && wlanInfo.ssid && !wlanInfo.quality && hostipDisplay" class="me-2">
-              <img :title="'WiFi Information not available \nIP: '+hostipDisplay" :alt="'WiFi Information not available'" src="/src/assets/img/svg/network-wireless-connected-20.svg" width="24" height="24" style="vertical-align: bottom;" />
-            </div>
-
-            <!-- WLAN SSID and quality not available (happens on windows without location services) -->
-            <div v-if="wlanInfo && !wlanInfo.ssid && !wlanInfo.quality && hostipDisplay" class="me-2">
-              <img :title="'WiFi Information not available \nIP: '+hostipDisplay" :alt="'WiFi Information not available'" src="/src/assets/img/svg/network-wireless-connected-20.svg" width="24" height="24" style="vertical-align: bottom;" />
-            </div>
-            <!-- WLAN permission not available -->
-            <div v-else-if="wlanInfo && wlanInfo?.message == 'nopermissions'" class="me-2">
-                <img :title="$t('student.wlanNopermissionsText')" :alt="$t('student.wlanNopermissionsText')" src="/src/assets/img/svg/network-wireless-disconnected.svg" width="24" height="24" >
-            </div>
-
-
-
+            <!-- WiFi icon (mutually exclusive states: never show 2 WiFi icons at once) -->
             <!-- Show WLAN quality -->
             <div v-if="wlanInfo && wlanInfo?.quality" class="me-2">
                 <img v-if="wlanInfo && wlanInfo.quality > 80" src="/src/assets/img/svg/network-wireless-connected-100.svg"  :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" class="" width="24" height="24" style="vertical-align: bottom;" />
@@ -71,9 +54,19 @@
                 <img v-if="wlanInfo && wlanInfo.quality <= 5" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" src="/src/assets/img/svg/network-wireless-connected-00.svg" width="24" height="24" style="vertical-align: bottom;" />
             </div>
 
+            <!-- WLAN permission not available -->
+            <div v-else-if="wlanInfo && wlanInfo?.message == 'nopermissions'" class="me-2">
+                <img :title="$t('student.wlanNopermissionsText')" :alt="$t('student.wlanNopermissionsText')" src="/src/assets/img/svg/network-wireless-disconnected.svg" width="24" height="24" >
+            </div>
+
             <!-- WLAN disconnected - no interface available -->
-            <div v-if="wlanInfo && wlanInfo?.message == 'nointerface'" class="me-2">
+            <div v-else-if="wlanInfo && wlanInfo?.message == 'nointerface'" class="me-2">
                 <img title="WLAN disconnected" alt="WLAN disconnected" src="/src/assets/img/svg/network-wireless-disconnected.svg" width="24" height="24" >
+            </div>
+
+            <!-- WLAN info not available (e.g. SSID redacted or no SSID/quality, but IP available) -->
+            <div v-else-if="wlanInfo && hostipDisplay && !wlanInfo.quality && (!wlanInfo.ssid || wlanInfo.ssid.includes('redacted') || wlanInfo.ssid.includes('<'))" class="me-2">
+              <img :title="'WiFi Information not available \nIP: '+hostipDisplay" :alt="'WiFi Information not available'" src="/src/assets/img/svg/network-wireless-connected-20.svg" width="24" height="24" style="vertical-align: bottom;" />
             </div>
    
 
