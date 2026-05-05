@@ -231,7 +231,6 @@
 
 <script lang="ts">
 import validator from 'validator'
-import {SchedulerService} from '../utils/schedulerservice.js'
 import {SignalBridge} from '../utils/signalBridge.js'
 import speedometer_img from 'src/assets/img/svg/speedometer.svg'
 import server_img from 'src/assets/img/svg/server.svg'
@@ -240,6 +239,7 @@ import emblem_warning_img from '/src/assets/img/svg/emblem-warning.svg'
 import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync } from '../utils/screenshotCapture.js'
 import { Exam } from '../types/api'
 import loggingBridge from "../utils/loggingBridge.js";
+import { autoCleanup } from "../utils/autoCleanup.js";
 
 
 // Capture unhandled promise rejections
@@ -1288,10 +1288,12 @@ export default {
 
     },
     async mounted() {
+        const { setAutoInterval, addAutoEventListener } = autoCleanup();
+
         document.querySelector("#statusdiv").style.visibility = "hidden";
 
         // 2️⃣ Timer
-        this.timer = setInterval(() => {
+        this.timer = setAutoInterval(() => {
           console.log('The interval still runs');
         }, 1000);
 
@@ -1332,23 +1334,18 @@ export default {
         // Fetch info asynchronously without blocking
         this.fetchInfo();
 
-        this.fetchinterval = new SchedulerService(4000);
-        this.fetchinterval.addEventListener('action', this.fetchInfo);  // Add event listener that reacts to the 'action' event
-        this.fetchinterval.start();
+        setAutoInterval(this.fetchInfo, 4000)
+        setAutoInterval(this.bipAutoUpdate, 10000)
 
-        this.autoUpdateInterval = new SchedulerService(10000);
-        this.autoUpdateInterval.addEventListener('action', this.bipAutoUpdate);  // Add event listener that reacts to the 'action' event
-        this.autoUpdateInterval.start();
-
-        // add event listener to user input field to supress all special chars
-        document.getElementById("user").addEventListener("keypress", function (e) {
-            // var lettersOnly = /^[a-zA-Z ]+$/;
-            var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
-            var key = e.key || String.fromCharCode(e.which);
-            if (!lettersOnly.test(key)) {
-                e.preventDefault();
-            }
-        });
+      // add event listener to user input field to supress all special 1chars
+        addAutoEventListener(document.getElementById("user"), "keypress", function (e) {
+          // var lettersOnly = /^[a-zA-Z ]+$/;
+          var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
+          var key = e.key || String.fromCharCode(e.which);
+          if (!lettersOnly.test(key)) {
+            e.preventDefault();
+          }
+        })
 
         // TODO: Modify windowhandling and token saving
         signalBridge.on('bipToken', (event, token) => {
@@ -1367,11 +1364,6 @@ export default {
 
     },
     beforeUnmount() {
-        this.fetchinterval.removeEventListener('action', this.fetchInfo);
-        this.fetchinterval.stop()
-
-        this.autoUpdateInterval.removeEventListener('action', this.bipAutoUpdate);
-        this.autoUpdateInterval.stop()
     }
 }
 </script>
