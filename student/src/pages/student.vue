@@ -171,7 +171,16 @@
                                                                              name="register" class="btn btn-sm btn-info"
                                                                              :value="$t('student.register')"
                                                                              @click="registerClient(server.serverip,server.servername)">
-                                <!-- not logged in, bip server      --> <input v-if="server.bip" style="width:200px;"
+
+                              <router-link :to="{ name: 'testpage' }">
+                                Test Page
+                              </router-link>
+
+                              <router-link to="testpage">
+                                Test Page Static
+                              </router-link>
+                              
+                              <!-- not logged in, bip server      --> <input v-if="server.bip" style="width:200px;"
                                                                                :id="server.servername" type="button"
                                                                                name="register" class="btn btn-sm"
                                                                                :value="server.examStatus ? server.examStatus : 'restricted'"
@@ -202,6 +211,13 @@
                     </div>
 
                     <div v-if="serverlist.length === 0"><h6 class="text-muted ms-1">{{ $t('student.noexams') }}</h6>
+                      <router-link :to="{ name: 'testpage'}">
+                        Test Page
+                      </router-link>
+
+                      <router-link to="testpage">
+                        Test Page Static
+                      </router-link>
                     </div>
                 </div>
             </div>
@@ -281,6 +297,8 @@ export default {
             validip: true,
             serverFailureCount: {}, // Track failed ping attempts for manually added servers
             activeDialog: false,
+
+            timer: null,
 
             speedometer_img,
             server_img,
@@ -1272,6 +1290,10 @@ export default {
     async mounted() {
         document.querySelector("#statusdiv").style.visibility = "hidden";
 
+        // 2️⃣ Timer
+        this.timer = setInterval(() => {
+          console.log('The interval still runs');
+        }, 1000);
 
 // this.lastFrameTime = performance.now(); // Initialize timing
 

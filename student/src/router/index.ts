@@ -36,7 +36,7 @@ const website = () => import('/src/pages/website.vue')
 const activesheets = () => import('/src/pages/activesheets.vue')
 const rdpview = () => import('/src/pages/rdpview.vue')
 const localvmview = () => import('/src/pages/localvmview.vue')
-
+const testpage = () => import('/src/pages/testpage.vue')
 
 
 import {isElectronWindow} from '../types/platform.js';
@@ -70,7 +70,8 @@ const routes = [ // to load a specific view just replace the component at path: 
     { path: '/lock',                name:"lock",         component: lock },
     { path: '/rdp/:token',          name:"rdp",          component: rdpview,      beforeEnter: [addParams, fetchInfo] },
     { path: '/localvm/:token',      name:"localvm",      component: localvmview,  beforeEnter: [addParams, fetchInfo] },
-    { path: '/:pathMatch(.*)*',     name:"404",          component: notfound },  
+    { path: '/:pathMatch(.*)*',     name:"404",          component: notfound },
+    { path: '/testpage', name: 'testpage', component: testpage },
 ]
 
 // TODO Search fitting type that allows non-string params
