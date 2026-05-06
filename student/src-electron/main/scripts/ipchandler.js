@@ -201,7 +201,18 @@ class IpcHandler {
                     return { ok: false, cancelled: true };
                 }
                 log.info(`ipchandler @ qemu-pick-import-disk: selected ${result.filePaths[0]}`);
-                return await qemuService.importDisk({ workdirectory: this.config.workdirectory, sourcePath: result.filePaths[0] });
+                const importRes = await qemuService.importDisk({ workdirectory: this.config.workdirectory, sourcePath: result.filePaths[0] });
+                if (importRes?.ok && this.multicastClient?.serverstatus?.exammode) {
+                    if (this.CommunicationHandler.localVmStartState === 'starting') {
+                        log.info('ipchandler @ qemu-pick-import-disk: localvm start already in progress, skip startExam');
+                    } else {
+                        if (this.CommunicationHandler.localVmStartState === 'blocked') {
+                            this.CommunicationHandler.localVmStartState = 'idle';
+                        }
+                        this.CommunicationHandler.startExam(this.multicastClient.serverstatus);
+                    }
+                }
+                return importRes;
             } catch (err) {
                 log.error('ipchandler @ qemu-pick-import-disk', err);
                 return { ok: false, error: String(err?.message || err) };
@@ -222,6 +233,16 @@ class IpcHandler {
                     overwrite: !!overwrite,
                 });
                 log.info(`ipchandler @ qemu-download-disk: download finished (skipped=${!!result?.skipped}) ${filename}`);
+                if (this.multicastClient?.serverstatus?.exammode) {
+                    if (this.CommunicationHandler.localVmStartState === 'starting') {
+                        log.info('ipchandler @ qemu-download-disk: localvm start already in progress, skip startExam');
+                    } else {
+                        if (this.CommunicationHandler.localVmStartState === 'blocked') {
+                            this.CommunicationHandler.localVmStartState = 'idle';
+                        }
+                        this.CommunicationHandler.startExam(this.multicastClient.serverstatus);
+                    }
+                }
                 return { ok: true, result };
             } catch (err) {
                 log.error('ipchandler @ qemu-download-disk', err);
@@ -550,9 +571,15 @@ class IpcHandler {
                         cmargin: { side: 'right', size: 3 },
                         linespacing: '2',
                         audioRepeat: 3,
-                        languagetool: args.languagetool || false,
-                        spellchecklang: args.spellchecklang || 'de-DE',
-                        suggestions: args.suggestions || false
+                        groupA: {
+                            examConfig: {
+                                editor: {
+                                    languagetool: args.languagetool || false,
+                                    spellchecklang: args.spellchecklang || 'de-DE',
+                                    suggestions: args.suggestions || false,
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1019,7 +1046,7 @@ class IpcHandler {
             // all further updates via the serverstatus object are read in the communication handler and applied to the clientinfo object as needed
             // this communication flow needs to be streamlined in 2.0 #FIXME
             
-            if (this.WindowHandler.examwindow) { serverstatus = this.multicastClient.serverstatus }
+            if (this.multicastClient?.serverstatus) { serverstatus = this.multicastClient.serverstatus }
 
             //count number of files in exam directory
             if (!this.multicastClient.clientinfo.exammode){

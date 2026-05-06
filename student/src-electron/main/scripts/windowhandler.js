@@ -483,6 +483,16 @@ class WindowHandler {
      * @param serverstatus the serverstatus object containing info about spellcheck language etc. 
      */
     async createExamWindow(examtype, token, serverstatus, primarydisplay) {
+        if (this.examwindow && !this.examwindow.isDestroyed?.()) {
+            log.warn('windowhandler @ createExamWindow: examwindow already exists, skip duplicate create');
+            try {
+                this.examwindow.show();
+                this.examwindow.focus();
+            } catch (e) {
+                log.debug('windowhandler @ createExamWindow: focus existing examwindow', e?.message);
+            }
+            return;
+        }
         // just to be sure we check some important vars here
         if (examtype !== "rdp" && examtype !== "website" &&  examtype !== "forms" && examtype !== "eduvidual" && examtype !== "editor" && examtype !== "math" && examtype !== "microsoft365" && examtype !== "activesheets" && examtype !== "localvm" || !token){  // for now.. we probably should stop everything here
             log.warn("missing parameters for exam-mode or mode not in allowed list!")

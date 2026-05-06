@@ -642,7 +642,7 @@
 
                 <div v-if="entry.message" class="fw-bold">{{ entry.rule.category.name }}</div>
                 <div
-                    v-if="serverstatus.examSections[serverstatus.activeSection].suggestions || privateSpellcheck.suggestions">
+                    v-if="getEditorExamConfig(lockedSection).suggestions || privateSpellcheck.suggestions">
                     <div v-if="entry.message">{{ entry.message }}</div>
                     <div v-if="entry.replacements" class="replacement">
                         <span v-if="entry.replacements[0]">  {{ entry.replacements[0].value }}</span>

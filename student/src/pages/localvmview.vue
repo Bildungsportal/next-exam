@@ -47,60 +47,7 @@
               {{ vmStateText }}
             </div>
           </div>
-          <div v-if="clientinfo && clientinfo.localVMState === 'missing'" class="q-mt-sm">
-            <div class="text-subtitle2 text-grey-5 q-mb-sm">
-              <div><b>{{ expectedVmDiskName || '—' }}</b></div>
-              <div>Der Direkt-Download vom Teacher kann 5-10 Minuten dauern</div>
-            </div>
-            <div v-if="vmDownloadInProgress" class="text-subtitle2 text-grey-5 q-mb-sm">
-              {{ statusMessage }}
-            </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
-              <button class="btn btn-primary btn-sm" @click="downloadVm" :disabled="vmDownloadInProgress">
-                {{ vmDownloadInProgress ? 'Download läuft…' : 'VM von Teacher holen' }}
-              </button>
-              <button class="btn btn-danger btn-sm" @click="gracefullyExit">
-                {{ $t('editor.unlock') }}
-              </button>
-            </div>
-          </div>
-          <div v-else-if="clientinfo && clientinfo.localVMState === 'hash_mismatch'" class="q-mt-sm">
-            <div class="text-subtitle2 text-grey-5 q-mb-sm">
-              <div><b>{{ expectedVmDiskName || '—' }}</b></div>
-              <div>Der Hash des Images weicht von der Lehrkraft-Vorgabe ab. Der Zugriff auf die VM wurde gesperrt und die Lehrkraft informiert.</div>
-            </div>
-            <div v-if="vmDownloadInProgress" class="text-subtitle2 text-grey-5 q-mb-sm">
-              {{ statusMessage }}
-            </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
-              <button class="btn btn-primary btn-sm" @click="downloadVm" :disabled="vmDownloadInProgress">
-                {{ vmDownloadInProgress ? 'Download läuft…' : 'VM von Teacher holen' }}
-              </button>
-              <button class="btn btn-danger btn-sm" @click="gracefullyExit">
-                {{ $t('editor.unlock') }}
-              </button>
-            </div>
-          </div>
-          <div v-else-if="clientinfo && clientinfo.localVMState === 'unverified_hash'" class="q-mt-sm">
-            <div class="text-subtitle2 text-grey-5 q-mb-sm">
-              {{ $t('student.vmUnverifiedHash') }}
-            </div>
-            <button class="btn btn-danger btn-sm" @click="gracefullyExit">
-              {{ $t('editor.unlock') }}
-            </button>
-          </div>
-          <div v-else-if="clientinfo && clientinfo.localVMState === 'error'" class="q-mt-sm">
-            <div class="text-subtitle2 text-grey-5 q-mb-sm">
-              VM konnte nicht gestartet werden. Du kannst es erneut versuchen.
-            </div>
-            <button class="btn btn-primary btn-sm q-mr-sm" @click="retryStartVm">
-              VM-Start erneut versuchen
-            </button>
-            <button class="btn btn-danger btn-sm" @click="gracefullyExit">
-              {{ $t('editor.unlock') }}
-            </button>
-          </div>
-          <div v-else-if="showRetry" class="q-mt-sm">
+          <div v-if="showRetry" class="q-mt-sm">
             <button class="btn btn-primary btn-sm q-mr-sm" @click="retryConnect">
               {{ $t('dashboard.retry') || 'Erneut versuchen' }}
             </button>
@@ -162,8 +109,7 @@ export default {
       connectScheduler: null,
       lastLocalVmState: null,
       lastFocusState: true,
-      isUnmounted: false,
-      vmDownloadInProgress: false
+      isUnmounted: false
     };
   },
   computed: {
@@ -172,7 +118,7 @@ export default {
         return true;
       }
       const st = this.clientinfo?.localVMState;
-      if (st && ['missing', 'hash_mismatch', 'missing_hash', 'error', 'verifying_hash', 'unverified_hash'].includes(st)) {
+      if (st && ['missing', 'hash_mismatch', 'missing_hash', 'error', 'verifying_hash'].includes(st)) {
         return true;
       }
       return !!(this.statusMessage && String(this.statusMessage).trim().length);
@@ -242,9 +188,6 @@ export default {
     reconnect,
 
     shouldBlockVnc() {
-      if (this.vmDownloadInProgress) {
-        return true;
-      }
       const st = this.clientinfo?.localVMState;
       return st === 'hash_mismatch';
     },
@@ -325,8 +268,6 @@ export default {
 
       if (this.clientinfo.localVMState === 'verifying_hash') {
         this.vmStateText = this.$t('student.vmVerifyingHash');
-      } else if (this.clientinfo.localVMState === 'unverified_hash') {
-        this.vmStateText = this.$t('student.vmUnverifiedHash');
       } else if (this.clientinfo.localVMState === 'starting') {
         this.vmStateText = this.$t('student.vmStarting');
       } else if (this.clientinfo.localVMState === 'running') {
@@ -420,13 +361,9 @@ export default {
           this.connectScheduler.stop();
           this.connectScheduler = null;
         }
-        if (st === 'hash_mismatch' || st === 'unverified_hash') {
-          this.statusMessage = '';
-        } else {
-          this.statusMessage = '';
-          if (st !== 'verifying_hash') {
-            this.vmStateText = '';
-          }
+        this.statusMessage = '';
+        if (st !== 'verifying_hash') {
+          this.vmStateText = '';
         }
       });
       this.rfb.addEventListener('disconnect', (event) => {
@@ -493,226 +430,15 @@ export default {
       this.online = !!(this.clientinfo && this.clientinfo.token);
     },
 
-    async syncClientInfoFromMain() {
-      const getinfo = await signalBridge.invoke('getinfoasync');
-      if (getinfo) {
-        this.applyGetinfoPayload(getinfo);
-      }
-    },
-
-    async afterQemuStartRejected(startRes) {
-      await this.syncClientInfoFromMain();
-      const st = this.clientinfo?.localVMState;
-      if (st === 'hash_mismatch' || st === 'missing') {
-        this.showRetry = false;
-        this.statusMessage = '';
-        this.vmStateText = '';
-        this.stopConnectLoop();
-        this.teardownRfb();
-        return true;
-      }
-      if (st === 'error') {
-        this.showRetry = false;
-        this.statusMessage = '';
-        this.vmStateText = '';
-        this.stopConnectLoop();
-        this.teardownRfb();
-        return true;
-      }
-      this.statusMessage = (startRes && startRes.error) ? startRes.error : this.$t('student.vmFailed');
-      this.showRetry = true;
-      return true;
-    },
-
-    async restartLocalVmPipeline(opts = {}) {
-      const { forceFreshOverlay = false } = opts;
-      const section = this.serverstatus?.examSections?.[this.clientinfo?.lockedSection || 1] || {};
-      const group = this.clientinfo?.group === 'b' ? 'b' : 'a';
-      const cfg = group === 'b' ? (section?.groupB?.examConfig?.localvm || {}) : (section?.groupA?.examConfig?.localvm || {});
-      const filename = cfg.qcow2Name;
-      const expectedSha256 = cfg.qcow2Sha256;
-      const blockInternet = !!cfg.blockInternet;
-      if (!filename) {
-        this.statusMessage = 'Keine VM konfiguriert.';
-        this.showRetry = true;
-        throw new Error('no qcow2 configured');
-      }
-      this.stopConnectLoop();
-      this.teardownRfb();
-      this.connectAttempts = 0;
-      this.showRetry = false;
-      this.statusMessage = this.$t('student.vmWaiting');
-      const startRes = await signalBridge.invoke('qemu-start-headless', {
-        qcow2Name: filename,
-        vncPort: 5901,
-        overlayName: `${filename}.overlay.${this.servername}.${this.pincode}.qcow2`,
-        blockInternet,
-        expectedSha256,
-        forceFreshOverlay
-      });
-      if (!startRes || !startRes.ok) {
-        await this.afterQemuStartRejected(startRes);
-        return;
-      }
-      if (this.clientinfo) {
-        this.clientinfo.localVMHost = '127.0.0.1';
-        this.clientinfo.localVMPort = 5901;
-        this.clientinfo.localVMState = expectedSha256 ? 'running' : 'unverified_hash';
-      }
-      this.ensureConnectLoopRunning();
-    },
-
     async retryConnect() {
       try {
+        this.showRetry = false;
         this.statusMessage = this.$t('student.vmWaiting');
-        await this.restartLocalVmPipeline();
+        this.connectAttempts = 0;
+        await this.tryConnectLoop();
       } catch (e) {
         console.error('localvmview @ retryConnect', e);
         this.statusMessage = this.$t('student.vmFailed');
-        this.showRetry = true;
-      }
-    },
-
-    async retryStartVm() {
-      try {
-        console.info(`${logPrefix} @ retryStartVm: requested`);
-        this.statusMessage = 'VM startet...';
-        await this.restartLocalVmPipeline();
-        console.info(`${logPrefix} @ retryStartVm: start pipeline done`);
-      } catch (e) {
-        console.error('localvmview @ retryStartVm', e);
-        this.statusMessage = 'VM-Start fehlgeschlagen.';
-        this.showRetry = true;
-      }
-    },
-
-    async downloadVm() {
-      try {
-        console.info(`${logPrefix} @ downloadVm: requested`);
-        this.vmDownloadInProgress = true;
-        this.stopConnectLoop();
-        this.teardownRfb();
-        this.statusMessage = 'VM-Disk wird vom Teacher heruntergeladen… (kann lange dauern)';
-        const section = this.serverstatus?.examSections?.[this.clientinfo?.lockedSection || 1] || {};
-        const group = this.clientinfo?.group === 'b' ? 'b' : 'a';
-        const cfg = group === 'b' ? (section?.groupB?.examConfig?.localvm || {}) : (section?.groupA?.examConfig?.localvm || {});
-        const filename = cfg.qcow2Name;
-        const expectedSha256 = cfg.qcow2Sha256;
-        const blockInternet = !!cfg.blockInternet;
-        if (!filename) {
-          this.statusMessage = 'Keine VM konfiguriert.';
-          this.vmDownloadInProgress = false;
-          return;
-        }
-        if (!expectedSha256) {
-          this.statusMessage = 'Kein Hash vorhanden.';
-          this.showRetry = true;
-          this.vmDownloadInProgress = false;
-          return;
-        }
-        const overwrite = this.clientinfo?.localVMState === 'hash_mismatch';
-        if (overwrite) {
-          console.warn(`${logPrefix} @ downloadVm: hash mismatch -> stopping VM and overwriting qcow2`);
-          try { await signalBridge.invoke('qemu-stop'); } catch (e) {}
-        }
-        const res = await signalBridge.invoke('qemu-download-disk', {
-          serverip: this.serverip,
-          serverApiPort: this.serverApiPort,
-          servername: this.servername,
-          token: this.token,
-          filename,
-          overwrite
-        });
-        if (!res || !res.ok) {
-          this.statusMessage = 'Download fehlgeschlagen.';
-          this.showRetry = true;
-          this.vmDownloadInProgress = false;
-          return;
-        }
-        const diskActuallyDownloaded = !res.result?.skipped;
-        console.info(`${logPrefix} @ downloadVm: downloaded (disk=${filename})`);
-        this.statusMessage = diskActuallyDownloaded
-          ? 'Download fertig. VM wird mit neuem Overlay gestartet…'
-          : 'VM wird mit neuem Overlay gestartet…';
-        const startRes = await signalBridge.invoke('qemu-start-headless', {
-          qcow2Name: filename,
-          vncPort: 5901,
-          overlayName: `${filename}.overlay.${this.servername}.${this.pincode}.qcow2`,
-          blockInternet,
-          expectedSha256,
-          forceFreshOverlay: diskActuallyDownloaded || overwrite
-        });
-        if (!startRes || !startRes.ok) {
-          this.vmDownloadInProgress = false;
-          await this.afterQemuStartRejected(startRes);
-          return;
-        }
-        console.info(`${logPrefix} @ downloadVm: start requested (disk=${filename}, blockInternet=${blockInternet}, hasHash=${!!expectedSha256})`);
-        this.statusMessage = 'VM startet…';
-        this.showRetry = false;
-        this.connectAttempts = 0;
-        if (this.clientinfo) {
-          this.clientinfo.localVMHost = '127.0.0.1';
-          this.clientinfo.localVMPort = 5901;
-          this.clientinfo.localVMState = expectedSha256 ? 'running' : 'unverified_hash';
-        }
-        this.vmDownloadInProgress = false;
-        this.ensureConnectLoopRunning();
-      } catch (e) {
-        console.error('localvmview @ downloadVm', e);
-        this.statusMessage = 'Download fehlgeschlagen.';
-        this.showRetry = true;
-        this.vmDownloadInProgress = false;
-      }
-    },
-
-    async browseVm() {
-      try {
-        console.info(`${logPrefix} @ browseVm: requested`);
-        this.statusMessage = 'Datei wird importiert...';
-        const section = this.serverstatus?.examSections?.[this.clientinfo?.lockedSection || 1] || {};
-        const group = this.clientinfo?.group === 'b' ? 'b' : 'a';
-        const cfg = group === 'b' ? (section?.groupB?.examConfig?.localvm || {}) : (section?.groupA?.examConfig?.localvm || {});
-        const expectedSha256 = cfg.qcow2Sha256;
-        const blockInternet = !!cfg.blockInternet;
-
-        const res = await signalBridge.invoke('qemu-pick-import-disk', {});
-        const filename = res && res.ok ? res.filename : null;
-        if (!filename) {
-          this.statusMessage = '';
-          return;
-        }
-        console.info(`${logPrefix} @ browseVm: imported (disk=${filename})`);
-        if (!expectedSha256) {
-          this.statusMessage = 'Kein Hash vorhanden.';
-          this.showRetry = true;
-          return;
-        }
-
-        const startRes = await signalBridge.invoke('qemu-start-headless', {
-          qcow2Name: filename,
-          vncPort: 5901,
-          overlayName: `${filename}.overlay.${this.servername}.${this.pincode}.qcow2`,
-          blockInternet,
-          expectedSha256
-        });
-        if (!startRes || !startRes.ok) {
-          await this.afterQemuStartRejected(startRes);
-          return;
-        }
-        console.info(`${logPrefix} @ browseVm: start requested (disk=${filename}, blockInternet=${blockInternet}, hasHash=${!!expectedSha256})`);
-        this.statusMessage = 'VM startet...';
-        this.showRetry = false;
-        this.connectAttempts = 0;
-        if (this.clientinfo) {
-          this.clientinfo.localVMHost = '127.0.0.1';
-          this.clientinfo.localVMPort = 5901;
-          this.clientinfo.localVMState = expectedSha256 ? 'running' : 'unverified_hash';
-        }
-        this.ensureConnectLoopRunning();
-      } catch (e) {
-        console.error('localvmview @ browseVm', e);
-        this.statusMessage = 'Import fehlgeschlagen.';
         this.showRetry = true;
       }
     },

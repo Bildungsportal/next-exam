@@ -29,6 +29,44 @@
     <!-- Header END -->
 
     <div v-show="!isLoading" id="wrapper" class="w-100 h-100 d-flex">
+        <!-- LocalVM preflight overlay (must stay in student.vue; exam window opens only after checks pass) -->
+        <div v-if="showLocalVmPreflightOverlay" class="localvm-preflight-backdrop">
+            <div class="localvm-preflight-card">
+                <div class="localvm-preflight-title">LocalVM</div>
+
+                <div v-if="localVmIsVerifying" class="localvm-preflight-verify">
+                    <div class="localvm-preflight-spinner" aria-hidden="true"></div>
+                    <div class="localvm-preflight-text">{{ $t('student.vmVerifyingHash') }}</div>
+                    <div class="localvm-preflight-subtext">{{ $t('student.vmVerifyingHashHint') }}</div>
+                </div>
+
+                <div v-else-if="localVmIsMissing" class="localvm-preflight-text">
+                    VM-Disk nicht gefunden. Bitte VM herunterladen oder eine qcow2 Datei importieren.
+                </div>
+
+                <div v-else-if="localVmIsMismatch" class="localvm-preflight-text">
+                    Die VM-Disk entspricht nicht der Vorgabe (Hash/Größe stimmt nicht). Bitte neu holen oder importieren.
+                </div>
+
+                <div v-else class="localvm-preflight-text">
+                    VM kann nicht gestartet werden. Bitte neu holen oder importieren.
+                </div>
+
+                <div class="localvm-preflight-actions">
+                    <button v-if="localVmCanFix" class="btn btn-primary btn-sm" @click="downloadVm" :disabled="localVmBusy">
+                        VM von Teacher holen
+                    </button>
+                    <button v-if="localVmCanFix" class="btn btn-cyan btn-sm" @click="browseVm" :disabled="localVmBusy">
+                        Dateisystem durchsuchen…
+                    </button>
+                </div>
+
+                <div v-if="localVmBusy && localVmCanFix && !localVmIsVerifying" class="localvm-preflight-verify" style="margin-top: 12px;">
+                    <div class="localvm-preflight-spinner" aria-hidden="true"></div>
+                    <div class="localvm-preflight-text">Download läuft…</div>
+                </div>
+            </div>
+        </div>
 
         <!-- SIDEBAR START -->
         <div class="p-3 text-white bg-dark h-100" style="width: 240px; min-width: 240px;">
@@ -254,6 +292,7 @@ export default {
             username: this.$route.params.config.development ? "Thomas" : "" as string | boolean,
             pincode: this.$route.params.config.development ? "1111" : "" as string,
             clientinfo: {},
+            serverstatus: null,
             serverlist: [],
             serverlistAdvanced: [],
             fetchinterval: null,
@@ -284,6 +323,7 @@ export default {
             validip: true,
             serverFailureCount: {}, // Track failed ping attempts for manually added servers
             activeDialog: false,
+            localVmBusy: false,
 
         };
     },
@@ -296,7 +336,25 @@ export default {
         },
         canSelectInterface() {
             return !this.token && this.hostip?.availableInterfaces?.length > 1;
-        }
+        },
+
+        showLocalVmPreflightOverlay() {
+            const st = this.clientinfo?.localVMState;
+            const inPreflightState = st === 'missing' || st === 'hash_mismatch' || st === 'verifying_hash' || st === 'error';
+            return !!this.token && !this.clientinfo?.exammode && this.clientinfo?.examtype === 'localvm' && inPreflightState;
+        },
+        localVmIsMissing() {
+            return this.clientinfo?.localVMState === 'missing';
+        },
+        localVmIsMismatch() {
+            return this.clientinfo?.localVMState === 'hash_mismatch';
+        },
+        localVmIsVerifying() {
+            return this.clientinfo?.localVMState === 'verifying_hash';
+        },
+        localVmCanFix() {
+            return this.localVmIsMissing || this.localVmIsMismatch || this.clientinfo?.localVMState === 'error';
+        },
     },
 
 
@@ -933,6 +991,7 @@ export default {
             if (clientInfoStr !== currentClientInfoStr) {
                 this.clientinfo = getinfo.clientinfo;
             }
+            this.serverstatus = getinfo.serverstatus || null;
 
             if (getinfo.clientinfo.exammode) {
                 return;
@@ -1110,6 +1169,67 @@ export default {
                     }
                 });
             }   
+        },
+
+        getLocalVmConfig() {
+            const sectionIndex = Number(this.clientinfo?.lockedSection || 1);
+            const section = this.serverstatus?.examSections?.[sectionIndex] || {};
+            const group = this.clientinfo?.group === 'b' ? 'b' : 'a';
+            const cfg = group === 'b' ? (section?.groupB?.examConfig?.localvm || {}) : (section?.groupA?.examConfig?.localvm || {});
+            return cfg || {};
+        },
+
+        async downloadVm() {
+            if (this.localVmBusy) return;
+            try {
+                this.localVmBusy = true;
+                const cfg = this.getLocalVmConfig();
+                const filename = cfg.qcow2Name;
+                const overwrite = this.clientinfo?.localVMState === 'hash_mismatch';
+                if (!filename) {
+                    await this.status('Keine VM konfiguriert.');
+                    return;
+                }
+                await this.status('VM-Disk wird vom Teacher heruntergeladen…');
+                const res = await signalBridge.invoke('qemu-download-disk', {
+                    serverip: this.clientinfo?.serverip,
+                    serverApiPort: this.serverApiPort,
+                    servername: this.clientinfo?.servername,
+                    token: this.token,
+                    filename,
+                    overwrite
+                });
+                if (!res || !res.ok) {
+                    await this.status('Download fehlgeschlagen.');
+                    return;
+                }
+                await this.status('Download fertig. Warte auf Start…');
+            } catch (e) {
+                log.error('student.vue @ downloadVm', e);
+                await this.status('Download fehlgeschlagen.');
+            } finally {
+                this.localVmBusy = false;
+            }
+        },
+
+        async browseVm() {
+            if (this.localVmBusy) return;
+            try {
+                this.localVmBusy = true;
+                await this.status('Datei wird importiert…');
+                const res = await signalBridge.invoke('qemu-pick-import-disk', {});
+                const filename = res && res.ok ? res.filename : null;
+                if (!filename) {
+                    await this.status('Import abgebrochen.');
+                    return;
+                }
+                await this.status(`Import fertig (${filename}). Warte auf Start…`);
+            } catch (e) {
+                log.error('student.vue @ browseVm', e);
+                await this.status('Import fehlgeschlagen.');
+            } finally {
+                this.localVmBusy = false;
+            }
         },
 
 
@@ -1425,6 +1545,73 @@ body {
 .disabledtext {
     filter: contrast(40%) grayscale(100%) brightness(130%) blur(0.6px);
     pointer-events: none;
+}
+
+.localvm-preflight-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 200000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.localvm-preflight-card {
+    width: 100%;
+    max-width: 520px;
+    border-radius: 10px;
+    background: rgba(33, 37, 41, 0.95);
+    color: #f8f9fa;
+    padding: 16px 18px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    text-align: center;
+}
+
+.localvm-preflight-title {
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.localvm-preflight-verify {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+}
+
+.localvm-preflight-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #93c5fd;
+    border-radius: 50%;
+    animation: localvm-preflight-spin 0.85s linear infinite;
+}
+
+@keyframes localvm-preflight-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.localvm-preflight-text {
+    font-size: 0.95em;
+}
+
+.localvm-preflight-subtext {
+    font-size: 0.85em;
+    color: rgba(248, 249, 250, 0.75);
+}
+
+.localvm-preflight-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
 }
 
 #content {

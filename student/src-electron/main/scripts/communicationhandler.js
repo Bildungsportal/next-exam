@@ -52,19 +52,9 @@ import { switchExamSection } from './switchExamSection.js';
     init (mc, config) {
         this.multicastClient = mc
         this.config = config
+        this.localVmStartState = 'idle' // idle|starting|blocked
         this.updateScheduler = new SchedulerService(this.requestUpdate.bind(this), 5000)
         this.updateScheduler.start()
-    }
-
-    // Mirror securityFocusLost: kiosk exam window + focus=false so teacher sees focus loss.
-    applyLocalVmSecurityLockdown() {
-        this.multicastClient.clientinfo.focus = false;
-        if (WindowHandler.examwindow && !this.config.development) {
-            WindowHandler.examwindow.moveTop();
-            WindowHandler.examwindow.setKiosk(true);
-            WindowHandler.examwindow.show();
-            WindowHandler.examwindow.focus();
-        }
     }
 
     // SHA-256 of base qcow2 before QEMU start (full read while VM runs starves guest disk I/O).
@@ -93,7 +83,6 @@ import { switchExamSection } from './switchExamSection.js';
                 } else {
                     this.multicastClient.clientinfo.localVMHost = null;
                     this.multicastClient.clientinfo.localVMState = 'error';
-                    this.applyLocalVmSecurityLockdown();
                 }
                 return { allowStart: false };
             }
@@ -102,7 +91,6 @@ import { switchExamSection } from './switchExamSection.js';
                 log.warn(`communicationhandler @ runLocalVmPreStartVerify: ${mismatch} for ${qcow2Name}`);
                 this.multicastClient.clientinfo.localVMHost = null;
                 this.multicastClient.clientinfo.localVMState = 'hash_mismatch';
-                this.applyLocalVmSecurityLockdown();
                 return { allowStart: false };
             }
             if (expectedSha256) {
@@ -115,9 +103,70 @@ import { switchExamSection } from './switchExamSection.js';
             log.error('communicationhandler @ runLocalVmPreStartVerify', e);
             this.multicastClient.clientinfo.localVMHost = null;
             this.multicastClient.clientinfo.localVMState = 'error';
-            this.applyLocalVmSecurityLockdown();
             return { allowStart: false };
         }
+    }
+
+    async preflightLocalVm(serverstatus, effectiveSection) {
+        const examSection = serverstatus.examSections[effectiveSection];
+        const hasGroups = !!examSection?.groups;
+        let group = this.multicastClient.clientinfo.group || 'a';
+        if (hasGroups) {
+            const clientname = this.multicastClient.clientinfo.name;
+            const groupA = examSection.groupA?.users ?? [];
+            const groupB = examSection.groupB?.users ?? [];
+            if (groupB.includes(clientname)) group = 'b';
+            else if (groupA.includes(clientname)) group = 'a';
+            else group = 'a';
+        } else {
+            group = 'a';
+        }
+
+        const vmConfig = group === 'b'
+            ? (examSection?.groupB?.examConfig?.localvm || {})
+            : (examSection?.groupA?.examConfig?.localvm || {});
+
+        const qcow2Name = vmConfig.qcow2Name;
+        const vncPort = Number(vmConfig.vncPort || 5901);
+        const calculateSha256 = vmConfig.calculateSha256 === true;
+        const expectedSha256 = calculateSha256 ? vmConfig.qcow2Sha256 : null;
+        const expectedSizeBytes = !calculateSha256 ? vmConfig.qcow2SizeBytes : null;
+        const blockInternet = !!vmConfig.blockInternet;
+
+        this.multicastClient.clientinfo.examtype = 'localvm';
+        this.multicastClient.clientinfo.localVMHost = null;
+        this.multicastClient.clientinfo.localVMPort = vncPort;
+
+        log.info(`communicationhandler @ preflightLocalVm: cfg (disk=${qcow2Name || '-'}, port=${vncPort}, blockInternet=${blockInternet}, calcHash=${calculateSha256}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
+
+        if (!qcow2Name) {
+            this.multicastClient.clientinfo.localVMState = 'missing';
+            return { allowStart: false };
+        }
+        if (calculateSha256 && !expectedSha256) {
+            log.error('communicationhandler @ preflightLocalVm: calculateSha256 enabled but qcow2Sha256 missing');
+            this.multicastClient.clientinfo.localVMState = 'error';
+            return { allowStart: false };
+        }
+        if (!calculateSha256 && (typeof expectedSizeBytes !== 'number' || !Number.isFinite(expectedSizeBytes) || expectedSizeBytes <= 0)) {
+            log.error('communicationhandler @ preflightLocalVm: calculateSha256 disabled but qcow2SizeBytes missing');
+            this.multicastClient.clientinfo.localVMState = 'error';
+            return { allowStart: false };
+        }
+
+        this.multicastClient.clientinfo.localVMState = 'verifying_hash';
+        const verifyRes = await this.runLocalVmPreStartVerify(qcow2Name, expectedSha256, calculateSha256 ? null : Number(expectedSizeBytes));
+        if (!verifyRes.allowStart) {
+            return { allowStart: false };
+        }
+
+        return {
+            allowStart: true,
+            qcow2Name,
+            vncPort,
+            overlayName: `${qcow2Name}.overlay.${this.multicastClient.clientinfo.servername || 'exam'}.${this.multicastClient.clientinfo.pin || '0'}.qcow2`,
+            blockInternet,
+        };
     }
 
     
@@ -423,6 +472,12 @@ import { switchExamSection } from './switchExamSection.js';
         }
         
         if (serverstatus.exammode && !this.multicastClient.clientinfo.exammode){
+            const lockedSection = Number(serverstatus.lockedSection || 1);
+            const examtype = serverstatus?.examSections?.[lockedSection]?.examtype;
+            if (examtype === 'localvm' && this.localVmStartState !== 'idle') {
+                log.info(`communicationhandler @ processUpdatedServerstatus: localvm start suppressed (state=${this.localVmStartState})`);
+                return;
+            }
             log.info("communicationhandler @ processUpdatedServerstatus: exammode activated");
             this.killScreenlock();
             this.startExam(serverstatus);
@@ -431,6 +486,17 @@ import { switchExamSection } from './switchExamSection.js';
             log.info("communicationhandler @ processUpdatedServerstatus: exammode deactivated");
             this.killScreenlock();
             this.endExam(serverstatus);
+        }
+
+        if (!serverstatus.exammode && this.multicastClient.clientinfo.examtype === 'localvm') {
+            const st = this.multicastClient.clientinfo.localVMState;
+            const inPreflightState = st === 'missing' || st === 'hash_mismatch' || st === 'verifying_hash' || st === 'error';
+            if (inPreflightState || this.localVmStartState !== 'idle') {
+                log.info('communicationhandler @ processUpdatedServerstatus: localvm exammode off -> clearing preflight state');
+                this.multicastClient.clientinfo.localVMState = null;
+                this.multicastClient.clientinfo.localVMHost = null;
+                this.localVmStartState = 'idle';
+            }
         }
     }
 
@@ -590,127 +656,85 @@ import { switchExamSection } from './switchExamSection.js';
        
         if (!primary || primary === "" || !primary.id){ primary = displays[0] }       
 
-        this.multicastClient.clientinfo.exammode = true
         // when allowSectionSwitch: client chooses section, clientinfo.lockedSection is authoritative; do not overwrite with server
         if (!serverstatus.allowSectionSwitch || !this.multicastClient.clientinfo.lockedSection) {
             this.multicastClient.clientinfo.lockedSection = serverstatus.lockedSection;
         }
         const effectiveSection = this.multicastClient.clientinfo.lockedSection;
+
+        const examtype = serverstatus.examSections[effectiveSection].examtype;
+
+        // LocalVM must run preflight BEFORE exammode and BEFORE opening the exam window.
+        if (examtype === 'localvm') {
+            if (WindowHandler.examwindow) {
+                log.warn('communicationhandler @ startExam: localvm requested but examwindow already exists');
+                return;
+            }
+            if (this.localVmStartState !== 'idle') {
+                log.info(`communicationhandler @ startExam: localvm start suppressed (state=${this.localVmStartState})`);
+                return;
+            }
+            this.localVmStartState = 'starting';
+            try {                
+                let preflight = null;
+                try {
+                    preflight = await this.preflightLocalVm(serverstatus, effectiveSection);
+                } catch (e) {
+                    log.error('communicationhandler @ startExam: preflightLocalVm failed', e);
+                    this.multicastClient.clientinfo.localVMState = 'error';
+                    this.multicastClient.clientinfo.exammode = false;
+                    this.localVmStartState = 'blocked';
+                    return;
+                }
+                if (!preflight?.allowStart) {
+                    this.multicastClient.clientinfo.exammode = false;
+                    this.localVmStartState = 'blocked';
+                    return;
+                }
+                try {
+                    await qemuService.startHeadless({
+                        workdirectory: this.config.workdirectory,
+                        qcow2Name: preflight.qcow2Name,
+                        vncDisplay: ':1',
+                        overlayName: preflight.overlayName,
+                        blockInternet: preflight.blockInternet,
+                    });
+                    this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
+                    this.multicastClient.clientinfo.localVMPort = Number(preflight.vncPort) || 5901;
+                    this.multicastClient.clientinfo.localVMState = 'running';
+                } catch (e) {
+                    log.error('communicationhandler @ startExam: qemu start failed', e);
+                    this.multicastClient.clientinfo.localVMHost = null;
+                    this.multicastClient.clientinfo.localVMState = 'error';
+                    this.multicastClient.clientinfo.exammode = false;
+                    this.localVmStartState = 'blocked';
+                    return;
+                }
+
+                this.multicastClient.clientinfo.exammode = true
+                this.multicastClient.clientinfo.examtype = examtype
+                this.multicastClient.clientinfo.cmargin = serverstatus.examSections[effectiveSection].cmargin
+                this.multicastClient.clientinfo.linespacing = serverstatus.examSections[effectiveSection].linespacing
+                this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[effectiveSection].audioRepeat
+                log.info("communicationhandler @ startExam: creating exam window")
+                WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+                this.localVmStartState = 'idle';
+            } catch (e) {
+                this.localVmStartState = 'blocked';
+                throw e;
+            }
+            return;
+        }
+
+        this.multicastClient.clientinfo.exammode = true
         this.multicastClient.clientinfo.cmargin = serverstatus.examSections[effectiveSection].cmargin  // this is used to configure margin settings for the editor
         this.multicastClient.clientinfo.linespacing = serverstatus.examSections[effectiveSection].linespacing // we try to double linespacing on demand in pdf creation
         this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[effectiveSection].audioRepeat // restrict repetition of audio files (for listening comprehension)
 
-        const examtype = serverstatus.examSections[effectiveSection].examtype;
-
         if (!WindowHandler.examwindow){  // why do we check? because exammode is left if the server connection gets lost but students could reconnect while the exam window is still open and we don't want to create a second one
             log.info("communicationhandler @ startExam: creating exam window")
             this.multicastClient.clientinfo.examtype = examtype
-
-            if (examtype === 'localvm') {
-                try {
-                    const examSection = serverstatus.examSections[effectiveSection];
-                    const hasGroups = !!examSection?.groups;
-                    let group = this.multicastClient.clientinfo.group || 'a';
-                    if (hasGroups) {
-                        const clientname = this.multicastClient.clientinfo.name;
-                        const groupA = examSection.groupA?.users ?? [];
-                        const groupB = examSection.groupB?.users ?? [];
-                        if (groupB.includes(clientname)) group = 'b';
-                        else if (groupA.includes(clientname)) group = 'a';
-                        else group = 'a';
-                    } else {
-                        group = 'a';
-                    }
-
-                    const vmConfig = group === 'b'
-                        ? (examSection?.groupB?.examConfig?.localvm || {})
-                        : (examSection?.groupA?.examConfig?.localvm || {});
-
-                    const qcow2Name = vmConfig.qcow2Name;
-                    const vncPort = Number(vmConfig.vncPort || 5901);
-                    const calculateSha256 = vmConfig.calculateSha256 === true;
-                    const expectedSha256 = calculateSha256 ? vmConfig.qcow2Sha256 : null;
-                    const expectedSizeBytes = !calculateSha256 ? vmConfig.qcow2SizeBytes : null;
-                    const blockInternet = !!vmConfig.blockInternet;
-                    log.info(`communicationhandler @ startExam: localvm cfg (disk=${qcow2Name || '-'}, port=${vncPort}, blockInternet=${blockInternet}, calcHash=${calculateSha256}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
-                    if (!qcow2Name) {
-                        log.error("communicationhandler @ startExam: no qcow2Name configured for localvm examtype");
-                        this.multicastClient.clientinfo.localVMHost = null;
-                        this.multicastClient.clientinfo.localVMPort = vncPort;
-                        this.multicastClient.clientinfo.localVMState = 'missing';
-                    } else {
-                        this.multicastClient.clientinfo.localVMHost = null;
-                        this.multicastClient.clientinfo.localVMPort = vncPort;
-                        if (calculateSha256 && !expectedSha256) {
-                            log.error("communicationhandler @ startExam: calculateSha256 enabled but qcow2Sha256 missing");
-                            this.multicastClient.clientinfo.localVMState = 'error';
-                            WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
-                            return;
-                        }
-                        if (!calculateSha256 && (typeof expectedSizeBytes !== 'number' || !Number.isFinite(expectedSizeBytes) || expectedSizeBytes <= 0)) {
-                            log.error("communicationhandler @ startExam: calculateSha256 disabled but qcow2SizeBytes missing");
-                            this.multicastClient.clientinfo.localVMState = 'error';
-                            WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
-                            return;
-                        }
-                        try {
-                            if (expectedSha256) {
-                                this.multicastClient.clientinfo.localVMState = 'verifying_hash';
-                                log.info('communicationhandler @ startExam: open exam window before pre-start hash verify (VM starts only after allowStart)');
-                                WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
-                                const pre = await this.runLocalVmPreStartVerify(qcow2Name, expectedSha256, null);
-                                if (!pre.allowStart) {
-                                    /* state set inside verify; exam window already open for localvmview feedback */
-                                } else {
-                                    await qemuService.startHeadless({
-                                        workdirectory: this.config.workdirectory,
-                                        qcow2Name,
-                                        vncDisplay: ':1',
-                                        overlayName: `${qcow2Name}.overlay.${this.multicastClient.clientinfo.servername || 'exam'}.${this.multicastClient.clientinfo.pin || '0'}.qcow2`,
-                                        blockInternet,
-                                    });
-                                    this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
-                                    this.multicastClient.clientinfo.localVMState = 'running';
-                                }
-                            } else {
-                                this.multicastClient.clientinfo.localVMState = 'verifying_hash';
-                                log.info('communicationhandler @ startExam: open exam window before pre-start size verify (VM starts only after allowStart)');
-                                WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
-                                const pre = await this.runLocalVmPreStartVerify(qcow2Name, null, Number(expectedSizeBytes));
-                                if (!pre.allowStart) {
-                                    /* state set inside verify; exam window already open for localvmview feedback */
-                                    return;
-                                }
-                                await qemuService.startHeadless({
-                                    workdirectory: this.config.workdirectory,
-                                    qcow2Name,
-                                    vncDisplay: ':1',
-                                    overlayName: `${qcow2Name}.overlay.${this.multicastClient.clientinfo.servername || 'exam'}.${this.multicastClient.clientinfo.pin || '0'}.qcow2`,
-                                    blockInternet,
-                                });
-                                this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
-                                this.multicastClient.clientinfo.localVMState = 'running';
-                            }
-                        } catch (e) {
-                            this.multicastClient.clientinfo.localVMHost = null;
-                            const msg = String(e?.message || e);
-                            if (msg.toLowerCase().includes('disk not found')) {
-                                this.multicastClient.clientinfo.localVMState = 'missing';
-                            } else {
-                                this.multicastClient.clientinfo.localVMState = 'error';
-                            }
-                        }
-                    }
-                } catch (err) {
-                    log.error("communicationhandler @ startExam: LocalVM start failed", err);
-                    this.multicastClient.clientinfo.localVMHost = null;
-                    this.multicastClient.clientinfo.localVMState = 'error';
-                }
-            }
-
-            if (!WindowHandler.examwindow) {
-                WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
-            }
+            WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
         }
         else if (WindowHandler.examwindow){  //reconnect into active exam session with exam window already open
             log.error("communicationhandler @ startExam: found existing Examwindow..")

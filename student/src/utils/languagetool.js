@@ -131,7 +131,7 @@ async function LTcheckAllWords(closeLT = true){
             headers,
             body: new URLSearchParams({
                 text: this.text,
-                language: this.ltLanguage || this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang
+                language: this.ltLanguage || this.getEditorExamConfig?.(this.lockedSection)?.spellchecklang || this.serverstatus?.examSections?.[this.serverstatus?.activeSection]?.spellchecklang
             }).toString()
         });
 
@@ -512,7 +512,9 @@ function LTfindByOffsetMap(word, offsetMap) {
 // }
     
 function LThighlightWords() {
-    if (!this.textContainer || (!this.serverstatus.examSections[this.serverstatus.activeSection].languagetool && !this.privateSpellcheck.activated)) {
+    const editorCfg = this.getEditorExamConfig?.(this.lockedSection) || null
+    const ltEnabled = editorCfg ? !!editorCfg.languagetool : !!this.serverstatus?.examSections?.[this.serverstatus?.activeSection]?.languagetool
+    if (!this.textContainer || (!ltEnabled && !this.privateSpellcheck.activated)) {
         console.log(this.privateSpellcheck);
         this.LTdisable(); 
         return;
