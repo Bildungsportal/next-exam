@@ -407,6 +407,9 @@ export default {
         this.onConnectError();
         return;
       }
+      this.rfb.scaleViewport = true;
+      this.rfb.resizeSession = true;
+      this.rfb.clipViewport = false;
 
       this.rfb.addEventListener('connect', () => {
         const st = this.clientinfo?.localVMState;
@@ -759,15 +762,23 @@ export default {
 </script>
 
 <style scoped>
+#content {
+  border-radius: 0px !important;
+}
+
 .vnc-wrapper {
   position: relative;
   width: 100%;
   height: 100%;
+  flex: 1;
+  display: flex;
+  min-height: 0;
 }
 
 .vnc-container {
   width: 100%;
   height: 100%;
+  flex: 1;
   background: #000;
   overflow: hidden;
 }

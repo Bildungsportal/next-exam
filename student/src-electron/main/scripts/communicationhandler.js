@@ -68,17 +68,24 @@ import { switchExamSection } from './switchExamSection.js';
     }
 
     // SHA-256 of base qcow2 before QEMU start (full read while VM runs starves guest disk I/O).
-    async runLocalVmPreStartVerify(qcow2Name, expectedSha256) {
-        if (!expectedSha256) {
-            return { allowStart: true };
-        }
+    async runLocalVmPreStartVerify(qcow2Name, expectedSha256, expectedSizeBytes) {
         try {
-            log.info(`communicationhandler @ runLocalVmPreStartVerify: sha256 before start for ${qcow2Name}`);
-            const verify = await qemuService.verifyDiskSha256({
-                workdirectory: this.config.workdirectory,
-                qcow2Name,
-                expectedSha256,
-            });
+            if (expectedSha256) {
+                log.info(`communicationhandler @ runLocalVmPreStartVerify: sha256 before start for ${qcow2Name}`);
+            } else {
+                log.info(`communicationhandler @ runLocalVmPreStartVerify: size check before start for ${qcow2Name} (expectedBytes=${expectedSizeBytes})`);
+            }
+            const verify = expectedSha256
+                ? await qemuService.verifyDiskSha256({
+                    workdirectory: this.config.workdirectory,
+                    qcow2Name,
+                    expectedSha256,
+                })
+                : await qemuService.verifyDiskSize({
+                    workdirectory: this.config.workdirectory,
+                    qcow2Name,
+                    expectedSizeBytes,
+                });
             if (!verify.ok) {
                 if (verify.error === 'disk not found') {
                     this.multicastClient.clientinfo.localVMHost = null;
@@ -91,13 +98,18 @@ import { switchExamSection } from './switchExamSection.js';
                 return { allowStart: false };
             }
             if (!verify.match) {
-                log.warn(`communicationhandler @ runLocalVmPreStartVerify: hash mismatch for ${qcow2Name}`);
+                const mismatch = expectedSha256 ? 'hash mismatch' : 'size mismatch';
+                log.warn(`communicationhandler @ runLocalVmPreStartVerify: ${mismatch} for ${qcow2Name}`);
                 this.multicastClient.clientinfo.localVMHost = null;
                 this.multicastClient.clientinfo.localVMState = 'hash_mismatch';
                 this.applyLocalVmSecurityLockdown();
                 return { allowStart: false };
             }
-            log.info(`communicationhandler @ runLocalVmPreStartVerify: hash OK for ${qcow2Name}`);
+            if (expectedSha256) {
+                log.info(`communicationhandler @ runLocalVmPreStartVerify: hash OK for ${qcow2Name}`);
+            } else {
+                log.info(`communicationhandler @ runLocalVmPreStartVerify: size OK for ${qcow2Name} (actualBytes=${verify.actual}, expectedBytes=${expectedSizeBytes})`);
+            }
             return { allowStart: true };
         } catch (e) {
             log.error('communicationhandler @ runLocalVmPreStartVerify', e);
@@ -616,9 +628,11 @@ import { switchExamSection } from './switchExamSection.js';
 
                     const qcow2Name = vmConfig.qcow2Name;
                     const vncPort = Number(vmConfig.vncPort || 5901);
-                    const expectedSha256 = vmConfig.qcow2Sha256;
+                    const calculateSha256 = vmConfig.calculateSha256 === true;
+                    const expectedSha256 = calculateSha256 ? vmConfig.qcow2Sha256 : null;
+                    const expectedSizeBytes = !calculateSha256 ? vmConfig.qcow2SizeBytes : null;
                     const blockInternet = !!vmConfig.blockInternet;
-                    log.info(`communicationhandler @ startExam: localvm cfg (disk=${qcow2Name || '-'}, port=${vncPort}, blockInternet=${blockInternet}, hasHash=${!!expectedSha256})`);
+                    log.info(`communicationhandler @ startExam: localvm cfg (disk=${qcow2Name || '-'}, port=${vncPort}, blockInternet=${blockInternet}, calcHash=${calculateSha256}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
                     if (!qcow2Name) {
                         log.error("communicationhandler @ startExam: no qcow2Name configured for localvm examtype");
                         this.multicastClient.clientinfo.localVMHost = null;
@@ -627,15 +641,24 @@ import { switchExamSection } from './switchExamSection.js';
                     } else {
                         this.multicastClient.clientinfo.localVMHost = null;
                         this.multicastClient.clientinfo.localVMPort = vncPort;
-                        if (!expectedSha256) {
-                            log.warn("communicationhandler @ startExam: no qcow2Sha256 – starting VM without base-image hash verify");
+                        if (calculateSha256 && !expectedSha256) {
+                            log.error("communicationhandler @ startExam: calculateSha256 enabled but qcow2Sha256 missing");
+                            this.multicastClient.clientinfo.localVMState = 'error';
+                            WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+                            return;
+                        }
+                        if (!calculateSha256 && (typeof expectedSizeBytes !== 'number' || !Number.isFinite(expectedSizeBytes) || expectedSizeBytes <= 0)) {
+                            log.error("communicationhandler @ startExam: calculateSha256 disabled but qcow2SizeBytes missing");
+                            this.multicastClient.clientinfo.localVMState = 'error';
+                            WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+                            return;
                         }
                         try {
                             if (expectedSha256) {
                                 this.multicastClient.clientinfo.localVMState = 'verifying_hash';
                                 log.info('communicationhandler @ startExam: open exam window before pre-start hash verify (VM starts only after allowStart)');
                                 WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
-                                const pre = await this.runLocalVmPreStartVerify(qcow2Name, expectedSha256);
+                                const pre = await this.runLocalVmPreStartVerify(qcow2Name, expectedSha256, null);
                                 if (!pre.allowStart) {
                                     /* state set inside verify; exam window already open for localvmview feedback */
                                 } else {
@@ -650,6 +673,14 @@ import { switchExamSection } from './switchExamSection.js';
                                     this.multicastClient.clientinfo.localVMState = 'running';
                                 }
                             } else {
+                                this.multicastClient.clientinfo.localVMState = 'verifying_hash';
+                                log.info('communicationhandler @ startExam: open exam window before pre-start size verify (VM starts only after allowStart)');
+                                WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+                                const pre = await this.runLocalVmPreStartVerify(qcow2Name, null, Number(expectedSizeBytes));
+                                if (!pre.allowStart) {
+                                    /* state set inside verify; exam window already open for localvmview feedback */
+                                    return;
+                                }
                                 await qemuService.startHeadless({
                                     workdirectory: this.config.workdirectory,
                                     qcow2Name,
@@ -658,7 +689,7 @@ import { switchExamSection } from './switchExamSection.js';
                                     blockInternet,
                                 });
                                 this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
-                                this.multicastClient.clientinfo.localVMState = 'unverified_hash';
+                                this.multicastClient.clientinfo.localVMState = 'running';
                             }
                         } catch (e) {
                             this.multicastClient.clientinfo.localVMHost = null;

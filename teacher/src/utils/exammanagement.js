@@ -19,25 +19,39 @@ async function startExam(){
     const rawSection = Number(this.serverstatus.activeSection) || 1
     const sectionIndex = Math.min(Math.max(1, rawSection), 4)
 
-    // LocalVM/QEMU hash is computed when selecting the disk (configureLocalVM).
+    // LocalVM/QEMU hash is computed when selecting the disk (configureLocalVM) – if enabled.
     try {
         const examSection = this.serverstatus.examSections[sectionIndex]
         if (examSection?.examtype === 'localvm') {
             const hasGroups = !!examSection.groups
             const cfgA = examSection?.groupA?.examConfig?.localvm || {}
             const cfgB = examSection?.groupB?.examConfig?.localvm || {}
+            const wantsHashA = cfgA.calculateSha256 === true
+            const wantsHashB = cfgB.calculateSha256 === true
             if (!hasGroups) {
-                if (cfgA.qcow2Name && !cfgA.qcow2Sha256) {
+                if (cfgA.qcow2Name && wantsHashA && !cfgA.qcow2Sha256) {
                     this.status('LocalVM: Hash fehlt – bitte VM-Disk erneut wählen.')
                     return
                 }
+                if (cfgA.qcow2Name && !wantsHashA && !cfgA.qcow2SizeBytes) {
+                    this.status('LocalVM: Dateigröße fehlt – bitte VM-Disk erneut wählen.')
+                    return
+                }
             } else {
-                if (cfgA.qcow2Name && !cfgA.qcow2Sha256) {
+                if (cfgA.qcow2Name && wantsHashA && !cfgA.qcow2Sha256) {
                     this.status('LocalVM: Hash fehlt (Gruppe A) – bitte VM-Disk erneut wählen.')
                     return
                 }
-                if (cfgB.qcow2Name && !cfgB.qcow2Sha256) {
+                if (cfgB.qcow2Name && wantsHashB && !cfgB.qcow2Sha256) {
                     this.status('LocalVM: Hash fehlt (Gruppe B) – bitte VM-Disk erneut wählen.')
+                    return
+                }
+                if (cfgA.qcow2Name && !wantsHashA && !cfgA.qcow2SizeBytes) {
+                    this.status('LocalVM: Dateigröße fehlt (Gruppe A) – bitte VM-Disk erneut wählen.')
+                    return
+                }
+                if (cfgB.qcow2Name && !wantsHashB && !cfgB.qcow2SizeBytes) {
+                    this.status('LocalVM: Dateigröße fehlt (Gruppe B) – bitte VM-Disk erneut wählen.')
                     return
                 }
             }

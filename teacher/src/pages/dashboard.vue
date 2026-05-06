@@ -580,11 +580,15 @@
                         <div class="basematerial-row">
                             <span class="basematerial-group-pill">A</span>
                             <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.localvm?.qcow2Name">
-                                <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate"
-                                    :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.localvm.qcow2Name"
-                                    @click="configureLocalVM('a')">
-                                    <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.localvm.qcow2Name }}</span>
-                                </button>
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate"
+                                        :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.localvm.qcow2Name"
+                                        @click="configureLocalVM('a')">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.localvm.qcow2Name }}</span>
+                                    </button>
+                                    <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.localvm.blockInternet" class="btn btn-sm btn-warning sd-sf-btn" title="Internet in der VM blockiert"><span class="sd-sf-stack">WEB</span></div>
+                                    <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.localvm.calculateSha256" class="btn btn-sm btn-warning sd-sf-btn" title="SHA256 Hash überprüfen aktiviert"><span class="sd-sf-stack">SHA</span></div>
+                                </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureLocalVM('a')">
                                 <span class="sidebar-pick-btn__label">QEMU VM wählen</span>
@@ -595,11 +599,15 @@
                         <div class="basematerial-row">
                             <span class="basematerial-group-pill basematerial-group-pill--b">B</span>
                             <template v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.localvm?.qcow2Name">
-                                <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate"
-                                    :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.localvm.qcow2Name"
-                                    @click="configureLocalVM('b')">
-                                    <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.localvm.qcow2Name }}</span>
-                                </button>
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate"
+                                        :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.localvm.qcow2Name"
+                                        @click="configureLocalVM('b')">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.localvm.qcow2Name }}</span>
+                                    </button>
+                                    <div v-if="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.localvm.blockInternet" class="btn btn-sm btn-warning sd-sf-btn" title="Internet in der VM blockiert"><span class="sd-sf-stack">WEB</span></div>
+                                    <div v-if="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.localvm.calculateSha256" class="btn btn-sm btn-warning sd-sf-btn" title="SHA256 Hash überprüfen aktiviert"><span class="sd-sf-stack">SHA</span></div>
+                                </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureLocalVM('b')">
                                 <span class="sidebar-pick-btn__label">QEMU VM wählen</span>
@@ -612,11 +620,15 @@
                         <div class="basematerial-row">
                             <span class="basematerial-group-pill basematerial-group-pill--ab" aria-label="A/B">AB</span>
                             <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.localvm?.qcow2Name">
-                                <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate"
-                                    :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.localvm.qcow2Name"
-                                    @click="configureLocalVM('all')">
-                                    <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.localvm.qcow2Name }}</span>
-                                </button>
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate"
+                                        :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.localvm.qcow2Name"
+                                        @click="configureLocalVM('all')">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.localvm.qcow2Name }}</span>
+                                    </button>
+                                    <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.localvm.blockInternet" class="btn btn-sm btn-warning sd-sf-btn" title="Internet in der VM blockiert"><span class="sd-sf-stack">WEB</span></div>
+                                    <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.localvm.calculateSha256" class="btn btn-sm btn-warning sd-sf-btn" title="SHA256 Hash überprüfen aktiviert"><span class="sd-sf-stack">SHA</span></div>
+                                </div>
                             </template>
                             <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureLocalVM('all')">
                                 <span class="sidebar-pick-btn__label">QEMU VM wählen</span>
@@ -1533,15 +1545,18 @@ computed: {
             return section.groups ? (hasA && hasB) : hasA;
         }
         if (examType === 'localvm') {
+            const isOk = (cfg) => {
+                if (!cfg || !cfg.qcow2Name) return false;
+                const wantsHash = cfg.calculateSha256 === true;
+                return wantsHash ? !!cfg.qcow2Sha256 : !!cfg.qcow2SizeBytes;
+            };
             if (!section.groups) {
                 const c = section.groupA?.examConfig?.localvm || {};
-                return !!(c.qcow2Name && c.qcow2Sha256);
+                return isOk(c);
             }
             const cfgA = section.groupA?.examConfig?.localvm || {};
             const cfgB = section.groupB?.examConfig?.localvm || {};
-            const okA = !cfgA.qcow2Name || !!cfgA.qcow2Sha256;
-            const okB = !cfgB.qcow2Name || !!cfgB.qcow2Sha256;
-            return !!(cfgA.qcow2Name || cfgB.qcow2Name) && okA && okB;
+            return isOk(cfgA) && isOk(cfgB);
         }
         return true;
     },

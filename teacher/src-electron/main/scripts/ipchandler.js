@@ -211,6 +211,17 @@ class IpcHandler {
             }
         })
 
+        ipcMain.handle('qemu-stat-disk', async (_event, payload = {}) => {
+            try {
+                const { qcow2Name } = payload || {}
+                const { size } = await qemuService.statDisk({ workdirectory: config.workdirectory, qcow2Name })
+                return { ok: true, size }
+            } catch (e) {
+                log.error('ipchandler @ qemu-stat-disk', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
+
         ipcMain.handle('qemu-boot-disk', async (_event, payload = {}) => {
             try {
                 const { qcow2Name } = payload || {}

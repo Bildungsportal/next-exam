@@ -811,6 +811,10 @@ async function configureLocalVM(presetGroup){
         activeGroup === 'b'
             ? !!groupB.examConfig.localvm.blockInternet
             : !!groupA.examConfig.localvm.blockInternet;
+    const currentCalculateSha256 =
+        activeGroup === 'b'
+            ? (groupB.examConfig.localvm.calculateSha256 === true)
+            : (groupA.examConfig.localvm.calculateSha256 === true);
 
     let selectedDisk =
         preferredDisk && disks.includes(preferredDisk)
@@ -860,6 +864,18 @@ async function configureLocalVM(presetGroup){
                     <input class="form-check-input" type="checkbox" role="switch" id="qemuBlockInternet" ${currentBlockInternet ? 'checked' : ''}>
                 </label>
             </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:8px;">
+                <label for="qemuCalculateSha256" style="margin:0; font-size:0.85em;">
+                    SHA256 Hash überprüfen
+                    <span
+                        title="Wenn diese Option deaktiviert ist wird die VM Integrität über die Dateigrösse kontrolliert"
+                        style="margin-left:6px; color:#6c757d; cursor:help; font-weight:700;"
+                    >i</span>
+                </label>
+                <label class="form-check form-switch" style="margin:0;">
+                    <input class="form-check-input" type="checkbox" role="switch" id="qemuCalculateSha256" ${currentCalculateSha256 ? 'checked' : ''}>
+                </label>
+            </div>
         </div>
 
         <div style="margin:4px 0; height:1px; background:rgba(255,255,255,0.08);"></div>
@@ -891,9 +907,10 @@ async function configureLocalVM(presetGroup){
         allowOutsideClick: () => !this.$swal.isLoading(),
         preConfirm: async () => {
             const blockInternet = !!document.getElementById('qemuBlockInternet')?.checked;
+            const calculateSha256 = !!document.getElementById('qemuCalculateSha256')?.checked;
             try {
                 const statusEl = document.getElementById('qemuHashStatus');
-                if (statusEl) statusEl.textContent = 'Berechne SHA-256…';
+                if (statusEl) statusEl.textContent = calculateSha256 ? 'Berechne SHA-256…' : 'Prüfe Dateigröße…';
             } catch (e) {}
             try {
                 const list = document.getElementById('qemuDiskList');
@@ -907,13 +924,26 @@ async function configureLocalVM(presetGroup){
             if (!selectedDisk) {
                 return 'Please select a disk.';
             }
+            let sizeBytes = null;
+            try {
+                const statRes = await ipc.invoke('qemu-stat-disk', { qcow2Name: selectedDisk });
+                sizeBytes = statRes && statRes.ok ? statRes.size : null;
+            } catch (e) {
+                sizeBytes = null;
+            }
+            if (typeof sizeBytes !== 'number' || !Number.isFinite(sizeBytes) || sizeBytes <= 0) {
+                return 'Konnte Dateigröße der qcow2 Disk nicht ermitteln.';
+            }
+            if (!calculateSha256) {
+                return { selectedDisk, sha256: null, sizeBytes, blockInternet, calculateSha256: false };
+            }
             try {
                 const hashRes = await ipc.invoke('qemu-hash-disk', { qcow2Name: selectedDisk });
                 const sha256 = hashRes && hashRes.ok ? hashRes.sha256 : null;
                 if (!sha256) {
                     return 'Konnte SHA-256 Hash der qcow2 Disk nicht berechnen.';
                 }
-                return { selectedDisk, sha256, blockInternet };
+                return { selectedDisk, sha256, sizeBytes, blockInternet, calculateSha256: true };
             } catch (e) {
                 return 'Konnte SHA-256 Hash der qcow2 Disk nicht berechnen.';
             }
@@ -1013,18 +1043,20 @@ async function configureLocalVM(presetGroup){
     if (!pick.isConfirmed) return;
 
     const finalDisk = pick.value?.selectedDisk || selectedDisk;
-    const sha256 = pick.value?.sha256 || null;
+    const calculateSha256 = pick.value?.calculateSha256 === true;
+    const sha256 = calculateSha256 ? (pick.value?.sha256 || null) : null;
+    const sizeBytes = pick.value?.sizeBytes ?? null;
     const blockInternet = !!pick.value?.blockInternet;
-    if (!finalDisk || !sha256) {
+    if (!finalDisk || (typeof sizeBytes !== 'number' || !Number.isFinite(sizeBytes) || sizeBytes <= 0) || (calculateSha256 && !sha256)) {
         await this.$swal.fire({
             icon: 'error',
             title: 'LocalVM',
-            text: 'Konnte SHA-256 Hash der qcow2 Disk nicht berechnen.'
+            text: calculateSha256 ? 'Konnte SHA-256 Hash der qcow2 Disk nicht berechnen.' : 'Konnte Dateigröße der qcow2 Disk nicht ermitteln.'
         });
         return;
     }
 
-    const nextCfg = { qcow2Name: finalDisk, vncPort: 5901, qcow2Sha256: sha256, blockInternet };
+    const nextCfg = { qcow2Name: finalDisk, vncPort: 5901, calculateSha256, qcow2Sha256: sha256, qcow2SizeBytes: sizeBytes, blockInternet };
     if (!hasGroups) {
         groupA.examConfig.localvm = nextCfg;
         groupB.examConfig.localvm = { ...nextCfg };

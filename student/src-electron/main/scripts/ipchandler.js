@@ -136,19 +136,19 @@ class IpcHandler {
 
         ipcMain.handle('qemu-start-headless', async (_event, payload = {}) => {
             try {
-                const { qcow2Name, vncPort, overlayName, blockInternet, expectedSha256, forceFreshOverlay } = payload || {};
-                log.info(`ipchandler @ qemu-start-headless: start requested (disk=${qcow2Name}, port=${vncPort}, blockInternet=${!!blockInternet}, hasHash=${!!expectedSha256})`);
+                const { qcow2Name, vncPort, overlayName, blockInternet, expectedSha256, expectedSizeBytes, forceFreshOverlay } = payload || {};
+                log.info(`ipchandler @ qemu-start-headless: start requested (disk=${qcow2Name}, port=${vncPort}, blockInternet=${!!blockInternet}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
                 const vncDisplay = Number(vncPort) === 5901 ? ':1' : ':1';
                 if (this.multicastClient?.clientinfo) {
                     this.multicastClient.clientinfo.localVMHost = null;
                     this.multicastClient.clientinfo.localVMPort = Number(vncPort) || 5901;
-                    this.multicastClient.clientinfo.localVMState = expectedSha256 ? 'verifying_hash' : 'starting';
+                    this.multicastClient.clientinfo.localVMState = (expectedSha256 || expectedSizeBytes) ? 'verifying_hash' : 'starting';
                 }
-                if (expectedSha256) {
+                if (expectedSha256 || expectedSizeBytes) {
                     if (!this.CommunicationHandler?.runLocalVmPreStartVerify) {
                         throw new Error('runLocalVmPreStartVerify unavailable');
                     }
-                    const pre = await this.CommunicationHandler.runLocalVmPreStartVerify(qcow2Name, expectedSha256);
+                    const pre = await this.CommunicationHandler.runLocalVmPreStartVerify(qcow2Name, expectedSha256 || null, expectedSha256 ? null : expectedSizeBytes);
                     if (!pre.allowStart) {
                         log.warn(`ipchandler @ qemu-start-headless: pre-start verify blocked start for ${qcow2Name}`);
                         return { ok: false, error: 'localvm hash verify failed or disk missing' };
@@ -165,7 +165,7 @@ class IpcHandler {
                 if (this.multicastClient?.clientinfo) {
                     this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
                     this.multicastClient.clientinfo.localVMPort = Number(vncPort) || 5901;
-                    this.multicastClient.clientinfo.localVMState = expectedSha256 ? 'running' : 'unverified_hash';
+                    this.multicastClient.clientinfo.localVMState = (expectedSha256 || expectedSizeBytes) ? 'running' : 'unverified_hash';
                 }
                 return { ok: true, result };
             } catch (err) {

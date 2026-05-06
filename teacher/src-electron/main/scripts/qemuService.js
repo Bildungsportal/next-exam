@@ -128,6 +128,21 @@ async function hashDisk({ workdirectory, qcow2Name }) {
     return await sha256File(p);
 }
 
+async function statDisk({ workdirectory, qcow2Name }) {
+    const qemuDir = getQemuDir(workdirectory);
+    await ensureDir(qemuDir);
+    const filename = path.basename(String(qcow2Name || ''));
+    if (!filename || filename !== String(qcow2Name || '')) {
+        throw new Error('invalid qcow2Name');
+    }
+    if (!filename.toLowerCase().endsWith('.qcow2')) {
+        throw new Error('invalid qcow2Name');
+    }
+    const p = path.join(qemuDir, filename);
+    const st = await fs.promises.stat(p);
+    return { size: st.size };
+}
+
 async function ensureAnswerIsoPresent(qemuDir) {
     const dest = path.join(qemuDir, DEFAULTS.answerIsoName);
     if (fs.existsSync(dest)) return dest;
@@ -244,6 +259,7 @@ async function importDisk({ workdirectory, sourcePath }) {
 export default {
     listDisks,
     hashDisk,
+    statDisk,
     installDefaultVm,
     bootDisk,
     importDisk,

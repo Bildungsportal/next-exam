@@ -195,14 +195,18 @@ async function shutdownVmGracefully({ timeoutMs = 8000 } = {}) {
 function _unlinkIfExists(p) {
     const filePath = String(p || '');
     if (!filePath) {
-        return;
+        return false;
     }
     try {
         if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
+            log.info(`qemuService: deleted ${filePath}`);
+            return true;
         }
+        return true;
     } catch (e) {
         log.error(`qemuService: failed to delete ${filePath}`, e);
+        return false;
     }
 }
 
@@ -236,10 +240,10 @@ async function stopVmAsync({ graceful = true, shutdownTimeoutMs = 8000, killTime
         vmProc = null;
         vmDisk = null;
         vmVncDisplay = null;
-        vmOverlayPath = null;
-        vmQmpPath = null;
-        _unlinkIfExists(overlayToDelete);
-        _unlinkIfExists(qmpToDelete);
+        const overlayDeleted = _unlinkIfExists(overlayToDelete);
+        const qmpDeleted = _unlinkIfExists(qmpToDelete);
+        if (overlayDeleted) vmOverlayPath = null;
+        if (qmpDeleted) vmQmpPath = null;
         return { ok: true, alreadyStopped: true };
     }
 
@@ -268,12 +272,12 @@ async function stopVmAsync({ graceful = true, shutdownTimeoutMs = 8000, killTime
     vmProc = null;
     vmDisk = null;
     vmVncDisplay = null;
-    vmOverlayPath = null;
-    vmQmpPath = null;
 
     // Delete overlay/socket only after process is gone to avoid file locks on qcow2/qmp.
-    _unlinkIfExists(overlayToDelete);
-    _unlinkIfExists(qmpToDelete);
+    const overlayDeleted = _unlinkIfExists(overlayToDelete);
+    const qmpDeleted = _unlinkIfExists(qmpToDelete);
+    if (overlayDeleted) vmOverlayPath = null;
+    if (qmpDeleted) vmQmpPath = null;
 
     return { ok: true, exited: !!exited, graceful: gracefulOk };
 }
@@ -375,6 +379,23 @@ async function verifyDiskSha256({ workdirectory, qcow2Name, expectedSha256 }) {
     return { ok: true, match: actual.toLowerCase() === expectedSha256.toLowerCase(), actual };
 }
 
+async function verifyDiskSize({ workdirectory, qcow2Name, expectedSizeBytes }) {
+    if (typeof expectedSizeBytes !== 'number' || !Number.isFinite(expectedSizeBytes) || expectedSizeBytes <= 0) {
+        return { ok: false, match: false, error: 'missing expected size' };
+    }
+    const disk = diskPath(workdirectory, qcow2Name);
+    try {
+        const st = await fs.promises.stat(disk);
+        const actual = st.size;
+        return { ok: true, match: actual === expectedSizeBytes, actual };
+    } catch (e) {
+        if (!fs.existsSync(disk)) {
+            return { ok: false, match: false, error: 'disk not found' };
+        }
+        return { ok: false, match: false, error: String(e?.message || e) };
+    }
+}
+
 async function downloadDiskFromTeacher({ serverip, serverApiPort, servername, token, filename, workdirectory, overwrite = false }) {
     if (!serverip || !serverApiPort || !servername || !token) {
         throw new Error('invalid download args');
@@ -448,6 +469,7 @@ export default {
     killAllLocalQemu,
     downloadDiskFromTeacher,
     verifyDiskSha256,
+    verifyDiskSize,
     importDisk,
 };
 
