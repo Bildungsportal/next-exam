@@ -124,15 +124,26 @@ export function applyPreviewWebviewHostLayout(splitview) {
     const webview = document.querySelector('#preview #webview') || document.querySelector('#webview');
     if (!webview) return;
     if (!splitview) {
-        webview.style.height = '80vh';
-        webview.style.width = '80vw';
+        // Match PdfviewPaneRendered .embed-container: same width token + horizontal centering (avoid 80vw + top:10% drift).
+        webview.style.display = 'block';
+        webview.style.boxSizing = 'border-box';
         webview.style.position = 'relative';
-        webview.style.top = '10%';
+        webview.style.top = '0';
+        webview.style.height = '100%';
+        webview.style.width = 'var(--nx-preview-content-width, 100%)';
+        webview.style.maxWidth = '100%';
+        webview.style.marginLeft = 'auto';
+        webview.style.marginRight = 'auto';
     } else {
         webview.style.height = '100%';
         webview.style.width = '100%';
         webview.style.position = 'relative';
         webview.style.top = '0%';
+        webview.style.display = '';
+        webview.style.boxSizing = '';
+        webview.style.maxWidth = '';
+        webview.style.marginLeft = '';
+        webview.style.marginRight = '';
     }
 }
 

@@ -1,5 +1,5 @@
 <template>
-  <div class="column" style="height: 100%">
+  <div class="column nx-localvm-root" style="height: 100%; position: relative;">
     <exam-header
       :serverstatus="serverstatus"
       :clientinfo="clientinfo"
@@ -18,6 +18,49 @@
       @reconnect="reconnect"
       @gracefullyExit="gracefullyExit"
     ></exam-header>
+
+    <div id="toolbar" class="d-inline p-1 pt-0">
+      <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
+
+      <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
+        <div v-if="(file.filetype == 'bak')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ file.filename }}</div>
+        <div v-if="(file.filetype == 'docx')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ file.filename }}</div>
+        <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{ file.filename }} </div>
+        <div v-if="(file.filetype == 'audio')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ file.filename }} </div>
+        <div v-if="(file.filetype == 'image')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{ file.filename }}</div>
+      </div>
+      <div v-if="allowedUrls.length !== 0" v-for="(allowedUrl, urlIdx) in allowedUrls" :key="'localvm-allowed-' + urlIdx" class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button" :title="getUrlDisplay(allowedUrl)" @click="showUrl(getUrlDisplay(allowedUrl))">
+        <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{ getUrlDisplay(allowedUrl) }}
+      </div>
+
+      <div class="white text-muted me-2 ms-2 small d-inline-block mb-0" style="vertical-align: middle;">{{ $t('editor.localfiles') }} </div>
+      <div v-for="file in localfiles" :key="file.name" class="d-inline mb-0">
+        <div v-if="(file.type == 'pdf')" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20"> {{ file.name }} </div>
+        <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{ file.name }} </div>
+      </div>
+    </div>
+
+    <div
+      id="preview"
+      class="fadeinfast p-4"
+      style="--nx-preview-chrome-top: 80px; --nx-preview-top-offset: 0px; --nx-preview-content-width: 90%;"
+    >
+      <WebviewPane
+        id="webview"
+        :src="urlForWebview || ''"
+        :visible="webviewVisible"
+        :allowed-url="urlForWebview"
+        :block-external="true"
+        @close="hidepreview"
+      />
+      <PdfviewPaneRendered
+        :localLockdown="localLockdown"
+        :examtype="examtype"
+        :toolbar="pdfPreviewUi"
+        :preview="pdfPreviewState"
+        @close="hidepreview"
+      />
+    </div>
 
     <div id="content" class="column q-pa-none" style="flex: 1; overflow: hidden;">
       <!-- focus warning start -->
@@ -65,14 +108,17 @@
 import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js';
-import {gracefullyExit, reconnect} from '../utils/commonMethods.js';
+import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js';
+import {getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../utils/filehandler.js';
+import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue';
+import WebviewPane from '../components/WebviewPane.vue';
 import {SignalBridge} from '../utils/signalBridge.js';
 
 const signalBridge = new SignalBridge(window);
 const logPrefix = 'localvmview';
 
 export default {
-  components: { ExamHeader },
+  components: { ExamHeader, PdfviewPaneRendered, WebviewPane },
   data() {
     return {
       componentName: 'LocalVM',
@@ -100,6 +146,16 @@ export default {
       wlanInfo: null,
       hostip: null,
       internetCheckCounter: 0,
+      examMaterials: [],
+      localfiles: null,
+      allowedUrls: [],
+      urlForWebview: null,
+      webviewVisible: false,
+      pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
+      pdfPreviewState: null,
+      currentpreview: null,
+      selectedFile: null,
+      loadfilelistinterval: null,
       statusMessage: '',
       connectAttempts: 0,
       maxAttempts: 10,
@@ -164,9 +220,24 @@ export default {
     }
 
     this.tryConnectLoop();
+
+    this.loadfilelistinterval = new SchedulerService(20000);
+    this.loadfilelistinterval.addEventListener('action', this.loadFilelist);
+    this.loadfilelistinterval.start();
+    this.loadFilelist();
+    this.getExamMaterials();
+    signalBridge.on('getmaterials', () => {
+      this.getExamMaterials();
+    });
   },
   beforeUnmount() {
     this.isUnmounted = true;
+    signalBridge.removeAllListeners('getmaterials');
+    if (this.loadfilelistinterval) {
+      this.loadfilelistinterval.removeEventListener('action', this.loadFilelist);
+      this.loadfilelistinterval.stop();
+      this.loadfilelistinterval = null;
+    }
     if (this.fetchinfointerval) {
       this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
       this.fetchinfointerval.stop();
@@ -186,6 +257,41 @@ export default {
   methods: {
     gracefullyExit,
     reconnect,
+    showUrl,
+    getExamMaterials,
+    loadPDF,
+    loadImage,
+
+    getUrlDisplay(allowedUrl) {
+      return typeof allowedUrl === 'object' ? allowedUrl.url : allowedUrl;
+    },
+
+    hidepreview() {
+      resetPdfPreviewToolbar(this);
+      this.pdfPreviewState = null;
+      this.webviewVisible = false;
+      const preview = document.querySelector('#preview');
+      if (preview) {
+        preview.style.display = 'none';
+      }
+      URL.revokeObjectURL(this.currentpreview);
+    },
+
+    loadBase64file(file) {
+      this.webviewVisible = false;
+      if (file.filetype === 'pdf') {
+        this.loadPDF(file, true);
+        return;
+      }
+      if (file.filetype === 'image') {
+        this.loadImage(file, true);
+      }
+    },
+
+    async loadFilelist() {
+      const filelist = await signalBridge.invoke('getfilesasync', null);
+      this.localfiles = filelist;
+    },
 
     shouldBlockVnc() {
       const st = this.clientinfo?.localVMState;
@@ -488,8 +594,27 @@ export default {
 </script>
 
 <style scoped>
+#toolbar {
+  z-index: 10001;
+  background-color: rgba(var(--bs-dark-rgb));
+  flex-shrink: 0;
+}
+
 #content {
   border-radius: 0px !important;
+}
+
+#preview {
+  display: none;
+  position: absolute;
+  top: var(--nx-preview-chrome-top, 148px);
+  left: 0;
+  width: 100%;
+  box-sizing: border-box;
+  height: calc(100% - var(--nx-preview-chrome-top, 148px));
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 100000;
+  backdrop-filter: blur(2px);
 }
 
 .vnc-wrapper {

@@ -2,8 +2,8 @@
   <div v-show="visible" :id="id" class="position-relative nx-webview-pane-host">
     <div class="nx-webview-pane-fill">
       <ul
-      class="nav nav-tabs d-flex align-items-stretch flex-nowrap position-absolute top-0 start-0 end-0 w-100 bg-white"
-      style="z-index:2000; pointer-events:auto; font-size:1.1rem;"
+      class="nav nav-tabs d-flex align-items-stretch flex-nowrap position-absolute start-0 end-0 w-100 bg-white"
+      style="top: var(--nx-preview-top-offset, 0px); z-index:2000; pointer-events:auto; font-size:1.1rem;"
       @mousedown.stop
       @click.stop
     >
@@ -84,7 +84,7 @@
       id="safebrowser"
       :src="src || ''"
       class="position-absolute start-0 end-0 w-100"
-      style="top:42px; z-index:10000; height:calc(100% - 42px); border:0; min-width:0;"
+      style="top:calc(42px + var(--nx-preview-top-offset, 0px)); z-index:10000; height:calc(100% - 42px - var(--nx-preview-top-offset, 0px)); border:0; min-width:0;"
     />
     </div>
   </div>
