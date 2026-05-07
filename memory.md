@@ -20,3 +20,4 @@ TECH^student^localvmHash^sha256 base qcow2 before qemu start (runLocalVmPreStart
 TECH^student^localvmStart^localVmStartState idle|starting|blocked; qemu-download/import must not set idle while starting (parallel startExam)^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js
 TECH^student^examWin^createExamWindow no-op if examwindow exists (orphan second BrowserWindow)^student/src-electron/main/scripts/windowhandler.js
 TECH^teacher^localvmVerify^localvm calculateSha256(default false); when false, use qcow2SizeBytes stat.size verify; when true, use qcow2Sha256 verify^teacher/src/utils/examsetup.js+exammanagement.js;student/src-electron/main/scripts/communicationhandler.js
+TECH^student^localvmWebdav^WebDAV 0.0.0.0:1900 /share -> workdir; guest http://10.0.2.2:1900/share; blockInternet uses restrict=on+guestfwd tcp:10.0.2.2:1900-tcp:127.0.0.1:1900; start WebDAV before QEMU^student/src-electron/main/scripts/examWebdavServer.js+qemuService.js

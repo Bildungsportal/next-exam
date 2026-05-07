@@ -5,6 +5,7 @@ import { spawn } from 'child_process';
 import log from 'electron-log';
 import crypto from 'crypto';
 import net from 'net';
+import { startExamWebdav, stopExamWebdav, EXAM_WEBDAV_PORT, EXAM_WEBDAV_MOUNT_PATH } from './examWebdavServer.js';
 
 let vmProc = null;
 let vmDisk = null;
@@ -234,6 +235,7 @@ async function _killVmProcessAndWait(killTimeoutMs = 8000) {
 }
 
 async function stopVmAsync({ graceful = true, shutdownTimeoutMs = 8000, killTimeoutMs = 8000 } = {}) {
+    stopExamWebdav();
     if (!vmProc || vmProc.killed) {
         const overlayToDelete = vmOverlayPath;
         const qmpToDelete = vmQmpPath;
@@ -321,8 +323,17 @@ async function startHeadless({ workdirectory, qcow2Name, vncDisplay = ':1', over
         }
     }
 
+    startExamWebdav({
+        rootDir: workdirectory,
+        port: EXAM_WEBDAV_PORT,
+        mountPath: EXAM_WEBDAV_MOUNT_PATH,
+    });
+    log.info(`qemuService @ startHeadless: exam WebDAV http://10.0.2.2:${EXAM_WEBDAV_PORT}${EXAM_WEBDAV_MOUNT_PATH} -> ${workdirectory}`);
+
+    // restrict=on blocks general internet; guestfwd tunnels guest TCP to 10.0.2.2:EXAM_WEBDAV_PORT to host WebDAV (must listen before QEMU starts).
+    const webdavGuestFwd = `guestfwd=tcp:10.0.2.2:${EXAM_WEBDAV_PORT}-tcp:127.0.0.1:${EXAM_WEBDAV_PORT}`;
     const netArgs = blockInternet
-        ? ['-netdev', 'user,id=net0,restrict=on', '-device', 'virtio-net,netdev=net0']
+        ? ['-netdev', `user,id=net0,restrict=on,${webdavGuestFwd}`, '-device', 'virtio-net-pci,netdev=net0']
         : ['-netdev', 'user,id=n0', '-device', 'virtio-net-pci,netdev=n0'];
 
     const args = [

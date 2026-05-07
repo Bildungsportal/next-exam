@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
+import http from 'http';
 import https from 'https';
 import log from 'electron-log';
 import crypto from 'crypto';
@@ -23,6 +24,14 @@ function getRepoPathRelative(...parts) {
     return path.join(__dirname, ...parts);
 }
 
+function getPackagedPublicPath(...parts) {
+    return path.join(process.resourcesPath || '', 'app.asar.unpacked', 'public', ...parts);
+}
+
+function getCwdCandidate(...parts) {
+    return path.join(process.cwd(), ...parts);
+}
+
 function getQemuDir(workdirectory) {
     return path.join(workdirectory, 'QEMU');
 }
@@ -31,21 +40,27 @@ async function ensureDir(dir) {
     await fs.promises.mkdir(dir, { recursive: true });
 }
 
-async function downloadFile(url, destPath) {
+async function downloadFile(url, destPath, onProgress = null) {
     await ensureDir(path.dirname(destPath));
     const tmpPath = `${destPath}.part`;
 
     if (fs.existsSync(destPath)) {
+        log.info(`qemuService @ downloadFile: skip exists ${destPath}`);
+        try { onProgress?.({ phase: 'skip', file: path.basename(destPath), percent: 100 }); } catch (e) {}
         return { ok: true, skipped: true, path: destPath };
     }
 
+    log.info(`qemuService @ downloadFile: ${url} -> ${destPath}`);
     return await new Promise((resolve, reject) => {
         const file = fs.createWriteStream(tmpPath);
-        const req = https.get(url, (res) => {
+        const u = new URL(url);
+        const client = u.protocol === 'http:' ? http : https;
+        const req = client.get(u, (res) => {
             if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                log.info(`qemuService @ downloadFile: redirect ${res.statusCode} -> ${res.headers.location}`);
                 file.close(() => {
                     try { fs.unlinkSync(tmpPath); } catch (e) {}
-                    downloadFile(res.headers.location, destPath).then(resolve, reject);
+                    downloadFile(res.headers.location, destPath, onProgress).then(resolve, reject);
                 });
                 return;
             }
@@ -56,11 +71,34 @@ async function downloadFile(url, destPath) {
                 });
                 return;
             }
+            const total = Number(res.headers['content-length'] || 0) || 0;
+            let received = 0;
+            let lastPct = -1;
+            const loggedMilestones = new Set();
+            try { onProgress?.({ phase: 'start', file: path.basename(destPath), percent: 0 }); } catch (e) {}
+            res.on('data', (chunk) => {
+                received += chunk.length;
+                if (total > 0) {
+                    const pct = Math.floor((received / total) * 100);
+                    if (pct !== lastPct) {
+                        lastPct = pct;
+                        try { onProgress?.({ phase: 'downloading', file: path.basename(destPath), percent: pct }); } catch (e) {}
+                    }
+                    if (pct === 5 || pct === 25 || pct === 50 || pct === 75 || pct === 90) {
+                        if (!loggedMilestones.has(pct)) {
+                            loggedMilestones.add(pct);
+                            log.info(`qemuService @ downloadFile: ${path.basename(destPath)} ${pct}%`);
+                        }
+                    }
+                }
+            });
             res.pipe(file);
             file.on('finish', () => {
                 file.close(async () => {
                     try {
                         await fs.promises.rename(tmpPath, destPath);
+                        log.info(`qemuService @ downloadFile: done ${destPath}`);
+                        try { onProgress?.({ phase: 'done', file: path.basename(destPath), percent: 100 }); } catch (e) {}
                         resolve({ ok: true, skipped: false, path: destPath });
                     } catch (e) {
                         reject(e);
@@ -147,10 +185,18 @@ async function ensureAnswerIsoPresent(qemuDir) {
     const dest = path.join(qemuDir, DEFAULTS.answerIsoName);
     if (fs.existsSync(dest)) return dest;
 
-    const candidate = getRepoPathRelative('../../../scripts/qemu', DEFAULTS.answerIsoName);
-    if (!fs.existsSync(candidate)) {
-        throw new Error(`missing ${DEFAULTS.answerIsoName} (expected in ${candidate} or ${dest})`);
+    const candidatePackagedPublic = getPackagedPublicPath('qemu', DEFAULTS.answerIsoName);
+    const candidates = [
+        candidatePackagedPublic,
+        // dev: depending on cwd, this can be teacher/public or repoRoot/teacher/public
+        getCwdCandidate('public', 'qemu', DEFAULTS.answerIsoName),
+        getCwdCandidate('teacher', 'public', 'qemu', DEFAULTS.answerIsoName),
+    ];
+    const candidate = candidates.find((p) => fs.existsSync(p)) || null;
+    if (!candidate) {
+        throw new Error(`missing ${DEFAULTS.answerIsoName} (expected in ${candidates.join(' or ')} or ${dest})`);
     }
+    log.info(`qemuService @ ensureAnswerIsoPresent: using ${candidate}`);
     await fs.promises.copyFile(candidate, dest);
     return dest;
 }
@@ -165,20 +211,30 @@ async function ensureDisk(qemuDir) {
     return diskPath;
 }
 
-async function installDefaultVm({ workdirectory }) {
+function getAccelArgs() {
+    const platform = process.platform;
+    if (platform === 'linux') return ['-enable-kvm'];
+    if (platform === 'win32') return ['-accel', 'whpx'];
+    if (platform === 'darwin') return ['-accel', 'hvf'];
+    return [];
+}
+
+async function installDefaultVm({ workdirectory, onProgress = null }) {
     const qemuDir = getQemuDir(workdirectory);
     await ensureDir(qemuDir);
 
+    log.info(`qemuService @ installDefaultVm: requested (workdirectory=${workdirectory})`);
     const isoPath = path.join(qemuDir, DEFAULTS.isoName);
     const virtioPath = path.join(qemuDir, DEFAULTS.virtioName);
 
-    await downloadFile(DEFAULTS.isoUrl, isoPath);
-    await downloadFile(DEFAULTS.virtioUrl, virtioPath);
+    await downloadFile(DEFAULTS.isoUrl, isoPath, onProgress);
+    await downloadFile(DEFAULTS.virtioUrl, virtioPath, onProgress);
     const answerIsoPath = await ensureAnswerIsoPresent(qemuDir);
     const diskPath = await ensureDisk(qemuDir);
+    log.info(`qemuService @ installDefaultVm: assets ready (iso=${isoPath}, virtio=${virtioPath}, answerIso=${answerIsoPath}, disk=${diskPath})`);
 
     const args = [
-        '-enable-kvm',
+        ...getAccelArgs(),
         '-m', '8192',
         '-smp', '4',
         '-cpu', 'host',
@@ -198,13 +254,9 @@ async function installDefaultVm({ workdirectory }) {
         '-netdev', 'user,id=n0',
     ];
 
-    const platform = process.platform;
-    if (platform === 'linux' || platform === 'win32' || platform === 'darwin') {
-        // same commands for now (linux first); platform-specific tuning later
-    }
-
     const proc = spawnLogged('qemu-system-x86_64', args, { cwd: qemuDir, detached: true, stdio: 'ignore' });
     try { proc.unref(); } catch (e) {}
+    log.info(`qemuService @ installDefaultVm: qemu started pid=${proc?.pid || 'unknown'}`);
 
     return { ok: true, qemuDir, diskName: DEFAULTS.diskName, vncDisplay: DEFAULTS.vncDisplay };
 }
@@ -223,7 +275,7 @@ async function bootDisk({ workdirectory, qcow2Name }) {
     await fs.promises.access(diskPath, fs.constants.R_OK);
 
     const args = [
-        '-enable-kvm',
+        ...getAccelArgs(),
         '-m', '8192',
         '-smp', '4',
         '-cpu', 'host',
@@ -233,11 +285,6 @@ async function bootDisk({ workdirectory, qcow2Name }) {
         '-device', 'usb-tablet',
         '-boot', 'order=c',
     ];
-
-    const platform = process.platform;
-    if (platform === 'linux' || platform === 'win32' || platform === 'darwin') {
-        // same commands for now (linux first); platform-specific tuning later
-    }
 
     const proc = spawnLogged('qemu-system-x86_64', args, { cwd: qemuDir, detached: true, stdio: 'ignore' });
     try { proc.unref(); } catch (e) {}

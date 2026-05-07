@@ -193,7 +193,14 @@ class IpcHandler {
 
         ipcMain.handle('qemu-install-default', async () => {
             try {
-                return await qemuService.installDefaultVm({ workdirectory: config.workdirectory })
+                log.info('ipchandler @ qemu-install-default: requested');
+                const sendProgress = (p) => {
+                    try { this.WindowHandler?.mainwindow?.webContents?.send?.('qemu-install-progress', p); } catch (e) {}
+                };
+                sendProgress({ phase: 'start', file: null, percent: 0 });
+                const res = await qemuService.installDefaultVm({ workdirectory: config.workdirectory, onProgress: sendProgress })
+                sendProgress({ phase: 'end', file: null, percent: 100 });
+                return res;
             } catch (e) {
                 log.error('ipchandler @ qemu-install-default', e)
                 return { ok: false, error: String(e?.message || e) }

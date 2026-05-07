@@ -1034,7 +1034,61 @@ async function configureLocalVM(presetGroup){
             });
             const installBtn = document.getElementById('qemuInstallBtn');
             installBtn?.addEventListener('click', async () => {
-                try { await ipc.invoke('qemu-install-default'); } catch (e) {}
+                try {
+                    const statusEl = document.getElementById('qemuHashStatus');
+                    if (statusEl) statusEl.textContent = 'Starte VM-Build…';
+                } catch (e) {}
+                let onProgress = null;
+                try {
+                    onProgress = (_event, payload) => {
+                        const statusEl = document.getElementById('qemuHashStatus');
+                        if (!statusEl) return;
+                        const phase = payload?.phase || '';
+                        const file = payload?.file || '';
+                        const pct = typeof payload?.percent === 'number' ? payload.percent : null;
+                        if (phase === 'skip' && file) {
+                            statusEl.textContent = `${file}: bereits vorhanden`;
+                            return;
+                        }
+                        if ((phase === 'downloading' || phase === 'start' || phase === 'done') && file) {
+                            statusEl.textContent = pct != null ? `${file}: ${pct}%` : `${file}`;
+                            return;
+                        }
+                        if (phase === 'start') {
+                            statusEl.textContent = 'VM-Build: starte Downloads…';
+                            return;
+                        }
+                        if (phase === 'end') {
+                            statusEl.textContent = 'VM-Build: Download fertig, starte QEMU…';
+                        }
+                    };
+                    ipc.removeAllListeners?.('qemu-install-progress');
+                    ipc.on?.('qemu-install-progress', onProgress);
+                } catch (e) {}
+                try {
+                    const res = await ipc.invoke('qemu-install-default');
+                    if (!res || res.ok !== true) {
+                        await this.$swal.fire({
+                            icon: 'error',
+                            title: 'LocalVM',
+                            text: `VM-Build konnte nicht gestartet werden: ${res?.error || 'unbekannter Fehler'}`,
+                        });
+                        return;
+                    }
+                } catch (e) {
+                    await this.$swal.fire({
+                        icon: 'error',
+                        title: 'LocalVM',
+                        text: `VM-Build konnte nicht gestartet werden: ${String(e?.message || e)}`,
+                    });
+                    return;
+                } finally {
+                    try {
+                        if (onProgress) {
+                            ipc.removeListener?.('qemu-install-progress', onProgress);
+                        }
+                    } catch (e) {}
+                }
                 try { this.$swal.close(); } catch (e) {}
                 setTimeout(() => { configureLocalVM.call(this, presetGroup); }, 50);
             });
