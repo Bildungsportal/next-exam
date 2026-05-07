@@ -298,7 +298,7 @@ function stopVm() {
     return true;
 }
 
-async function startHeadless({ workdirectory, qcow2Name, vncDisplay = ':1', overlayName = null, blockInternet = false, forceFreshOverlay = false }) {
+async function startHeadless({ workdirectory, examdirectory, qcow2Name, vncDisplay = ':1', overlayName = null, blockInternet = false, forceFreshOverlay = false }) {
     const qemuDir = getQemuDir(workdirectory);
     await ensureDir(qemuDir);
 
@@ -332,7 +332,7 @@ async function startHeadless({ workdirectory, qcow2Name, vncDisplay = ':1', over
     }
 
     startExamWebdav({
-        rootDir: workdirectory,
+        rootDir: examdirectory,
         port: EXAM_WEBDAV_PORT,
         mountPath: EXAM_WEBDAV_MOUNT_PATH,
     });

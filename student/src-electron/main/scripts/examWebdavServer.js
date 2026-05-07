@@ -99,15 +99,17 @@ function davHeaders(res) {
 }
 
 function propfindResponse(hrefs) {
-    const rows = hrefs.map(({ href, collection }) => {
+    const rows = hrefs.map(({ href, collection, size, mtime }) => {
         const rt = collection
             ? '<D:resourcetype><D:collection/></D:resourcetype>'
             : '<D:resourcetype/>';
+        const sizeTag = (!collection && size != null) ? `<D:getcontentlength>${size}</D:getcontentlength>` : '';
+        const mtimeTag = mtime ? `<D:getlastmodified>${mtime.toUTCString()}</D:getlastmodified>` : '';
         return `
   <D:response>
     <D:href>${xmlEscape(href)}</D:href>
     <D:propstat>
-      <D:prop>${rt}</D:prop>
+      <D:prop>${rt}${sizeTag}${mtimeTag}</D:prop>
       <D:status>HTTP/1.1 200 OK</D:status>
     </D:propstat>
   </D:response>`;
@@ -133,7 +135,7 @@ async function handlePropfind(rootDir, mountPath, urlPath, depth) {
     if (isDir && !pathname.endsWith('/')) {
         pathname = `${pathname}/`;
     }
-    const hrefs = [{ href: pathname, collection: isDir }];
+    const hrefs = [{ href: pathname, collection: isDir, size: isDir ? null : st.size, mtime: st.mtime }];
 
     if (isDir && (depth === '1' || depth === 'infinity')) {
         const entries = await readdir(fsPath);
@@ -146,8 +148,9 @@ async function handlePropfind(rootDir, mountPath, urlPath, depth) {
             } catch (e) {
                 continue;
             }
-            const seg = `${encodeURIComponent(name)}${cst.isDirectory() ? '/' : ''}`;
-            hrefs.push({ href: `${prefix}${seg}`, collection: cst.isDirectory() });
+            const isChildDir = cst.isDirectory();
+            const seg = `${encodeURIComponent(name)}${isChildDir ? '/' : ''}`;
+            hrefs.push({ href: `${prefix}${seg}`, collection: isChildDir, size: isChildDir ? null : cst.size, mtime: cst.mtime });
         }
     }
 

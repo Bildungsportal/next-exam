@@ -196,7 +196,7 @@
             <FirstLogonCommands>
                 <SynchronousCommand wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
                     <Order>1</Order>
-                    <CommandLine>cmd /c for %D in (D E F G H I J K L M N O P Q R S T U V W X Y Z) do (if exist %D:\setup-rclone.cmd (call %D:\setup-rclone.cmd &amp; exit /b 0)) &amp; exit /b 1</CommandLine>
+                    <CommandLine>powershell -NoProfile -ExecutionPolicy Bypass -Command "foreach($d in 'D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'){if(Test-Path ($d+':\setup-rclone.cmd')){Start-Process cmd -ArgumentList '/c',($d+':\setup-rclone.cmd') -Wait -Verb RunAs; exit}}"</CommandLine>
                     <Description>Install WinFsp and setup rclone mount</Description>
                 </SynchronousCommand>
             </FirstLogonCommands>

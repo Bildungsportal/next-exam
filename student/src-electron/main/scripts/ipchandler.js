@@ -156,6 +156,7 @@ class IpcHandler {
                 }
                 const result = await qemuService.startHeadless({
                     workdirectory: this.config.workdirectory,
+                    examdirectory: this.config.examdirectory,
                     qcow2Name,
                     vncDisplay,
                     overlayName,

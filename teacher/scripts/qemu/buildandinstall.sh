@@ -24,7 +24,6 @@ mkdir -p ./autounattend-iso-root
 cp ./autounattend.xml ./autounattend-iso-root/autounattend.xml
 cp ./setup-rclone.cmd ./autounattend-iso-root/setup-rclone.cmd
 cp ./mount-rclone.cmd ./autounattend-iso-root/mount-rclone.cmd
-cp ./create-shortcut.cmd ./autounattend-iso-root/create-shortcut.cmd
 
 if [ "$ISO_ONLY" -eq 0 ]; then
   [ -f "$ISO" ]    || wget -c -O "$ISO" "$ISO_URL"
@@ -70,4 +69,6 @@ fi
   -drive file=autounattend.iso,media=cdrom \
   -boot once=d \
   -device virtio-net-pci,netdev=n0 \
-  -netdev user,id=n0
+  -netdev user,id=n0 \
+  -device usb-ehci \
+  -device usb-tablet

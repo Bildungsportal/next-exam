@@ -694,6 +694,7 @@ import { switchExamSection } from './switchExamSection.js';
                 try {
                     await qemuService.startHeadless({
                         workdirectory: this.config.workdirectory,
+                        examdirectory: this.config.examdirectory,
                         qcow2Name: preflight.qcow2Name,
                         vncDisplay: ':1',
                         overlayName: preflight.overlayName,

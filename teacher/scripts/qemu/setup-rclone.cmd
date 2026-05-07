@@ -24,7 +24,6 @@ mkdir "%TARGET%" >nul 2>&1
 copy /y "%DRIVE%\rclone.exe" "%TARGET%\rclone.exe" >nul
 copy /y "%DRIVE%\winfsp-*.msi" "%TARGET%\" >nul
 copy /y "%DRIVE%\mount-rclone.cmd" "%TARGET%\mount-rclone.cmd" >nul
-copy /y "%DRIVE%\create-shortcut.cmd" "%TARGET%\create-shortcut.cmd" >nul
 
 set "WINFSP_MSI="
 for %%F in (%TARGET%\winfsp-*.msi) do set "WINFSP_MSI=%%~fF"
@@ -47,11 +46,9 @@ echo [%date% %time%] writing rclone.conf >> "%LOG%"
 
 echo [%date% %time%] registering scheduled tasks >> "%LOG%"
 schtasks /create /tn "NextExam-RcloneMount" /tr "\"%TARGET%\mount-rclone.cmd\"" /sc onlogon /ru admin /rl HIGHEST /f >> "%LOG%" 2>&1
-schtasks /create /tn "NextExam-CreateShortcut" /tr "\"%TARGET%\create-shortcut.cmd\"" /sc onlogon /ru admin /rl HIGHEST /f >> "%LOG%" 2>&1
 
 echo [%date% %time%] starting mount and shortcut creator >> "%LOG%"
 start "" /min "%TARGET%\mount-rclone.cmd"
-start "" /min "%TARGET%\create-shortcut.cmd"
 
 echo [%date% %time%] setup-rclone done >> "%LOG%"
 exit /b 0
