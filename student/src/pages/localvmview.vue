@@ -82,7 +82,7 @@
             <div v-else-if="isHashMismatch">SHA-256 Hash Missmatch</div>
             <div v-else-if="isVerifyingHash" class="localvm-hash-verify-layout">
               <div class="localvm-hash-spinner" aria-hidden="true"></div>
-              <div class="text-subtitle1">{{ $t('student.vmVerifyingHash') }}</div>
+              <div class="text-subtitle1">{{ vmVerifyingText }}</div>
               <div class="text-subtitle2 text-grey-5 q-mt-xs">{{ $t('student.vmVerifyingHashHint') }}</div>
             </div>
             <div v-else>{{ statusMessage }}</div>
@@ -195,6 +195,14 @@ export default {
       const group = this.clientinfo?.group === 'b' ? 'b' : 'a';
       const cfg = group === 'b' ? (section?.groupB?.examConfig?.localvm || {}) : (section?.groupA?.examConfig?.localvm || {});
       return cfg.qcow2Name || '';
+    }
+    ,
+    vmVerifyingText() {
+      const sectionIndex = this.clientinfo?.lockedSection || 1;
+      const section = this.serverstatus?.examSections?.[sectionIndex] || {};
+      const group = this.clientinfo?.group === 'b' ? 'b' : 'a';
+      const cfg = group === 'b' ? (section?.groupB?.examConfig?.localvm || {}) : (section?.groupA?.examConfig?.localvm || {});
+      return cfg.calculateSha256 === true ? this.$t('student.vmVerifyingHash') : this.$t('student.vmVerifyingSize');
     }
   },
   mounted() {

@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+ISO_ONLY=0
+if [ "${1:-}" = "--iso-only" ]; then
+  ISO_ONLY=1
+fi
+
 ISO_URL="https://software-static.download.prss.microsoft.com/dbazure/888969d5-f34g-4e03-ac9d-1f9786c66749/26100.1.240331-1435.ge_release_CLIENT_IOT_LTSC_EVAL_x64FRE_en-us.iso"
 ISO="win11_iot.iso"
 
@@ -14,28 +19,44 @@ RCLONE_EXE="rclone.exe"
 ANSWER_ISO="autounattend.iso"
 DISK="win11.qcow2"
 
-[ -f "$ISO" ]    || wget -c -O "$ISO" "$ISO_URL"
-[ -f "$VIRTIO" ] || wget -c -O "$VIRTIO" "$VIRTIO_URL"
-
-[ -f "$RCLONE_ZIP" ] || wget -c -O "$RCLONE_ZIP" "$RCLONE_URL"
-[ -f "$RCLONE_EXE" ] || unzip -p "$RCLONE_ZIP" "*/$RCLONE_EXE" > "$RCLONE_EXE"
-
-# Download stable WinFsp MSI into the QEMU workdir (same dir as this script)
-node ./download-winfsp.mjs .
-
 rm -rf ./autounattend-iso-root
 mkdir -p ./autounattend-iso-root
 cp ./autounattend.xml ./autounattend-iso-root/autounattend.xml
-cp ./rclone.exe ./autounattend-iso-root/rclone.exe
-cp ./winfsp-*.msi ./autounattend-iso-root/
 cp ./setup-rclone.cmd ./autounattend-iso-root/setup-rclone.cmd
-test -f ./rclone.conf && cp ./rclone.conf ./autounattend-iso-root/rclone.conf || true
+
+if [ "$ISO_ONLY" -eq 0 ]; then
+  [ -f "$ISO" ]    || wget -c -O "$ISO" "$ISO_URL"
+  [ -f "$VIRTIO" ] || wget -c -O "$VIRTIO" "$VIRTIO_URL"
+
+  [ -f "$RCLONE_ZIP" ] || wget -c -O "$RCLONE_ZIP" "$RCLONE_URL"
+  [ -f "$RCLONE_EXE" ] || unzip -p "$RCLONE_ZIP" "*/$RCLONE_EXE" > "$RCLONE_EXE"
+
+  # Download stable WinFsp MSI into the QEMU workdir (same dir as this script)
+  node ./download-winfsp.mjs .
+
+  cp ./rclone.exe ./autounattend-iso-root/rclone.exe
+  cp ./winfsp-*.msi ./autounattend-iso-root/
+  test -f ./rclone.conf && cp ./rclone.conf ./autounattend-iso-root/rclone.conf || true
+else
+  if [ -f ./rclone.exe ]; then
+    cp ./rclone.exe ./autounattend-iso-root/rclone.exe
+  fi
+  if ls ./winfsp-*.msi >/dev/null 2>&1; then
+    cp ./winfsp-*.msi ./autounattend-iso-root/
+  fi
+  test -f ./rclone.conf && cp ./rclone.conf ./autounattend-iso-root/rclone.conf || true
+fi
 
 genisoimage -o "$ANSWER_ISO" -V "ADK" -J -r ./autounattend-iso-root
 
 # Also place the ISO under teacher/public so packaged builds can find it via resourcesPath/app.asar.unpacked/public/.
 mkdir -p ../../public/qemu
 cp -f "$ANSWER_ISO" ../../public/qemu/autounattend.iso
+
+if [ "$ISO_ONLY" -eq 1 ]; then
+  echo "built $ANSWER_ISO (iso-only)"
+  exit 0
+fi
 
 [ -f "$DISK" ] || qemu-img create -f qcow2 "$DISK" 64G
 
@@ -51,5 +72,5 @@ cp -f "$ANSWER_ISO" ../../public/qemu/autounattend.iso
   -drive file=virtio-win.iso,media=cdrom \
   -drive file=autounattend.iso,media=cdrom \
   -boot once=d \
-  -device virtio-net,netdev=n0 \
+  -device virtio-net-pci,netdev=n0 \
   -netdev user,id=n0

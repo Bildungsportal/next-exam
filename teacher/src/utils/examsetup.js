@@ -736,71 +736,127 @@ async function configureLocalVM(presetGroup){
 
     let preferredDisk = null;
     if (!Array.isArray(disks) || disks.length === 0) {
+        const firstHtml = `<div style="text-align:left;">
+            <div><b>Keine QEMU-VM gefunden</b> im Workdirectory unter <code>EXAM-TEACHER/QEMU</code>.</div>
+            <div style="margin-top:8px;">Du kannst jetzt eine VM <b>vollautomatisch installieren</b> (inkl. Download der ISOs). Das kann <b>~10 Minuten</b> dauern.</div>
+            <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-sm btn-cyan" id="qemuInstallBtn">Installieren (~10 Min)</button>
+                <button type="button" class="btn btn-sm btn-cyan" id="qemuBrowseBtn">Datei wählen…</button>
+            </div>
+            <div id="qemuHashStatus" style="margin-top:10px; font-size:0.9em; color:#6c757d;"></div>
+        </div>`;
+
         const result = await this.$swal.fire({
             customClass: {
                 popup: 'my-popup',
                 title: 'my-title',
                 content: 'my-content',
                 actions: 'my-swal2-actions',
-                confirmButton: 'btn btn-cyan',
-                denyButton: 'btn btn-cyan',
+                cancelButton: 'btn btn-cyan',
             },
             title: 'LocalVM',
             icon: 'warning',
-            html: `<div style="text-align:left;">
-                <div><b>Keine QEMU-VM gefunden</b> im Workdirectory unter <code>EXAM-TEACHER/QEMU</code>.</div>
-                <div style="margin-top:8px;">Du kannst jetzt eine VM <b>vollautomatisch installieren</b> (inkl. Download der ISOs). Das kann <b>~10 Minuten</b> dauern.</div>
-            </div>`,
+            html: firstHtml,
             showCancelButton: true,
-            showDenyButton: true,
-            confirmButtonText: 'Installieren (~10 Min)',
-            denyButtonText: 'Datei wählen…',
+            showConfirmButton: false,
             cancelButtonText: this.$t('dashboard.cancel'),
-        });
-        if (result.isDenied) {
-            try {
-                const importRes = await ipc.invoke('qemu-pick-import-disk');
-                if (importRes && importRes.ok && importRes.filename) {
-                    preferredDisk = importRes.filename;
-                }
-            } catch (e) {}
-            try {
-                disks = await ipc.invoke('qemu-list-disks');
-            } catch (e) {
-                disks = [];
-            }
-            if (!Array.isArray(disks) || disks.length === 0) {
-                await this.$swal.fire({
-                    icon: 'error',
-                    title: 'LocalVM',
-                    text: 'Keine qcow2 Disk gefunden.'
-                });
-                return;
-            }
-        } else if (result.isConfirmed) {
-            this.status('Installing QEMU VM (this may take ~10 minutes)...');
-            try {
-                await ipc.invoke('qemu-install-default');
-            } catch (e) {
-                console.error('examsetup @ configureLocalVM: qemu-install-default failed', e);
-            }
+            allowOutsideClick: false,
+            didOpen: () => {
+                const statusEl = document.getElementById('qemuHashStatus');
+                const browseBtn = document.getElementById('qemuBrowseBtn');
+                const installBtn = document.getElementById('qemuInstallBtn');
 
-            try {
-                disks = await ipc.invoke('qemu-list-disks');
-            } catch (e) {
-                disks = [];
-            }
-            if (!Array.isArray(disks) || disks.length === 0) {
-                await this.$swal.fire({
-                    icon: 'error',
-                    title: 'LocalVM',
-                    text: 'Installation gestartet, aber es wurde noch keine qcow2 Disk gefunden. Bitte später erneut versuchen.'
+                browseBtn?.addEventListener('click', async () => {
+                    try {
+                        if (statusEl) statusEl.textContent = 'Öffne Dateiauswahl…';
+                    } catch (e) {}
+                    try {
+                        const importRes = await ipc.invoke('qemu-pick-import-disk');
+                        if (importRes && importRes.ok && importRes.filename) {
+                            preferredDisk = importRes.filename;
+                        }
+                    } catch (e) {}
+                    try {
+                        disks = await ipc.invoke('qemu-list-disks');
+                    } catch (e) {
+                        disks = [];
+                    }
+                    if (!Array.isArray(disks) || disks.length === 0) {
+                        if (statusEl) statusEl.textContent = 'Keine qcow2 Disk gefunden.';
+                        return;
+                    }
+                    try { this.$swal.close(); } catch (e) {}
+                    setTimeout(() => { configureLocalVM.call(this, presetGroup); }, 50);
                 });
-                return;
-            }
-        } else {
+
+                installBtn?.addEventListener('click', async () => {
+                    let onProgress = null;
+                    try {
+                        if (statusEl) statusEl.textContent = 'Starte VM-Build…';
+                    } catch (e) {}
+                    try {
+                        onProgress = (_event, payload) => {
+                            const el = document.getElementById('qemuHashStatus');
+                            if (!el) return;
+                            const phase = payload?.phase || '';
+                            const file = payload?.file || '';
+                            const pct = typeof payload?.percent === 'number' ? payload.percent : null;
+                            if (phase === 'skip' && file) {
+                                el.textContent = `${file}: bereits vorhanden`;
+                                return;
+                            }
+                            if ((phase === 'downloading' || phase === 'start' || phase === 'done') && file) {
+                                el.textContent = pct != null ? `${file}: ${pct}%` : `${file}`;
+                                return;
+                            }
+                            if (phase === 'start') {
+                                el.textContent = 'VM-Build: starte Downloads…';
+                                return;
+                            }
+                            if (phase === 'end') {
+                                el.textContent = 'VM-Build: Download fertig, starte QEMU…';
+                            }
+                        };
+                        ipc.removeAllListeners?.('qemu-install-progress');
+                        ipc.on?.('qemu-install-progress', onProgress);
+                    } catch (e) {}
+
+                    try {
+                        const res = await ipc.invoke('qemu-install-default');
+                        if (!res || res.ok !== true) {
+                            await this.$swal.fire({
+                                icon: 'error',
+                                title: 'LocalVM',
+                                text: `VM-Build konnte nicht gestartet werden: ${res?.error || 'unbekannter Fehler'}`,
+                            });
+                            return;
+                        }
+                    } catch (e) {
+                        await this.$swal.fire({
+                            icon: 'error',
+                            title: 'LocalVM',
+                            text: `VM-Build konnte nicht gestartet werden: ${String(e?.message || e)}`,
+                        });
+                        return;
+                    } finally {
+                        try {
+                            if (onProgress) {
+                                ipc.removeListener?.('qemu-install-progress', onProgress);
+                            }
+                        } catch (e) {}
+                    }
+
+                    try { this.$swal.close(); } catch (e) {}
+                    setTimeout(() => { configureLocalVM.call(this, presetGroup); }, 50);
+                });
+            },
+        });
+
+        if (!result.isDismissed) {
             return;
         }
+
+        return;
     }
 
     const currentDisk =

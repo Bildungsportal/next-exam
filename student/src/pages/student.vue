@@ -36,7 +36,7 @@
 
                 <div v-if="localVmIsVerifying" class="localvm-preflight-verify">
                     <div class="localvm-preflight-spinner" aria-hidden="true"></div>
-                    <div class="localvm-preflight-text">{{ $t('student.vmVerifyingHash') }}</div>
+                    <div class="localvm-preflight-text">{{ localVmVerifyingText }}</div>
                     <div class="localvm-preflight-subtext">{{ $t('student.vmVerifyingHashHint') }}</div>
                 </div>
 
@@ -354,6 +354,10 @@ export default {
         },
         localVmCanFix() {
             return this.localVmIsMissing || this.localVmIsMismatch || this.clientinfo?.localVMState === 'error';
+        },
+        localVmVerifyingText() {
+            const cfg = this.getLocalVmConfig?.() || {};
+            return cfg.calculateSha256 === true ? this.$t('student.vmVerifyingHash') : this.$t('student.vmVerifyingSize');
         },
     },
 

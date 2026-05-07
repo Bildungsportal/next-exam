@@ -41,6 +41,15 @@
                 <PathAndCredentials wcm:action="add" wcm:keyValue="3">
                     <Path>F:\viostor\w11\amd64</Path>
                 </PathAndCredentials>
+                <PathAndCredentials wcm:action="add" wcm:keyValue="4">
+                    <Path>D:\NetKVM\w11\amd64</Path>
+                </PathAndCredentials>
+                <PathAndCredentials wcm:action="add" wcm:keyValue="5">
+                    <Path>E:\NetKVM\w11\amd64</Path>
+                </PathAndCredentials>
+                <PathAndCredentials wcm:action="add" wcm:keyValue="6">
+                    <Path>F:\NetKVM\w11\amd64</Path>
+                </PathAndCredentials>
             </DriverPaths>
 
         </component>
