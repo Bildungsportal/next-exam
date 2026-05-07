@@ -40,31 +40,37 @@
                     <div class="localvm-preflight-subtext">{{ $t('student.vmVerifyingHashHint') }}</div>
                 </div>
 
+                <div v-else-if="localVmFixPhase === 'waiting_for_start'" class="localvm-preflight-text">
+                    {{ $t('student.localvmFixWaitingForStart') }}
+                </div>
+
                 <div v-else-if="localVmIsMissing" class="localvm-preflight-text">
-                    VM-Disk nicht gefunden. Bitte VM herunterladen oder eine qcow2 Datei importieren.
+                    {{ $t('student.localvmMissingDisk') }}
                 </div>
 
                 <div v-else-if="localVmIsMismatch" class="localvm-preflight-text">
-                    Die VM-Disk entspricht nicht der Vorgabe (Hash/Größe stimmt nicht). Bitte neu holen oder importieren.
+                    {{ $t('student.localvmDiskMismatch') }}
                 </div>
 
                 <div v-else class="localvm-preflight-text">
-                    VM kann nicht gestartet werden. Bitte neu holen oder importieren.
+                    {{ $t('student.localvmStartError') }}
                 </div>
 
                 <div class="localvm-preflight-actions">
-                    <button v-if="localVmCanFix" class="btn btn-primary btn-sm" @click="downloadVm" :disabled="localVmBusy">
-                        VM von Teacher holen
+                    <button v-if="localVmCanFix && !localVmFixPhase" class="btn btn-primary btn-sm" @click="downloadVm" :disabled="localVmBusy">
+                        {{ $t('student.localvmDownloadButton') }}
                     </button>
-                    <button v-if="localVmCanFix" class="btn btn-cyan btn-sm" @click="browseVm" :disabled="localVmBusy">
-                        Dateisystem durchsuchen…
+                    <button v-if="localVmCanFix && !localVmFixPhase" class="btn btn-cyan btn-sm" @click="browseVm" :disabled="localVmBusy">
+                        {{ $t('student.localvmBrowseButton') }}
                     </button>
                 </div>
 
-                <div v-if="localVmBusy && localVmCanFix && !localVmIsVerifying" class="localvm-preflight-verify" style="margin-top: 12px;">
+                <div v-if="localVmFixPhase && localVmCanFix && !localVmIsVerifying" class="localvm-preflight-verify" style="margin-top: 12px;">
                     <div class="localvm-preflight-spinner" aria-hidden="true"></div>
-                    <div class="localvm-preflight-text">Download läuft…</div>
-                    <div v-if="localVmDownloadPercent != null" class="localvm-preflight-subtext">{{ localVmDownloadPercent }}%</div>
+                    <div class="localvm-preflight-text">
+                        {{ localVmFixPhase === 'waiting_for_start' ? $t('student.localvmWaitingForStart') : $t('student.localvmDownloading') }}
+                    </div>
+                    <div v-if="localVmFixPhase !== 'waiting_for_start' && localVmDownloadPercent != null" class="localvm-preflight-subtext">{{ localVmDownloadPercent }}%</div>
                 </div>
             </div>
         </div>
@@ -326,6 +332,7 @@ export default {
             activeDialog: false,
             localVmBusy: false,
             localVmDownloadPercent: null,
+            localVmFixPhase: null,
 
         };
     },
@@ -360,6 +367,17 @@ export default {
         localVmVerifyingText() {
             const cfg = this.getLocalVmConfig?.() || {};
             return cfg.calculateSha256 === true ? this.$t('student.vmVerifyingHash') : this.$t('student.vmVerifyingSize');
+        },
+    },
+    watch: {
+        'clientinfo.localVMState'(nextState) {
+            const st = String(nextState || '');
+            const inPreflightState = st === 'missing' || st === 'hash_mismatch' || st === 'verifying_hash' || st === 'error';
+            if (!inPreflightState) {
+                this.localVmFixPhase = null;
+                this.localVmDownloadPercent = null;
+                this.localVmBusy = false;
+            }
         },
     },
 
@@ -1190,14 +1208,15 @@ export default {
             try {
                 this.localVmBusy = true;
                 this.localVmDownloadPercent = null;
+                this.localVmFixPhase = 'downloading';
                 const cfg = this.getLocalVmConfig();
                 const filename = cfg.qcow2Name;
                 const overwrite = this.clientinfo?.localVMState === 'hash_mismatch';
                 if (!filename) {
-                    await this.status('Keine VM konfiguriert.');
+                await this.status(this.$t('student.localvmNoVmConfigured'));
                     return;
                 }
-                await this.status('VM-Disk wird vom Teacher heruntergeladen…');
+            await this.status(this.$t('student.localvmDownloadingFromTeacher'));
                 const res = await signalBridge.invoke('qemu-download-disk', {
                     serverip: this.clientinfo?.serverip,
                     serverApiPort: this.serverApiPort,
@@ -1207,16 +1226,21 @@ export default {
                     overwrite
                 });
                 if (!res || !res.ok) {
-                    await this.status('Download fehlgeschlagen.');
+                await this.status(this.$t('student.localvmDownloadFailed'));
+                    this.localVmFixPhase = null;
                     return;
                 }
-                await this.status('Download fertig. Warte auf Start…');
+            await this.status(this.$t('student.localvmDownloadDoneWaiting'));
+                this.localVmFixPhase = 'waiting_for_start';
             } catch (e) {
                 log.error('student.vue @ downloadVm', e);
-                await this.status('Download fehlgeschlagen.');
+            await this.status(this.$t('student.localvmDownloadFailed'));
+                this.localVmFixPhase = null;
             } finally {
                 this.localVmBusy = false;
-                this.localVmDownloadPercent = null;
+                if (this.localVmFixPhase !== 'waiting_for_start') {
+                    this.localVmDownloadPercent = null;
+                }
             }
         },
 
@@ -1224,17 +1248,21 @@ export default {
             if (this.localVmBusy) return;
             try {
                 this.localVmBusy = true;
-                await this.status('Datei wird importiert…');
+                this.localVmFixPhase = 'importing';
+                await this.status(this.$t('student.localvmImporting'));
                 const res = await signalBridge.invoke('qemu-pick-import-disk', {});
                 const filename = res && res.ok ? res.filename : null;
                 if (!filename) {
-                    await this.status('Import abgebrochen.');
+                    await this.status(this.$t('student.localvmImportCancelled'));
+                    this.localVmFixPhase = null;
                     return;
                 }
-                await this.status(`Import fertig (${filename}). Warte auf Start…`);
+                await this.status(this.$t('student.localvmImportDoneWaiting', { filename }));
+                this.localVmFixPhase = 'waiting_for_start';
             } catch (e) {
                 log.error('student.vue @ browseVm', e);
-                await this.status('Import fehlgeschlagen.');
+                await this.status(this.$t('student.localvmImportFailed'));
+                this.localVmFixPhase = null;
             } finally {
                 this.localVmBusy = false;
             }

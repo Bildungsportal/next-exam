@@ -45,10 +45,10 @@ echo [%date% %time%] writing rclone.conf >> "%LOG%"
 )
 
 echo [%date% %time%] registering scheduled tasks >> "%LOG%"
-schtasks /create /tn "NextExam-RcloneMount" /tr "\"%TARGET%\mount-rclone.cmd\"" /sc onlogon /ru admin /rl HIGHEST /f >> "%LOG%" 2>&1
+schtasks /create /tn "NextExam-RcloneMount" /tr "powershell -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -Command \"& '%TARGET%\mount-rclone.cmd'\"" /sc onlogon /ru admin /rl HIGHEST /f >> "%LOG%" 2>&1
 
 echo [%date% %time%] starting mount and shortcut creator >> "%LOG%"
-start "" /min "%TARGET%\mount-rclone.cmd"
+start "" /min powershell -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -Command "& '%TARGET%\mount-rclone.cmd'"
 
 echo [%date% %time%] setup-rclone done >> "%LOG%"
 exit /b 0
