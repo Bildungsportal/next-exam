@@ -24,3 +24,5 @@ logs
 npm-debug.log*
 
 config.js
+
+virtio-win.iso

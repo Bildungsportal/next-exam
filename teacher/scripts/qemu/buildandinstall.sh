@@ -27,25 +27,20 @@ cp ./setup-rclone.cmd ./autounattend-iso-root/setup-rclone.cmd
 if [ "$ISO_ONLY" -eq 0 ]; then
   [ -f "$ISO" ]    || wget -c -O "$ISO" "$ISO_URL"
   [ -f "$VIRTIO" ] || wget -c -O "$VIRTIO" "$VIRTIO_URL"
-
-  [ -f "$RCLONE_ZIP" ] || wget -c -O "$RCLONE_ZIP" "$RCLONE_URL"
-  [ -f "$RCLONE_EXE" ] || unzip -p "$RCLONE_ZIP" "*/$RCLONE_EXE" > "$RCLONE_EXE"
-
-  # Download stable WinFsp MSI into the QEMU workdir (same dir as this script)
-  node ./download-winfsp.mjs .
-
-  cp ./rclone.exe ./autounattend-iso-root/rclone.exe
-  cp ./winfsp-*.msi ./autounattend-iso-root/
-  test -f ./rclone.conf && cp ./rclone.conf ./autounattend-iso-root/rclone.conf || true
-else
-  if [ -f ./rclone.exe ]; then
-    cp ./rclone.exe ./autounattend-iso-root/rclone.exe
-  fi
-  if ls ./winfsp-*.msi >/dev/null 2>&1; then
-    cp ./winfsp-*.msi ./autounattend-iso-root/
-  fi
-  test -f ./rclone.conf && cp ./rclone.conf ./autounattend-iso-root/rclone.conf || true
 fi
+
+# ISO payloads (needed even for --iso-only)
+[ -f "$RCLONE_ZIP" ] || wget -c -O "$RCLONE_ZIP" "$RCLONE_URL"
+[ -f "$RCLONE_EXE" ] || unzip -p "$RCLONE_ZIP" "*/$RCLONE_EXE" > "$RCLONE_EXE"
+
+# Download stable WinFsp MSI into the QEMU workdir (same dir as this script)
+if ! ls ./winfsp-*.msi >/dev/null 2>&1; then
+  node ./download-winfsp.mjs .
+fi
+
+cp ./rclone.exe ./autounattend-iso-root/rclone.exe
+cp ./winfsp-*.msi ./autounattend-iso-root/
+test -f ./rclone.conf && cp ./rclone.conf ./autounattend-iso-root/rclone.conf || true
 
 genisoimage -o "$ANSWER_ISO" -V "ADK" -J -r ./autounattend-iso-root
 

@@ -183,8 +183,6 @@ async function statDisk({ workdirectory, qcow2Name }) {
 
 async function ensureAnswerIsoPresent(qemuDir) {
     const dest = path.join(qemuDir, DEFAULTS.answerIsoName);
-    if (fs.existsSync(dest)) return dest;
-
     const candidatePackagedPublic = getPackagedPublicPath('qemu', DEFAULTS.answerIsoName);
     const candidates = [
         candidatePackagedPublic,
@@ -194,8 +192,23 @@ async function ensureAnswerIsoPresent(qemuDir) {
     ];
     const candidate = candidates.find((p) => fs.existsSync(p)) || null;
     if (!candidate) {
+        if (fs.existsSync(dest)) return dest;
         throw new Error(`missing ${DEFAULTS.answerIsoName} (expected in ${candidates.join(' or ')} or ${dest})`);
     }
+
+    if (fs.existsSync(dest)) {
+        try {
+            const [dstHash, srcHash] = await Promise.all([sha256File(dest), sha256File(candidate)]);
+            if (dstHash === srcHash) return dest;
+            log.info(`qemuService @ ensureAnswerIsoPresent: updating cached ${DEFAULTS.answerIsoName} (hash mismatch)`);
+        } catch (e) {
+            // If hash fails for any reason, fall back to copying to be safe.
+            log.warn(`qemuService @ ensureAnswerIsoPresent: hash check failed, refreshing cached ${DEFAULTS.answerIsoName}`, e);
+        }
+    } else {
+        log.info(`qemuService @ ensureAnswerIsoPresent: caching ${DEFAULTS.answerIsoName} from ${candidate}`);
+    }
+
     log.info(`qemuService @ ensureAnswerIsoPresent: using ${candidate}`);
     await fs.promises.copyFile(candidate, dest);
     return dest;
@@ -279,10 +292,13 @@ async function bootDisk({ workdirectory, qcow2Name }) {
         '-m', '8192',
         '-smp', '4',
         '-cpu', 'host',
+        '-machine', 'q35',
         '-drive', `file=${diskPath},if=virtio`,
         '-vga', 'virtio',
         '-device', 'qemu-xhci',
         '-device', 'usb-tablet',
+        '-device', 'virtio-net-pci,netdev=n0',
+        '-netdev', 'user,id=n0',
         '-boot', 'order=c',
     ];
 
