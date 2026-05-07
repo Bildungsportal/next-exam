@@ -1,25 +1,28 @@
 import { onBeforeUnmount } from 'vue';
+import {SchedulerService} from "./schedulerservice.js";
 
 export function autoCleanup() {
     const cleanupFunctions: (() => void)[] = [];
-    const timers: NodeJS.Timeout[] = [];
     const eventListeners: Array<{
         target: any;
         event: string;
         handler: any
     }> = [];
+    const schedulerServices: SchedulerService[] = [];
 
     // Track function to cleanup later
     const onCleanup = (fn: () => void) => {
         cleanupFunctions.push(fn);
     };
 
-    // Track timer automatically
-    const setAutoInterval = (callback: () => void, delay: number) => {
-        const timer = setInterval(callback, delay);
-        timers.push(timer);
-        return timer;
-    };
+    const setAutoSchedulerService = (action: () => void, interval: number) => {
+        let schedulerService: SchedulerService = new SchedulerService(interval);
+
+        addAutoEventListener(schedulerService, 'action', action)
+        schedulerService.start()
+
+        schedulerServices.push(schedulerService);
+    }
 
     // Track event listener automatically
     const addAutoEventListener = (
@@ -50,17 +53,16 @@ export function autoCleanup() {
     const cleanup = () => {
         console.log('Auto-cleanup running');
 
-        // Clear all timers
-        timers.forEach(timer => {
-            clearInterval(timer);
-        });
-        timers.length = 0;
-
         // Remove all event listeners
         eventListeners.forEach(({ target, event, handler }) => {
             target.removeEventListener(event, handler);
         });
         eventListeners.length = 0;
+
+        // Remove all scheduler services
+        schedulerServices.forEach((schedulerService: SchedulerService) => {
+           schedulerService.stop()
+        });
 
         // Run cleanup functions
         cleanupFunctions.forEach(fn => fn());
@@ -74,7 +76,7 @@ export function autoCleanup() {
 
     return {
         onCleanup,
-        setAutoInterval,
+        setAutoSchedulerService,
         addAutoEventListener,
         autoFetch,
         cleanup

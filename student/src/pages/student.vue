@@ -1288,12 +1288,12 @@ export default {
 
     },
     async mounted() {
-        const { setAutoInterval, addAutoEventListener } = autoCleanup();
+        const { setAutoSchedulerService, addAutoEventListener } = autoCleanup();
 
         document.querySelector("#statusdiv").style.visibility = "hidden";
 
         // 2️⃣ Timer
-        this.timer = setAutoInterval(() => {
+        setAutoSchedulerService(() => {
           console.log('The interval still runs');
         }, 1000);
 
@@ -1334,8 +1334,8 @@ export default {
         // Fetch info asynchronously without blocking
         this.fetchInfo();
 
-        setAutoInterval(this.fetchInfo, 4000)
-        setAutoInterval(this.bipAutoUpdate, 10000)
+        setAutoSchedulerService(this.fetchInfo, 4000)
+        setAutoSchedulerService(this.bipAutoUpdate, 10000)
 
       // add event listener to user input field to supress all special 1chars
         addAutoEventListener(document.getElementById("user"), "keypress", function (e) {
