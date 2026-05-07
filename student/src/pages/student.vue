@@ -64,6 +64,7 @@
                 <div v-if="localVmBusy && localVmCanFix && !localVmIsVerifying" class="localvm-preflight-verify" style="margin-top: 12px;">
                     <div class="localvm-preflight-spinner" aria-hidden="true"></div>
                     <div class="localvm-preflight-text">Download läuft…</div>
+                    <div v-if="localVmDownloadPercent != null" class="localvm-preflight-subtext">{{ localVmDownloadPercent }}%</div>
                 </div>
             </div>
         </div>
@@ -324,6 +325,7 @@ export default {
             serverFailureCount: {}, // Track failed ping attempts for manually added servers
             activeDialog: false,
             localVmBusy: false,
+            localVmDownloadPercent: null,
 
         };
     },
@@ -1187,6 +1189,7 @@ export default {
             if (this.localVmBusy) return;
             try {
                 this.localVmBusy = true;
+                this.localVmDownloadPercent = null;
                 const cfg = this.getLocalVmConfig();
                 const filename = cfg.qcow2Name;
                 const overwrite = this.clientinfo?.localVMState === 'hash_mismatch';
@@ -1213,6 +1216,7 @@ export default {
                 await this.status('Download fehlgeschlagen.');
             } finally {
                 this.localVmBusy = false;
+                this.localVmDownloadPercent = null;
             }
         },
 
@@ -1476,6 +1480,11 @@ export default {
             resetDisplayStream();
         });
 
+        signalBridge.on('qemu-download-progress', (_event, payload) => {
+            const pct = payload && typeof payload.percent === 'number' ? payload.percent : null;
+            this.localVmDownloadPercent = pct;
+        });
+
         // Screenshot scheduler only in main window (this page); exam window never loads student.vue
         initScreenshotScheduler(signalBridge);
 
@@ -1491,6 +1500,8 @@ export default {
 
         this.autoUpdateInterval.removeEventListener('action', this.bipAutoUpdate);
         this.autoUpdateInterval.stop()
+
+        signalBridge.removeAllListeners('qemu-download-progress');
     }
 }
 </script>

@@ -2,36 +2,42 @@
 setlocal enabledelayedexpansion
 
 set "TARGET=C:\ProgramData\NextExam"
+set "LOG=C:\Windows\Temp\nextexam-setup.log"
 set "DRIVE="
 
+echo [%date% %time%] setup-rclone start >> "%LOG%"
+
 for %%D in (D E F G H I J K L M N O P Q R S T U V W X Y Z) do (
-    if exist "%%D:\rclone.exe" if exist "%%D:\winfsp-*.msi" (
+    if exist "%%D:\rclone.exe" if exist "%%D:\setup-rclone.cmd" (
         set "DRIVE=%%D:"
         goto :found
     )
 )
 
+echo [%date% %time%] ERROR: CD drive not found >> "%LOG%"
+exit /b 1
+
 :found
-if "%DRIVE%"=="" (
-    echo setup-rclone: CD drive not found
-    exit /b 1
-)
+echo [%date% %time%] found ISO at %DRIVE% >> "%LOG%"
 
 mkdir "%TARGET%" >nul 2>&1
 copy /y "%DRIVE%\rclone.exe" "%TARGET%\rclone.exe" >nul
 copy /y "%DRIVE%\winfsp-*.msi" "%TARGET%\" >nul
+copy /y "%DRIVE%\mount-rclone.cmd" "%TARGET%\mount-rclone.cmd" >nul
+copy /y "%DRIVE%\create-shortcut.cmd" "%TARGET%\create-shortcut.cmd" >nul
 
 set "WINFSP_MSI="
-for %%F in ("%TARGET%\winfsp-*.msi") do set "WINFSP_MSI=%%~fF"
+for %%F in (%TARGET%\winfsp-*.msi) do set "WINFSP_MSI=%%~fF"
 if "%WINFSP_MSI%"=="" (
-    echo setup-rclone: WinFsp MSI not found after copy
+    echo [%date% %time%] ERROR: WinFsp MSI not found after copy >> "%LOG%"
     exit /b 1
 )
 
-echo Installing WinFsp...
+echo [%date% %time%] installing WinFsp: %WINFSP_MSI% >> "%LOG%"
 msiexec /i "%WINFSP_MSI%" /quiet /norestart
+echo [%date% %time%] msiexec exit=%errorlevel% >> "%LOG%"
 
-echo Writing rclone.conf...
+echo [%date% %time%] writing rclone.conf >> "%LOG%"
 > "%TARGET%\rclone.conf" (
     echo [electron_host]
     echo type = webdav
@@ -39,25 +45,13 @@ echo Writing rclone.conf...
     echo vendor = other
 )
 
-echo Creating mount script...
-> "%TARGET%\mount-rclone.cmd" (
-    echo @echo off
-    echo setlocal
-    echo set "LINK=%PUBLIC%\Desktop\NEXT-EXAM-STUDENT.lnk"
-    echo :retry
-    echo "%TARGET%\rclone.exe" mount electron_host: Z: --config "%TARGET%\rclone.conf" --vfs-cache-mode full --no-check-certificate --log-file "%TARGET%\rclone.log" --log-level INFO
-    echo if exist "Z:\\" ^(
-    echo   powershell -NoProfile -ExecutionPolicy Bypass -Command "$$s=(New-Object -ComObject WScript.Shell).CreateShortcut('%PUBLIC%\\Desktop\\NEXT-EXAM-STUDENT.lnk'); $$s.TargetPath='Z:\\'; $$s.WorkingDirectory='Z:\\'; $$s.IconLocation='shell32.dll,3'; $$s.Save()" ^>nul 2^>^&1
-    echo ^)
-    echo timeout /t 2 /nobreak ^>nul
-    echo goto retry
-)
+echo [%date% %time%] registering scheduled tasks >> "%LOG%"
+schtasks /create /tn "NextExam-RcloneMount" /tr "\"%TARGET%\mount-rclone.cmd\"" /sc onlogon /ru admin /rl HIGHEST /f >> "%LOG%" 2>&1
+schtasks /create /tn "NextExam-CreateShortcut" /tr "\"%TARGET%\create-shortcut.cmd\"" /sc onlogon /ru admin /rl HIGHEST /f >> "%LOG%" 2>&1
 
-echo Registering scheduled task...
-schtasks /create /tn "NextExam-RcloneMount" /tr "\"%TARGET%\mount-rclone.cmd\"" /sc onlogon /ru admin /rl HIGHEST /f
-
-echo Starting mount once...
+echo [%date% %time%] starting mount and shortcut creator >> "%LOG%"
 start "" /min "%TARGET%\mount-rclone.cmd"
+start "" /min "%TARGET%\create-shortcut.cmd"
 
+echo [%date% %time%] setup-rclone done >> "%LOG%"
 exit /b 0
-

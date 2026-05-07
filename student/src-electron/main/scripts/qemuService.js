@@ -13,6 +13,14 @@ let vmVncDisplay = null;
 let vmOverlayPath = null;
 let vmQmpPath = null;
 
+function getCpuArg() {
+    const cpu = 'host,hv_relaxed,hv_spinlocks=0x1fff,hv_vapic,hv_time';
+    if (process.platform === 'linux') return cpu;
+    if (process.platform === 'win32') return cpu;
+    if (process.platform === 'darwin') return cpu;
+    return cpu;
+}
+
 function getQemuDir(workdirectory) {
     return path.join(workdirectory, 'QEMU');
 }
@@ -338,7 +346,7 @@ async function startHeadless({ workdirectory, qcow2Name, vncDisplay = ':1', over
 
     const args = [
         '-enable-kvm',
-        '-cpu', 'host',
+        '-cpu', getCpuArg(),
         '-m', '8192',
         '-smp', '4',
         // writeback+threads avoids long stalls many hosts show with cache=none+aio=native on large Windows images
@@ -407,7 +415,7 @@ async function verifyDiskSize({ workdirectory, qcow2Name, expectedSizeBytes }) {
     }
 }
 
-async function downloadDiskFromTeacher({ serverip, serverApiPort, servername, token, filename, workdirectory, overwrite = false }) {
+async function downloadDiskFromTeacher({ serverip, serverApiPort, servername, token, filename, workdirectory, overwrite = false, onProgress = null }) {
     if (!serverip || !serverApiPort || !servername || !token) {
         throw new Error('invalid download args');
     }
@@ -443,6 +451,22 @@ async function downloadDiskFromTeacher({ serverip, serverApiPort, servername, to
                 });
                 return;
             }
+            const total = Number(res.headers['content-length'] || 0) || 0;
+            let received = 0;
+            let lastPct = -1;
+            try { onProgress?.({ phase: 'start', filename, percent: 0, receivedBytes: 0, totalBytes: total || null }); } catch (e) {}
+            res.on('data', (chunk) => {
+                received += chunk.length;
+                if (total > 0) {
+                    const pct = Math.floor((received / total) * 100);
+                    if (pct !== lastPct) {
+                        lastPct = pct;
+                        try { onProgress?.({ phase: 'downloading', filename, percent: pct, receivedBytes: received, totalBytes: total }); } catch (e) {}
+                    }
+                } else {
+                    try { onProgress?.({ phase: 'downloading', filename, percent: null, receivedBytes: received, totalBytes: null }); } catch (e) {}
+                }
+            });
             res.pipe(file);
             file.on('finish', () => {
                 file.close(async () => {
@@ -451,6 +475,7 @@ async function downloadDiskFromTeacher({ serverip, serverApiPort, servername, to
                             try { await fs.promises.unlink(dest); } catch (e) {}
                         }
                         await fs.promises.rename(tmp, dest);
+                        try { onProgress?.({ phase: 'done', filename, percent: 100, receivedBytes: received, totalBytes: total || null }); } catch (e) {}
                         resolve({ ok: true, skipped: false, path: dest });
                     } catch (e) {
                         reject(e);

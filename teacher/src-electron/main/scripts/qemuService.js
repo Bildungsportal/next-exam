@@ -216,7 +216,10 @@ async function ensureAnswerIsoPresent(qemuDir) {
 
 async function ensureDisk(qemuDir) {
     const diskPath = path.join(qemuDir, DEFAULTS.diskName);
-    if (fs.existsSync(diskPath)) return diskPath;
+    if (fs.existsSync(diskPath)) {
+        log.warn(`qemuService @ ensureDisk: reusing existing disk ${diskPath} (no reinstall will run)`);
+        return diskPath;
+    }
     const res = await runToCompletion('qemu-img', ['create', '-f', 'qcow2', diskPath, DEFAULTS.diskSize], { cwd: qemuDir });
     if (res.exitCode !== 0) {
         throw new Error(`qemu-img failed: ${res.stderr || res.stdout}`);
@@ -230,6 +233,14 @@ function getAccelArgs() {
     if (platform === 'win32') return ['-accel', 'whpx'];
     if (platform === 'darwin') return ['-accel', 'hvf'];
     return [];
+}
+
+function getCpuArg() {
+    const cpu = 'host,hv_relaxed,hv_spinlocks=0x1fff,hv_vapic,hv_time';
+    if (process.platform === 'linux') return cpu;
+    if (process.platform === 'win32') return cpu;
+    if (process.platform === 'darwin') return cpu;
+    return cpu;
 }
 
 async function installDefaultVm({ workdirectory, onProgress = null }) {
@@ -250,7 +261,7 @@ async function installDefaultVm({ workdirectory, onProgress = null }) {
         ...getAccelArgs(),
         '-m', '8192',
         '-smp', '4',
-        '-cpu', 'host',
+        '-cpu', getCpuArg(),
         '-machine', 'q35',
         '-drive', `file=${diskPath},if=virtio,cache=none,aio=native`,
         '-drive', `file=${isoPath},media=cdrom,if=none,id=winiso,readonly=on`,
@@ -291,7 +302,7 @@ async function bootDisk({ workdirectory, qcow2Name }) {
         ...getAccelArgs(),
         '-m', '8192',
         '-smp', '4',
-        '-cpu', 'host',
+        '-cpu', getCpuArg(),
         '-machine', 'q35',
         '-drive', `file=${diskPath},if=virtio`,
         '-vga', 'virtio',

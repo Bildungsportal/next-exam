@@ -223,6 +223,10 @@ class IpcHandler {
             try {
                 const { serverip, serverApiPort, servername, token, filename, overwrite } = payload || {};
                 log.info(`ipchandler @ qemu-download-disk: downloading ${filename} from teacher ${servername}@${serverip}:${serverApiPort}`);
+                const sendProgress = (p) => {
+                    try { this.WindowHandler?.mainwindow?.webContents?.send?.('qemu-download-progress', p); } catch (e) {}
+                };
+                sendProgress({ phase: 'start', filename, percent: 0 });
                 const result = await qemuService.downloadDiskFromTeacher({
                     serverip,
                     serverApiPort,
@@ -231,8 +235,10 @@ class IpcHandler {
                     filename,
                     workdirectory: this.config.workdirectory,
                     overwrite: !!overwrite,
+                    onProgress: sendProgress,
                 });
                 log.info(`ipchandler @ qemu-download-disk: download finished (skipped=${!!result?.skipped}) ${filename}`);
+                sendProgress({ phase: 'end', filename, percent: 100 });
                 if (this.multicastClient?.serverstatus?.exammode) {
                     if (this.CommunicationHandler.localVmStartState === 'starting') {
                         log.info('ipchandler @ qemu-download-disk: localvm start already in progress, skip startExam');

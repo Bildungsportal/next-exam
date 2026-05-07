@@ -217,8 +217,15 @@ export function startExamWebdav(opts) {
                     return;
                 }
                 if (st.isDirectory()) {
-                    res.writeHead(301, { Location: `${urlPath.endsWith('/') ? urlPath : `${urlPath}/`}` });
-                    res.end();
+                    if (!urlPath.endsWith('/')) {
+                        res.writeHead(301, { Location: `${urlPath}/` });
+                        res.end();
+                        return;
+                    }
+                    // Avoid redirect loops for directory GET (browser check); WebDAV clients use PROPFIND.
+                    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+                    res.writeHead(200);
+                    res.end('OK');
                     return;
                 }
                 if (req.method === 'HEAD') {
