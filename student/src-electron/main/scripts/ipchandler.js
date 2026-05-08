@@ -190,6 +190,16 @@ class IpcHandler {
             }
         });
 
+        ipcMain.handle('qemu-reset-hard', async () => {
+            try {
+                const res = await qemuService.resetVmHard();
+                return { ok: true, result: res };
+            } catch (err) {
+                log.error('ipchandler @ qemu-reset-hard', err);
+                return { ok: false, error: String(err?.message || err) };
+            }
+        });
+
         ipcMain.handle('qemu-pick-import-disk', async () => {
             try {
                 log.info('ipchandler @ qemu-pick-import-disk: selecting qcow2 via filepicker');

@@ -46,7 +46,7 @@ echo [%date% %time%] writing rclone.conf >> "%LOG%"
 )
 
 echo [%date% %time%] registering scheduled tasks >> "%LOG%"
-schtasks /create /tn "NextExam-RcloneMount" /tr "wscript.exe ""%TARGET%\run-hidden.vbs"" ""%TARGET%\mount-rclone.cmd""" /sc onlogon /ru admin /rl HIGHEST /f >> "%LOG%" 2>&1
+schtasks /create /tn "NextExam-RcloneMount" /tr "wscript.exe %TARGET%\run-hidden.vbs %TARGET%\mount-rclone.cmd" /sc onlogon /ru admin /rl HIGHEST /f >> "%LOG%" 2>&1
 
 echo [%date% %time%] starting mount and shortcut creator >> "%LOG%"
 wscript.exe "%TARGET%\run-hidden.vbs" "%TARGET%\mount-rclone.cmd"

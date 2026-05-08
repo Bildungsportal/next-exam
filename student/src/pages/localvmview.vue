@@ -20,6 +20,13 @@
     ></exam-header>
 
     <div id="toolbar" class="d-inline p-1 pt-0">
+      <button
+        class="btn btn-primary p-0 pe-2 ps-1 me-1 mb-0 btn-sm"
+        @click="confirmHardResetVm"
+        :disabled="vmResetBusy"
+        title="VM hart zurücksetzen"
+      ><img src="/src/assets/img/svg/edit-redo.svg" class="" width="22" height="20">Reset VM</button>
+
       <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
 
       <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
@@ -165,7 +172,8 @@ export default {
       connectScheduler: null,
       lastLocalVmState: null,
       lastFocusState: true,
-      isUnmounted: false
+      isUnmounted: false,
+      vmResetBusy: false
     };
   },
   computed: {
@@ -595,6 +603,32 @@ export default {
           console.error('localvmview @ fetchInfo: wlan/host ip error', err);
         }
         this.internetCheckCounter = 0;
+      }
+    }
+    ,
+    async confirmHardResetVm() {
+      if (this.vmResetBusy) return;
+      const result = await this.$swal.fire({
+        title: 'VM hart zurücksetzen?',
+        text: 'Die VM wird sofort neu gestartet (Reset-Knopf). Ungespeicherte Daten in der VM können verloren gehen.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Reset',
+        cancelButtonText: 'Abbrechen',
+        reverseButtons: true,
+      });
+      if (!result?.isConfirmed) return;
+      try {
+        this.vmResetBusy = true;
+        const res = await signalBridge.invoke('qemu-reset-hard');
+        if (!res?.ok) {
+          throw new Error(res?.error || 'reset failed');
+        }
+        await this.$swal.fire({ title: 'Reset ausgelöst', icon: 'success', timer: 1200, showConfirmButton: false });
+      } catch (e) {
+        await this.$swal.fire({ title: 'Reset fehlgeschlagen', text: String(e?.message || e), icon: 'error' });
+      } finally {
+        this.vmResetBusy = false;
       }
     }
   }

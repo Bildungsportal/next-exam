@@ -201,6 +201,21 @@ async function shutdownVmGracefully({ timeoutMs = 8000 } = {}) {
     return { ok: true, alreadyStopped: false, graceful: false };
 }
 
+async function resetVmHard() {
+    if (!vmProc || vmProc.killed) {
+        throw new Error('no running VM');
+    }
+    if (!vmQmpPath || !fs.existsSync(vmQmpPath)) {
+        throw new Error('missing qmp socket');
+    }
+    log.warn('qemuService @ resetVmHard: system_reset via QMP');
+    const res = await qmpExecute(vmQmpPath, 'system_reset');
+    if (res?.error) {
+        throw new Error(String(res.error?.desc || 'qmp system_reset failed'));
+    }
+    return { ok: true };
+}
+
 function _unlinkIfExists(p) {
     const filePath = String(p || '');
     if (!filePath) {
@@ -500,6 +515,7 @@ export default {
     getQemuDir,
     startHeadless,
     shutdownVmGracefully,
+    resetVmHard,
     stopVm,
     stopVmAsync,
     killAllLocalQemu,

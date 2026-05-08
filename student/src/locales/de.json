@@ -229,7 +229,7 @@
         "vmVerifyingHashHint": "Dies kann ein paar Minuten dauern.",
         "vmVerifyingSize": "Dateigröße des Basis-Images wird geprüft …",
         "vmWaiting": "Warte auf virtuelle Maschine …",
-        "localvmDiskMismatch": "Die VM-Disk entspricht nicht der Vorgabe (Hash/Größe stimmt nicht). Bitte neu holen oder importieren.",
+        "localvmDiskMismatch": "Die VM-Disk entspricht nicht der Vorgabe.\n(Hash/Größe stimmt nicht). Bitte neu holen oder importieren.",
         "localvmDownloadDoneWaiting": "Download fertig. Warte auf Start…",
         "localvmDownloadFailed": "Download fehlgeschlagen.",
         "localvmDownloading": "Download läuft…",
