@@ -12,6 +12,7 @@ const examEventBus = reactive({
     async init(ipcRenderer, servername) {
         this._ipc = ipcRenderer;
         this._servername = servername;
+        this.clearMemory();
         try {
             const saved = await ipcRenderer.invoke('loadExamLog', servername);
             if (saved) {
@@ -62,10 +63,16 @@ const examEventBus = reactive({
         }
     },
 
-    reset() {
+    clearMemory() {
+        clearTimeout(this._saveTimer);
+        this._saveTimer = null;
         this.events.splice(0, this.events.length);
         this.examStart = null;
         this.examEnd = null;
+    },
+
+    reset() {
+        this.clearMemory();
         this._save();
     },
 });

@@ -1361,6 +1361,8 @@ export default {
             timelimitWarnedByStartTs: {},
             setupStatusText: '',
 
+            ipcSubmissionHandler: null,
+
             bipToken:this.$route.params.bipToken === 'false' ?  false : this.$route.params.bipToken,   // parameters are always passed as string "false", convert to bool
             bipuserID: this.$route.params.bipuserID === 'false' ?  false : this.$route.params.bipuserID,
             bipUsername:this.$route.params.bipUsername === 'false' ?  false : this.$route.params.bipUsername,
@@ -3053,9 +3055,10 @@ computed: {
 
         // fired by the express server (control.js) via webContents.send after a PDF is successfully written to disk
         // distinguishes between a plain submission (file saved only) and a printrequest (file saved + teacher print dialog)
-        ipcRenderer.on('submission', (event, student) => {
+        this.ipcSubmissionHandler = (event, student) => {
             examEventBus.push(student.printrequest ? 'printrequest' : 'submission', student)
-        })
+        }
+        ipcRenderer.on('submission', this.ipcSubmissionHandler)
 
         ipcRenderer.on('reconnected', async (event, student) => {
             examEventBus.push('relogin', student)
@@ -3132,6 +3135,10 @@ computed: {
 
     },
     beforeUnmount() {  //when leaving
+        if (this.ipcSubmissionHandler) {
+            ipcRenderer.removeListener('submission', this.ipcSubmissionHandler)
+            this.ipcSubmissionHandler = null
+        }
         this.fetchinterval.removeEventListener('action', this.fetchInfo);
         this.fetchinterval.stop() 
         this.backupinterval.removeEventListener('action', this.backupintervalCallback);

@@ -208,6 +208,7 @@ function stopserver(){
 
             examEventBus.push('serverstop')
             await examEventBus._save()  // save synchronously before navigation
+            examEventBus.clearMemory()
             await ipcRenderer.invoke("stopserver", this.servername)  // need to stop server first otherwise router.js won't route back
 
             this.$router.push({  // for some reason this doesn't work on mobile
