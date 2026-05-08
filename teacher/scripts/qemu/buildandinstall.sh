@@ -24,6 +24,7 @@ mkdir -p ./autounattend-iso-root
 cp ./autounattend.xml ./autounattend-iso-root/autounattend.xml
 cp ./setup-rclone.cmd ./autounattend-iso-root/setup-rclone.cmd
 cp ./mount-rclone.cmd ./autounattend-iso-root/mount-rclone.cmd
+cp ./run-hidden.vbs ./autounattend-iso-root/run-hidden.vbs
 
 if [ "$ISO_ONLY" -eq 0 ]; then
   [ -f "$ISO" ]    || wget -c -O "$ISO" "$ISO_URL"

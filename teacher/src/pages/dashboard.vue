@@ -1102,7 +1102,7 @@
                 </div> 
             </div>
 
-            <div id="logrefresh" class="form-check form-switch" style="position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); width: 60px; margin:auto auto"> 
+            <div id="logrefresh" class="form-check form-switch" style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 60px; margin:auto auto">
                 <input type="checkbox" id="logrefreshcheckbox" v-model="serverlogReload" class="form-check-input" title="Refresh Log" style="width: 50px; height: 15px;"> 
              </div>
         </div>
@@ -4249,14 +4249,14 @@ hr {
     position: fixed;
     z-index: 1000; 
     width: 580px;
-    height: 100%;
+    height: auto;
     right: -582px;
-    top: 66px;
+    top: 62px;
+    bottom: 1.5em;
     background-color: var(--bs-gray-100);
     box-shadow: -2px 1px 2px rgba(0, 0, 0, 0);
     transition: 0.3s;
     padding: 6px;
-    padding-bottom: 100px;
   
 }
 
@@ -4310,7 +4310,7 @@ hr {
 }
 
 #loginfo .logscrollarea {
-    height: calc(100vh - 52px);
+    height: calc(100vh - 62px - 1.5em);
     width: 568px;
     overflow-x: hidden;
     overflow-y: auto;
