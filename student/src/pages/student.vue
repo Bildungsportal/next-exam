@@ -239,27 +239,28 @@ import emblem_warning_img from '/src/assets/img/svg/emblem-warning.svg'
 import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync } from '../utils/screenshotCapture.js'
 import { Exam } from '../types/api'
 import loggingBridge from "../utils/loggingBridge.js";
-import { autoCleanup } from "../utils/autoCleanup.js";
+import { autoCleanupMixin } from "../mixins/autoCleanupMixin.js";
 
+function unhandledRejectionFunction() {
+  const reason = event?.reason;
+  const msg = typeof reason === 'string' ? reason : reason && reason.message;
+  if (msg && (msg.includes('GUEST_VIEW_MANAGER_CALL') || msg.includes('ERR_FAILED'))) {
+    event.preventDefault(); // swallow guest view clone errors and ERR_FAILED
+    return;
+  }
+}
 
 // Capture unhandled promise rejections
-window.addEventListener('unhandledrejection', event => {
-    const reason = event?.reason;
-    const msg = typeof reason === 'string' ? reason : reason && reason.message;
-    if (msg && (msg.includes('GUEST_VIEW_MANAGER_CALL') || msg.includes('ERR_FAILED'))) {
-        event.preventDefault(); // swallow guest view clone errors and ERR_FAILED
-        return;
-    }
-    //loggingBridge.error('Unhandled promise rejection:', reason); // log all other errors
-});
+window.addEventListener('unhandledrejection', unhandledRejectionFunction);
 
 //Object.assign(console, loggingBridge.functions);  // Replace all console logs with logger
 
 // signalBridge instance centralizes ipc send calls with platform checks
 const signalBridge = new SignalBridge(window);
 
-
 export default {
+
+    mixins: [autoCleanupMixin],
     data() {
         return {
             version: this.$route.params.version,
@@ -269,8 +270,6 @@ export default {
             clientinfo: {},
             serverlist: [],
             serverlistAdvanced: [],
-            fetchinterval: null,
-            autoUpdateInterval: null,
             serverApiPort: this.$route.params.serverApiPort,
             clientApiPort: this.$route.params.clientApiPort,
             electron: this.$route.params.electron,
@@ -467,7 +466,7 @@ export default {
 
             const url = this.getBiPUrl() + '/webservice/rest/server.php?wstoken=' + token + '&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json';
 
-            await fetch(url, { method: "GET" })
+            await this.autoFetch(url, { method: "GET" })
             .then(response => {
                 return response.json();
             })
@@ -487,7 +486,7 @@ export default {
             console.log("token"+token);
             let url = this.getBiPUrl()+'/webservice/rest/server.php?wstoken='+token+'&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json';
 
-            fetch(url, {method: 'POST'})
+            this.autoFetch(url, {method: 'POST'})
                 .then(res => res.json())
                 .then(async (response) => {
                     if (response.fullname){
@@ -596,7 +595,7 @@ export default {
                     const localUserElement = document.getElementById("localuser");
                     const localPasswordElement = document.getElementById("localpassword");
 
-                    localUserElement.addEventListener("keypress", function (e) {
+                    this.autoEventListener(localUserElement,"keypress", function (e) {
                         // var lettersOnly = /^[a-zA-Z ]+$/;
                         var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
                         var key = e.key || String.fromCharCode(e.which);
@@ -619,10 +618,10 @@ export default {
                     };
 
                     // Add listener to document for general Enter key handling
-                    document.addEventListener('keydown', handleEnterKey);
+                    this.autoEventListener(document,'keydown', handleEnterKey);
                     // Add listener directly to input fields to catch Enter when focused
-                    localUserElement.addEventListener('keydown', handleEnterKey);
-                    localPasswordElement.addEventListener('keydown', handleEnterKey);
+                    this.autoEventListener(localUserElement,'keydown', handleEnterKey);
+                    this.autoEventListener(localPasswordElement,'keydown', handleEnterKey);
 
                     // Store handler reference for cleanup (will be cleaned up when dialog closes)
                     this._enterKeyHandler = handleEnterKey;
@@ -659,7 +658,7 @@ export default {
                     checkboxSuggestions.disabled = !checkboxLT.checked;
 
                     // Event Listener für checkboxLT, um den Status von checkboxsuggestions anzupassen
-                    checkboxLT.addEventListener('change', () => {
+                  this.autoEventListener(checkboxLT,'change', () => {
                         checkboxSuggestions.disabled = !checkboxLT.checked;
                         // Wenn checkboxLT abgewählt wird, soll suggestions zusätzlich zurückgesetzt werden:
                         if (!checkboxLT.checked) {
@@ -668,8 +667,8 @@ export default {
                     });
 
                     // Event Listener für Radio-Buttons, um Spellcheck-Sektion ein/auszublenden
-                    editorRadio.addEventListener('change', toggleSpellcheckSection);
-                    mathRadio.addEventListener('change', toggleSpellcheckSection);
+                    this.autoEventListener(editorRadio,'change', toggleSpellcheckSection);
+                    this.autoEventListener(mathRadio,'change', toggleSpellcheckSection);
 
                     // Initial visibility based on selected radio button
                     toggleSpellcheckSection();
@@ -978,7 +977,7 @@ export default {
                         if (this.serverlistAdvanced.length == 0) {
                             this.status("Suche nach Prüfungen...")
                         }
-                        fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/serverlist`)
+                        this.autoFetch(`https://${this.serverip}:${this.serverApiPort}/server/control/serverlist`)
                             .then(response => response.json()) // Parse JSON response
                             .then(data => {
                                 if (data && data.status === "success") {
@@ -1032,7 +1031,7 @@ export default {
                 this.applyOnlineExamStatusToServerlist();
 
 
-            } 
+            }
             else {  // No multicast: still show manual IP servers and BiP exams from the portal
                 let newServerlist = this.serverlistAdvanced.length !== 0 ? [...this.serverlistAdvanced] : [];
                 newServerlist = this.mergeBipExamsIntoServerlist(newServerlist);
@@ -1079,7 +1078,7 @@ export default {
                 const serverIdentifier = this.getServerIdentifier(server);
                 const isManual = this.isManuallyAddedServer(server);
                 const signal = AbortSignal.timeout(4000); // 4000 milliseconds = 4 seconds
-                fetch(`https://${server.serverip}:${this.serverApiPort}/server/control/pong`, {
+                this.autoFetch(`https://${server.serverip}:${this.serverApiPort}/server/control/pong`, {
                     method: 'GET',
                     signal
                 })
@@ -1288,12 +1287,10 @@ export default {
 
     },
     async mounted() {
-        const { setAutoSchedulerService, addAutoEventListener } = autoCleanup();
-
         document.querySelector("#statusdiv").style.visibility = "hidden";
 
         // 2️⃣ Timer
-        setAutoSchedulerService(() => {
+        this.autoSchedulerService(() => {
           console.log('The interval still runs');
         }, 1000);
 
@@ -1330,22 +1327,21 @@ export default {
             }
 
         });
-
-        // Fetch info asynchronously without blocking
+       // Fetch info asynchronously without blocking
         this.fetchInfo();
 
-        setAutoSchedulerService(this.fetchInfo, 4000)
-        setAutoSchedulerService(this.bipAutoUpdate, 10000)
+        this.autoSchedulerService(this.fetchInfo, 4000);
+        this.autoSchedulerService(this.bipAutoUpdate, 10000);
 
       // add event listener to user input field to supress all special 1chars
-        addAutoEventListener(document.getElementById("user"), "keypress", function (e) {
+        this.autoEventListener(document.getElementById("user"), "keypress", function (e) {
           // var lettersOnly = /^[a-zA-Z ]+$/;
           var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
           var key = e.key || String.fromCharCode(e.which);
           if (!lettersOnly.test(key)) {
             e.preventDefault();
           }
-        })
+        });
 
         // TODO: Modify windowhandling and token saving
         signalBridge.on('bipToken', (event, token) => {
@@ -1364,6 +1360,7 @@ export default {
 
     },
     beforeUnmount() {
+      window.removeEventListener('unhandledrejection', unhandledRejectionFunction);
     }
 }
 </script>
