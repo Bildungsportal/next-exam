@@ -975,6 +975,11 @@ import { switchExamSection } from './switchExamSection.js';
     async sendExamToTeacher(){
         //send save trigger to exam window
         if (WindowHandler.examwindow){  //there is a running exam - save current work first!
+            // localvm has no renderer-side save flow; send ZIP directly
+            if (this.multicastClient?.clientinfo?.examtype === 'localvm') {
+                this.sendToTeacher()
+                return
+            }
             try {
                 WindowHandler.examwindow.webContents.send('save','teacherrequest')   //trigger, why  (teacherrequest will also trigger sendToTeacher() but only after saving the pdf is complete)
             }
