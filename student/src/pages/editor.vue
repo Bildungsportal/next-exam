@@ -1469,7 +1469,8 @@ export default {
             //get current exam sectioninfo
 
             // this currentpreviewBase64 contains the current visible pdf as base64 string
-            const url = `https://${this.serverip}:${this.serverApiPort}/server/control/printrequest/${this.servername}/${this.token}`;
+            const endpoint = printrequest ? 'printjob' : 'submission'
+            const url = `https://${this.serverip}:${this.serverApiPort}/server/control/${endpoint}/${this.servername}/${this.token}`;
             const payload = {
                 document: this.currentpreviewBase64,
                 printrequest: printrequest,
@@ -1488,7 +1489,7 @@ export default {
             })
             .then(data => {
                 if (data.message == "success") {
-                    this.submissionnumber++   // successful submission -> increment number
+                    if (!printrequest) { this.submissionnumber++ }   // successful submission -> increment number
                     let message = this.$t("editor.saved")
                     if (printrequest) {
                         message = this.$t("editor.requestsent")

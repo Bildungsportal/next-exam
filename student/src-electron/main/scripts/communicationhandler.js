@@ -515,7 +515,7 @@ import { switchExamSection } from './switchExamSection.js';
 
     // send base64 pdf to teacher
     sendBase64PDFtoTeacher(base64pdf, section=1){
-        const url = `https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/printrequest/${this.multicastClient.clientinfo.servername}/${this.multicastClient.clientinfo.token}`;
+        const url = `https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/submission/${this.multicastClient.clientinfo.servername}/${this.multicastClient.clientinfo.token}`;
         const payload = {
             document: base64pdf,
             printrequest: false,    

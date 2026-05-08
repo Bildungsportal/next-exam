@@ -994,7 +994,7 @@ router.post('/updatescreenshot', async function (req, res, next) {
  * @param servername the name of the server at which the student is registered
  * @param token the students token to search and update the entry in the list
  */
-router.post('/printrequest/:servername/:studenttoken', async function (req, res, next) {
+router.post('/submission/:servername/:studenttoken', async function (req, res, next) {
     const studenttoken = req.params.studenttoken
     const servername = req.params.servername
     const pdfDocument = req.body.document
@@ -1040,7 +1040,7 @@ router.post('/printrequest/:servername/:studenttoken', async function (req, res,
         const absoluteFilename = path.join(filepath, filename)                                 // build path
         await fsp.writeFile(absoluteFilename, pdfBuffer)                                       // write main
       
-        log.info(`control @ printrequest: Received and stored submission file for user: ${student.clientname}`)
+        log.info(`control @ submission: Received and stored submission file for user: ${student.clientname}`)
         WindowHandler.mainwindow.webContents.send('submission', { clientname: student.clientname, clientip: student.clientip, hostname: student.hostname, printrequest: !!printrequest })
         // create backup of abgabe
         let backupStatus = 'skipped'                                                           // default backup status
@@ -1054,11 +1054,64 @@ router.post('/printrequest/:servername/:studenttoken', async function (req, res,
       
         res.send({ sender: 'server', message: 'success', status: 'success', backup: backupStatus }) // respond success
       } catch (err) {
-        log.error(`control @ printrequest: ${err}`)                                            // log error
+        log.error(`control @ submission: ${err}`)                                            // log error
         let message = t("control.submissionfailed")
         res.status(500).send({ sender: 'server', message: message, status: 'error' })   // respond error
       }
     
+})
+
+/**
+ * Receive PRINTJOB From Student (no ABGABE)
+ * Stores PDF under PRINTJOBS and triggers teacher-side printrequest UI flow.
+ */
+router.post('/printjob/:servername/:studenttoken', async function (req, res, next) {
+    const studenttoken = req.params.studenttoken
+    const servername = req.params.servername
+    const pdfDocument = req.body.document
+    const submissionnumber = req.body.submissionnumber
+    const lockedsection = req.body.lockedsection || 1 // default to section 1 if not provided
+
+    const mcServer = config.examServerList[servername]
+    if (!mcServer) { return res.send({ sender: "server", message: "notavailable", status: "error" }) }
+
+    let student = mcServer.studentList.find(element => element.token === studenttoken)
+    if (!student) { return res.send({ sender: "server", message: "removed", status: "error" }) }
+
+    // trigger teacher dashboard printrequest flow (polled via studentlist)
+    student.printrequest = pdfDocument
+
+    let safeStudent = student.clientname.replace(/\s+/g, '_')
+    let now = new Date()
+    let timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`
+    let filename = `${servername}-${safeStudent}-${submissionnumber}-${timestamp}.pdf`
+
+    const pdfBuffer = Buffer.from(pdfDocument, 'base64');
+
+    try {
+        const filepath = path.join(config.workdirectory, mcServer.serverinfo.servername, student.clientname, 'PRINTJOBS', lockedsection.toString())
+        await fsp.mkdir(filepath, { recursive: true })
+        const absoluteFilename = path.join(filepath, filename)
+        await fsp.writeFile(absoluteFilename, pdfBuffer)
+
+        log.info(`control @ printjob: Received and stored printjob file for user: ${student.clientname}`)
+        WindowHandler.mainwindow.webContents.send('submission', { clientname: student.clientname, clientip: student.clientip, hostname: student.hostname, printrequest: true })
+
+        let backupStatus = 'skipped'
+        if (config.backupdirectory) {
+            const backuppath = path.join(config.backupdirectory, mcServer.serverinfo.servername, student.clientname, 'PRINTJOBS', lockedsection.toString())
+            await fsp.mkdir(backuppath, { recursive: true })
+            const absoluteBackupFilename = path.join(backuppath, filename)
+            await fsp.writeFile(absoluteBackupFilename, pdfBuffer)
+            backupStatus = 'ok'
+        }
+
+        res.send({ sender: 'server', message: 'success', status: 'success', backup: backupStatus })
+    } catch (err) {
+        log.error(`control @ printjob: ${err}`)
+        let message = t("control.submissionfailed")
+        res.status(500).send({ sender: 'server', message: message, status: 'error' })
+    }
 })
 
 
