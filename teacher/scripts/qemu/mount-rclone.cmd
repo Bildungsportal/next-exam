@@ -5,7 +5,10 @@ set "TARGET=C:\ProgramData\NextExam"
 set "RCLONE=%TARGET%\rclone.exe"
 set "CONF=%TARGET%\rclone.conf"
 set "LOG=%TARGET%\rclone.log"
-set "MOUNT=%USERPROFILE%\Desktop\NEXT-EXAM-STUDENT"
+set "MOUNT=C:\Users\admin\Desktop\NEXT-EXAM-STUDENT"
+
+rem Exit if rclone is already running.
+tasklist /FI "IMAGENAME eq rclone.exe" 2>nul | find /I "rclone.exe" >nul && exit /b 0
 
 call :wait_for_guestfwd_webdav
 
