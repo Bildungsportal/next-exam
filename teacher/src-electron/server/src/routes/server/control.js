@@ -705,9 +705,24 @@ router.post('/setserverstatus/:servername/:csrfservertoken', async function (req
     const mcServer = config.examServerList[servername]
     if (!mcServer) {  return res.send({sender: "server", message:t("control.notfound"), status: "error"} )  }
     if (csrfservertoken !== mcServer.serverinfo.servertoken) { return res.send({sender: "server", message:t("control.tokennotvalid"), status: "error"} )}
-    
-    mcServer.serverstatus = req.body.serverstatus
+    const incoming = req.body.serverstatus
+    if (!incoming || typeof incoming !== 'object') {
+        return res.json({ sender: "server", message: t("control.invalidpayload"), status: "error" })
+    }
+    let normalizedPin = null
+    if (incoming.pin !== undefined && incoming.pin !== null) {
+        const pinStr = String(incoming.pin).trim()
+        if (!/^\d{4}$/.test(pinStr)) {
+            return res.json({ sender: "server", message: t("control.invalidpin"), status: "error" })
+        }
+        normalizedPin = pinStr
+    }
+
+    mcServer.serverstatus = incoming
     mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].msOfficeFile = false  // we cant store a file object as json
+    if (normalizedPin !== null) {
+        mcServer.serverinfo.pin = normalizedPin
+    }
 
     //console.log("control:", mcServer.serverstatus)
     log.info("control @ setserverstatus: saving server status to disc")
@@ -720,7 +735,18 @@ router.post('/setserverstatus/:servername/:csrfservertoken', async function (req
         const jsonString = JSON.stringify(mcServer.serverstatus, null, 2);
         // Validate JSON before writing to prevent invalid JSON files
         JSON.parse(jsonString);
-        await fs.promises.writeFile(filePath, jsonString);  
+        await fs.promises.writeFile(filePath, jsonString);
+        // Mirror serverstatus.json to backupdirectory/<servername>/ when configured.
+        if (config.backupdirectory) {
+            const backupExamDir = path.join(config.backupdirectory, mcServer.serverinfo.servername)
+            const backupFilePath = path.join(backupExamDir, 'serverstatus.json')
+            try {
+                await fs.promises.mkdir(backupExamDir, { recursive: true })
+                await fs.promises.writeFile(backupFilePath, jsonString)
+            } catch (backupErr) {
+                log.error('control @ setserverstatus: backup mirror failed', backupErr)
+            }
+        }
     }   // mcServer.serverstatus als JSON-Datei speichern
     catch (error) {  
         log.error(`control @ setserverstatus: ${error}` );

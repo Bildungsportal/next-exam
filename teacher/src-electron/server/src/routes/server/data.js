@@ -83,7 +83,17 @@ import pdf from '@bingsjs/pdf-parse';
  * CREATE COMBINED PDF START >>>>>>>>>>>>>>>>>>
  */
 
-
+// Copy exam-root artifact into backupdirectory/<servername>/ when backup path is set.
+async function mirrorExamRootFileToBackup(servername, basename, data) {
+    if (!config.backupdirectory) return
+    const backupExamDir = path.join(config.backupdirectory, servername)
+    try {
+        await fs.promises.mkdir(backupExamDir, { recursive: true })
+        await fs.promises.writeFile(path.join(backupExamDir, basename), data)
+    } catch (err) {
+        log.error(`data @ mirrorExamRootFileToBackup: ${basename}`, err)
+    }
+}
 
 /**
  * GET a latest work from all students
@@ -125,6 +135,7 @@ import pdf from '@bingsjs/pdf-parse';
         try {
             await fs.promises.writeFile(indexPDFpath, indexPDFdata);
             log.info('data @ getlatest: Index PDF saved successfully!');
+            await mirrorExamRootFileToBackup(mcServer.serverinfo.servername, 'index.pdf', indexPDFdata)
         }
         catch(err){log.error("data @ getlatest:",err)}
         latestFiles.unshift(indexPDFpath)
@@ -137,6 +148,7 @@ import pdf from '@bingsjs/pdf-parse';
         try {
             await fs.promises.writeFile(pdfPath, pdfBuffer);
             log.info('data @ getlatest: PDF saved successfully!');
+            await mirrorExamRootFileToBackup(mcServer.serverinfo.servername, 'combined.pdf', pdfBuffer)
         }
         catch(err){log.error("data @ getlatest:",err)}
         return res.json({warning: warning, pdfBuffer:pdfBuffer, pdfPath:pdfPath });
@@ -608,7 +620,7 @@ router.post('/getexammaterials/:servername/:token', async (req, res, next) => {
 
 
 /**
- * POST next-exam-student.log from client (workdirectory root) into teacher workdir/<server>/<clientname>/logfiles/
+ * POST next-exam-student.log from client into workdir/<server>/<client>/logfiles/ and mirror to backupdirectory when set
  */
 router.post('/studentlog/:servername/:studenttoken', async (req, res, next) => {
     const studenttoken = req.params.studenttoken
@@ -646,6 +658,17 @@ router.post('/studentlog/:servername/:studenttoken', async (req, res, next) => {
     try {
         await fs.promises.mkdir(logdir, { recursive: true })
         await fs.promises.writeFile(destPath, fileContent)
+        // Mirror student log to backupdirectory when configured (same relative layout as workdir).
+        if (config.backupdirectory) {
+            const backupLogdir = path.join(config.backupdirectory, mcServer.serverinfo.servername, student.clientname, 'logfiles')
+            const backupDestPath = path.join(backupLogdir, 'next-exam-student.log')
+            try {
+                await fs.promises.mkdir(backupLogdir, { recursive: true })
+                await fs.promises.writeFile(backupDestPath, fileContent)
+            } catch (backupErr) {
+                log.error("data @ studentlog: backup mirror failed", backupErr)
+            }
+        }
         log.info(`data @ studentlog: stored log for ${student.clientname}`)
         return res.json({ status: "success", sender: "server", message: "Log received" })
     } catch (err) {

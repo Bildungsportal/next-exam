@@ -169,9 +169,19 @@
         <div class="sidebar-overlays">
         </div>
         <div class="sidebar-info-strip">
-        <div class="btn btn-light text-start infobutton" @click="showinfo()">{{$t('dashboard.name')}} <br><b> {{$route.params.servername}}</b> </div>
-        <div class="btn btn-light text-start infobutton" @click="showinfo()">{{$t('dashboard.pin')}}<br><b> {{ serverstatus.pin }} </b>  </div>
-        <div class="btn btn-light  text-start infobutton" @click="showinfo()" style="margin-bottom: 0.7rem;">{{$t('dashboard.server')}} <br><b>{{serverip}}</b> </div>
+        <div class="text-start infobutton d-flex align-items-start">
+            <div class="flex-grow-1 min-w-0">{{$t('dashboard.name')}} <br><b> {{$route.params.servername}}</b></div>
+            <button type="button" class="sectionbutton-edit flex-shrink-0 ms-1 me-1" :title="$t('dashboard.online')" @click.stop="showinfo()">
+                <img src="/src/assets/img/svg/eye-fill.svg" alt="" width="22" height="22">
+            </button>
+        </div>
+        <div class="text-start infobutton d-flex align-items-start">
+            <div class="flex-grow-1 min-w-0">{{$t('dashboard.pin')}}<br><b> {{ serverstatus.pin }} </b></div>
+            <button type="button" class="sectionbutton-edit flex-shrink-0 ms-1 me-1" :title="$t('dashboard.pin')" @click.stop="editPin()">
+                <img src="/src/assets/img/svg/document-edit.svg" class="white" alt="" width="22" height="22">
+            </button>
+        </div>
+        <div class="text-start infobutton" style="margin-bottom: 0.7rem;">{{$t('dashboard.server')}} <br><b>{{serverip}}</b></div>
         </div>
 
         
@@ -2382,19 +2392,40 @@ computed: {
             if (group === 'A') section.groupA.examConfig.activeSheets = {};
             else section.groupB.examConfig.activeSheets = {};
         },
+        async editPin() {
+            const prev = String(this.serverstatus.pin ?? '').trim()
+            const result = await this.$swal.fire({
+                title: this.$t('dashboard.pin'),
+                input: 'text',
+                inputValue: prev,
+                inputAttributes: { maxlength: 4, autocapitalize: 'off', autocorrect: 'off', inputmode: 'numeric' },
+                showCancelButton: true,
+                cancelButtonText: this.$t('dashboard.cancel'),
+                confirmButtonText: this.$t('general.ok'),
+                customClass: { popup: 'custom-swal2-popup-info' },
+                inputValidator: (value) => {
+                    const nextPin = String(value ?? '').trim()
+                    if (!/^\d{4}$/.test(nextPin)) return this.$t('dashboard.pinInvalid')
+                },
+            })
+            if (!result.isConfirmed) return
+            const nextPin = result.value
+            if (!nextPin || nextPin === prev) return
+            this.serverstatus.pin = nextPin
+            const response = await this.setServerStatus()
+            if (response?.status !== 'success') {
+                this.serverstatus.pin = prev
+                return
+            }
+            await this.status(this.$t('dashboard.pinSaved'))
+        },
         //show pincode 
         showinfo(){
-            let info = `<span> IP: <strong>${this.serverip}</strong> \nName: ${this.servername}  \nPin: ${this.serverstatus.pin} </span>`
+            const esc = (v) => String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')
             this.$swal.fire({ 
-                title: `<div style="justify-content: center;""><div style="display:inline-block; text-align: right; margin-right: 10px; font-weight:normal; font-size: 1.1em;">${this.$t("dashboard.name")}:
-                                ${this.$t("dashboard.server")}:
-                                ${this.$t("dashboard.pin")}:
-                                
-                            </div><div style="display:inline-block; text-align: left;font-size: 1.1em;">${this.servername}
-                                ${this.serverip}
-                                ${this.serverstatus.pin} 
-
-                            </div>
+                title: `<div style="display:flex;justify-content:flex-start;align-items:flex-start;gap:0px;text-align:left">
+                            <div style="flex:0 0 auto;text-align:left;font-weight:normal;font-size:1.1em;line-height:1.5">${this.$t("dashboard.name")}<br/>${this.$t("dashboard.server")}<br/>${this.$t("dashboard.pin")}</div>
+                            <div style="flex:1 1 auto;text-align:left;font-size:1.1em;line-height:1.5; margin-left: 50px;" ><b>${esc(this.servername)}</b><br/>${esc(this.serverip)}<br/>${esc(this.serverstatus.pin)}</div>
                         </div>`,
                 icon: "info",
                 customClass: {
@@ -4012,7 +4043,20 @@ computed: {
     max-width: none;
     border-radius: 0 !important;
     background-color: whitesmoke;
-    cursor: help;
+    color: var(--bs-body-color, #212529);
+    border: var(--bs-border-width, 1px) solid transparent;
+    padding: 0.375rem 0.75rem;
+    cursor: default;
+    box-shadow: none;
+    user-select: text;
+}
+.infobutton:hover,
+.infobutton:focus,
+.infobutton:focus-visible {
+    background-color: whitesmoke;
+    color: var(--bs-body-color, #212529);
+    border-color: transparent;
+    box-shadow: none;
 }
 
 #studentslist{
