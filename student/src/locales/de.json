@@ -117,6 +117,8 @@
         "spellcheck": "Rechtschreibprüfung aktivieren",
         "spellcheckdeactivate": "Rechtschreibprüfung deaktivieren",
         "splitview": "Spaltenansicht",
+        "statsrule": "Linie mit Abschnittszähler (Zeichen/Wörter)",
+        "statsruleBadge": "{chars} Zeichen, {words} Wörter",
         "subscript": "tiefgestellt",
         "success": "Erfolg",
         "superscript": "hochgestellt",

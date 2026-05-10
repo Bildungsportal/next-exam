@@ -164,9 +164,11 @@
                     class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img
                 src="/src/assets/img/svg/key-enter.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.line')" @click="editor.chain().focus().setHorizontalRule().run()"
-                    class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img
+                    class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm"><img
                 src="/src/assets/img/svg/newline.svg" class="white" width="22" height="22"></button>
-
+            <button :title="$t('editor.statsrule')" @click="editor.chain().focus().setStatsRule().run()"
+                    class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img
+                src="/src/assets/img/svg/statsbreaker.svg" class="" width="22" height="22"></button>
 
             <button :title="$t('editor.more')" id="more" @click="showMore();this.LTdisable()"
                     class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img
@@ -686,6 +688,7 @@ import BulletList from '@tiptap/extension-bullet-list'
 import HardBreak from '@tiptap/extension-hard-break'
 import ListItem from '@tiptap/extension-list-item'
 import HorizontalRule from '@tiptap/extension-horizontal-rule'
+import { StatsRule } from '../components/statsRule.ts'
 import Heading from '@tiptap/extension-heading'
 import OrderedList from '@tiptap/extension-ordered-list'
 import Bold from '@tiptap/extension-bold'
@@ -1975,6 +1978,7 @@ export default {
                     HardBreak,
                     Heading,
                     HorizontalRule,
+                    StatsRule,
                     ListItem,
                     OrderedList,
                     Paragraph,
@@ -2018,6 +2022,7 @@ export default {
                 content: ``,
             });
         },
+        
         async loadBackupFile(filename = false) {
             // check if there is a bak file in the exam directory and load it
             // This must run early to read the file before editor overwrites it after 20 seconds

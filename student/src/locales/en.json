@@ -117,6 +117,8 @@
         "spellcheck": "spellcheck",
         "spellcheckdeactivate": "deactivate spellcheck",
         "splitview": "Splitview",
+        "statsrule": "Line with section counter (chars/words)",
+        "statsruleBadge": "{chars} characters, {words} words",
         "subscript": "subscript",
         "success": "Success",
         "superscript": "superscript",
