@@ -326,10 +326,10 @@ for (let i = 0; i<16; i++ ){
     const servername = req.params.servername
     const mcServer = config.examServerList[servername] // get the multicastserver object
     const sessionRef = String(mcServer?.serverinfo?.pin || '')
-    let clientname, clientip, pin, version, hostname, bipuserID
+    let clientname, clientip, pin, version, hostname, bipuserID, exammode
     try {
         const payload = await processSecurePayload(packet, sessionRef)
-        ;({ clientname, clientip, pin, version, hostname, bipuserID } = payload || {})
+        ;({ clientname, clientip, pin, version, hostname, bipuserID, exammode } = payload || {})
     } catch (err) {
         return res.send({ sender: "server", message: "Wrong PIN", status: "error" })
     }
@@ -358,6 +358,9 @@ for (let i = 0; i<16; i++ ){
     }
     try {
         if (pin == mcServer.serverinfo.pin) {
+            if (exammode === true && !mcServer.serverstatus?.exammode) {
+                return res.json({ sender: "server", message: t("control.exammismatchregistration"), status: "error" })
+            }
             let registeredClient = mcServer.studentList.find(element => element.clientname === clientname)
         
             
@@ -383,7 +386,7 @@ for (let i = 0; i<16; i++ ){
                     clientip: clientip,
                     timestamp: new Date().getTime(),
                     focus: true,
-                    exammode: false,
+                    exammode: exammode ?? false,
                     imageurl:false,
                     virtualized: false,
                     version: version,  // set at registration so isVersionMismatch is correct before first /update
@@ -445,11 +448,12 @@ for (let i = 0; i<16; i++ ){
                 let now = new Date().getTime()
                 if (now - 20000 > registeredClient.timestamp) { // student probably went offline (teacher connection loss) but is coming back now
                     registeredClient.timestamp = now
+                    registeredClient.exammode = exammode ?? false
                     log.info("control @ registerclient: student reconnected")
 
                     //inform frontend about re-connection
                     WindowHandler.mainwindow.webContents.send("reconnected", registeredClient)
-                    return res.json({sender: "server", message:"Student successfully reconnected", status: "success", token: registeredClient.token})  //send back old token
+                    return res.json({ sender: "server", message: "Student successfully reconnected", status: "success", token: registeredClient.token, reconnected: true }) // send back old token; reconnected flags student UI success copy
                 }
                 else {
                     return res.json({sender: "server", message:"Student already registered", status: "error"})

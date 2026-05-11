@@ -1243,7 +1243,7 @@ class IpcHandler {
 
          
             // Encrypt the registration payload and derive sessionRef from the pin.
-            let payload = { pin, clientname, clientip, hostname, version, bipuserID }
+            let payload = { pin, clientname, clientip, hostname, version, bipuserID, exammode: this.multicastClient.clientinfo.exammode === true }
             const url = `https://${serverip}:${this.config.serverApiPort}/server/control/registerclient/${servername}`;
             const signal = AbortSignal.timeout(8000); // 8000 milliseconds = 8 second AbortSignal timeout
 

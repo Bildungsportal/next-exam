@@ -5,6 +5,7 @@
         "bipclosed": "This BiP exam is currently closed.",
         "biprequired": "Bildungsportal authentification mandatory!",
         "correctpw": "Password OK",
+        "exammismatchregistration": "The exam server is not in secure exam mode. Please wait until the teacher starts the exam, then connect again.",
         "examrequest": "Exams requested",
         "invalidpayload": "Invalid server status payload.",
         "invalidpin": "Invalid PIN (exactly four digits).",

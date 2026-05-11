@@ -203,6 +203,7 @@
         "pin": "Pincode",
         "pwdmismatch": "Passwörter stimmen nicht überein",
         "register": "anmelden",
+        "reconnectedinfo": "Die Verbindung zum Prüfungsserver wurde wiederhergestellt. Der abgesicherte Prüfungsmodus läuft bereits.",
         "registered": "angemeldet",
         "registeredinfo": "Sie haben sich erfolgreich am Server registriert! \n\nBitte warten Sie auf die Aktivierung des Prüfungsmodus durch die Lehrperson!",
         "registering": "melde an...",

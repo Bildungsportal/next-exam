@@ -107,9 +107,11 @@ export function gracefullyExit() {
         this.token = IPCresponse.token; // set token (used to determine server connection status)
 
         // Show success or error swal
+        // Success copy: use reconnect text when server set reconnected or UI still shows exam mode (register path may be "new" on server).
+        const successText = (IPCresponse.reconnected || this.exammode) ? this.$t("student.reconnectedinfo") : this.$t("student.registeredinfo")
         this.$swal.fire({
             title: IPCresponse.status === "success" ? "OK" : "Error", // Title based on status
-            text: IPCresponse.status === "success" ? this.$t("student.registeredinfo") : IPCresponse.message, // Text based on status
+            text: IPCresponse.status === "success" ? successText : IPCresponse.message, // Text based on status
             icon: IPCresponse.status, // Icon is 'success' or 'error'
             showCancelButton: false, // No cancel button
         });

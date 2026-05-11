@@ -5,6 +5,7 @@
         "bipclosed": "Die BiP-Prüfung ist derzeit geschlossen.",
         "biprequired": "Dies erzwingt die Authentifizierung der Schüler:innen durch das Bildungsportal.",
         "correctpw": "Passwort OK",
+        "exammismatchregistration": "Der Prüfungsserver befindet sich nicht im abgesicherten Prüfungsmodus. Bitte warten Sie, bis die Lehrperson die Prüfung startet und verbinden Sie sich erneut.",
         "examrequest": "Sicherungen wurden angefordert",
         "invalidpayload": "Ungültige Serverstatus-Daten.",
         "invalidpin": "Ungültiger PIN-Code (genau vier Ziffern).",

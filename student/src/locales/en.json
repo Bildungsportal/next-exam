@@ -203,6 +203,7 @@
         "pin": "Pincode",
         "pwdmismatch": "Passwords do not match",
         "register": "register",
+        "reconnectedinfo": "Reconnected to the exam server. Secure exam mode is already running.",
         "registered": "registered",
         "registeredinfo": "Successfully registered on server! \n\nPlease wait for the activation of the exam mode by the teacher!",
         "registering": "registering...",

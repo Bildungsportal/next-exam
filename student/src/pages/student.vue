@@ -1352,9 +1352,10 @@ export default {
                 }
 
                 if (IPCresponse && IPCresponse.status === "success") {
+                    const okBody = IPCresponse.reconnected ? this.$t("student.reconnectedinfo") : this.$t("student.registeredinfo")
                     this.$swal.fire({
                         title: "OK",
-                        html: `<div style="white-space: pre-line;">${this.$t("student.registeredinfo")}</div>`,
+                        html: `<div style="white-space: pre-line;">${okBody}</div>`,
                         icon: 'success',
                         timer: 6000,
                         showCancelButton: false,
