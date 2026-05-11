@@ -34,6 +34,7 @@ When editing existing code:
 - Don't "improve" adjacent code, comments, or formatting.
 - Don't refactor things that aren't broken.
 - Match existing style, even if you'd do it differently.
+- always describe newly introduced functions with a short comment
 - If you notice unrelated dead code, mention it - don't delete it.
 - Never run git restore/reset/clean/rebase/stash/pop/checkout/switch unless the user explicitly requests it.
 

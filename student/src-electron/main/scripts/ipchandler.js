@@ -37,7 +37,7 @@ import { updateSystemTray } from './traymenu.js';
 import { ensureNetworkOrReset } from './testpermissionsMac.js';
 import { getWlanInfo } from './getwlaninfo.js';
 import { switchExamSection } from './switchExamSection.js';
-import { startProxy } from './vncproxy.js';
+import { startProxy, stopProxy } from './vncproxy.js';
 import qemuService from './qemuService.js';
 import { getVMFindings } from './vmDetection.js';
 
@@ -131,6 +131,17 @@ class IpcHandler {
             } catch (err) {
                 log.error('ipchandler @ start-proxy:', err);
                 return { port: null, error: err.message };
+            }
+        });
+
+        // shut down the VNC proxy helper from renderer (e.g. localvmview beforeUnmount)
+        ipcMain.handle('stop-proxy', async () => {
+            try {
+                stopProxy();
+                return { ok: true };
+            } catch (err) {
+                log.error('ipchandler @ stop-proxy:', err);
+                return { ok: false, error: err.message };
             }
         });
 

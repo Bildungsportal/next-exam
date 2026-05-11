@@ -269,6 +269,10 @@ export default {
     }
     document.body.removeEventListener('mouseleave', this.sendFocuslost);
     this.teardownRfb();
+    // make sure the vncproxy-helper does not survive when leaving the localvm view
+    signalBridge.invoke('stop-proxy').catch((err) => {
+      console.warn('localvmview @ beforeUnmount: stop-proxy failed', err);
+    });
   },
   methods: {
     gracefullyExit,
