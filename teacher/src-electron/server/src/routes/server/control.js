@@ -28,6 +28,7 @@ import fs from 'fs'
 import qs from 'qs'
 import { msalConfig } from '../../../../../src/msalutils/authConfigShared.ts'
 import log from 'electron-log';
+import { resolvePathUnderRoot, safeScreenshotFileName, safeSectionFolderId, isSafePathSegment } from '../../utils/safePaths.js';
 
 import WindowHandler from '../../../../main/scripts/windowhandler.js'
 import Tesseract from 'tesseract.js';
@@ -731,10 +732,14 @@ router.post('/setserverstatus/:servername/:csrfservertoken', async function (req
     //console.log("control:", mcServer.serverstatus)
     log.info("control @ setserverstatus: saving server status to disc")
     
-    const workdir = path.join(config.workdirectory, mcServer.serverinfo.servername)
-    const filePath = path.join(config.workdirectory, mcServer.serverinfo.servername, 'serverstatus.json');
+    const workdir = resolvePathUnderRoot(config.workdirectory, [mcServer.serverinfo.servername])
+    const filePath = resolvePathUnderRoot(config.workdirectory, [mcServer.serverinfo.servername, 'serverstatus.json']);
 
     try {  
+        if (!workdir || !filePath) {
+            log.error('control @ setserverstatus: unsafe workdir or filePath');
+            return res.json({ sender: "server", message: "could not save serverstatus to disc", status: "error" });
+        }
         await fs.promises.mkdir(workdir, { recursive: true });
         const jsonString = JSON.stringify(mcServer.serverstatus, null, 2);
         // Validate JSON before writing to prevent invalid JSON files
@@ -742,11 +747,15 @@ router.post('/setserverstatus/:servername/:csrfservertoken', async function (req
         await fs.promises.writeFile(filePath, jsonString);
         // Mirror serverstatus.json to backupdirectory/<servername>/ when configured.
         if (config.backupdirectory) {
-            const backupExamDir = path.join(config.backupdirectory, mcServer.serverinfo.servername)
-            const backupFilePath = path.join(backupExamDir, 'serverstatus.json')
+            const backupExamDir = resolvePathUnderRoot(config.backupdirectory, [mcServer.serverinfo.servername])
+            const backupFilePath = resolvePathUnderRoot(config.backupdirectory, [mcServer.serverinfo.servername, 'serverstatus.json'])
             try {
+                if (!backupExamDir || !backupFilePath) {
+                    log.error('control @ setserverstatus: unsafe backup path');
+                } else {
                 await fs.promises.mkdir(backupExamDir, { recursive: true })
                 await fs.promises.writeFile(backupFilePath, jsonString)
+                }
             } catch (backupErr) {
                 log.error('control @ setserverstatus: backup mirror failed', backupErr)
             }
@@ -1001,14 +1010,24 @@ router.post('/updatescreenshot', async function (req, res, next) {
             if (!student.focus) { // Archiviere Screenshot, wenn Student nicht fokussiert ist
                 log.info("control @ updatescreenshot: Student out of focus - securing screenshots");
                 let time = new Date().toISOString().substr(11, 8).replace(/:/g, "_");
-                let filepath = path.join(config.workdirectory, mcServer.serverinfo.servername, student.clientname, "focuslost");
-                let absoluteFilename = path.join(filepath, `${time}-${req.body.screenshotfilename}`);
+                const shotPart = safeScreenshotFileName(req.body.screenshotfilename) || safeScreenshotFileName('shot.png');
+                const finalName = `${time}-${shotPart}`;
+                if (!isSafePathSegment(finalName)) {
+                    log.warn(`control @ updatescreenshot: rejected screenshot filename (${finalName})`);
+                } else {
+                const filepath = resolvePathUnderRoot(config.workdirectory, [mcServer.serverinfo.servername, student.clientname, "focuslost"]);
+                const absoluteFilename = filepath ? resolvePathUnderRoot(filepath, [finalName]) : null;
             
                 try {
+                    if (!filepath || !absoluteFilename) {
+                        log.warn('control @ updatescreenshot: rejected unsafe focuslost path');
+                    } else {
                     await fs.promises.mkdir(filepath, { recursive: true });
                     let screenshotBuffer = Buffer.from(req.body.screenshot, 'base64');    // Konvertieren des Base64-Strings in einen Buffer und Speichern der Datei
                     await fs.promises.writeFile(absoluteFilename, screenshotBuffer);
+                    }
                 } catch (err) { log.error(`control @ updatescreenshot: ${err}` ); }
+                }
             }
       
     } else {
@@ -1030,7 +1049,7 @@ router.post('/submission/:servername/:studenttoken', async function (req, res, n
     const pdfDocument = req.body.document
     const printrequest = req.body.printrequest
     const submissionnumber = req.body.submissionnumber
-    const lockedsection = req.body.lockedsection || 1 // default to section 1 if not provided
+    const lockedsection = safeSectionFolderId(req.body.lockedsection)
     const saveReason = typeof req.body.saveReason === 'string' ? req.body.saveReason : 'n/a'
 
 
@@ -1059,15 +1078,26 @@ router.post('/submission/:servername/:studenttoken', async function (req, res, n
   
     let timestamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`
     let filename = `${servername}-${safeStudent}-${submissionnumber}-${timestamp}.pdf`
-
+    if (!isSafePathSegment(filename)) {
+        log.error(`control @ submission: rejected generated filename (${filename})`);
+        return res.status(500).send({ sender: 'server', message: t("control.submissionfailed"), status: 'error' });
+    }
 
    
     const pdfBuffer = Buffer.from(pdfDocument, 'base64');
 
     try {
-        const filepath = path.join(config.workdirectory, mcServer.serverinfo.servername, student.clientname, 'ABGABE', lockedsection.toString() ) // target dir
+        const filepath = resolvePathUnderRoot(config.workdirectory, [mcServer.serverinfo.servername, student.clientname, 'ABGABE', lockedsection])
+        if (!filepath) {
+            log.error('control @ submission: unsafe filepath');
+            return res.status(500).send({ sender: 'server', message: t("control.submissionfailed"), status: 'error' });
+        }
         await fsp.mkdir(filepath, { recursive: true })                                        // ensure dir
-        const absoluteFilename = path.join(filepath, filename)                                 // build path
+        const absoluteFilename = resolvePathUnderRoot(filepath, [filename])
+        if (!absoluteFilename) {
+            log.error('control @ submission: unsafe absoluteFilename');
+            return res.status(500).send({ sender: 'server', message: t("control.submissionfailed"), status: 'error' });
+        }
         await fsp.writeFile(absoluteFilename, pdfBuffer)                                       // write main
       
         log.info(`control @ submission: Received and stored submission file for user: ${student.clientname} saveReason=${saveReason}`)
@@ -1075,11 +1105,19 @@ router.post('/submission/:servername/:studenttoken', async function (req, res, n
         // create backup of abgabe
         let backupStatus = 'skipped'                                                           // default backup status
         if (config.backupdirectory) {                                                          // optional backup
-          const backuppath = path.join(config.backupdirectory, mcServer.serverinfo.servername, student.clientname, 'ABGABE', lockedsection.toString() )
+          const backuppath = resolvePathUnderRoot(config.backupdirectory, [mcServer.serverinfo.servername, student.clientname, 'ABGABE', lockedsection])
+          if (!backuppath) {
+            log.error('control @ submission: unsafe backuppath');
+          } else {
           await fsp.mkdir(backuppath, { recursive: true })                                     // ensure backup dir
-          const absoluteBackupFilename = path.join(backuppath, filename)                       // backup path
+          const absoluteBackupFilename = resolvePathUnderRoot(backuppath, [filename])                       // backup path
+          if (!absoluteBackupFilename) {
+            log.error('control @ submission: unsafe backup file path');
+          } else {
           await fsp.writeFile(absoluteBackupFilename, pdfBuffer)                               // write backup
           backupStatus = 'ok'                                                                  // backup ok
+          }
+          }
         }
       
         res.send({ sender: 'server', message: 'success', status: 'success', backup: backupStatus }) // respond success
@@ -1100,7 +1138,7 @@ router.post('/printjob/:servername/:studenttoken', async function (req, res, nex
     const servername = req.params.servername
     const pdfDocument = req.body.document
     const submissionnumber = req.body.submissionnumber
-    const lockedsection = req.body.lockedsection || 1 // default to section 1 if not provided
+    const lockedsection = safeSectionFolderId(req.body.lockedsection)
     const saveReason = typeof req.body.saveReason === 'string' ? req.body.saveReason : 'n/a'
 
     const mcServer = config.examServerList[servername]
@@ -1116,13 +1154,25 @@ router.post('/printjob/:servername/:studenttoken', async function (req, res, nex
     let now = new Date()
     let timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`
     let filename = `${servername}-${safeStudent}-${submissionnumber}-${timestamp}.pdf`
+    if (!isSafePathSegment(filename)) {
+        log.error(`control @ printjob: rejected generated filename (${filename})`);
+        return res.status(500).send({ sender: 'server', message: t("control.submissionfailed"), status: 'error' });
+    }
 
     const pdfBuffer = Buffer.from(pdfDocument, 'base64');
 
     try {
-        const filepath = path.join(config.workdirectory, mcServer.serverinfo.servername, student.clientname, 'PRINTJOBS', lockedsection.toString())
+        const filepath = resolvePathUnderRoot(config.workdirectory, [mcServer.serverinfo.servername, student.clientname, 'PRINTJOBS', lockedsection])
+        if (!filepath) {
+            log.error('control @ printjob: unsafe filepath');
+            return res.status(500).send({ sender: 'server', message: t("control.submissionfailed"), status: 'error' });
+        }
         await fsp.mkdir(filepath, { recursive: true })
-        const absoluteFilename = path.join(filepath, filename)
+        const absoluteFilename = resolvePathUnderRoot(filepath, [filename])
+        if (!absoluteFilename) {
+            log.error('control @ printjob: unsafe absoluteFilename');
+            return res.status(500).send({ sender: 'server', message: t("control.submissionfailed"), status: 'error' });
+        }
         await fsp.writeFile(absoluteFilename, pdfBuffer)
 
         log.info(`control @ printjob: Received and stored printjob file for user: ${student.clientname} saveReason=${saveReason}`)
@@ -1130,11 +1180,19 @@ router.post('/printjob/:servername/:studenttoken', async function (req, res, nex
 
         let backupStatus = 'skipped'
         if (config.backupdirectory) {
-            const backuppath = path.join(config.backupdirectory, mcServer.serverinfo.servername, student.clientname, 'PRINTJOBS', lockedsection.toString())
+            const backuppath = resolvePathUnderRoot(config.backupdirectory, [mcServer.serverinfo.servername, student.clientname, 'PRINTJOBS', lockedsection])
+            if (!backuppath) {
+                log.error('control @ printjob: unsafe backuppath');
+            } else {
             await fsp.mkdir(backuppath, { recursive: true })
-            const absoluteBackupFilename = path.join(backuppath, filename)
+            const absoluteBackupFilename = resolvePathUnderRoot(backuppath, [filename])
+            if (!absoluteBackupFilename) {
+                log.error('control @ printjob: unsafe backup file path');
+            } else {
             await fsp.writeFile(absoluteBackupFilename, pdfBuffer)
             backupStatus = 'ok'
+            }
+            }
         }
 
         res.send({ sender: 'server', message: 'success', status: 'success', backup: backupStatus })

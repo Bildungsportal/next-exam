@@ -30,6 +30,11 @@ import log from 'electron-log';
 import moment from 'moment';
 import pdf from '@bingsjs/pdf-parse';
 import {
+    resolvePathUnderRoot,
+    safeClientZipBasename,
+    isSafePathSegment,
+} from '../../utils/safePaths.js';
+import {
     decryptBufferIfNeeded,
     decryptNxe1FilesUnderDir,
 } from '../../../../main/scripts/examFileCryptoContext.js';
@@ -90,10 +95,20 @@ import {
 // Copy exam-root artifact into backupdirectory/<servername>/ when backup path is set.
 async function mirrorExamRootFileToBackup(servername, basename, data) {
     if (!config.backupdirectory) return
-    const backupExamDir = path.join(config.backupdirectory, servername)
+    const allowed = new Set(['index.pdf', 'combined.pdf'])
+    if (!allowed.has(basename) || !isSafePathSegment(servername) || !isSafePathSegment(basename)) {
+        log.warn(`data @ mirrorExamRootFileToBackup: rejected mirror (${servername}/${basename})`)
+        return
+    }
+    const backupExamDir = resolvePathUnderRoot(config.backupdirectory, [servername])
+    const dest = backupExamDir ? resolvePathUnderRoot(backupExamDir, [basename]) : null
+    if (!backupExamDir || !dest) {
+        log.warn(`data @ mirrorExamRootFileToBackup: unsafe path (${servername}/${basename})`)
+        return
+    }
     try {
         await fs.promises.mkdir(backupExamDir, { recursive: true })
-        await fs.promises.writeFile(path.join(backupExamDir, basename), data)
+        await fs.promises.writeFile(dest, data)
     } catch (err) {
         log.error(`data @ mirrorExamRootFileToBackup: ${basename}`, err)
     }
@@ -135,27 +150,37 @@ async function mirrorExamRootFileToBackup(servername, basename, data) {
     }
     else {
         let indexPDFdata = await createIndexPDF(submissions, servername, mcServer)   //contains the index table pdf as uint8array
-        let indexPDFpath = path.join(config.workdirectory, mcServer.serverinfo.servername,"index.pdf")
+        let indexPDFpath = resolvePathUnderRoot(config.workdirectory, [mcServer.serverinfo.servername, 'index.pdf'])
         try {
+            if (!indexPDFpath) {
+                log.error('data @ getlatest: rejected index.pdf path');
+            } else {
             await fs.promises.writeFile(indexPDFpath, indexPDFdata);
             log.info('data @ getlatest: Index PDF saved successfully!');
             await mirrorExamRootFileToBackup(mcServer.serverinfo.servername, 'index.pdf', indexPDFdata)
+            }
         }
         catch(err){log.error("data @ getlatest:",err)}
+        if (indexPDFpath) {
         latestFiles.unshift(indexPDFpath)
+        }
 
 
         // now concat the pdfs of all sections to one combined pdf
         let PDF = await concatPages(mcServer, latestFiles)
         let pdfBuffer = Buffer.from(PDF) 
-        let pdfPath = path.join(config.workdirectory, mcServer.serverinfo.servername,"combined.pdf")
+        let pdfPath = resolvePathUnderRoot(config.workdirectory, [mcServer.serverinfo.servername, 'combined.pdf'])
         try {
+            if (!pdfPath) {
+                log.error('data @ getlatest: rejected combined.pdf path');
+            } else {
             await fs.promises.writeFile(pdfPath, pdfBuffer);
             log.info('data @ getlatest: PDF saved successfully!');
             await mirrorExamRootFileToBackup(mcServer.serverinfo.servername, 'combined.pdf', pdfBuffer)
+            }
         }
         catch(err){log.error("data @ getlatest:",err)}
-        return res.json({warning: warning, pdfBuffer:pdfBuffer, pdfPath:pdfPath });
+        return res.json({warning: warning, pdfBuffer:pdfBuffer, pdfPath: pdfPath || null });
     }
 })
 
@@ -467,8 +492,15 @@ router.post('/getpdf/:servername/:token', function (req, res, next) {
     }
     else if (type === "dir") {
         //zip folder and then send
-        let zipfilename = filename.concat('.zip')
-        let zipfilepath = path.join(config.tempdirectory, zipfilename);
+        const base = path.basename(String(filename ?? 'export').trim() || 'export')
+        const zipSegment = base.toLowerCase().endsWith('.zip') ? base : `${base}.zip`
+        if (!isSafePathSegment(zipSegment)) {
+            return res.status(400).json({ status: t("data.fileerror") })
+        }
+        let zipfilepath = resolvePathUnderRoot(config.tempdirectory, [zipSegment])
+        if (!zipfilepath) {
+            return res.status(400).json({ status: t("data.fileerror") })
+        }
         await zipDirectory(filepath, zipfilepath)
         res.setHeader('Content-disposition', 'attachment; filename=' + filename);
         res.download(zipfilepath,filename); 
@@ -596,10 +628,19 @@ router.post('/getexammaterials/:servername/:token', async (req, res, next) => {
         let tstring = `${dateString}_${timestring}`;
         
         let student = mcServer.studentList.find(element => element.token === studenttoken) // get student from token
-        let absoluteFilepath = path.join(config.workdirectory, mcServer.serverinfo.servername, student.clientname, filename);
-        let studentdirectory =  path.join(config.workdirectory, mcServer.serverinfo.servername, student.clientname)
+        const zipName = safeClientZipBasename(filename)
+        if (!zipName) {
+            log.warn(`data @ receive: rejected unsafe or non-zip filename (${filename})`)
+            return res.json({ status: "error", sender: "server", message: "Invalid filename", errors: errors })
+        }
+        let absoluteFilepath = resolvePathUnderRoot(config.workdirectory, [mcServer.serverinfo.servername, student.clientname, zipName]);
+        let studentdirectory = resolvePathUnderRoot(config.workdirectory, [mcServer.serverinfo.servername, student.clientname])
         
-        let studentarchivedir = path.join(studentdirectory, tstring)
+        let studentarchivedir = studentdirectory ? resolvePathUnderRoot(studentdirectory, [tstring]) : null
+        if (!absoluteFilepath || !studentdirectory || !studentarchivedir) {
+            log.error('data @ receive: unsafe path for zip or archive dir', { zipName, tstring })
+            return res.json({ status: "error", sender: "server", message: "Invalid path", errors: errors })
+        }
         try {
             await fs.promises.mkdir(studentdirectory, { recursive: true });
             await fs.promises.mkdir(studentarchivedir, { recursive: true });
@@ -610,13 +651,16 @@ router.post('/getexammaterials/:servername/:token', async (req, res, next) => {
 
         if (file){
 
-            if (filename.includes(".zip")){
+            if (zipName){
                 log.info("data @ receive: Received ZIP File from user:", student.clientname, "lastExamWriteSaveReason=", zipSaveTag)
                 let success = await archiveAndExtractZip(absoluteFilepath, studentarchivedir, fileContent, mcServer)
                 
                 if (config.backupdirectory && success){     // copy to backup directory - do not unzip a second time - this is already done in archiveAndExtractZip
                     
-                    let backupdir =  path.join(config.backupdirectory, mcServer.serverinfo.servername, student.clientname, tstring) // same concept as in studentarchivedir
+                    let backupdir = resolvePathUnderRoot(config.backupdirectory, [mcServer.serverinfo.servername, student.clientname, tstring]) // same concept as in studentarchivedir
+                    if (!backupdir) {
+                        log.error('data @ receive: unsafe backupdir');
+                    } else {
                     log.info(`data @ receive: Copying to backup directory: ${studentarchivedir} ->   ${backupdir} `)
                     try {
                         await fs.promises.mkdir(backupdir, { recursive: true });
@@ -624,6 +668,7 @@ router.post('/getexammaterials/:servername/:token', async (req, res, next) => {
                     }
                     catch (err) {
                         log.error("data @ receive: ", err)
+                    }
                     }
                 }
                 res.json({ status:"success", sender: "server", message:"Files received", errors: errors  })
@@ -673,19 +718,28 @@ router.post('/studentlog/:servername/:studenttoken', async (req, res, next) => {
         log.error("data @ studentlog: invalid base64", e)
         return res.json({ status: "error", sender: "server", message: "Invalid file payload" })
     }
-    const studentdirectory = path.join(config.workdirectory, mcServer.serverinfo.servername, student.clientname)
-    const logdir = path.join(studentdirectory, 'logfiles')
-    const destPath = path.join(logdir, 'next-exam-student.log')
+    const studentdirectory = resolvePathUnderRoot(config.workdirectory, [mcServer.serverinfo.servername, student.clientname])
+    const logdir = studentdirectory ? resolvePathUnderRoot(studentdirectory, ['logfiles']) : null
+    const destPath = logdir ? resolvePathUnderRoot(logdir, ['next-exam-student.log']) : null
     try {
+        if (!studentdirectory || !logdir || !destPath) {
+            log.error('data @ studentlog: unsafe log path');
+            return res.json({ status: "error", sender: "server", message: "Invalid path" })
+        }
         await fs.promises.mkdir(logdir, { recursive: true })
         await fs.promises.writeFile(destPath, fileContent)
         // Mirror student log to backupdirectory when configured (same relative layout as workdir).
         if (config.backupdirectory) {
-            const backupLogdir = path.join(config.backupdirectory, mcServer.serverinfo.servername, student.clientname, 'logfiles')
-            const backupDestPath = path.join(backupLogdir, 'next-exam-student.log')
+            const backupLogdirRoot = resolvePathUnderRoot(config.backupdirectory, [mcServer.serverinfo.servername, student.clientname])
+            const backupLogdir = backupLogdirRoot ? resolvePathUnderRoot(backupLogdirRoot, ['logfiles']) : null
+            const backupDestPath = backupLogdir ? resolvePathUnderRoot(backupLogdir, ['next-exam-student.log']) : null
             try {
+                if (!backupLogdir || !backupDestPath) {
+                    log.error('data @ studentlog: unsafe backup log path');
+                } else {
                 await fs.promises.mkdir(backupLogdir, { recursive: true })
                 await fs.promises.writeFile(backupDestPath, fileContent)
+                }
             } catch (backupErr) {
                 log.error("data @ studentlog: backup mirror failed", backupErr)
             }
@@ -714,8 +768,12 @@ router.post('/upload/:servername/:servertoken/:studenttoken', async (req, res, n
     if ( servertoken !== mcServer.serverinfo.servertoken ) { return res.json({ status: t("data.tokennotvalid") }) }
 
     // create uploads directory
-    let uploaddirectory =  path.join(config.workdirectory, mcServer.serverinfo.servername, 'UPLOADS')
+    let uploaddirectory = resolvePathUnderRoot(config.workdirectory, [mcServer.serverinfo.servername, 'UPLOADS'])
     try {
+        if (!uploaddirectory) {
+            log.error('data @ upload: unsafe UPLOADS path');
+            return res.json({ status: "error", sender: "server", message: "Invalid path" })
+        }
         await fs.promises.mkdir(uploaddirectory, { recursive: true });
     } catch (err) {
         // Directory might already exist, that's ok
@@ -731,8 +789,16 @@ router.post('/upload/:servername/:servertoken/:studenttoken', async (req, res, n
         let files = []        
     
         for await (let file of  filesArray) {
-            let filename = decodeURIComponent(file.name)  //encode to prevent non-ascii chars weirdness
-            let absoluteFilepath = path.join(uploaddirectory, filename);
+            let filename = path.basename(decodeURIComponent(file.name || 'upload'))  //encode to prevent non-ascii chars weirdness
+            if (!isSafePathSegment(filename)) {
+                log.error(`data @ upload: rejected unsafe upload name (${file.name})`);
+                continue
+            }
+            let absoluteFilepath = resolvePathUnderRoot(uploaddirectory, [filename]);
+            if (!absoluteFilepath) {
+                log.error(`data @ upload: rejected path for (${filename})`);
+                continue
+            }
             await file.mv(absoluteFilepath, (err) => {  
                 if (err) { log.error( "Could not store file" ) }
             });

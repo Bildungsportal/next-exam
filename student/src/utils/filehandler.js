@@ -163,6 +163,9 @@ export async function loadHTML(file){
             this.editor.commands.insertContent(data)  
             //set currentFile to the loaded filename remove extension .htm from filename
             let filename = file.replace(/\.htm$/, '')  //remove extension .htm from filename
+            if (/[/\\]/.test(filename) || filename.includes('..')) {
+                filename = this.clientname
+            }
             this.currentFile = filename
         } 
     }); 

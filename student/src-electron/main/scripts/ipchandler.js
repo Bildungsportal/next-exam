@@ -67,6 +67,24 @@ const encryptExamFileBytesUnlessAlready = (plainBuf, pw) => {
     return pw ? encryptExamFileBytes(buf, pw) : buf;
 };
 
+// Resolves a single-segment filename under rootDir or returns null (blocks path traversal from IPC/renderer).
+const resolveWritablePathUnderExamDir = (rootDir, name, allowedLowerExtensions = null) => {
+    if (rootDir == null || typeof rootDir !== 'string' || name == null || typeof name !== 'string') return null;
+    const n = name.trim();
+    if (!n || n.includes('\0')) return null;
+    if (n !== path.basename(n)) return null;
+    if (n === '.' || n === '..') return null;
+    const ext = path.extname(n).toLowerCase();
+    if (allowedLowerExtensions?.length && !allowedLowerExtensions.includes(ext)) return null;
+    const stem = path.parse(n).name;
+    if (/^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])$/i.test(stem)) return null;
+    const rootResolved = path.resolve(rootDir);
+    const absTarget = path.resolve(path.join(rootResolved, n));
+    const rel = path.relative(rootResolved, absTarget);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) return null;
+    return absTarget;
+};
+
 const checkPortOpen = (port, host = '127.0.0.1', timeout = 1500) => {
     return new Promise((resolve) => {
         const socket = new net.Socket();
@@ -907,11 +925,15 @@ class IpcHandler {
             const saveReason = typeof args.reason === 'string' ? args.reason : 'n/a'
             let htmlfilename = `${this.multicastClient.clientinfo.name}.htm`
             
-            if (filename){
-                htmlfilename = `${filename}.htm`
+            if (filename && String(filename).trim()){
+                htmlfilename = `${String(filename).trim()}.htm`
             }
 
-            const htmlfile = path.join(this.config.examdirectory, htmlfilename);
+            const htmlfile = resolveWritablePathUnderExamDir(this.config.examdirectory, htmlfilename, ['.htm']);
+            if (!htmlfile) {
+                log.warn(`ipchandler @ storeHTML: rejected unsafe html filename (${htmlfilename})`);
+                return;
+            }
 
             if (htmlContent) { 
                 // log.info("ipchandler: storeHTML: saving students work to disk...")
@@ -926,7 +948,12 @@ class IpcHandler {
                         if (err) {
                             log.error(`ipchandler @ storeHTML: ${err.message}`); 
                         
-                            let alternatepath = `${htmlfile}-${this.multicastClient.clientinfo.token}.htm`
+                            let alternatepath = resolveWritablePathUnderExamDir(this.config.examdirectory, `${path.basename(htmlfile, '.htm')}-${this.multicastClient.clientinfo.token}.htm`, ['.htm']);
+                            if (!alternatepath) {
+                                log.error("ipchandler @ storeHTML: alternate path rejected");
+                                event.reply("fileerror", { sender: "client", message: "invalid alternate path", status: "error" });
+                                return;
+                            }
                             log.warn("ipchandler @ storeHTML: trying to write file as:", alternatepath )
                             fs.writeFile(alternatepath, out, (err2) => { 
                                 if (err2) {
@@ -1005,10 +1032,20 @@ class IpcHandler {
                     pdffilename = `${args.filename}.pdf`
                     
                 }
-                const pdffilepath = path.join(this.config.examdirectory, pdffilename);  // path points to the current exam directory
-                const alternatefilename = `${pdffilename}-aux.pdf`    //thomas.pdf-aux.pdf 
-                const alternatebackupfilename = `${pdffilename}-old.pdf`;   //thomas.pdf-old.pdf
-                const alternatepath = path.join(this.config.examdirectory, alternatefilename);  // if something goes wrong we try to write a different file
+                const pdffilepath = resolveWritablePathUnderExamDir(this.config.examdirectory, pdffilename, ['.pdf']);  // path points to the current exam directory
+                if (!pdffilepath) {
+                    log.warn(`ipchandler @ printpdf: rejected unsafe pdf filename (${pdffilename})`);
+                    event.reply("fileerror", { sender: "client", message: "invalid pdf filename", status: "error" } );
+                    return;
+                }
+                const alternatefilename = `${path.basename(pdffilename, '.pdf')}-aux.pdf`    //thomas.pdf-aux.pdf 
+                const alternatebackupfilename = `${path.basename(pdffilename, '.pdf')}-old.pdf`;   //thomas.pdf-old.pdf
+                const alternatepath = resolveWritablePathUnderExamDir(this.config.examdirectory, alternatefilename, ['.pdf']);  // if something goes wrong we try to write a different file
+                if (!alternatepath) {
+                    log.warn(`ipchandler @ printpdf: rejected alternate pdf path (${alternatefilename})`);
+                    event.reply("fileerror", { sender: "client", message: "invalid alternate pdf path", status: "error" } );
+                    return;
+                }
 
 
                 // aux files are files created if the main pdffilepath is not writeable (opened on windows) 
@@ -1016,8 +1053,10 @@ class IpcHandler {
                     const files = fs.readdirSync(this.config.examdirectory);
                     files.forEach(file => {
                         if (file === alternatefilename) {
-                            const newPath = path.join(this.config.examdirectory, alternatebackupfilename);
-                            fs.renameSync(alternatepath, newPath);
+                            const newPath = resolveWritablePathUnderExamDir(this.config.examdirectory, alternatebackupfilename, ['.pdf']);
+                            if (newPath) {
+                                fs.renameSync(alternatepath, newPath);
+                            }
                         }
                     });
                 } 
@@ -1095,7 +1134,12 @@ class IpcHandler {
             try {
                 const saveReason = typeof args.reason === 'string' ? args.reason : 'n/a'
                 const htmFilename = args.filename ? `${args.filename}.htm` : `${this.multicastClient.clientinfo.name}.htm`;
-                const htmFilePath = path.join(this.config.examdirectory, htmFilename);
+                const htmFilePath = resolveWritablePathUnderExamDir(this.config.examdirectory, htmFilename, ['.htm']);
+                if (!htmFilePath) {
+                    log.warn(`ipchandler @ saveActivesheetsBak: rejected unsafe filename (${htmFilename})`);
+                    event.reply("fileerror", { sender: "client", message: "invalid backup filename", status: "error" });
+                    return;
+                }
                 
                 // Convert formData to JSON string
                 const jsonData = JSON.stringify(args.formData, null, 2);
@@ -1332,7 +1376,11 @@ class IpcHandler {
             const content = args.content
             const filename = args.filename
             const saveReason = typeof args.reason === 'string' ? args.reason : 'n/a'
-            const ggbFilePath = path.join(this.config.examdirectory, filename);
+            const ggbFilePath = resolveWritablePathUnderExamDir(this.config.examdirectory, filename, ['.ggb']);
+            if (!ggbFilePath) {
+                log.warn(`ipchandler @ saveGGB: rejected unsafe ggb filename (${filename})`);
+                return { sender: "client", message: "invalid filename", status: "error" };
+            }
             if (content) { 
                 //log.info("ipchandler @ saveGGB: saving students work to disk...")
                 const fileData = Buffer.from(content, 'base64');
@@ -1363,7 +1411,11 @@ class IpcHandler {
          * @param args contains an object { filename:`${this.clientname}.ggb` }
          */
         ipcMain.handle('loadGGB', (event, filename) => {   
-            const ggbFilePath = path.join(this.config.examdirectory, filename);
+            const ggbFilePath = resolveWritablePathUnderExamDir(this.config.examdirectory, filename, ['.ggb']);
+            if (!ggbFilePath) {
+                log.warn(`ipchandler @ loadGGB: rejected unsafe ggb filename (${filename})`);
+                return { sender: "client", content: false , status:"error" };
+            }
             try {
                 // Read the file and convert it to base64
                 const pw = resolveExamDecryptPassword(this.multicastClient);
@@ -1390,7 +1442,12 @@ class IpcHandler {
         ipcMain.handle('getpdfasync', (event, filename, image = false) => {   
             const workdir = path.join(config.examdirectory,"/")
             if (filename) { //return content of specific file
-                let filepath = path.join(workdir,filename)
+                const allowed = image ? ['.jpg', '.jpeg', '.png', '.gif'] : ['.pdf'];
+                let filepath = resolveWritablePathUnderExamDir(config.examdirectory, filename, allowed);
+                if (!filepath) {
+                    log.warn(`ipchandler @ getpdfasync: rejected unsafe filename (${filename})`);
+                    return { sender: "client", content: false , status:"error" };
+                }
                 try {
                     const pw = resolveExamDecryptPassword(this.multicastClient);
                     const raw = fs.readFileSync(filepath)
@@ -1414,14 +1471,22 @@ class IpcHandler {
             const workdir = path.join(config.examdirectory, "/");
         
             if (filename && !publicdir) { // Return content of specific file as string (html) to replace in editor
-                let filepath = path.join(workdir, filename);
+                let filepath = resolveWritablePathUnderExamDir(config.examdirectory, filename, ['.mp3', '.ogg', '.wav']);
+                if (!filepath) {
+                    log.warn(`ipchandler @ getAudioFile: rejected unsafe exam audio filename (${filename})`);
+                    return false;
+                }
                 const audioData = fs.readFileSync(filepath);
                 return audioData.toString('base64');
             }
         
             if (filename && publicdir) {
                 const publicBase = platformDispatcher.publicBase;
-                let filepath = path.join(publicBase, filename);
+                let filepath = resolveWritablePathUnderExamDir(publicBase, filename, ['.mp3', '.ogg', '.wav']);
+                if (!filepath) {
+                    log.warn(`ipchandler @ getAudioFile: rejected unsafe public audio filename (${filename})`);
+                    return false;
+                }
                 const audioData = fs.readFileSync(filepath);
                 return audioData.toString('base64');
             }
@@ -1439,8 +1504,14 @@ class IpcHandler {
 
             if (filename) { //return content of specific file as string (html) to replace in editor)
                 // console.log("Received arguments:", filename, audio, docx);
-
-                let filepath = path.join(workdir,filename)
+                const allowedList = audio === true
+                    ? ['.mp3', '.ogg', '.wav']
+                    : (docx ? ['.docx'] : ['.htm']);
+                let filepath = resolveWritablePathUnderExamDir(config.examdirectory, filename, allowedList);
+                if (!filepath) {
+                    log.warn(`ipchandler @ getfilesasync: rejected unsafe filename (${filename})`);
+                    return false;
+                }
                 const pw = resolveExamDecryptPassword(this.multicastClient);
                 // Helper to transparently decrypt encrypted exam files. 
                 const readMaybeDecrypt = () => {
@@ -1522,7 +1593,11 @@ class IpcHandler {
                 log.warn(`ipchandler @ getbackupfile: no filename provided`); 
                 return false;
             }
-            const filepath = path.join(workdir, filename)
+            const filepath = resolveWritablePathUnderExamDir(config.examdirectory, filename, ['.htm']);
+            if (!filepath) {
+                log.warn(`ipchandler @ getbackupfile: rejected unsafe filename (${filename})`);
+                return false;
+            }
             log.info(`ipchandler @ getbackupfile: Full file path: ${filepath}`)
             try {
                 if (!fs.existsSync(filepath)){

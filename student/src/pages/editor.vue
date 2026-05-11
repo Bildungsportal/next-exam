@@ -1406,14 +1406,16 @@ export default {
                     confirmButtonText: 'Ok',
                     cancelButtonText: this.$t("editor.cancel"),
                     inputValidator: (value) => {
-                        const regex = /^[A-Za-z0-9]+$/;
-                        if (!value.match(regex)) {
+                        const v = typeof value === 'string' ? value.trim() : '';
+                        const regex = /^[A-Za-z0-9]{1,20}$/;
+                        if (!v.match(regex)) {
                             return this.$t("math.nospecial");
                         }
                     },
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        filename = `${result.value}`
+                        const stem = String(result.value ?? '').trim();
+                        filename = `${stem}`
                         this.currentFile = filename
                     }
                     else {return; }
