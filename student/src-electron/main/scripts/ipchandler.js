@@ -1499,14 +1499,14 @@ class IpcHandler {
          * ASYNC GET FILE-LIST from examdirectory
          * @param filename if set the content of the file is returned
          */ 
-        ipcMain.handle('getfilesasync', async (event, filename, audio=false, docx=false) => {   
+        ipcMain.handle('getfilesasync', async (event, filename, audio=false, docx=false, odtRaw=false) => {   
             const workdir = path.join(config.examdirectory,"/")
 
             if (filename) { //return content of specific file as string (html) to replace in editor)
                 // console.log("Received arguments:", filename, audio, docx);
                 const allowedList = audio === true
                     ? ['.mp3', '.ogg', '.wav']
-                    : (docx ? ['.docx'] : ['.htm']);
+                    : (docx ? ['.docx'] : odtRaw ? ['.odt'] : ['.htm']);
                 let filepath = resolveWritablePathUnderExamDir(config.examdirectory, filename, allowedList);
                 if (!filepath) {
                     log.warn(`ipchandler @ getfilesasync: rejected unsafe filename (${filename})`);
@@ -1540,6 +1540,16 @@ class IpcHandler {
                     });
                     return result
                 }
+                else if (odtRaw) {
+                    try {
+                        const raw = readMaybeDecrypt();
+                        return raw.toString('base64');
+                    }
+                    catch (err) {
+                        log.error(`ipchandler @ getfilesasync odt: ${err}`); 
+                        return false;
+                    }
+                }
                 else {   //htm backup file
                     try {
                         const data = readMaybeDecrypt().toString('utf8');
@@ -1566,6 +1576,7 @@ class IpcHandler {
                         if  (path.extname(file).toLowerCase() === ".pdf"){ files.push( {name: file, type: "pdf", mod: mod})   }         //pdf
                         else if  (path.extname(file).toLowerCase() === ".htm"){ files.push( {name: file, type: "htm", mod: mod})   }   // editor| backup file to replace editor content
                         else if  (path.extname(file).toLowerCase() === ".docx"){ files.push( {name: file, type: "docx", mod: mod})   }   // editor| content file (from teacher) to replace content and continue writing
+                        else if  (path.extname(file).toLowerCase() === ".odt"){ files.push( {name: file, type: "odt", mod: mod})   }   // ODT → TipTap HTML in renderer
                         else if  (path.extname(file).toLowerCase() === ".ggb"){ files.push( {name: file, type: "ggb", mod: mod})   }  // geogebra
                         else if  (path.extname(file).toLowerCase() === ".mp3" || path.extname(file).toLowerCase() === ".ogg" || path.extname(file).toLowerCase() === ".wav" ){ files.push( {name: file, type: "audio", mod: mod})   }  // audio
                         else if  (path.extname(file).toLowerCase() === ".jpg" || path.extname(file).toLowerCase() === ".png" || path.extname(file).toLowerCase() === ".gif" ){ files.push( {name: file, type: "image", mod: mod})   }  // images

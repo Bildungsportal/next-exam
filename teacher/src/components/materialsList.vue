@@ -27,6 +27,7 @@
                   <div v-else-if="file.filetype == 'audio'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click="playAudioFile(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                   <div v-else-if="file.filetype == 'ggb'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                   <div v-else-if="file.filetype == 'docx'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                  <div v-else-if="file.filetype == 'odt'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                   <div v-else-if="file.filetype == 'htm'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                   <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeFile('A', index)"><span class="remove-x">&times;</span></button>
                   </div>
@@ -83,6 +84,7 @@
                   <div v-else-if="file.filetype == 'audio'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click="playAudioFile(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                   <div v-else-if="file.filetype == 'ggb'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                   <div v-else-if="file.filetype == 'docx'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                  <div v-else-if="file.filetype == 'odt'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                   <div v-else-if="file.filetype == 'htm'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                   <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeFile('B', index)"><span class="remove-x">&times;</span></button>
                   </div>
@@ -141,6 +143,7 @@
                     <div v-else-if="file.filetype == 'audio'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click="playAudioFile(file.filecontent, file.filename)"><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                     <div v-else-if="file.filetype == 'ggb'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                     <div v-else-if="file.filetype == 'docx'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
+                    <div v-else-if="file.filetype == 'odt'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                     <div v-else-if="file.filetype == 'htm'" class="btn btn-sm btn-cyan filename-button text-truncate" :title="file.filename" @click=""><span class="materials-filename-truncate">{{ getFilenameWithoutExtension(file.filename) }}</span></div>
                     <button type="button" class="btn btn-sm btn-secondary materials-remove" :title="$t('dashboard.removefile')" @click="removeFile('A', index)"><span class="remove-x">&times;</span></button>
                     </div>

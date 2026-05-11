@@ -53,7 +53,7 @@
 
 
             <button :title="$t('editor.clear')"
-                    @click="editor.chain().focus().clearNodes().run();editor.chain().focus().unsetColor().run()"
+                    @click="clearFormatting()"
                     class="invisible-button btn btn-outline-warning p-1 me-2 mb-1 btn-sm"><img
                 src="/src/assets/img/svg/draw-eraser.svg" class="white" width="22" height="22"></button>
 
@@ -296,7 +296,7 @@
 
                 <div v-if="!localLockdown" id="printfinalexam"
                      class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm pe-2 ps-1" 
-                     @click="sendExamToTeacher(false, 'print')" :title="$t('editor.print')"><img
+                     @click="sendExamToTeacher(false, 'print')" :title="$t('editor.printTooltip')"><img
                     src="/src/assets/img/svg/print.svg" class="white" width="22" height="22"
                     style="vertical-align: top;"> {{ $t('editor.print') }}
                 </div>
@@ -323,6 +323,11 @@
                         style="vertical-align: top;"> {{ file.filename }}
                     </div>
                     <div v-if="(file.filetype == 'docx')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
+                         @click="selectedFile=file.filename; loadBase64file(file)"><img
+                        src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22"
+                        style="vertical-align: top;"> {{ file.filename }}
+                    </div>
+                    <div v-if="(file.filetype == 'odt')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
                          @click="selectedFile=file.filename; loadBase64file(file)"><img
                         src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22"
                         style="vertical-align: top;"> {{ file.filename }}
@@ -373,6 +378,12 @@
 
                     <div v-if="(file.type == 'docx')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
                          @click="selectedFile=file.name; loadDOCX(file.name)"><img
+                        src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22"
+                        style="vertical-align: top;"> {{ file.name }}
+                    </div>
+
+                    <div v-if="(file.type == 'odt')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
+                         @click="selectedFile=file.name; loadODT(file.name)"><img
                         src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22"
                         style="vertical-align: top;"> {{ file.name }}
                     </div>
@@ -659,16 +670,21 @@
     <!-- LANGUAGE TOOL END -->
 
 
-    <div id="statusbar" style="padding-left:15px;">
-        <!-- Static text with v-once to prevent re-rendering since $t apparently performs performance measures each time causing memory bloat -->
-        <span v-once>{{ $t("editor.words") }}:</span> <span>{{ wordcount }}</span> | <span v-once>{{
-            $t("editor.chars")
-        }}:</span> <span>{{ charcount }}</span>
-        &nbsp;
-        <span v-once id="editselectedtext"> {{ $t("editor.selected") }}: </span> <span
-        id="editselected"> {{ selectedWordCount }}/{{ selectedCharCount }}</span>
-        <img @click="zoomin(); LTupdateHighlights();" src="/src/assets/img/svg/zoom-in.svg" class="zoombutton">
-        <img @click="zoomout(); LTupdateHighlights();" src="/src/assets/img/svg/zoom-out.svg" class="zoombutton">
+    <div id="statusbar" style="padding-left:15px;padding-right:8px;">
+        <div class="statusbar-left">
+            <!-- Static text with v-once to prevent re-rendering since $t apparently performs performance measures each time causing memory bloat -->
+            <span v-once>{{ $t("editor.words") }}:</span> <span>{{ wordcount }}</span> | <span v-once>{{
+                $t("editor.chars")
+            }}:</span> <span>{{ charcount }}</span>
+            &nbsp;
+            <span v-once id="editselectedtext"> {{ $t("editor.selected") }}: </span> <span
+                id="editselected"> {{ selectedWordCount }}/{{ selectedCharCount }}</span>
+        </div>
+        <div class="statusbar-right">
+            <span class="caret-context-label" :title="caretContextLabel">{{ caretContextLabel }}</span>
+            <img @click="zoomin(); LTupdateHighlights();" src="/src/assets/img/svg/zoom-in.svg" class="zoombutton">
+            <img @click="zoomout(); LTupdateHighlights();" src="/src/assets/img/svg/zoom-out.svg" class="zoombutton">
+        </div>
     </div>
     <!-- EDITOR END -->
     </div>
@@ -676,7 +692,58 @@
 
 <script>
 import {Editor, EditorContent, VueNodeViewRenderer} from '@tiptap/vue-3'
+import {NodeSelection} from '@tiptap/pm/state'
 import Image from '@tiptap/extension-image';
+
+/** Base Image node drops width/height/style on parse; ODT import and round-tripped HTML need them preserved. */
+const ImageWithDimensions = Image.extend({
+    addAttributes() {
+        return {
+            ...this.parent?.(),
+            width: {
+                default: null,
+                parseHTML: (element) => element.getAttribute('width'),
+                renderHTML: (attributes) => {
+                    if (!attributes.width) return {};
+                    return { width: attributes.width };
+                },
+            },
+            height: {
+                default: null,
+                parseHTML: (element) => element.getAttribute('height'),
+                renderHTML: (attributes) => {
+                    if (!attributes.height) return {};
+                    return { height: attributes.height };
+                },
+            },
+            style: {
+                default: null,
+                parseHTML: (element) => element.getAttribute('style'),
+                renderHTML: (attributes) => {
+                    if (!attributes.style) return {};
+                    return { style: attributes.style };
+                },
+            },
+        };
+    },
+});
+
+/** Paragraph drops inline styles on parse; ODT import uses per-paragraph line-height. */
+const ParagraphWithLineHeight = Paragraph.extend({
+    addAttributes() {
+        return {
+            ...this.parent?.(),
+            lineHeight: {
+                default: null,
+                parseHTML: (element) => element.style?.lineHeight || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.lineHeight) return {};
+                    return { style: `line-height: ${attributes.lineHeight}` };
+                },
+            },
+        };
+    },
+});
 import TextAlign from '@tiptap/extension-text-align'
 import Document from '@tiptap/extension-document'
 import Paragraph from '@tiptap/extension-paragraph'
@@ -729,7 +796,7 @@ import {
     LTbuildOffsetMap,
     LTfindByOffsetMap,
 } from '../utils/languagetool.js'
-import {getExamMaterials, loadDOCX, loadHTML, loadImage, loadPDF, playAudio, resetPdfPreviewToolbar} from '../utils/filehandler.js'
+import {getExamMaterials, loadDOCX, loadHTML, loadImage, loadODT, loadPDF, playAudio, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 
 import {SignalBridge} from '../utils/signalBridge.js'
@@ -801,6 +868,7 @@ export default {
             currenttime: 0,
             charcount: 0,
             wordcount: 0,
+            caretContextLabel: '',
             now: 0,
             pincode: this.$route.params.pincode,
             zoom: EDITOR_ZOOM_INITIAL,
@@ -912,6 +980,7 @@ export default {
         loadPDF: loadPDF,
         loadHTML: loadHTML,
         loadDOCX: loadDOCX,
+        loadODT: loadODT,
         loadImage: loadImage,
         playAudio: playAudio,
 
@@ -1086,6 +1155,9 @@ export default {
                 return
             } else if (file.filetype == 'docx') {
                 this.loadDOCX(file, true)
+                return
+            } else if (file.filetype == 'odt') {
+                this.loadODT(file, true)
                 return
             } else if (file.filetype == 'audio') {
                 this.playAudio(file, true)
@@ -1328,6 +1400,93 @@ export default {
             this.now = new Date().getTime()
             this.timesinceentry = new Date(this.now - this.entrytime).toISOString().substr(11, 8)
             this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
+        },
+
+        // Strip marks, color, alignment, paragraph line-height, then normalize block nodes (unsetAllMarks before clearNodes for full-doc selection).
+        clearFormatting() {
+            if (!this.editor) return
+            this.editor.chain().focus()
+                .unsetAllMarks()
+                .unsetColor()
+                .unsetTextAlign()
+                .resetAttributes('paragraph', 'lineHeight')
+                .clearNodes()
+                .run()
+        },
+
+        // Refresh status-bar text for block path, alignment, and marks at the selection anchor.
+        updateCaretContextLabel() {
+            if (!this.editor?.state) {
+                this.caretContextLabel = ''
+                return
+            }
+            const {state} = this.editor
+            const sel = state.selection
+            if (sel instanceof NodeSelection) {
+                const fragment = this.caretContextLabelForNode(sel.node)
+                this.caretContextLabel = fragment || this.$t('editor.caretCtxUnknown', {type: sel.node.type.name})
+                return
+            }
+            const {$from} = sel
+            const parts = []
+            for (let d = 1; d <= $from.depth; d++) {
+                const fragment = this.caretContextLabelForNode($from.node(d))
+                if (fragment) parts.push(fragment)
+            }
+            const parent = $from.parent
+            if ((parent.type.name === 'paragraph' || parent.type.name === 'heading') && parent.attrs.textAlign) {
+                const alignKey = {
+                    left: 'editor.caretCtxAlignLeft',
+                    center: 'editor.caretCtxAlignCenter',
+                    right: 'editor.caretCtxAlignRight',
+                    justify: 'editor.caretCtxAlignJustify',
+                }[parent.attrs.textAlign]
+                if (alignKey) parts.push(this.$t(alignKey))
+            }
+            $from.marks().forEach((mark) => {
+                const fragment = this.caretContextLabelForMark(mark)
+                if (fragment) parts.push(fragment)
+            })
+            this.caretContextLabel = parts.join(' · ')
+        },
+        // Map a document block node to a translated caret-context fragment (empty if omitted from UI).
+        caretContextLabelForNode(node) {
+            const name = node.type.name
+            if (name === 'heading') {
+                return this.$t('editor.caretCtxHeading', {level: node.attrs.level ?? ''})
+            }
+            const keyByName = {
+                paragraph: 'editor.caretCtxParagraph',
+                blockquote: 'editor.caretCtxBlockquote',
+                codeBlock: 'editor.caretCtxCodeBlock',
+                bulletList: 'editor.caretCtxBulletList',
+                orderedList: 'editor.caretCtxOrderedList',
+                listItem: 'editor.caretCtxListItem',
+                tableCell: 'editor.caretCtxTableCell',
+                tableHeader: 'editor.caretCtxTableHeader',
+                horizontalRule: 'editor.caretCtxHorizontalRule',
+                statsRule: 'editor.caretCtxStatsRule',
+                image: 'editor.caretCtxImage',
+            }
+            const i18nKey = keyByName[name]
+            return i18nKey ? this.$t(i18nKey) : ''
+        },
+        // Map an active mark to a translated caret-context fragment (supports textStyle color).
+        caretContextLabelForMark(mark) {
+            const keyByName = {
+                bold: 'editor.caretCtxBold',
+                italic: 'editor.caretCtxItalic',
+                underline: 'editor.caretCtxUnderline',
+                code: 'editor.caretCtxCode',
+                subscript: 'editor.caretCtxSubscript',
+                superscript: 'editor.caretCtxSuperscript',
+            }
+            const i18nKey = keyByName[mark.type.name]
+            if (i18nKey) return this.$t(i18nKey)
+            if (mark.type.name === 'textStyle' && mark.attrs?.color) {
+                return this.$t('editor.caretCtxColor', {color: mark.attrs.color})
+            }
+            return ''
         },
 
         //get all files in user directory
@@ -1964,7 +2123,7 @@ export default {
                 extensions: [
                     Typography,
 
-                    Image.configure({
+                    ImageWithDimensions.configure({
                         inline: true,
                         allowBase64: true,
                     }),
@@ -1985,7 +2144,7 @@ export default {
                     StatsRule,
                     ListItem,
                     OrderedList,
-                    Paragraph,
+                    ParagraphWithLineHeight,
                     Text,
                     Bold,
                     Code,
@@ -2024,6 +2183,12 @@ export default {
                         .configure({lowlight}),
                 ],
                 content: ``,
+                onCreate: () => {
+                    this.$nextTick(() => this.updateCaretContextLabel())
+                },
+                onTransaction: () => {
+                    this.updateCaretContextLabel()
+                },
             });
         },
         
@@ -2448,6 +2613,9 @@ export default {
         //margin-right: var(--js-margin) !important;
         margin-left: 14px !important;
         width: var(--js-editorWidth) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
     }
     #editorcontent {
         border: 0px !important;
@@ -2598,6 +2766,7 @@ Other Styles
 #editorcontent div.tiptap {
     overflow-x: auto;
     overflow-y: hidden;
+    font-size: var(--js-fontsize);
     line-height: var(--js-linespacing) !important;
     width: var(--js-editorWidth);
     border-radius: 0px;
@@ -2632,11 +2801,40 @@ Other Styles
     padding-left: 6px;
     box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
     font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    box-sizing: border-box;
+}
+
+.statusbar-left {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.statusbar-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.caret-context-label {
+    max-width: min(480px, 38vw);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
 }
 
 .zoombutton {
     height: 24px;
-    float: right;
+    flex-shrink: 0;
     cursor: pointer;
 
 }

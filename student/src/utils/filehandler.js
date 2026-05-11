@@ -1,7 +1,8 @@
 import { Buffer } from 'buffer';
 import DOMPurify from 'dompurify';
 import mammoth from 'mammoth';
-import {SignalBridge} from './signalBridge.js'
+import {SignalBridge} from './signalBridge.js';
+import {odtToTiptapHtml} from './odtToTiptapHtml.js';
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -221,6 +222,69 @@ export async function loadDOCX(file, base64=false){
         
         } 
     }); 
+}
+
+/** Loads an ODT from disk or base64 material into the TipTap editor (renderer converts via odtToTiptapHtml). */
+export async function loadODT(file, base64 = false) {
+    let base64content;
+    let filename = file;
+    if (base64) {
+        filename = file.filename;
+        base64content = file.filecontent.split(',')[1];
+    }
+
+    this.LTdisable();
+    this.$swal.fire({
+        title: this.$t('editor.replace'),
+        html: `${this.$t('editor.replacecontent1')} <b>${filename}</b> ${this.$t('editor.replacecontent2')}`,
+        icon: 'question',
+        showCancelButton: true,
+        cancelButtonText: this.$t('editor.cancel'),
+        reverseButtons: true,
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                let arrayBuffer;
+                if (base64) {
+                    const response = await fetch(file.filecontent);
+                    arrayBuffer = await response.arrayBuffer();
+                } else {
+                    const b64 = await signalBridge.invoke('getfilesasync', file, false, false, true);
+                    if (!b64 || typeof b64 !== 'string') {
+                        this.$swal.fire({
+                            title: this.$t('general.error'),
+                            text: this.$t('general.error'),
+                            icon: 'error',
+                            timer: 2500,
+                        });
+                        return;
+                    }
+                    const bin = atob(b64);
+                    const u8 = new Uint8Array(bin.length);
+                    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+                    arrayBuffer = u8.buffer;
+                }
+                const {html} = await odtToTiptapHtml(arrayBuffer);
+                const cleanHtml = DOMPurify.sanitize(html);
+                const body = parseHTMLString(cleanHtml);
+                this.editor.commands.clearContent(true);
+                this.editor.commands.insertContent(body.innerHTML);
+                let stem = String(filename).replace(/\.odt$/i, '');
+                if (/[/\\]/.test(stem) || stem.includes('..')) {
+                    stem = this.clientname;
+                }
+                this.currentFile = stem;
+            } catch (err) {
+                console.error('filehandler @ loadODT:', err);
+                this.$swal.fire({
+                    title: this.$t('general.error'),
+                    text: String(err?.message || err),
+                    icon: 'error',
+                    timer: 4000,
+                });
+            }
+        }
+    });
 }
 
 
