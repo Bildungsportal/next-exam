@@ -270,7 +270,7 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 import {isElectronWindow} from "../types/platform.ts";
 import config from '../../src-electron/main/config.js'
 import {SignalBridge} from '../utils/signalBridge.js'
-import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync, resetDisplayStream } from '../utils/screenshotCapture.js'
+import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync } from '../utils/screenshotCapture.js'
 import { Exam } from '../types/api'
 
 
@@ -1502,10 +1502,6 @@ export default {
             console.log("token received: ", token)
             this.bipToken = token
             this.fetchBiPData(token)
-        });
-
-        signalBridge.on('reset-screenshot-stream', () => {
-            resetDisplayStream();
         });
 
         signalBridge.on('qemu-download-progress', (_event, payload) => {

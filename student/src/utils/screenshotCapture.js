@@ -28,7 +28,7 @@ async function hashArrayBuffer(buffer) {
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Screen capture permission is requested exactly once via acquireDisplayStream at app start.
+// Desktop capture stream is acquired once (or on first successful ensureDisplayStreamAsync) and kept for the app lifetime; teacher disconnect must not stop tracks (kiosk cannot re-prompt).
 
 /**
  * Capture one frame from a live video element (stream already attached and playing).
@@ -127,7 +127,7 @@ function stopSharedStream(sharedRef) {
   sharedRef.video = null;
 }
 
-/** Reset display stream state so it can be re-acquired on next connect (e.g. after kick/disconnect) */
+/** Hard-reset capture stream (e.g. dev only); not used on teacher disconnect — that would force invisible OS re-consent in kiosk. */
 export function resetDisplayStream() {
   stopSharedStream(sharedRef);
   initAttempted = false;
@@ -187,7 +187,7 @@ async function acquireDisplayStream() {
   }
 }
 
-/** Initialize global display stream once at app start */
+/** First successful acquire only (initAttempted); keeps stream for app lifetime unless hard reset or track ends. */
 export async function initDisplayStreamOnce() {
   if (!isElectronWindow(window)) return;
   if (initAttempted) return;
@@ -223,7 +223,7 @@ export function isFullDesktopCaptureLikely() {
 
 /**
  * Apply config: start interval when serverip and screenshotinterval > 0, stop when 0 or no serverip.
- * Stream is acquired once at app start and reused for every tick.
+ * Reuses the long-lived capture stream for every tick (no new getDisplayMedia per tick).
  */
 function applyConfig(signalBridge, config) {
   if (applyInFlight) return;

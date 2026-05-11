@@ -972,11 +972,7 @@ import { switchExamSection } from './switchExamSection.js';
         this.multicastClient.clientinfo.timestamp = false
         this.multicastClient.clientinfo.localLockdown = false
         //this.multicastClient.clientinfo.virtualized = false  // this check happens only at the application start.. do not reset once set
-        try {
-            WindowHandler.mainwindow?.webContents?.send('reset-screenshot-stream');
-        } catch (e) {
-            log.debug('communicationhandler @ resetConnection: reset-screenshot-stream send', e?.message);
-        }
+        // Do not reset desktop capture stream here: kiosk/exam cannot show OS getDisplayMedia prompts; stream must live until app quit.
     }
  
 
