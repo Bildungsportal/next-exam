@@ -991,7 +991,7 @@ import { switchExamSection } from './switchExamSection.js';
         let token = this.multicastClient.clientinfo.token
         let backupfile = false
         for (const file of files) {
-            if (file.name && file.name.includes('bak')){   // this will always set the last bak file as backup file if there is more than one bak file
+            if (file.name && file.name.toLowerCase().endsWith('.htm')){   // this will always set the last htm backup as backup file if there is more than one
                 backupfile = file.name
             }
         }

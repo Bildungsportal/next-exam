@@ -92,6 +92,8 @@ export default defineConfig(( ctx: any ) => {
       showBuildSummary: false,
 
       extendViteConf (viteConf: any) {
+        viteConf.server = viteConf.server || {};
+        viteConf.server.forwardConsole = false; // Vite 8+: do not mirror browser console.warn/error to the dev-server terminal (avoids duplicate lines with electron-log).
         // suppress SASS deprecation warnings for Bootstrap color functions
         viteConf.css = viteConf.css || {};
         viteConf.css.preprocessorOptions = viteConf.css.preprocessorOptions || {};

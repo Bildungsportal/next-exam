@@ -37,7 +37,7 @@
         </div>
 
         <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
-            <div v-if="(file.filetype == 'bak')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
+            <div v-if="(file.filetype == 'htm')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
                  @click="selectedFile=file.filename; loadBase64file(file)"><img
                 src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;">
                 {{ file.filename }}

@@ -37,7 +37,7 @@
         <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
 
         <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
-            <div v-if="(file.filetype == 'bak')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+            <div v-if="(file.filetype == 'htm')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
             <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
             <div v-if="(file.filetype == 'audio')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
             <div v-if="(file.filetype == 'image')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
@@ -49,7 +49,7 @@
 
 
         <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
-                <div v-if="(file.type == 'bak')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadBAK(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
+                <div v-if="(file.type == 'htm')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadBAK(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
 
                 
                 <div v-if="(file.type == 'pdf')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
@@ -339,9 +339,9 @@ export default {
         },
         
         async loadBackupFile(filename=false){
-            // check if there is a bak file in the exam directory and load it
+            // check if there is an htm backup in the exam directory and load it
             // This must run early to read the file before it gets overwritten
-            let backupfileName = filename ? filename : this.clientname + ".bak"
+            let backupfileName = filename ? filename : this.clientname + ".htm"
             console.log(`activesheets @ loadBackupFile: Checking for backup file: ${backupfileName}`)
             try {
                 let backupfileContent = await signalBridge.invoke('getbackupfile', backupfileName )
@@ -424,11 +424,11 @@ export default {
                     }
                 }
                 
-                // Read the .bak file via IPC
+                // Read the .htm file via IPC
                 const bakContent = await signalBridge.invoke('getbackupfile', filename);
                 
                 if (!bakContent) {
-                    console.warn('activesheets @ loadBAK: No content found in .bak file');
+                    console.warn('activesheets @ loadBAK: No content found in .htm file');
                     this.$swal.fire({
                         title: this.$t('editor.error') || 'Fehler',
                         text: this.$t('editor.backupnotfound') || 'Backup-Datei konnte nicht gelesen werden',
@@ -475,7 +475,7 @@ export default {
                     timerProgressBar: true
                 });
             } catch (error) {
-                console.error('activesheets @ loadBAK: Error loading .bak file:', error);
+                console.error('activesheets @ loadBAK: Error loading .htm file:', error);
                 this.$swal.fire({
                     title: this.$t('editor.error') || 'Fehler',
                     text: this.$t('editor.backuperror') || 'Fehler beim Laden der Backup-Datei',
@@ -638,7 +638,7 @@ export default {
                 }
             });
             
-            // Save form data to .bak file via IPC
+            // Save form data to .htm file via IPC
             signalBridge.send('saveActivesheetsBak', {
                 filename: filename || this.clientname,
                 formData: formData,

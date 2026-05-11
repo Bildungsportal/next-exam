@@ -905,10 +905,10 @@ class IpcHandler {
             const htmlContent = args.editorcontent
             const filename = args.filename
             const saveReason = typeof args.reason === 'string' ? args.reason : 'n/a'
-            let htmlfilename = `${this.multicastClient.clientinfo.name}.bak`
+            let htmlfilename = `${this.multicastClient.clientinfo.name}.htm`
             
             if (filename){
-                htmlfilename = `${filename}.bak`
+                htmlfilename = `${filename}.htm`
             }
 
             const htmlfile = path.join(this.config.examdirectory, htmlfilename);
@@ -926,7 +926,7 @@ class IpcHandler {
                         if (err) {
                             log.error(`ipchandler @ storeHTML: ${err.message}`); 
                         
-                            let alternatepath = `${htmlfile}-${this.multicastClient.clientinfo.token}.bak`
+                            let alternatepath = `${htmlfile}-${this.multicastClient.clientinfo.token}.htm`
                             log.warn("ipchandler @ storeHTML: trying to write file as:", alternatepath )
                             fs.writeFile(alternatepath, out, (err2) => { 
                                 if (err2) {
@@ -1089,24 +1089,24 @@ class IpcHandler {
         })
 
         /**
-         * Saves Active Sheets form data to .bak file
+         * Saves Active Sheets form data to .htm file
          */
         ipcMain.on('saveActivesheetsBak', (event, args) => {
             try {
                 const saveReason = typeof args.reason === 'string' ? args.reason : 'n/a'
-                const bakFilename = args.filename ? `${args.filename}.bak` : `${this.multicastClient.clientinfo.name}.bak`;
-                const bakFilePath = path.join(this.config.examdirectory, bakFilename);
+                const htmFilename = args.filename ? `${args.filename}.htm` : `${this.multicastClient.clientinfo.name}.htm`;
+                const htmFilePath = path.join(this.config.examdirectory, htmFilename);
                 
                 // Convert formData to JSON string
                 const jsonData = JSON.stringify(args.formData, null, 2);
                 
-                // Write to .bak file
+                // Write to .htm file
                 const pw = resolveExamDecryptPassword(this.multicastClient);
                 const out = encryptExamFileBytesUnlessAlready(Buffer.from(jsonData, 'utf8'), pw);
-                if (pw) logSaveInfoUnlessAuto(saveReason, `ipchandler @ saveActivesheetsBak: encrypted write ${bakFilename}`);
-                else logSaveInfoUnlessAuto(saveReason, `ipchandler @ saveActivesheetsBak: plaintext write ${bakFilename}`);
-                fs.writeFileSync(bakFilePath, out);
-                logSaveInfoUnlessAuto(saveReason, `ipchandler @ saveActivesheetsBak: saved form data to ${bakFilename}`);
+                if (pw) logSaveInfoUnlessAuto(saveReason, `ipchandler @ saveActivesheetsBak: encrypted write ${htmFilename}`);
+                else logSaveInfoUnlessAuto(saveReason, `ipchandler @ saveActivesheetsBak: plaintext write ${htmFilename}`);
+                fs.writeFileSync(htmFilePath, out);
+                logSaveInfoUnlessAuto(saveReason, `ipchandler @ saveActivesheetsBak: saved form data to ${htmFilename}`);
             } catch (error) {
                 log.error(`ipchandler @ saveActivesheetsBak: ${error.message}`);
                 event.reply("fileerror", { sender: "client", message: error.message, status: "error" });
@@ -1469,7 +1469,7 @@ class IpcHandler {
                     });
                     return result
                 }
-                else {   //bak file
+                else {   //htm backup file
                     try {
                         const data = readMaybeDecrypt().toString('utf8');
                         return data
@@ -1493,7 +1493,7 @@ class IpcHandler {
                         let modified = fs.statSync(   path.join(workdir,file)  ).mtime
                         let mod = modified.getTime()
                         if  (path.extname(file).toLowerCase() === ".pdf"){ files.push( {name: file, type: "pdf", mod: mod})   }         //pdf
-                        else if  (path.extname(file).toLowerCase() === ".bak"){ files.push( {name: file, type: "bak", mod: mod})   }   // editor| backup file to replace editor content
+                        else if  (path.extname(file).toLowerCase() === ".htm"){ files.push( {name: file, type: "htm", mod: mod})   }   // editor| backup file to replace editor content
                         else if  (path.extname(file).toLowerCase() === ".docx"){ files.push( {name: file, type: "docx", mod: mod})   }   // editor| content file (from teacher) to replace content and continue writing
                         else if  (path.extname(file).toLowerCase() === ".ggb"){ files.push( {name: file, type: "ggb", mod: mod})   }  // geogebra
                         else if  (path.extname(file).toLowerCase() === ".mp3" || path.extname(file).toLowerCase() === ".ogg" || path.extname(file).toLowerCase() === ".wav" ){ files.push( {name: file, type: "audio", mod: mod})   }  // audio

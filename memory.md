@@ -4,6 +4,7 @@ TECH^vue^api^Options API teacher/src; mirror sibling file; no script setup unles
 RULE^i18n^alphabetical^keep keys in teacher/src/locales/de.json+en.json alphabetically sorted within each object
 RULE^dashboard^setupLogic^exam setup funcs live in teacher/src/utils/examsetup.js; dashboard.vue should mostly import+map
 RULE^dev^noBackCompat^unstable dev; no legacy migrations/workarounds/backward-compat; schema breaks ok
+TECH^quasar^vite^@quasar/app-vite bundles Vite 8; server.forwardConsole=false in student+teacher quasar.config.ts extendViteConf stops browser console.warn mirroring to dev terminal ([vite] client dupes)
 RULE^ui^noJsWorkarounds^fix layout via CSS/layout first; no JS workaround for layout/scroll issues
 RULE^agent^assumeUserEditsIntentional^never revert incidental diffs; assume user made changes intentionally unless explicitly asked
 RULE^agent^gitSafety^never run git restore/reset/clean/rebase/stash/pop/checkout/switch unless user explicitly asks
@@ -29,3 +30,4 @@ RULE^student^appsToClose^single source of truth in student/src-electron/main/scr
 RULE^student^screenshotStream^resetConnection must not stop getDisplayMedia stream; capture persists until app quit so kiosk reconnect avoids OS picker^student communicationhandler resetConnection; resetDisplayStream not on disconnect
 TECH^exam^fileCrypto^NXE1 v1 AES-256-GCM+scrypt; key=serverstatus.encryptionPassword (64 hex auto); examPassword=human exit only; student encrypt/decrypt+teacher decrypt use encryptionPassword^student ipchandler+communicationhandler; teacher examFileCryptoContext+data.js+control.js+ipchandler getSpecificSubmissionBase64+pickEncryptedPdfForPreview
 IPC^teacher^pickEncryptedPdfForPreview^invoke(encryptionPassword)->dialog .pdf read; if NXE1 unwrap else raw; %PDF- check; {ok,base64,filename,filePath}|codes NEEDS_PASSWORD|BAD_PASSWORD|NOT_PDF|ERROR^teacher ipchandler.js+dashboard openEncryptedPdfPreview
+TECH^exam^editorBackupExt^editor/activesheets HTML backup filename <name>.htm + type htm in getfilesasync; teacher getLatestBakFile reads <student>.htm in latest backup dir (IPC name unchanged)^student+teacher ipchandler; Vue filetype htm

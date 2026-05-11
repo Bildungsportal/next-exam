@@ -317,7 +317,7 @@
                 </div>
 
                 <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
-                    <div v-if="(file.filetype == 'bak')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
+                    <div v-if="(file.filetype == 'htm')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
                          @click="selectedFile=file.filename; loadBase64file(file)"><img
                         src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22"
                         style="vertical-align: top;"> {{ file.filename }}
@@ -367,8 +367,8 @@
                 <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
                  
 
-                    <div v-if="(file.type == 'bak' && !file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
-                    <div v-if="(file.type == 'bak' && file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
+                    <div v-if="(file.type == 'htm' && !file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.htm'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
+                    <div v-if="(file.type == 'htm' && file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.htm'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
 
 
                     <div v-if="(file.type == 'docx')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
@@ -1450,7 +1450,7 @@ export default {
                 previewElement.classList.remove('fadeinfast');
             }
 
-            // SAVE AS HTML (bak) - also save editorcontent as *html file - used to re-populate the editor window in case something went completely wrong
+            // SAVE AS HTML (.htm) - also save editorcontent as *html file - used to re-populate the editor window in case something went completely wrong
             let editorcontent = this.editor.getHTML(); 
             signalBridge.send('storeHTML', { filename: filename, editorcontent: editorcontent, reason: why })
             
@@ -2026,9 +2026,9 @@ export default {
         },
         
         async loadBackupFile(filename = false) {
-            // check if there is a bak file in the exam directory and load it
+            // check if there is an htm backup in the exam directory and load it
             // This must run early to read the file before editor overwrites it after 20 seconds
-            let backupfileName = filename ? filename : this.clientname + ".bak"
+            let backupfileName = filename ? filename : this.clientname + ".htm"
             console.log(`editor @ loadBackupFile: Checking for backup file: ${backupfileName}`)
             try {
                 let backupfileContent = await signalBridge.invoke('getbackupfile', backupfileName)

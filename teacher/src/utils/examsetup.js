@@ -1796,13 +1796,13 @@ function defineMaterials(who) {
 
     let htmlcontent = `<div class="my-content"> 
         ${this.$t("dashboard.filesendtext")} <br>
-        <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
+        <span style="font-size:0.8em;">(.pdf, .docx, .htm, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
         </div>`
 
     if (hasGroups && presetGroup === "all") {
         htmlcontent = `<div class="my-content"> 
             ${this.$t("dashboard.filesendtext")} <br>
-            <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
+            <span style="font-size:0.8em;">(.pdf, .docx, .htm, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
             <br>  <br> 
             Gruppe<br>
             <button id="fbtnA" class="swal2-button btn btn-cyan m-2" style="width: 42px; height: 42px;">A</button>
@@ -1851,7 +1851,7 @@ function defineMaterials(who) {
             id: "swalFile",
             class: "form-control",
             multiple: "multiple",
-            accept: ".pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb"
+            accept: ".pdf, .docx, .htm, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb"
         },
         didRender: () => {
             const btnA = document.getElementById('fbtnA');
@@ -2016,7 +2016,7 @@ function determineFiletype(file, filename) {
     let filetype = "";
     if (file && file.type) {
         if (file.type.includes("pdf")) { filetype = "pdf"; }
-        else if (file.type.includes("bak")) { filetype = "bak"; }
+        else if (file.type.includes("html")) { filetype = "htm"; }
         else if (file.type.includes("openxml")) { filetype = "docx"; }
         else if (file.type.includes("ggb")) { filetype = "ggb"; }
         else if (file.type.includes("audio") || file.type.includes("ogg") || file.type.includes("wav")) { filetype = "audio"; }
@@ -2027,7 +2027,7 @@ function determineFiletype(file, filename) {
     if (!filetype && filename) {
         const lowerName = filename.toLowerCase();
         if (lowerName.endsWith('.pdf')) { filetype = "pdf"; }
-        else if (lowerName.endsWith('.bak')) { filetype = "bak"; }
+        else if (lowerName.endsWith('.htm')) { filetype = "htm"; }
         else if (lowerName.endsWith('.docx')) { filetype = "docx"; }
         else if (lowerName.endsWith('.ggb')) { filetype = "ggb"; }
         else if (lowerName.endsWith('.ogg') || lowerName.endsWith('.wav') || lowerName.endsWith('.mp3')) { filetype = "audio"; }

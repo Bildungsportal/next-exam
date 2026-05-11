@@ -360,13 +360,13 @@ function sendFiles(who) {
     }
     let htmlcontent = `<div class="my-content"> 
         ${this.$t("dashboard.filesendtext")} <br>
-        <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
+        <span style="font-size:0.8em;">(.pdf, .docx, .htm, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
         </div>`
 
     if (this.serverstatus.examSections[this.serverstatus.activeSection].groups && who == "all"){ //wenn who != "all" sondern ein studenttoken ist dann soll die datei an eine einzelne person gesandt werden
         htmlcontent =  `<div class="my-content"> 
             ${this.$t("dashboard.filesendtext")} <br>
-            <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
+            <span style="font-size:0.8em;">(.pdf, .docx, .htm, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
             <br>  <br> 
             Gruppe<br>
             <button id="fbtnA" class="swal2-button btn btn-cyan m-2" style="width: 42px; height: 42px;">A</button>
@@ -399,7 +399,7 @@ function sendFiles(who) {
             id: "swalFile",
             class:"form-control",
             multiple:"multiple",
-            accept: ".pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb"
+            accept: ".pdf, .docx, .htm, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb"
         },
         didRender: () => {
             const btnA = document.getElementById('fbtnA');

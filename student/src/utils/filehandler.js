@@ -161,8 +161,8 @@ export async function loadHTML(file){
             
             this.editor.commands.clearContent(true)
             this.editor.commands.insertContent(data)  
-            //set currentFile to the loaded filename remove extension .bak from filename
-            let filename = file.replace(/\.bak$/, '')  //remove extension .bak from filename
+            //set currentFile to the loaded filename remove extension .htm from filename
+            let filename = file.replace(/\.htm$/, '')  //remove extension .htm from filename
             this.currentFile = filename
         } 
     }); 

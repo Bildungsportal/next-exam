@@ -68,10 +68,13 @@
             <!-- Create exam START -->
             <div v-if="activeTab === 'pruefung'" class="d-flex flex-column flex-grow-1" style="min-height: 0;">
                 <div class="flex-shrink-0">
-                <div class="input-group  mb-1 mt-0">
+                <div class="input-group mb-1 mt-0 examname-input-row">
                     <span class="input-group-text col-2 grayback" id="inputGroup-sizing-lg" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.examname")}}</span>
-                    <input v-model="servername" @paste.prevent @drop.prevent @click="servername = ''; checkExistingExam()" maxlength="20" type="text" class="form-control" id="servername" placeholder="5a-mathematik" style="width:200px;max-width:200px;min-width:135px;">
-                    <span v-if="bipNameConflict" class="text-warning ms-2 align-self-center" style="font-size:0.8em;">⚠ {{$t("startserver.bipNameConflictShort")}}</span>
+                    <input v-model="servername" @paste="onServernamePasteOrDrop" @drop="onServernamePasteOrDrop" @dragover.prevent @click="servername = ''; checkExistingExam()" maxlength="20" type="text" class="form-control" id="servername" placeholder="5a-mathematik" style="width:200px;max-width:200px;min-width:135px;">
+                    <Transition name="servername-charset-hint">
+                        <span v-if="showServernameCharsetHint" class="servername-charset-hint ms-2 align-self-center">{{ $t("startserver.examnameCharsetHint") }}</span>
+                    </Transition>
+                    <span v-if="bipNameConflict" class="text-warning ms-2 align-self-center text-nowrap text-truncate examname-bip-conflict-hint">⚠ {{$t("startserver.bipNameConflictShort")}}</span>
                 </div>
 
                 <!-- could be used to set an ESCAPE PASSWORD for students to make it harder to leave on connection loss -->
@@ -316,6 +319,8 @@ export default {
             biptest:true,   //switches between production and q
             selectedExam: null,
             bipNameConflict: false,
+            showServernameCharsetHint: false,
+            servernameCharsetHintTimer: null,
 
             bipToken:this.$route.params.bipToken === 'false' || !this.$route.params.bipToken ?  false : this.$route.params.bipToken,   // params are always passed as string "false", convert to bool
             bipuserID: this.$route.params.bipuserID === 'false' || !this.$route.params.bipuserID ?  false : this.$route.params.bipuserID,
@@ -1041,11 +1046,30 @@ export default {
             this.servername = document.getElementById('servername').value;
             this.checkExistingExam();
         },
+        // Shows a short hint next to the exam name field when a disallowed character is rejected or paste/drop is blocked.
+        flashServernameCharsetHint() {
+            this.showServernameCharsetHint = true;
+            if (this.servernameCharsetHintTimer) {
+                clearTimeout(this.servernameCharsetHintTimer);
+            }
+            this.servernameCharsetHintTimer = setTimeout(() => {
+                this.showServernameCharsetHint = false;
+                this.servernameCharsetHintTimer = null;
+            }, 1600);
+        },
+        onServernamePasteOrDrop(e) {
+            e.preventDefault();
+            this.flashServernameCharsetHint();
+        },
         validateInput(e) {
-            var lettersOnly = /^[a-zA-Z0-9-_]+$/;
-            var key = e.key || String.fromCharCode(e.which);
+            const lettersOnly = /^[a-zA-Z0-9-_]+$/;
+            const key = e.key || String.fromCharCode(e.which);
             if (!lettersOnly.test(key)) {
                 e.preventDefault();
+                // Avoid hint for navigation/control keys (single printable chars and space are the usual mistakes).
+                if (key.length === 1 || e.code === 'Space' || key === ' ') {
+                    this.flashServernameCharsetHint();
+                }
             }
         },
         // Function to add fade-in effect
@@ -1119,6 +1143,10 @@ export default {
         }
     },
     beforeUnmount() {
+        if (this.servernameCharsetHintTimer) {
+            clearTimeout(this.servernameCharsetHintTimer);
+            this.servernameCharsetHintTimer = null;
+        }
         const servernameEl = document.getElementById("servername");
         if (servernameEl) {
             // should be safe for SPA unmount when element might already be gone
@@ -1144,6 +1172,40 @@ export default {
 
 
 <style scoped>
+
+.examname-input-row {
+    flex-wrap: nowrap;
+    align-items: center;
+    min-width: 0;
+}
+
+.servername-charset-hint {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: min(480px, 42vw);
+    font-size: 0.8em;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #198754;
+}
+
+.examname-bip-conflict-hint {
+    max-width: min(280px, 28vw);
+}
+
+.servername-charset-hint-enter-active,
+.servername-charset-hint-leave-active {
+    transition: opacity 0.19s ease, transform 0.19s ease;
+}
+
+.servername-charset-hint-enter-from,
+.servername-charset-hint-leave-to {
+    opacity: 0;
+    transform: translateX(6px);
+}
 
 .disabledstart {
     filter: contrast(100%) grayscale(60%) brightness(130%) blur(0.6px);

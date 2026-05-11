@@ -658,7 +658,7 @@ class IpcHandler {
 
 
          /**
-         * get latest bak file from specific student directory
+         * get latest student html backup (.htm) from specific student directory
          */
         ipcMain.handle('getLatestBakFile', async (event, servername, studentName) => {
             const mcServer = this.config.examServerList[servername]
@@ -669,8 +669,8 @@ class IpcHandler {
             //check if directory exists
             if (!fs.existsSync(dir)) { return { sender: "server", message:"notfound", status: "error", filepath: false } }
 
-            //in the student directroy there are several backup directories  that contain a bak file /20251112_10_20_13/
-            // the bakfile naming scheme is studentname.bak ... we only need the latest one that has the studentname as filename
+            //in the student directroy there are several backup directories  that contain an htm backup /20251112_10_20_13/
+            // the backup naming scheme is studentname.htm ... we only need the latest one that has the studentname as filename
             // ignore directories: ABGABE and focuslost
             const backupDirectories = fs.readdirSync(dir, { withFileTypes: true })
                 .filter(dirent => dirent.isDirectory() && dirent.name !== 'ABGABE' && dirent.name !== 'focuslost')
@@ -686,10 +686,10 @@ class IpcHandler {
             
             let latestBackupDirectory = backupDirectories[0].name
             log.info("ipchandler @ getLatestBakFile: Searching for latest backup file in:", dir, latestBackupDirectory)
-            const latestBakFilepath = join(dir, latestBackupDirectory, studentName + '.bak')
+            const latestBakFilepath = join(dir, latestBackupDirectory, studentName + '.htm')
             const latestBackupDirectoryPath = join(dir, latestBackupDirectory)
             
-            //get latest bak file  - check if file exists
+            //get latest htm backup  - check if file exists
             if (!fs.existsSync(latestBakFilepath)) { return { sender: "server", message:"notfound", status: "error", filepath: false, latestBackupDirectoryPath:latestBackupDirectoryPath || false } }
             //return the existing and checked filepath or if no file was found false
             return { sender: "server", message:"success", status: "success", filepath: latestBakFilepath, latestBackupDirectoryPath: latestBackupDirectoryPath }
