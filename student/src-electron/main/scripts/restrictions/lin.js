@@ -150,6 +150,14 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
         log.info("platformrestrictions @ enableRestrictions: reconfiguring kwin");
         childProcess.execFile('kwriteconfig5', ['--file', `${platformDispatcher.homedirectory}/.config/kwinrc`,'--group', 'ModifierOnlyShortcuts','--key','Meta','""']);
         childProcess.execFile('kwriteconfig5', ['--file','kwinrc','--group','Desktops','--key','Number','1']);
+
+        // Übersicht (Overview) deaktivieren
+        childProcess.execFile('kwriteconfig6', ['--file', 'kwinrc', '--group', 'Plugins', '--key', 'overviewEnabled', 'false']);
+        // Desktop-Gitter (Grid) deaktivieren
+        childProcess.execFile('kwriteconfig6', ['--file', 'kwinrc', '--group', 'Plugins', '--key', 'desktopgridEnabled', 'false']);
+        // Deaktiviert alle globalen Wischgesten (Desktop-Wechsel, Übersicht etc.)
+        childProcess.execFile('kwriteconfig6', ['--file', 'kwinrc', '--group', 'Gestures', '--key', 'Enabled', 'false']);
+
         childProcess.execFile('qdbus', ['org.kde.KWin','/KWin','reconfigure']);
         childProcess.execFile('qdbus', ['org.kde.KWin','/KWin','setCurrentDesktop','1']);
         log.info("platformrestrictions @ enableRestrictions: disabling effects");

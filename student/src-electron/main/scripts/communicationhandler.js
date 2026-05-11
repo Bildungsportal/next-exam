@@ -63,7 +63,7 @@ import { switchExamSection } from './switchExamSection.js';
     // Encrypts all unencrypted files in the current examdirectory. 
     async encryptExamdirectoryFiles() {
         if (this.multicastClient?.clientinfo?.examtype === 'localvm') return;
-        const pw = String(this.multicastClient?.serverstatus?.examPassword ?? '').trim();
+        const pw = String(this.multicastClient?.serverstatus?.encryptionPassword ?? '').trim();
         if (!pw) return;
         const dir = this.config?.examdirectory;
         if (!dir) return;

@@ -50,9 +50,9 @@ const logSaveInfoUnlessAuto = (saveReason, message) => {
     log.info(message)
 }
 
-/** Exam file key: serverstatus.examPassword; local lockdown uses serverstatus.password only. */
+/** Exam file key: serverstatus.encryptionPassword; local lockdown uses serverstatus.password only. */
 const resolveExamDecryptPassword = (multicastClient) => {
-    const examPw = String(multicastClient?.serverstatus?.examPassword ?? '').trim();
+    const examPw = String(multicastClient?.serverstatus?.encryptionPassword ?? '').trim();
     if (examPw) return examPw;
     if (multicastClient?.clientinfo?.localLockdown) {
         return String(multicastClient?.serverstatus?.password ?? '').trim();

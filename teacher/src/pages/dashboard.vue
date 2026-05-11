@@ -8,10 +8,11 @@
         <span style="font-size:23px;" class="align-middle me-1 ">Next-Exam</span>
     </span>
 
-    <div style="flex-shrink: 0; text-align: right;">
-        <div class="btn btn-sm btn-cyan m-0 me-1 mt-0" style=" padding:3px; height:32px; width:32px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22" > </div>
+    <div style="flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
+        <button type="button" class="btn btn-sm btn-outline-light m-0 me-1 mt-0 text-start text-nowrap" style="height:32px; max-width: 11rem; padding: 2px 8px; font-size: 0.72rem; line-height: 1.1; overflow: hidden; text-overflow: ellipsis;" :title="$t('dashboard.openEncryptedPdf')" @click="openEncryptedPdfPreview" @mouseover="showDescription($t('dashboard.openEncryptedPdf'))" @mouseout="hideDescription">{{ $t('dashboard.openEncryptedPdf') }}</button>
         <div class="btn btn-sm btn-danger m-0 me-1 mt-0" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style=" height:32px;"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" >&nbsp; {{$t('dashboard.stopserver')}}&nbsp; </div>
         <div v-if="!hostip?.hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 me-1 " style="cursor: unset;">{{ $t("general.offline") }}</div>
+        <div class="btn btn-sm btn-cyan m-0 me-1 mt-0" style=" padding:3px; height:32px; width:32px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22" > </div>
         <span class="align-middle ms-3" style="font-size:23px;">Dashboard</span>
     </div>
     
@@ -1276,6 +1277,7 @@ import { swalQueued } from '../utils/swalQueue.js'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, lockSectionForAll, endExam, kick, restore } from '../utils/exammanagement.js'
 import { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
 import { Exam } from '../types/api'
+import { generateEncryptionPassword } from '../utils/encryptionPassword.js'
 
 class EmptyWidget {
     constructor() {
@@ -1387,6 +1389,7 @@ export default {
                 nextexamVersion: this.$route.params.version,
                 examName: this.$route.params.servername,
                 examPassword: this.$route.params.passwd,
+                encryptionPassword: generateEncryptionPassword(),
                 examDate: new Date().toISOString().slice(0, 19),
                 examDurationMinutes: 100, 
                 pin: this.$route.params.pin,
@@ -1762,6 +1765,31 @@ computed: {
         },
         studentsZoomReset() {
             this.studentsZoom = 1
+        },
+
+        // Opens picked PDF in preview; decrypts NXE1 using serverstatus.encryptionPassword.
+        async openEncryptedPdfPreview() {
+            const pw = String(this.serverstatus?.encryptionPassword ?? '').trim()
+            const res = await ipcRenderer.invoke('pickEncryptedPdfForPreview', pw)
+            if (res?.cancelled) return
+            if (!res?.ok) {
+                const map = {
+                    NEEDS_PASSWORD: 'dashboard.openEncryptedPdfNeedEncryptionKey',
+                    BAD_PASSWORD: 'dashboard.openEncryptedPdfBadPassword',
+                    STILL_ENCRYPTED: 'dashboard.openEncryptedPdfBadPassword',
+                    NOT_PDF: 'dashboard.openEncryptedPdfNotPdf',
+                    ERROR: 'dashboard.openEncryptedPdfError',
+                }
+                const key = map[res.code] || 'dashboard.openEncryptedPdfError'
+                await swalQueued.fire({
+                    icon: 'error',
+                    title: this.$t(key),
+                    text: res.message || '',
+                })
+                return
+            }
+            this.showBase64FilePreview(res.base64, res.filename)
+            this.currentpreviewPath = res.filePath
         },
 
         /**
@@ -2508,6 +2536,9 @@ computed: {
             if (!status || typeof status !== 'object') return;
             if (!status.examSections || typeof status.examSections !== 'object') status.examSections = {};
             if (typeof status.directPrintAllowed !== 'boolean') status.directPrintAllowed = false;
+            if (typeof status.encryptionPassword !== 'string' || status.encryptionPassword.trim().length < 64) {
+                status.encryptionPassword = generateEncryptionPassword();
+            }
 
             for (const section of Object.values(status.examSections)) {
                 if (!section || typeof section !== 'object') continue;

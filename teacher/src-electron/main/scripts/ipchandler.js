@@ -23,7 +23,7 @@ import fs from 'fs'
 import { ipcMain, dialog, session } from 'electron'
 import path, { join } from 'path'
 import log from 'electron-log';
-import { decryptBufferIfNeeded } from './examFileCryptoContext.js';
+import { decryptBufferIfNeeded, isNxe1ExamEncrypted, unwrapNxe1ExamBuffer } from './examFileCryptoContext.js';
 import { networkInterfaces } from 'os'
 import { exec } from 'child_process';
 import { gateway4sync} from 'default-gateway';
@@ -533,6 +533,42 @@ class IpcHandler {
             catch (e) {
                 log.error(`ipchandler @ getSpecificSubmissionBase64: ${e}`)
                 return { submission: false, status: "error" }
+            }
+        })
+
+        /** Pick a PDF from disk; decrypt NXE1 layers with encryption secret when present; return base64 for preview. */
+        ipcMain.handle('pickEncryptedPdfForPreview', async (_event, encryptionPassword) => {
+            const win = this.WindowHandler?.mainwindow
+            try {
+                const dlg = await dialog.showOpenDialog(win || undefined, {
+                    properties: ['openFile'],
+                    filters: [{ name: 'PDF', extensions: ['pdf'] }],
+                })
+                if (dlg.canceled || !dlg.filePaths?.[0]) {
+                    return { ok: false, cancelled: true }
+                }
+                const filePath = dlg.filePaths[0]
+                let plain = await fs.promises.readFile(filePath)
+                if (isNxe1ExamEncrypted(plain)) {
+                    const unwrapped = unwrapNxe1ExamBuffer(plain, encryptionPassword, 'pickEncryptedPdfForPreview')
+                    if (!unwrapped.ok) {
+                        return { ok: false, code: unwrapped.code }
+                    }
+                    plain = unwrapped.buffer
+                }
+                const probe = plain.subarray(0, Math.min(plain.length, 2048)).toString('binary')
+                if (!probe.includes('%PDF-')) {
+                    return { ok: false, code: 'NOT_PDF' }
+                }
+                return {
+                    ok: true,
+                    base64: plain.toString('base64'),
+                    filename: path.basename(filePath),
+                    filePath,
+                }
+            } catch (e) {
+                log.error('ipchandler @ pickEncryptedPdfForPreview', e)
+                return { ok: false, code: 'ERROR', message: String(e?.message || e) }
             }
         })
 

@@ -19,11 +19,11 @@
     <!-- sidebar -->
     <div id="sidebar" class="p-3 text-white bg-dark h-100 d-flex flex-column position-relative overflow-hidden" style="width: 240px; min-width: 240px;">
         <div class="flex-shrink-0">
-        <div class="btn btn-light ms-1 text-start infobutton" @click="activeTab = 'pruefung'; selectedExam = null; servername = ''; password = 'next-exam'; passwordConfirm = 'next-exam'; advanced = false; checkExistingExam();" :style="activeTab !== 'pruefung' ? 'border-right: 2px solid #aaa; box-shadow: -6px -3px 10px -12px inset #000; color: #666;' : ''">
+        <div class="btn btn-light ms-1 text-start infobutton" @click="activeTab = 'pruefung'; selectedExam = null; servername = ''; password = ''; passwordConfirm = ''; advanced = false; checkExistingExam();" :style="activeTab !== 'pruefung' ? 'border-right: 2px solid #aaa; box-shadow: -6px -3px 10px -12px inset #000; color: #666;' : ''">
             <img src='/src/assets/img/svg/server.svg' class="me-2"  width="16" height="16" :style="activeTab !== 'pruefung' ? 'opacity: 0.5;' : ''">
             {{$t("general.startserver")}}
         </div>
-        <div v-if="config.bipIntegration" class="btn btn-light ms-1 mt-1 text-start infobutton" @click="activeTab = 'bildungsportal'; selectedExam = null; servername = ''; password = 'next-exam'; passwordConfirm = 'next-exam'; advanced = false; checkExistingExam();" :style="activeTab !== 'bildungsportal' ? 'border-right: 2px solid #aaa; box-shadow: -6px 0px 10px -12px inset #000; color: #666;' : ''">
+        <div v-if="config.bipIntegration" class="btn btn-light ms-1 mt-1 text-start infobutton" @click="activeTab = 'bildungsportal'; selectedExam = null; servername = ''; password = ''; passwordConfirm = ''; advanced = false; checkExistingExam();" :style="activeTab !== 'bildungsportal' ? 'border-right: 2px solid #aaa; box-shadow: -6px 0px 10px -12px inset #000; color: #666;' : ''">
             <img src='/src/assets/img/svg/shield-lock-fill.svg' class="me-2 "  width="16" height="16"  :style="activeTab !== 'bildungsportal' ? 'opacity: 0.5;' : ''">
             {{$t("dashboard.bildungsportal")}}
         </div><br v-if="config.bipIntegration">
@@ -75,6 +75,7 @@
                 </div>
 
                 <!-- could be used to set an ESCAPE PASSWORD for students to make it harder to leave on connection loss -->
+                <template v-if="advanced">
                 <div class="input-group mb-1" style="max-width: fit-content" @mouseover="showDescription($t('startserver.pwdinfo'))" @mouseout="hideDescription">
                     <span id="pwd" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.pwd")}}</span>
                     <input v-model="password" :type="showPassword ? 'text' : 'password'" class="form-control" id="examPassword" style="width:200px;">
@@ -87,6 +88,7 @@
                     <input v-model="passwordConfirm" :type="showPassword ? 'text' : 'password'" class="form-control" :class="passwordMismatch ? 'is-invalid' : (passwordConfirm !== '' ? 'is-valid' : '')" style="width:200px;">
                     <span v-if="passwordMismatch" class="text-danger ms-2 align-self-center" style="font-size:0.8em;">⚠ {{$t("startserver.pwdmismatch")}}</span>
                 </div>
+                </template>
 
                 <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content" @mouseover="showDescription($t('startserver.backupfolderinfo'))" @mouseout="hideDescription">
                     <span id="backupdir" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.backupfolder")}}</span>
@@ -96,7 +98,7 @@
                     </button>
                 </div>
 
-                <button @click="startServer()" :class="(!hostip || !password || !passwordConfirm || passwordMismatch) ? 'disabledstart':''" id="examstart" class="ps-1 pe-1 mb-3 btn btn-cyan" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
+                <button @click="startServer()" :class="(!hostip || (advanced && (!password || !passwordConfirm || passwordMismatch))) ? 'disabledstart':''" id="examstart" class="ps-1 pe-1 mb-3 btn btn-cyan" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
                 </div><!-- /flex-shrink-0 -->
 
                 <!-- Local exams widget grid START -->
@@ -156,6 +158,7 @@
                     <span>{{$t("startserver.bipwelcome")}} {{bipUsername}}!</span>
                 </div>
 
+                <template v-if="advanced">
                 <div class="input-group mb-1" style="max-width: fit-content" @mouseover="showDescription($t('startserver.pwdinfo'))" @mouseout="hideDescription">
                     <span id="pwd" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.pwd")}}</span>
                     <input v-model="password" :type="showPassword ? 'text' : 'password'" class="form-control" id="examPassword" style="width:200px;">
@@ -168,6 +171,7 @@
                     <input v-model="passwordConfirm" :type="showPassword ? 'text' : 'password'" class="form-control" :class="passwordMismatch ? 'is-invalid' : (passwordConfirm !== '' ? 'is-valid' : '')" style="width:200px;">
                     <span v-if="passwordMismatch" class="text-danger ms-2 align-self-center" style="font-size:0.8em;">⚠ {{$t("startserver.pwdmismatch")}}</span>
                 </div>
+                </template>
 
                 <div v-if="advanced" class="input-group mb-1" style="max-width: fit-content" @mouseover="showDescription($t('startserver.backupfolderinfo'))" @mouseout="hideDescription">
                     <span id="backupdir" class="input-group-text col-2 grayback"  style="width:170px;">{{$t("startserver.backupfolder")}}</span>
@@ -177,7 +181,7 @@
                     </button>
                 </div>
 
-                <button @click="startServer()" :class="(!hostip || !bipToken || !servername || !password || !passwordConfirm || passwordMismatch) ? 'disabledstart':''" id="examstart" class="ps-1 pe-1 mb-3 btn btn-success" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
+                <button @click="startServer()" :class="(!hostip || !bipToken || !servername || (advanced && (!password || !passwordConfirm || passwordMismatch))) ? 'disabledstart':''" id="examstart" class="ps-1 pe-1 mb-3 btn btn-success" value="start exam" style="width:170px;max-width:170px;min-width:170px;">{{$t("startserver.start")}}</button>
                 </div><!-- /flex-shrink-0 -->
 
                 <!-- BiP exams START -->
@@ -295,8 +299,8 @@ export default {
             buildDate: this.$route.params.config.buildDate,
             title: document.title,
             servername : this.$route.params.config.development ? "test-exam":"",
-            password: "next-exam",   //we use this password to allow students to manually leave exam mode
-            passwordConfirm: "next-exam",
+            password: "",
+            passwordConfirm: "",
             prod : false,
             serverApiPort: this.$route.params.serverApiPort,
             electron: this.$route.params.electron,
@@ -322,7 +326,7 @@ export default {
             BipInfoActive: false,
             activeTab: 'pruefung',
             showDesc: false,
-            currentDescription: ''
+            currentDescription: '',
         };
     },
     components: {},
@@ -360,6 +364,12 @@ export default {
         },
         passwordMismatch() {
             return this.passwordConfirm !== '' && this.password !== this.passwordConfirm;
+        },
+        // Password sent to control API / dashboard when the user leaves advanced empty (legacy default).
+        effectiveExamPassword() {
+            if (this.password) return this.password;
+            if (!this.advanced) return "next-exam";
+            return "";
         }
     },
 
@@ -827,8 +837,8 @@ export default {
                     }
 
                     this.bipNameConflict = false
-                    this.password = "next-exam"
-                    this.passwordConfirm = "next-exam"
+                    this.password = ""
+                    this.passwordConfirm = ""
                     this.advanced = false
                     this.backupdir = previousExam.backupdirectory || ''
                     let hasExamPassword = typeof previousExam.examPassword === 'string' && previousExam.examPassword.trim() !== ''
@@ -915,7 +925,7 @@ export default {
             if (this.servername === "" ){
                 this.status(this.$t("startserver.emptyname"));
             }
-            else if (this.password === "" || this.passwordConfirm === "" || this.passwordMismatch){
+            else if (this.advanced && (this.password === "" || this.passwordConfirm === "" || this.passwordMismatch)){
                 this.status(this.$t("startserver.emptypw"));
             }
             else {
@@ -959,7 +969,7 @@ export default {
                     bipId: bipId
                 }
 
-                fetch(`https://${this.hostname}:${this.serverApiPort}/server/control/start/${this.servername.toLowerCase()}/${this.password}`, { 
+                fetch(`https://${this.hostname}:${this.serverApiPort}/server/control/start/${this.servername.toLowerCase()}/${this.effectiveExamPassword}`, { 
                     method: 'POST',
                     headers: {'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
@@ -975,7 +985,7 @@ export default {
                             name: 'dashboard', 
                             params:{
                                 servername: this.servername.toLowerCase(), 
-                                passwd: this.password,
+                                passwd: this.effectiveExamPassword,
                                 bipToken: this.bipToken,
                                 bipUsername: this.bipUsername,
                                 bipuserID:this.bipuserID,
@@ -1056,8 +1066,7 @@ export default {
         },
         hideDescription() {
             this.showDesc = false;
-        }
-
+        },
 
     },
     async mounted() {  // when ready

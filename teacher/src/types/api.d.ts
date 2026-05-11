@@ -4,7 +4,8 @@ export type Exam = {
   id: number, // Unique ID in BiP.
   nextexamVersion: string,
   examName: string, // Name of the exam as displayed to the client.
-  examPassword: number, // Remove?
+  examPassword: string,
+  encryptionPassword: string,
   examDate: string, // Scheduled start of the exam.
   examDurationMinutes: number, // Duration of the exam in minutes.
   pin: number,
