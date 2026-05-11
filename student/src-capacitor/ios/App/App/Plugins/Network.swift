@@ -17,7 +17,7 @@ public class NetworkPlugin: CAPPlugin, CAPBridgedPlugin {
     public override func load() {
         IPCBridge.shared.onInvoke("checkhostip") { [weak self] _ throws -> Any? in
             guard let self else { throw PluginError.notInitialized }
-            return try self.getNetworkInfo().asDictionary
+            return try await self.getNetworkInfo().asDictionary
         }
         IPCBridge.shared.onInvoke("setPreferredInterface") { [weak self] payload in
             guard let self else { throw PluginError.notInitialized }
@@ -32,7 +32,7 @@ public class NetworkPlugin: CAPPlugin, CAPBridgedPlugin {
 
     deinit { wifiMonitor.cancel() }
 
-    private func getNetworkInfo() throws -> CheckHostIP {
+    private func getNetworkInfo() async throws -> CheckHostIP {
         let path = wifiMonitor.currentPath
 
         // ── Preferred interface: first WiFi interface NWPath is aware of ──────
@@ -85,6 +85,8 @@ public class NetworkPlugin: CAPPlugin, CAPBridgedPlugin {
             preferred = (self.interfaces.first(where: { $0.name == preferredName }) ?? self.interfaces[0])
             self.preferredInterface = preferred
         }
+        
+        Config.hostip = preferred.address
 
         return CheckHostIP(
             hostIP:               preferred.address,
@@ -98,6 +100,7 @@ public class NetworkPlugin: CAPPlugin, CAPBridgedPlugin {
         print("setPerferredInterface \(preferredName)")
         if let preferredInterface = self.interfaces.first(where: { $0.name == preferredName }) {
             self.preferredInterface = preferredInterface
+            Config.hostip = preferredInterface.address
         }
     }
 }

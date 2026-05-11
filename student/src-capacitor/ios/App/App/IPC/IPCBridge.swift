@@ -3,7 +3,7 @@ import Foundation
 // ── Type aliases ──────────────────────────────────────────────────────────────
 
 public typealias SendHandler   = (Any?) throws -> Void
-public typealias InvokeHandler = (Any?) throws -> Any?
+public typealias InvokeHandler = (Any?) async throws -> Any?
 public typealias SyncHandler   = (Any?) throws -> Any?
 
 // ── Error ─────────────────────────────────────────────────────────────────────
@@ -77,11 +77,11 @@ public final class IPCBridge {
         return try handler(payload)
     }
 
-    internal func dispatchInvoke(_ channel: String, payload: Any?) throws -> Any? {
+    internal func dispatchInvoke(_ channel: String, payload: Any?) async throws -> Any? {
         guard let handler = invokeHandlers[channel] else {
             throw IPCError.noHandler("No invoke handler for channel: \(channel)")
         }
-        return try handler(payload)
+        return try await handler(payload)
     }
 
     internal func dispatchSync(_ channel: String, payload: Any?) throws -> Any? {

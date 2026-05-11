@@ -38,7 +38,7 @@ export class SignalBridge {
     // e.g. getinfoasync is needed to test checkhostip, therefore the empty object fallback of
     // Swift fallback is not enough
     pluginList = [
-        'checkhostip', 'setPreferredInterface', 'getinfoasync'
+        'checkhostip', 'setPreferredInterface', 'getinfoasync', 'register'
     ]
 
     // send forwards all params to electron or leaves hook for ios
@@ -71,7 +71,11 @@ export class SignalBridge {
         }
 
         if (isIOS()) {
-            return this.iosTaskDispatcher.dispatch(channel, ...args)
+            if (this.pluginList.includes(channel)) {
+                return win.ipcRenderer.invoke(channel, ...args) // TODO implement sendSync in Swift
+            } else {
+                return this.iosTaskDispatcher.dispatch(channel, ...args)
+            }
         }
 
         // log unsupported platform information

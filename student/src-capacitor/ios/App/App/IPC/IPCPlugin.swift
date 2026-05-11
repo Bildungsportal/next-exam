@@ -55,11 +55,16 @@ public class IPCPlugin: CAPPlugin, CAPBridgedPlugin {
             call.resolve(["error": "channel required"])
             return
         }
-        do {
-            let result = try IPCBridge.shared.dispatchInvoke(channel, payload: call.options["payload"])
-            call.resolve(["result": result as Any])
-        } catch let error {
-            call.resolve(["error": error.localizedDescription])
+        Task {
+            do {
+                let result = try await IPCBridge.shared.dispatchInvoke(
+                    channel,
+                    payload: call.options["payload"]
+                )
+                call.resolve(["result": result as Any])
+            } catch let error {
+                call.reject(error.localizedDescription)
+            }
         }
     }
 
