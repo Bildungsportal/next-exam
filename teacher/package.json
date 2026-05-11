@@ -1,6 +1,6 @@
 {
   "name": "next-exam-teacher",
-  "version": "2.0.0",
+  "version": "1.99.0",
   "private": true,
   "main": "dist/main/main.mjs",
   "author": {
@@ -140,6 +140,6 @@
     "vue-sweetalert2": "^5.0.11"
   },
   "overrides": {},
-  "buildNumber": "1",
-  "buildVersion": "2.0.0.1"
+  "buildNumber": "0",
+  "buildVersion": "1.99.0.0"
 }
