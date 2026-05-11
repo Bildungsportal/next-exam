@@ -327,7 +327,7 @@ export default {
 
         signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
             console.log("editor @ save: Teacher saverequest received")
-            this.saveContent(true, why)
+            this.saveContent(false, why)
         });
 
         signalBridge.on('fileerror', (event, msg) => {
@@ -366,7 +366,8 @@ export default {
             this.clockinterval.start();
 
             this.saveinterval = new SchedulerService(20000);
-            this.saveinterval.addEventListener('action', this.saveContent);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
+            this.saveContentGgbAuto = () => this.saveContent(false, 'auto'); // detour so interval does not pass Scheduler event as first arg
+            this.saveinterval.addEventListener('action', this.saveContentGgbAuto);
             this.saveinterval.start();
 
             document.body.addEventListener('mouseleave', this.sendFocuslost);
@@ -861,7 +862,7 @@ export default {
                             console.log("geogebra @ saveContent: no base64 content returned"); // one line comment
                             return;
                         }
-                        let response = await signalBridge.invoke('saveGGB', {filename: filename, content: base64GgbFile});   // send base64 string to backend for saving
+                        let response = await signalBridge.invoke('saveGGB', { filename: filename, content: base64GgbFile, reason: 'manual' });
                         if (response && response.status === "success" && reason == "manual" ){  // we wait for a response - only show feed back if manually saved
                             this.loadFilelist();
                             this.$swal.fire({
@@ -880,7 +881,8 @@ export default {
                     console.log("geogebra @ saveContent: no base64 content returned"); // one line comment
                 } 
                 else {
-                    let response = await signalBridge.invoke('saveGGB', {filename: filename, content: base64GgbFile, reason: reason });   // send base64 string to backend for saving
+                    const saveReason = typeof reason === 'string' ? reason : 'auto';
+                    let response = await signalBridge.invoke('saveGGB', { filename: filename, content: base64GgbFile, reason: saveReason });
                     if (response && response.status === "success" && reason == "manual" ){  // we wait for a response - only show feed back if manually saved
                         this.loadFilelist();
                         this.$swal.fire({
@@ -904,7 +906,7 @@ export default {
         clearInterval(this.loadfilelistinterval)
         this.loadfilelistinterval = null
 
-        this.saveinterval.removeEventListener('action', this.saveContent);
+        this.saveinterval.removeEventListener('action', this.saveContentGgbAuto);
         this.saveinterval.stop() 
 
         this.fetchinfointerval.removeEventListener('action', this.fetchInfo);

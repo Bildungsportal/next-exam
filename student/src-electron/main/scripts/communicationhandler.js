@@ -29,7 +29,7 @@ import {SchedulerService} from './schedulerservice.ts'
 import crypto from 'crypto';
 import path from 'path';
 import platformDispatcher from './platformDispatcher.js';
-import { encryptExamFileBytes } from './examFileCrypto.js';
+import { encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
 import { runRemoteCheck } from './remoteCheck.js'
 import { logNetworkActiveProcesses } from './networkActiveProcesses.js'
 import { getVMFindings } from './vmDetection.js'
@@ -54,6 +54,7 @@ import { switchExamSection } from './switchExamSection.js';
     init (mc, config) {
         this.multicastClient = mc
         this.config = config
+        this.lastExamWriteSaveReason = 'n/a' // updated on successful examdir writes; sent with ZIP to teacher /receive
         this.localVmStartState = 'idle' // idle|starting|blocked
         this.updateScheduler = new SchedulerService(this.requestUpdate.bind(this), 5000)
         this.updateScheduler.start()
@@ -84,8 +85,7 @@ import { switchExamSection } from './switchExamSection.js';
             } catch (e) {
                 continue;
             }
-            const isEnc = raw.length >= 5 && raw.subarray(0, 4).toString('ascii') === 'NXE1' && raw.readUInt8(4) === 1;
-            if (isEnc) continue;
+            if (isExamFileEncryptedBytes(raw)) continue;
             let out;
             try {
                 out = encryptExamFileBytes(raw, pw);
@@ -580,13 +580,15 @@ import { switchExamSection } from './switchExamSection.js';
 
 
     // send base64 pdf to teacher
-    sendBase64PDFtoTeacher(base64pdf, section=1){
+    sendBase64PDFtoTeacher(base64pdf, section=1, saveReason='sectionchange'){
         const url = `https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/submission/${this.multicastClient.clientinfo.servername}/${this.multicastClient.clientinfo.token}`;
+        const sr = typeof saveReason === 'string' ? saveReason : 'sectionchange'
         const payload = {
             document: base64pdf,
             printrequest: false,    
             submissionnumber: this.multicastClient.clientinfo.submissionnumber,
-            lockedsection: section
+            lockedsection: section,
+            saveReason: sr
         }
         fetch(url, {
             method: "POST",
@@ -609,8 +611,8 @@ import { switchExamSection } from './switchExamSection.js';
 
     //get base64 pdf from editor
     // ATTENTION: there is a similar method in ipchandler.js that also generates a pdf but stores it as file in the exam directory
-    async getBase64PDF(submissionnumber, sectionname, printBackground=false){
-        log.info("communicationhandler @ getBase64PDF: getting base64 encoded pdf")
+    async getBase64PDF(submissionnumber, sectionname, printBackground=false, saveReason){
+        if (saveReason !== 'auto') log.info("communicationhandler @ getBase64PDF: getting base64 encoded pdf")
         
         // Wait for any ongoing print operation to finish (max 30 seconds)
         let waitCount = 0;
@@ -1089,13 +1091,23 @@ import { switchExamSection } from './switchExamSection.js';
         // sending the whole directory as zip file base64encoded via JSON isn't probably the best method but it works while all formData approaches failed with
         // fetch() while they worked with ax ios() - not even chatgpt or stackoverflow could help ^^ i think it is related to the specific formData module that cant be imported without "window error"
         const url = `https://${serverip}:${this.config.serverApiPort}/server/data/receive/${servername}/${token}`;
+        const zipPayload = {
+            file: base64File,
+            filename: zipfilename,
+            lastExamWriteSaveReason: typeof this.lastExamWriteSaveReason === 'string' ? this.lastExamWriteSaveReason : 'n/a'
+        }
         fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ file: base64File, filename: zipfilename }),
+            body: JSON.stringify(zipPayload),
         })
         .then(response => response.json())
-        .then(data => { log.info(`communicationhandler @ sendExamToTeacher: teacher response: ${data.message}`); })
+        .then(data => {
+            log.info(`communicationhandler @ sendExamToTeacher: teacher response: ${data.message}`);
+            if (data && (data.status === 'success' || data.message === 'success')) {
+                this.lastExamWriteSaveReason = 'n/a';
+            }
+        })
         .catch(error => {log.error(`communicationhandler @ sendExamToTeacher: ${error}`); });
      }
 

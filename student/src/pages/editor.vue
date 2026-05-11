@@ -488,7 +488,7 @@
             :toolbar="pdfPreviewUi"
             :preview="pdfPreviewState"
             @close="hidepreview"
-            @printBase64="printBase64"
+            @printBase64="(pr) => printBase64(pr, 'manual')"
             @insertImage="insertImage"
         />
 
@@ -533,7 +533,7 @@
                 :showClose="false"
                 :style="!pdfPreviewState ? 'display:none;' : ''"
                 @close="hidepreview"
-                @printBase64="printBase64"
+                @printBase64="(pr) => printBase64(pr, 'manual')"
                 @insertImage="insertImage"
             />
         </div>
@@ -1452,7 +1452,7 @@ export default {
 
             // SAVE AS HTML (bak) - also save editorcontent as *html file - used to re-populate the editor window in case something went completely wrong
             let editorcontent = this.editor.getHTML(); 
-            signalBridge.send('storeHTML', {filename: filename, editorcontent: editorcontent })
+            signalBridge.send('storeHTML', { filename: filename, editorcontent: editorcontent, reason: why })
             
             // SAVE AS PDF - inform mainprocess to save webcontent as pdf (see @media css query for adjustments for pdf)
             // printPDF will trigger a reload of the filelist if finished and send files to teacher if reason (why) is "teacherrequest"
@@ -1468,17 +1468,19 @@ export default {
 
 
         // send direct print request to teacher and append current document as base64
-        printBase64(printrequest = false) {
+        printBase64(printrequest = false, saveReason = 'n/a') {
             //get current exam sectioninfo
 
             // this currentpreviewBase64 contains the current visible pdf as base64 string
             const endpoint = printrequest ? 'printjob' : 'submission'
             const url = `https://${this.serverip}:${this.serverApiPort}/server/control/${endpoint}/${this.servername}/${this.token}`;
+            const sr = typeof saveReason === 'string' ? saveReason : 'n/a'
             const payload = {
                 document: this.currentpreviewBase64,
                 printrequest: printrequest,
                 submissionnumber: this.submissionnumber,
-                lockedsection: this.lockedSection  // this is needed to save the current section files to the correct section folder on the server
+                lockedsection: this.lockedSection,  // this is needed to save the current section files to the correct section folder on the server
+                saveReason: sr
             }
 
             fetch(url, {
@@ -1535,7 +1537,7 @@ export default {
 
                 if (directsend) {   //direct send to teacher without displaying the print preview
                     this.currentpreviewBase64 = base64pdf
-                    this.printBase64()
+                    this.printBase64(false, 'directsend')
                     return
                 }
 
@@ -2199,7 +2201,7 @@ export default {
 
         signalBridge.on('submitexam', (event, why) => {  //send current work as base64 to teacher
             console.log("editor @ submitexam: submit exam request received")
-            this.printBase64()
+            this.printBase64(false, typeof why === 'string' ? why : 'submitexam')
         });
 
         signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler

@@ -577,8 +577,9 @@ router.post('/getexammaterials/:servername/:token', async (req, res, next) => {
     const studenttoken = req.params.studenttoken
     const servername = req.params.servername
     const mcServer = config.examServerList[servername] // get the multicastserver object
-    const { file, filename } = req.body;
+    const { file, filename, lastExamWriteSaveReason } = req.body;
     const fileContent = Buffer.from(file, 'base64');
+    const zipSaveTag = typeof lastExamWriteSaveReason === 'string' ? lastExamWriteSaveReason : 'n/a';
 
     if ( !checkToken(studenttoken, mcServer ) ) { res.json({ status: t("data.tokennotvalid") }) }
     else {
@@ -610,7 +611,7 @@ router.post('/getexammaterials/:servername/:token', async (req, res, next) => {
         if (file){
 
             if (filename.includes(".zip")){
-                log.info("data @ receive: Received ZIP File from user:", student.clientname)
+                log.info("data @ receive: Received ZIP File from user:", student.clientname, "lastExamWriteSaveReason=", zipSaveTag)
                 let success = await archiveAndExtractZip(absoluteFilepath, studentarchivedir, fileContent, mcServer)
                 
                 if (config.backupdirectory && success){     // copy to backup directory - do not unzip a second time - this is already done in archiveAndExtractZip

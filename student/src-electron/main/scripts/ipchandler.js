@@ -40,9 +40,32 @@ import { switchExamSection } from './switchExamSection.js';
 import { startProxy, stopProxy } from './vncproxy.js';
 import qemuService from './qemuService.js';
 import { getVMFindings } from './vmDetection.js';
-import { decryptExamFileBytes, encryptExamFileBytes } from './examFileCrypto.js';
+import { decryptExamFileBytes, decryptExamFileAllLayers, encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
 
 const __dirname = import.meta.dirname;
+
+// Skip info-level file-save log noise when the renderer marks the write as periodic auto-save.
+const logSaveInfoUnlessAuto = (saveReason, message) => {
+    if (saveReason === 'auto') return
+    log.info(message)
+}
+
+/** Exam file key: serverstatus.examPassword; local lockdown uses serverstatus.password only. */
+const resolveExamDecryptPassword = (multicastClient) => {
+    const examPw = String(multicastClient?.serverstatus?.examPassword ?? '').trim();
+    if (examPw) return examPw;
+    if (multicastClient?.clientinfo?.localLockdown) {
+        return String(multicastClient?.serverstatus?.password ?? '').trim();
+    }
+    return '';
+};
+
+// Encrypt once for disk; if buffer is already NXE1, write as-is (avoids nested ciphertext).
+const encryptExamFileBytesUnlessAlready = (plainBuf, pw) => {
+    const buf = Buffer.isBuffer(plainBuf) ? plainBuf : Buffer.from(plainBuf);
+    if (isExamFileEncryptedBytes(buf)) return buf;
+    return pw ? encryptExamFileBytes(buf, pw) : buf;
+};
 
 const checkPortOpen = (port, host = '127.0.0.1', timeout = 1500) => {
     return new Promise((resolve) => {
@@ -876,11 +899,12 @@ class IpcHandler {
 
         /**
          * Store content from editor as html file - as backup - only triggered by the teacher for now (allow manual backup !!)
-         * @param args contains an object with  {clientname:this.clientname, filename:`${filename}.html`, editorcontent: editorcontent }
+         * @param args contains an object with  { filename, editorcontent, reason?: 'auto'|'manual'|'teacherrequest'|... }
          */
         ipcMain.on('storeHTML', (event, args) => {   
             const htmlContent = args.editorcontent
             const filename = args.filename
+            const saveReason = typeof args.reason === 'string' ? args.reason : 'n/a'
             let htmlfilename = `${this.multicastClient.clientinfo.name}.bak`
             
             if (filename){
@@ -892,29 +916,34 @@ class IpcHandler {
             if (htmlContent) { 
                 // log.info("ipchandler: storeHTML: saving students work to disk...")
                 try {
-                    const pw = String(this.multicastClient?.serverstatus?.examPassword ?? '').trim();
-                    const out = pw ? encryptExamFileBytes(Buffer.from(String(htmlContent), 'utf8'), pw) : Buffer.from(String(htmlContent), 'utf8');
-                    if (pw) log.info(`ipchandler @ storeHTML: encrypted write ${htmlfilename}`);
-                    else log.info(`ipchandler @ storeHTML: plaintext write ${htmlfilename}`);
+                    const pw = resolveExamDecryptPassword(this.multicastClient);
+                    const buf = Buffer.from(String(htmlContent), 'utf8');
+                    const out = encryptExamFileBytesUnlessAlready(buf, pw);
+                    if (pw) logSaveInfoUnlessAuto(saveReason, `ipchandler @ storeHTML: encrypted write ${htmlfilename} saveReason=${saveReason}`);
+                    else logSaveInfoUnlessAuto(saveReason, `ipchandler @ storeHTML: plaintext write ${htmlfilename} saveReason=${saveReason}`);
+                    const ch = this.CommunicationHandler
                     fs.writeFile(htmlfile, out, (err) => { 
                         if (err) {
                             log.error(`ipchandler @ storeHTML: ${err.message}`); 
                         
                             let alternatepath = `${htmlfile}-${this.multicastClient.clientinfo.token}.bak`
                             log.warn("ipchandler @ storeHTML: trying to write file as:", alternatepath )
-                            fs.writeFile(alternatepath, out, function (err) { 
-                                if (err) {
-                                    log.error(err.message);
+                            fs.writeFile(alternatepath, out, (err2) => { 
+                                if (err2) {
+                                    log.error(err2.message);
                                     log.error("ipchandler @ storeHTML: giving up"); 
-                                    event.reply("fileerror", { sender: "client", message:err , status:"error" } )
+                                    event.reply("fileerror", { sender: "client", message:err2 , status:"error" } )
                                 }
                                 else {
-                                    log.info("ipchandler @ storeHTML: success!");
+                                    if (ch) ch.lastExamWriteSaveReason = saveReason
+                                    logSaveInfoUnlessAuto(saveReason, "ipchandler @ storeHTML: success!");
                                     event.reply("loadfilelist")
                                 }
                             }); 
+                        } else {
+                            if (ch) ch.lastExamWriteSaveReason = saveReason
+                            event.reply("loadfilelist")
                         }
-                        event.reply("loadfilelist")
                     } ); 
                 }
                 catch(err){
@@ -930,9 +959,10 @@ class IpcHandler {
          * get base64 encoded pdf from editor
          */ 
         ipcMain.handle('getPDFbase64', async (event, args) => {
-            log.info("ipchandler @ getPDFbase64: getting base64 encoded pdf")
+            const saveReason = typeof args.reason === 'string' ? args.reason : ''
+            logSaveInfoUnlessAuto(saveReason, "ipchandler @ getPDFbase64: getting base64 encoded pdf")
             this.multicastClient.clientinfo.submissionnumber = args.submissionnumber+1 // clientinfo keeps track of submissions for automated submissionnumbers at section change - but this obviously happens after manual submit
-            let result = await this.CommunicationHandler.getBase64PDF(args.submissionnumber, args.sectionname, args.printBackground)   // why the hell is this function located in communicationhandler.js and not in ipchandler.js ? FIXME !
+            let result = await this.CommunicationHandler.getBase64PDF(args.submissionnumber, args.sectionname, args.printBackground, saveReason)   // why the hell is this function located in communicationhandler.js and not in ipchandler.js ? FIXME !
             return result
         })
 
@@ -942,8 +972,10 @@ class IpcHandler {
         /**
          * Stores the ExamWindow content as PDF
          * ATTENTION there is a similar method in communicationhandler.js that also generates a pdf but retuns a base64 version of the pdf
+         * @param args.reason optional save trigger label for logs and teacher ZIP metadata (e.g. auto, manual, teacherrequest)
          */ 
         ipcMain.on('printpdf', (event, args) => { 
+            const saveReason = typeof args.reason === 'string' ? args.reason : 'n/a'
             // do not print if exam mode is not active anymore
             if (!this.multicastClient?.clientinfo?.exammode){
                 log.warn("ipchandler @ printpdf: exammode is false - skipping print")
@@ -993,6 +1025,7 @@ class IpcHandler {
 
                 const examWindow = this.WindowHandler.examwindow
                 const webContents = examWindow?.webContents
+                const ch = this.CommunicationHandler
 
                 if (!webContents){
                     log.error("ipchandler @ printpdf: no webContents found for examwindow")
@@ -1014,10 +1047,10 @@ class IpcHandler {
                     try { if (fs.existsSync(pdffilepath)) { fs.unlinkSync(pdffilepath); }}
                     catch(err) { log.error(`ipchandler @ printpdf: ${err.message}`);  }
                     // write the pdf to the exam directory
-                    const pw = String(this.multicastClient?.serverstatus?.examPassword ?? '').trim();
-                    const out = pw ? encryptExamFileBytes(Buffer.from(data), pw) : Buffer.from(data);
-                    if (pw) log.info(`ipchandler @ printpdf: encrypted write ${pdffilename}`);
-                    else log.info(`ipchandler @ printpdf: plaintext write ${pdffilename}`);
+                    const pw = resolveExamDecryptPassword(this.multicastClient);
+                    const out = encryptExamFileBytesUnlessAlready(Buffer.from(data), pw);
+                    if (pw) logSaveInfoUnlessAuto(saveReason, `ipchandler @ printpdf: encrypted write ${pdffilename} saveReason=${saveReason}`);
+                    else logSaveInfoUnlessAuto(saveReason, `ipchandler @ printpdf: plaintext write ${pdffilename} saveReason=${saveReason}`);
                     fs.writeFile(pdffilepath, out, (err) => { 
                         if (err) {
                             log.warn(`ipchandler @ printpdf: ${err.message} - writing file as: ${alternatepath} `); 
@@ -1025,8 +1058,8 @@ class IpcHandler {
                             try { if (fs.existsSync(alternatepath)) { fs.unlinkSync(alternatepath); } }
                             catch (err) { log.error(`ipchandler @ printpdf (alternativer Pfad): ${err.message}`); }
                             // write the pdf to the alternate path
-                            if (pw) log.info(`ipchandler @ printpdf: encrypted write ${alternatefilename}`);
-                            else log.info(`ipchandler @ printpdf: plaintext write ${alternatefilename}`);
+                            if (pw) logSaveInfoUnlessAuto(saveReason, `ipchandler @ printpdf: encrypted write ${alternatefilename} saveReason=${saveReason}`);
+                            else logSaveInfoUnlessAuto(saveReason, `ipchandler @ printpdf: plaintext write ${alternatefilename} saveReason=${saveReason}`);
                             fs.writeFile(alternatepath, out, (err) => { 
                                 if (err) {
                                     log.error(err.message);
@@ -1034,12 +1067,14 @@ class IpcHandler {
                                     event.reply("fileerror", { sender: "client", message:err.message , status:"error" } )
                                 }
                                 else { // log.info("ipchandler @ printpdf: success!");
+                                    if (ch) ch.lastExamWriteSaveReason = saveReason
                                     if (args.reason === "teacherrequest") { this.CommunicationHandler.sendToTeacher() }
                                     event.reply("loadfilelist")
                                 }
                             }); 
                         }
                         else { // log.info("ipchandler @ printpdf: success!");
+                            if (ch) ch.lastExamWriteSaveReason = saveReason
                             if (args.reason === "teacherrequest") { this.CommunicationHandler.sendToTeacher() }
                             event.reply("loadfilelist")   //make sure students see the new file immediately
                         }
@@ -1058,6 +1093,7 @@ class IpcHandler {
          */
         ipcMain.on('saveActivesheetsBak', (event, args) => {
             try {
+                const saveReason = typeof args.reason === 'string' ? args.reason : 'n/a'
                 const bakFilename = args.filename ? `${args.filename}.bak` : `${this.multicastClient.clientinfo.name}.bak`;
                 const bakFilePath = path.join(this.config.examdirectory, bakFilename);
                 
@@ -1065,12 +1101,12 @@ class IpcHandler {
                 const jsonData = JSON.stringify(args.formData, null, 2);
                 
                 // Write to .bak file
-                const pw = String(this.multicastClient?.serverstatus?.examPassword ?? '').trim();
-                const out = pw ? encryptExamFileBytes(Buffer.from(jsonData, 'utf8'), pw) : Buffer.from(jsonData, 'utf8');
-                if (pw) log.info(`ipchandler @ saveActivesheetsBak: encrypted write ${bakFilename}`);
-                else log.info(`ipchandler @ saveActivesheetsBak: plaintext write ${bakFilename}`);
+                const pw = resolveExamDecryptPassword(this.multicastClient);
+                const out = encryptExamFileBytesUnlessAlready(Buffer.from(jsonData, 'utf8'), pw);
+                if (pw) logSaveInfoUnlessAuto(saveReason, `ipchandler @ saveActivesheetsBak: encrypted write ${bakFilename}`);
+                else logSaveInfoUnlessAuto(saveReason, `ipchandler @ saveActivesheetsBak: plaintext write ${bakFilename}`);
                 fs.writeFileSync(bakFilePath, out);
-                log.info(`ipchandler @ saveActivesheetsBak: saved form data to ${bakFilename}`);
+                logSaveInfoUnlessAuto(saveReason, `ipchandler @ saveActivesheetsBak: saved form data to ${bakFilename}`);
             } catch (error) {
                 log.error(`ipchandler @ saveActivesheetsBak: ${error.message}`);
                 event.reply("fileerror", { sender: "client", message: error.message, status: "error" });
@@ -1290,24 +1326,25 @@ class IpcHandler {
 
         /**
          * Store content from Geogebra as ggb file - as backup 
-         * @param args contains an object with  { filename:`${this.clientname}.ggb`, content: base64 }
+         * @param args contains an object with  { filename, content: base64, reason?: 'auto'|'manual'|'teacherrequest'|... }
          */
         ipcMain.handle('saveGGB', (event, args) => {   
             const content = args.content
             const filename = args.filename
-            const reason = args.reason
+            const saveReason = typeof args.reason === 'string' ? args.reason : 'n/a'
             const ggbFilePath = path.join(this.config.examdirectory, filename);
             if (content) { 
                 //log.info("ipchandler @ saveGGB: saving students work to disk...")
                 const fileData = Buffer.from(content, 'base64');
 
                 try {
-                    const pw = String(this.multicastClient?.serverstatus?.examPassword ?? '').trim();
-                    const out = pw ? encryptExamFileBytes(fileData, pw) : fileData;
-                    if (pw) log.info(`ipchandler @ saveGGB: encrypted write ${filename} (reason=${reason || 'n/a'})`);
-                    else log.info(`ipchandler @ saveGGB: plaintext write ${filename} (reason=${reason || 'n/a'})`);
+                    const pw = resolveExamDecryptPassword(this.multicastClient);
+                    const out = encryptExamFileBytesUnlessAlready(fileData, pw);
+                    if (pw) logSaveInfoUnlessAuto(saveReason, `ipchandler @ saveGGB: encrypted write ${filename} saveReason=${saveReason}`);
+                    else logSaveInfoUnlessAuto(saveReason, `ipchandler @ saveGGB: plaintext write ${filename} saveReason=${saveReason}`);
                     fs.writeFileSync(ggbFilePath, out);
-                    if (reason === "teacherrequest") { this.CommunicationHandler.sendToTeacher() }
+                    if (this.CommunicationHandler) this.CommunicationHandler.lastExamWriteSaveReason = saveReason
+                    if (args.reason === "teacherrequest") { this.CommunicationHandler.sendToTeacher() }
                     return  { sender: "client", message:t("data.filestored") , status:"success" }
                 }
                 catch(err){
@@ -1329,11 +1366,11 @@ class IpcHandler {
             const ggbFilePath = path.join(this.config.examdirectory, filename);
             try {
                 // Read the file and convert it to base64
-                const pw = String(this.multicastClient?.serverstatus?.examPassword ?? '').trim();
+                const pw = resolveExamDecryptPassword(this.multicastClient);
                 const raw = fs.readFileSync(ggbFilePath);
-                const isEnc = raw.length >= 5 && raw.subarray(0, 4).toString('ascii') === 'NXE1' && raw.readUInt8(4) === 1;
+                const isEnc = isExamFileEncryptedBytes(raw);
                 if (isEnc && pw) log.info(`ipchandler @ loadGGB: decrypted read ${filename}`);
-                const fileData = (isEnc && pw) ? decryptExamFileBytes(raw, pw) : raw;
+                const fileData = (isEnc && pw) ? decryptExamFileAllLayers(raw, pw) : raw;
                 const base64GgbFile = fileData.toString('base64');
                 return { sender: "client", content:base64GgbFile, status:"success" }
             } 
@@ -1355,11 +1392,11 @@ class IpcHandler {
             if (filename) { //return content of specific file
                 let filepath = path.join(workdir,filename)
                 try {
-                    const pw = String(this.multicastClient?.serverstatus?.examPassword ?? '').trim();
+                    const pw = resolveExamDecryptPassword(this.multicastClient);
                     const raw = fs.readFileSync(filepath)
-                    const isEnc = raw.length >= 5 && raw.subarray(0, 4).toString('ascii') === 'NXE1' && raw.readUInt8(4) === 1;
+                    const isEnc = isExamFileEncryptedBytes(raw);
                     if (isEnc && pw) log.info(`ipchandler @ getpdfasync: decrypted read ${filename}`);
-                    const data = (isEnc && pw) ? decryptExamFileBytes(raw, pw) : raw
+                    const data = (isEnc && pw) ? decryptExamFileAllLayers(raw, pw) : raw
                    
                     if (image){ return data.toString('base64');  }
                     return data
@@ -1404,13 +1441,13 @@ class IpcHandler {
                 // console.log("Received arguments:", filename, audio, docx);
 
                 let filepath = path.join(workdir,filename)
-                const pw = String(this.multicastClient?.serverstatus?.examPassword ?? '').trim();
+                const pw = resolveExamDecryptPassword(this.multicastClient);
                 // Helper to transparently decrypt encrypted exam files. 
                 const readMaybeDecrypt = () => {
                     const raw = fs.readFileSync(filepath);
-                    const isEnc = raw.length >= 5 && raw.subarray(0, 4).toString('ascii') === 'NXE1' && raw.readUInt8(4) === 1;
+                    const isEnc = isExamFileEncryptedBytes(raw);
                     if (isEnc && pw) log.info(`ipchandler @ getfilesasync: decrypted read ${filename}`);
-                    return (isEnc && pw) ? decryptExamFileBytes(raw, pw) : raw;
+                    return (isEnc && pw) ? decryptExamFileAllLayers(raw, pw) : raw;
                 };
 
                 if (audio == true){ // audio file
@@ -1419,9 +1456,10 @@ class IpcHandler {
                 }
                 else if (docx){  //office open xml file
                     const raw = fs.readFileSync(filepath);
-                    const isEnc = raw.length >= 5 && raw.subarray(0, 4).toString('ascii') === 'NXE1' && raw.readUInt8(4) === 1;
-                    if (isEnc && pw) log.info(`ipchandler @ getfilesasync: decrypted read ${filename}`);
-                    const docxBuffer = (isEnc && pw) ? decryptExamFileBytes(raw, pw) : null;
+                    const pwDoc = resolveExamDecryptPassword(this.multicastClient);
+                    const isEnc = isExamFileEncryptedBytes(raw);
+                    if (isEnc && pwDoc) log.info(`ipchandler @ getfilesasync: decrypted read ${filename}`);
+                    const docxBuffer = (isEnc && pwDoc) ? decryptExamFileAllLayers(raw, pwDoc) : null;
                     let result = await mammoth.convertToHtml(docxBuffer ? { buffer: docxBuffer } : { path: filepath })
                     .then((data) => {
                         return data
@@ -1477,31 +1515,44 @@ class IpcHandler {
          * ASYNC GET BACKUP FILE from examdirectory
          * @param filename filename without
          */ 
-        ipcMain.handle('getbackupfile', async (event, filename) => {   
+        ipcMain.handle('getbackupfile', (event, filename) => {   
             log.info(`ipchandler @ getbackupfile: Request received for filename: ${filename}`)
             const workdir = path.join(config.examdirectory,"/")
-            if (filename) { //return content of specific file as string (html) to replace in editor)
-                let filepath = path.join(workdir,filename)
-                log.info(`ipchandler @ getbackupfile: Full file path: ${filepath}`)
-                try {
-                    if (!fs.existsSync(filepath)){
-                        log.warn(`ipchandler @ getbackupfile: backup file not found: ${filepath}`); 
-                        return false;
-                    }
-                    log.info(`ipchandler @ getbackupfile: backup file exists, reading content`)
-                    let data = fs.readFileSync(filepath, 'utf8')
-                    log.info(`ipchandler @ getbackupfile: Successfully read backup file, content length: ${data.length}`)
-                    return data
-                }
-                catch (err) {
-                    log.error(`ipchandler @ getbackupfile: Error reading backup file: ${err}`); 
-                    log.error(`ipchandler @ getbackupfile: Error stack: ${err.stack}`)
-                    return false
-                }
-            }
-            else {
+            if (!filename) {
                 log.warn(`ipchandler @ getbackupfile: no filename provided`); 
                 return false;
+            }
+            const filepath = path.join(workdir, filename)
+            log.info(`ipchandler @ getbackupfile: Full file path: ${filepath}`)
+            try {
+                if (!fs.existsSync(filepath)){
+                    log.warn(`ipchandler @ getbackupfile: backup file not found: ${filepath}`); 
+                    return false;
+                }
+                log.info(`ipchandler @ getbackupfile: backup file exists, reading content`)
+                let raw = fs.readFileSync(filepath);
+                if (isExamFileEncryptedBytes(raw)) {
+                    const pw = resolveExamDecryptPassword(this.multicastClient);
+                    if (!pw) {
+                        log.warn(`ipchandler @ getbackupfile: encrypted ${filename} but no key in serverstatus`);
+                        return false;
+                    }
+                    try {
+                        log.info(`ipchandler @ getbackupfile: decrypted read ${filename}`);
+                        raw = decryptExamFileAllLayers(raw, pw);
+                    } catch (e) {
+                        log.error(`ipchandler @ getbackupfile: decrypt failed ${e?.message || e}`);
+                        return false;
+                    }
+                }
+                const data = raw.toString('utf8');
+                log.info(`ipchandler @ getbackupfile: Successfully read backup file, content length: ${data.length}`)
+                return data
+            }
+            catch (err) {
+                log.error(`ipchandler @ getbackupfile: Error reading backup file: ${err}`); 
+                log.error(`ipchandler @ getbackupfile: Error stack: ${err.stack}`)
+                return false
             }
         })
 

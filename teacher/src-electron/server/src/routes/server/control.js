@@ -1027,6 +1027,7 @@ router.post('/submission/:servername/:studenttoken', async function (req, res, n
     const printrequest = req.body.printrequest
     const submissionnumber = req.body.submissionnumber
     const lockedsection = req.body.lockedsection || 1 // default to section 1 if not provided
+    const saveReason = typeof req.body.saveReason === 'string' ? req.body.saveReason : 'n/a'
 
 
     //check if server exists 
@@ -1065,8 +1066,8 @@ router.post('/submission/:servername/:studenttoken', async function (req, res, n
         const absoluteFilename = path.join(filepath, filename)                                 // build path
         await fsp.writeFile(absoluteFilename, pdfBuffer)                                       // write main
       
-        log.info(`control @ submission: Received and stored submission file for user: ${student.clientname}`)
-        WindowHandler.mainwindow.webContents.send('submission', { clientname: student.clientname, clientip: student.clientip, hostname: student.hostname, printrequest: !!printrequest })
+        log.info(`control @ submission: Received and stored submission file for user: ${student.clientname} saveReason=${saveReason}`)
+        WindowHandler.mainwindow.webContents.send('submission', { clientname: student.clientname, clientip: student.clientip, hostname: student.hostname, printrequest: !!printrequest, saveReason })
         // create backup of abgabe
         let backupStatus = 'skipped'                                                           // default backup status
         if (config.backupdirectory) {                                                          // optional backup
@@ -1096,6 +1097,7 @@ router.post('/printjob/:servername/:studenttoken', async function (req, res, nex
     const pdfDocument = req.body.document
     const submissionnumber = req.body.submissionnumber
     const lockedsection = req.body.lockedsection || 1 // default to section 1 if not provided
+    const saveReason = typeof req.body.saveReason === 'string' ? req.body.saveReason : 'n/a'
 
     const mcServer = config.examServerList[servername]
     if (!mcServer) { return res.send({ sender: "server", message: "notavailable", status: "error" }) }
@@ -1119,8 +1121,8 @@ router.post('/printjob/:servername/:studenttoken', async function (req, res, nex
         const absoluteFilename = path.join(filepath, filename)
         await fsp.writeFile(absoluteFilename, pdfBuffer)
 
-        log.info(`control @ printjob: Received and stored printjob file for user: ${student.clientname}`)
-        WindowHandler.mainwindow.webContents.send('submission', { clientname: student.clientname, clientip: student.clientip, hostname: student.hostname, printrequest: true })
+        log.info(`control @ printjob: Received and stored printjob file for user: ${student.clientname} saveReason=${saveReason}`)
+        WindowHandler.mainwindow.webContents.send('submission', { clientname: student.clientname, clientip: student.clientip, hostname: student.hostname, printrequest: true, saveReason })
 
         let backupStatus = 'skipped'
         if (config.backupdirectory) {

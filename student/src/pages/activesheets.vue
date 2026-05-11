@@ -88,7 +88,7 @@
             :showClose="!splitview"
             :style="!pdfPreviewState ? 'display:none;' : ''"
             @close="hidepreview"
-            @printBase64="printBase64"
+            @printBase64="(pr) => printBase64(pr, 'manual')"
         />
         </div>
         <div
@@ -641,7 +641,8 @@ export default {
             // Save form data to .bak file via IPC
             signalBridge.send('saveActivesheetsBak', {
                 filename: filename || this.clientname,
-                formData: formData
+                formData: formData,
+                reason: why
             });
 
             // SAVE AS PDF - inform mainprocess to save webcontent as pdf
@@ -652,7 +653,7 @@ export default {
                 signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: this.currentpreviewBase64 })  
             } else {
                 // Otherwise generate from current view
-                let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true})
+                let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true, reason: why})
                 if (response?.status == "success") {
                     signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })  
                 }
@@ -661,7 +662,7 @@ export default {
         },
 
         // send direct print request to teacher and append current document as base64
-        printBase64(printrequest=false){  
+        printBase64(printrequest=false, saveReason = 'n/a'){
             if (!this.currentpreviewBase64) {
                 console.warn('activesheets @ printBase64: No PDF available to send');
                 return;
@@ -669,11 +670,13 @@ export default {
             
             const endpoint = printrequest ? 'printjob' : 'submission'
             const url = `https://${this.serverip}:${this.serverApiPort}/server/control/${endpoint}/${this.servername}/${this.token}`;
+            const sr = typeof saveReason === 'string' ? saveReason : 'n/a'
             const payload = {
                 document: this.currentpreviewBase64,
                 printrequest: printrequest,
                 submissionnumber: this.submissionnumber,
-                lockedsection: this.lockedSection
+                lockedsection: this.lockedSection,
+                saveReason: sr
             }
 
             fetch(url, {
@@ -722,7 +725,7 @@ export default {
                 this.currentpreviewBase64 = base64pdf
                 
                 if (directsend){   //direct send to teacher without displaying the print preview
-                    this.printBase64()
+                    this.printBase64(false, 'directsend')
                     return
                 }
 
@@ -822,8 +825,8 @@ export default {
 
             signalBridge.on('submitexam', (event, why) => {  //send current work as base64 to teacher
                 console.log("activesheets @ submitexam: submit exam request received")
-                this.printBase64() 
-            }); 
+                this.printBase64(false, typeof why === 'string' ? why : 'submitexam')
+            });
             
             signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
                 console.log("activesheets @ save: Teacher saverequest received")
