@@ -12,19 +12,35 @@ Wird die Prüfung nicht automatisch gefunden, kann die Server-Adresse bei den Sc
 
 ---
 
-## Fortsetzen der Prüfung bei Fehlern auf Schüler:innenseite
+## Schüler:innenseite
 
-Bei Fehlern in **Next-Exam-Student** sollte das Programm geschlossen und neu gestartet werden.  
+### Next-Exam-Student muss neu gestartet werden
+
+Bei Fehlern in **Next-Exam-Student** sollte das Programm geschlossen und neu gestartet werden.
 Der Editor stellt bereits vorhandene Dateien automatisch wieder her. Die Lehrperson kann zusätzlich bereits gesicherte Dateien an die betroffene Person senden, um die Prüfung nahtlos fortzusetzen.
+
+### Endgerät auf Schüler:innenseite muss getauscht werden
+Schritt für Schritt:
+1. Neues Endgerät und Next-Exam-Student starten
+2. Anmeldung (mit PIN und ev. IP-Adresse) an der bereits laufenden Prüfung
+3. Die Lehrperson schickt dem Schüler/der Schülerin das letzte Backup
 
 ---
 
-## Fortsetzen der Prüfung bei Fehlern auf Lehrpersonenseite
+## Lehrpersonenseite
 
-Wird **Next-Exam-Teacher** während einer laufenden Prüfung beendet, ist Folgendes zu beachten:
+### Endgerät muss getauscht werden
 
-- Die Schüler:innen dürfen die Verbindung zum Prüfungsserver erst wiederherstellen, wenn **Next-Exam-Teacher** erneut gestartet und alle Einstellungen wiederhergestellt wurden.
-- Insbesondere muss die **Absicherung der Geräte** erneut aktiviert werden. Andernfalls verbinden sich die Schüler:innen mit einer nicht gesicherten Umgebung, was zum sofortigen Abbruch der Prüfung führt.
+Schritt für Schritt:
+
+1. Neues Endgerät und Next-Exam-Teacher starten
+2. Prüfung mit dem selben Namen und den selben Einstellungen wieder anlegen.
+3. **WICHTIG!** Die Schüler:innen verbinden sich **NOCH NICHT** zum neuen Gerät.  
+   Zuerst muss der Button „0 Geräte absichern“ betätigt werden, um die **Absicherung der Geräte** erneut zu aktivieren.
+4. Der PIN der neuen Prüfung wird den Schüler:innen **erst jetzt** mitgeteilt und sie melden sich an der neuen Prüfung an.  
+   Da die Schüler:innen den Prüfungsmodus nicht verlassen haben, sind die Inhalte nicht verloren gegangen. Sie werden automatisch an den Teacher übertragen.  
+   Verbinden sich die Schüler:innen mit einer nicht gesicherten Umgebung, führt dies zum sofortigen Abbruch der Prüfung auf Schüler:innenseite.
+5. Falls es notwendig ist, kann optional aus dem Backupverzeichnis die letzte Version an den/die Schüler:in gesendet werden.
 
 ---
 
