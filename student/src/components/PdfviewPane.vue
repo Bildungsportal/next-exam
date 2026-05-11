@@ -7,14 +7,14 @@
             <!-- insert button -->
             <li v-if="examtype === 'editor' && toolbar.showInsert" class="nav-item">
                 <div class="nav-link btn btn-light btn-sm unstyled" id="insert-button" @click="insertImage()" :title="$t('editor.insert')">
-                    <img src="/src/assets/img/svg/edit-download.svg" class="white" >
+                    <img :src="edit_download_img" class="white" />
                 </div>
             </li>
       
             <!-- print button -->
             <li v-if="!localLockdown && toolbar.showPrint" class="nav-item">
                 <div class="nav-link btn btn-success btn-sm unstyled unstyled-send" id="print-button" @click="printBase64(true)" :title="$t('editor.printToPrinter')">
-                    <img src="/src/assets/img/svg/print.svg" class="white" >
+                    <img :src="print_img" class="white" />
                     <span class="ms-2 send-label">{{ $t('editor.printToPrinter') }}</span>
                 </div>
             </li>
@@ -22,15 +22,15 @@
             <!-- send button -->
             <li v-if="!localLockdown && toolbar.showSend" class="nav-item">
                 <div class="nav-link btn btn-success btn-sm unstyled unstyled-send" id="send-button" @click="printBase64()" :title="$t('editor.send')">
-                    <img src="/src/assets/img/svg/document-send.svg" class="white">
+                    <img :src="document_send_img" class="white" />
                     <span class="ms-2 send-label">{{ $t('editor.send') }}</span>
                  </div>
             </li>
             
             <!-- zoom buttons -->
             <li v-show="toolbar.showZoom" class="nav-item" id="pdfZoom">
-                <div class="nav-link btn btn-light btn-sm unstyled" style="display:inline-flex;" id="zoomIn" :title="$t('editor.zoomIn')">  <img src="/src/assets/img/svg/zoom-in.svg" class="" ></div>
-                <div class="nav-link btn btn-light btn-sm unstyled" style="display:inline-flex;" id="zoomOut" :title="$t('editor.zoomOut')"> <img src="/src/assets/img/svg/zoom-out.svg" class="" ></div>
+                <div class="nav-link btn btn-light btn-sm unstyled" style="display:inline-flex;" id="zoomIn" :title="$t('editor.zoomIn')">  <img :src="zoom_in_img" class="" /></div>
+                <div class="nav-link btn btn-light btn-sm unstyled" style="display:inline-flex;" id="zoomOut" :title="$t('editor.zoomOut')"> <img :src="zoom_out_img" class="" /></div>
             </li>
 
             <!-- close button -->
@@ -47,6 +47,12 @@
   
   
   <script>
+  import document_send_img from '/src/assets/img/svg/document-send.svg'
+  import edit_download_img from '/src/assets/img/svg/edit-download.svg'
+  import print_img from '/src/assets/img/svg/print.svg'
+  import zoom_in_img from '/src/assets/img/svg/zoom-in.svg'
+  import zoom_out_img from '/src/assets/img/svg/zoom-out.svg'
+
   export default {
     name: 'PdfviewPane',
     props: {
@@ -61,6 +67,11 @@
 
     data() {
       return {
+        document_send_img,
+        edit_download_img,
+        print_img,
+        zoom_in_img,
+        zoom_out_img
       }
     },
     mounted() {

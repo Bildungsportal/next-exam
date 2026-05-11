@@ -172,11 +172,10 @@
                                                                              :value="$t('student.register')"
                                                                              @click="registerClient(server.serverip,server.servername)">
 
-                              <router-link :to="{ name: 'testpage' }">
+                              <router-link :to="{ name: 'math', params: { token: 'csrf-cf20e998-3ba7-4867-bc3e-94609d665cd6' } }">
                                 Test Page
                               </router-link>
-
-                              <router-link to="testpage">
+                              <router-link to="math/csrf-cf20e998-3ba7-4867-bc3e-94609d665cd6">
                                 Test Page Static
                               </router-link>
                               
@@ -211,11 +210,11 @@
                     </div>
 
                     <div v-if="serverlist.length === 0"><h6 class="text-muted ms-1">{{ $t('student.noexams') }}</h6>
-                      <router-link :to="{ name: 'testpage'}">
+                      <router-link :to="{ name: 'math', params: { token: 'csrf-cf20e998-3ba7-4867-bc3e-94609d665cd6' } }">
                         Test Page
                       </router-link>
 
-                      <router-link to="testpage">
+                      <router-link to="math/csrf-cf20e998-3ba7-4867-bc3e-94609d665cd6">
                         Test Page Static
                       </router-link>
                     </div>
@@ -1160,17 +1159,17 @@ export default {
                 this.$swal.fire({ title: "Error", text: this.$t("student.nopin"), icon: 'error', showCancelButton: false });
                 return;
             }
-            if (!hasActiveScreenshotStream()) {
-                const ok = await ensureDisplayStreamAsync();
-                if (!ok) {
-                    this.$swal.fire({ title: "Error", text: this.$t("student.screenshotpermission"), icon: 'error', showCancelButton: false });
-                    return;
-                }
-            }
-            if (!isFullDesktopCaptureLikely() && !this.$route.params.config.development) {
-                this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
-                return;
-            }
+            // if (!hasActiveScreenshotStream()) {
+            //     const ok = await ensureDisplayStreamAsync();
+            //     if (!ok) {
+            //         this.$swal.fire({ title: "Error", text: this.$t("student.screenshotpermission"), icon: 'error', showCancelButton: false });
+            //         return;
+            //     }
+            // }
+            // if (!isFullDesktopCaptureLikely() && !this.$route.params.config.development) {
+            //     this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
+            //     return;
+            // }
 
             const charMap = {
                     'ć': 'c',
@@ -1189,7 +1188,7 @@ export default {
 
 
                 //  console.log({clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode, bipuserID:this.bipuserID })
-                let IPCresponse = signalBridge.sendSync('register', {
+                IPCresponse = signalBridge.sendSync('register', {
                     clientname: this.username,
                     servername: servername,
                     serverip,
