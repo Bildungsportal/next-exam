@@ -29,6 +29,10 @@ import { PDFDocument, rgb } from 'pdf-lib/dist/pdf-lib.js'  // we import the com
 import log from 'electron-log';
 import moment from 'moment';
 import pdf from '@bingsjs/pdf-parse';
+import {
+    decryptBufferIfNeeded,
+    decryptNxe1FilesUnderDir,
+} from '../../../../main/scripts/examFileCryptoContext.js';
 
 
 /**
@@ -130,7 +134,7 @@ async function mirrorExamRootFileToBackup(servername, basename, data) {
         return res.json({warning: warning, pdfBuffer: null})
     }
     else {
-        let indexPDFdata = await createIndexPDF(submissions, servername)   //contains the index table pdf as uint8array
+        let indexPDFdata = await createIndexPDF(submissions, servername, mcServer)   //contains the index table pdf as uint8array
         let indexPDFpath = path.join(config.workdirectory, mcServer.serverinfo.servername,"index.pdf")
         try {
             await fs.promises.writeFile(indexPDFpath, indexPDFdata);
@@ -142,7 +146,7 @@ async function mirrorExamRootFileToBackup(servername, basename, data) {
 
 
         // now concat the pdfs of all sections to one combined pdf
-        let PDF = await concatPages(latestFiles)
+        let PDF = await concatPages(mcServer, latestFiles)
         let pdfBuffer = Buffer.from(PDF) 
         let pdfPath = path.join(config.workdirectory, mcServer.serverinfo.servername,"combined.pdf")
         try {
@@ -177,8 +181,9 @@ function isValidPdf(data) {
     return true; // all bytes match the PDF header
 }
 
-async function countCharsOfPDF(pdfPath, studentname, servername){
-    const dataBuffer = await fs.promises.readFile(pdfPath);// Read the PDF file
+async function countCharsOfPDF(mcServer, pdfPath, studentname, servername){
+    const raw = await fs.promises.readFile(pdfPath);// Read the PDF file
+    const dataBuffer = mcServer ? decryptBufferIfNeeded(raw, mcServer, 'data @ countCharsOfPDF') : raw;
     let chars = 0 
 
     if (isValidPdf(dataBuffer)){
@@ -234,7 +239,7 @@ async function countCharsOfPDF(pdfPath, studentname, servername){
 
 
 
-async function createIndexPDF(submissions, servername){
+async function createIndexPDF(submissions, servername, mcServer){
     let tabledata = [["Name", "Abschnitt", "Datum", "Zeichen", "Dateiname"]]
     for (const student of submissions){
         let hasSubmission = false // track if student has at least one submission
@@ -251,7 +256,7 @@ async function createIndexPDF(submissions, servername){
                 sectionName = student.sections[section].sectionname || `Abschnitt ${section}`
                 sectionName = sectionName.length > 20 ? sectionName.slice(0, 20) + "..." : sectionName;
                 time = moment(student.sections[section].date).format('DD.MM.YYYY HH:mm')
-                chars = await countCharsOfPDF(student.sections[section].path, student.studentName, servername)
+                chars = await countCharsOfPDF(mcServer, student.sections[section].path, student.studentName, servername)
                 filename = student.sections[section].filename.length > 25 ? student.sections[section].filename.slice(0, 25) + "..." : student.sections[section].filename ;
                 tabledata.push([ name, sectionName, time, chars, filename ])
                 hasSubmission = true
@@ -319,11 +324,12 @@ async function createIndexPDF(submissions, servername){
 
 
 
-async function concatPages(pdfsToMerge) {
+async function concatPages(mcServer, pdfsToMerge) {
     // Create a new PDFDocument
     const tempPDF = await PDFDocument.create();
     for (const pdfpath of pdfsToMerge) { 
-        let pdfBytes = await fs.promises.readFile(pdfpath);
+        const raw = await fs.promises.readFile(pdfpath);
+        let pdfBytes = mcServer ? decryptBufferIfNeeded(raw, mcServer, 'data @ concatPages') : raw;
         //check if this actually is a pdf
         if (isValidPdf(pdfBytes)){
             const pdf = await PDFDocument.load(pdfBytes); 
@@ -397,11 +403,15 @@ router.post('/getpdf/:servername/:token', function (req, res, next) {
 
     const { filename } = req.body;
     if (filename) {
-        res.sendFile(filename, (err) => {
+        fs.readFile(filename, (err, data) => {
             if (err) {
                 log.error(err);
-                res.status(404).json({ status: t("data.fileerror") });
+                return res.status(404).json({ status: t("data.fileerror") });
             }
+            const out = decryptBufferIfNeeded(data, mcServer, 'data @ getpdf');
+            const ext = path.extname(filename).toLowerCase();
+            if (ext === '.pdf') res.setHeader('Content-Type', 'application/pdf');
+            res.send(out);
         });
     } else {
         // Antwort, falls kein Dateiname angegeben wurde
@@ -443,7 +453,17 @@ router.post('/getpdf/:servername/:token', function (req, res, next) {
     }  
     else if (type === "file") {
             res.setHeader('Content-disposition', 'attachment; filename=' + filename);
-            res.download(filepath);  
+            if (token === mcServer.serverinfo.servertoken) {
+                fs.promises.readFile(filepath).then((data) => {
+                    const out = decryptBufferIfNeeded(data, mcServer, 'data @ download');
+                    res.send(out);
+                }).catch((err) => {
+                    log.error('data @ download', err);
+                    res.status(404).json({ status: t("data.fileerror") });
+                });
+            } else {
+                res.download(filepath);
+            }
     }
     else if (type === "dir") {
         //zip folder and then send
@@ -591,7 +611,7 @@ router.post('/getexammaterials/:servername/:token', async (req, res, next) => {
 
             if (filename.includes(".zip")){
                 log.info("data @ receive: Received ZIP File from user:", student.clientname)
-                let success = await archiveAndExtractZip(absoluteFilepath, studentarchivedir, fileContent)
+                let success = await archiveAndExtractZip(absoluteFilepath, studentarchivedir, fileContent, mcServer)
                 
                 if (config.backupdirectory && success){     // copy to backup directory - do not unzip a second time - this is already done in archiveAndExtractZip
                     
@@ -714,7 +734,7 @@ router.post('/upload/:servername/:servertoken/:studenttoken', async (req, res, n
             let absoluteFilepath = path.join(uploaddirectory, filename);
             await file.mv(absoluteFilepath, (err) => {  
                 if (err) { log.error( "Could not store file" ) }
-            }); 
+            });
             files.push({ name:filename , path:absoluteFilepath });
         }
 
@@ -802,7 +822,7 @@ function runNextExtract() {
         });
 }
 
-async function archiveAndExtractZip(absoluteFilepath, studentarchivedir, fileContent){
+async function archiveAndExtractZip(absoluteFilepath, studentarchivedir, fileContent, mcServer){
     // log.info(`data @ receive: Storing Zipfile to ${absoluteFilepath}`)
 
     return new Promise((resolve) => {
@@ -824,6 +844,9 @@ async function archiveAndExtractZip(absoluteFilepath, studentarchivedir, fileCon
 
                 try { await fs.promises.unlink(absoluteFilepath); } catch (e) { /* ignore */ }
                 log.info(`data @ receive: Successfully extracted ZIP file to ${studentarchivedir}`);
+                if (mcServer) {
+                    await decryptNxe1FilesUnderDir(studentarchivedir, mcServer, 'data @ receive');
+                }
                 resolve(true);
             } catch (err) {
                 log.error("data @ receive (extract): ", err);

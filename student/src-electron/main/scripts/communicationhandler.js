@@ -29,6 +29,7 @@ import {SchedulerService} from './schedulerservice.ts'
 import crypto from 'crypto';
 import path from 'path';
 import platformDispatcher from './platformDispatcher.js';
+import { encryptExamFileBytes } from './examFileCrypto.js';
 import { runRemoteCheck } from './remoteCheck.js'
 import { logNetworkActiveProcesses } from './networkActiveProcesses.js'
 import { getVMFindings } from './vmDetection.js'
@@ -56,6 +57,51 @@ import { switchExamSection } from './switchExamSection.js';
         this.localVmStartState = 'idle' // idle|starting|blocked
         this.updateScheduler = new SchedulerService(this.requestUpdate.bind(this), 5000)
         this.updateScheduler.start()
+    }
+
+    // Encrypts all unencrypted files in the current examdirectory. 
+    async encryptExamdirectoryFiles() {
+        if (this.multicastClient?.clientinfo?.examtype === 'localvm') return;
+        const pw = String(this.multicastClient?.serverstatus?.examPassword ?? '').trim();
+        if (!pw) return;
+        const dir = this.config?.examdirectory;
+        if (!dir) return;
+        let dirents;
+        try {
+            dirents = await fs.promises.readdir(dir, { withFileTypes: true });
+        } catch (e) {
+            log.error('communicationhandler @ encryptExamdirectoryFiles: readdir failed', e);
+            return;
+        }
+        for (const d of dirents) {
+            if (!d.isFile()) continue;
+            const name = d.name;
+            if (name === 'next-exam-student.log') continue;
+            const abs = join(dir, name);
+            let raw;
+            try {
+                raw = await fs.promises.readFile(abs);
+            } catch (e) {
+                continue;
+            }
+            const isEnc = raw.length >= 5 && raw.subarray(0, 4).toString('ascii') === 'NXE1' && raw.readUInt8(4) === 1;
+            if (isEnc) continue;
+            let out;
+            try {
+                out = encryptExamFileBytes(raw, pw);
+            } catch (e) {
+                log.error(`communicationhandler @ encryptExamdirectoryFiles: encrypt failed ${name}`, e);
+                continue;
+            }
+            log.info(`communicationhandler @ encryptExamdirectoryFiles: encrypted write ${name}`);
+            const tmp = `${abs}.encpart`;
+            try {
+                await fs.promises.writeFile(tmp, out);
+                await fs.promises.rename(tmp, abs);
+            } catch (e) {
+                try { await fs.promises.unlink(tmp); } catch {}
+            }
+        }
     }
 
     // SHA-256 of base qcow2 before QEMU start (full read while VM runs starves guest disk I/O).
@@ -972,6 +1018,9 @@ import { switchExamSection } from './switchExamSection.js';
                     .then(() => {
                         log.info("CommunicationHandler @ requestFileFromServer: files received and extracted");
                         return fs.promises.unlink(absoluteFilepath); // Using the promise-based fs API
+                    })
+                    .then(async () => {
+                        await this.encryptExamdirectoryFiles();
                     })
                     .then(() => {
                         if (backupfile && WindowHandler.examwindow) {

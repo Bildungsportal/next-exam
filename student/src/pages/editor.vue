@@ -2314,10 +2314,11 @@ export default {
         document.getElementById('editormaincontainer').addEventListener('scroll', this.LTupdateHighlights, {passive: true});
 
         // block editor on escape
-        document.body.addEventListener('mouseleave', this.sendFocuslost);
-        // document.body.addEventListener('keydown', this.handleCtrlAlt);
-        window.addEventListener('visibilitychange', this.handleVisibilityChange);
-
+        if (!this.config.development) {
+            document.body.addEventListener('mouseleave', this.sendFocuslost);
+            // document.body.addEventListener('keydown', this.handleCtrlAlt);
+            window.addEventListener('visibilitychange', this.handleVisibilityChange);
+        }
 
       
         // get wlan info and host ip for internet check

@@ -1059,7 +1059,6 @@ router.post('/submission/:servername/:studenttoken', async function (req, res, n
    
     const pdfBuffer = Buffer.from(pdfDocument, 'base64');
 
-
     try {
         const filepath = path.join(config.workdirectory, mcServer.serverinfo.servername, student.clientname, 'ABGABE', lockedsection.toString() ) // target dir
         await fsp.mkdir(filepath, { recursive: true })                                        // ensure dir

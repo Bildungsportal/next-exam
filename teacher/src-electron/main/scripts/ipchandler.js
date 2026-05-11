@@ -21,8 +21,9 @@ import fs from 'fs'
 //import i18n from '../../renderer/src/locales/locales.js'
 //const { t } = i18n.global
 import { ipcMain, dialog, session } from 'electron'
-import { join } from 'path'
+import path, { join } from 'path'
 import log from 'electron-log';
+import { decryptBufferIfNeeded } from './examFileCryptoContext.js';
 import { networkInterfaces } from 'os'
 import { exec } from 'child_process';
 import { gateway4sync} from 'default-gateway';
@@ -519,7 +520,14 @@ class IpcHandler {
         /** Get Specific Submission by filepath as base64 string */
         ipcMain.handle('getSpecificSubmissionBase64', async (event, filepath) => {
             try {
-                const submission = fs.readFileSync(filepath, 'base64')
+                let raw = fs.readFileSync(filepath)
+                const rel = path.relative(this.config.workdirectory, filepath)
+                const servername = rel.split(path.sep)[0]
+                const mcServer = this.config.examServerList[servername]
+                if (mcServer) {
+                    raw = decryptBufferIfNeeded(raw, mcServer, 'ipchandler @ getSpecificSubmissionBase64')
+                }
+                const submission = raw.toString('base64')
                 return { submission: submission, status: "success" }
             }
             catch (e) {
@@ -1069,7 +1077,8 @@ class IpcHandler {
 
             try {
                 const fileBuffer = await fileResponse.arrayBuffer();
-                fs.writeFileSync(join(studentarchivedir, fileName), Buffer.from(fileBuffer));
+                const buf = Buffer.from(fileBuffer);
+                fs.writeFileSync(join(studentarchivedir, fileName), buf);
             } catch (e) {log.error(e)}
 
             const pdfFileResponse = await fetch(`https://graph.microsoft.com/v1.0/me/drive/items/${fileID}/content?format=pdf`, {
