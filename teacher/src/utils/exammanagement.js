@@ -162,11 +162,31 @@ function endExam(){
 /** 
  * Stop and Exit Exam Server Instance
  */
-function stopserver(){
+async function stopserver(){
 
     if (this.hostip){  this.getFiles('all') }      // fetch files from students before ending exam for everybody - this takes up to 8 seconds and may fail - so this is just a emergency backup and should be properly handled by the teacher
     let message = this.$t("dashboard.exitexam")
     if (!this.serverstatus.exammode) { message = this.$t("dashboard.exitexaminfo")}
+
+    const now = Date.now()
+    let freshSubmissions = Array.isArray(this.submissions) ? this.submissions : []
+    const warnSubmissions = activeSectionUsesAbgabeSubmissionWarnings(this.serverstatus)
+    if (warnSubmissions) {
+        try {
+            if (typeof window !== 'undefined' && window.ipcRenderer?.invoke) {
+                freshSubmissions = await window.ipcRenderer.invoke('getSubmissions', this.servername, JSON.stringify(this.serverstatus))
+                if (Array.isArray(freshSubmissions)) this.submissions = freshSubmissions
+            }
+        } catch (e) {
+            log.error('exammanagement @ stopserver: getSubmissions failed', e)
+        }
+    }
+
+    const showMissingSubmissionBanner = warnSubmissions && anyReachableStudentLacksSubmission(this.studentlist, freshSubmissions, now)
+    const missingSubmissionBanner = showMissingSubmissionBanner ? `
+        <div role="alert" style="margin:0 0 1rem 0;padding:0.85rem 1rem;border:3px solid #ffc107;background:transparent;color:inherit;font-weight:700;font-size:1.05em;line-height:1.35;border-radius:6px;text-align:left;">
+            ${this.$t('dashboard.stopserverMissingSubmissionWarning')}
+        </div>` : ''
 
     const bipCompletedHtml = this.serverstatus?.bip ? `
             <input class="form-check-input" style="margin-top: 0.1em;" type="checkbox" id="checkboxcompleted">
@@ -184,6 +204,7 @@ function stopserver(){
         },
         title: this.$t("dashboard.exitexamsure"),
         html: `<div class="my-content">
+            ${missingSubmissionBanner}
             <span> ${message} </span>
             <br><br>
             ${bipCompletedHtml}
@@ -223,18 +244,58 @@ function stopserver(){
     });    
 }
 
+// Returns whether getSubmissions data shows at least one PDF in ABGABE for this student (any section).
+function clientHasSubmissionOnDisk(submissions, clientname) {
+    if (!Array.isArray(submissions) || !clientname) return false
+    const row = submissions.find((s) => s.studentName === clientname)
+    if (!row?.sections) return false
+    for (let section = 1; section <= 4; section++) {
+        if (row.sections[section]?.path) return true
+    }
+    return false
+}
+
+// Returns true if any heartbeat-reachable student has no PDF submission in the scan.
+function anyReachableStudentLacksSubmission(studentlist, submissions, now) {
+    if (!Array.isArray(studentlist) || studentlist.length === 0) return false
+    return studentlist.some((s) => isStudentReachable(s, now) && !clientHasSubmissionOnDisk(submissions, s.clientname))
+}
+
+// True when active section is editor or activesheets (PDF ABGABE flow); submission kick/stop warnings apply only then.
+function activeSectionUsesAbgabeSubmissionWarnings(serverstatus) {
+    const t = serverstatus?.examSections?.[serverstatus?.activeSection]?.examtype
+    return t === 'editor' || t === 'activesheets'
+}
 
 
 //remove student from exam
-function kick(studenttoken, studentip){
+async function kick(studenttoken, studentip){
     if ( this.studentlist.length <= 0 ) { this.status(this.$t("dashboard.noclients")); return; }
-    
-    //get student name
-    //console.log("studentlist:", this.studentlist)
-    const studentname = this.studentlist.find(student => student.token === studenttoken).clientname
-    //console.log("studentname:", studentname)
+
+    const studentRow = this.studentlist.find(student => student.token === studenttoken)
+    if (!studentRow) { this.status(this.$t("dashboard.noclients")); return; }
+    const studentname = studentRow.clientname
 
     let delfolderonexit = false;
+
+    let freshSubmissions = Array.isArray(this.submissions) ? this.submissions : []
+    const warnSubmissions = activeSectionUsesAbgabeSubmissionWarnings(this.serverstatus)
+    if (warnSubmissions) {
+        try {
+            if (typeof window !== 'undefined' && window.ipcRenderer?.invoke) {
+                freshSubmissions = await window.ipcRenderer.invoke('getSubmissions', this.servername, JSON.stringify(this.serverstatus))
+                if (Array.isArray(freshSubmissions)) this.submissions = freshSubmissions
+            }
+        } catch (e) {
+            log.error('exammanagement @ kick: getSubmissions failed', e)
+        }
+    }
+
+    const hasSubmission = !warnSubmissions || clientHasSubmissionOnDisk(freshSubmissions, studentname)
+    const noSubmissionBanner = hasSubmission ? '' : `
+        <div role="alert" style="margin:0 0 1rem 0;padding:0.85rem 1rem;border:3px solid #ffc107;background:transparent;color:inherit;font-weight:700;font-size:1.05em;line-height:1.35;border-radius:6px;text-align:left;">
+            ${this.$t('dashboard.kickNoSubmissionWarning')}
+        </div>`
 
     this.$swal.fire({
         customClass: {
@@ -247,6 +308,7 @@ function kick(studenttoken, studentip){
         },
         title: this.$t("dashboard.sure"),
         html:  `<div class="my-content">
+        ${noSubmissionBanner}
         <span style='font-weight:bold;'>${studentname}</span> ${this.$t("dashboard.reallykick")}
         <br><br>
         

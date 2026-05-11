@@ -3,6 +3,7 @@ RULE^agent^memRW^read CLAUDE §5+this file before nontrivial; append atoms post-
 TECH^vue^api^Options API teacher/src; mirror sibling file; no script setup unless user migrates
 RULE^i18n^alphabetical^keep keys in teacher/src/locales/de.json+en.json alphabetically sorted within each object
 RULE^dashboard^setupLogic^exam setup funcs live in teacher/src/utils/examsetup.js; dashboard.vue should mostly import+map
+RULE^dashboard^kickStop^kick()+stopserver() getSubmissions+swal yellow banner only if activeSection examtype editor|activesheets; missing ABGABE PDF^teacher/src/utils/exammanagement.js
 RULE^dev^noBackCompat^unstable dev; no legacy migrations/workarounds/backward-compat; schema breaks ok
 TECH^quasar^vite^@quasar/app-vite bundles Vite 8; server.forwardConsole=false in student+teacher quasar.config.ts extendViteConf stops browser console.warn mirroring to dev terminal ([vite] client dupes)
 RULE^ui^noJsWorkarounds^fix layout via CSS/layout first; no JS workaround for layout/scroll issues

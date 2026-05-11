@@ -4489,6 +4489,9 @@ hr {
     overflow:visible !important;
 }
 
+.swal2-title {
+   padding-left: 0.9em !important;
+}
 
 .my-html-container {
     width: 90% !important;
