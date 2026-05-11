@@ -1,6 +1,7 @@
 import Capacitor
 import Foundation
 import Darwin
+import CryptoKit
 
 // MARK: - Configuration
 
@@ -111,11 +112,19 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
         startMulticast()
         IPCBridge.shared.onInvoke("getinfoasync") { [weak self] _ throws -> Any? in
             guard let self else { throw PluginError.notInitialized }
-            return self.getinfoasync().asDictionary
+            return await self.getinfoasync().asDictionary
+        }
+        IPCBridge.shared.onInvoke("register") { [weak self] payload throws -> Any? in
+            guard let self else { throw PluginError.notInitialized }
+            print("register ############## ", payload)
+            guard let payloadArray = payload as? [String: Any] else {
+                throw IPCError.noHandler("Invalid payload for channel: register")
+            }
+            return await self.register(args: payloadArray) //.asDictionary
         }
     }
     
-    private func getinfoasync() -> GetInfoaAsync {
+    private func getinfoasync() async -> GetInfoaAsync {
         return GetInfoaAsync(
             serverlist: _examServerList,
             clientinfo: clientinfo,
@@ -152,6 +161,281 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
                 ]
             )
         )
+    }
+    
+    private func register(args: [String: Any]) async -> [String: Any] {
+        // MARK: Extract Arguments
+        guard
+            let clientname = args["clientname"] as? String,
+            let pin        = args["pin"]        as? String,
+            let serverip   = args["serverip"]   as? String,
+            let servername = args["servername"] as? String,
+            let bipuserID  = args["bipuserID"]  as? String
+        else {
+            return ["sender": "client", "status": "error", "message": "Missing required arguments"]
+        }
+        
+        let clientip = Config.hostip // ?? getIPAddress()
+        let hostname = ProcessInfo.processInfo.hostName
+        let version  = Config.version
+        
+        // MARK: Guard Against Duplicate Registration
+        guard self.clientinfo.token == nil else {
+            return [
+                "sender":  "client",
+                "status":  "error",
+                "message": NSLocalizedString("control.alreadyregistered", comment: "")
+            ]
+        }
+        
+        // MARK: Build URL
+        let urlString = "https://\(serverip):\(Config.serverApiPort)/server/control/registerclient/\(servername)"
+        guard let url = URL(string: urlString) else {
+            return ["sender": "client", "status": "error", "message": "Invalid URL"]
+        }
+        
+        // MARK: Encrypt Payload & Fire Request
+        do {
+            // Encrypt the registration payload and derive sessionRef from the pin
+            let payload = RegistrationPayload(
+                pin: pin,
+                clientname: clientname,
+                clientip: clientip,
+                hostname: hostname,
+                version: version,
+                bipuserID: bipuserID
+            )
+            
+            let packet = try self.prepareSecurePayload(data: payload, sessionRef: pin)
+            
+            var request = URLRequest(url: url, timeoutInterval: 8.0) // 8-second timeout
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: ["packet": packet.asDictionary])
+            
+            let delegate = LocalNetworkSessionDelegate()
+            let session = URLSession(
+                configuration: .default,
+                delegate: delegate,
+                delegateQueue: nil
+            )
+            
+            let (data, _) = try await session.data(for: request)
+            let response  = try JSONDecoder().decode(RegistrationResponse.self, from: data)
+            
+            // MARK: Handle Success
+            if response.status == "success" {
+                self.clientinfo.name       = clientname
+                self.clientinfo.serverip   = serverip
+                self.clientinfo.servername = servername
+                self.clientinfo.ip         = clientip
+                self.clientinfo.hostname   = hostname
+                self.clientinfo.token      = response.token  // stored to validate critical API calls
+                self.clientinfo.focus      = true
+                self.clientinfo.pin        = pin
+                
+                print("ipchandler @ register: successfully registered at \(servername) @ \(serverip) as \(clientname)")
+                
+                // Notify so screenshot scheduler can start immediately on successful connect
+                NotificationCenter.default.post(
+                    name: Notification.Name("screenshot-config"),
+                    object: nil,
+                    userInfo: [
+                        "screenshotinterval": self.clientinfo.screenshotinterval as Any,
+                        "serverip":           self.clientinfo.serverip           as Any
+                    ]
+                )
+                
+                // Create exam folder inside workfolder
+                let uniqueExamName = "\(servername)-\(pin)"
+                let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+                let examDirectory = docs.appendingPathComponent(uniqueExamName)
+                Config.examdirectory = examDirectory.path
+                
+                if !FileManager.default.fileExists(atPath: examDirectory.path) {
+                    try FileManager.default.createDirectory(
+                        at: examDirectory,
+                        withIntermediateDirectories: true
+                    )
+                }
+                
+                return ["status": "success", "token": response.token ?? ""]
+                
+                // MARK: Handle Failure / Version Mismatch
+            } else {
+                if let serverVersion = response.version {
+                    let comparison = self.compareSoftware(
+                        versionA: serverVersion,
+                        statusA:    response.versioninfo ?? "",
+                        versionB:  Config.version,
+                        statusB:     Config.info
+                    )
+                    
+                    switch comparison {
+                    case let c where c > 0:
+                        return ["status": "error",
+                                "message": "Ihre Version von Next-Exam ist neuer als die der Lehrperson!"]
+                    case let c where c < 0:
+                        return ["status": "error",
+                                "message": "Ihre Version von Next-Exam ist zu alt. Laden sie sich eine aktuelle Version herunter!"]
+                    default:
+                        return ["status": "error",
+                                "message": "Unbekannter Fehler beim Verbindungsaufbau."]
+                    }
+                }
+                
+                return ["status": "error", "message": response.message ?? "Unknown error"]
+            }
+            
+            // MARK: Error Handling
+        } catch {
+            var errorMessage = error.localizedDescription
+            let nsError = error as NSError
+            
+            // Remap timeout error to a friendlier message
+            if nsError.domain == NSURLErrorDomain, nsError.code == NSURLErrorTimedOut {
+                errorMessage = "The request timed out"
+            }
+            
+            print("ipchandler @ register: \(errorMessage)")
+            
+#if os(macOS)
+            // On macOS, permission issues can sometimes block network access.
+            // Check and optionally reset network permissions.
+            let resetResponse = await ensureNetworkOrReset(
+                serverip: serverip,
+                port: self.config.serverApiPort
+            )
+            if resetResponse == "reset" {
+                DispatchQueue.main.async { NSApplication.shared.terminate(nil) }
+                return [:]
+            }
+#endif
+            
+            return [
+                "sender":  "client",
+                "status":  "error",
+                "message": "Es gibt ein Problem mit dem Netzwerk, den Firewallregeln oder den Netzwerkberechtigungen! " +
+                "Bitte beheben sie dieses Problem und starten Sie Next-Exam neu!"
+            ]
+        }
+    }
+    
+    func prepareSecurePayload<T: Encodable>(
+        data: T,
+        sessionRef: String
+    ) throws -> EncryptedPacket {
+
+        let jsonData = try JSONEncoder().encode(data)
+        return try encryptAESGCM(jsonData, sessionRef: sessionRef)
+    }
+    
+    func prepareSecurePayload(
+        _ data: [String: Any],
+        sessionRef: String
+    ) throws -> EncryptedPacket {
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: data) else {
+            throw SecurePayloadError.jsonSerializationFailed
+        }
+        return try encryptAESGCM(jsonData, sessionRef: sessionRef)
+    }
+    
+    private func deriveSymmetricKey(from sessionRef: String) throws -> SymmetricKey {
+
+        // (sessionRef + "0").padEnd(32, "0").slice(0, 32)
+        var raw = sessionRef + "0"
+        if raw.count < 32 {
+            raw += String(repeating: "0", count: 32 - raw.count)
+        }
+        let keyString = String(raw.prefix(32)) // Exactly 32 chars / bytes (ASCII)
+
+        guard
+            let keyData = keyString.data(using: .utf8),
+            keyData.count == 32
+        else {
+            throw SecurePayloadError.invalidKeyEncoding
+        }
+
+        return SymmetricKey(data: keyData) // AES-256
+    }
+    
+    private func encryptAESGCM(
+        _ plaintext: Data,
+        sessionRef: String
+    ) throws -> EncryptedPacket {
+
+        let key = try deriveSymmetricKey(from: sessionRef)
+
+        // AES.GCM.seal auto-generates a cryptographically random 12-byte nonce
+        // (matches: crypto.getRandomValues(new Uint8Array(12)))
+        let sealedBox = try AES.GCM.seal(plaintext, using: key)
+
+        // Extract the 12-byte nonce as Data
+        // Matches JS: btoa(String.fromCharCode(...iv))
+        let ivData = sealedBox.nonce.withUnsafeBytes { Data($0) }
+
+        // JS crypto.subtle.encrypt (AES-GCM) returns: ciphertext || 16-byte auth tag
+        // Matches JS: btoa(String.fromCharCode(...new Uint8Array(buf)))
+        let ciphertextAndTag = sealedBox.ciphertext + sealedBox.tag
+
+        return EncryptedPacket(
+            v: ivData.base64EncodedString(),
+            d: ciphertextAndTag.base64EncodedString()
+        )
+    }
+    
+    private func compareVersions(_ versionA: String, _ versionB: String) -> Int {
+
+        // Split by "." and convert each part to Int, defaulting to 0 on failure
+        // Mirrors: versionA.split('.').map(Number)
+        let partsA = versionA.split(separator: ".").map { Int($0) ?? 0 }
+        let partsB = versionB.split(separator: ".").map { Int($0) ?? 0 }
+
+        let maxLength = max(partsA.count, partsB.count)
+
+        for i in 0..<maxLength {
+            // Fallback to 0 if index is out of range
+            // Mirrors: partsA[i] || 0
+            let numA = i < partsA.count ? partsA[i] : 0
+            let numB = i < partsB.count ? partsB[i] : 0
+
+            if numA < numB { return -1 }
+            if numA > numB { return  1 }
+        }
+
+        return 0
+    }
+
+    private func compareReleaseNumbers(_ statusA: String, _ statusB: String) -> Int {
+
+        // Extract the first sequence of digits from the status string
+        // Mirrors: parseInt(status.match(/\d+/), 10) || 0
+        let numberA = firstNumber(in: statusA)
+        let numberB = firstNumber(in: statusB)
+
+        if numberA < numberB { return -1 }
+        if numberA > numberB { return  1 }
+        return 0
+    }
+
+    private func compareSoftware(
+        versionA: String, statusA: String,
+        versionB: String, statusB: String
+    ) -> Int {
+
+        // Version takes priority; only fall through to release number if equal
+        let versionComparison = compareVersions(versionA, versionB)
+        guard versionComparison == 0 else { return versionComparison }
+
+        return compareReleaseNumbers(statusA, statusB)
+    }
+
+    private func firstNumber(in string: String) -> Int {
+        guard let range = string.range(of: #"\d+"#, options: .regularExpression) else {
+            return 0
+        }
+        return Int(string[range]) ?? 0
     }
 
     // MARK: - JS-Callable Plugin Methods

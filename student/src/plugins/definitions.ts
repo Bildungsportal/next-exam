@@ -4,7 +4,7 @@ export interface IPCPlugin {
     /** Fire-and-forget */
     send(options: { channel: string; payload?: unknown }): Promise<void>;
     /** Request → Response */
-    invoke(options: { channel: string; payload?: unknown[] }): Promise<{ result?: unknown }>;
+    invoke(options: { channel: string; payload?: any[] }): Promise<{ result?: any }>;
 
     addListener(
         channel: string,

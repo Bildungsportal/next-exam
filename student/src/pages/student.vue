@@ -1073,7 +1073,6 @@ export default {
              * For manually added servers: remove after more than 2 failures
              */
             for (let server of this.serverlist) {
-                //loggingBridge.info(`student.vue @ fetchinfo: checking server ${server.servername} (${server.serverip})`)
                 if (!server.serverip) continue;
                 const serverIdentifier = this.getServerIdentifier(server);
                 const isManual = this.isManuallyAddedServer(server);
@@ -1160,7 +1159,7 @@ export default {
                 this.$swal.fire({ title: "Error", text: this.$t("student.nopin"), icon: 'error', showCancelButton: false });
                 return;
             }
-            if (!hasActiveScreenshotStream()) {
+            /*if (!hasActiveScreenshotStream()) {
                 const ok = await ensureDisplayStreamAsync();
                 if (!ok) {
                     this.$swal.fire({ title: "Error", text: this.$t("student.screenshotpermission"), icon: 'error', showCancelButton: false });
@@ -1170,7 +1169,7 @@ export default {
             if (!isFullDesktopCaptureLikely() && !this.$route.params.config.development) {
                 this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
                 return;
-            }
+            }*/
 
             const charMap = {
                     'ć': 'c',
@@ -1189,13 +1188,13 @@ export default {
 
 
                 //  console.log({clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode, bipuserID:this.bipuserID })
-                let IPCresponse = signalBridge.sendSync('register', {
+                let IPCresponse = await signalBridge.invoke('register', { // TODO Change back to sendSync when implemented
                     clientname: this.username,
                     servername: servername,
-                    serverip,
-                    serverip,
+                    serverip: serverip,
+                    //serverip,
                     pin: this.pincode,
-                    bipuserID: this.bipuserID
+                    bipuserID: this.bipuserID+""
                 })
                 if (IPCresponse) {
                     console.log(`student @ registerClient: ${IPCresponse.message}`)
