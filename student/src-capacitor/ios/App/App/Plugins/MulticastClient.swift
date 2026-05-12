@@ -110,17 +110,31 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
     public override func load() {
         //pluginLog(.info, "MulticastClientPlugin loaded – starting multicast listener")
         startMulticast()
-        IPCBridge.shared.onInvoke("getinfoasync") { [weak self] _ throws -> Any? in
+        IPCBridge.shared.registerInvokeHandler("getinfoasync") { [weak self] _ throws -> Any? in
             guard let self else { throw PluginError.notInitialized }
             return await self.getinfoasync().asDictionary
         }
-        IPCBridge.shared.onInvoke("register") { [weak self] payload throws -> Any? in
-            guard let self else { throw PluginError.notInitialized }
-            print("register ############## ", payload)
-            guard let payloadArray = payload as? [String: Any] else {
-                throw IPCError.noHandler("Invalid payload for channel: register")
+        IPCBridge.shared.registerSendSyncHandler("register") { [weak self] event in
+            guard let self else {
+                event.returnValue = ["error": "not initialized"]
+                return
             }
-            return await self.register(args: payloadArray) //.asDictionary
+            guard let args = event.args as? [Any],
+                  let payload = args.first as? [String: Any] else {
+                event.returnValue = ["error": "Invalid payload"]
+                return
+            }
+            
+            event.deferReturn()
+
+            Task {
+                do {
+                    let result = try await self.register(args: payload)
+                    event.resolve(result)
+                } catch {
+                    event.resolve(["error": error.localizedDescription])
+                }
+            }
         }
     }
     
@@ -163,7 +177,7 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
         )
     }
     
-    private func register(args: [String: Any]) async -> [String: Any] {
+    private func register(args: [String: Any]) async throws -> [String: Any] {
         // MARK: Extract Arguments
         guard
             let clientname = args["clientname"] as? String,

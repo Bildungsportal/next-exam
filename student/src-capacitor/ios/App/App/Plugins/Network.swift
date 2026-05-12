@@ -15,11 +15,11 @@ public class NetworkPlugin: CAPPlugin, CAPBridgedPlugin {
     private var preferredInterface: NetworkInterfaceInfo? = nil
 
     public override func load() {
-        IPCBridge.shared.onInvoke("checkhostip") { [weak self] _ throws -> Any? in
+        IPCBridge.shared.registerInvokeHandler("checkhostip") { [weak self] _ throws -> Any? in
             guard let self else { throw PluginError.notInitialized }
             return try await self.getNetworkInfo().asDictionary
         }
-        IPCBridge.shared.onInvoke("setPreferredInterface") { [weak self] payload in
+        IPCBridge.shared.registerInvokeHandler("setPreferredInterface") { [weak self] payload in
             guard let self else { throw PluginError.notInitialized }
             guard let payloadArray = payload as? [String],
                   let preferredName = payloadArray.first else {

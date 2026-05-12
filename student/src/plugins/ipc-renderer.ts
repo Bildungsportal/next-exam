@@ -78,7 +78,9 @@ class IpcRenderer {
      * Removes all listeners from the specified `channel`. Removes all listeners from
      * all channels if no channel is specified.
      */
-    removeAllListeners(channel?: string): this;
+    removeAllListeners(channel?: string): this {
+        IPC.removeAllListeners(channel)
+    }
 
     /**
      * Send an asynchronous message to the main process via `channel`, along with
@@ -132,7 +134,12 @@ class IpcRenderer {
      * until the reply is received, so use this method only as a last resort. It's much
      * better to use the asynchronous version, `invoke()`.
      */
-    sendSync(channel: string, ...args: any[]): any;
+
+    /** Goes through window.prompt() — NOT through Capacitor (sync) */
+    sendSync(channel: string, ...args: any[]): any {
+        // This function was injected by injectSendSyncScript()
+        return (window as any).ipcRendererSendSync(channel, ...args);
+    }
 }
 
 export const ipcRenderer = new IpcRenderer();

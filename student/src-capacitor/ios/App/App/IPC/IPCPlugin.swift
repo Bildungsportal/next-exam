@@ -1,5 +1,6 @@
 import Capacitor
 import Foundation
+import WebKit
 
 @objc(IPCPlugin)
 public class IPCPlugin: CAPPlugin, CAPBridgedPlugin {
@@ -13,35 +14,18 @@ public class IPCPlugin: CAPPlugin, CAPBridgedPlugin {
     ]
     
     public static weak var shared: IPCPlugin?
-    
-    private var sendHandlers:   [String: (Any?) -> Void]  = [:]
-    private var invokeHandlers: [String: (Any?) -> Any?]  = [:]
-    private var syncHandlers:   [String: (Any?) -> Any?]  = [:]
-
-    private var syncServer: AnyObject? // IPCSyncServer — type-erased for <iOS12
 
     public override func load() {
         IPCPlugin.shared = self
-        if #available(iOS 12.0, *) {
-            let server = IPCSyncServer(port: 7777) { [weak self] channel, payload in
-                self?.syncHandlers[channel]?(payload)
-            }
-            server.start()
-            syncServer = server
-        }
+        injectSendSyncScript()
     }
     
-    deinit {
-        if #available(iOS 12.0, *) { (syncServer as? IPCSyncServer)?.stop() }
-    }
+    deinit {}
 
     // ── Plugin Methods ────────────────────────────────────────────────────────
 
     @objc func send(_ call: CAPPluginCall) {
-        guard let channel = call.getString("channel") else {
-            call.resolve(["error": "channel required"])
-            return
-        }
+        guard let channel = call.getString("channel") else { call.resolve(["error": "channel required"]); return }
         do {
             let result = try IPCBridge.shared.dispatchSend(channel, payload: call.options["payload"])
             call.resolve(["result": result as Any])
@@ -51,16 +35,10 @@ public class IPCPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     @objc func invoke(_ call: CAPPluginCall) {
-        guard let channel = call.getString("channel") else {
-            call.resolve(["error": "channel required"])
-            return
-        }
+        guard let channel = call.getString("channel") else { call.resolve(["error": "channel required"]); return }
         Task {
             do {
-                let result = try await IPCBridge.shared.dispatchInvoke(
-                    channel,
-                    payload: call.options["payload"]
-                )
+                let result = try await IPCBridge.shared.dispatchInvoke(channel, payload: call.options["payload"])
                 call.resolve(["result": result as Any])
             } catch let error {
                 call.reject(error.localizedDescription)
@@ -74,9 +52,59 @@ public class IPCPlugin: CAPPlugin, CAPBridgedPlugin {
         notifyListeners(channel, data: ["payload": payload as Any])
     }
     
-    // ── Handler Registration ──────────────────────────────────────────────────
+    // MARK: - Send to renderer (for event.sender.send / event.reply)
 
-    public func handleSend  (_ ch: String, _ fn: @escaping (Any?) -> Void)  { sendHandlers[ch]   = fn }
-    public func handleInvoke(_ ch: String, _ fn: @escaping (Any?) -> Any?)  { invokeHandlers[ch] = fn }
-    public func handleSync  (_ ch: String, _ fn: @escaping (Any?) -> Any?)  { syncHandlers[ch]   = fn }
+    func sendToRenderer(channel: String, data: Any?) {
+        let json = Self.jsonEncode(data) ?? "null"
+        let js = """
+        window.dispatchEvent(new CustomEvent('ipc-message', {
+            detail: { channel: '\(channel)', args: \(json) }
+        }));
+        """
+        DispatchQueue.main.async { [weak self] in
+            self?.bridge?.webView?.evaluateJavaScript(js)
+        }
+    }
+
+    // MARK: - Inject JS for sendSync
+
+    private func injectSendSyncScript() {
+        let js = """
+        (function() {
+            if (window.__ipcSendSyncInstalled) return;
+            window.__ipcSendSyncInstalled = true;
+
+            window.ipcRendererSendSync = function(channel) {
+                var args = Array.prototype.slice.call(arguments, 1);
+                var payload = JSON.stringify(args);
+                var raw = window.prompt('__IPC_SYNC__:' + channel, payload);
+                try { return JSON.parse(raw); }
+                catch(e) { return raw; }
+            };
+        })();
+        """
+        let script = WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        bridge?.webView?.configuration.userContentController.addUserScript(script)
+    }
+
+    // MARK: - Helpers
+
+    static func jsonEncode(_ value: Any?) -> String? {
+        guard let value else { return "null" }
+        if value is NSNull { return "null" }
+        if let n = value as? NSNumber { return "\(n)" }
+        if let s = value as? String {
+            let data = try? JSONSerialization.data(withJSONObject: [s])
+            if let data, let str = String(data: data, encoding: .utf8) {
+                return String(str.dropFirst().dropLast())
+            }
+            return "\"\(s)\""
+        }
+        if JSONSerialization.isValidJSONObject(value),
+           let data = try? JSONSerialization.data(withJSONObject: value),
+           let str = String(data: data, encoding: .utf8) {
+            return str
+        }
+        return "\"\(value)\""
+    }
 }

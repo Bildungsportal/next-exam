@@ -6,10 +6,12 @@ export interface IPCPlugin {
     /** Request → Response */
     invoke(options: { channel: string; payload?: any[] }): Promise<{ result?: any }>;
 
+    sendSync(options: { channel: string, payload?: unknown }): any
+
     addListener(
         channel: string,
         listenerFunc: (data: { payload?: unknown }) => void
     ): Promise<PluginListenerHandle> & PluginListenerHandle;
 
-    removeAllListeners(): Promise<void>;
+    removeAllListeners(channel: string): Promise<void>;
 }

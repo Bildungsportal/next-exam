@@ -1,10 +1,11 @@
+import Capacitor
 import Foundation
 
 // ── Type aliases ──────────────────────────────────────────────────────────────
 
 public typealias SendHandler   = (Any?) throws -> Void
 public typealias InvokeHandler = (Any?) async throws -> Any?
-public typealias SyncHandler   = (Any?) throws -> Any?
+public typealias SendSyncHandler = (IPCMainEvent) -> Void
 
 // ── Error ─────────────────────────────────────────────────────────────────────
 
@@ -27,35 +28,24 @@ public final class IPCBridge {
     public static let shared = IPCBridge()
     private init() {}
 
-    private var sendHandlers:   [String: SendHandler]   = [:]
+    private var sendHandlers:   [String: SendHandler] = [:]
     private var invokeHandlers: [String: InvokeHandler] = [:]
-    private var syncHandlers:   [String: SyncHandler]   = [:]
+    private var sendSyncHandlers:   [String: SendSyncHandler] = [:]
 
     // ── Public: Handler Registration ─────────────────────────────────────────
 
-    /** Register a handler for ipcRenderer.send() */
-    public func onSend(_ channel: String, _ handler: @escaping SendHandler) {
-        sendHandlers[channel] = handler
-    }
-
-    /** Register a handler for ipcRenderer.invoke() */
-    public func onInvoke(_ channel: String, _ handler: @escaping InvokeHandler) {
-        invokeHandlers[channel] = handler
-    }
-
-    /** Register a handler for ipcRenderer.sendSync() */
-    public func onSync(_ channel: String, _ handler: @escaping SyncHandler) {
-        syncHandlers[channel] = handler
-    }
+    public func registerSendHandler(_ channel: String, _ handler: @escaping SendHandler) { sendHandlers[channel] = handler }
+    public func registerInvokeHandler(_ channel: String, _ handler: @escaping InvokeHandler) { invokeHandlers[channel] = handler }
+    public func registerSendSyncHandler(_ channel: String, _ handler: @escaping SendSyncHandler) { sendSyncHandlers[channel] = handler }
 
     public func removeSend  (_ channel: String) { sendHandlers.removeValue(forKey: channel) }
     public func removeInvoke(_ channel: String) { invokeHandlers.removeValue(forKey: channel) }
-    public func removeSync  (_ channel: String) { syncHandlers.removeValue(forKey: channel) }
+    public func removeSendSync  (_ channel: String) { sendSyncHandlers.removeValue(forKey: channel) }
 
     public func clearAll() {
         sendHandlers.removeAll()
         invokeHandlers.removeAll()
-        syncHandlers.removeAll()
+        sendSyncHandlers.removeAll()
     }
 
     // ── Public: Emit (Native → Web) ──────────────────────────────────────────
@@ -71,23 +61,20 @@ public final class IPCBridge {
     // ── Internal: Dispatch (called by IPCPlugin + IPCSyncServer) ─────────────
 
     internal func dispatchSend(_ channel: String, payload: Any?) throws -> Any? {
-        guard let handler = sendHandlers[channel] else {
-            throw IPCError.noHandler("No send handler for channel: \(channel)")
-        }
+        guard let handler = sendHandlers[channel] else { throw IPCError.noHandler("No send handler for channel: \(channel)") }
         return try handler(payload)
     }
 
     internal func dispatchInvoke(_ channel: String, payload: Any?) async throws -> Any? {
-        guard let handler = invokeHandlers[channel] else {
-            throw IPCError.noHandler("No invoke handler for channel: \(channel)")
-        }
+        guard let handler = invokeHandlers[channel] else { throw IPCError.noHandler("No invoke handler for channel: \(channel)") }
         return try await handler(payload)
     }
 
-    internal func dispatchSync(_ channel: String, payload: Any?) throws -> Any? {
-        guard let handler = syncHandlers[channel] else {
-            throw IPCError.noHandler("No sync handler for channel: \(channel)")
+    internal func dispatchSendSync(_ event: IPCMainEvent) -> Void {
+        guard let handler = sendSyncHandlers[event.channel] else {
+            event.returnValue = ["error": "No sendSync handler for channel: \(event.channel)"]
+            return
         }
-        return try handler(payload)
+        handler(event)
     }
 }

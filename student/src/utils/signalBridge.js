@@ -72,7 +72,7 @@ export class SignalBridge {
 
         if (isIOS()) {
             if (this.pluginList.includes(channel)) {
-                return win.ipcRenderer.invoke(channel, ...args) // TODO implement sendSync in Swift
+                return win.ipcRenderer.sendSync(channel, ...args)
             } else {
                 return this.iosTaskDispatcher.dispatch(channel, ...args)
             }
