@@ -38,6 +38,7 @@
     "rollup"
   ],
   "dependencies": {
+    "@capacitor/status-bar": "^8.0.2",
     "@jimp/jpeg": "^0.22.12",
     "@novnc/novnc": "^1.6.0",
     "@quasar/extras": "^1.16.4",

@@ -232,10 +232,11 @@ export default {
 
     },
     async mounted() {
+        console.log(this.urlForWebview);
 
-        this.currentFile = `${this.clientname}.ggb`
-        this.entrytime = new Date().getTime()  
-         
+        this.currentFile = `${this.clientname}.ggb`;
+        this.entrytime = new Date().getTime()  ;
+
         this._onUnhandledRejection = (event) => {
             const reason = event?.reason;
             const message = typeof reason === 'string' ? reason : reason && reason.message;
