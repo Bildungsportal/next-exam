@@ -372,8 +372,7 @@
                 <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
                  
 
-                    <div v-if="(file.type == 'htm' && !file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.htm'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
-                    <div v-if="(file.type == 'htm' && file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.htm'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
+                    <div v-if="file.type == 'htm'" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.htm'}" @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ file.name }}<template v-if="!isActiveLocalHtmFile(file)"> ({{ formatHtmLocalFileAge(file) }})</template></div>
 
 
                     <div v-if="(file.type == 'docx')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
@@ -1021,6 +1020,60 @@ export default {
             return section?.[groupKey]?.examConfig?.editor || {};
         },
 
+        // Teacher-set ODT/DOCX template under examConfig.editor.editorTemplate (not materials).
+        getEditorTemplateFromExamConfig(sectionIndexIn = null) {
+            const status = this.serverstatus;
+            if (!status || !status.examSections) return null;
+            const allowSwitch = !!status.allowSectionSwitch;
+            const sectionIndex = sectionIndexIn != null
+                ? sectionIndexIn
+                : (status.useExamSections === false
+                    ? 1
+                    : (allowSwitch
+                        ? (this.clientinfo?.lockedSection ?? this.lockedSection ?? status.activeSection ?? 0)
+                        : (status.lockedSection ?? status.activeSection ?? 0)));
+            const section = status.examSections?.[sectionIndex] || status.examSections?.[1] || null;
+            if (!section || section.examtype !== 'editor') return null;
+            const groupKey = section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA';
+            const tmpl = section[groupKey]?.examConfig?.editor?.editorTemplate;
+            if (!tmpl?.filename || !tmpl?.filecontent) return null;
+            let ft = tmpl.filetype;
+            if (ft !== 'docx' && ft !== 'odt') {
+                const n = String(tmpl.filename).toLowerCase();
+                if (n.endsWith('.docx')) ft = 'docx';
+                else if (n.endsWith('.odt')) ft = 'odt';
+                else return null;
+            }
+            return { ...tmpl, filetype: ft };
+        },
+
+        // Wait until TipTap is ready (same readiness as backup restore).
+        async waitForEditorReady(maxAttempts = 50, delayMs = 100) {
+            for (let attempts = 0; attempts < maxAttempts; attempts++) {
+                if (this.editor && this.editor.isEditable !== undefined && this.editor.commands) {
+                    await this.sleep(delayMs);
+                    return true;
+                }
+                await this.sleep(delayMs);
+            }
+            console.error(`editor @ waitForEditorReady: Editor not ready after ${maxAttempts} attempts`);
+            return false;
+        },
+
+        // Silent import of teacher template (no replace dialog); runs only after backup was skipped or absent.
+        async autoLoadEditorTemplateIfConfigured() {
+            const file = this.getEditorTemplateFromExamConfig();
+            if (!file) return;
+            console.log(`editor @ autoLoadEditorTemplateIfConfigured: Loading template ${file.filename}`);
+            this.webviewVisible = false;
+            this.selectedFile = file.filename;
+            if (file.filetype === 'docx') {
+                await this.loadDOCX(file, true, true);
+            } else if (file.filetype === 'odt') {
+                await this.loadODT(file, true, true);
+            }
+        },
+
         syncEditorLanguageSettings() {
             const cfg = this.getEditorExamConfig(this.lockedSection);
             this.LThost = cfg.languagetoolhost || "http://127.0.0.1";
@@ -1487,6 +1540,24 @@ export default {
                 return this.$t('editor.caretCtxColor', {color: mark.attrs.color})
             }
             return ''
+        },
+
+        // True when this row is the document that receives the 20s auto-save (.htm).
+        isActiveLocalHtmFile(file) {
+            return !!(file && file.type === 'htm' && this.currentFile && file.name === `${this.currentFile}.htm`);
+        },
+
+        // Seconds/minutes/hours since last filesystem mtime (active .htm omits label in template).
+        formatHtmLocalFileAge(file) {
+            const t = this.now || Date.now();
+            const ms = Math.max(0, t - Number(file?.mod || 0));
+            const sec = Math.floor(ms / 1000);
+            if (sec < 60) return `${sec}s`;
+            const min = Math.floor(sec / 60);
+            if (min < 60) return `${min} min`;
+            const h = Math.floor(min / 60);
+            const m = min % 60;
+            return `${h}h ${m}m`;
         },
 
         //get all files in user directory
@@ -2195,60 +2266,38 @@ export default {
         async loadBackupFile(filename = false) {
             // check if there is an htm backup in the exam directory and load it
             // This must run early to read the file before editor overwrites it after 20 seconds
-            let backupfileName = filename ? filename : this.clientname + ".htm"
-            console.log(`editor @ loadBackupFile: Checking for backup file: ${backupfileName}`)
+            const backupfileName = filename ? filename : this.clientname + ".htm";
+            console.log(`editor @ loadBackupFile: Checking for backup file: ${backupfileName}`);
             try {
-                let backupfileContent = await signalBridge.invoke('getbackupfile', backupfileName)
+                const backupfileContent = await signalBridge.invoke('getbackupfile', backupfileName);
+                const ready = await this.waitForEditorReady();
+                if (!ready) return;
 
                 if (backupfileContent) {
-                    console.log(`editor @ loadBackupFile: Backup file found, waiting for editor to be ready before showing dialog`)
-                    // Wait for editor to be fully initialized before showing dialog
-                    const waitForEditor = async () => {
-                        let attempts = 0
-                        const maxAttempts = 50 // 5 seconds max wait
-
-                        while (attempts < maxAttempts) {
-                            if (this.editor && this.editor.isEditable !== undefined && this.editor.commands) {
-                                console.log(`editor @ loadBackupFile: Editor ready, showing dialog`)
-                                // Wait one more frame to ensure DOM is ready
-                                await this.sleep(100)
-                                this.$swal.fire({
-                                    title: this.$t("editor.backupfound"),
-                                    html: `${this.$t("editor.replacecontent1")} <b>${backupfileName}</b> ${this.$t("editor.replacecontent2")}`,
-                                    icon: "question",
-                                    showCancelButton: true,
-                                    cancelButtonText: this.$t("editor.cancel"),
-                                    reverseButtons: true,
-                                    allowOutsideClick: false,
-                                    allowEscapeKey: true
-                                })
-                                .then(async (result) => {
-                                    if (result.isConfirmed) {
-                                        console.log(`editor @ loadBackupFile: User confirmed, loading backup file`)
-                                        this.editor.commands.clearContent(true)
-                                        this.editor.commands.insertContent(backupfileContent)
-                                    } else {
-                                        console.log(`editor @ loadBackupFile: User cancelled loading backup file`)
-                                    }
-                                })
-                                .catch((error) => {
-                                    console.error(`editor @ loadBackupFile: Error showing dialog: ${error}`)
-                                })
-                                return
-                            }
-                            attempts++
-                            await this.sleep(100)
-                        }
-                        console.error(`editor @ loadBackupFile: Editor not ready after ${maxAttempts} attempts`)
+                    console.log(`editor @ loadBackupFile: Backup file found, showing dialog`);
+                    const result = await this.$swal.fire({
+                        title: this.$t("editor.backupfound"),
+                        html: `${this.$t("editor.replacecontent1")} <b>${backupfileName}</b> ${this.$t("editor.replacecontent2")}`,
+                        icon: "question",
+                        showCancelButton: true,
+                        cancelButtonText: this.$t("editor.cancel"),
+                        reverseButtons: true,
+                        allowOutsideClick: false,
+                        allowEscapeKey: true,
+                    });
+                    if (result.isConfirmed) {
+                        console.log(`editor @ loadBackupFile: User confirmed, loading backup file`);
+                        this.editor.commands.clearContent(true);
+                        this.editor.commands.insertContent(backupfileContent);
+                        return;
                     }
-                    waitForEditor()
-                } 
-                else {
-                    console.log(`editor @ loadBackupFile: No backup file found or content is empty`)
+                    console.log(`editor @ loadBackupFile: User cancelled loading backup file`);
+                } else {
+                    console.log(`editor @ loadBackupFile: No backup file found or content is empty`);
                 }
-            }
-            catch (error) {
-                console.error(`editor @ loadBackupFile: Error loading backup file: ${error}`)
+                await this.autoLoadEditorTemplateIfConfigured();
+            } catch (error) {
+                console.error(`editor @ loadBackupFile: Error loading backup file: ${error}`);
             }
         },
 

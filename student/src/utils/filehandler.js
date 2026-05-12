@@ -174,66 +174,133 @@ export async function loadHTML(file){
 
 
 
-// get file from local examdirectory and replace editor content with it
-export async function loadDOCX(file, base64=false){
-    let base64content;
-    let filename = file
-    if (base64){
-        filename = file.filename
-        base64content = file.filecontent.split(',')[1];
-    }
-
-    this.LTdisable()
-    this.$swal.fire({
-        title: this.$t("editor.replace"),
-        html:  `${this.$t("editor.replacecontent1")} <b>${filename}</b> ${this.$t("editor.replacecontent2")}`,
-        icon: "question",
-        showCancelButton: true,
-        cancelButtonText: this.$t("editor.cancel"),
-        reverseButtons: true
-    })
-    .then(async (result) => {
-        if (result.isConfirmed) {
-            
-            if (base64){
-                const response = await fetch(file.filecontent); // Data-URL abrufen
-                const arrayBuffer = await response.arrayBuffer(); // ArrayBuffer erstellen
-
-                mammoth.convertToHtml({ arrayBuffer }) // DOCX zu HTML konvertieren
-                .then(result => {
-                    const html = result.value; // HTML-Ergebnis erhalten
-                    this.editor.commands.clearContent(true); // Editor-Inhalt leeren
-                    this.editor.commands.insertContent(html); // insert HTML
-                })
-                .catch(error => console.error(error)); // Fehler ausgeben
-
-            }
-            else{
-                let data = await signalBridge.invoke('getfilesasync', file, false, true )   // signal, filename, audiofile, docxfile // converts the file to html in case of docx with mammoth
-                this.editor.commands.clearContent(true)
-            
-                const cleanHtml = DOMPurify.sanitize(data.value);
-                const body = parseHTMLString(cleanHtml);
-                
-                this.editor.commands.insertContent(cleanHtml)
-                // body.childNodes.forEach(node => {  processNode(node); });
-            }
-        
-        
-        } 
-    }); 
-}
-
-/** Loads an ODT from disk or base64 material into the TipTap editor (renderer converts via odtToTiptapHtml). */
-export async function loadODT(file, base64 = false) {
-    let base64content;
+// get file from local examdirectory and replace editor content with it (silent=true skips confirm dialog, e.g. teacher-set editor template on startup)
+export async function loadDOCX(file, base64 = false, silent = false) {
     let filename = file;
     if (base64) {
         filename = file.filename;
-        base64content = file.filecontent.split(',')[1];
     }
 
-    this.LTdisable();
+    const doLoad = async () => {
+        this.LTdisable();
+        if (base64) {
+            const response = await fetch(file.filecontent);
+            const arrayBuffer = await response.arrayBuffer();
+            const mammothResult = await mammoth.convertToHtml({ arrayBuffer });
+            const html = mammothResult.value;
+            this.editor.commands.clearContent(true);
+            this.editor.commands.insertContent(html);
+        } else {
+            const data = await signalBridge.invoke('getfilesasync', file, false, true);
+            this.editor.commands.clearContent(true);
+            const cleanHtml = DOMPurify.sanitize(data.value);
+            parseHTMLString(cleanHtml);
+            this.editor.commands.insertContent(cleanHtml);
+        }
+        if (base64 && filename) {
+            let stem = String(filename).replace(/\.docx$/i, '');
+            if (/[/\\]/.test(stem) || stem.includes('..')) {
+                stem = this.clientname;
+            }
+            this.currentFile = stem;
+        }
+    };
+
+    if (silent) {
+        try {
+            await doLoad();
+        } catch (err) {
+            console.error('filehandler @ loadDOCX:', err);
+            this.$swal.fire({
+                title: this.$t('general.error'),
+                text: String(err?.message || err),
+                icon: 'error',
+                timer: 4000,
+            });
+        }
+        return;
+    }
+
+    this.$swal.fire({
+        title: this.$t("editor.replace"),
+        html: `${this.$t("editor.replacecontent1")} <b>${filename}</b> ${this.$t("editor.replacecontent2")}`,
+        icon: "question",
+        showCancelButton: true,
+        cancelButtonText: this.$t("editor.cancel"),
+        reverseButtons: true,
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                await doLoad();
+            } catch (err) {
+                console.error('filehandler @ loadDOCX:', err);
+                this.$swal.fire({
+                    title: this.$t('general.error'),
+                    text: String(err?.message || err),
+                    icon: 'error',
+                    timer: 4000,
+                });
+            }
+        }
+    });
+}
+
+/** Loads an ODT from disk or base64 material into the TipTap editor (renderer converts via odtToTiptapHtml). silent=true skips confirm dialog. */
+export async function loadODT(file, base64 = false, silent = false) {
+    let filename = file;
+    if (base64) {
+        filename = file.filename;
+    }
+
+    const doLoad = async () => {
+        this.LTdisable();
+        let arrayBuffer;
+        if (base64) {
+            const response = await fetch(file.filecontent);
+            arrayBuffer = await response.arrayBuffer();
+        } else {
+            const b64 = await signalBridge.invoke('getfilesasync', file, false, false, true);
+            if (!b64 || typeof b64 !== 'string') {
+                this.$swal.fire({
+                    title: this.$t('general.error'),
+                    text: this.$t('general.error'),
+                    icon: 'error',
+                    timer: 2500,
+                });
+                return;
+            }
+            const bin = atob(b64);
+            const u8 = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+            arrayBuffer = u8.buffer;
+        }
+        const { html } = await odtToTiptapHtml(arrayBuffer);
+        const cleanHtml = DOMPurify.sanitize(html);
+        const body = parseHTMLString(cleanHtml);
+        this.editor.commands.clearContent(true);
+        this.editor.commands.insertContent(body.innerHTML);
+        let stem = String(filename).replace(/\.odt$/i, '');
+        if (/[/\\]/.test(stem) || stem.includes('..')) {
+            stem = this.clientname;
+        }
+        this.currentFile = stem;
+    };
+
+    if (silent) {
+        try {
+            await doLoad();
+        } catch (err) {
+            console.error('filehandler @ loadODT:', err);
+            this.$swal.fire({
+                title: this.$t('general.error'),
+                text: String(err?.message || err),
+                icon: 'error',
+                timer: 4000,
+            });
+        }
+        return;
+    }
+
     this.$swal.fire({
         title: this.$t('editor.replace'),
         html: `${this.$t('editor.replacecontent1')} <b>${filename}</b> ${this.$t('editor.replacecontent2')}`,
@@ -244,36 +311,7 @@ export async function loadODT(file, base64 = false) {
     }).then(async (result) => {
         if (result.isConfirmed) {
             try {
-                let arrayBuffer;
-                if (base64) {
-                    const response = await fetch(file.filecontent);
-                    arrayBuffer = await response.arrayBuffer();
-                } else {
-                    const b64 = await signalBridge.invoke('getfilesasync', file, false, false, true);
-                    if (!b64 || typeof b64 !== 'string') {
-                        this.$swal.fire({
-                            title: this.$t('general.error'),
-                            text: this.$t('general.error'),
-                            icon: 'error',
-                            timer: 2500,
-                        });
-                        return;
-                    }
-                    const bin = atob(b64);
-                    const u8 = new Uint8Array(bin.length);
-                    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-                    arrayBuffer = u8.buffer;
-                }
-                const {html} = await odtToTiptapHtml(arrayBuffer);
-                const cleanHtml = DOMPurify.sanitize(html);
-                const body = parseHTMLString(cleanHtml);
-                this.editor.commands.clearContent(true);
-                this.editor.commands.insertContent(body.innerHTML);
-                let stem = String(filename).replace(/\.odt$/i, '');
-                if (/[/\\]/.test(stem) || stem.includes('..')) {
-                    stem = this.clientname;
-                }
-                this.currentFile = stem;
+                await doLoad();
             } catch (err) {
                 console.error('filehandler @ loadODT:', err);
                 this.$swal.fire({

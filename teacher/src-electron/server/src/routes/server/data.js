@@ -571,14 +571,13 @@ router.post('/getexammaterials/:servername/:token', async (req, res, next) => {
         let materials = []
         let allowedUrls = []
         if (group === "a") {
-            materials = groupA.examInstructionFiles
+            materials = [...(groupA.examInstructionFiles || [])]
             allowedUrls = groupA.allowedUrls
         }
         else if (group === "b") {
-            materials = groupB.examInstructionFiles
+            materials = [...(groupB.examInstructionFiles || [])]
             allowedUrls = groupB.allowedUrls
         }
-
 
         res.json({ status:"success", sender: "server", materials: materials, allowedUrls: allowedUrls  })
     } 

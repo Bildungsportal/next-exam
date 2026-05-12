@@ -35,3 +35,4 @@ TECH^exam^editorBackupExt^editor/activesheets HTML backup filename <name>.htm + 
 IPC^student^registerSecurePayload^registerclient decrypt JSON may include exammode bool; teacher sets student.exammode on create+reconnect; if client exammode true and !serverstatus.exammode deny+t(control.exammismatchregistration); success may set reconnected:true→student swal reconnectedinfo; heartbeat POST /update clientinfo.exammode^student ipchandler+student.vue; teacher control.js registerclient
 PATH^student^odtTiptap^student/src/utils/odtToTiptapHtml.js+filehandler loadODT+editor.vue materials+localfiles
 IPC^student^getfilesasync^odtRaw 5th arg true→base64 .odt (decrypt like htm); dir list type odt^student/src-electron/main/scripts/ipchandler.js
+TECH^exam^editorTemplate^examConfig.editor.editorTemplate odt/docx base64; setEditorExamConfigPatch keeps groupB.editorTemplate when section.groups; student reads after backup^teacher+student

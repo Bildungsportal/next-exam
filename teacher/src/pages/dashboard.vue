@@ -350,6 +350,62 @@
                     </template>
                 </div>
 
+                <div v-if="isExamType('editor')" class="basematerial-sidebar-block mt-3">
+                    <div class="basematerial-panel-caption">{{ $t('dashboard.editorTemplateCaption') }}</div>
+
+                    <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill">A</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.editorTemplate?.filename">
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.editor.editorTemplate.filename" @click="configureEditorTemplate('a')">
+                                        <span class="basematerial-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.editor.editorTemplate.filename), 22) }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeEditorTemplate('a')"><span class="remove-x">&times;</span></button>
+                                </div>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureEditorTemplate('a')">
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.templateChoose') }}</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill basematerial-group-pill--b">B</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.editor?.editorTemplate?.filename">
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.editor.editorTemplate.filename" @click="configureEditorTemplate('b')">
+                                        <span class="basematerial-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.editor.editorTemplate.filename), 22) }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeEditorTemplate('b')"><span class="remove-x">&times;</span></button>
+                                </div>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureEditorTemplate('b')">
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.templateChoose') }}</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+                    </template>
+
+                    <template v-else>
+                        <div class="basematerial-row">
+                            <span class="basematerial-group-pill basematerial-group-pill--ab" aria-label="A/B">AB</span>
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.editorTemplate?.filename">
+                                <div class="btn-group basematerial-filegroup" role="group">
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.editor.editorTemplate.filename" @click="configureEditorTemplate('all')">
+                                        <span class="basematerial-filename-truncate">{{ truncatedClientName(getFilenameWithoutExtension(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.editor.editorTemplate.filename), 22) }}</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeEditorTemplate('all')"><span class="remove-x">&times;</span></button>
+                                </div>
+                            </template>
+                            <button v-else type="button" class="btn btn-sm btn-outline-secondary sidebar-pick-btn" @click="configureEditorTemplate('all')">
+                                <span class="sidebar-pick-btn__label">{{ $t('dashboard.templateChoose') }}</span>
+                                <span class="sidebar-pick-btn__plus" aria-hidden="true">+</span>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+
                 <!-- Website Config -->
                 <div v-if="isExamType('website')" class="basematerial-sidebar-block mt-3">
                     <div class="basematerial-panel-caption">{{ $t('dashboard.website') }}</div>
@@ -1275,7 +1331,7 @@ import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStuden
 import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer } from '../utils/filemanager'
 import { swalQueued } from '../utils/swalQueue.js'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, lockSectionForAll, endExam, kick, restore } from '../utils/exammanagement.js'
-import { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
+import { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, configureEditorTemplate, removeEditorTemplate, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
 import { Exam } from '../types/api'
 import { generateEncryptionPassword } from '../utils/encryptionPassword.js'
 
@@ -1729,6 +1785,8 @@ computed: {
             return new File([bytes], template.filename, { type });
         },
 
+        configureEditorTemplate: configureEditorTemplate,
+        removeEditorTemplate: removeEditorTemplate,
         removeMicrosoft365Template: removeMicrosoft365Template,
         removeWebsiteUrl: removeWebsiteUrl,
         removeEduvidualUrl: removeEduvidualUrl,
@@ -2559,6 +2617,14 @@ computed: {
                     if (!group.examConfig.rdp || typeof group.examConfig.rdp !== 'object') group.examConfig.rdp = {};
                     if (!group.examConfig.microsoft365 || typeof group.examConfig.microsoft365 !== 'object') group.examConfig.microsoft365 = {};
                     if (!group.examConfig.editor || typeof group.examConfig.editor !== 'object') group.examConfig.editor = {};
+                    if (!group.examConfig.editor.editorTemplate || typeof group.examConfig.editor.editorTemplate !== 'object') group.examConfig.editor.editorTemplate = {};
+                    if (group.examConfig.editorTemplate !== undefined) {
+                        const leg = group.examConfig.editorTemplate;
+                        if (leg && typeof leg === 'object' && leg.filename && !group.examConfig.editor.editorTemplate?.filename) {
+                            group.examConfig.editor.editorTemplate = { ...leg };
+                        }
+                        delete group.examConfig.editorTemplate;
+                    }
                 }
             }
         },

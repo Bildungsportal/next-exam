@@ -320,6 +320,40 @@ function microsoft365IsTemplateFile(file) {
     return name.endsWith('.docx') || name.endsWith('.xlsx');
 }
 
+function editorTemplateIsAllowedFile(file) {
+    const name = (file && file.name) ? String(file.name).toLowerCase() : '';
+    return name.endsWith('.odt') || name.endsWith('.docx');
+}
+
+/** Returns picked .odt/.docx File or null if dialog cancelled (native input, same pattern as activesheets PDF picker). */
+function pickEditorTemplateFromUser() {
+    return new Promise((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.odt,.docx,application/vnd.oasis.opendocument.text,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        input.multiple = false;
+        let settled = false;
+        const settle = (file) => {
+            if (settled) return;
+            settled = true;
+            window.removeEventListener('focus', onWinFocus);
+            input.remove();
+            resolve(file || null);
+        };
+        const onWinFocus = () => {
+            setTimeout(() => {
+                if (!settled && (!input.files || input.files.length === 0)) settle(null);
+            }, 300);
+        };
+        input.addEventListener('change', () => {
+            settle(input.files && input.files.length ? input.files[0] : null);
+        });
+        document.body.appendChild(input);
+        window.addEventListener('focus', onWinFocus);
+        requestAnimationFrame(() => input.click());
+    });
+}
+
 /** Returns picked Office template File or null if dialog cancelled (native input). */
 function pickOfficeTemplateFromUser() {
     return new Promise((resolve) => {
@@ -467,6 +501,72 @@ async function configureMicrosoft365Template(presetGroup) {
     }
 
     if (Object.prototype.hasOwnProperty.call(section, 'msOfficeFile')) delete section.msOfficeFile;
+    this.setServerStatus();
+}
+
+/**
+ * Editor exam: optional per-group ODT/DOCX template under examConfig.editor.editorTemplate (same subtree as spellcheck etc.).
+ * @param {'a'|'b'|'all'|undefined} presetGroup
+ */
+async function configureEditorTemplate(presetGroup) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
+    const hasGroups = !!section.groups;
+    const whoNorm = String(presetGroup || 'all').toLowerCase();
+    const activeGroup = hasGroups ? (whoNorm === 'b' ? 'b' : whoNorm === 'a' ? 'a' : 'a') : 'all';
+
+    const groupA = section.groupA;
+    const groupB = section.groupB;
+    if (!groupA.examConfig) groupA.examConfig = {};
+    if (!groupB.examConfig) groupB.examConfig = {};
+    if (!groupA.examConfig.editor || typeof groupA.examConfig.editor !== 'object') groupA.examConfig.editor = {};
+    if (!groupB.examConfig.editor || typeof groupB.examConfig.editor !== 'object') groupB.examConfig.editor = {};
+
+    const file = await pickEditorTemplateFromUser();
+    if (!file) return;
+    if (!editorTemplateIsAllowedFile(file)) {
+        await this.$swal.fire({
+            customClass: { popup: 'my-popup', title: 'my-title', content: 'my-content', actions: 'my-swal2-actions' },
+            title: this.$t('dashboard.editorTemplateInvalid'),
+            text: this.$t('dashboard.editorTemplateInvalidText'),
+            icon: 'error',
+            showConfirmButton: true,
+        });
+        return;
+    }
+
+    const filecontent = await readFileAsBase64(file);
+    const checksum = await calculateMD5(file);
+    const filetype = determineFiletype(file, file.name);
+    const template = { filename: file.name, filecontent, filetype, checksum };
+
+    if (!hasGroups) {
+        groupA.examConfig.editor.editorTemplate = { ...template };
+        groupB.examConfig.editor.editorTemplate = { ...template };
+    } else if (activeGroup === 'b') {
+        groupB.examConfig.editor.editorTemplate = { ...template };
+    } else {
+        groupA.examConfig.editor.editorTemplate = { ...template };
+    }
+
+    this.setServerStatus();
+}
+
+function removeEditorTemplate(group) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
+    const clearCfg = (g) => {
+        if (!g?.examConfig?.editor || typeof g.examConfig.editor !== 'object') return;
+        g.examConfig.editor.editorTemplate = {};
+    };
+    if (!section.groups || group === 'all') {
+        clearCfg(section.groupA);
+        clearCfg(section.groupB);
+    } else if (group === 'b') {
+        clearCfg(section.groupB);
+    } else {
+        clearCfg(section.groupA);
+    }
     this.setServerStatus();
 }
 
@@ -1600,7 +1700,12 @@ function setEditorExamConfigPatch(patch) {
     }
 
     groupA.examConfig.editor = next;
-    groupB.examConfig.editor = { ...next };
+    const templateB = groupB.examConfig.editor?.editorTemplate;
+    if (section.groups) {
+        groupB.examConfig.editor = { ...next, editorTemplate: templateB !== undefined ? templateB : next.editorTemplate };
+    } else {
+        groupB.examConfig.editor = { ...next };
+    }
 
     this.backupinterval.stop();
     this.autobackup = false;
@@ -2187,4 +2292,4 @@ function openAllowedUrl(allowedUrl){
 
 
 
-export { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, getFormsID, configureEditor, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }
+export { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, configureEditorTemplate, removeEditorTemplate, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, getFormsID, configureEditor, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }
