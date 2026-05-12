@@ -16,3 +16,11 @@
 257	778	7945759275630105	app/disable-shortcuts-hook.dll	fd004a6053b976c0
 257	778	7945759275630105	app/disable-shortcuts-hook.lib	fd004a6053b976c0
 778	1069	7945759280833037	app/disable-shortcuts.exe	dde3bc8766b1200e
+135	1040	8002729116611695	app/CMakeFiles/disable-shortcuts.dir/app.c.obj	ad622bd82492100f
+117	1044	8002729116432548	app/CMakeFiles/disable-shortcuts-hook.dir/hook.c.obj	b0634d633374c0af
+140	1057	8002729116651928	app/CMakeFiles/disable-shortcuts.dir/mainwindow.c.obj	9b5799a1581d10d3
+1044	1970	8002729125690209	app/disable-shortcuts-hook.dll	fd004a6053b976c0
+1044	1970	8002729125690209	app/disable-shortcuts-hook.lib	fd004a6053b976c0
+1970	2348	8002729134941393	app/disable-shortcuts.exe	dde3bc8766b1200e
+50	334	8002734045915010	app/CMakeFiles/disable-shortcuts.dir/mainwindow.c.obj	9b5799a1581d10d3
+335	617	8002734048760942	app/disable-shortcuts.exe	dde3bc8766b1200e
