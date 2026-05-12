@@ -1079,7 +1079,7 @@ export default {
                 const serverIdentifier = this.getServerIdentifier(server);
                 const isManual = this.isManuallyAddedServer(server);
                 const signal = AbortSignal.timeout(4000); // 4000 milliseconds = 4 seconds
-                fetch(`https://${server.serverip}:${this.serverApiPort}/server/control/pong`, {
+                this.autoFetch(`https://${server.serverip}:${this.serverApiPort}/server/control/pong`, {
                     method: 'GET',
                     signal
                 })
