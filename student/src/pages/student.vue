@@ -240,6 +240,9 @@ import { Exam } from '../types/api'
 import loggingBridge from "../utils/loggingBridge.js";
 import { autoCleanupMixin } from "../mixins/autoCleanupMixin.js";
 
+import { StatusBar } from "@capacitor/status-bar";
+import {isIOS} from "../types/platform.js";
+
 function unhandledRejectionFunction() {
   const reason = event?.reason;
   const msg = typeof reason === 'string' ? reason : reason && reason.message;
@@ -1285,6 +1288,14 @@ export default {
 
     },
     async mounted() {
+      if (isIOS()) {
+        try {
+          await StatusBar.hide();
+        } catch (error) {
+          console.warn('Status bar error:', error);
+        }
+      }
+
         document.querySelector("#statusdiv").style.visibility = "hidden";
 
         // 2️⃣ Timer

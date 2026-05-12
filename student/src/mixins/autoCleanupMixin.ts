@@ -16,13 +16,14 @@ export const autoCleanupMixin = {
     },
 
     methods: {
-        autoSchedulerService(action: () => void, interval: number) {
+        autoSchedulerService(action: () => void, interval: number): SchedulerService {
             const schedulerService: SchedulerService = new SchedulerService(interval);
 
             this.autoEventListener(schedulerService, 'action', action);
             schedulerService.start();
 
             this.schedulerServices.push(schedulerService);
+            return schedulerService;
         },
 
         // Track event listener automatically

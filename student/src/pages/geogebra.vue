@@ -158,7 +158,6 @@ import eye_fill_img from '/src/assets/img/svg/eye-fill.svg'
 import formula_img from '/src/assets/img/svg/formula.svg'
 import games_solve_img from '/src/assets/img/svg/games-solve.svg'
 import im_google_talk_img from '/src/assets/img/svg/im-google-talk.svg'
-import {StatusBar} from "@capacitor/status-bar";
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
 
@@ -233,13 +232,6 @@ export default {
 
     },
     async mounted() {
-
-      try {
-        await StatusBar.hide();
-        console.log('hid status bar');
-      } catch (error) {
-        console.warn('Status bar error:', error);
-      }
 
         this.currentFile = `${this.clientname}.ggb`
         this.entrytime = new Date().getTime()  
