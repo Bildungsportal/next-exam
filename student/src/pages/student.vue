@@ -1079,7 +1079,7 @@ export default {
                 const serverIdentifier = this.getServerIdentifier(server);
                 const isManual = this.isManuallyAddedServer(server);
                 const signal = AbortSignal.timeout(4000); // 4000 milliseconds = 4 seconds
-                this.autoFetch(`https://${server.serverip}:${this.serverApiPort}/server/control/pong`, {
+                fetch(`https://${server.serverip}:${this.serverApiPort}/server/control/pong`, {
                     method: 'GET',
                     signal
                 })
@@ -1190,7 +1190,7 @@ export default {
 
 
                 //  console.log({clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode, bipuserID:this.bipuserID })
-                let IPCresponse = await signalBridge.invoke('register', { // TODO Change back to sendSync when implemented
+                let IPCresponse = await signalBridge.sendSync('register', {
                     clientname: this.username,
                     servername: servername,
                     serverip: serverip,

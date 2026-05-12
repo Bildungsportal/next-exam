@@ -39,7 +39,7 @@
 		551E69A12FA0B7DB004C06DD /* Error */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Error; sourceTree = "<group>"; };
 		55D6E0A42F9A7A86001C57AC /* IPC */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = IPC; sourceTree = "<group>"; };
 		55D6E0A52F9A7A99001C57AC /* Plugins */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Plugins; sourceTree = "<group>"; };
-		F2514D282FB348A2006D68EB /* Util */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Util; sourceTree = "<group>"; };
+		55E057B42FAE0CC6009A183B /* Util */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Util; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -83,7 +83,7 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
-				F2514D282FB348A2006D68EB /* Util */,
+				55E057B42FAE0CC6009A183B /* Util */,
 				551E69A12FA0B7DB004C06DD /* Error */,
 				551E69822FA0B5CE004C06DD /* DTO */,
 				55D6E0A52F9A7A99001C57AC /* Plugins */,
@@ -132,7 +132,7 @@
 				551E69A12FA0B7DB004C06DD /* Error */,
 				55D6E0A42F9A7A86001C57AC /* IPC */,
 				55D6E0A52F9A7A99001C57AC /* Plugins */,
-				F2514D282FB348A2006D68EB /* Util */,
+				55E057B42FAE0CC6009A183B /* Util */,
 			);
 			name = App;
 			productName = App;
