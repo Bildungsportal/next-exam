@@ -3074,8 +3074,25 @@ Other Styles
 }
 
 .ProseMirror {
+    // Collapse UA block margins; single between-block gap scales with exam line-height setting.
+    p,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    blockquote,
+    pre,
+    ul,
+    ol,
+    li {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
     > * + * {
-        margin-top: 0.75em;
+        margin-top: max(0.25em, calc((var(--js-linespacing) - 1) * 1em));
     }
 
     ul,
@@ -3096,7 +3113,7 @@ Other Styles
     h4,
     h5,
     h6 {
-        line-height: 1.1;
+        line-height: var(--js-linespacing) !important;
     }
 
     code {
