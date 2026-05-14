@@ -178,16 +178,23 @@ export function diffPlainTextToSegments(prevText, currText) {
 }
 
 /**
+ * Extra CSS class for whitespace-only diff tokens (softer highlight in viewer).
+ */
+function diffTokenWsClass(t) {
+    return isWhitespaceToken(String(t ?? '')) ? ' etd-token-ws' : ''
+}
+
+/**
  * Turn diff segments into HTML (trusted structure, escaped user text).
  */
 export function segmentsToDiffHtml(segments) {
     let html = ''
     for (const s of segments) {
         if (s.op === 'eq') html += escapeHtml(s.t)
-        else if (s.op === 'del') html += `<span class="etd-del">${escapeHtml(s.t)}</span>`
-        else if (s.op === 'ins') html += `<span class="etd-ins">${escapeHtml(s.t)}</span>`
+        else if (s.op === 'del') html += `<span class="etd-del${diffTokenWsClass(s.t)}">${escapeHtml(s.t)}</span>`
+        else if (s.op === 'ins') html += `<span class="etd-ins${diffTokenWsClass(s.t)}">${escapeHtml(s.t)}</span>`
         else if (s.op === 'chg') {
-            html += `<span class="etd-chg-old">${escapeHtml(s.oldT)}</span><span class="etd-chg-new">${escapeHtml(s.newT)}</span>`
+            html += `<span class="etd-chg-old${diffTokenWsClass(s.oldT)}">${escapeHtml(s.oldT)}</span><span class="etd-chg-new${diffTokenWsClass(s.newT)}">${escapeHtml(s.newT)}</span>`
         } else if (s.op === 'plain') html += escapeHtml(s.t)
     }
     return html

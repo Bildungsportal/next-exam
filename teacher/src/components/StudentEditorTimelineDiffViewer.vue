@@ -29,7 +29,10 @@
                 </div>
             </div>
             <div class="etd-footer">
-                <label class="etd-slider-label">{{ sliderLabel }}</label>
+                <div class="etd-slider-row">
+                    <label class="etd-slider-label etd-slider-label-main">{{ sliderLabel }}</label>
+                    <span class="etd-slider-stats">{{ wordCountStatsLine }}</span>
+                </div>
                 <div class="etd-footer-controls">
                     <button
                         type="button"
@@ -77,6 +80,12 @@ const PAPER_ZOOM_MAX = 2.8
 const PAPER_ZOOM_STEP = 0.1
 const PAPER_ZOOM_FALLBACK = 1.6
 const TIMELINE_AUTOPLAY_MS = 600
+
+/** Count non-whitespace runs in plain text (same notion as word-level diff tokens). */
+function countPlainWordRuns(s) {
+    const m = String(s ?? '').match(/\S+/g)
+    return m ? m.length : 0
+}
 
 export default {
     name: 'StudentEditorTimelineDiffViewer',
@@ -138,10 +147,30 @@ export default {
 
         sliderLabel() {
             const total = this.normalizedEntries.length
-            return this.$t('dashboard.editorTimelineDiffState', {
+            const base = this.$t('dashboard.editorTimelineDiffState', {
                 index: this.stepIndex + 1,
                 total,
             })
+            const entry = this.normalizedEntries[this.stepIndex]
+            const when = this.formatSnapshotDateTimeDe(entry)
+            return when ? `${base} · ${when}` : base
+        },
+
+        wordCountStatsLine() {
+            const entries = this.normalizedEntries
+            if (!entries.length) return ''
+            const i = Math.min(Math.max(0, this.stepIndex), entries.length - 1)
+            const cur = entries[i]?.text ?? ''
+            const n = countPlainWordRuns(cur)
+            if (i <= 0) {
+                const deltaStr = n === 0 ? '+0' : `+${n}`
+                return this.$t('dashboard.editorTimelineDiffWordStats', { count: n, delta: deltaStr })
+            }
+            const prev = entries[i - 1]?.text ?? ''
+            const prevN = countPlainWordRuns(prev)
+            const d = n - prevN
+            const deltaStr = d === 0 ? '+0' : d > 0 ? `+${d}` : String(d)
+            return this.$t('dashboard.editorTimelineDiffWordStats', { count: n, delta: deltaStr })
         },
 
         bodyHtml() {
@@ -205,6 +234,32 @@ export default {
     },
 
     methods: {
+        /** Parse timeline entry backup time to a Date (local components from ISO string or folder name). */
+        snapshotEntryToDate(entry) {
+            if (!entry) return null
+            if (entry.timestamp) {
+                const d = new Date(entry.timestamp)
+                if (!Number.isNaN(d.getTime())) return d
+            }
+            const name = entry.timestamp_name
+            if (!name) return null
+            const m = String(name).match(/^(\d{4})(\d{2})(\d{2})_(\d{2})_(\d{2})_(\d{2})$/)
+            if (!m) return null
+            return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6])
+        },
+
+        /** Format snapshot date/time as DD.MM.YYYY HH:mm (German numeric, local exam clock). */
+        formatSnapshotDateTimeDe(entry) {
+            const d = this.snapshotEntryToDate(entry)
+            if (!d || Number.isNaN(d.getTime())) return ''
+            const dd = String(d.getDate()).padStart(2, '0')
+            const mm = String(d.getMonth() + 1).padStart(2, '0')
+            const yyyy = d.getFullYear()
+            const hh = String(d.getHours()).padStart(2, '0')
+            const mi = String(d.getMinutes()).padStart(2, '0')
+            return `${dd}.${mm}.${yyyy} ${hh}:${mi}`
+        },
+
         /** Scroll paper stage to bottom so latest diff tail is visible after content updates. */
         scrollPaperToBottom() {
             const el = this.$refs.paperStage
@@ -469,7 +524,7 @@ export default {
     border-right: var(--js-borderright);
     border-left: var(--js-borderleft);
     margin-bottom: 4px;
-    color: #111;
+    color: #000;
     background-color: #fff;
     border-radius: 0;
     outline: 0;
@@ -491,6 +546,7 @@ export default {
 }
 .etd-footer {
     flex-shrink: 0;
+    min-width: 0;
     padding: 10px 16px 14px;
     background: rgb(20, 23, 26);
     border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -533,19 +589,43 @@ export default {
     flex: 1 1 auto;
     min-width: 0;
 }
-/* Same thumb teal as dashboard.vue .editor-cmargin-range (#20c997 / Bootstrap teal) */
+/* Same thumb as dashboard editor range — Bootstrap teal from app.scss (var --bs-teal) */
 .etd-timeline-range::-webkit-slider-thumb {
-    background-color: #20c997;
+    background-color: var(--bs-teal, #20c997);
 }
 .etd-timeline-range::-moz-range-thumb {
-    background-color: #20c997;
-    border-color: #20c997;
+    background-color: var(--bs-teal, #20c997);
+    border-color: var(--bs-teal, #20c997);
+}
+.etd-slider-row {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+    width: 100%;
+    min-width: 0;
 }
 .etd-slider-label {
     display: block;
     font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.45);
-    margin-bottom: 6px;
+}
+.etd-slider-label-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-bottom: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.etd-slider-stats {
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.45);
+    text-align: right;
+    white-space: nowrap;
 }
 :deep(.etd-plain) {
     white-space: pre-wrap;
@@ -553,32 +633,85 @@ export default {
     font-size: inherit;
     line-height: inherit;
     font-family: inherit;
+    color: #000;
 }
-@keyframes etd-diff-add-soft {
+:deep(.etd-diffroot) {
+    color: #000;
+}
+@keyframes etd-diff-bg-in-ins {
     from {
-        opacity: 0;
-        transform: translateY(0.06em);
+        background-color: color-mix(in srgb, var(--bs-teal, #20c997) 14%, transparent);
     }
     to {
-        opacity: 1;
-        transform: translateY(0);
+        background-color: color-mix(in srgb, var(--bs-teal, #20c997) 44%, transparent);
     }
 }
+@keyframes etd-diff-bg-in-chg {
+    from {
+        background-color: rgba(255, 146, 43, 0.12);
+    }
+    to {
+        background-color: rgba(255, 146, 43, 0.48);
+    }
+}
+@keyframes etd-diff-bg-in-ins-ws {
+    from {
+        background-color: color-mix(in srgb, var(--bs-teal, #20c997) 6%, transparent);
+    }
+    to {
+        background-color: color-mix(in srgb, var(--bs-teal, #20c997) 22%, transparent);
+    }
+}
+@keyframes etd-diff-bg-in-chg-ws {
+    from {
+        background-color: rgba(255, 146, 43, 0.05);
+    }
+    to {
+        background-color: rgba(255, 146, 43, 0.22);
+    }
+}
+:deep(.etd-del),
+:deep(.etd-ins),
+:deep(.etd-chg-old),
+:deep(.etd-chg-new) {
+    color: #000;
+    border-radius: 5px;
+    padding: 0.06em 0.2em;
+    margin: 0 0.03em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+}
 :deep(.etd-del) {
-    color: #ff6b6b;
+    background-color: rgba(255, 107, 107, 0.4);
     text-decoration: line-through;
+    text-decoration-color: rgba(0, 0, 0, 0.35);
 }
 :deep(.etd-ins) {
-    color: #69db7c;
-    animation: etd-diff-add-soft 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+    background-color: color-mix(in srgb, var(--bs-teal, #20c997) 44%, transparent);
+    animation: etd-diff-bg-in-ins 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 :deep(.etd-chg-old) {
-    color: #ff922b;
+    background-color: rgba(255, 146, 43, 0.3);
     text-decoration: line-through;
+    text-decoration-color: rgba(0, 0, 0, 0.35);
 }
 :deep(.etd-chg-new) {
-    color: #ff922b;
-    animation: etd-diff-add-soft 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+    background-color: rgba(255, 146, 43, 0.48);
+    animation: etd-diff-bg-in-chg 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+:deep(.etd-del.etd-token-ws) {
+    background-color: rgba(255, 107, 107, 0.16);
+}
+:deep(.etd-ins.etd-token-ws) {
+    background-color: color-mix(in srgb, var(--bs-teal, #20c997) 22%, transparent);
+    animation: etd-diff-bg-in-ins-ws 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+:deep(.etd-chg-old.etd-token-ws) {
+    background-color: rgba(255, 146, 43, 0.14);
+}
+:deep(.etd-chg-new.etd-token-ws) {
+    background-color: rgba(255, 146, 43, 0.22);
+    animation: etd-diff-bg-in-chg-ws 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 @media (prefers-reduced-motion: reduce) {
     :deep(.etd-ins),

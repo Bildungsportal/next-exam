@@ -108,6 +108,7 @@
         "editorTimelineDiffTitle": "Edit timeline",
         "editorTimelineDiffTooLong": "Text too long for word-level diff; showing without highlights.",
         "editorTimelineDiffTooltip": "Analyse .htm backups and show edit timeline (diff)",
+        "editorTimelineDiffWordStats": "{count} words {'|'} {delta}",
         "editorTemplateCaption": "Template",
         "editorTemplateInvalid": "Wrong file type",
         "editorTemplateInvalidText": "Only .odt or .docx files are allowed.",

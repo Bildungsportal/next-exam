@@ -108,6 +108,7 @@
         "editorTimelineDiffTitle": "Bearbeitungsverlauf",
         "editorTimelineDiffTooLong": "Text zu lang für Wort-Differenz; Anzeige ohne farbliche Hervorhebung.",
         "editorTimelineDiffTooltip": "Bearbeitungsverlauf aus .htm-Sicherungen (Diff)",
+        "editorTimelineDiffWordStats": "{count} Wörter {'|'} {delta}",
         "editorTemplateCaption": "Template",
         "editorTemplateInvalid": "Falscher Dateityp",
         "editorTemplateInvalidText": "Nur Dateien mit der Endung .odt oder .docx sind erlaubt.",
