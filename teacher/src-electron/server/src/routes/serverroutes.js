@@ -47,7 +47,7 @@ function requireNextExamAppSecret(req, res, next) {
     return next();
 }
 
-//serverRouter.use(requireNextExamAppSecret);
+serverRouter.use(requireNextExamAppSecret);  //this requires the shared app secret to be sent in the header of the request
 serverRouter.use('/control/', controlRoutes);
 serverRouter.use('/data/', dataRoutes);
 

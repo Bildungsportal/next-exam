@@ -121,6 +121,13 @@
         @send-file="(file) => dashboardExplorerSendFile(file)"
         @download-file="(file) => downloadFile(file)"
         @delete-file="(file) => fdelete(file)"
+        @timeline-diff="(file) => openStudentEditorTimelineDiff(file)"
+    />
+
+    <StudentEditorTimelineDiffViewer
+        :visible="showEditorTimelineViewer"
+        :document="editorTimelineViewerDoc"
+        @close="showEditorTimelineViewer = false"
     />
 
 
@@ -1322,6 +1329,7 @@ import PdfRenderer from '../components/PdfRenderer.vue'
 import ExamLog from '../components/ExamLog.vue'
 import SubmissionsView from '../components/SubmissionsView.vue'
 import DashboardExplorer from '../components/DashboardExplorer.vue'
+import StudentEditorTimelineDiffViewer from '../components/StudentEditorTimelineDiffViewer.vue'
 import StudentView from '../components/StudentView.vue'
 import examEventBus from '../utils/examEventBus.js'
 import { isStudentReachable, countReachableStudents } from '../utils/studentPresence.js'
@@ -1334,6 +1342,7 @@ import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles,
 import { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, configureEditorTemplate, removeEditorTemplate, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
 import { Exam } from '../types/api'
 import { generateEncryptionPassword } from '../utils/encryptionPassword.js'
+import { openStudentEditorTimelineDiff } from '../utils/studentEditorTimeline.js'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
 
 class EmptyWidget {
@@ -1354,6 +1363,7 @@ export default {
         ExamLog: ExamLog,
         SubmissionsView: SubmissionsView,
         DashboardExplorer: DashboardExplorer,
+        StudentEditorTimelineDiffViewer: StudentEditorTimelineDiffViewer,
         StudentView: StudentView
     },
     data() {
@@ -1426,6 +1436,8 @@ export default {
             studentsZoom: 1,
             showSubmissionsView: false,
             showExplorer: false,
+            showEditorTimelineViewer: false,
+            editorTimelineViewerDoc: null,
 
             timelimitWarnedByStartTs: {},
             setupStatusText: '',
@@ -1867,6 +1879,7 @@ computed: {
         showWorkfolder:showWorkfolder,                              // makes the dashboard explorer visible
         fdelete:fdelete,                                            // deletes a file
         openLatestFolder:openLatestFolder,                          // opens the newest folder that belongs to the current visible student
+        openStudentEditorTimelineDiff: openStudentEditorTimelineDiff, // scans .htm backups, writes *_editor_timeline.json, opens diff viewer
         showBase64FilePreview:showBase64FilePreview,                // displays a base64 encoded pdf in the preview panel
         showBase64ImagePreview:showBase64ImagePreview,              // displays a base64 encoded image in the preview panel
         showBase64PdfInRenderer:showBase64PdfInRenderer,            // displays a base64 encoded pdf in PdfRenderer component

@@ -66,9 +66,14 @@
                         <div v-if="file.type === 'file'" class="btn btn-sm btn-dark" :class="lockSendFile ? 'disabledexam' : ''" @click="$emit('send-file', file)" :title="$t('dashboard.send')">
                             <img src="/src/assets/img/svg/document-send.svg" width="16" height="16">
                         </div>
+                        <div v-if="file.type === 'dir' && isTimelineStudentDir(file)" class="btn btn-sm btn-dark" @click.stop="$emit('timeline-diff', file)" :title="$t('dashboard.editorTimelineDiffTooltip')">
+                            <img src="/src/assets/img/svg/code-context.svg" class="" width="16" height="16" alt="">
+                        </div>
+
                         <div class="btn btn-sm btn-dark" @click="$emit('download-file', file)" :title="$t('dashboard.download')">
                             <img src="/src/assets/img/svg/edit-download.svg" width="16" height="16">
                         </div>
+
                         <div class="btn btn-sm btn-dark" @click="$emit('delete-file', file)" :title="$t('dashboard.delete')">
                             <img src="/src/assets/img/svg/edit-delete.svg" width="16" height="16">
                         </div>
@@ -88,6 +93,8 @@
 </template>
 
 <script>
+import { isStudentExplorerRowForTimeline } from '../utils/studentEditorTimeline.js'
+
 export default {
     name: 'DashboardExplorer',
 
@@ -101,7 +108,13 @@ export default {
         backupdirectory:      { type: String, default: '' },
     },
 
-    emits: ['close', 'load-filelist', 'load-pdf', 'load-image', 'load-text', 'send-file', 'download-file', 'delete-file'],
+    emits: ['close', 'load-filelist', 'load-pdf', 'load-image', 'load-text', 'send-file', 'download-file', 'delete-file', 'timeline-diff'],
+
+    methods: {
+        isTimelineStudentDir(file) {
+            return isStudentExplorerRowForTimeline(file, this.workdirectory)
+        },
+    },
 }
 </script>
 

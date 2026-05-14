@@ -1,6 +1,9 @@
 @memV1
 RULE^agent^memRW^read CLAUDE §5+this file before nontrivial; append atoms post-learn; dedup; prune
 TECH^vue^api^Options API teacher/src; mirror sibling file; no script setup unless user migrates
+IPC^teacher^writeTeacherWorkdirUtf8File^invoke({servername,filepath,utf8})→write UTF-8; basename must end _editor_timeline.json; servername must exist in examServerList^teacher ipchandler.js+studentEditorTimeline.js
+PATH^dashboard^editorTimeline^teacher/src/utils/studentEditorTimeline.js + teacher/src/components/StudentEditorTimelineDiffViewer.vue; explorer button DashboardExplorer.vue; dashboard.vue wires @timeline-diff
+TECH^exam^editorTimelineJson^workdir student folder `<Student>_editor_timeline.json` (listed in explorer); schema {version,kind,studentFolder,generatedAt,jsonPath,entries[{timestamp_name,timestamp,text,sourceHtm}]}
 RULE^i18n^alphabetical^keep keys in teacher/src/locales/de.json+en.json alphabetically sorted within each object
 RULE^dashboard^setupLogic^exam setup funcs live in teacher/src/utils/examsetup.js; dashboard.vue should mostly import+map
 RULE^dashboard^kickStop^kick()+stopserver() getSubmissions+swal yellow banner only if activeSection examtype editor|activesheets; missing ABGABE PDF^teacher/src/utils/exammanagement.js

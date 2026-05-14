@@ -977,11 +977,12 @@ class IpcHandler {
                 for (const file of names) {
                     const filepath = path.join(absDir, file)
                     const ext = path.extname(file).toLowerCase()
+                    const allowListedJson = ext === '.json' && file.endsWith('_editor_timeline.json')
                     try {
                         const stats = await fs.promises.stat(filepath)
                         if (stats.isDirectory()) {
                             folders.push({ path: filepath, name: file, type: 'dir', ext: '', parent: absDir })
-                        } else if (stats.isFile() && !omitExtensions.includes(ext)) {
+                        } else if (stats.isFile() && (allowListedJson || !omitExtensions.includes(ext))) {
                             folders.push({ path: filepath, name: file, type: 'file', ext: ext, parent: absDir })
                         }
                     } catch (innerErr) {
@@ -1019,7 +1020,37 @@ class IpcHandler {
                 const out = decryptBufferIfNeeded(raw, mcServer, 'ipchandler @ readTeacherWorkdirFile')
                 return { status: 'success', sender: 'server', data: out }
             } catch (err) {
+                if (err && err.code === 'ENOENT') {
+                    return { status: 'error', sender: 'server', message: t('data.fileerror'), code: 'ENOENT' }
+                }
                 log.error('ipchandler @ readTeacherWorkdirFile:', err)
+                return { status: 'error', sender: 'server', message: t('data.fileerror'), code: err?.code }
+            }
+        })
+
+        /** Writes UTF-8 JSON from trusted teacher renderer; basename must end with _editor_timeline.json. */
+        ipcMain.handle('writeTeacherWorkdirUtf8File', async (_event, payload = {}) => {
+            const servername = payload?.servername
+            const filepath = payload?.filepath
+            const utf8 = payload?.utf8
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer) {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            if (!filepath || typeof filepath !== 'string' || typeof utf8 !== 'string') {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            const base = path.basename(filepath)
+            if (!base.endsWith('_editor_timeline.json')) {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            const absTarget = path.resolve(filepath)
+            try {
+                await fs.promises.mkdir(path.dirname(absTarget), { recursive: true })
+                await fs.promises.writeFile(absTarget, utf8, 'utf8')
+                return { status: 'success', sender: 'server', message: 'ok' }
+            } catch (err) {
+                log.error('ipchandler @ writeTeacherWorkdirUtf8File:', err)
                 return { status: 'error', sender: 'server', message: t('data.fileerror') }
             }
         })

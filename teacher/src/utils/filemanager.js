@@ -524,17 +524,20 @@ async function loadFilelist(directory){
             return
         }
         const filelist = res.filelist
+        // Resolve parent from listTeacherWorkdir meta row before sort (pinned dirs/files move it away from index 0).
+        const dirMeta = filelist.find((e) => typeof e?.parentdirectory === 'string' && typeof e?.currentdirectory === 'string')
+        const listedParentDir = dirMeta ? dirMeta.parentdirectory : ''
         //log.error(filelist)
         const pinnedDirs = ['ABGABE', 'logfiles', 'screenshots'];
         filelist.sort((a, b) => {
             const aPin = a.type === 'dir' && pinnedDirs.includes(a.name) ? 0 : (a.type === 'dir' ? 1 : 2);
             const bPin = b.type === 'dir' && pinnedDirs.includes(b.name) ? 0 : (b.type === 'dir' ? 1 : 2);
             if (aPin !== bPin) return aPin - bPin;
-            return a.name.localeCompare(b.name);
+            return String(a.name || '').localeCompare(String(b.name || ''))
         })
         this.localfiles = filelist;
         this.currentdirectory = directory
-        this.currentdirectoryparent = filelist[0].parentdirectory // currentdirectory and parentdirectory live on filelist[0] (see listTeacherWorkdir)
+        this.currentdirectoryparent = listedParentDir
         if (directory === this.workdirectory) {this.showWorkfolder(); }
     } catch (err) {
         log.error(err)
