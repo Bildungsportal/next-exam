@@ -32,13 +32,14 @@
 import { exec } from 'child_process'                          // run tccutil
 import { dialog, app } from 'electron'                         // show dialog and quit
 import log from 'electron-log';
+import { examApiFetch } from '../../../../shared/examApiFetch.js';
 
 
 
 
 export async function testNetworkPermission(serverip, serverApiPort) {                // returns true if fetch works
     try {
-            const res = await fetch(`https://${serverip}:${serverApiPort}/server/control/pong`, { method: 'GET', cache: 'no-store' }) // test request
+            const res = await examApiFetch(`https://${serverip}:${serverApiPort}/server/control/pong`, { method: 'GET', cache: 'no-store' }) // test request
             return res.ok
     } catch {  return false }
 }

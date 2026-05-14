@@ -46,15 +46,12 @@ function addParams(to){
 //we double check the password for now..  use proper auth process in the future ;-)
 // since we almost moved to single and local instance teacher server password is not needed at all #REFACTOR ? 
 async function getServerInfo(to){
-    let hostname = electron ? "localhost" : window.location.hostname
-   
-    const config = getConfig();
+
     let res
     try {
-        const response = await fetch(`https://${hostname}:${config.serverApiPort}/server/control/getserverinfo/${to.params.servername}`)
-        res = await response.json()
+        res = await window.ipcRenderer.invoke('getServerInfoForDashboard', to.params.servername)
     } catch (err) {
-        console.error(`router @ checkPasswd:    ${err}`)
+        console.error(`router @ getServerInfo: ${err}`)
         return false
     }
 
@@ -66,7 +63,7 @@ async function getServerInfo(to){
         return true 
     }
     else {  
-        console.log("router @ checkPasswd: serverinfo error"); 
+        console.log("router @ getServerInfo: serverinfo error"); 
         return false
     }
 }

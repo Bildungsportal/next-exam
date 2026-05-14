@@ -6,6 +6,7 @@ import log from 'electron-log';
 import crypto from 'crypto';
 import net from 'net';
 import { startExamWebdav, stopExamWebdav, EXAM_WEBDAV_PORT, EXAM_WEBDAV_MOUNT_PATH } from './examWebdavServer.js';
+import { NEXT_EXAM_API_SECRET, NEXT_EXAM_API_SECRET_HEADER } from '../../../../shared/nextExamApiSecret.js';
 
 let vmProc = null;
 let vmDisk = null;
@@ -430,8 +431,8 @@ async function verifyDiskSize({ workdirectory, qcow2Name, expectedSizeBytes }) {
     }
 }
 
-async function downloadDiskFromTeacher({ serverip, serverApiPort, servername, token, filename, workdirectory, overwrite = false, onProgress = null }) {
-    if (!serverip || !serverApiPort || !servername || !token) {
+async function downloadDiskFromTeacher({ serverip, serverApiPort, servername, studenttoken, filename, workdirectory, overwrite = false, onProgress = null }) {
+    if (!serverip || !serverApiPort || !servername || !studenttoken) {
         throw new Error('invalid download args');
     }
     if (!isSafeFilename(filename) || !filename.toLowerCase().endsWith('.qcow2')) {
@@ -447,13 +448,20 @@ async function downloadDiskFromTeacher({ serverip, serverApiPort, servername, to
     }
     const tmp = `${dest}.part`;
 
-    const urlPath = `/server/data/qemu/${encodeURIComponent(servername)}/${encodeURIComponent(token)}/${encodeURIComponent(filename)}`;
+    const urlPath = `/server/data/qemu/${encodeURIComponent(servername)}`;
+    const postBody = JSON.stringify({ filename });
     const options = {
         hostname: serverip,
         port: Number(serverApiPort),
         path: urlPath,
-        method: 'GET',
+        method: 'POST',
         rejectUnauthorized: false,
+        headers: {
+            [NEXT_EXAM_API_SECRET_HEADER]: NEXT_EXAM_API_SECRET,
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postBody),
+            Authorization: `Bearer ${studenttoken}`,
+        },
     };
 
     return await new Promise((resolve, reject) => {
@@ -503,6 +511,7 @@ async function downloadDiskFromTeacher({ serverip, serverApiPort, servername, to
             try { fs.unlinkSync(tmp); } catch (e) {}
             reject(err);
         });
+        req.write(postBody);
         req.end();
     });
 }

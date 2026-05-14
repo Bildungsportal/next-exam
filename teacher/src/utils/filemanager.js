@@ -2,6 +2,22 @@ import log from 'electron-log/renderer';
 import { Buffer } from 'buffer';
 import { swalQueued } from './swalQueue.js'
 
+/**
+ * Dashboard explorer: read file bytes from the active exam workdir (decrypted in main when applicable).
+ * Used by loadPDF (PDF preview), loadTextFile (log popup), loadImage (image preview) in this module.
+ */
+async function readWorkdirFileForDashboard(ctx, filepath) {
+    const res = await window.ipcRenderer.invoke('readTeacherWorkdirFile', {
+        servername: ctx.servername,
+        servertoken: ctx.servertoken,
+        filepath,
+    })
+    if (!res || res.status !== 'success' || res.data == null) {
+        throw new Error(res?.message || 'read failed')
+    }
+    return res.data
+}
+
 
 // DASHBOARD EXPLORER
 
@@ -24,13 +40,8 @@ function fdelete(file){
     })
     .then((result) => {
         if (result.isConfirmed) {
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/delete/${this.servername}/${this.servertoken}`, { 
-                method: 'POST',
-                headers: {'Content-Type': 'application/json' },
-                body: JSON.stringify({ filepath:file.path })
-            })
-            .then( res => res.json() )
-            .then( result => { 
+            ipcRenderer.invoke('deleteWorkdirItem', { servername: this.servername, filepath: file.path })
+            .then( result => {
                 log.info(result)
                 this.loadFilelist(this.currentdirectory)
             }).catch(err => { log.error(err)});
@@ -64,20 +75,25 @@ function downloadFile(file){
         return
     }
     log.info("requesting file for downlod ")
-    fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/download/${this.servername}/${this.servertoken}`, { 
-        method: 'POST',
-        headers: {'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename : file.name, path: file.path, type: file.type})
+    ipcRenderer.invoke('workdownloadExplorerItem', {
+        servername: this.servername,
+        servertoken: this.servertoken,
+        filename: file.name,
+        path: file.path,
+        type: file.type,
     })
-    .then( res => res.blob() )
-    .then( blob => {
-            //this is a trick to trigger the download dialog
-            let a = document.createElement("a");
-            a.href = window.URL.createObjectURL(blob);
-            a.setAttribute("download", file.name);
-            a.click();
+    .then((result) => {
+        if (!result || result.status !== 'success' || result.data == null) {
+            log.error('filemanager @ downloadFile:', result)
+            return
+        }
+        const blob = new Blob([result.data], { type: 'application/octet-stream' })
+        let a = document.createElement("a")
+        a.href = window.URL.createObjectURL(blob)
+        a.setAttribute("download", file.name)
+        a.click()
     })
-    .catch(err => { log.error(err)});
+    .catch(err => { log.error(err)})
 }
 
 
@@ -112,14 +128,14 @@ function dashboardExplorerSendFile(file){
     .then((input) => {
         if (input.isConfirmed) {
             let student = this.studentlist.find(element => element.token === input.value)  // fetch cerrect student that belongs to the token
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/sendtoclient/${this.servername}/${this.servertoken}/${student.token}`, { 
-                method: 'POST',
-                headers: {'Content-Type': 'application/json' },
-                body: JSON.stringify({ files:[ {name:file.name, path:file.path } ] })
+            ipcRenderer.invoke('setStudentStatus', {
+                servername: this.servername,
+                studenttoken: student.token,
+                fetchfiles: true,
+                files: [{ name: file.name, path: file.path }],
             })
-            .then( res => res.json() )
-            .then( result => { log.info(result)})
-            .catch(err => { log.error(err)});
+                .then((result) => { log.info(result) })
+                .catch((err) => { log.error(err) })
         }
     }).catch(err => { log.error(err)});
 }
@@ -128,12 +144,9 @@ function dashboardExplorerSendFile(file){
 
 // fetch file from disc - show preview
 function loadPDF(filepath, filename){
-    const form = new FormData()
-    form.append("filename", filepath)
-    //console.log(filepath)
-    fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/getpdf/${this.servername}/${this.servertoken}`, { method: 'POST', body: form })
-    .then( response => response.arrayBuffer())
-    .then( data => {
+    readWorkdirFileForDashboard(this, filepath)
+    .then( (raw) => {
+        const data = raw instanceof ArrayBuffer ? raw : new Uint8Array(raw).buffer
         URL.revokeObjectURL(this.currentpreview);  //speicher freigeben
      
         let isvalid = isValidPdf(data)
@@ -175,12 +188,10 @@ function escapeHtml(s){
 
 // fetch file from disc - show as text (e.g. .log)
 function loadTextFile(filepath, filename){
-    const form = new FormData()
-    form.append("filename", filepath)
     const titleText = buildLogViewerTitle(this.workdirectory, filepath, filename)
-    fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/getpdf/${this.servername}/${this.servertoken}`, { method: 'POST', body: form })
-        .then((response) => response.arrayBuffer())
-        .then((data) => {
+    readWorkdirFileForDashboard(this, filepath)
+        .then((raw) => {
+            const data = raw instanceof ArrayBuffer ? raw : new Uint8Array(raw).buffer
             const decoder = new TextDecoder('utf-8')
             let text = decoder.decode(data)
             const maxChars = 200000
@@ -248,11 +259,9 @@ function detectLogLevel(line){
 
 // fetch file from disc - show preview
 function loadImage(file){
-    const form = new FormData()
-    form.append("filename", file)
-    fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/getpdf/${this.servername}/${this.servertoken}`, { method: 'POST', body: form })
-        .then( response => response.arrayBuffer())
-        .then( data => {
+    readWorkdirFileForDashboard(this, file)
+        .then( (raw) => {
+            const data = raw instanceof ArrayBuffer ? raw : new Uint8Array(raw).buffer
             this.currentpreviewPath = file
             this.currentpreviewname = file.split('/').pop(); //needed for preview buttons
   
@@ -276,13 +285,16 @@ async function getLatest(){
 
 
     this.visualfeedback(this.$t("dashboard.summarizepdf"))
-    fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/getlatest/${this.servername}/${this.servertoken}`, { 
-        method: 'POST',
-        headers: {'Content-Type': 'application/json' },
-        body: JSON.stringify({ submissions: submissions })
-    })
-    .then( response => response.json() )
-    .then( async(responseObj) => {
+    try {
+        const responseObj = await window.ipcRenderer.invoke('buildTeacherCombinedLatestPdf', {
+            servername: this.servername,
+            servertoken: this.servertoken,
+            submissions,
+        })
+        if (!responseObj || responseObj.status !== 'success') {
+            log.error('filemanager @ getLatest:', responseObj)
+            return
+        }
         if (!responseObj.pdfBuffer ){
             log.info("filemanager @ getLatest: latest work not found")
             this.visualfeedback(this.$t("dashboard.nopdf"))
@@ -296,8 +308,9 @@ async function getLatest(){
         }
         // show pdf
         this.loadPDF(responseObj.pdfPath, "combined.pdf")
-        
-    }).catch(err => { log.error(err)});
+    } catch (err) {
+        log.error(err)
+    }
 }
 
 
@@ -499,14 +512,18 @@ async function printBase64(documentBase64 = this.currentpreviewBase64, type = th
 }
 
 
-function loadFilelist(directory){
-    fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/getfiles/${this.servername}/${this.servertoken}`, { 
-        method: 'POST',
-        headers: {'Content-Type': 'application/json' },
-        body: JSON.stringify({ dir : directory})
-    })
-    .then( response => response.json() )
-    .then( filelist => {
+async function loadFilelist(directory){
+    try {
+        const res = await window.ipcRenderer.invoke('listTeacherWorkdir', {
+            servername: this.servername,
+            servertoken: this.servertoken,
+            dir: directory,
+        })
+        if (!res || res.status !== 'success' || !Array.isArray(res.filelist)) {
+            log.error('filemanager @ loadFilelist:', res)
+            return
+        }
+        const filelist = res.filelist
         //log.error(filelist)
         const pinnedDirs = ['ABGABE', 'logfiles', 'screenshots'];
         filelist.sort((a, b) => {
@@ -517,9 +534,11 @@ function loadFilelist(directory){
         })
         this.localfiles = filelist;
         this.currentdirectory = directory
-        this.currentdirectoryparent = filelist[filelist.length-1].parentdirectory // the currentdirectory and parentdirectory properties are always on [0]
+        this.currentdirectoryparent = filelist[0].parentdirectory // currentdirectory and parentdirectory live on filelist[0] (see listTeacherWorkdir)
         if (directory === this.workdirectory) {this.showWorkfolder(); }
-    }).catch(err => { log.error(err)});
+    } catch (err) {
+        log.error(err)
+    }
 }
  
 export {loadFilelist, getLatest, processPrintrequest, loadImage, loadPDF, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer}

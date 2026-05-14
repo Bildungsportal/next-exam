@@ -24,7 +24,8 @@ function findSectionStart(doc, statsPos) {
 function countWordsAndChars(sliceText) {
   const normalized = sliceText.replace(/\r\n/g, '\n')
   const words = normalized.trim() ? normalized.trim().split(/\s+/).filter(Boolean).length : 0
-  return { chars: normalized.length, words }
+  const chars = normalized.replace(/\s/g, '').length // non-whitespace chars only
+  return { chars, words }
 }
 
 export default {

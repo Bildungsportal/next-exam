@@ -1334,6 +1334,7 @@ import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles,
 import { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, configureEditorTemplate, removeEditorTemplate, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
 import { Exam } from '../types/api'
 import { generateEncryptionPassword } from '../utils/encryptionPassword.js'
+import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
 
 class EmptyWidget {
     constructor() {
@@ -2067,14 +2068,14 @@ computed: {
                                 })
                                 .then(sendResult => {
                                     if (sendResult.isConfirmed) {
-                                        fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/sendtoclient/${this.servername}/${this.servertoken}/${student.token}`, {
-                                            method: 'POST',
-                                            headers: {'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ files: [{ name: fileName, path: filePath }] })
+                                        ipcRenderer.invoke('setStudentStatus', {
+                                            servername: this.servername,
+                                            studenttoken: student.token,
+                                            fetchfiles: true,
+                                            files: [{ name: fileName, path: filePath }],
                                         })
-                                        .then(res => res.json())
-                                        .then(result => { console.log("dashboard @ login bakCheck:", result.message) })
-                                        .catch(err => { console.error("dashboard @ login bakCheck:", err) })
+                                            .then((result) => { console.log('dashboard @ login bakCheck:', result.message) })
+                                            .catch((err) => { console.error('dashboard @ login bakCheck:', err) })
                                     }
                                 })
                             }
@@ -2632,40 +2633,35 @@ computed: {
         // we save serverstatus everytime we start an exam - therefore exams can be resumed easily by the teacher if something wicked happens
         async getPreviousServerStatus(){
             this.config = await ipcRenderer.invoke('getconfigasync')
-            let result = fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/getserverstatus/${this.servername}/${this.servertoken}`, { method: 'POST', headers: {'Content-Type': 'application/json' },})
-            .then( res => res.json())
-            .then( async (response) => {
-                if (response.serverstatus === false) {
-                    this.serverstatus.backupdirectory = this.config.backupdirectory || false
-                    this.migrateServerStatus()
-                    this.setServerStatus()  // there is no serverstatus - we need to set it to default
-                    return
-                }
-                this.serverstatus = response.serverstatus // we slowly move things over to a centra serverstatus object
+            const response = await ipcRenderer.invoke('getServerStatusFromDisk', this.servername)
+            if (response.serverstatus === false) {
+                this.serverstatus.backupdirectory = this.config.backupdirectory || false
                 this.migrateServerStatus()
-                if (!this.serverstatus.backupdirectory) {  // preserve backupdirectory set in UI if not in saved status
-                    this.serverstatus.backupdirectory = this.config.backupdirectory || false
-                }
-                           
+                this.setServerStatus()  // there is no serverstatus - we need to set it to default
+                return
+            }
+            this.serverstatus = response.serverstatus // we slowly move things over to a centra serverstatus object
+            this.migrateServerStatus()
+            if (!this.serverstatus.backupdirectory) {  // preserve backupdirectory set in UI if not in saved status
+                this.serverstatus.backupdirectory = this.config.backupdirectory || false
+            }
 
-                if (this.serverstatus.examSections[this.serverstatus.activeSection].examtype === "microsoft365"){  // unfortunately we can't automagically reconnect the teacher without violating privacy
-                    this.serverstatus.exammode = false
-                    if (this.serverstatus.examSections[this.serverstatus.activeSection].groupA?.examConfig?.microsoft365) this.serverstatus.examSections[this.serverstatus.activeSection].groupA.examConfig.microsoft365.template = {}
-                    if (this.serverstatus.examSections[this.serverstatus.activeSection].groupB?.examConfig?.microsoft365) this.serverstatus.examSections[this.serverstatus.activeSection].groupB.examConfig.microsoft365.template = {}
-                    Object.values(this.serverstatus.examSections).forEach(section => { section.locked = false }) // crash recovery must unlock every ms365 section
-                    this.serverstatus.lockedSection = this.serverstatus.activeSection
-                    this.$swal.fire({
-                        title: this.$t("dashboard.attention"),
-                        text: this.$t("dashboard.msoWarn"),
-                        icon: "info"
-                    })
-                }
 
-                this.setServerStatus()  //  we fetched a backup of serverstatus and now we make sure the backend has the updated settings for the students to fetch
-                return true
-            })
-            .catch(err => { console.warn(err) })
-            return result
+            if (this.serverstatus.examSections[this.serverstatus.activeSection].examtype === "microsoft365"){  // unfortunately we can't automagically reconnect the teacher without violating privacy
+                this.serverstatus.exammode = false
+                if (this.serverstatus.examSections[this.serverstatus.activeSection].groupA?.examConfig?.microsoft365) this.serverstatus.examSections[this.serverstatus.activeSection].groupA.examConfig.microsoft365.template = {}
+                if (this.serverstatus.examSections[this.serverstatus.activeSection].groupB?.examConfig?.microsoft365) this.serverstatus.examSections[this.serverstatus.activeSection].groupB.examConfig.microsoft365.template = {}
+                Object.values(this.serverstatus.examSections).forEach(section => { section.locked = false }) // crash recovery must unlock every ms365 section
+                this.serverstatus.lockedSection = this.serverstatus.activeSection
+                this.$swal.fire({
+                    title: this.$t("dashboard.attention"),
+                    text: this.$t("dashboard.msoWarn"),
+                    icon: "info"
+                })
+            }
+
+            this.setServerStatus()  //  we fetched a backup of serverstatus and now we make sure the backend has the updated settings for the students to fetch
+            return true
         },
 
 
@@ -2693,25 +2689,23 @@ computed: {
          * store the current serverstatus object in the backend
          * this should be the goTo function from now on to update the backend in a single request
         */
-        setServerStatus(){
-            return fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setserverstatus/${this.servername}/${this.servertoken}`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json' },
-                body: JSON.stringify({ serverstatus: this.serverstatus })
-            })
-                .then((res) => res.json())
-                .then((response) => {
-                    if (response.status === 'error') {
-                        console.error('dashboard @ setServerStatus:', response.message);
-                        this.status(response.message || 'Serverstatus speichern fehlgeschlagen.');
-                    }
-                    return response;
+        async setServerStatus(){
+            try {
+                const serverstatus = JSON.parse(JSON.stringify(this.serverstatus))
+                const response = await ipcRenderer.invoke('setServerStatus', {
+                    servername: this.servername,
+                    serverstatus,
                 })
-                .catch((err) => {
-                    console.error('dashboard @ setServerStatus:', err);
-                    this.status('Server nicht erreichbar (Serverstatus).');
-                    throw err;
-                });
+                if (response.status === 'error') {
+                    console.error('dashboard @ setServerStatus:', response.message);
+                    this.status(response.message || 'Serverstatus speichern fehlgeschlagen.');
+                }
+                return response
+            } catch (err) {
+                console.error('dashboard @ setServerStatus:', err);
+                this.status('Server nicht erreichbar (Serverstatus).');
+                throw err
+            }
         },
 
         // setup groups
@@ -2808,15 +2802,17 @@ computed: {
          * @param {*} bodyobject an object that contains the studentstatus or student attibute that needs to be set in the servers student representation
          * @param studenttoken  the unique token to identify a student
          */
-        setStudentStatus(bodyobject, studenttoken){
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${studenttoken}`, { 
-                method: 'POST',
-                headers: {'Content-Type': 'application/json' },
-                body: JSON.stringify(bodyobject )
-            })
-            .then( res => res.json() )
-            .then( result => { console.log("dashboard @ setStudentStatus:", result.message)})
-            .catch(err => { console.error(err)});
+        async setStudentStatus(bodyobject, studenttoken){
+            try {
+                const result = await ipcRenderer.invoke('setStudentStatus', {
+                    ...bodyobject,
+                    servername: this.servername,
+                    studenttoken,
+                })
+                console.log('dashboard @ setStudentStatus:', result.message)
+            } catch (err) {
+                console.error(err)
+            }
         },
 
         selectPrinter(printer){
@@ -3220,23 +3216,18 @@ computed: {
                 .then((sendResult) => {
                     if (sendResult.isConfirmed) {
                         // Send the BAK file to the student
-                        fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/sendtoclient/${this.servername}/${this.servertoken}/${student.token}`, { 
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json' },
-                            body: JSON.stringify({ 
-                                files: [{ 
-                                    name: fileName, 
-                                    path: filePath 
-                                }] 
+                        ipcRenderer.invoke('setStudentStatus', {
+                            servername: this.servername,
+                            studenttoken: student.token,
+                            fetchfiles: true,
+                            files: [{ name: fileName, path: filePath }],
+                        })
+                            .then((result) => {
+                                console.log("dashboard @ ipcRenderer.on('reconnected'):", result.message)
                             })
-                        })
-                        .then(res => res.json())
-                        .then(result => { 
-                            console.log("dashboard @ ipcRenderer.on('reconnected'):", result.message)
-                        })
-                        .catch(err => { 
-                            console.error("dashboard @ ipcRenderer.on('reconnected'):", err)
-                        })
+                            .catch((err) => {
+                                console.error("dashboard @ ipcRenderer.on('reconnected'):", err)
+                            })
                     }
                 })
                 .catch(err => { console.error("dashboard @ ipcRenderer.on('reconnected'):", err) })

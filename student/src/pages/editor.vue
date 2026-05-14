@@ -437,7 +437,7 @@
         <div id="focuswarning" class="infodiv p-4 d-block focuswarning">
             <div class="mb-3 row">
                 <div class="mb-3 "> {{ $t('editor.leftkiosk') }} <br> {{ $t('editor.tellsomeone') }}</div>
-                <div v-if="focusLostMessage" class="mb-3 text-dark fw-bold">{{ focusLostMessage }}</div>
+                <div v-if="focusLostMessage" class="mb-3 text-dark fw-bold" style="white-space: pre-line">{{ focusLostMessage }}</div>
                 <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32">
                 <div class="mt-3"> {{ timesinceentry }}</div>
             </div>
@@ -672,10 +672,8 @@
     <div id="statusbar" style="padding-left:15px;padding-right:8px;">
         <div class="statusbar-left">
             <!-- Static text with v-once to prevent re-rendering since $t apparently performs performance measures each time causing memory bloat -->
-            <span v-once>{{ $t("editor.words") }}:</span> <span>{{ wordcount }}</span> | <span v-once>{{
-                $t("editor.chars")
-            }}:</span> <span>{{ charcount }}</span>
-            &nbsp;
+            <span>{{ wordcount }}</span> <span v-once>{{ $t("editor.words") }}</span>,  <span>{{ charcount }}</span> <span v-once>{{$t("editor.chars")}}</span>
+            &nbsp; | &nbsp;
             <span v-once id="editselectedtext"> {{ $t("editor.selected") }}: </span> <span
                 id="editselected"> {{ selectedWordCount }}/{{ selectedCharCount }}</span>
         </div>
@@ -799,6 +797,7 @@ import {getExamMaterials, loadDOCX, loadHTML, loadImage, loadODT, loadPDF, playA
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 
 import {SignalBridge} from '../utils/signalBridge.js'
+import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
 
 const lowlight = createLowlight(common)
 
@@ -1705,7 +1704,7 @@ export default {
 
             // this currentpreviewBase64 contains the current visible pdf as base64 string
             const endpoint = printrequest ? 'printjob' : 'submission'
-            const url = `https://${this.serverip}:${this.serverApiPort}/server/control/${endpoint}/${this.servername}/${this.token}`;
+            const url = `https://${this.serverip}:${this.serverApiPort}/server/control/${endpoint}/${this.servername}`;
             const sr = typeof saveReason === 'string' ? saveReason : 'n/a'
             const payload = {
                 document: this.currentpreviewBase64,
@@ -1715,10 +1714,10 @@ export default {
                 saveReason: sr
             }
 
-            fetch(url, {
+            examApiFetch(url, {
                 method: "POST",
                 cache: "no-store",
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', Authorization: `Bearer ${this.token}`},
                 body: JSON.stringify(payload),
             })
             .then(response => {
@@ -2310,8 +2309,25 @@ export default {
             event.stopPropagation();
         },
 
+        /** Keys whose OS auto-repeat looks like scripted timing — exclude from typingRhythm statistics */
+        isTypingRhythmExemptKey(e) {
+            const code = e.code;
+            if (code === 'Backspace' || code === 'Delete' || code === 'Space') return true;
+            if (code === 'Enter' || code === 'NumpadEnter') return true;
+            const key = e.key;
+            if (key === 'Backspace' || key === 'Delete' || key === 'Enter') return true;
+            if (key === ' ') return true;
+            return false;
+        },
+
         handleTypingRhythmKeydown(e) {
             if (e.isComposing) return;
+            if (this.isTypingRhythmExemptKey(e)) {
+                const s = this.typingRhythm;
+                s.deltas = [];
+                s.lastTs = 0;
+                return;
+            }
             const now = Date.now();
             const s = this.typingRhythm;
             if (s.lastTs > 0) {
@@ -2336,7 +2352,7 @@ export default {
                 s.lastLogTs = now;
                 console.log('editor @ typingRhythm: suspicious typing rhythm', { meanMs: mean, stdevMs: stdev, deltasMs: [...s.deltas] });
                 if (this.focus) {
-                    this.sendFocuslost(false, { instantBlock: true, forceBackendLock: true, message: 'Automatische Texteingabe erkannt. Student Computer kompromittiert.' });
+                    this.sendFocuslost(false, { instantBlock: true, forceBackendLock: true, message: 'Automatisierte Texteingabe erkannt\nDieser Computer ist möglicherweise kompromittiert' });
                 }
             }
         },
@@ -2643,7 +2659,7 @@ export default {
 @media print { //this controls how the editor view is printed (to pdf)
 
 
-    #editortoolbar, #webview, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer, span.NXTEhighlight::after, #highlight-layer, #languagetool, #clipboard-sidebar, #preview, #pdfembed, .pdf-toolbar, .split-divider {
+    #editortoolbar, #webview, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer, span.NXTEhighlight::after, #highlight-layer, #languagetool, #clipboard-sidebar, #preview, #pdfembed, .pdf-toolbar, .split-divider, .caret-context-label {
         display: none !important;
     }
 
@@ -2709,8 +2725,13 @@ export default {
         border-right: var(--js-borderright) !important;
         border-left: var(--js-borderleft) !important;
         margin-bottom: 4px !important;
+        caret-color: transparent !important; // hide native text caret in print / PDF capture
     }
 
+    .ProseMirror-gapcursor,
+    .prosemirror-dropcursor {
+        display: none !important;
+    }
 
     .ProseMirror {
         hr {

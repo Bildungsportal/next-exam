@@ -246,7 +246,7 @@
 </template>
 
 <script>
-import { parsePdfToPages } from '../utils/pdfparser/index.js';
+import { parsePdfToPages } from 'next-exam-shared/pdfparser/index.js';
 import Swal from 'sweetalert2';
 
 export default {

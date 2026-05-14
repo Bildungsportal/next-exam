@@ -4,6 +4,7 @@
  */
 
 import { isElectronWindow } from '../types/platform';
+import { examApiFetch } from 'next-exam-shared/examApiFetch.js';
 
 const log = { info: (...a) => console.log(...a), warn: (...a) => console.warn(...a), error: (...a) => console.error(...a) };
 
@@ -101,10 +102,14 @@ async function captureAndUpload(signalBridge, config, sharedRef) {
     };
 
     const url = `https://${serverip}:${serverApiPort}/server/control/updatescreenshot`;
-    const res = await fetch(url, {
+    const headers = { 'Content-Type': 'application/json' };
+    if (clientinfo.token) {
+        headers.Authorization = `Bearer ${clientinfo.token}`;
+    }
+    const res = await examApiFetch(url, {
       method: 'POST',
       cache: 'no-store',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload),
     });
     if (!res.ok) {

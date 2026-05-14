@@ -143,7 +143,7 @@
         "spellcheckdeactivate": "Rechtschreibprüfung deaktivieren",
         "splitview": "Spaltenansicht",
         "statsrule": "Linie mit Abschnittszähler (Zeichen/Wörter)",
-        "statsruleBadge": "{chars} Zeichen, {words} Wörter",
+        "statsruleBadge": "{words} Wörter, {chars} Zeichen",
         "subscript": "tiefgestellt",
         "success": "Erfolg",
         "superscript": "hochgestellt",

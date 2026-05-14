@@ -101,11 +101,13 @@ export default defineConfig(( ctx: any ) => {
         viteConf.css.preprocessorOptions.scss = viteConf.css.preprocessorOptions.scss || {};
         viteConf.css.preprocessorOptions.scss.silenceDeprecations = ['color-functions', 'if-function'];
         // Resolve pdfjs-dist legacy build (package has no exports for legacy subpath)
+        const sharedDir = path.resolve(__dirname, '..', 'shared');
         viteConf.resolve = viteConf.resolve || {};
         viteConf.resolve.alias = {
           ...viteConf.resolve.alias,
           'pdfjs-dist/legacy/build/pdf.mjs': pdfjsLegacyPdf,
           'pdfjs-dist/legacy/build/pdf.worker.mjs': pdfjsLegacyWorker,
+          'next-exam-shared': sharedDir,
         };
         // Ensure single copy of TipTap/ProseMirror to avoid "Duplicate use of selection JSON ID gapcursor"
         viteConf.resolve.dedupe = viteConf.resolve.dedupe || [];

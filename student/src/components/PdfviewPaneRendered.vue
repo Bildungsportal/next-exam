@@ -117,7 +117,7 @@
 </template>
 
 <script>
-    import { parsePdfToPages } from '../utils/pdfparser/index.js'
+    import { parsePdfToPages } from 'next-exam-shared/pdfparser/index.js'
     import { SignalBridge } from '../utils/signalBridge.js'
 
     const signalBridge = new SignalBridge(window)

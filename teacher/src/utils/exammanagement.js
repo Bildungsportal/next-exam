@@ -332,13 +332,13 @@ async function kick(studenttoken, studentip){
             const kickedStudent = this.studentlist.find(s => s.token === studenttoken)
             console.log('[examlog] kick:', kickedStudent?.clientname, 'events before:', examEventBus.events.length)
             if (kickedStudent) examEventBus.push('kick', kickedStudent)
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${studenttoken}`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json' },
-                body: JSON.stringify({ delfolder : delfolderonexit, kick : true } )
+            ipcRenderer.invoke('setStudentStatus', {
+                servername: this.servername,
+                studenttoken,
+                delfolder: delfolderonexit,
+                kick: true,
             })
-            .then( res => res.json() )
-            .then( result => { log.info("exammanagment @ kick:", result.message)});
+                .then((result) => { log.info('exammanagment @ kick:', result.message) })
         }
     });
 }
@@ -348,10 +348,13 @@ async function kick(studenttoken, studentip){
 //restore focus state for specific student -- we tell the client that his status is restored which will then (on the next update) update it's focus state on the server 
 function restore(studenttoken){
     this.visualfeedback(this.$t("dashboard.restore"),2000)
-    fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/restore/${this.servername}/${this.servertoken}/${studenttoken}`)
-        .then( response => response.json() )
-        .then( data => { log.info(`exammanagment @ restore:  ${data.message}`)  })
-        .catch( err => {log.error(`exammanagment @ restore:  ${err}`)});
+    ipcRenderer.invoke('setStudentStatus', {
+        servername: this.servername,
+        studenttoken,
+        restorefocusstate: true,
+    })
+        .then((data) => { log.info(`exammanagment @ restore:  ${data.message}`) })
+        .catch((err) => { log.error(`exammanagment @ restore:  ${err}`) })
 }
 
 
@@ -371,24 +374,25 @@ function getFiles(who='all', feedback=false, quiet=false, includeStudentLog=fals
     }
     else { 
         log.info(`exammanagment @ getFiles: requesting files from ${who}`)
-        // fetch files from clients - this basically just sets studentstatus (we have setstudentstatus/ for that now) to inform the client(s) to send their exam
-        const logQuery = includeStudentLog ? '?log=true' : ''
-        fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/fetch/${this.servername}/${this.servertoken}/${who}${logQuery}`)  // who is either all or token; ?log=true sets sendlog for next-exam-student.log upload
-        .then(response => {
-            if (!response.ok) {  throw new Error('Network response was not ok');  }
-            return response.json(); 
+        ipcRenderer.invoke('setStudentStatus', {
+            servername: this.servername,
+            studenttoken: who,
+            sendexam: true,
+            sendlog: includeStudentLog,
         })
-        .then(data => {
-            
-            if (feedback) { this.visualfeedback(data.message, 2000);  } // visual feedback if requested
-            else {
-                if (!quiet) {this.status(data.message);   }// show status message if not in "quiet" mode
-            }
-        })
-        .catch(error => {  log.error(error);   });
-
-
-
+            .then((data) => {
+                if (data.status === 'error') {
+                    throw new Error(data.message || 'setStudentStatus failed')
+                }
+                if (feedback) {
+                    this.visualfeedback(data.message, 2000)
+                } else if (!quiet) {
+                    this.status(data.message)
+                }
+            })
+            .catch((error) => {
+                log.error(error)
+            })
     }
 }
 
@@ -496,27 +500,28 @@ function sendFiles(who) {
             }
         }
     })
-    .then((input) => {
+    .then(async (input) => {
         this.files = input.value
         if (!this.files) { this.status(this.$t("dashboard.nofiles")); return }
         this.status(this.$t("dashboard.uploadfiles"));
 
-        //create a new form
-        const formData = new FormData()
-        formData.append('servertoken', this.servertoken);
-        formData.append('servername', this.servername);
-
+        const filesPayload = []
         for (const i of Object.keys(this.files)) {
-            let filename = encodeURIComponent(this.files[i].name) // we need to encode the filename because sending formdata encodes non-ASCII characters in a not reversable way
-            formData.append('files', this.files[i], filename)  // single file is sent as object.. multiple files as array..
+            const f = this.files[i]
+            const ab = await f.arrayBuffer()
+            filesPayload.push({ name: f.name, data: new Uint8Array(ab) })
         }
-        
-        // group managment - send files to specific group
-        if (this.serverstatus.examSections[this.serverstatus.activeSection].groups && who == "all"){ who = activeGroup}  //nur wenn who == all wurde der allgemeine filesend dialog aufgeruden. who kann auch ein student token sein
 
-        //console.log(formData)
-        fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/upload/${this.servername}/${this.servertoken}/${who}`, { method: "POST", body: formData })
-        .then( (response) => response.json() )
+        // group managment - send files to specific group
+        let whoParam = who
+        if (this.serverstatus.examSections[this.serverstatus.activeSection].groups && who == "all"){ whoParam = activeGroup}  //nur wenn who == all wurde der allgemeine filesend dialog aufgeruden. who kann auch ein student token sein
+
+        window.ipcRenderer.invoke('uploadTeacherFiles', {
+            servername: this.servername,
+            servertoken: this.servertoken,
+            who: whoParam,
+            files: filesPayload,
+        })
         .then( (data) => {log.info("exmmmanagment @ sendFiles:", data) })
         .catch( err =>{ log.error(`${err}`) })
     });    
@@ -569,13 +574,12 @@ function delfolderquestion(event, token="all"){
     .then((result) => {
         if (result.isConfirmed) {
                 // inform student that folder needs to be deleted
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${effectiveToken}`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json' },
-                body: JSON.stringify({ delfolder : true } )
+            ipcRenderer.invoke('setStudentStatus', {
+                servername: this.servername,
+                studenttoken: effectiveToken,
+                delfolder: true,
             })
-            .then( res => res.json() )
-            .then( result => { log.info("exammanagment @ delfolderquestion:", result.message)});
+                .then((result) => { log.info('exammanagment @ delfolderquestion:', result.message) })
         } 
     });  
 }
@@ -641,24 +645,23 @@ async function activateSpellcheckForStudent(token, clientname){
         if (!languagetool){
             console.log(`de-activating spellcheck for user: ${clientname} `)
             // inform student that spellcheck can be activated
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${token}`, { 
-                method: 'POST',
-                headers: {'Content-Type': 'application/json' },
-                body: JSON.stringify({ activatePrivateSpellcheck : false } )
+            ipcRenderer.invoke('setStudentStatus', {
+                servername: this.servername,
+                studenttoken: token,
+                activatePrivateSpellcheck: false,
             })
-            .then( res => res.json() )
-            .then( result => { log.info("exammanagement @ activatespellcheckforstudent: " ,result.message); this.fetchInfo();});
+                .then((result) => { log.info('exammanagement @ activatespellcheckforstudent:', result.message); this.fetchInfo() })
         }
         else {
 
             // inform student that spellcheck can be activated
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${token}`, { 
-                method: 'POST',
-                headers: {'Content-Type': 'application/json' },
-                body: JSON.stringify({ activatePrivateSpellcheck : true, activatePrivateSuggestions: suggestions} )
+            ipcRenderer.invoke('setStudentStatus', {
+                servername: this.servername,
+                studenttoken: token,
+                activatePrivateSpellcheck: true,
+                activatePrivateSuggestions: suggestions,
             })
-            .then( res => res.json() )
-            .then( result => { log.info("exammanagement @ activatespellcheckforstudent: " ,result.message); this.fetchInfo();});
+                .then((result) => { log.info('exammanagement @ activatespellcheckforstudent:', result.message); this.fetchInfo() })
         }
     })  
 }

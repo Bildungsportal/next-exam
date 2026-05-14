@@ -969,19 +969,13 @@ export default {
                     return;
                 }
 
-                let payload = {
-                    bip: isBip,
-                    bipId: bipId
-                }
-
-                fetch(`https://${this.hostname}:${this.serverApiPort}/server/control/start/${this.servername.toLowerCase()}/${this.effectiveExamPassword}`, { 
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                })
-                .then( res => res.json())
-                .then( async response => { 
-                   
+                try {
+                    const response = await ipcRenderer.invoke('startExamServer', {
+                        servername: this.servername.toLowerCase(),
+                        passwd: this.effectiveExamPassword,
+                        bip: isBip,
+                        bipId: bipId,
+                    })
                     if (response.status === "success") {  //directly log in
                         this.status(response.message);
                         await this.sleep(1000);
@@ -1002,8 +996,7 @@ export default {
                     else { 
                         this.status(response.message); 
                     }
-                })
-                .catch(err => { this.status(err); console.warn(err) })
+                } catch (err) { this.status(err); console.warn(err) }
             } 
         },
         showCopyleft(){

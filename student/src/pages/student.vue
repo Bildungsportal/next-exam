@@ -272,6 +272,7 @@ import config from '../../src-electron/main/config.js'
 import {SignalBridge} from '../utils/signalBridge.js'
 import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync } from '../utils/screenshotCapture.js'
 import { Exam } from '../types/api'
+import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
 
 
 // Capture unhandled promise rejections
@@ -1051,7 +1052,7 @@ export default {
                         if (this.serverlistAdvanced.length == 0) {
                             this.status("Searching for exams...")
                         }
-                        fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/serverlist`)
+                        examApiFetch(`https://${this.serverip}:${this.serverApiPort}/server/control/serverlist`)
                             .then(response => response.json()) // Parse JSON response
                             .then(data => {
                                 if (data && data.status === "success") {
@@ -1152,7 +1153,7 @@ export default {
                 const serverIdentifier = this.getServerIdentifier(server);
                 const isManual = this.isManuallyAddedServer(server);
                 const signal = AbortSignal.timeout(4000); // 4000 milliseconds = 4 seconds
-                fetch(`https://${server.serverip}:${this.serverApiPort}/server/control/pong`, {
+                examApiFetch(`https://${server.serverip}:${this.serverApiPort}/server/control/pong`, {
                     method: 'GET',
                     signal
                 })
@@ -1221,7 +1222,7 @@ export default {
                     serverip: this.clientinfo?.serverip,
                     serverApiPort: this.serverApiPort,
                     servername: this.clientinfo?.servername,
-                    token: this.token,
+                    studenttoken: this.token,
                     filename,
                     overwrite
                 });

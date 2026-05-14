@@ -33,6 +33,7 @@ import { encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto
 import { runRemoteCheck } from './remoteCheck.js'
 import { logNetworkActiveProcesses } from './networkActiveProcesses.js'
 import { getVMFindings } from './vmDetection.js'
+import { examApiFetch } from '../../../../shared/examApiFetch.js'
 import languageToolServer from './lt-server.js';
 import qemuService from './qemuService.js';
 import { stopProxy } from './vncproxy.js';
@@ -282,40 +283,48 @@ import { switchExamSection } from './switchExamSection.js';
             if (this.multicastClient.clientinfo.virtualized && !this.multicastClient.clientinfo.vmFindings) {
                 this.multicastClient.clientinfo.vmFindings = getVMFindings();
             }
-            let payload = {clientinfo: this.multicastClient.clientinfo}
+            const bearer = this.multicastClient.clientinfo.token
+            if (bearer) {
+                let payload = {clientinfo: this.multicastClient.clientinfo}
 
-            fetch(`https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/update`, {
-                method: "POST",
-                cache: "no-store",
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
-            })
-            .then(response => {
-                if (!response.ok) { throw new Error('Network response was not ok'); }
-                return response.json();
-            })
-            .then(data => {
-                if (data.status === "error") {
-                    if      (data.message === "notavailable"){ log.warn('communicationhandler @ requestUpdate: Exam Instance not found!');        this.multicastClient.beaconsLost = 5; }    // exam instance not available but server reachable
-                    else if (data.message === "removed"){      
-                        log.warn('communicationhandler @ requestUpdate: Student registration not found!'); 
-                        this.kickStudent()
-                    }   // student got kicked - we handle this differently now. teacher stores "kicked" for student to collect. student is removed from server when collecting kicked info. student closes exam and cleans up.
-                    else {                                     log.warn(`communicationhandler @ requestUpdate: ${this.multicastClient.beaconsLost} Heartbeat lost..`);              this.multicastClient.beaconsLost += 1;}   // heartbeat lost server not reachable
-                } else if (data.status === "success") {
-                    this.multicastClient.beaconsLost = 0; // This also counts as a successful heartbeat - keep connection alive
-                    this.multicastClient.clientinfo.printrequest = false  //set this to false after the request left the client to prevent double triggering
-                    const serverStatusDeepCopy = JSON.parse(JSON.stringify(data.serverstatus));
-                    const studentStatusDeepCopy = JSON.parse(JSON.stringify(data.studentstatus)); 
-                    this.processUpdatedServerstatus(serverStatusDeepCopy, studentStatusDeepCopy);// Process received data
-                }
-            })
-            .catch(error => {
-                this.multicastClient.beaconsLost += 1;
-                log.error(`communicationhandler @ requestUpdate: (${this.multicastClient.beaconsLost}) ${error}`);
-            });
+                examApiFetch(`https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/update`, {
+                    method: "POST",
+                    cache: "no-store",
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${bearer}`,
+                    },
+                    body: JSON.stringify(payload),
+                })
+                .then(response => {
+                    if (!response.ok) { throw new Error('Network response was not ok'); }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === "error") {
+                        if      (data.message === "notavailable"){ log.warn('communicationhandler @ requestUpdate: Exam Instance not found!');        this.multicastClient.beaconsLost = 5; }    // exam instance not available but server reachable
+                        else if (data.message === "removed"){
+                            log.warn('communicationhandler @ requestUpdate: Student registration not found!');
+                            this.kickStudent()
+                        }   // student got kicked - we handle this differently now. teacher stores "kicked" for student to collect. student is removed from server when collecting kicked info. student closes exam and cleans up.
+                        else if (data.message === "authrequired") {
+                            log.warn('communicationhandler @ requestUpdate: missing or invalid Authorization Bearer')
+                            this.multicastClient.beaconsLost += 1
+                        }
+                        else {                                     log.warn(`communicationhandler @ requestUpdate: ${this.multicastClient.beaconsLost} Heartbeat lost..`);              this.multicastClient.beaconsLost += 1;}   // heartbeat lost server not reachable
+                    } else if (data.status === "success") {
+                        this.multicastClient.beaconsLost = 0; // This also counts as a successful heartbeat - keep connection alive
+                        this.multicastClient.clientinfo.printrequest = false  //set this to false after the request left the client to prevent double triggering
+                        const serverStatusDeepCopy = JSON.parse(JSON.stringify(data.serverstatus));
+                        const studentStatusDeepCopy = JSON.parse(JSON.stringify(data.studentstatus));
+                        this.processUpdatedServerstatus(serverStatusDeepCopy, studentStatusDeepCopy);// Process received data
+                    }
+                })
+                .catch(error => {
+                    this.multicastClient.beaconsLost += 1;
+                    log.error(`communicationhandler @ requestUpdate: (${this.multicastClient.beaconsLost}) ${error}`);
+                });
+            }
         }
         else { // prevent focus warning block if no connection 
             this.multicastClient.clientinfo.focus = true  // if not connected but still in exam mode you could trigger a focus warning and nobody is able to unlock you
@@ -581,19 +590,19 @@ import { switchExamSection } from './switchExamSection.js';
 
     // send base64 pdf to teacher
     sendBase64PDFtoTeacher(base64pdf, section=1, saveReason='sectionchange'){
-        const url = `https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/submission/${this.multicastClient.clientinfo.servername}/${this.multicastClient.clientinfo.token}`;
+        const url = `https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/submission/${this.multicastClient.clientinfo.servername}`;
         const sr = typeof saveReason === 'string' ? saveReason : 'sectionchange'
         const payload = {
             document: base64pdf,
-            printrequest: false,    
+            printrequest: false,
             submissionnumber: this.multicastClient.clientinfo.submissionnumber,
             lockedsection: section,
             saveReason: sr
         }
-        fetch(url, {
+        examApiFetch(url, {
             method: "POST",
             body: JSON.stringify(payload),
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.multicastClient.clientinfo.token}` },
         })
         .then(response => { return response.json();  })
         .then(data => {
@@ -988,7 +997,7 @@ import { switchExamSection } from './switchExamSection.js';
     requestFileFromServer(files){
         let servername = this.multicastClient.clientinfo.servername
         let serverip = this.multicastClient.clientinfo.serverip
-        let token = this.multicastClient.clientinfo.token
+        let studenttoken = this.multicastClient.clientinfo.token
         let backupfile = false
         for (const file of files) {
             if (file.name && file.name.toLowerCase().endsWith('.htm')){   // this will always set the last htm backup as backup file if there is more than one
@@ -1001,14 +1010,14 @@ import { switchExamSection } from './switchExamSection.js';
         let data = JSON.stringify({ 'files': files, 'type': 'studentfilerequest' });
 
         // Fetch request with the corresponding options
-        fetch(`https://${serverip}:${this.config.serverApiPort}/server/data/download/${servername}/${token}`, {
+        examApiFetch(`https://${serverip}:${this.config.serverApiPort}/server/data/download/${servername}`, {
             method: "POST",
             body: data,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${studenttoken}` },
         })
         .then(response => response.arrayBuffer()) // Antwort als ArrayBuffer erhalten
         .then(buffer => {
-            let absoluteFilepath = join(this.config.tempdirectory, token.concat('.zip'));
+            let absoluteFilepath = join(this.config.tempdirectory, studenttoken.concat('.zip'));
             fs.writeFile(absoluteFilepath, Buffer.from(buffer), (err) => {
                 if (err) { log.error(err);  }
                 else {
@@ -1077,7 +1086,7 @@ import { switchExamSection } from './switchExamSection.js';
         let zipfilename = this.multicastClient.clientinfo.name.concat('.zip')
         let servername = this.multicastClient.clientinfo.servername
         let serverip = this.multicastClient.clientinfo.serverip
-        let token = this.multicastClient.clientinfo.token
+        let studenttoken = this.multicastClient.clientinfo.token
         let zipfilepath = join(this.config.tempdirectory, zipfilename);
      
 
@@ -1090,15 +1099,15 @@ import { switchExamSection } from './switchExamSection.js';
 
         // sending the whole directory as zip file base64encoded via JSON isn't probably the best method but it works while all formData approaches failed with
         // fetch() while they worked with ax ios() - not even chatgpt or stackoverflow could help ^^ i think it is related to the specific formData module that cant be imported without "window error"
-        const url = `https://${serverip}:${this.config.serverApiPort}/server/data/receive/${servername}/${token}`;
+        const url = `https://${serverip}:${this.config.serverApiPort}/server/data/receive/${servername}`;
         const zipPayload = {
             file: base64File,
             filename: zipfilename,
             lastExamWriteSaveReason: typeof this.lastExamWriteSaveReason === 'string' ? this.lastExamWriteSaveReason : 'n/a'
         }
-        fetch(url, {
+        examApiFetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${studenttoken}` },
             body: JSON.stringify(zipPayload),
         })
         .then(response => response.json())
@@ -1127,12 +1136,12 @@ import { switchExamSection } from './switchExamSection.js';
         }
         const servername = this.multicastClient.clientinfo.servername
         const serverip = this.multicastClient.clientinfo.serverip
-        const token = this.multicastClient.clientinfo.token
+        const studenttoken = this.multicastClient.clientinfo.token
         const clientname = this.multicastClient.clientinfo.name
-        const url = `https://${serverip}:${this.config.serverApiPort}/server/data/studentlog/${servername}/${token}`
-        fetch(url, {
+        const url = `https://${serverip}:${this.config.serverApiPort}/server/data/studentlog/${servername}`
+        examApiFetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${studenttoken}` },
             body: JSON.stringify({ file: base64File, clientname }),
         })
             .then((response) => response.json())

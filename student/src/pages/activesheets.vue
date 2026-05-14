@@ -144,6 +144,7 @@ import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue';
 import PdfOverlay from '../components/PdfRenderer.vue';
 import {SignalBridge} from '../utils/signalBridge.js'
+import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -669,7 +670,7 @@ export default {
             }
             
             const endpoint = printrequest ? 'printjob' : 'submission'
-            const url = `https://${this.serverip}:${this.serverApiPort}/server/control/${endpoint}/${this.servername}/${this.token}`;
+            const url = `https://${this.serverip}:${this.serverApiPort}/server/control/${endpoint}/${this.servername}`;
             const sr = typeof saveReason === 'string' ? saveReason : 'n/a'
             const payload = {
                 document: this.currentpreviewBase64,
@@ -679,10 +680,10 @@ export default {
                 saveReason: sr
             }
 
-            fetch(url, {
+            examApiFetch(url, {
                 method: "POST",
                 cache: "no-store",
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', Authorization: `Bearer ${this.token}`},
                 body: JSON.stringify(payload),
             })
             .then(response => { return response.json();  })

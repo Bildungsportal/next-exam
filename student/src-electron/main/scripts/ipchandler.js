@@ -41,6 +41,7 @@ import { startProxy, stopProxy } from './vncproxy.js';
 import qemuService from './qemuService.js';
 import { getVMFindings } from './vmDetection.js';
 import { decryptExamFileBytes, decryptExamFileAllLayers, encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
+import { examApiFetch } from '../../../../shared/examApiFetch.js';
 
 const __dirname = import.meta.dirname;
 
@@ -134,7 +135,7 @@ class IpcHandler {
             let clientinfo = this.multicastClient.clientinfo
             let servername = clientinfo.servername
             let serverip = clientinfo.serverip
-            let token = clientinfo.token
+            let studenttoken = clientinfo.token
            
             let payload = {
                 group: clientinfo.group,
@@ -147,10 +148,10 @@ class IpcHandler {
             }
             else{
                 // Fetch request with the corresponding options
-                examMaterials = await fetch(`https://${serverip}:${this.config.serverApiPort}/server/data/getexammaterials/${servername}/${token}`, {
+                examMaterials = await examApiFetch(`https://${serverip}:${this.config.serverApiPort}/server/data/getexammaterials/${servername}`, {
                     method: "POST",
                     body: JSON.stringify(payload),
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${studenttoken}` },
                 })
                 .then(response => response.json()) // Receive response as JSON
                 .then(data => {
@@ -285,7 +286,7 @@ class IpcHandler {
 
         ipcMain.handle('qemu-download-disk', async (_event, payload = {}) => {
             try {
-                const { serverip, serverApiPort, servername, token, filename, overwrite } = payload || {};
+                const { serverip, serverApiPort, servername, studenttoken, filename, overwrite } = payload || {};
                 log.info(`ipchandler @ qemu-download-disk: downloading ${filename} from teacher ${servername}@${serverip}:${serverApiPort}`);
                 const sendProgress = (p) => {
                     try { this.WindowHandler?.mainwindow?.webContents?.send?.('qemu-download-progress', p); } catch (e) {}
@@ -295,7 +296,7 @@ class IpcHandler {
                     serverip,
                     serverApiPort,
                     servername,
-                    token,
+                    studenttoken,
                     filename,
                     workdirectory: this.config.workdirectory,
                     overwrite: !!overwrite,
@@ -1295,7 +1296,7 @@ class IpcHandler {
             this.prepareSecurePayload(payload, pin)
             .then(packet => {
                 payload = null;
-                return fetch(url, { method: 'POST', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ packet }) });
+                return examApiFetch(url, { method: 'POST', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ packet }) });
             })
             .then(response => response.json()) 
             .then(data => {

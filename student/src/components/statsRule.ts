@@ -1,9 +1,4 @@
-import {
-  canInsertNode,
-  isNodeSelection,
-  mergeAttributes,
-  Node,
-} from '@tiptap/core'
+import { mergeAttributes, Node } from '@tiptap/core'
 import { NodeSelection, TextSelection } from '@tiptap/pm/state'
 import { VueNodeViewRenderer } from '@tiptap/vue-3'
 import StatsRuleComponent from './StatsRuleComponent.vue'
@@ -60,34 +55,24 @@ export const StatsRule = Node.create<StatsRuleOptions>({
       setStatsRule:
         () =>
         ({ chain, state }) => {
-          if (!canInsertNode(state, state.schema.nodes[this.name])) {
+          if (!state.schema.nodes[this.name]) {
             return false
           }
 
-          const { selection } = state
-          const { $from: $originFrom, $to: $originTo } = selection
+          const { $from } = state.selection
 
-          const currentChain = chain()
-
-          if ($originFrom.parentOffset === 0) {
-            currentChain.insertContentAt(
-              {
-                from: Math.max($originFrom.pos - 1, 0),
-                to: $originTo.pos,
-              },
-              {
-                type: this.name,
-              },
-            )
-          } else if (isNodeSelection(selection)) {
-            currentChain.insertContentAt($originTo.pos, {
-              type: this.name,
-            })
-          } else {
-            currentChain.insertContent({ type: this.name })
+          // Insert after the doc-level block that contains the caret so statsRule stays a direct doc child, never inside table/list/cell.
+          if ($from.depth < 1) {
+            return false
           }
 
-          return currentChain
+          const insertPos = $from.after(1)
+          if (insertPos > state.doc.content.size) {
+            return false
+          }
+
+          return chain()
+            .insertContentAt(insertPos, { type: this.name })
             .command(({ tr, dispatch, editor }) => {
               if (dispatch) {
                 const { $to } = tr.selection

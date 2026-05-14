@@ -12,6 +12,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const pdfjsLegacyPdf = path.resolve(__dirname, 'node_modules/pdfjs-dist/legacy/build/pdf.mjs');
+const pdfjsLegacyWorker = path.resolve(__dirname, 'node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs');
 
 const buildDate = (() => {
   const now = new Date();
@@ -99,6 +101,20 @@ export default defineConfig(( ctx: any ) => {
         viteConf.css.preprocessorOptions = viteConf.css.preprocessorOptions || {};
         viteConf.css.preprocessorOptions.scss = viteConf.css.preprocessorOptions.scss || {};
         viteConf.css.preprocessorOptions.scss.silenceDeprecations = ['color-functions', 'if-function'];
+
+        const sharedDir = path.resolve(__dirname, '..', 'shared');
+        viteConf.resolve = viteConf.resolve || {};
+        viteConf.resolve.alias = {
+          ...viteConf.resolve.alias,
+          'pdfjs-dist/legacy/build/pdf.mjs': pdfjsLegacyPdf,
+          'pdfjs-dist/legacy/build/pdf.worker.mjs': pdfjsLegacyWorker,
+          'next-exam-shared': sharedDir,
+        };
+        viteConf.optimizeDeps = viteConf.optimizeDeps || {};
+        viteConf.optimizeDeps.include = viteConf.optimizeDeps.include || [];
+        if (!viteConf.optimizeDeps.include.includes('pdfjs-dist')) {
+          viteConf.optimizeDeps.include.push('pdfjs-dist');
+        }
 
         viteConf.build = viteConf.build || {};
         viteConf.build.chunkSizeWarningLimit = 1500;
