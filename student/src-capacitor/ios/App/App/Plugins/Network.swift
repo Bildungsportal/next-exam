@@ -21,8 +21,7 @@ public class NetworkPlugin: CAPPlugin, CAPBridgedPlugin {
         }
         IPCBridge.shared.registerInvokeHandler("setPreferredInterface") { [weak self] payload in
             guard let self else { throw PluginError.notInitialized }
-            guard let payloadArray = payload as? [String],
-                  let preferredName = payloadArray.first else {
+            guard let preferredName = payload as? String else {
                 throw IPCError.noHandler("Invalid payload for channel: setPreferredInterface")
             }
             self.setPerferredInterface(preferredName: preferredName)
