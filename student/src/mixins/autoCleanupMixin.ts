@@ -47,17 +47,19 @@ export const autoCleanupMixin = {
                     if (err.name !== 'AbortError') throw err;
                 }
             } finally {
-                // this.onCleanup(() => {
-                //     abortController.abort();
-                //     console.log("cleaning up auto fetch", url)
-                // });
+                this.onCleanup(() => {
+                    abortController.abort();
+                    console.log("cleaning up auto fetch", url)
+                });
             }
         },
+
+        onCleanup(cleanupFunction: () => void) {
+            this.cleanupFunctions.push(cleanupFunction);
+        },
+
     },
 
-    onCleanup(cleanupFunction: () => void) {
-        this.cleanupFunctions.push(cleanupFunction);
-    },
 
     beforeUnmount() {
         console.log('Auto-cleanup running');
