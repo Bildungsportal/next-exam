@@ -99,6 +99,8 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
 
     var serverstatus: [String: Any] = [:]
     var clientinfo    = ClientInfo()
+    var beaconsLost: Int  = 0
+    var kicked: Bool      = false
 
     // MARK: - Capacitor Lifecycle
 
@@ -136,6 +138,8 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
                 }
             }
         }
+        
+        CommunicationHandler.shared.initialize(multicastClient: self)
     }
     
     private func getinfoasync() async -> GetInfoaAsync {
@@ -661,8 +665,6 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
         info.serverport = senderPort
         info.reachable = true
         info.timestamp = Int64(Date().timeIntervalSince1970 * 1000)
-        
-        print("messageReceived \(info) \(senderIP) \(senderPort)")
 
         // Populate network fields (mirrors JS: serverInfo.serverip = rinfo.address)
         /*info.serverip   = senderIP
