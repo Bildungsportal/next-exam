@@ -3,6 +3,7 @@ RULE^agent^memRW^read CLAUDE §5+this file before nontrivial; append atoms post-
 TECH^vue^api^Options API teacher/src; mirror sibling file; no script setup unless user migrates
 IPC^teacher^writeTeacherWorkdirUtf8File^invoke({servername,filepath,utf8})→write UTF-8; basename must end _editor_timeline.json; servername must exist in examServerList^teacher ipchandler.js+studentEditorTimeline.js
 PATH^dashboard^editorTimeline^teacher/src/utils/studentEditorTimeline.js + teacher/src/components/StudentEditorTimelineDiffViewer.vue; explorer button DashboardExplorer.vue; dashboard.vue wires @timeline-diff
+TECH^dashboard^overlayZ^StudentView 4000; DashboardExplorer 4100; StudentEditorTimelineDiffViewer 1003 (below StudentView unless raised)
 PATH^examlog^settings^examLogSettings.js snapshot on examstart→event.settings; ExamLog.vue UI+print; examEventBus.push meta.settings
 BUG^examlog^dupSubmission^dashboard mounted stacked ipcRenderer.on('submission'); fix removeListener before on; examEventBus.push dedupe ≤1ms same type+student
 TECH^exam^editorTimelineJson^workdir student folder `<Student>_editor_timeline.json` (listed in explorer); schema {version,kind,studentFolder,generatedAt,jsonPath,entries[{timestamp_name,timestamp,text,sourceHtm}]}
@@ -55,6 +56,7 @@ TECH^exam^fileCrypto^NXE1 v1 AES-256-GCM+scrypt; key=serverstatus.encryptionPass
 IPC^teacher^pickEncryptedPdfForPreview^invoke(encryptionPassword)->dialog .pdf read; if NXE1 unwrap else raw; %PDF- check; {ok,base64,filename,filePath}|codes NEEDS_PASSWORD|BAD_PASSWORD|NOT_PDF|ERROR^teacher ipchandler.js+dashboard openEncryptedPdfPreview
 TECH^exam^editorBackupExt^editor/activesheets HTML backup filename <name>.htm + type htm in getfilesasync; teacher getLatestBakFile reads <student>.htm in latest backup dir (IPC name unchanged)^student+teacher ipchandler; Vue filetype htm
 IPC^student^registerSecurePayload^registerclient: teacher must !examServerList[servername] before processSecurePayload (empty sessionRef→Wrong PIN); decrypt JSON may include exammode bool; teacher sets student.exammode on create+reconnect; if client exammode true and !serverstatus.exammode deny+t(control.exammismatchregistration); success may set reconnected:true→student swal reconnectedinfo; heartbeat POST /update clientinfo.exammode^student ipchandler+student.vue; teacher control.js registerclient
+RULE^student^clientname^trim+lowercase canonical id; shared/normalizeStudentClientName.js; student.vue @input+register; student ipchandler register+locallockdown; teacher control.js registerclient+workdir rename case-only mismatch
 IPC^student^controlBearer^POST /server/control/update|updatescreenshot|submission/:srv|printjob/:srv require Authorization Bearer=registered student token; exempt GET pong+GET serverlist (pre-register); registerclient PIN; oauth+msauth^control.js+communicationhandler+editor.vue+activesheets.vue+screenshotCapture.js
 PATH^student^odtTiptap^student/src/utils/odtToTiptapHtml.js+filehandler loadODT+editor.vue materials+localfiles
 IPC^student^getfilesasync^odtRaw 5th arg true→base64 .odt (decrypt like htm); dir list type odt^student/src-electron/main/scripts/ipchandler.js

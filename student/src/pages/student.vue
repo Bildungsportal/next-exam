@@ -145,7 +145,7 @@
                 <div v-if="!bipToken" class="input-group  mb-1">
                     <span class="input-group-text col-3" style="width:135px;"
                           id="inputGroup-sizing-lg">{{ $t("student.username") }}</span>
-                    <input ref="userInput" v-model="username" @paste.prevent @drop.prevent type="text"
+                    <input ref="userInput" v-model="username" @input="onUsernameInput" @paste.prevent @drop.prevent type="text"
                            required="required" maxlength="25" class="form-control" id="user" placeholder=""
                            style="width:200px;max-width:200px;min-width:135px;">
                 </div>
@@ -273,6 +273,7 @@ import {SignalBridge} from '../utils/signalBridge.js'
 import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync } from '../utils/screenshotCapture.js'
 import { Exam } from '../types/api'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
+import { normalizeStudentClientName } from 'next-exam-shared/normalizeStudentClientName.js'
 
 
 // Capture unhandled promise rejections
@@ -384,6 +385,14 @@ export default {
 
 
     methods: {
+        // Force lowercase while typing so reconnects match regardless of caps lock.
+        onUsernameInput() {
+            const normalized = normalizeStudentClientName(this.username);
+            if (normalized !== this.username) {
+                this.username = normalized;
+            }
+        },
+
         toggleLocale() {
             // Switch between 'de' and 'en'
             this.$i18n.locale = this.$i18n.locale === 'de' ? 'en' : 'de';
@@ -561,7 +570,7 @@ export default {
                             showCancelButton: false,
                         })
 
-                        this.bipUsername = response.fullname
+                        this.bipUsername = normalizeStudentClientName(response.fullname)
                         this.bipuserID = response.userid
 
 
@@ -653,6 +662,13 @@ export default {
                     const localUserElement = document.getElementById("localuser");
                     const localPasswordElement = document.getElementById("localpassword");
                     const localPasswordConfirmElement = document.getElementById("localpasswordconfirm");
+
+                    localUserElement.addEventListener('input', () => {
+                        const normalized = normalizeStudentClientName(localUserElement.value);
+                        if (normalized !== localUserElement.value) {
+                            localUserElement.value = normalized;
+                        }
+                    });
 
                     localUserElement.addEventListener("keypress", function(e) {
                          // var lettersOnly = /^[a-zA-Z ]+$/;
@@ -769,7 +785,7 @@ export default {
                     const checkboxSuggestionsElement = document.getElementById('checkboxsuggestions');
                     const radioButtons = document.querySelectorAll('input[name="etesttype"]');
 
-                    savedUsername = localUserElement ? localUserElement.value.trim() : '';
+                    savedUsername = localUserElement ? normalizeStudentClientName(localUserElement.value) : '';
                     savedPassword = localPasswordElement ? localPasswordElement.value : '';
                     const passwordConfirm = localPasswordConfirmElement ? localPasswordConfirmElement.value : '';
                     savedLanguagetool = checkboxLTElement ? checkboxLTElement.checked : false;
@@ -799,8 +815,7 @@ export default {
                 if (result.isConfirmed) {
 
                     let exammode = savedExammode; // Use saved value instead of reading from DOM
-                    let username = savedUsername; // Use saved value instead of reading from DOM
-                    username = username.replace(/^\s+|\s+$/g, '');  // Check username - remove leading and trailing spaces
+                    let username = normalizeStudentClientName(savedUsername);
                     let password = savedPassword; // Use saved value instead of reading from DOM
 
                     if (username == "" || password == "") {
@@ -1336,9 +1351,10 @@ export default {
 
 
                 //check username - remove leading and trailing spaces
-                this.username = this.username
-                    .replace(/^\s+|\s+$/g, '')
-                    .replace(/[^\x00-\x7F]/g, char => charMap[char] || char); // Replace using the map
+                this.username = normalizeStudentClientName(
+                    this.username
+                        .replace(/[^\x00-\x7F]/g, char => charMap[char] || char)
+                );
 
 
                 //  console.log({clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode, bipuserID:this.bipuserID })

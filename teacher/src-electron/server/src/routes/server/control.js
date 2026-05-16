@@ -28,6 +28,7 @@ import qs from 'qs'
 import { msalConfig } from '../../../../../src/msalutils/authConfigShared.ts'
 import log from 'electron-log';
 import { resolvePathUnderRoot, safeScreenshotFileName, safeSectionFolderId, isSafePathSegment } from '../../utils/safePaths.js';
+import { normalizeStudentClientName } from '../../../../../../shared/normalizeStudentClientName.js';
 import { isStudentReachable } from '../../../../../src/utils/studentPresence.js';
 
 import WindowHandler from '../../../../main/scripts/windowhandler.js'
@@ -249,6 +250,7 @@ router.get('/connectedstudentips', function (req, res) {
     } catch (err) {
         return res.send({ sender: "server", message: "Wrong PIN", status: "error" })
     }
+    clientname = normalizeStudentClientName(clientname)
     const token = `csrf-${crypto.randomUUID()}`
 
     //log.info("control @ registerclient: Client Version:",version)
@@ -276,7 +278,7 @@ router.get('/connectedstudentips', function (req, res) {
             if (exammode === true && !mcServer.serverstatus?.exammode) {
                 return res.json({ sender: "server", message: t("control.exammismatchregistration"), status: "error" })
             }
-            let registeredClient = mcServer.studentList.find(element => element.clientname === clientname)
+            let registeredClient = mcServer.studentList.find(element => element.clientname.toLowerCase() === clientname)
         
             
 
@@ -286,8 +288,10 @@ router.get('/connectedstudentips', function (req, res) {
 
                 //group handling - everybody is in groupA except there is already a group configuration
                 let group = false;
-                if (mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupA?.users?.includes(clientname)) { group = 'a'; } 
-                else if (mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupB?.users?.includes(clientname)) { group = 'b';  }
+                const groupAUsers = mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupA?.users || []
+                const groupBUsers = mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupB?.users || []
+                if (groupAUsers.some((u) => String(u).toLowerCase() === clientname)) { group = 'a'; }
+                else if (groupBUsers.some((u) => String(u).toLowerCase() === clientname)) { group = 'b'; }
                 else {  // user is not in any group or no group is configured
                     group = 'a'
                    mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupA.users.push(clientname)
@@ -309,44 +313,29 @@ router.get('/connectedstudentips', function (req, res) {
                     status: { group: group || 'a'},    // we use this to store (per student) information about whats going on on the serverside (tasklist) and send it back on /update
                     // we allow two groups (this is just used for distribution of files by now)
                 }
-                //create folder for student
-                let studentfolder =path.join(config.workdirectory, mcServer.serverinfo.servername , clientname);
-            
-            
+                //create folder for student (canonical lowercase name)
+                const parentDir = path.join(config.workdirectory, mcServer.serverinfo.servername)
+                const targetDirName = clientname
+                let studentfolder = path.join(parentDir, targetDirName)
                 try {
-                    await fs.promises.access(studentfolder); // Check if directory exists
-                    // the directory for this student exists
-                    // on unix the folder name is 100% identical - on windows there could be differences in upper/lower case
-                    // check if it was written EXACTLY the same (case-sensitive)
-                    
-                    const parentDir = path.dirname(studentfolder);
-                    const targetDirName = path.basename(studentfolder);
                     const directories = (await fs.promises.readdir(parentDir, { withFileTypes: true }))
-                                        .filter(dirent => dirent.isDirectory())
-                                        .map(dirent => dirent.name);
-
-
-                    if (!directories.includes(targetDirName)) {  // caught windows... the filename is not 100% identical "Test" !== "test"
-                        
-                        const existingDir = directories.find(dir => dir.toLowerCase() === targetDirName.toLowerCase());
-                        if (existingDir) {
-                            const oldPath = path.join(parentDir, existingDir);
-                            const newPath = path.join(parentDir, `backup-${existingDir}`);
-                            await fs.promises.rename(oldPath, newPath);  // rename the old directory
-                            log.warn(`control @ registerclient: Renaming ${oldPath} to ${newPath} - thx bill gates for the worst operating system otw`)
+                        .filter((dirent) => dirent.isDirectory())
+                        .map((dirent) => dirent.name)
+                    const existingDir = directories.find((dir) => dir.toLowerCase() === targetDirName)
+                    if (existingDir) {
+                        if (existingDir !== targetDirName) {
+                            const oldPath = path.join(parentDir, existingDir)
+                            await fs.promises.rename(oldPath, studentfolder)
+                            log.info(`control @ registerclient: Renamed workdir ${existingDir} -> ${targetDirName}`)
+                        } else {
+                            log.warn(`control @ registerclient: Using already existing directory: ${targetDirName}`)
                         }
+                    } else {
+                        await fs.promises.mkdir(studentfolder, { recursive: true })
+                        log.info(`control @ registerclient: Creating ${studentfolder}`)
                     }
-                    else {
-                        log.warn(`control @ registerclient: Using already existing directory: ${targetDirName}`)
-                    }
-                } catch (err) {
-                    // The directory does not exist, create it
-                    try {
-                        await fs.promises.mkdir(studentfolder, { recursive: true });
-                        log.info(`control @ registerclient: Creating ${studentfolder}`);
-                    } catch (mkdirErr) {
-                        log.error(`control @ registerclient: Error creating directory: ${mkdirErr}`);
-                    }
+                } catch (mkdirErr) {
+                    log.error(`control @ registerclient: Error creating directory: ${mkdirErr}`)
                 }
 
                 try {
@@ -362,6 +351,7 @@ router.get('/connectedstudentips', function (req, res) {
 
                 let now = new Date().getTime()
                 if (now - 20000 > registeredClient.timestamp) { // student probably went offline (teacher connection loss) but is coming back now
+                    registeredClient.clientname = clientname
                     registeredClient.timestamp = now
                     registeredClient.exammode = exammode ?? false
                     log.info("control @ registerclient: student reconnected")

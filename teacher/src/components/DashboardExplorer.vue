@@ -127,7 +127,7 @@ export default {
     width: 100vw;
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.75);
-    z-index: 1002;
+    z-index: 4100; /* above StudentView overlay (4000) */
     align-items: center;
     justify-content: center;
 }

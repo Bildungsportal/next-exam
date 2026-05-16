@@ -42,6 +42,7 @@ import qemuService from './qemuService.js';
 import { getVMFindings } from './vmDetection.js';
 import { decryptExamFileBytes, decryptExamFileAllLayers, encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
 import { examApiFetch } from '../../../../shared/examApiFetch.js';
+import { normalizeStudentClientName } from '../../../../shared/normalizeStudentClientName.js';
 import { setClientFocusLock, clearClientFocusLock } from './focusLockState.js';
 import { syncClientDisplayInfo } from './displayInfo.js';
 
@@ -658,7 +659,7 @@ class IpcHandler {
             // make serverstatus available for getinfoasync() so the renderer (editor) sees password and examSections
             this.multicastClient.serverstatus = serverstatus;
 
-            this.multicastClient.clientinfo.name = args.clientname;
+            this.multicastClient.clientinfo.name = normalizeStudentClientName(args.clientname);
             this.multicastClient.clientinfo.serverip = "127.0.0.1";
             this.multicastClient.clientinfo.servername = "localhost";
             this.multicastClient.clientinfo.pin = "0000";
@@ -1280,7 +1281,7 @@ class IpcHandler {
          * @param args contains an object with  clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode 
          */
         ipcMain.on('register', (event, args) => {   
-            const clientname = args.clientname
+            const clientname = normalizeStudentClientName(args.clientname)
             const pin = args.pin
             const serverip = args.serverip
             const servername = args.servername
