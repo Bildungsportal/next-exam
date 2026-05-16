@@ -43,6 +43,7 @@ import { getVMFindings } from './vmDetection.js';
 import { decryptExamFileBytes, decryptExamFileAllLayers, encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
 import { examApiFetch } from '../../../../shared/examApiFetch.js';
 import { setClientFocusLock, clearClientFocusLock } from './focusLockState.js';
+import { syncClientDisplayInfo } from './displayInfo.js';
 
 // Skip info-level file-save log noise when the renderer marks the write as periodic auto-save.
 const logSaveInfoUnlessAuto = (saveReason, message) => {
@@ -1171,6 +1172,7 @@ class IpcHandler {
          * Returns all found Servers and the information about this client
          */ 
         ipcMain.handle('getinfoasync', async (event) => {   
+            syncClientDisplayInfo(this.multicastClient.clientinfo);
             let serverstatus = false   
             // serverstatus object is only passed to the exam window at the start of the exam for base settings
             // all further updates via the serverstatus object are read in the communication handler and applied to the clientinfo object as needed
@@ -1291,8 +1293,12 @@ class IpcHandler {
                 event.returnValue = { sender: "client", message: t("control.alreadyregistered"), status:"error" }
             }
 
+            syncClientDisplayInfo(this.multicastClient.clientinfo);
+            if (this.multicastClient.clientinfo.multiMonitor && !this.config.development) {
+                event.returnValue = { status: "error", message: t("student.multimonitor") };
+                return;
+            }
 
-         
             // Encrypt the registration payload and derive sessionRef from the pin.
             let payload = { pin, clientname, clientip, hostname, version, bipuserID, exammode: this.multicastClient.clientinfo.exammode === true }
             const url = `https://${serverip}:${this.config.serverApiPort}/server/control/registerclient/${servername}`;

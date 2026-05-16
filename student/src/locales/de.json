@@ -213,6 +213,7 @@
         "logoutBiP": "Sind Sie sicher, dass Sie sich abmelden möchten?",
         "manualsearch": "Manuell suchen",
         "math": "Mathematik",
+        "multimonitor": "Mehrere Bildschirme sind für die Prüfung nicht zulässig. Bitte trennen Sie zusätzliche Monitore ab und starten Sie Next-Exam neu.",
         "name": "Name",
         "noapi": "Keine Prüfungsserver an angegebener Adresse",
         "noexams": "Keine Prüfungen gefunden",

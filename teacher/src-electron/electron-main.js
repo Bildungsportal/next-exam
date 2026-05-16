@@ -142,7 +142,7 @@ if (config.workdirectory) {
     app.commandLine.appendSwitch('user-data-dir', config.workdirectory);
 }
 
-WindowHandler.init(multicastClient, config)  // mainwindow, examwindow, blockwindow
+WindowHandler.init(multicastClient, config)  // mainwindow, examwindow
 IpcHandler.init(multicastClient, config, WindowHandler)  //controll all Inter Process Communication
 
 

@@ -34,6 +34,7 @@ import { getVMFindings } from './vmDetection.js'
 import { examApiFetch } from '../../../../shared/examApiFetch.js'
 import languageToolServer from './lt-server.js';
 import { setClientFocusLock, clearClientFocusLock } from './focusLockState.js';
+import { syncClientDisplayInfo } from './displayInfo.js';
 import qemuService from './qemuService.js';
 import { stopProxy } from './vncproxy.js';
 import { switchExamSection } from './switchExamSection.js';
@@ -64,7 +65,7 @@ import { switchExamSection } from './switchExamSection.js';
 
     /** Exam lockdown: focus=false + kiosk refocus; optional reason/message for overlay (IPC focusLock). */
     applySecurityFocusLost(reason = 'unknown', message = '') {
-        //if (this.config.development) return;
+        if (this.config.development) return;
 
 
         log.warn(`communicationhandler @ applySecurityFocusLost: forcing lockdown (reason=${reason})`);
@@ -243,6 +244,7 @@ import { switchExamSection } from './switchExamSection.js';
 
 
     async requestUpdate(){
+        syncClientDisplayInfo(this.multicastClient.clientinfo);
 
         this.timer++   // we use timer to time loops with different intervals without introducing new unneccesary schedulers
         if (this.timer % 20 === 0 ){  // run every 20*5 (updateloop) seconds
@@ -303,10 +305,6 @@ import { switchExamSection } from './switchExamSection.js';
                     keywords: mergedKeywords,
                     ports: keywordHit ? keywordHit.ports : (ra.ports || []),
                 };
-            }
-
-            if (this.multicastClient.clientinfo.exammode){
-                WindowHandler.initBlockWindows()  // check if there is a new screen that needs to be blocked
             }
 
         }
@@ -872,9 +870,7 @@ import { switchExamSection } from './switchExamSection.js';
                     await enableRestrictions(WindowHandler)
                     await this.sleep(2000) // wait an additional 2 sec for windows restrictions to kick in (they steal focus)
                     WindowHandler.addBlurListener();
-                    // For reconnect: initialize block windows after window is repositioned
                     await this.sleep(500)
-                    await WindowHandler.initBlockWindows()
                     WindowHandler.examwindow.moveTop()
                     WindowHandler.examwindow.focus()
                 }   
@@ -890,8 +886,6 @@ import { switchExamSection } from './switchExamSection.js';
                 return  // in that case.. we are finished here !
             }
         }
-        // Note: For new exam windows, initBlockWindows() is called in did-finish-load handler
-        // to ensure window is fully positioned (important for Wayland/KWin)
     }
 
 
@@ -943,19 +937,7 @@ import { switchExamSection } from './switchExamSection.js';
                 this.closeExamWindowSafely()
             }
             catch(e){ log.error('communicationhandler @ endExam: ',e)}
-           
-            try {
-                for (let blockwindow of WindowHandler.blockwindows){
-                    blockwindow.close(); 
-                    blockwindow.destroy(); 
-                    blockwindow = null;
-                }
-            } catch (e) { 
-                WindowHandler.blockwindows = []
-                log.error("communicationhandler @ endExam: no functional blockwindow to handle")
-            }  
         }
-        WindowHandler.blockwindows = []
         
         this.multicastClient.clientinfo.msofficeshare = false
         this.multicastClient.clientinfo.focus = true

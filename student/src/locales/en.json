@@ -213,6 +213,7 @@
         "logoutBiP": "Are you sure you want to logout?",
         "manualsearch": "Manual search",
         "math": "Mathematics",
+        "multimonitor": "Multiple displays are not allowed for the exam. Please disconnect extra monitors and restart Next-Exam.",
         "name": "Name",
         "noapi": "No Teacher API found on the given address",
         "noexams": "No exams found",

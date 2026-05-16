@@ -1319,6 +1319,11 @@ export default {
                 this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
                 return;
             }
+            const displayInfo = await signalBridge.invoke('getinfoasync');
+            if (displayInfo?.clientinfo?.multiMonitor && !this.$route.params.config.development) {
+                this.$swal.fire({ title: "Error", text: this.$t("student.multimonitor"), icon: 'error', showCancelButton: false });
+                return;
+            }
 
             const charMap = {
                     'ć': 'c',

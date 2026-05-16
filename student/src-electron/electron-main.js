@@ -40,6 +40,7 @@ import { checkParentProcess } from './main/scripts/checkparent.js';
 import { toggleMacOSLockdown } from './main/scripts/platformrestrictions.js';
 import { stopProxy } from './main/scripts/vncproxy.js';
 import { initErrorHandling } from './main/scripts/errorHandling.js';
+import { syncClientDisplayInfo } from './main/scripts/displayInfo.js';
 JreHandler.init()
 
 if (!config.development && process.argv.some(arg => arg.startsWith('--inspect') || arg.startsWith('--remote-debugging'))) {  // disable options to read v8 heap on production builds
@@ -103,7 +104,7 @@ log.debug(`main: Desktop: ${platformDispatcher.desktopName}`)
 log.debug(`main: Display server: ${platformDispatcher.displayServer}`)
 
 
-WindowHandler.init(multicastClient, config)  // mainwindow, examwindow, blockwindow
+WindowHandler.init(multicastClient, config)  // mainwindow, examwindow
 CommHandler.init(multicastClient, config)    // starts "beacon" intervall and fetches information from the teacher - acts on it (startexam, stopexam, sendfile, getfile)
 IpcHandler.init(multicastClient, config, WindowHandler, CommHandler)  //controll all Inter Process Communication
 initErrorHandling(log, WindowHandler);
@@ -234,6 +235,8 @@ async function runParentProcessCheck() {
 
 app.whenReady()
 .then(async ()=>{
+
+    syncClientDisplayInfo(multicastClient.clientinfo);
 
     nativeTheme.themeSource = 'light'  // prevent theme settings from being adopted from windows
     session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions

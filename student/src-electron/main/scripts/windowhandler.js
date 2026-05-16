@@ -54,12 +54,10 @@ function getRendererIndexPath() {
 
 class WindowHandler {
     constructor () {
-      this.blockwindows = []
       this.screenlockwindows = []
       this.screenlockWindow = null
       this.mainwindow = null
       this.examwindow = null
-      this.examDisplayId = null  // reserved display ID for exam window (set immediately when window is created)
       this.splashwin = null
       this.bipwindow = null
       this.config = null
@@ -226,172 +224,6 @@ class WindowHandler {
 
 
     /**
-     * BlockWindow (to cover additional screens)
-     * @param display 
-     */
-    newBlockWin(display) {
-        let blockwin = new BrowserWindow({
-            x: display.bounds.x + 0,
-            y: display.bounds.y + 0,
-            parent: this.examwindow,
-            skipTaskbar:true,
-            title: 'Next-Exam',
-            width: display.bounds.width,
-            height: display.bounds.height,
-            closable: false,
-            alwaysOnTop: true,
-            focusable: false,   //doesn't work with kiosk mode (no kiosk mode possible.. why?)
-            minimizable: false,
-            // resizable:false,   // leads to weird 20px bottomspace on windows
-            movable: false,
-            frame: false,
-            icon: join(platformDispatcher.publicBase, 'icons', 'icon.png'),
-            webPreferences: {
-                preload: join(__dirname, './preload/electron-preload.cjs'),
-            },
-        });
-    
-        let url = "notfound"
-        if (app.isPackaged) {
-            blockwin.loadFile(getRendererIndexPath(), {hash: `#/${url}/`})
-        } 
-        else {
-            url = `${process.env.APP_URL}/#/${url}/`
-            blockwin.loadURL(url)
-        }
-        
-        blockwin.removeMenu() 
-        blockwin.setMinimizable(false)
-
-        // Position window on specific display BEFORE showing it
-        blockwin.setBounds({
-            x: display.bounds.x,
-            y: display.bounds.y,
-            width: display.bounds.width,
-            height: display.bounds.height
-        });
-
-        blockwin.setAlwaysOnTop(true, "screen-saver", 1) 
-        blockwin.show()
-
-        if (process.platform ==='darwin') { 
-            blockwin.setFullScreen(true);
-            blockwin.on('leave-full-screen', () => {
-                blockwin.setFullScreen(true); // immediately reset to full screen
-            }); 
-        }  
-        else {   
-            blockwin.setKiosk(true); // Kiosk = "take over main screen". on macos that's why we use fullScreen workaround with event listener
-        }
-        blockwin.moveTop();
-        blockwin.display = display
-        this.blockwindows.push(blockwin)
-    }
-
-
-    // block all screens with a blockwindow
-    async initBlockWindows(){
-        let displays = screen.getAllDisplays()
-        //log.info(`windowhandler @ initBlockWindows: found ${displays.length} displays`)
-        
-        if (!this.config.development) {  // lock all screens
-            if (displays.length <= 1) return
-            // Wait for exam window to be visible and positioned; never create block windows before that
-            let examReady = false
-            if (this.examwindow && !this.examwindow.isDestroyed()) {
-                let retries = 0
-                const maxRetries = 10
-                while (!this.examwindow.isVisible() && retries < maxRetries) {
-                    await this.sleep(100)
-                    retries++
-                }
-                if (this.examwindow.isVisible()) {
-                    examReady = true
-                    // Additional wait to ensure positioning is complete on Wayland
-                    await this.sleep(200)
-                }
-            }
-            
-            if (!examReady) {
-                log.info("windowhandler @ initBlockWindows: exam window not ready, skipping block window creation")
-                return
-            }
-            
-            // Clean up destroyed block windows from array
-            this.blockwindows = this.blockwindows.filter(blockwin => blockwin && !blockwin.isDestroyed())
-            
-            // Get all existing windows and determine their displays
-            const usedDisplayIds = new Set()
-            
-            // First, use the reserved exam display ID (set immediately when exam window was created)
-            // This ensures the screen is reserved even if the window isn't fully initialized yet
-            if (this.examDisplayId !== undefined && this.examDisplayId !== null) {
-                usedDisplayIds.add(this.examDisplayId)
-            }
-            
-            // Check exam window display (as fallback/verification, but reserved ID takes priority)
-            if (this.examwindow && !this.examwindow.isDestroyed()) {
-                try {
-                    const bounds = this.examwindow.getBounds()
-                    const display = screen.getDisplayMatching(bounds)
-                    if (display && display.id !== undefined && display.id !== null) {
-                        usedDisplayIds.add(display.id)
-                        log.info(`windowhandler @ initBlockWindows: exam window is on display ${display.id}`)
-                    }
-                } catch (err) {
-                    log.error(`windowhandler @ initBlockWindows: error getting exam window display: ${err}`)
-                }
-            }
-            
-            // Check block windows displays
-            for (const blockwin of this.blockwindows) {
-                try {
-                    const bounds = blockwin.getBounds()
-                    const display = screen.getDisplayMatching(bounds)
-                    if (display && display.id !== undefined && display.id !== null) {
-                        usedDisplayIds.add(display.id)
-                        log.info(`windowhandler @ initBlockWindows: block window found on display ${display.id}`)
-                    }
-                } catch (err) {
-                    log.error(`windowhandler @ initBlockWindows: error getting block window display: ${err}`)
-                }
-            }
-            
-            // Create block windows for displays that don't have exam or block windows
-            for (let display of displays){
-                if (usedDisplayIds.has(display.id)) {
-                    log.info(`windowhandler @ initBlockWindows: skipping display ${display.id} - already has exam or block window`)
-                    continue
-                }
-                
-                log.info("windowhandler @ initBlockWindows: create blockwin on:",display.id)
-                this.newBlockWin(display)  // add blockwindows for displays without exam window
-            }
-            
-            await this.sleep(1000)
-            this.blockwindows.forEach( (blockwin) => {
-                if (blockwin && !blockwin.isDestroyed()) {
-                    blockwin.moveTop();
-                }
-            })
-        }
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /**
      * Screenlock Window (to cover the mainscreen) - block students from working
      * @param display 
      */
@@ -508,13 +340,6 @@ class WindowHandler {
             }
         }
         
-        // Immediately reserve the display ID for the exam window (before window is fully initialized)
-        // This prevents block windows from being created on the same screen
-        if (primarydisplay && primarydisplay.id) {
-            this.examDisplayId = primarydisplay.id
-            log.info(`windowhandler @ createExamWindow: reserving display ${this.examDisplayId} for exam window`)
-        }
-        
         let px = 0
         let py = 0
         if (primarydisplay && primarydisplay.bounds && primarydisplay.bounds.x) {
@@ -564,7 +389,6 @@ class WindowHandler {
                     this.examwindow.setKiosk(true);
                 
                     await this.sleep(500)
-                    await this.initBlockWindows()
                     this.examwindow.moveTop()
                     this.examwindow.focus()
                     
@@ -600,7 +424,6 @@ class WindowHandler {
       
                 this.examwindow.destroy(); 
                 this.examwindow = null;
-                this.examDisplayId = null  // reset reserved display ID when exam window is destroyed
                 disableRestrictions(this.examwindow)
                 this.multicastClient.clientinfo.exammode = false
                 this.multicastClient.clientinfo.focus = true
@@ -790,7 +613,6 @@ class WindowHandler {
             else {              
                 this.examwindow.destroy(); 
                 this.examwindow = null;
-                this.examDisplayId = null  // reset reserved display ID when exam window is closed
                 this.checkWindowInterval.stop()
                 //disableRestrictions(this.examwindow)  //do not disable twice
                 this.multicastClient.clientinfo.exammode = false
