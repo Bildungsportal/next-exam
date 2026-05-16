@@ -687,7 +687,7 @@ export default {
     font-weight: 400;
     color: rgba(255,255,255,0.55);
     white-space: nowrap;
-    border-right: 1px solid rgba(255,255,255,0.06);
+   
 }
 .examlog-timeline-entry:last-child { border-right: none; }
 .examlog-tl-time { color: rgba(255,255,255,0.3); }
