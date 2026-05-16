@@ -20,6 +20,7 @@ RULE^agent^gitSafety^never run git restore/reset/clean/rebase/stash/pop/checkout
 PATH^print^pdf^teacher/src-electron/main/scripts/printjobhandler.js+teacher/src/pages/SystemPrintPdf.vue
 TECH^teacherCli^examModes^--exam-modes=csv overrides config.exammodes at runtime^teacher/src-electron/electron-main.js
 TECH^build^protectMain^electron-main.js in dist/electron/UnPackaged; protect via electron-builder beforePack^teacher+student scripts/protect-main.mjs+beforepack.js+quasar.config.ts
+RULE^student^devtoolsInstaller^electron-devtools-installer devDep only; dynamic import in windowhandler installVueJsDevTools when !app.isPackaged—no top-level require^student/src-electron/main/scripts/windowhandler.js
 TECH^build^electronAssets^prod electron: copy src/assets→public/src/assets; rewrite `/src/assets`→`./src/assets` incl. Vue backtick literals in generateBundle; CSS url() often Vite-inlined^teacher+student quasar.config.ts
 PATH^platform^dispatcher^teacher/src-electron/main/scripts/platformDispatcher.js used by teacher main startup logs^teacher/src-electron/electron-main.js
 PATH^pdfparser^root^shared/pdfparser/ (v5+shared); renderer import next-exam-shared/pdfparser/index.js (quasar alias next-exam-shared->shared/)

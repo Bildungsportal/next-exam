@@ -25,7 +25,6 @@ import { activeWindow } from 'get-windows';
 import platformDispatcher from './platformDispatcher.js';
 import {fileURLToPath} from "node:url";
 import path from 'path';
-import * as devtoolsInstaller from 'electron-devtools-installer';
 
 const __dirname = import.meta.dirname;
 
@@ -100,9 +99,11 @@ class WindowHandler {
 
     installVueJsDevTools(win) {
         if (!app.isPackaged) {
-            devtoolsInstaller.installExtension(devtoolsInstaller.VUEJS_DEVTOOLS)
-                .then((name) => console.log(`Added Extension: ${name.name}`))
-                .catch((err) => console.log('An error occurred: ', err));
+            // Dev-only: keep optional dependency out of release builds.
+            import('electron-devtools-installer')
+                .then((m) => m.installExtension(m.VUEJS_DEVTOOLS))
+                .then((name) => log.info(`windowhandler @ devtools: Added Extension: ${name.name}`))
+                .catch((err) => log.warn(`windowhandler @ devtools: install skipped: ${err?.message || err}`));
         }
     }
 
