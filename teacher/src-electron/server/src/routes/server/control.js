@@ -28,36 +28,11 @@ import qs from 'qs'
 import { msalConfig } from '../../../../../src/msalutils/authConfigShared.ts'
 import log from 'electron-log';
 import { resolvePathUnderRoot, safeScreenshotFileName, safeSectionFolderId, isSafePathSegment } from '../../utils/safePaths.js';
+import { isStudentReachable } from '../../../../../src/utils/studentPresence.js';
 
 import WindowHandler from '../../../../main/scripts/windowhandler.js'
 import Tesseract from 'tesseract.js';
 let TesseractWorker = false
-
-/** Parses Authorization: Bearer <token> for student control routes (not register/oauth/msauth). */
-function bearerTokenFromRequest(req) {
-    const h = req.headers?.authorization
-    if (!h || typeof h !== 'string') return null
-    const m = /^Bearer\s+(\S+)/i.exec(h.trim())
-    return m ? m[1] : null
-}
-
-/** Resolves mcServer+student by Bearer token and servername; reason authrequired|notavailable|removed. */
-function resolveStudentForControl(req, servername) {
-    const studenttoken = bearerTokenFromRequest(req)
-    if (!studenttoken) return { ok: false, reason: 'authrequired' }
-    const mcServer = config.examServerList[servername]
-    if (!mcServer) return { ok: false, reason: 'notavailable' }
-    const student = mcServer.studentList.find((el) => el.token === studenttoken)
-    if (!student) return { ok: false, reason: 'removed' }
-    return { ok: true, mcServer, studenttoken, student }
-}
-
-/** Sends consistent JSON for student auth failures on control routes. */
-function respondStudentAuth(res, reason) {
-    if (reason === 'authrequired') return res.send({ sender: 'server', message: 'authrequired', status: 'error' })
-    if (reason === 'notavailable') return res.send({ sender: 'server', message: 'notavailable', status: 'error' })
-    return res.send({ sender: 'server', message: 'removed', status: 'error' })
-}
 
 import { app } from 'electron'
 const __dirname = import.meta.dirname;
@@ -178,10 +153,13 @@ router.get('/msauth', async (req, res) => {
 
 /**
  * STUDENT-ORIENTED ROUTES (Bearer student token required except: oauth, msauth, registerclient=PIN,
- * serverlist+pong=pre-registration discovery before any token exists).
+ * serverlist+pong+connectedstudentips=open LAN discovery).
  */
 
 
+
+///////////////////
+/** OPEN ROUTES */
 
 
 /**
@@ -190,11 +168,6 @@ router.get('/msauth', async (req, res) => {
  router.get('/pong', function (req, res, next) {
     res.send('pong')
 })
-
-
-
-
-
 
 
 /**
@@ -218,6 +191,41 @@ router.get('/serverlist', function (req, res, next) {
 })
 
 
+
+
+
+
+
+/**
+ * Returns reachable student IPs only while serverstatus.exammode is true; otherwise ips: [] (open LAN).
+ */
+router.get('/connectedstudentips', function (req, res) {
+    const servers = Object.values(config.examServerList)
+    if (servers.length === 0) {
+        return res.status(404).json({ sender: 'server', status: 'error', message: t('control.notfound') })
+    }
+    const mcServer = servers[0]
+    if (!mcServer.serverstatus?.exammode) {
+        return res.json({ sender: 'server', status: 'success', ips: [] })
+    }
+    const now = Date.now()
+    const ips = (mcServer.studentList || [])
+        .filter((student) => isStudentReachable(student, now))
+        .map((student) => student.clientip)
+        .filter((ip) => typeof ip === 'string' && ip.length > 0)
+    return res.json({ sender: 'server', status: 'success', ips })
+})
+
+ /** OPEN ROUTES END*/
+/////////////////////
+
+
+
+
+
+
+ /////////////////////////////
+/** PROTECTED ROUTES START */
 
 
 /**
@@ -745,6 +753,32 @@ router.post('/printjob/:servername', async function (req, res, next) {
 
 
 export default router
+
+/** Parses Authorization: Bearer <token> for student control routes (not register/oauth/msauth). */
+function bearerTokenFromRequest(req) {
+    const h = req.headers?.authorization
+    if (!h || typeof h !== 'string') return null
+    const m = /^Bearer\s+(\S+)/i.exec(h.trim())
+    return m ? m[1] : null
+}
+
+/** Resolves mcServer+student by Bearer token and servername; reason authrequired|notavailable|removed. */
+function resolveStudentForControl(req, servername) {
+    const studenttoken = bearerTokenFromRequest(req)
+    if (!studenttoken) return { ok: false, reason: 'authrequired' }
+    const mcServer = config.examServerList[servername]
+    if (!mcServer) return { ok: false, reason: 'notavailable' }
+    const student = mcServer.studentList.find((el) => el.token === studenttoken)
+    if (!student) return { ok: false, reason: 'removed' }
+    return { ok: true, mcServer, studenttoken, student }
+}
+
+/** Sends consistent JSON for student auth failures on control routes. */
+function respondStudentAuth(res, reason) {
+    if (reason === 'authrequired') return res.send({ sender: 'server', message: 'authrequired', status: 'error' })
+    if (reason === 'notavailable') return res.send({ sender: 'server', message: 'notavailable', status: 'error' })
+    return res.send({ sender: 'server', message: 'removed', status: 'error' })
+}
 
 
 

@@ -30,7 +30,7 @@ function requireNextExamAppSecret(req, res, next) {
         return next();
     }
     const p = req.path || '';
-    if (p === '/control/oauth' || p === '/control/msauth') {
+    if (p === '/control/oauth' || p === '/control/msauth' || p === '/control/connectedstudentips') {
         return next();
     }
     const got = req.get(NEXT_EXAM_API_SECRET_HEADER);

@@ -336,32 +336,75 @@ export default {
                 <td>${times('examend')}</td>
             </tr>`
 
-            const countWithTimes = (count, events, type) => {
-                const times = events.filter(e => e.type === type).map(e => e.time).join(', ')
-                return count > 0
-                    ? `<b>${count}</b> <span style="color:#666;">${times}</span>`
-                    : `<span style="color:#aaa;">0</span>`
+            const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+            // Two-column cell: count/label left, detail lines stacked right (monospace).
+            const splitMetricCell = (left, rightLines) => {
+                const lines = (rightLines || []).map(t => esc(t))
+                const leftStr = left === 0 || left === '0' ? '0' : String(left ?? '')
+                const muted = leftStr === '0' || leftStr === 'Nein'
+                const warn = leftStr === 'Ja'
+                const nClass = (i) => `split-n${i === 0 && warn ? ' yes-warn' : ''}${i === 0 && muted ? ' muted' : ''}`
+                if (!lines.length) {
+                    return `<td class="split-metric"><table class="split-inner"><tr>
+                        <td class="${nClass(0)}">${esc(leftStr || '0')}</td><td class="split-v"></td>
+                    </tr></table></td>`
+                }
+                const rows = lines.map((line, i) =>
+                    `<tr><td class="${nClass(i)}">${i === 0 ? esc(leftStr || lines.length) : ''}</td><td class="split-v">${line}</td></tr>`
+                ).join('')
+                return `<td class="split-metric"><table class="split-inner">${rows}</table></td>`
+            }
+
+            const splitTimesByType = (events, type) => {
+                const times = events.filter(e => e.type === type).map(e => e.time)
+                return splitMetricCell(times.length, times)
+            }
+
+            const splitTimeListCell = (times) => splitMetricCell(times.length, times)
+
+            const splitYesDetailsCell = (yes, detailsStr) => {
+                if (!yes) return splitMetricCell('Nein', [])
+                const lines = detailsStr && detailsStr !== '–' ? detailsStr.split(' | ') : []
+                return splitMetricCell('Ja', lines)
+            }
+
+            // Split login vs relogin times the same way studentSummaries counts reloginCount.
+            const loginReloginTimes = (events) => {
+                const loginTimes = []
+                const reloginTimes = []
+                let kicked = false
+                for (const ev of events) {
+                    if (ev.type === 'kick') kicked = true
+                    else if (ev.type === 'relogin') {
+                        reloginTimes.push(ev.time)
+                        kicked = false
+                    } else if (ev.type === 'login') {
+                        if (kicked) {
+                            reloginTimes.push(ev.time)
+                            kicked = false
+                        } else {
+                            loginTimes.push(ev.time)
+                        }
+                    }
+                }
+                return { loginTimes, reloginTimes }
             }
 
             const studentRows = this.studentSummaries.map(s => {
-                const loginEvents = s.events.filter(e => e.type === 'login' || e.type === 'relogin')
-                const loginTimes  = loginEvents.map(e => e.time).join(', ') || '–'
-                const vmText = (s.virtualized || s.vmFindings?.isVM || s.webglFindings?.detected)
-                    ? `<b style="color:#c77700;">Ja</b> <span style="color:#666;">${this.vmDetails(s)}</span>`
-                    : 'Nein'
-                const raText = s.remoteassistant
-                    ? `<b style="color:#c77700;">Ja</b> <span style="color:#666;">${this.remoteDetails(s)}</span>`
-                    : 'Nein'
+                const { loginTimes, reloginTimes } = loginReloginTimes(s.events)
+                const vmYes = s.virtualized || s.vmFindings?.isVM || s.webglFindings?.detected
                 return `<tr>
-                    <td>${s.name}</td>
-                    <td>${s.hostname || '–'}${s.ip ? ' | ' + s.ip : ''}</td>
-                    <td>${loginTimes}</td>
-                    <td>${countWithTimes(s.submissionCount, s.events, 'submission')}</td>
-                    <td>${countWithTimes(s.focusLostCount, s.events, 'focuslost')}</td>
-                    <td>${countWithTimes(s.printRequests, s.events, 'printrequest')}</td>
-                    <td>${countWithTimes(s.events.filter(e => e.type === 'kick').length, s.events, 'kick')}</td>
-                    <td>${vmText}</td>
-                    <td>${raText}</td>
+                    <td class="print-mono">${esc(s.name)}</td>
+                    <td class="print-mono">${esc(s.hostname || '–')}${s.ip ? ' | ' + esc(s.ip) : ''}</td>
+                    ${splitTimeListCell(loginTimes)}
+                    ${splitTimeListCell(reloginTimes)}
+                    ${splitTimesByType(s.events, 'submission')}
+                    ${splitTimesByType(s.events, 'focuslost')}
+                    ${splitTimesByType(s.events, 'printrequest')}
+                    ${splitTimesByType(s.events, 'kick')}
+                    ${splitYesDetailsCell(vmYes, this.vmDetails(s))}
+                    ${splitYesDetailsCell(!!s.remoteassistant, this.remoteDetails(s))}
                 </tr>`
             }).join('')
 
@@ -376,6 +419,14 @@ export default {
                 th, td { border: 1px solid #ccc; padding: 2px 4px; text-align: left; vertical-align: top; word-break: break-word; white-space: normal; }
                 th { background: #eee; font-size: 8px; }
                 .server-table td { color: #555; }
+                .print-mono, .split-inner { font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace; }
+                .split-metric { padding: 0; vertical-align: top; }
+                .split-inner { width: 100%; border-collapse: collapse; }
+                .split-inner td { border: none; padding: 1px 3px; vertical-align: top; line-height: 1.35; }
+                .split-n { width: 1.4em; text-align: right; font-weight: 700; white-space: nowrap; }
+                .split-n.muted { color: #aaa; font-weight: 400; }
+                .split-v { color: #444; }
+                .yes-warn { color: #c77700; }
             </style></head><body>
             <h2>${this.$t('examlog.title')} | ${this.examName}</h2>
             <div style="font-size:11px; margin-bottom:10px; color:#666;">
@@ -398,12 +449,13 @@ export default {
             </table>
 
             <h3>${this.$t('examlog.students')}</h3>
-            <table>
+            <table class="students-table">
                 <thead>
                     <tr>
                         <th>${this.$t('examlog.students')}</th>
                         <th>Host / IP</th>
-                        <th>Login</th>
+                        <th>${this.$t('examlog.logins')}</th>
+                        <th>${this.$t('examlog.relogins')}</th>
                         <th>${this.$t('examlog.submissions')}</th>
                         <th>${this.$t('examlog.focuslost')}</th>
                         <th>${this.$t('examlog.printrequests')}</th>
