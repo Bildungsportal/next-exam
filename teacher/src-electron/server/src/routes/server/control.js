@@ -240,7 +240,8 @@ router.get('/connectedstudentips', function (req, res) {
     const { packet } = req.body || {}
     const servername = req.params.servername
     const mcServer = config.examServerList[servername] // get the multicastserver object
-    const sessionRef = String(mcServer?.serverinfo?.pin || '')
+    if (!mcServer) { return res.send({ sender: "server", message: t("control.notfound"), status: "error" }) }
+    const sessionRef = String(mcServer.serverinfo?.pin || '')
     let clientname, clientip, pin, version, hostname, bipuserID, exammode
     try {
         const payload = await processSecurePayload(packet, sessionRef)
@@ -260,7 +261,6 @@ router.get('/connectedstudentips', function (req, res) {
 
     //console.log(versionteacher, versionstudent)
   
-    if (!mcServer) {  return res.send({sender: "server", message:t("control.notfound"), status: "error"} )  }
     if (!pin || !clientname || !clientip || !hostname || !version) { return res.send({sender: "server", message:"Invalid registration payload", status: "error"} ) }
     if (`${versionteacher}` !== versionstudent ) {  return res.send({sender: "server", message:t("control.versionmismatch"), status: "error", version: config.version, versioninfo: config.info} )  }  
     

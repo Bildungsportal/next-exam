@@ -437,7 +437,8 @@
         <div id="focuswarning" class="infodiv p-4 d-block focuswarning">
             <div class="mb-3 row">
                 <div class="mb-3 "> {{ $t('editor.leftkiosk') }} <br> {{ $t('editor.tellsomeone') }}</div>
-                <div v-if="focusLostMessage" class="mb-3 text-dark fw-bold" style="white-space: pre-line">{{ focusLostMessage }}</div>
+                <div v-if="focusLostMessage || focusLockMessage" class="mb-3 text-dark fw-bold" style="white-space: pre-line">{{ focusLostMessage || focusLockMessage }}</div>
+                <div v-if="focusLockReasonLine" class="mb-3 text-dark fw-bold">{{ focusLockReasonLine }}</div>
                 <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32">
                 <div class="mt-3"> {{ timesinceentry }}</div>
             </div>
@@ -837,6 +838,8 @@ export default {
             online: true,
             focus: true,
             focusLostMessage: '',
+            focusLockReason: '',
+            focusLockMessage: '',
             exammode: false,
             examtype: this.$route.params.examtype,
             selectedFile: null,
@@ -953,6 +956,13 @@ export default {
             const cfg = this.getEditorExamConfig();
             return !!cfg?.languagetool;
         },
+        focusLockReasonLine() {
+            const code = this.focusLockReason;
+            if (!code) return '';
+            const key = `editor.focusLockReason_${code}`;
+            const text = this.$te(key) ? this.$t(key) : code;
+            return `${this.$t('editor.focusLockReason')}: ${text}`;
+        },
     },
 
 
@@ -967,11 +977,19 @@ export default {
                 return;
             }
             this.focusLostMessage = '';
+            this.focusLockReason = '';
+            this.focusLockMessage = '';
         },
     },
 
 
     methods: {
+
+        // Sync focus-lock overlay fields from main-process clientinfo.
+        syncFocusLockFromClientinfo(clientinfo) {
+            this.focusLockReason = clientinfo?.focusLockReason || '';
+            this.focusLockMessage = clientinfo?.focusLockMessage || '';
+        },
 
         // from filehandler.js
         getExamMaterials: getExamMaterials,
@@ -1247,6 +1265,7 @@ export default {
             this.clientinfo = getinfo.clientinfo;
             this.token = this.clientinfo.token
             this.focus = this.clientinfo.focus
+            this.syncFocusLockFromClientinfo(this.clientinfo);
             this.clientname = this.clientinfo.name
             this.exammode = this.clientinfo.exammode
             this.pincode = this.clientinfo.pin
@@ -2420,6 +2439,12 @@ export default {
         this.getExamMaterials()
 
       
+
+        signalBridge.on('focusLock', (_event, payload = {}) => {
+            this.focusLockReason = payload.reason || '';
+            this.focusLockMessage = payload.message || '';
+            if (!this.config.development) this.focus = false;
+        });
 
         signalBridge.on('getmaterials', (event) => {  // get exam materials from teacher
             console.log("editor @ getmaterials: get materials request received")

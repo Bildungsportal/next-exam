@@ -186,6 +186,27 @@ function escapeHtml(s){
         .replace(/'/g, '&#039;')
 }
 
+/** Keep the tail of long log text; omit oldest bytes from the start. */
+function truncateLogTextForViewer(text, maxChars = 200000) {
+    const full = String(text)
+    if (full.length <= maxChars) return full
+    const omitted = full.length - maxChars
+    return `... ${omitted} chars omitted from start ...\n\n${full.slice(-maxChars)}`
+}
+
+/** Scroll log popup pre block so the latest lines are visible. */
+function scrollLogPopupPreToBottom() {
+    const pre = document.querySelector('.log-view-popup .log-pre')
+    if (pre && typeof pre.scrollTop === 'number') {
+        pre.scrollTop = pre.scrollHeight
+    }
+}
+
+function scheduleScrollLogPopupPreToBottom() {
+    scrollLogPopupPreToBottom()
+    requestAnimationFrame(() => scrollLogPopupPreToBottom())
+}
+
 // fetch file from disc - show as text (e.g. .log)
 function loadTextFile(filepath, filename){
     const titleText = buildLogViewerTitle(this.workdirectory, filepath, filename)
@@ -193,11 +214,7 @@ function loadTextFile(filepath, filename){
         .then((raw) => {
             const data = raw instanceof ArrayBuffer ? raw : new Uint8Array(raw).buffer
             const decoder = new TextDecoder('utf-8')
-            let text = decoder.decode(data)
-            const maxChars = 200000
-            if (text.length > maxChars) {
-                text = text.slice(0, maxChars) + `\n\n... truncated (${text.length - maxChars} chars)`
-            }
+            const text = truncateLogTextForViewer(decoder.decode(data))
 
             const htmlLines = String(text).split('\n').map((line) => {
                 const level = detectLogLevel(line)
@@ -227,6 +244,7 @@ function loadTextFile(filepath, filename){
                 showCloseButton: true,
                 showConfirmButton: false,
                 showCancelButton: false,
+                didOpen: () => scheduleScrollLogPopupPreToBottom(),
             })
         })
         .catch((err) => { log.error(err) })

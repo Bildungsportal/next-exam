@@ -42,8 +42,7 @@ import qemuService from './qemuService.js';
 import { getVMFindings } from './vmDetection.js';
 import { decryptExamFileBytes, decryptExamFileAllLayers, encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
 import { examApiFetch } from '../../../../shared/examApiFetch.js';
-
-const __dirname = import.meta.dirname;
+import { setClientFocusLock, clearClientFocusLock } from './focusLockState.js';
 
 // Skip info-level file-save log noise when the renderer marks the write as periodic auto-save.
 const logSaveInfoUnlessAuto = (saveReason, message) => {
@@ -735,17 +734,23 @@ class IpcHandler {
          */
         ipcMain.handle('securityFocusLost', (event, payload = {}) => {
             const reason = payload?.reason || 'unknown';
+            const message = payload?.message || '';
             log.warn(`ipchandler @ securityFocusLost: forcing lockdown (reason=${reason})`);
 
-            if (this.WindowHandler?.examwindow && !this.config.development) {
-                this.WindowHandler.examwindow.moveTop();
-                this.WindowHandler.examwindow.setKiosk(true);
-                this.WindowHandler.examwindow.show();
-                this.WindowHandler.examwindow.focus();
+            const examWin = this.WindowHandler?.examwindow;
+            if (examWin && !this.config.development) {
+                examWin.moveTop();
+                examWin.setKiosk(true);
+                examWin.show();
+                examWin.focus();
             }
 
             if (this.multicastClient?.clientinfo) {
-                this.multicastClient.clientinfo.focus = false;
+                setClientFocusLock(this.multicastClient.clientinfo, reason, message);
+            }
+
+            if (examWin?.webContents && !examWin.webContents.isDestroyed()) {
+                examWin.webContents.send('focusLock', { reason, message });
             }
 
             return { sender: "client", focus: false, reason };
@@ -759,6 +764,7 @@ class IpcHandler {
                 return { ok: false, reason: 'not-local-lockdown' };
             }
 
+            clearClientFocusLock(this.multicastClient.clientinfo);
             this.multicastClient.clientinfo.focus = true;
 
             if (this.WindowHandler?.examwindow && !this.config.development) {
@@ -1706,9 +1712,7 @@ class IpcHandler {
         // New handler to get PDF from public directory for frontend parsing
         ipcMain.handle('getPdfFromPublic', async (event, pdfFilename ) => {
             try {
-                // Get directory name in ESM
-                const __dirname = import.meta.dirname;
-                
+           
                 let pdfPath;
                 pdfPath = path.join(platformDispatcher.publicBase, pdfFilename);
                 

@@ -78,6 +78,8 @@
         "exit": "Exit safe exam mode?",
         "exitkiosk": "Do not leave safe exam mode without permission.",
         "finalsubmit": "Final submit",
+        "focusLockReason": "Reason",
+        "focusLockReason_ltPort8088": "Port 8088 is in use by another service (not LanguageTool)",
         "getmaterials": "Get materials",
         "headercolumn": "headercolumn",
         "headerrow": "headerrow",

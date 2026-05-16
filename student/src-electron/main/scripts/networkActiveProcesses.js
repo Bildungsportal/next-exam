@@ -19,7 +19,7 @@ const execFileAsync = promisify(childProcess.execFile);
 // LanguageTool process markers (cmdline/exe based; never port-based)
 const LT_MARKERS = ['languagetool-server.jar', 'org.languagetool.server'];
 
-// LT default port; only used to support the cmdline check (not as generic signature)
+// LT default listen port; conflict detection uses ltServer.port when set
 const LT_DEFAULT_PORT = 8088;
 
 // Next-Exam owned helper markers; cmdline-based safety net for processes that may
@@ -66,7 +66,7 @@ async function sh(cmd, args) {
  */
 const isLt = (cmd, exe) => {
     const s = `${cmd || ''} ${exe || ''}`.toLowerCase();
-    return LT_MARKERS.some((m) => s.includes(m));
+    return s.includes('languagetool') || LT_MARKERS.some((m) => s.includes(m));
 };
 
 /**
@@ -424,9 +424,15 @@ export async function getNetworkActiveProcesses(opts = {}) {
     return { processes, snapshotTs: Date.now() };
 }
 
+/** TCP listeners on 8088 that are not LanguageTool (already filtered by getNetworkActiveProcesses). */
+export async function findNonLanguageToolOn8088() {
+    const { processes } = await getNetworkActiveProcesses({ mode: 'listen' });
+    return processes.filter((p) => p.listenPorts.includes(LT_DEFAULT_PORT));
+}
+
 /**
  * Run a scan and emit a summary + one electron-log line per candidate.
- * Used by platformrestrictions.js (initial scan + SchedulerService interval).
+ * Used by communicationhandler requestUpdate (remote-check tick).
  * @param {object} [opts]
  * @param {'outbound'|'listen'|'both'} [opts.mode]
  */

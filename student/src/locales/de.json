@@ -78,6 +78,8 @@
         "exit": "Abgesicherten Modus beenden?",
         "exitkiosk": "Verlassen Sie den abgesicherten Modus nie ohne Freigabe einer Lehrperson.",
         "finalsubmit": "abgeben",
+        "focusLockReason": "Grund",
+        "focusLockReason_ltPort8088": "Port 8088 ist von einem anderen Dienst belegt (nicht LanguageTool)",
         "getmaterials": "Materialien holen",
         "headercolumn": "Titelspalte",
         "headerrow": "Titelreihe",

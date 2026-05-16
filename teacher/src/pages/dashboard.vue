@@ -1209,7 +1209,8 @@
                                 <div v-if="student.virtualized && isStudentReachable(student, now)" class="virtualizedinfo" @mouseover="showDescription($t('dashboard.virtualizedinfo'), { vmFindings: student.vmFindings, webglFindings: student.webglFindings })" @mouseout="hideDescription">{{$t("dashboard.virtualized")}}</div>
                                 <div v-if="!student.focus && isStudentReachable(student, now)" class="kioskwarning" @mouseover="showDescription($t('dashboard.leftkioskinfo'))" @mouseout="hideDescription">{{$t("dashboard.leftkiosk")}}</div>
                                 <div v-if="student.status.sendexam && isStudentReachable(student, now)" class="examrequest" @mouseover="showDescription($t('dashboard.examrequestinfo'))" @mouseout="hideDescription">{{$t("dashboard.examrequest")}}</div>
-                                <div v-if="student.remoteassistant && isStudentReachable(student, now)" class="remoteassistant" @mouseover="showDescription($t('dashboard.remoteassistantinfo'), student.remoteassistant)" @mouseout="hideDescription">{{$t("dashboard.remoteassistant")}}</div>
+                                <div v-if="student.remoteassistant?.languagetoolFake && isStudentReachable(student, now)" class="languagetoolfake" @mouseover="showDescription(languageToolFakeDescription(student))" @mouseout="hideDescription">{{$t("dashboard.languagetoolfake")}}</div>
+                                <div v-if="student.remoteassistant && !student.remoteassistant.languagetoolFake && isStudentReachable(student, now)" class="remoteassistant" @mouseover="showDescription($t('dashboard.remoteassistantinfo'), student.remoteassistant)" @mouseout="hideDescription">{{$t("dashboard.remoteassistant")}}</div>
                                 <span >   
                                     <div v-if="isStudentReachable(student, now)" style="display: inline-block; overflow: hidden; width: 140px; height: 22px" @mouseover="showDescription($t('dashboard.documentsinfo') + student.files)" @mouseout="hideDescription"> 
                                         <img v-for="file in student.files" style="width:22px; margin-left:-4px; position: relative; filter: sepia(10%) hue-rotate(306deg) brightness(0.3) saturate(75);" class="" src="/src/assets/img/svg/document.svg">
@@ -1946,13 +1947,7 @@ computed: {
             
             if (this.serverlogActive && this.serverlogReload){
                 this.serverlog = await ipcRenderer.invoke('getlog')
-                this.$nextTick(() => {
-                let logscroll = document.getElementById('logscrollarea');
-                if (logscroll) {
-                    logscroll.scrollTop = logscroll.scrollHeight;
-                }
-                });
-
+                this.scheduleScrollServerLogToBottom()
             }
 
             let result = await ipcRenderer.invoke('studentlist', this.servername)
@@ -2594,6 +2589,20 @@ computed: {
             return value.length > len ? value.substr(0, len) + '...' : value;
         },
 
+        // Hover description for LT-fake badge (other remoteassistant hits below main text).
+        languageToolFakeDescription(student) {
+            let desc = this.$t('dashboard.languagetoolfakeinfo');
+            const ra = student?.remoteassistant;
+            if (!ra) return desc;
+            if (ra.keywords?.length) {
+                desc += ` | ${this.$t('dashboard.languagetoolfakeOtherServices')}: ${ra.keywords.join(', ')}`;
+            }
+            if (ra.ports?.length) {
+                desc += ` | Ports: ${ra.ports.join(', ')}`;
+            }
+            return desc;
+        },
+
         // Strip last ".ext" segment for labels (same behavior as materialsList.vue).
         getFilenameWithoutExtension(filename) {
             if (!filename || typeof filename !== 'string') {
@@ -3030,15 +3039,22 @@ computed: {
                 if (log.length == 0){ this.serverlog = [] }
                 else { this.serverlog = log }
 
-         
-                this.$nextTick(() => {
-                let logscroll = document.getElementById('logscrollarea');
-                if (logscroll) {
-                    logscroll.scrollTop = logscroll.scrollHeight;
-                }
-                });
-
+                this.scheduleScrollServerLogToBottom()
             }
+        },
+
+        scrollServerLogToBottom() {
+            const el = document.getElementById('logscrollarea')
+            if (el && typeof el.scrollTop === 'number') {
+                el.scrollTop = el.scrollHeight
+            }
+        },
+
+        scheduleScrollServerLogToBottom() {
+            this.$nextTick(() => {
+                this.scrollServerLogToBottom()
+                requestAnimationFrame(() => this.scrollServerLogToBottom())
+            })
         },
 
         /**
@@ -3980,6 +3996,21 @@ computed: {
     padding-right: 10px;
     border-bottom-right-radius: 5px;
     border-top-right-radius: 5px;
+}
+
+.languagetoolfake {
+    position: absolute;
+    top: 78px;
+    left: 0;
+    background-color: #9b2c2c;
+    color: white;
+    font-size: 0.7em;
+    padding: 2px;
+    padding-left: 4px;
+    padding-right: 10px;
+    border-bottom-right-radius: 5px;
+    border-top-right-radius: 5px;
+    z-index: 100;
 }
 
 .remoteassistant {
