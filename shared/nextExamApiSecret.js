@@ -3,7 +3,7 @@
  * Replace the string before production builds; must be identical in Teacher + Student bundles.
  */
 
-export const NEXT_EXAM_API_SECRET = 'CHANGE_ME_NEXT_EXAM_API_SECRET_REPLACE_BEFORE_RELEASE';
+export const NEXT_EXAM_API_SECRET = 'NEXT_EXAM_API_SECRET';
 
 /** Lowercase header name (Express normalizes incoming headers). */
 export const NEXT_EXAM_API_SECRET_HEADER = 'x-next-exam-app-secret';
