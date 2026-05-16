@@ -3,6 +3,8 @@ RULE^agent^memRW^read CLAUDE §5+this file before nontrivial; append atoms post-
 TECH^vue^api^Options API teacher/src; mirror sibling file; no script setup unless user migrates
 IPC^teacher^writeTeacherWorkdirUtf8File^invoke({servername,filepath,utf8})→write UTF-8; basename must end _editor_timeline.json; servername must exist in examServerList^teacher ipchandler.js+studentEditorTimeline.js
 PATH^dashboard^editorTimeline^teacher/src/utils/studentEditorTimeline.js + teacher/src/components/StudentEditorTimelineDiffViewer.vue; explorer button DashboardExplorer.vue; dashboard.vue wires @timeline-diff
+PATH^examlog^settings^examLogSettings.js snapshot on examstart→event.settings; ExamLog.vue UI+print; examEventBus.push meta.settings
+BUG^examlog^dupSubmission^dashboard mounted stacked ipcRenderer.on('submission'); fix removeListener before on; examEventBus.push dedupe ≤1ms same type+student
 TECH^exam^editorTimelineJson^workdir student folder `<Student>_editor_timeline.json` (listed in explorer); schema {version,kind,studentFolder,generatedAt,jsonPath,entries[{timestamp_name,timestamp,text,sourceHtm}]}
 RULE^i18n^alphabetical^keep keys in teacher/src/locales/de.json+en.json alphabetically sorted within each object
 RULE^i18n^intlifyPipe^vue-i18n/intlify treats | in messages as plural delimiter; literal pipe write {'|'}^teacher+student locales
@@ -17,6 +19,7 @@ RULE^agent^gitSafety^never run git restore/reset/clean/rebase/stash/pop/checkout
 PATH^print^pdf^teacher/src-electron/main/scripts/printjobhandler.js+teacher/src/pages/SystemPrintPdf.vue
 TECH^teacherCli^examModes^--exam-modes=csv overrides config.exammodes at runtime^teacher/src-electron/electron-main.js
 TECH^build^protectMain^main bundle path=teacher/dist/electron/UnPackaged/electron-main.js;run protect via electron-builder beforePack^teacher/scripts/protect-main.mjs+teacher/quasar.config.ts
+TECH^build^electronAssets^prod electron: copy src/assets→public/src/assets; rewrite `/src/assets`→`./src/assets` incl. Vue backtick literals in generateBundle; CSS url() often Vite-inlined^teacher+student quasar.config.ts
 PATH^platform^dispatcher^teacher/src-electron/main/scripts/platformDispatcher.js used by teacher main startup logs^teacher/src-electron/electron-main.js
 PATH^pdfparser^root^shared/pdfparser/ (v5+shared); renderer import next-exam-shared/pdfparser/index.js (quasar alias next-exam-shared->shared/)
 IPC^teacher^getServerInfoForDashboard^invoke(servername)→{status,data:{pin,servertoken,serverip,id}}|error; dashboard beforeEnter (replaces GET /control/getserverinfo)^teacher ipchandler.js+router/index.js

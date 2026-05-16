@@ -137,12 +137,18 @@ export default defineConfig(( ctx: any ) => {
           viteConf.plugins.push({
             name: 'quasar-electron-rewrite-assets',
             transformIndexHtml: (html) => {
-              let out = html.replace(/(["'])\/src\/assets/g, '$1./src/assets');
+              let out = html.replace(/([`"'])\/src\/assets/g, '$1./src/assets');
               out = out.replace(/href=["']public\//g, 'href="./');
               return out;
             },
             generateBundle (_, bundle) {
-              const rewrite = (s) => s.replace(/"\/src\/assets/g, '"./src/assets').replace(/'\/src\/assets/g, "'./src/assets");
+              // Vue compiles template src to backticks; CSS url() is inlined — only JS literals need backtick rewrite.
+              const rewrite = (s) => s
+                .replace(/`\/src\/assets/g, '`./src/assets')
+                .replace(/\\"\/src\/assets/g, '\\"./src/assets')
+                .replace(/\\'\/src\/assets/g, "\\'./src/assets")
+                .replace(/"\/src\/assets/g, '"./src/assets')
+                .replace(/'\/src\/assets/g, "'./src/assets");
               for (const item of Object.values(bundle)) {
                 const entry = item as { type?: string; code?: string; source?: string | Buffer };
                 if (entry?.type === 'chunk' && entry.code) entry.code = rewrite(entry.code);

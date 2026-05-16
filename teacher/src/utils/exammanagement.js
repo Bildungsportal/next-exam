@@ -1,5 +1,6 @@
 import log from 'electron-log/renderer';
 import examEventBus from './examEventBus.js'
+import { buildExamLogSettingsSnapshot } from './examLogSettings.js'
 import { countReachableStudents, isStudentReachable } from './studentPresence.js'
 
 
@@ -81,7 +82,8 @@ async function startExam(){
     examEventBus.examStart = new Date().toLocaleString('de-DE')
     examEventBus._scheduleSave()
     log.info("exammanagment @ startExam: starting exammode")
-    examEventBus.push('examstart')
+    const settingsSnap = buildExamLogSettingsSnapshot(this.serverstatus, sectionIndex)
+    examEventBus.push('examstart', {}, settingsSnap ? { settings: settingsSnap } : null)
     this.visualfeedback(this.$t("dashboard.startexam"))
     try {
         const resp = await this.setServerStatus()

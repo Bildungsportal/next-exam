@@ -49,8 +49,11 @@
             <!-- Content -->
             <div v-else class="examlog-content">
 
-                <!-- Server events strip -->
-                <div v-if="serverEvents.length" class="examlog-server-strip">
+                <!-- General log: server events + exam settings -->
+                <section v-if="serverEvents.length || examSettingsEvents.length" class="examlog-section">
+                    <h3 class="examlog-section-title">{{ $t('examlog.generalLog') }}</h3>
+
+                    <div v-if="serverEvents.length" class="examlog-server-strip">
                     <div v-for="(ev, idx) in serverEvents" :key="idx" class="examlog-server-event">
                         <span class="examlog-server-time">{{ ev.time }}</span>
                         <span class="examlog-server-dot" :class="serverDotClass(ev.type)"></span>
@@ -58,8 +61,48 @@
                     </div>
                 </div>
 
-                <!-- Student cards -->
-                <div class="examlog-cards">
+                <!-- Exam settings (snapshotted at each exam start) -->
+                <div v-for="(ev, idx) in examSettingsEvents" :key="'settings-' + idx" class="examlog-settings">
+                    <div class="examlog-settings-header">
+                        <span class="examlog-server-time">{{ ev.time }}</span>
+                        <span class="examlog-settings-title">{{ $t('examlog.settingsTitle') }}</span>
+                        <span v-if="ev.settings.sectionName" class="examlog-settings-section">— {{ ev.settings.sectionName }}</span>
+                    </div>
+                    <div class="examlog-settings-grid examlog-settings-grid--ui">
+                        <div class="examlog-settings-row">
+                            <span class="examlog-settings-label">{{ $t('examlog.examMode') }}</span>
+                            <span class="examlog-settings-value">{{ examTypeLabel(ev.settings.examtype) }}</span>
+                        </div>
+                        <div class="examlog-settings-row">
+                            <span class="examlog-settings-label">{{ $t('examlog.groups') }}</span>
+                            <span class="examlog-settings-value">{{ ev.settings.groups ? $t('examlog.groupsOn') : $t('examlog.groupsOff') }}</span>
+                        </div>
+                        <template v-for="gk in settingsGroupKeys(ev.settings)" :key="gk">
+                            <div class="examlog-settings-grouphead">{{ groupLabel(gk) }}</div>
+                            <div class="examlog-settings-row">
+                                <span class="examlog-settings-label">{{ $t('examlog.baseMaterialUrl') }}</span>
+                                <span class="examlog-settings-value">{{ formatSettingValue(ev.settings[gk].baseMaterialUrl) }}</span>
+                            </div>
+                            <div class="examlog-settings-row examlog-settings-row--stack">
+                                <span class="examlog-settings-label">{{ $t('examlog.materials') }}</span>
+                                <div class="examlog-settings-value examlog-settings-stack">
+                                    <div v-if="!materialsItems(ev.settings[gk]).length" class="examlog-settings-line">–</div>
+                                    <div v-for="(line, mi) in materialsItems(ev.settings[gk])" :key="mi" class="examlog-settings-line">{{ line }}</div>
+                                </div>
+                            </div>
+                            <div v-if="ev.settings.examtype === 'editor'" class="examlog-settings-row">
+                                <span class="examlog-settings-label">{{ $t('examlog.languagetool') }}</span>
+                                <span class="examlog-settings-value">{{ formatLanguagetool(ev.settings[gk].languagetool) }}</span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                </section>
+
+                <!-- Student log -->
+                <section v-if="studentSummaries.length" class="examlog-section">
+                    <h3 class="examlog-section-title">{{ $t('examlog.studentLog') }}</h3>
+                    <div class="examlog-cards">
                     <div v-for="s in studentSummaries" :key="s.name" class="examlog-card">
 
                         <!-- Card header -->
@@ -87,7 +130,7 @@
                             </span>
                             <span v-if="s.remoteassistant" class="examlog-meta-sep">|</span>
                             <span v-if="s.remoteassistant" class="examlog-meta-item examlog-meta-warn">
-                                {{ $t('dashboard.remoteassistant') }}
+                                {{ $t('examlog.ev_remoteassistant') }}
                                 <span class="examlog-meta-details" v-if="remoteDetails(s)"> ({{ remoteDetails(s) }})</span>
                             </span>
                         </div>
@@ -123,7 +166,8 @@
                         </div>
 
                     </div>
-                </div>
+                    </div>
+                </section>
             </div>
 
         </div>
@@ -237,6 +281,10 @@ export default {
 
             return Object.values(students)
         },
+
+        examSettingsEvents() {
+            return (this.events || []).filter(ev => ev.type === 'examstart' && ev.settings)
+        },
     },
 
     methods: {
@@ -275,6 +323,54 @@ export default {
             return translated === key ? type : translated
         },
 
+        examTypeLabel(examtype) {
+            switch (examtype) {
+                case 'math': return this.$t('dashboard.math')
+                case 'editor': return this.$t('dashboard.lang')
+                case 'eduvidual': return this.$t('dashboard.eduvidual')
+                case 'forms': return this.$t('dashboard.forms')
+                case 'website': return 'Website'
+                case 'activesheets': return 'Active Sheets'
+                case 'microsoft365': return this.$t('dashboard.microsoft365')
+                case 'rdp': return 'RDP'
+                case 'localvm': return 'LocalVM'
+                default: return examtype || '–'
+            }
+        },
+
+        settingsGroupKeys(settings) {
+            if (!settings) return []
+            return settings.groups ? ['groupA', 'groupB'] : ['groupA']
+        },
+
+        groupLabel(gk) {
+            if (gk === 'groupB') return this.$t('examlog.groupB')
+            return this.$t('examlog.groupA')
+        },
+
+        formatSettingValue(value) {
+            return value || '–'
+        },
+
+        materialsItems(group) {
+            return [
+                ...(group?.materialsFiles || []),
+                ...(group?.materialsUrls || []),
+            ]
+        },
+
+        formatMaterialsList(group) {
+            const items = this.materialsItems(group)
+            return items.length ? items.join(', ') : '–'
+        },
+
+        formatLanguagetool(lt) {
+            if (!lt?.enabled) return this.$t('examlog.languagetoolOff')
+            const host = lt.host ? ` (${lt.host})` : ''
+            if (lt.suggestions) return this.$t('examlog.languagetoolWithSuggestions') + host
+            return this.$t('examlog.languagetoolWithoutSuggestions') + host
+        },
+
         dotClass(type) {
             if (type === 'login' || type === 'relogin') return 'dot-success'
             if (type === 'focuslost')       return 'dot-danger'
@@ -298,6 +394,36 @@ export default {
             if (type === 'virtualized')     return 'tl-warning'
             if (type === 'remoteassistant') return 'tl-warning'
             return ''
+        },
+
+        buildSettingsPrintHtml() {
+            const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            const events = this.examSettingsEvents
+            if (!events.length) return ''
+            const blocks = events.map(ev => {
+                const s = ev.settings
+                const groupKeys = this.settingsGroupKeys(s)
+                const rows = [
+                    `<tr><th>${this.$t('examlog.examMode')}</th><td class="print-mono" colspan="3">${esc(this.examTypeLabel(s.examtype))}</td></tr>`,
+                    `<tr><th>${this.$t('examlog.groups')}</th><td class="print-mono" colspan="3">${esc(s.groups ? this.$t('examlog.groupsOn') : this.$t('examlog.groupsOff'))}</td></tr>`,
+                ]
+                for (const gk of groupKeys) {
+                    const g = s[gk]
+                    rows.push(`<tr><th colspan="4" class="settings-grouphead print-mono">${esc(this.groupLabel(gk))}</th></tr>`)
+                    rows.push(`<tr><th>${this.$t('examlog.baseMaterialUrl')}</th><td class="print-mono" colspan="3">${esc(this.formatSettingValue(g.baseMaterialUrl))}</td></tr>`)
+                    const matLines = this.materialsItems(g)
+                    const matCell = matLines.length
+                        ? matLines.map(l => esc(l)).join('<br>')
+                        : '–'
+                    rows.push(`<tr><th>${this.$t('examlog.materials')}</th><td class="print-mono" colspan="3">${matCell}</td></tr>`)
+                    if (s.examtype === 'editor') {
+                        rows.push(`<tr><th>${this.$t('examlog.languagetool')}</th><td class="print-mono" colspan="3">${esc(this.formatLanguagetool(g.languagetool))}</td></tr>`)
+                    }
+                }
+                return `<h3 class="settings-block-title print-mono">${esc(this.$t('examlog.settingsTitle'))} — ${esc(ev.time)}${s.sectionName ? ' — ' + esc(s.sectionName) : ''}</h3>
+                <table class="settings-table"><tbody>${rows.join('')}</tbody></table>`
+            }).join('')
+            return blocks
         },
 
         showPrintPreview() {
@@ -427,6 +553,10 @@ export default {
                 .split-n.muted { color: #aaa; font-weight: 400; }
                 .split-v { color: #444; }
                 .yes-warn { color: #c77700; }
+                .settings-block-title { font-size: 9px; margin: 10px 0 4px 0; color: #444; }
+                .settings-table { margin-bottom: 8px; }
+                .settings-table th { width: 22%; background: #f5f5f5; }
+                .settings-grouphead { background: #e8e8e8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
             </style></head><body>
             <h2>${this.$t('examlog.title')} | ${this.examName}</h2>
             <div style="font-size:11px; margin-bottom:10px; color:#666;">
@@ -435,7 +565,7 @@ export default {
                 ${this.$t('examlog.students')}: <b>${this.studentSummaries.length}</b>
             </div>
 
-            <h3>${this.$t('examlog.server')}</h3>
+            <h3>${this.$t('examlog.generalLog')}</h3>
             <table class="server-table">
                 <thead>
                     <tr>
@@ -448,7 +578,9 @@ export default {
                 <tbody>${serverSummaryRow}</tbody>
             </table>
 
-            <h3>${this.$t('examlog.students')}</h3>
+            ${this.buildSettingsPrintHtml()}
+
+            <h3>${this.$t('examlog.studentLog')}</h3>
             <table class="students-table">
                 <thead>
                     <tr>
@@ -556,6 +688,87 @@ export default {
 }
 .examlog-content::-webkit-scrollbar-thumb:hover {
     background: rgba(255,255,255,0.28);
+}
+
+/* Section headings (general vs student log) */
+.examlog-section {
+    margin-bottom: 14px;
+}
+.examlog-section-title {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 8px 0;
+}
+
+/* Exam settings (snapshot at exam start) */
+.examlog-settings {
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+.examlog-settings-header {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px;
+    margin-bottom: 8px;
+}
+.examlog-settings-title {
+    color: rgba(255,255,255,0.85);
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+.examlog-settings-section {
+    color: rgba(255,255,255,0.45);
+    font-size: 0.75rem;
+}
+.examlog-settings-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.examlog-settings-row {
+    display: grid;
+    grid-template-columns: minmax(7rem, 11rem) 1fr;
+    gap: 8px;
+    align-items: start;
+    font-size: 0.73rem;
+}
+.examlog-settings-grouphead {
+    color: var(--bs-teal);
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+}
+.examlog-settings-label {
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.65rem;
+}
+.examlog-settings-value {
+    color: rgba(255,255,255,0.8);
+    word-break: break-word;
+}
+.examlog-settings-grid--ui {
+    font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+}
+.examlog-settings-row--stack {
+    align-items: start;
+}
+.examlog-settings-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.examlog-settings-line {
+    color: rgba(255,255,255,0.75);
+    line-height: 1.35;
 }
 
 /* Server strip */

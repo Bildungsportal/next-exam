@@ -24,7 +24,7 @@ const examEventBus = reactive({
         }
     },
 
-    push(type, student = {}) {
+    push(type, student = {}, meta = null) {
         const now = new Date();
         const entry = {
             type,
@@ -38,6 +38,19 @@ const examEventBus = reactive({
         if (student?.vmFindings)       entry.vmFindings = student.vmFindings;
         if (student?.webglFindings)    entry.webglFindings = student.webglFindings;
         if (student?.remoteassistant)  entry.remoteassistant = student.remoteassistant;
+        if (meta?.settings)            entry.settings = meta.settings;
+
+        // Ignore duplicate IPC delivery (e.g. stacked submission listeners on dashboard remount).
+        const last = this.events[this.events.length - 1];
+        if (
+            last
+            && last.type === type
+            && last.student === entry.student
+            && entry.ts - last.ts <= 1
+        ) {
+            return;
+        }
+
         this.events.push(entry);
         this._scheduleSave();
     },

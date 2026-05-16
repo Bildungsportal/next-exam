@@ -3192,6 +3192,9 @@ computed: {
 
         // fired by the express server (control.js) via webContents.send after a PDF is successfully written to disk
         // distinguishes between a plain submission (file saved only) and a printrequest (file saved + teacher print dialog)
+        if (this.ipcSubmissionHandler) {
+            ipcRenderer.removeListener('submission', this.ipcSubmissionHandler)
+        }
         this.ipcSubmissionHandler = (event, student) => {
             examEventBus.push(student.printrequest ? 'printrequest' : 'submission', student)
         }
