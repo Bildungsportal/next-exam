@@ -302,6 +302,7 @@ export default defineConfig(( ctx: any ) => {
         productName,
         buildVersion: `${version}.${buildNumber}`,
         asar: { smartUnpack: true },
+        beforePack: 'scripts/beforepack.js',
         afterPack: 'scripts/afterpack.js',
         asarUnpack: [
           'public/**/*',
