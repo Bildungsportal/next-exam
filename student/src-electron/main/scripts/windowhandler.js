@@ -749,6 +749,7 @@ class WindowHandler {
             log.info(`windowhandler @ createMainWindow: Loading URL: ${url}`)
             this.mainwindow.loadURL(url)
         }
+
     }
 
 
@@ -864,6 +865,9 @@ class WindowHandler {
 
     //adds blur listener when entering exammode   // blur event isnt fired on macos MISSIONCONTROL (which cant be deactivated anymore) - damn you apple!
     addBlurListener(window = "examwindow"){
+        if (platformDispatcher.runningInCage) {
+            return;
+        }
         if (window === "examwindow"){ 
             log.info(`windowhandler @ addBlurListener: Setting Blur Event for ${window}`)
             this.examwindow.addListener('blur', () => this.blurevent(this)) 

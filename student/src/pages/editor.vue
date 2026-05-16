@@ -798,6 +798,7 @@ import {getExamMaterials, loadDOCX, loadHTML, loadImage, loadODT, loadPDF, playA
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 
 import {SignalBridge} from '../utils/signalBridge.js'
+import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
 
 const lowlight = createLowlight(common)
@@ -2055,6 +2056,7 @@ export default {
         },
         async sendFocuslost(ctrlalt = false, options = {}) {
             const { instantBlock = false, forceBackendLock = false, message = '' } = options;
+            if (!forceBackendLock && await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
             if (message) this.focusLostMessage = message;
             if (instantBlock && !this.config.development) {
                 this.focus = false;
@@ -2574,7 +2576,7 @@ export default {
 
         // block editor on escape
         if (!this.config.development) {
-            document.body.addEventListener('mouseleave', this.sendFocuslost);
+            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
             // document.body.addEventListener('keydown', this.handleCtrlAlt);
             window.addEventListener('visibilitychange', this.handleVisibilityChange);
         }

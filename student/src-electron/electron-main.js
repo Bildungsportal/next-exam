@@ -241,25 +241,51 @@ app.whenReady()
     nativeTheme.themeSource = 'light'  // prevent theme settings from being adopted from windows
     session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
-    // Use system picker (KDE/PipeWire dialog on Linux) when available; fallback to first screen
-    session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
-        desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
-            try {
-                if (sources.length > 0) {
-                    callback({ video: sources[0] });
-                } else {
-                    log.warn('main @ setDisplayMediaRequestHandler: no screen sources available');
+    if (platformDispatcher.runningInCage) {
+        session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+            desktopCapturer.getSources({ types: ['window'] }).then((sources) => {
+                try {
+                    let picked = sources[0];
+                    if (sources.length) {
+                        const nextExam = sources.find((s) => /next-exam|next exam/i.test(s.name));
+                        if (nextExam) picked = nextExam;
+                    }
+                    if (picked) {
+                        callback({ video: picked });
+                    } else {
+                        log.warn('main @ setDisplayMediaRequestHandler (cage): no window sources');
+                        callback(null);
+                    }
+                } catch (e) {
+                    log.warn('main @ setDisplayMediaRequestHandler (cage):', e?.message || e);
                     callback(null);
                 }
-            } catch (e) {
-                log.warn('main @ setDisplayMediaRequestHandler: exception in handler', e?.message || e);
+            }).catch((err) => {
+                log.warn('main @ setDisplayMediaRequestHandler (cage):', err?.message || err);
                 callback(null);
-            }
-        }).catch((err) => {
-            log.warn('main @ setDisplayMediaRequestHandler:', err?.message || err);
-            callback(null);
-        });
-    }, { useSystemPicker: true });
+            });
+        }, { useSystemPicker: false });
+    } else {
+        // Use system picker (KDE/PipeWire dialog on Linux) when available; fallback to first screen
+        session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+            desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+                try {
+                    if (sources.length > 0) {
+                        callback({ video: sources[0] });
+                    } else {
+                        log.warn('main @ setDisplayMediaRequestHandler: no screen sources available');
+                        callback(null);
+                    }
+                } catch (e) {
+                    log.warn('main @ setDisplayMediaRequestHandler: exception in handler', e?.message || e);
+                    callback(null);
+                }
+            }).catch((err) => {
+                log.warn('main @ setDisplayMediaRequestHandler:', err?.message || err);
+                callback(null);
+            });
+        }, { useSystemPicker: true });
+    }
     
     toggleMacOSLockdown(true);
    

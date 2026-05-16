@@ -163,6 +163,7 @@ import WebviewPane from '../components/WebviewPane.vue'
 import {getExamMaterials, loadImage, loadPDF, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import {isElectronWindow} from "../types/platform.ts";
 import {SignalBridge} from '../utils/signalBridge.js'
+import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -266,7 +267,7 @@ export default {
             this.loadfilelistinterval.addEventListener('action', this.loadFilelist);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.loadfilelistinterval.start();
 
-            document.body.addEventListener('mouseleave', this.sendFocuslost);
+            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
 
             this.loadFilelist()
             this.getExamMaterials()
@@ -447,6 +448,7 @@ export default {
         },
 
         async sendFocuslost() {
+            if (await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
             if (isElectronWindow(window)) {
                 let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
                 if (!this.config.development && !response.focus) {  //immediately block frontend

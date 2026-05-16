@@ -186,6 +186,7 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 import { getExamMaterials, loadPDF, loadImage, loadGGB, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import {SignalBridge} from '../utils/signalBridge.js'
+import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -370,7 +371,7 @@ export default {
             this.saveinterval.addEventListener('action', this.saveContentGgbAuto);
             this.saveinterval.start();
 
-            document.body.addEventListener('mouseleave', this.sendFocuslost);
+            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
 
             this.loadFilelist()
             this.getExamMaterials()
@@ -482,6 +483,7 @@ export default {
 
         
         async sendFocuslost(ctrlalt = false){
+            if (await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
             let response = await signalBridge.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
             if (response && !this.config.development && !response.focus) {  //immediately block frontend
                 this.focus = false

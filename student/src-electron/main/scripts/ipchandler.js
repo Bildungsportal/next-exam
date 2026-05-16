@@ -18,6 +18,8 @@
 
 import path from 'path'
 import fs from 'fs'
+import { spawn } from 'child_process'
+import { fileURLToPath } from 'url'
 import ip from 'ip'
 import net from 'net'
 import dns from 'dns'
@@ -45,6 +47,7 @@ import { examApiFetch } from '../../../../shared/examApiFetch.js';
 import { normalizeStudentClientName } from '../../../../shared/normalizeStudentClientName.js';
 import { setClientFocusLock, clearClientFocusLock } from './focusLockState.js';
 import { syncClientDisplayInfo } from './displayInfo.js';
+import { captureActiveWindowScreenshot } from './cageScreenshotCapture.js';
 
 // Skip info-level file-save log noise when the renderer marks the write as periodic auto-save.
 const logSaveInfoUnlessAuto = (saveReason, message) => {
@@ -123,6 +126,38 @@ class IpcHandler {
         this.WindowHandler = wh  
         this.CommunicationHandler = ch
         
+
+        ipcMain.handle('get-linux-kiosk-info', () => ({
+            cageInstalled: platformDispatcher.cageInstalled,
+            runningInCage: platformDispatcher.runningInCage,
+            cageKioskInstalled: platformDispatcher.cageKioskInstalled,
+            displayServer: platformDispatcher.displayServer,
+        }));
+
+        ipcMain.handle('quit-app', () => {
+            app.quit();
+        });
+
+        ipcMain.handle('capture-screenshot-frame', async () => {
+            return captureActiveWindowScreenshot(this.WindowHandler, this.multicastClient);
+        });
+
+        ipcMain.handle('install-linux-cage-kiosk', () => {
+            const source = process.env.APPIMAGE || process.execPath;
+            const script = app.isPackaged
+                ? path.join(process.resourcesPath, 'linux', 'install-cage-kiosk.sh')
+                : path.join(path.dirname(fileURLToPath(import.meta.url)), '../../resources/linux/install-cage-kiosk.sh');
+            return new Promise((resolve) => {
+                const child = spawn('pkexec', ['/bin/sh', script, source], { env: process.env });
+                let stderr = '';
+                child.stderr?.on('data', (chunk) => { stderr += String(chunk); });
+                child.on('error', (err) => resolve({ ok: false, error: err.message }));
+                child.on('close', (code) => {
+                    if (code === 0) resolve({ ok: true });
+                    else resolve({ ok: false, error: stderr.trim() || `exit ${code}` });
+                });
+            });
+        });
 
         ipcMain.on('set-new-locale', (event, locale) => {
             log.info(`ipchandler @ set-new-locale: setting new locale to ${locale}`)
@@ -701,6 +736,9 @@ class IpcHandler {
          */ 
         ipcMain.handle('focuslost', (event, ctrlalt=false) => { 
             let answer = false 
+            if (platformDispatcher.runningInCage) {
+                return { sender: 'client', focus: true };
+            }
             if (this.config.development || !this.multicastClient.clientinfo.exammode) { 
                 log.info(`ipchandler @ focuslost: focuslost event was triggered but development mode is enabled or exammode is false`)
           

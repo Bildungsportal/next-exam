@@ -17,6 +17,8 @@ TECH^vite^pdfjsLegacyAlias^student+teacher quasar extendViteConf resolve.alias p
 RULE^ui^noJsWorkarounds^fix layout via CSS/layout first; no JS workaround for layout/scroll issues
 RULE^agent^assumeUserEditsIntentional^never revert incidental diffs; assume user made changes intentionally unless explicitly asked
 RULE^agent^gitSafety^never run git restore/reset/clean/rebase/stash/pop/checkout/switch unless user explicitly asks
+RULE^agent^utils^noSingleUseFiles^do not add utils/ files for one-off helpers; colocate in consumer or one shared module per feature area
+RULE^agent^userEdits^never revert intentional user manual edits (e.g. removed v-if) unless user asks
 PATH^print^pdf^teacher/src-electron/main/scripts/printjobhandler.js+teacher/src/pages/SystemPrintPdf.vue
 TECH^teacherCli^examModes^--exam-modes=csv overrides config.exammodes at runtime^teacher/src-electron/electron-main.js
 TECH^build^protectMain^electron-main.js in dist/electron/UnPackaged; protect via electron-builder beforePack^teacher+student scripts/protect-main.mjs+beforepack.js+quasar.config.ts
@@ -53,6 +55,9 @@ IPC^student^focusLock^main sets clientinfo.focusLockReason+focusLockMessage; exa
 IPC^student^stopProxy^ipcMain.handle('stop-proxy') -> vncproxy.stopProxy(); called by localvmview.vue beforeUnmount + electron-main.js window-all-closed^student/src-electron/main/scripts/ipchandler.js+vncproxy.js
 RULE^student^appsToClose^single source of truth in student/src-electron/main/scripts/platformrestrictions.js (exported); consumed by restrictions/{lin,win,mac}.js (kill) + remotecheck/remote{Lin,Win,Mac}.js (detect+report via clientinfo.remoteassistant); macOS TitleCase duplicates intentional (pkill -f case-sensitive); never add bare 'vnc' (would kill vncproxy-helper)
 RULE^student^screenshotStream^resetConnection must not stop getDisplayMedia stream; capture persists until app quit so kiosk reconnect avoids OS picker^student communicationhandler resetConnection; resetDisplayStream not on disconnect
+TECH^linux^cage^platformDispatcher.runningInCage; lin.js appsToClose then skip gsettings; renderer linuxCageKiosk.js; quit-app; exit sidebar student.vue
+TECH^linux^cageScreenshot^registerClient skip stream+fullDesktop in Cage; capturePage IPC; desktop path unchanged vs pre-cage (screen handler useSystemPicker true initDisplayStreamOnce at scheduler)
+PATH^linux^cageInstall^student/src-electron/resources/linux/install-cage-kiosk.sh pkexec→/opt/next-exam/next-exam.AppImage
 TECH^exam^fileCrypto^NXE1 v1 AES-256-GCM+scrypt; key=serverstatus.encryptionPassword (64 hex auto); examPassword=human exit only; student encrypt/decrypt+teacher decrypt use encryptionPassword^student ipchandler+communicationhandler; teacher examFileCryptoContext+data.js+control.js+ipchandler getSpecificSubmissionBase64+pickEncryptedPdfForPreview
 IPC^teacher^pickEncryptedPdfForPreview^invoke(encryptionPassword)->dialog .pdf read; if NXE1 unwrap else raw; %PDF- check; {ok,base64,filename,filePath}|codes NEEDS_PASSWORD|BAD_PASSWORD|NOT_PDF|ERROR^teacher ipchandler.js+dashboard openEncryptedPdfPreview
 TECH^exam^editorBackupExt^editor/activesheets HTML backup filename <name>.htm + type htm in getfilesasync; teacher getLatestBakFile reads <student>.htm in latest backup dir (IPC name unchanged)^student+teacher ipchandler; Vue filetype htm

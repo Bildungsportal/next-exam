@@ -76,7 +76,7 @@
         </div>
 
         <!-- SIDEBAR START -->
-        <div class="p-3 text-white bg-dark h-100" style="width: 240px; min-width: 240px;">
+        <div class="p-3 text-white bg-dark h-100 student-sidebar" style="width: 240px; min-width: 240px;">
             <div class="btn btn-light ms-1 text-start infobutton nobutton">
                 <img src='/src/assets/img/svg/server.svg' class="me-2" width="16" height="16"> {{ $t('student.exams') }}
             </div>
@@ -124,9 +124,20 @@
             </div>
             <br>
 
-            <button class="btn btn-outline-secondary btn-sm ms-1 mt-3 mb-2" style="position: absolute; bottom:32px;"
-                    @click="toggleLocale">{{ inactivelocale }}
-            </button>
+            <div class="sidebar-bottom-btns ms-3">
+                <button type="button" class="btn btn-outline-secondary btn-sm sidebar-locale-btn"
+                        @click="toggleLocale">{{ inactivelocale }}
+                </button>
+                <button type="button"
+                        class="btn btn-outline-danger btn-sm sidebar-exit-btn"
+                        :title="$t('student.cageExit')" :aria-label="$t('student.cageExit')"
+                        @click="quitNextExam">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                        <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                    </svg>
+                </button>
+            </div>
 
             <span @click="showCopyleft()"
                   style="position: absolute; bottom:2px; left: 6px; font-size:0.8em;cursor: pointer;">
@@ -270,7 +281,8 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 import {isElectronWindow} from "../types/platform.ts";
 import config from '../../src-electron/main/config.js'
 import {SignalBridge} from '../utils/signalBridge.js'
-import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync } from '../utils/screenshotCapture.js'
+import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync, setCageWindowCaptureFallback, setLinuxKioskRunningInCage } from '../utils/screenshotCapture.js'
+import { getLinuxKioskInfo } from '../utils/linuxCageKiosk.js'
 import { Exam } from '../types/api'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
 import { normalizeStudentClientName } from 'next-exam-shared/normalizeStudentClientName.js'
@@ -321,6 +333,7 @@ export default {
             networkerror: false,
             localLockdown: false,
             isLoading: true,
+            platformKiosk: { cageInstalled: false, runningInCage: false, cageKioskInstalled: false },
 
             biptest: true,
             bipToken: false,
@@ -391,6 +404,45 @@ export default {
             if (normalized !== this.username) {
                 this.username = normalized;
             }
+        },
+
+        async maybeOfferCageKioskSetup() {
+            const k = this.platformKiosk;
+           // if (!isElectronWindow(window) || this.config.development) return;
+            if (!k.cageInstalled || k.runningInCage || k.cageKioskInstalled) return;
+            const result = await this.$swal.fire({
+                title: this.$t('student.cageSetupTitle'),
+                html: `${this.$t('student.cageSetupText')}<br><br>${this.$t('student.cageSetupTextRoot')}`,
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: this.$t('student.cageSetupInstall'),
+                cancelButtonText: this.$t('student.cageSetupLater'),
+            });
+            if (!result.isConfirmed) return;
+            const install = await signalBridge.invoke('install-linux-cage-kiosk');
+            if (install?.ok) {
+                this.platformKiosk.cageKioskInstalled = true;
+                await this.$swal.fire({ title: this.$t('student.cageSetupSuccess'), icon: 'success' });
+            } else {
+                await this.$swal.fire({
+                    title: this.$t('student.cageSetupFailed'),
+                    text: install?.error || '',
+                    icon: 'error',
+                });
+            }
+        },
+
+        quitNextExam() {
+            this.$swal.fire({
+                title: this.$t('student.cageExit'),
+                text: this.$t('student.cageExitConfirm'),
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: this.$t('student.cageExit'),
+                cancelButtonText: this.$t('dashboard.cancel'),
+            }).then((result) => {
+                if (result.isConfirmed) signalBridge.invoke('quit-app');
+            });
         },
 
         toggleLocale() {
@@ -1323,16 +1375,20 @@ export default {
                 this.$swal.fire({ title: "Error", text: this.$t("student.nopin"), icon: 'error', showCancelButton: false });
                 return;
             }
-            if (!hasActiveScreenshotStream()) {
-                const ok = await ensureDisplayStreamAsync();
-                if (!ok) {
-                    this.$swal.fire({ title: "Error", text: this.$t("student.screenshotpermission"), icon: 'error', showCancelButton: false });
+            if (!this.platformKiosk.runningInCage) {
+                if (!hasActiveScreenshotStream()) {
+                    const ok = await ensureDisplayStreamAsync();
+                    if (!ok) {
+                        this.$swal.fire({ title: "Error", text: this.$t("student.screenshotpermission"), icon: 'error', showCancelButton: false });
+                        return;
+                    }
+                }
+                if (!isFullDesktopCaptureLikely() && !this.$route.params.config.development) {
+                    this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
                     return;
                 }
-            }
-            if (!isFullDesktopCaptureLikely() && !this.$route.params.config.development) {
-                this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
-                return;
+            } else {
+                setCageWindowCaptureFallback(true);
             }
             const displayInfo = await signalBridge.invoke('getinfoasync');
             if (displayInfo?.clientinfo?.multiMonitor && !this.$route.params.config.development) {
@@ -1491,6 +1547,13 @@ export default {
 
 
         this.isLoading = false;
+
+        if (isElectronWindow(window)) {
+            this.platformKiosk = await getLinuxKioskInfo(signalBridge);
+            setLinuxKioskRunningInCage(this.platformKiosk.runningInCage);
+            setCageWindowCaptureFallback(!!this.platformKiosk.runningInCage);
+            await this.maybeOfferCageKioskSetup();
+        }
 
         // Focus username input field when component is mounted
         this.$nextTick(() => {
@@ -1693,6 +1756,41 @@ body {
 #statusdiv {
     display: block !important;
     width: 200px;
+}
+
+.student-sidebar {
+    position: relative;
+}
+
+.sidebar-bottom-btns {
+    position: absolute;
+    bottom: 32px;
+    left: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.sidebar-bottom-btns .btn {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.125rem;
+    line-height: 1;
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+}
+
+.sidebar-bottom-btns .sidebar-locale-btn {
+    line-height: 1;
+}
+
+.sidebar-bottom-btns .sidebar-exit-btn {
+    width: 2.125rem;
+    min-width: 2.125rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
 }
 
 /* CSS classes for fade-in and fade-out */

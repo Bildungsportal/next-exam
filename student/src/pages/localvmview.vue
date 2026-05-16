@@ -120,6 +120,7 @@ import {getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../u
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue';
 import WebviewPane from '../components/WebviewPane.vue';
 import {SignalBridge} from '../utils/signalBridge.js';
+import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js';
 
 const signalBridge = new SignalBridge(window);
 const logPrefix = 'localvmview';
@@ -232,7 +233,7 @@ export default {
     this.clockinterval.start();
 
     if (!this.config.development) {
-      document.body.addEventListener('mouseleave', this.sendFocuslost);
+      attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
     }
 
     this.tryConnectLoop();
@@ -570,6 +571,7 @@ export default {
     },
 
     async sendFocuslost(){
+      if (await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
       const response = await signalBridge.invoke('focuslost');
       if (!this.config.development && response && !response.focus){
         this.focus = false;

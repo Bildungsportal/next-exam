@@ -137,6 +137,10 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
         // silently ignore errors
     }
 
+    if (platformDispatcher.runningInCage) {
+        return;
+    }
+
     if (platformDispatcher.isKDE) {
         log.info("platformrestrictions @ enableRestrictions: enabling KDE restrictions");
         childProcess.execFile('kreadconfig5', ['--file', 'kwinrc', '--group', 'Desktops', '--key', 'Number'], (error, stdout, stderr) => {
@@ -290,6 +294,10 @@ export function disableLinuxRestrictions(configStore) {
     childProcess.exec('xclip -i /dev/null');
     childProcess.exec('xclip -selection clipboard');
     childProcess.exec('xsel -bc');
+
+    if (platformDispatcher.runningInCage) {
+        return;
+    }
 
     if (platformDispatcher.isKDE) {
         log.info("platformrestrictions @ disableRestrictions (linux): KDE detected");

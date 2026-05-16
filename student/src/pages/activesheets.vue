@@ -144,6 +144,7 @@ import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue';
 import PdfOverlay from '../components/PdfRenderer.vue';
 import {SignalBridge} from '../utils/signalBridge.js'
+import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
 
 // signalBridge instance centralizes ipc calls with platform checks
@@ -324,6 +325,7 @@ export default {
         },
        
         async sendFocuslost(){
+            if (await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
             let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
             if (!this.config.development && !response.focus){  //immediately block frontend
                 this.focus = false 
@@ -815,8 +817,8 @@ export default {
             this.saveinterval.start();
 
 
-            document.body.addEventListener('mouseleave', this.sendFocuslost);
-            
+            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
+
             signalBridge.on('getmaterials', (event) => {   this.getExamMaterials()  });
             
             signalBridge.on('finalsubmit', (event) => {  // triggered on exit exam mode - send exam to teacher

@@ -308,6 +308,9 @@ export default defineConfig(( ctx: any ) => {
           'public/**/*',
           'node_modules/get-windows/**/*',
         ],
+        extraResources: [
+          { from: 'src-electron/resources/linux', to: 'linux' },
+        ],
         directories: { output: `../release/${version}.${buildNumber}_${artifactDate}` },
         compression: 'normal',
         linux: {

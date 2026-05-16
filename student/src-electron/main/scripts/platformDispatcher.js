@@ -30,6 +30,7 @@ import config from '../config.js';
 import os from 'os';
 import path from 'path';
 import dotenv from 'dotenv';
+import { detectCageInstalled, detectCageKioskInstalled, detectRunningInCage } from './cageDetect.js';
 dotenv.config();
 const __dirname = import.meta.dirname;
 
@@ -47,6 +48,10 @@ class PlatformDispatcher {
     this.isGNOME = this._isGNOME();
     this.isUnity = this._isUNITY();
     this.isWayland = this._isWayland();
+    this.cageInstalled = this.platform === 'linux' ? detectCageInstalled() : false;
+    this.runningInCage = this.platform === 'linux' ? detectRunningInCage() : false;
+    this.isCageSession = this.runningInCage;
+    this.cageKioskInstalled = this.platform === 'linux' ? detectCageKioskInstalled() : false;
     this.jre = this._detectJREId();
     this.publicBase = this._getPublicBase();
     this.jreDir = this._resolveJREDir();
@@ -71,6 +76,9 @@ class PlatformDispatcher {
     } 
     
     else if (this.platform === 'linux') {
+      if (this.runningInCage) {
+        return "cage";
+      }
       if (this._isGNOME()) {
         return "gnome-shell";
       } else if (this._isKDE()) {

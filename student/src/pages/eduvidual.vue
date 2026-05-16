@@ -110,6 +110,7 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 import {isElectronWindow} from "../types/platform.js";
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import {SignalBridge} from '../utils/signalBridge.js'
+import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -219,9 +220,9 @@ export default {
             this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.clockinterval.start();
 
-            document.body.addEventListener('mouseleave', this.sendFocuslost);
-            
-            
+            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
+
+
             this.loadFilelist()
             this.getExamMaterials()
 
@@ -367,6 +368,7 @@ export default {
             return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed
         },
         async sendFocuslost(){
+            if (await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
             if (isElectronWindow(window)) {
                 let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
                 if (!this.config.development && !response.focus) {  //immediately block frontend
