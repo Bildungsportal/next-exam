@@ -68,8 +68,7 @@ export const appsToClose = [
     'chromium',
     'claude',
     'Claude',
-    'cursor',
-    'Cursor',
+
     'discord',
     'Discord',
     'dropbox',

@@ -43,11 +43,11 @@ import { initErrorHandling } from './main/scripts/errorHandling.js';
 import { syncClientDisplayInfo } from './main/scripts/displayInfo.js';
 JreHandler.init()
 
-if (!config.development && process.argv.some(arg => arg.startsWith('--inspect') || arg.startsWith('--remote-debugging'))) {  // disable options to read v8 heap on production builds
-    log.info('main @ electron-main: Inspect mode detected, quitting...');
-    app.quit();
-    process.exit(0);
-}
+// if (!config.development && process.argv.some(arg => arg.startsWith('--inspect') || arg.startsWith('--remote-debugging'))) {  // disable options to read v8 heap on production builds
+//     log.info('main @ electron-main: Inspect mode detected, quitting...');
+//     app.quit();
+//     process.exit(0);
+// }
 
 app.commandLine.appendSwitch('lang', 'de');
 // Chromium stack for main-process fetch ignores NODE_TLS_REJECT_UNAUTHORIZED (Electron 38+).

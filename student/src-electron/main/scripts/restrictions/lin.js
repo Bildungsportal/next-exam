@@ -197,7 +197,7 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
                 for (const binding of waylandKeys) {
                     logGsettingsValue(gnomeShortcutConfig.mutterWayland.schema, binding, 'enable-gnome-wayland-before-set');
                     childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.mutterWayland.schema, binding, `[]`]);
-                    childProcess.execFile('dconf', ['write', `/org/gnome/mutter/wayland/keybindings/${binding}`, `[]`]);
+                    childProcess.execFile('dconf', ['write', `/org/gnome/mutter/wayland/keybindings/${binding}`, '@as []']);
                     logGsettingsValue(gnomeShortcutConfig.mutterWayland.schema, binding, 'enable-gnome-wayland-after-set');
                 }
                 const shellKeys = [...gnomeShortcutConfig.shell.critical, ...gnomeShortcutConfig.shell.niceToHave];
@@ -234,7 +234,7 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
                     if (dumpErr) log.debug(`platformrestrictions @ enableRestrictions: dconf dump custom-keybindings failed: ${dumpErr.message}`);
                     childProcess.execFile('dconf', ['read', `${customKeybindingsPath}`], (readErr, listStdout) => {
                         if (!readErr && listStdout != null) configStore.linux.gnomeCustomKeybindingsListBackup = listStdout.trim();
-                        childProcess.execFile('dconf', ['write', customKeybindingsPath, '[]'], (writeErr) => {
+                        childProcess.execFile('dconf', ['write', customKeybindingsPath, '@as []'], (writeErr) => {
                             if (writeErr) log.debug(`platformrestrictions @ enableRestrictions: dconf write custom-keybindings [] failed: ${writeErr.message}`);
                         });
                     });
