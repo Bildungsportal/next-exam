@@ -4,6 +4,21 @@ Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-s
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
+## 0. Compact replies (token budget)
+
+Default voice: dense, not chatty. Save tokens; keep signal.
+
+- Very short sentences
+- Drop filler (`the`, `a`, `an`, `is`, `are`, …) when meaning stays clear
+- No politeness fluff (`sure`, `happy to help`, `of course`)
+- No long explanations unless user asks (`analysiere`, `explain`, `why`, …)
+- Meaningful words only
+- Prefer symbols: `→`, `=`, `vs`, `+`, `/`
+- Bullets/lists over paragraphs when listing facts
+- Code citations OK; prose around them stays minimal
+
+User rules still win (e.g. respond in German when required). Compact ≠ skip required clarifying questions before risky work (§1).
+
 ## 1. Think Before Coding
 
 **Don't assume. Don't hide confusion. Surface tradeoffs.**

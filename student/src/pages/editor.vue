@@ -1252,6 +1252,13 @@ export default {
         },
 
 
+        // True when activate/activated/suggestions differ (skip redundant fetchInfo reactive updates).
+        privateSpellcheckFlagsDiffer(a, b) {
+            const x = a || {};
+            const y = b || {};
+            return x.activate !== y.activate || x.activated !== y.activated || x.suggestions !== y.suggestions;
+        },
+
         async fetchInfo() {
             let getinfo = await signalBridge.invoke('getinfoasync')  // we need to fetch the updated version of the systemconfig from express api (server.js)
             this.clientinfo = getinfo.clientinfo;
@@ -1261,7 +1268,10 @@ export default {
             this.clientname = this.clientinfo.name
             this.exammode = this.clientinfo.exammode
             this.pincode = this.clientinfo.pin
-            this.privateSpellcheck = this.clientinfo.privateSpellcheck
+            const nextPrivateSpellcheck = this.clientinfo?.privateSpellcheck;
+            if (nextPrivateSpellcheck && this.privateSpellcheckFlagsDiffer(nextPrivateSpellcheck, this.privateSpellcheck)) {
+                this.privateSpellcheck = nextPrivateSpellcheck;
+            }
             
             if (getinfo.serverstatus) {
                 this.serverstatus = getinfo.serverstatus
