@@ -297,6 +297,11 @@ import { getLinuxKioskInfo } from '../utils/linuxCageKiosk.js'
 import { Exam } from '../types/api'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
 import { normalizeStudentClientName } from 'next-exam-shared/normalizeStudentClientName.js'
+import {
+    applyClientinfoFromFetch,
+    applyServerstatusFromFetch,
+    serverstatusStudentLobbyUiChanged,
+} from '../utils/examFetchInfoSync.js'
 
 
 // Capture unhandled promise rejections
@@ -1122,13 +1127,8 @@ export default {
             let getinfo = await signalBridge.invoke('getinfoasync')  // gets serverlist and clientinfo from multicastclient
 
 
-            // Only update if clientinfo has actually changed
-            const clientInfoStr = JSON.stringify(getinfo.clientinfo);
-            const currentClientInfoStr = JSON.stringify(this.clientinfo);
-            if (clientInfoStr !== currentClientInfoStr) {
-                this.clientinfo = getinfo.clientinfo;
-            }
-            this.serverstatus = getinfo.serverstatus || null;
+            applyClientinfoFromFetch(this, getinfo.clientinfo);
+            applyServerstatusFromFetch(this, getinfo.serverstatus || null, serverstatusStudentLobbyUiChanged);
 
             if (getinfo.clientinfo.exammode) {
                 return;

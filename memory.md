@@ -54,6 +54,7 @@ TECH^student^localvm^fetchInfo^examFetchInfoSync applyClientinfo+serverstatusLoc
 TECH^student^forms^fetchInfo^examFetchInfoSync serverstatusFormsUiChanged; applyFormsUrlFromSection; webview src only on url change
 TECH^student^ms365^fetchInfo^examFetchInfoSync applyClientinfo+serverstatusExamHeaderUiChanged; msofficeshare in clientinfoUiChanged; collapse/restore browserview only on focus transition
 TECH^student^rdp^fetchInfo^examFetchInfoSync serverstatusRdpUiChanged; applyRdpConfigFromSection; webview src only on url change
+TECH^student^lobby^fetchInfo^student.vue applyClientinfoFromFetch+serverstatusStudentLobbyUiChanged (=localvm slice); examtype/servername/serverip in clientinfoUiChanged
 RULE^student^typingRhythm^editor.vue isTypingRhythmExemptKey clears deltas for Backspace Delete Space Enter NumpadEnter (OS key-repeat)^student/src/pages/editor.vue handleTypingRhythmKeydown
 RULE^ui^swal2^teacher+student global left-align .swal2-html-container+.swal2-title^teacher/src/css/app.scss+student/src/css/app.scss
 TECH^student^localvmHash^sha256 base qcow2 before qemu start (runLocalVmPreStartVerify); avoids guest freeze from parallel full read^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js
