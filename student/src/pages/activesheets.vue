@@ -144,6 +144,13 @@ import PdfOverlay from '../components/PdfRenderer.vue';
 import {SignalBridge} from '../utils/signalBridge.js'
 import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
+import {
+    activeSheetLoadKey,
+    applyClientinfoFromFetch,
+    applyServerstatusFromFetch,
+    resolveLockedSection,
+    serverstatusActivesheetsUiChanged,
+} from '../utils/examFetchInfoSync.js'
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -185,7 +192,7 @@ export default {
 
             clientinfo: null,
             entrytime: 0,
-            now : new Date().getTime(),
+            activeSheetLoadKey: '',
             localfiles: null,
             battery: null,
           
@@ -485,39 +492,44 @@ export default {
             const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
             return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed
         },  
+        // Reload active-sheet PDF only when section/group/filename actually changes (not every fetchInfo poll).
+        maybeReloadActiveSheetPdf() {
+            const key = activeSheetLoadKey(this.serverstatus, this.clientinfo, this.lockedSection);
+            if (!key || key === this.activeSheetLoadKey) return;
+            this.activeSheetLoadKey = key;
+            this.loadPdfParserHtml();
+        },
+
         async fetchInfo() {
-            let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
-            
-            this.clientinfo = getinfo.clientinfo;
-            this.token = this.clientinfo.token
-            this.focus = this.clientinfo.focus
-            this.clientname = this.clientinfo.name
-            this.exammode = this.clientinfo.exammode
-            this.pincode = this.clientinfo.pin
-            
-            this.serverstatus = getinfo.serverstatus
+            const getinfo = await signalBridge.invoke('getinfoasync');
+            const prevClientinfo = this.clientinfo;
+            const prevGroup = prevClientinfo?.group;
 
-            // decide which locked section index is authoritative (client vs server)
-            const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
-                ? this.clientinfo.lockedSection
-                : this.serverstatus.lockedSection
+            applyClientinfoFromFetch(this, getinfo.clientinfo);
+            const serverstatusChanged = getinfo.serverstatus
+                ? applyServerstatusFromFetch(this, getinfo.serverstatus, serverstatusActivesheetsUiChanged)
+                : false;
 
-            this.lockedSection = sectionIndex
+            const sectionIndex = resolveLockedSection(this.serverstatus, this.clientinfo);
+            const sectionChanged = sectionIndex !== this.lockedSection;
+            if (sectionChanged) this.lockedSection = sectionIndex;
 
-            if (!this.focus){  this.entrytime = new Date().getTime()}
-            if (this.clientinfo && this.clientinfo.token){  this.online = true  }
-            else { this.online = false  }
+            if (!this.focus) this.entrytime = new Date().getTime();
 
-            this.battery = await navigator.getBattery().then(battery => { return battery })
-            .catch(error => { console.error("Error accessing the Battery API:", error);  });
-            
-            this.internetCheckCounter++
-            if (this.internetCheckCounter % 5 === 0){
-                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
-                this.hostip = await signalBridge.invoke('checkhostip')
-                this.internetCheckCounter = 0
+            const groupChanged = prevClientinfo != null && getinfo.clientinfo?.group !== prevGroup;
+            if (sectionChanged || serverstatusChanged || groupChanged) {
+                this.maybeReloadActiveSheetPdf();
             }
 
+            this.battery = await navigator.getBattery().then(battery => battery)
+                .catch(error => { console.error("Error accessing the Battery API:", error); });
+
+            this.internetCheckCounter++;
+            if (this.internetCheckCounter % 5 === 0) {
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info');
+                this.hostip = await signalBridge.invoke('checkhostip');
+                this.internetCheckCounter = 0;
+            }
         }, 
         // --- NEW: Refactored PDF Loader ---
         async loadPdfParserHtml() {
@@ -754,18 +766,6 @@ export default {
     computed: {
     },
     watch: {
-        clientinfo: {
-            handler(newClientinfo) {
-                // Reload PDF when clientinfo is updated and group is available
-                if (newClientinfo && this.serverstatus && this.serverstatus.examSections && this.serverstatus.examSections[this.lockedSection]) {
-                    const section = this.serverstatus.examSections[this.lockedSection];
-                    if (newClientinfo.group || !section.groups) {
-                        this.loadPdfParserHtml();
-                    }
-                }
-            },
-            immediate: false
-        },
         examMaterials: {
             handler(newMaterials) {
                 // Reload PDF when examMaterials are loaded (they might contain the Active Sheet PDF)

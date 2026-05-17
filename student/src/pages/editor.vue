@@ -796,6 +796,12 @@ import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 import {SignalBridge} from '../utils/signalBridge.js'
 import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
+import {
+    applyClientinfoFromFetch,
+    applyServerstatusFromFetch,
+    resolveLockedSection,
+    serverstatusEditorUiChanged,
+} from '../utils/examFetchInfoSync.js'
 
 const lowlight = createLowlight(common)
 
@@ -976,112 +982,6 @@ export default {
 
 
     methods: {
-
-        // Sync focus-lock overlay fields from main-process clientinfo (assign only when changed).
-        syncFocusLockFromClientinfo(clientinfo) {
-            const reason = clientinfo?.focusLockReason || '';
-            const message = clientinfo?.focusLockMessage || '';
-            if (reason !== this.focusLockReason) this.focusLockReason = reason;
-            if (message !== this.focusLockMessage) this.focusLockMessage = message;
-        },
-
-        // --- fetchInfo poll (5s): IPC always sends new object references; compare before assign to avoid full editor.vue re-renders ---
-        // fetchInfo (5s) returns a new clientinfo object every poll; used to skip Object.assign when the header/editor would look the same.
-        clientinfoUiChanged(next, cur) {
-            if (!cur) return true;
-            if (!next) return false;
-            return next.token !== cur.token
-                || next.focus !== cur.focus
-                || next.name !== cur.name
-                || next.exammode !== cur.exammode
-                || next.pin !== cur.pin
-                || next.group !== cur.group
-                || !!next.groups !== !!cur.groups
-                || next.lockedSection !== cur.lockedSection
-                || (next.focusLockReason || '') !== (cur.focusLockReason || '')
-                || (next.focusLockMessage || '') !== (cur.focusLockMessage || '')
-                || this.privateSpellcheckFlagsDiffer(next.privateSpellcheck, cur.privateSpellcheck);
-        },
-
-        // Merge IPC clientinfo into this.clientinfo + mirrored primitives; only touches Vue state when a compared field actually changed.
-        applyClientinfoFromFetch(ci) {
-            if (!ci) return;
-            if (!this.clientinfo) {
-                this.clientinfo = ci;
-            } else if (this.clientinfoUiChanged(ci, this.clientinfo)) {
-                Object.assign(this.clientinfo, ci);
-            }
-            if (ci.token !== this.token) this.token = ci.token;
-            if (ci.focus !== this.focus) this.focus = ci.focus;
-            this.syncFocusLockFromClientinfo(ci);
-            if (ci.name !== this.clientname) this.clientname = ci.name;
-            if (ci.exammode !== this.exammode) this.exammode = ci.exammode;
-            if (ci.pin !== this.pincode) this.pincode = ci.pin;
-            const nextPrivateSpellcheck = ci.privateSpellcheck;
-            if (nextPrivateSpellcheck && this.privateSpellcheckFlagsDiffer(nextPrivateSpellcheck, this.privateSpellcheck)) {
-                this.privateSpellcheck = nextPrivateSpellcheck;
-            }
-            const nextOnline = !!ci.token;
-            if (nextOnline !== this.online) this.online = nextOnline;
-        },
-
-        // Subset of examConfig.editor for serverstatus diff only (LT sidebar, syncEditorLanguageSettings) — not used to render the toolbar.
-        editorExamConfigSlice(cfg) {
-            if (!cfg) return null;
-            return {
-                languagetool: !!cfg.languagetool,
-                languagetoolhost: cfg.languagetoolhost || '',
-                languagetoolport: cfg.languagetoolport || '',
-                spellchecklang: cfg.spellchecklang || '',
-                suggestions: !!cfg.suggestions,
-            };
-        },
-
-        // JSON fingerprint of examSections for fetchInfo: section labels in ExamHeader, examtype, groups, audioRepeat, editor config per group.
-        examSectionsEditorUiJson(status) {
-            const es = status?.examSections;
-            if (!es) return 'null';
-            const out = {};
-            for (const key of Object.keys(es)) {
-                const sec = es[key];
-                if (!sec) continue;
-                const n = Number(key);
-                if (Number.isNaN(n)) continue;
-                out[n] = {
-                    sectionname: sec.sectionname,
-                    examtype: sec.examtype,
-                    groups: !!sec.groups,
-                    audioRepeat: sec.audioRepeat,
-                    editorA: this.editorExamConfigSlice(sec.groupA?.examConfig?.editor),
-                    editorB: this.editorExamConfigSlice(sec.groupB?.examConfig?.editor),
-                };
-            }
-            return JSON.stringify(out);
-        },
-
-        // True when serverstatus would change anything visible (section switch UI, LT config, unlock password, section metadata).
-        serverstatusUiChanged(next, cur) {
-            if (!cur) return true;
-            if (!next) return false;
-            if (!!next.allowSectionSwitch !== !!cur.allowSectionSwitch) return true;
-            if (!!next.useExamSections !== !!cur.useExamSections) return true;
-            if (next.lockedSection !== cur.lockedSection) return true;
-            if (next.activeSection !== cur.activeSection) return true;
-            if ((next.password ?? '') !== (cur.password ?? '')) return true;
-            return this.examSectionsEditorUiJson(next) !== this.examSectionsEditorUiJson(cur);
-        },
-
-        // Replace this.serverstatus only if serverstatusUiChanged; return value tells fetchInfo to refresh LT host/port/lang.
-        applyServerstatusFromFetch(next) {
-            if (!next) return false;
-            if (!this.serverstatus) {
-                this.serverstatus = next;
-                return true;
-            }
-            if (!this.serverstatusUiChanged(next, this.serverstatus)) return false;
-            this.serverstatus = next;
-            return true;
-        },
 
         // from filehandler.js
         getExamMaterials: getExamMaterials,
@@ -1355,27 +1255,15 @@ export default {
         },
 
 
-        // Legasthenie spellcheck flags from clientinfo; avoids assigning this.privateSpellcheck when IPC payload is unchanged.
-        privateSpellcheckFlagsDiffer(a, b) {
-            const x = a || {};
-            const y = b || {};
-            return x.activate !== y.activate || x.activated !== y.activated || x.suggestions !== y.suggestions;
-        },
-
         async fetchInfo() {
             let getinfo = await signalBridge.invoke('getinfoasync')  // we need to fetch the updated version of the systemconfig from express api (server.js)
-            // apply*FromFetch helpers below: assign clientinfo/serverstatus/privateSpellcheck only when UI-visible fields changed
-            this.applyClientinfoFromFetch(getinfo.clientinfo);
+            applyClientinfoFromFetch(this, getinfo.clientinfo, { trackPrivateSpellcheck: true });
 
             const serverstatusChanged = getinfo.serverstatus
-                ? this.applyServerstatusFromFetch(getinfo.serverstatus)
+                ? applyServerstatusFromFetch(this, getinfo.serverstatus, serverstatusEditorUiChanged)
                 : false;
 
-            // decide which section index is authoritative (client vs server)
-            const ci = this.clientinfo;
-            const sectionIndex = (this.serverstatus.allowSectionSwitch && ci?.lockedSection != null)
-                ? ci.lockedSection
-                : this.serverstatus.lockedSection
+            const sectionIndex = resolveLockedSection(this.serverstatus, this.clientinfo);
 
             if (sectionIndex !== this.lockedSection) {
                 this.lockedSection = sectionIndex;
