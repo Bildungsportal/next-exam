@@ -143,6 +143,8 @@ class IpcHandler {
             displayServer: platformDispatcher.displayServer,
         }));
 
+        ipcMain.handle('get-mac-arch-info', () => platformDispatcher.macRosettaEmulation);
+
         ipcMain.handle('quit-app', () => {
             app.quit();
         });

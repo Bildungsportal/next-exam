@@ -72,6 +72,38 @@ class PlatformDispatcher {
     this.workdirectory = this._getWorkdirectory();
     this.logfile = this._getLogfile();
     this.desktopName = this._whichDesktopName();
+    this.macRosettaEmulation = this._detectMacRosettaEmulation();
+    this.runningUnderMacRosetta = this.macRosettaEmulation.runningUnderRosetta;
+  }
+
+  // True when Apple Silicon runs this x64 binary under Rosetta (sysctl.proc_translated).
+  _detectMacRosettaEmulation() {
+    const processArch = this.arch;
+    if (this.platform !== 'darwin') {
+      return { runningUnderRosetta: false, nativeHostArch: null, processArch, procTranslated: false };
+    }
+    let nativeHostArch = null;
+    try {
+      nativeHostArch = execSync('uname -m', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
+    } catch {
+      return { runningUnderRosetta: false, nativeHostArch: null, processArch, procTranslated: false };
+    }
+    let procTranslated = false;
+    try {
+      procTranslated = Number(
+        execSync('sysctl -n sysctl.proc_translated', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim()
+      ) === 1;
+    } catch {
+      procTranslated = false;
+    }
+    const runningUnderRosetta =
+      nativeHostArch === 'arm64' && processArch === 'x64' && procTranslated;
+    if (runningUnderRosetta) {
+      this.messages.push(
+        `platformDispatcher @ _detectMacRosettaEmulation: x64 process on arm64 host (Rosetta); native=${nativeHostArch} process=${processArch}`
+      );
+    }
+    return { runningUnderRosetta, nativeHostArch, processArch, procTranslated };
   }
 
   _isIOS() {

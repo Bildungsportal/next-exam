@@ -102,7 +102,9 @@ log.debug(`main: OS: ${process.platform} ${process.arch}`)
 log.debug(`main: Arch: ${process.arch}`)
 log.debug(`main: Desktop: ${platformDispatcher.desktopName}`)
 log.debug(`main: Display server: ${platformDispatcher.displayServer}`)
-
+if (platformDispatcher.runningUnderMacRosetta) {
+    log.warn('main: Intel (x64) build running under Rosetta on Apple Silicon — install the arm64 build');
+}
 
 WindowHandler.init(multicastClient, config)  // mainwindow, examwindow
 CommHandler.init(multicastClient, config)    // starts "beacon" intervall and fetches information from the teacher - acts on it (startexam, stopexam, sendfile, getfile)

@@ -467,6 +467,15 @@ export default {
             await this.promptCageKioskSetup();
         },
 
+        async warnMacRosettaArch() {
+            await this.$swal.fire({
+                title: this.$t('student.macRosettaArchTitle'),
+                html: this.$t('student.macRosettaArchText'),
+                icon: 'warning',
+                confirmButtonText: this.$t('student.macRosettaArchOk'),
+            });
+        },
+
         quitNextExam() {
             if (this.token) return;
             this.$swal.fire({
@@ -1585,6 +1594,12 @@ export default {
         this.isLoading = false;
 
         if (isElectronWindow(window)) {
+            if (!this.config.development) {
+                const macArch = await signalBridge.invoke('get-mac-arch-info');
+                if (macArch?.runningUnderRosetta) {
+                    await this.warnMacRosettaArch();
+                }
+            }
             this.platformKiosk = await getLinuxKioskInfo(signalBridge);
             setLinuxKioskRunningInCage(this.platformKiosk.runningInCage);
             setCageWindowCaptureFallback(!!this.platformKiosk.runningInCage);
