@@ -985,7 +985,8 @@ export default {
             if (message !== this.focusLockMessage) this.focusLockMessage = message;
         },
 
-        // True when UI-relevant clientinfo fields differ from current snapshot.
+        // --- fetchInfo poll (5s): IPC always sends new object references; compare before assign to avoid full editor.vue re-renders ---
+        // fetchInfo (5s) returns a new clientinfo object every poll; used to skip Object.assign when the header/editor would look the same.
         clientinfoUiChanged(next, cur) {
             if (!cur) return true;
             if (!next) return false;
@@ -1002,7 +1003,7 @@ export default {
                 || this.privateSpellcheckFlagsDiffer(next.privateSpellcheck, cur.privateSpellcheck);
         },
 
-        // Apply getinfo clientinfo without replacing the object when nothing UI-relevant changed.
+        // Merge IPC clientinfo into this.clientinfo + mirrored primitives; only touches Vue state when a compared field actually changed.
         applyClientinfoFromFetch(ci) {
             if (!ci) return;
             if (!this.clientinfo) {
@@ -1022,6 +1023,64 @@ export default {
             }
             const nextOnline = !!ci.token;
             if (nextOnline !== this.online) this.online = nextOnline;
+        },
+
+        // Subset of examConfig.editor for serverstatus diff only (LT sidebar, syncEditorLanguageSettings) — not used to render the toolbar.
+        editorExamConfigSlice(cfg) {
+            if (!cfg) return null;
+            return {
+                languagetool: !!cfg.languagetool,
+                languagetoolhost: cfg.languagetoolhost || '',
+                languagetoolport: cfg.languagetoolport || '',
+                spellchecklang: cfg.spellchecklang || '',
+                suggestions: !!cfg.suggestions,
+            };
+        },
+
+        // JSON fingerprint of examSections for fetchInfo: section labels in ExamHeader, examtype, groups, audioRepeat, editor config per group.
+        examSectionsEditorUiJson(status) {
+            const es = status?.examSections;
+            if (!es) return 'null';
+            const out = {};
+            for (const key of Object.keys(es)) {
+                const sec = es[key];
+                if (!sec) continue;
+                const n = Number(key);
+                if (Number.isNaN(n)) continue;
+                out[n] = {
+                    sectionname: sec.sectionname,
+                    examtype: sec.examtype,
+                    groups: !!sec.groups,
+                    audioRepeat: sec.audioRepeat,
+                    editorA: this.editorExamConfigSlice(sec.groupA?.examConfig?.editor),
+                    editorB: this.editorExamConfigSlice(sec.groupB?.examConfig?.editor),
+                };
+            }
+            return JSON.stringify(out);
+        },
+
+        // True when serverstatus would change anything visible (section switch UI, LT config, unlock password, section metadata).
+        serverstatusUiChanged(next, cur) {
+            if (!cur) return true;
+            if (!next) return false;
+            if (!!next.allowSectionSwitch !== !!cur.allowSectionSwitch) return true;
+            if (!!next.useExamSections !== !!cur.useExamSections) return true;
+            if (next.lockedSection !== cur.lockedSection) return true;
+            if (next.activeSection !== cur.activeSection) return true;
+            if ((next.password ?? '') !== (cur.password ?? '')) return true;
+            return this.examSectionsEditorUiJson(next) !== this.examSectionsEditorUiJson(cur);
+        },
+
+        // Replace this.serverstatus only if serverstatusUiChanged; return value tells fetchInfo to refresh LT host/port/lang.
+        applyServerstatusFromFetch(next) {
+            if (!next) return false;
+            if (!this.serverstatus) {
+                this.serverstatus = next;
+                return true;
+            }
+            if (!this.serverstatusUiChanged(next, this.serverstatus)) return false;
+            this.serverstatus = next;
+            return true;
         },
 
         // from filehandler.js
@@ -1126,9 +1185,12 @@ export default {
 
         syncEditorLanguageSettings() {
             const cfg = this.getEditorExamConfig(this.lockedSection);
-            this.LThost = cfg.languagetoolhost || "http://127.0.0.1";
-            this.LTport = cfg.languagetoolport || "8088";
-            this.ltLanguage = cfg.spellchecklang || "de-DE";
+            const host = cfg.languagetoolhost || 'http://127.0.0.1';
+            const port = cfg.languagetoolport || '8088';
+            const lang = cfg.spellchecklang || 'de-DE';
+            if (host !== this.LThost) this.LThost = host;
+            if (port !== this.LTport) this.LTport = port;
+            if (lang !== this.ltLanguage) this.ltLanguage = lang;
         },
 
 
@@ -1293,7 +1355,7 @@ export default {
         },
 
 
-        // True when activate/activated/suggestions differ (skip redundant fetchInfo reactive updates).
+        // Legasthenie spellcheck flags from clientinfo; avoids assigning this.privateSpellcheck when IPC payload is unchanged.
         privateSpellcheckFlagsDiffer(a, b) {
             const x = a || {};
             const y = b || {};
@@ -1302,11 +1364,12 @@ export default {
 
         async fetchInfo() {
             let getinfo = await signalBridge.invoke('getinfoasync')  // we need to fetch the updated version of the systemconfig from express api (server.js)
+            // apply*FromFetch helpers below: assign clientinfo/serverstatus/privateSpellcheck only when UI-visible fields changed
             this.applyClientinfoFromFetch(getinfo.clientinfo);
 
-            if (getinfo.serverstatus) {
-                this.serverstatus = getinfo.serverstatus
-            }
+            const serverstatusChanged = getinfo.serverstatus
+                ? this.applyServerstatusFromFetch(getinfo.serverstatus)
+                : false;
 
             // decide which section index is authoritative (client vs server)
             const ci = this.clientinfo;
@@ -1316,6 +1379,8 @@ export default {
 
             if (sectionIndex !== this.lockedSection) {
                 this.lockedSection = sectionIndex;
+                this.syncEditorLanguageSettings();
+            } else if (serverstatusChanged) {
                 this.syncEditorLanguageSettings();
             }
 
