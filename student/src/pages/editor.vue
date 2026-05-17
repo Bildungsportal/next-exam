@@ -977,10 +977,51 @@ export default {
 
     methods: {
 
-        // Sync focus-lock overlay fields from main-process clientinfo.
+        // Sync focus-lock overlay fields from main-process clientinfo (assign only when changed).
         syncFocusLockFromClientinfo(clientinfo) {
-            this.focusLockReason = clientinfo?.focusLockReason || '';
-            this.focusLockMessage = clientinfo?.focusLockMessage || '';
+            const reason = clientinfo?.focusLockReason || '';
+            const message = clientinfo?.focusLockMessage || '';
+            if (reason !== this.focusLockReason) this.focusLockReason = reason;
+            if (message !== this.focusLockMessage) this.focusLockMessage = message;
+        },
+
+        // True when UI-relevant clientinfo fields differ from current snapshot.
+        clientinfoUiChanged(next, cur) {
+            if (!cur) return true;
+            if (!next) return false;
+            return next.token !== cur.token
+                || next.focus !== cur.focus
+                || next.name !== cur.name
+                || next.exammode !== cur.exammode
+                || next.pin !== cur.pin
+                || next.group !== cur.group
+                || !!next.groups !== !!cur.groups
+                || next.lockedSection !== cur.lockedSection
+                || (next.focusLockReason || '') !== (cur.focusLockReason || '')
+                || (next.focusLockMessage || '') !== (cur.focusLockMessage || '')
+                || this.privateSpellcheckFlagsDiffer(next.privateSpellcheck, cur.privateSpellcheck);
+        },
+
+        // Apply getinfo clientinfo without replacing the object when nothing UI-relevant changed.
+        applyClientinfoFromFetch(ci) {
+            if (!ci) return;
+            if (!this.clientinfo) {
+                this.clientinfo = ci;
+            } else if (this.clientinfoUiChanged(ci, this.clientinfo)) {
+                Object.assign(this.clientinfo, ci);
+            }
+            if (ci.token !== this.token) this.token = ci.token;
+            if (ci.focus !== this.focus) this.focus = ci.focus;
+            this.syncFocusLockFromClientinfo(ci);
+            if (ci.name !== this.clientname) this.clientname = ci.name;
+            if (ci.exammode !== this.exammode) this.exammode = ci.exammode;
+            if (ci.pin !== this.pincode) this.pincode = ci.pin;
+            const nextPrivateSpellcheck = ci.privateSpellcheck;
+            if (nextPrivateSpellcheck && this.privateSpellcheckFlagsDiffer(nextPrivateSpellcheck, this.privateSpellcheck)) {
+                this.privateSpellcheck = nextPrivateSpellcheck;
+            }
+            const nextOnline = !!ci.token;
+            if (nextOnline !== this.online) this.online = nextOnline;
         },
 
         // from filehandler.js
@@ -1261,41 +1302,27 @@ export default {
 
         async fetchInfo() {
             let getinfo = await signalBridge.invoke('getinfoasync')  // we need to fetch the updated version of the systemconfig from express api (server.js)
-            this.clientinfo = getinfo.clientinfo;
-            this.token = this.clientinfo.token
-            this.focus = this.clientinfo.focus
-            this.syncFocusLockFromClientinfo(this.clientinfo);
-            this.clientname = this.clientinfo.name
-            this.exammode = this.clientinfo.exammode
-            this.pincode = this.clientinfo.pin
-            const nextPrivateSpellcheck = this.clientinfo?.privateSpellcheck;
-            if (nextPrivateSpellcheck && this.privateSpellcheckFlagsDiffer(nextPrivateSpellcheck, this.privateSpellcheck)) {
-                this.privateSpellcheck = nextPrivateSpellcheck;
-            }
-            
+            this.applyClientinfoFromFetch(getinfo.clientinfo);
+
             if (getinfo.serverstatus) {
                 this.serverstatus = getinfo.serverstatus
             }
 
             // decide which section index is authoritative (client vs server)
-            const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
-                ? this.clientinfo.lockedSection
+            const ci = this.clientinfo;
+            const sectionIndex = (this.serverstatus.allowSectionSwitch && ci?.lockedSection != null)
+                ? ci.lockedSection
                 : this.serverstatus.lockedSection
 
-            this.lockedSection = sectionIndex
-
-            this.syncEditorLanguageSettings()
+            if (sectionIndex !== this.lockedSection) {
+                this.lockedSection = sectionIndex;
+                this.syncEditorLanguageSettings();
+            }
 
             // console.log(this.serverstatus)
             if (this.pincode !== "0000") {
                 this.localLockdown = false
             }  // pingcode is 0000 only in localmode
-
-            if (this.clientinfo && this.clientinfo.token) {
-                this.online = true
-            } else {
-                this.online = false
-            }
 
             this.battery = await navigator.getBattery().then(battery => {
                 return battery

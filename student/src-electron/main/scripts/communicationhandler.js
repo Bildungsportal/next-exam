@@ -428,6 +428,13 @@ import { switchExamSection } from './switchExamSection.js';
             WindowHandler.examwindow.webContents.send('denied');
         }
 
+        if (studentstatus.sendexam === true){
+            await this.sendExamToTeacher();
+        }
+        if (studentstatus.sendlog === true){
+            await this.sendStudentLogToTeacher();
+        }
+
         if (studentstatus.kicked) {
             await this.kickStudent(studentstatus);
             return true;
@@ -498,12 +505,6 @@ import { switchExamSection } from './switchExamSection.js';
 
         this.multicastClient.clientinfo.privateSpellcheck.suggestions = studentstatus.activatePrivateSuggestions;
 
-        if (studentstatus.sendexam === true){
-            this.sendExamToTeacher();
-        }
-        if (studentstatus.sendlog === true){
-            this.sendStudentLogToTeacher();
-        }
         if (studentstatus.fetchfiles === true){
             this.requestFileFromServer(studentstatus.files);
         }
@@ -1154,7 +1155,7 @@ import { switchExamSection } from './switchExamSection.js';
      }
 
     // Upload next-exam-student.log from workdirectory root when teacher requests log snapshot (separate from ZIP backup).
-    sendStudentLogToTeacher(){
+    async sendStudentLogToTeacher(){
         const logPath = platformDispatcher.logfile
         if (!fs.existsSync(logPath)) {
             log.warn(`communicationhandler @ sendStudentLogToTeacher: missing ${logPath}`)
@@ -1172,14 +1173,17 @@ import { switchExamSection } from './switchExamSection.js';
         const studenttoken = this.multicastClient.clientinfo.token
         const clientname = this.multicastClient.clientinfo.name
         const url = `https://${serverip}:${this.config.serverApiPort}/server/data/studentlog/${servername}`
-        examApiFetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${studenttoken}` },
-            body: JSON.stringify({ file: base64File, clientname }),
-        })
-            .then((response) => response.json())
-            .then((data) => { log.info(`communicationhandler @ sendStudentLogToTeacher: ${data.message || data.status}`) })
-            .catch((error) => { log.error(`communicationhandler @ sendStudentLogToTeacher: ${error}`) })
+        try {
+            const response = await examApiFetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${studenttoken}` },
+                body: JSON.stringify({ file: base64File, clientname }),
+            })
+            const data = await response.json()
+            log.info(`communicationhandler @ sendStudentLogToTeacher: ${data.message || data.status}`)
+        } catch (error) {
+            log.error(`communicationhandler @ sendStudentLogToTeacher: ${error}`)
+        }
     }
 
 

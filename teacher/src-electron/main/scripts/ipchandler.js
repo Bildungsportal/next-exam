@@ -212,9 +212,9 @@ class IpcHandler {
                 for (const student of mcServer.studentList) {
                     if (sendexam) {
                         student.status.sendexam = true
-                        if (sendlog) {
-                            student.status.sendlog = true
-                        }
+                    }
+                    if (sendlog) {
+                        student.status.sendlog = true
                     }
                     if (fetchfiles && filesPayload !== undefined) {
                         student.status.fetchfiles = true
@@ -238,9 +238,9 @@ class IpcHandler {
                 if (student) {
                     if (sendexam) {
                         student.status.sendexam = true
-                        if (sendlog) {
-                            student.status.sendlog = true
-                        }
+                    }
+                    if (sendlog) {
+                        student.status.sendlog = true
                     }
                     if (fetchfiles && filesPayload !== undefined) {
                         student.status.fetchfiles = true
