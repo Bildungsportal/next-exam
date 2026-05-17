@@ -2,6 +2,7 @@ import { execSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 
 export const CAGE_KIOSK_APPIMAGE = '/opt/next-exam/next-exam.AppImage';
+export const CAGE_KIOSK_DESKTOP = '/usr/share/applications/next-exam-kiosk.desktop';
 
 /** Returns true when the cage binary is on PATH. */
 export function detectCageInstalled() {
@@ -31,8 +32,18 @@ export function detectRunningInCage(maxDepth = 12) {
 }
 
 /** True when the kiosk AppImage was installed under /opt/next-exam. */
-export function detectCageKioskInstalled() {
+export function detectCageKioskAppImageInstalled() {
     return existsSync(CAGE_KIOSK_APPIMAGE);
+}
+
+/** True when the kiosk .desktop entry exists. */
+export function detectCageKioskDesktopInstalled() {
+    return existsSync(CAGE_KIOSK_DESKTOP);
+}
+
+/** Show install UI while cage, AppImage, or kiosk desktop entry is still missing. */
+export function needsCageKioskSetup() {
+    return !detectCageInstalled() || !detectCageKioskAppImageInstalled() || !detectCageKioskDesktopInstalled();
 }
 
 function getProcessInfoSync(pid) {

@@ -30,7 +30,13 @@ import config from '../config.js';
 import os from 'os';
 import path from 'path';
 import dotenv from 'dotenv';
-import { detectCageInstalled, detectCageKioskInstalled, detectRunningInCage } from './cageDetect.js';
+import {
+    detectCageInstalled,
+    detectCageKioskAppImageInstalled,
+    detectCageKioskDesktopInstalled,
+    detectRunningInCage,
+    needsCageKioskSetup,
+} from './cageDetect.js';
 dotenv.config();
 const __dirname = import.meta.dirname;
 
@@ -51,7 +57,9 @@ class PlatformDispatcher {
     this.cageInstalled = this.platform === 'linux' ? detectCageInstalled() : false;
     this.runningInCage = this.platform === 'linux' ? detectRunningInCage() : false;
     this.isCageSession = this.runningInCage;
-    this.cageKioskInstalled = this.platform === 'linux' ? detectCageKioskInstalled() : false;
+    this.cageKioskAppImageInstalled = this.platform === 'linux' ? detectCageKioskAppImageInstalled() : false;
+    this.cageKioskDesktopInstalled = this.platform === 'linux' ? detectCageKioskDesktopInstalled() : false;
+    this.needsCageKioskSetup = this.platform === 'linux' ? needsCageKioskSetup() : false;
     this.jre = this._detectJREId();
     this.publicBase = this._getPublicBase();
     this.jreDir = this._resolveJREDir();

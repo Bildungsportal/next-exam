@@ -6,7 +6,14 @@ let kioskInfoCache = null;
 export async function getLinuxKioskInfo(signalBridge) {
     if (kioskInfoCache) return kioskInfoCache;
     if (!isElectronWindow(window)) {
-        kioskInfoCache = { cageInstalled: false, runningInCage: false, cageKioskInstalled: false, displayServer: 'n/a' };
+        kioskInfoCache = {
+            cageInstalled: false,
+            runningInCage: false,
+            cageKioskAppImageInstalled: false,
+            cageKioskDesktopInstalled: false,
+            needsCageKioskSetup: false,
+            displayServer: 'n/a',
+        };
         return kioskInfoCache;
     }
     kioskInfoCache = await signalBridge.invoke('get-linux-kiosk-info');

@@ -48,6 +48,13 @@ import { normalizeStudentClientName } from '../../../../shared/normalizeStudentC
 import { setClientFocusLock, clearClientFocusLock } from './focusLockState.js';
 import { syncClientDisplayInfo } from './displayInfo.js';
 import { captureActiveWindowScreenshot } from './cageScreenshotCapture.js';
+import {
+    detectCageInstalled,
+    detectCageKioskAppImageInstalled,
+    detectCageKioskDesktopInstalled,
+    detectRunningInCage,
+    needsCageKioskSetup,
+} from './cageDetect.js';
 
 // Skip info-level file-save log noise when the renderer marks the write as periodic auto-save.
 const logSaveInfoUnlessAuto = (saveReason, message) => {
@@ -128,9 +135,11 @@ class IpcHandler {
         
 
         ipcMain.handle('get-linux-kiosk-info', () => ({
-            cageInstalled: platformDispatcher.cageInstalled,
-            runningInCage: platformDispatcher.runningInCage,
-            cageKioskInstalled: platformDispatcher.cageKioskInstalled,
+            cageInstalled: detectCageInstalled(),
+            runningInCage: detectRunningInCage(),
+            cageKioskAppImageInstalled: detectCageKioskAppImageInstalled(),
+            cageKioskDesktopInstalled: detectCageKioskDesktopInstalled(),
+            needsCageKioskSetup: needsCageKioskSetup(),
             displayServer: platformDispatcher.displayServer,
         }));
 
@@ -146,7 +155,10 @@ class IpcHandler {
             const source = process.env.APPIMAGE || process.execPath;
             const script = app.isPackaged
                 ? path.join(process.resourcesPath, 'linux', 'install-cage-kiosk.sh')
-                : path.join(path.dirname(fileURLToPath(import.meta.url)), '../../resources/linux/install-cage-kiosk.sh');
+                : path.join(process.cwd(), 'src-electron/resources/linux/install-cage-kiosk.sh');
+            if (!fs.existsSync(script)) {
+                return Promise.resolve({ ok: false, error: `install script not found: ${script}` });
+            }
             return new Promise((resolve) => {
                 const child = spawn('pkexec', ['/bin/sh', script, source], { env: process.env });
                 let stderr = '';

@@ -114,10 +114,19 @@
             <!-- BIP Section END -->
 
 
-            <div @click="setupLocalLockdown()" class="btn btn-sm btn-outline-secondary ms-1 mt-3 mb-4"
+            <div @click="setupLocalLockdown()" class="btn btn-sm btn-outline-secondary ms-1 mt-3 mb-1"
                  :class="(token)? 'disabledexam':''" style="font-size:0.9em"> {{ $t("student.localLockdown") }}
             </div>
-
+            <button v-if="showCageKioskInstallBtn"
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary ms-1 mb-4 d-block"
+                    :class="(token) ? 'disabledexam' : ''"
+                    :disabled="!!token"
+                    style="font-size:0.9em"
+                    :title="$t('student.cageSetupText')"
+                    @click="promptCageKioskSetup">
+                {{ $t('student.cageSetupButton') }}
+            </button>
 
             <div><br>
                 <div id="statusdiv" class="btn btn-warning m-1"></div>
@@ -125,11 +134,13 @@
             <br>
 
             <div class="sidebar-bottom-btns ms-3">
-                <button type="button" class="btn btn-outline-secondary btn-sm sidebar-locale-btn"
+                <button type="button" class="btn btn-outline-secondary btn-sm sidebar-locale-btn ms-1"
                         @click="toggleLocale">{{ inactivelocale }}
                 </button>
                 <button type="button"
                         class="btn btn-outline-danger btn-sm sidebar-exit-btn"
+                        :class="token ? 'disabledexam' : ''"
+                        :disabled="!!token"
                         :title="$t('student.cageExit')" :aria-label="$t('student.cageExit')"
                         @click="quitNextExam">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
@@ -333,7 +344,13 @@ export default {
             networkerror: false,
             localLockdown: false,
             isLoading: true,
-            platformKiosk: { cageInstalled: false, runningInCage: false, cageKioskInstalled: false },
+            platformKiosk: {
+                cageInstalled: false,
+                runningInCage: false,
+                cageKioskAppImageInstalled: false,
+                cageKioskDesktopInstalled: false,
+                needsCageKioskSetup: false,
+            },
 
             biptest: true,
             bipToken: false,
@@ -383,6 +400,10 @@ export default {
             const cfg = this.getLocalVmConfig?.() || {};
             return cfg.calculateSha256 === true ? this.$t('student.vmVerifyingHash') : this.$t('student.vmVerifyingSize');
         },
+        showCageKioskInstallBtn() {
+            const k = this.platformKiosk;
+            return isElectronWindow(window) && k.displayServer !== 'n/a' && !k.runningInCage && k.needsCageKioskSetup;
+        },
     },
     watch: {
         'clientinfo.localVMState'(nextState) {
@@ -406,23 +427,29 @@ export default {
             }
         },
 
-        async maybeOfferCageKioskSetup() {
-            const k = this.platformKiosk;
-           // if (!isElectronWindow(window) || this.config.development) return;
-            if (!k.cageInstalled || k.runningInCage || k.cageKioskInstalled) return;
+        async promptCageKioskSetup() {
             const result = await this.$swal.fire({
                 title: this.$t('student.cageSetupTitle'),
-                html: `${this.$t('student.cageSetupText')}<br><br>${this.$t('student.cageSetupTextRoot')}`,
+                html: `${this.$t('student.cageSetupText')}<br><br>${this.$t('student.cageSetupTextRoot')}<br><br>
+                    <label><input type="checkbox" id="cage-setup-dismiss"> ${this.$t('student.cageSetupDontShow')}</label>`,
                 icon: 'info',
                 showCancelButton: true,
                 confirmButtonText: this.$t('student.cageSetupInstall'),
                 cancelButtonText: this.$t('student.cageSetupLater'),
+                willClose: (popup) => {
+                    if (popup.querySelector('#cage-setup-dismiss')?.checked) {
+                        localStorage.setItem('next-exam-cage-kiosk-setup-dismissed', '1');
+                    }
+                },
             });
             if (!result.isConfirmed) return;
             const install = await signalBridge.invoke('install-linux-cage-kiosk');
             if (install?.ok) {
-                this.platformKiosk.cageKioskInstalled = true;
-                await this.$swal.fire({ title: this.$t('student.cageSetupSuccess'), icon: 'success' });
+                this.platformKiosk = await signalBridge.invoke('get-linux-kiosk-info');
+                await this.$swal.fire({
+                    html: `${this.$t('student.cageSetupSuccess')}<br><br>${this.$t('student.cageSetupSuccessHint')}`,
+                    icon: 'success',
+                });
             } else {
                 await this.$swal.fire({
                     title: this.$t('student.cageSetupFailed'),
@@ -432,7 +459,16 @@ export default {
             }
         },
 
+        async maybeOfferCageKioskSetup() {
+            const k = this.platformKiosk;
+            if (!isElectronWindow(window) || this.config.development) return;
+            if (k.runningInCage || !k.needsCageKioskSetup) return;
+            if (localStorage.getItem('next-exam-cage-kiosk-setup-dismissed') === '1') return;
+            await this.promptCageKioskSetup();
+        },
+
         quitNextExam() {
+            if (this.token) return;
             this.$swal.fire({
                 title: this.$t('student.cageExit'),
                 text: this.$t('student.cageExitConfirm'),

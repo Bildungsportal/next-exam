@@ -70,6 +70,7 @@
         "blockSubfoldersInfo": "Only allow navigation within the specified URL path",
         "cancel": "Cancel",
         "cannotDeleteActiveSheet": "Active Sheet cannot be deleted during exam",
+        "cageKioskInfo": "Student is running in SRDP kiosk mode",
         "chooserequire": "You need to choose a student!",
         "choosestudent": "Select Student",
         "chooseUrl": "Choose URL",

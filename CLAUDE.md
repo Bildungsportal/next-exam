@@ -20,6 +20,7 @@ Before implementing:
 
 - No features beyond what was asked.
 - No abstractions for single-use code.
+- **Never** add a new file that only wraps one tiny helper (if it fits in ~2 lines at the call site, put it there). After every new function, ask: necessary? can it be inlined or deleted?
 - No "flexibility" or "configurability" that wasn't requested.
 - No error handling for impossible scenarios.
 - If you write 200 lines and it could be 50, rewrite it.
@@ -52,6 +53,8 @@ When editing existing code:
 When your changes create orphans:
 - Remove imports/variables/functions that YOUR changes made unused.
 - Don't remove pre-existing dead code unless asked.
+
+**No trivial extra modules:** Do not create a dedicated file (utils, paths, helpers) for a single function solvable in a few lines at the only caller. Colocate in the existing file; expand an existing shared module only when the same logic is reused in multiple places.
 
 The test: Every changed line should trace directly to the user's request.
 
