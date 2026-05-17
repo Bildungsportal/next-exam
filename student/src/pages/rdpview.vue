@@ -10,8 +10,7 @@
         :servername="servername"
         :pincode="pincode"
         :battery="battery"
-        :currenttime="currenttime"
-        :timesinceentry="timesinceentry"
+        :entrytime="entrytime"
         :componentName="componentName"
         :localLockdown="localLockdown"
         :wlanInfo="wlanInfo"
@@ -133,7 +132,6 @@
 </template>
 
 <script>
-import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {getExamMaterials, loadImage, loadPDF, resetPdfPreviewToolbar} from '../utils/filehandler.js'
@@ -158,7 +156,6 @@ export default {
             currentFile: null,
             fetchinfointerval: null,
             loadfilelistinterval: null,
-            clockinterval: null,
             servername: this.$route.params.servername,
             servertoken: this.$route.params.servertoken,
             serverip: this.$route.params.serverip,
@@ -173,9 +170,6 @@ export default {
             localLockdown: this.$route.params.localLockdown,
             clientinfo: null,
             entrytime: 0,
-            timesinceentry: 0,
-            currenttime: 0,
-            now: new Date().getTime(),
             localfiles: null,
             battery: null,
             url: null,
@@ -212,11 +206,6 @@ export default {
         this.loadfilelistinterval = new SchedulerService(20000);
         this.loadfilelistinterval.addEventListener('action', this.loadFilelist);
         this.loadfilelistinterval.start();
-
-        this.clockinterval = new SchedulerService(1000);
-        this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-        this.clockinterval.start();
-
         attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
 
         this.loadFilelist()
@@ -341,11 +330,6 @@ export default {
             const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
             return date.toLocaleTimeString('en-US', {hour12: false}); // Adjust locale and options as needed
         },
-        clock() {
-            this.now = new Date().getTime()
-            this.timesinceentry = new Date(this.now - this.entrytime).toISOString().substr(11, 8)
-            this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
-        },
         async fetchInfo() {
             if (isElectronWindow(window)) {
                 let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
@@ -403,10 +387,6 @@ export default {
     beforeUnmount() {
         this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
         this.fetchinfointerval.stop()
-
-        this.clockinterval.removeEventListener('action', this.clock);
-        this.clockinterval.stop()
-
         this.loadfilelistinterval.removeEventListener('action', this.loadFilelist);
         this.loadfilelistinterval.stop()
 

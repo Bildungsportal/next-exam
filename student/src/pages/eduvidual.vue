@@ -10,8 +10,7 @@
       :servername="servername"
       :pincode="pincode"
       :battery="battery"
-      :currenttime="currenttime"
-      :timesinceentry="timesinceentry"
+      :entrytime="entrytime"
       :componentName="componentName"
       :localLockdown="localLockdown"
       :wlanInfo="wlanInfo"
@@ -104,7 +103,6 @@
 
 
 <script>
-import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {isElectronWindow} from "../types/platform.js";
@@ -131,7 +129,6 @@ export default {
             currentFile:null,
             fetchinfointerval: null,
             loadfilelistinterval: null,
-            clockinterval: null,
             servername: this.$route.params.servername,
             servertoken: this.$route.params.servertoken,
             serverip: this.$route.params.serverip,
@@ -154,8 +151,6 @@ export default {
             localLockdown: this.$route.params.localLockdown,
             clientinfo: null,
             entrytime: 0,
-            timesinceentry: 0,
-            currenttime: 0,
             now : new Date().getTime(),
             localfiles: null,
             battery: null,
@@ -215,11 +210,6 @@ export default {
             this.loadfilelistinterval = new SchedulerService(20000);
             this.loadfilelistinterval.addEventListener('action',  this.loadFilelist);
             this.loadfilelistinterval.start();
-            
-            this.clockinterval = new SchedulerService(1000);
-            this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-            this.clockinterval.start();
-
             attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
 
 
@@ -382,11 +372,6 @@ export default {
                 let filelist = await signalBridge.invoke('getfilesasync', null)
                 this.localfiles = filelist;
             }
-        },
-        clock(){
-            this.now = new Date().getTime()
-            this.timesinceentry =  new Date(this.now - this.entrytime).toISOString().substr(11, 8)
-            this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
         },  
         async fetchInfo() {
             
@@ -448,10 +433,6 @@ export default {
     beforeUnmount() {
         this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
         this.fetchinfointerval.stop() 
-
-        this.clockinterval.removeEventListener('action', this.clock);
-        this.clockinterval.stop() 
-
         this.loadfilelistinterval.removeEventListener('action', this.loadFilelist);
         this.loadfilelistinterval.stop() 
 

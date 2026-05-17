@@ -98,7 +98,7 @@
                 <img v-if="battery && battery.level > 0.1 && battery.level <= 0.2 " src="/src/assets/img/svg/battery-020.svg" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" class="white" width="32" height="32" />
                 <img v-if="battery && battery.level <= 0.1" :title="battery.level*100+'%'" :alt="battery.level*100+'%'" src="/src/assets/img/svg/battery-010.svg" width="32" height="32" >
             </div>
-            <div class="fs-5" style="width:90px;" :title="'Exam: '+timesinceentry" >{{currenttime}}</div>
+            <span ref="headerClock" class="fs-5 d-inline-block" style="width:90px;"></span>
             <div class="fs-5" >{{componentName}}</div>
         </div>
     </div>
@@ -106,7 +106,9 @@
 </template>
   
 <script>
+  import moment from 'moment-timezone';
   import {SignalBridge} from '../utils/signalBridge.js'
+  import {SchedulerService} from '../utils/schedulerservice.js'
 
   // signalBridge instance centralizes ipc calls with platform checks
   const signalBridge = new SignalBridge(window);
@@ -114,11 +116,13 @@
 
   export default {
     name: 'ExamHeader',
-    props: ['serverstatus','clientinfo','online', 'clientname', 'exammode', 'servername', 'pincode', 'battery', 'currenttime','timesinceentry','componentName','localLockdown','wlanInfo','hostip'],
+    props: ['serverstatus','clientinfo','online', 'clientname', 'exammode', 'servername', 'pincode', 'battery', 'entrytime', 'componentName','localLockdown','wlanInfo','hostip'],
     data() {
       return {
         lastShownMessage: null,
-        _nxHeaderResizeObs: null
+        _nxHeaderResizeObs: null,
+        _clockInterval: null,
+        _entrytimeMs: 0,
       };
     },
     computed: {
@@ -130,14 +134,24 @@
       }
     },
     mounted() {
+      this._entrytimeMs = Number(this.entrytime) || Date.now();
+      this._clockInterval = new SchedulerService(1000);
+      this._clockInterval.addEventListener('action', this.tickHeaderClock);
+      this._clockInterval.start();
       this._nxSetHeaderHeightVar(); // keep --nx-apphead-h synced for overlays
       if (typeof ResizeObserver !== 'undefined') {
         this._nxHeaderResizeObs = new ResizeObserver(() => this._nxSetHeaderHeightVar());
         this._nxHeaderResizeObs.observe(this.$el);
       }
       window.addEventListener('resize', this._nxSetHeaderHeightVar);
+      this.$nextTick(() => this.tickHeaderClock());
     },
     beforeUnmount() {
+      if (this._clockInterval) {
+        this._clockInterval.removeEventListener('action', this.tickHeaderClock);
+        this._clockInterval.stop();
+        this._clockInterval = null;
+      }
       window.removeEventListener('resize', this._nxSetHeaderHeightVar);
       if (this._nxHeaderResizeObs) {
         this._nxHeaderResizeObs.disconnect();
@@ -145,6 +159,10 @@
       }
     },
     watch: {
+      entrytime(ms) {
+        this._entrytimeMs = Number(ms) || 0;
+        this.tickHeaderClock();
+      },
       'wlanInfo.message'(newMessage) {
         if (newMessage && newMessage !== this.lastShownMessage) {
           this.lastShownMessage = newMessage;
@@ -154,6 +172,16 @@
       }
     },
     methods: {
+      // Update clock DOM only — no reactive state, avoids header re-render each tick.
+      tickHeaderClock() {
+        const el = this.$refs.headerClock;
+        if (!el) return;
+        const now = Date.now();
+        const base = this._entrytimeMs || now;
+        const elapsed = new Date(now - base).toISOString().substr(11, 8);
+        el.textContent = moment().tz('Europe/Vienna').format('HH:mm:ss');
+        el.title = `Exam: ${elapsed}`;
+      },
       _nxSetHeaderHeightVar() {
         this.$nextTick(() => {
           const h = Math.max(0, Math.round(this.$el?.offsetHeight || 0));

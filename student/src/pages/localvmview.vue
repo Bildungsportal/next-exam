@@ -9,8 +9,7 @@
       :servername="servername"
       :pincode="pincode"
       :battery="battery"
-      :currenttime="currenttime"
-      :timesinceentry="timesinceentry"
+      :entrytime="entrytime"
       :componentName="componentName"
       :localLockdown="localLockdown"
       :wlanInfo="wlanInfo"
@@ -76,7 +75,6 @@
           <div class="mb-3 row">
             <div class="mb-3 "> {{ $t('editor.leftkiosk') }} <br> {{ $t('editor.tellsomeone') }}</div>
             <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32">
-            <div class="mt-3"> {{ timesinceentry }}</div>
           </div>
         </div>
       </div>
@@ -112,7 +110,6 @@
 </template>
 
 <script>
-import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js';
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js';
@@ -147,9 +144,6 @@ export default {
       localLockdown: this.$route.params.localLockdown,
       clientinfo: null,
       entrytime: 0,
-      timesinceentry: 0,
-      currenttime: 0,
-      now: new Date().getTime(),
       battery: null,
       wlanInfo: null,
       hostip: null,
@@ -228,10 +222,6 @@ export default {
         console.error('localvmview @ mounted: initial wlan/host ip error', err);
       }
     });
-    this.clockinterval = new SchedulerService(1000);
-    this.clockinterval.addEventListener('action', this.clock);
-    this.clockinterval.start();
-
     if (!this.config.development) {
       attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
     }
@@ -258,10 +248,6 @@ export default {
     if (this.fetchinfointerval) {
       this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
       this.fetchinfointerval.stop();
-    }
-    if (this.clockinterval) {
-      this.clockinterval.removeEventListener('action', this.clock);
-      this.clockinterval.stop();
     }
     if (this.connectScheduler) {
       this.connectScheduler.removeEventListener('action', this.tryConnectLoop);
@@ -576,12 +562,6 @@ export default {
       if (!this.config.development && response && !response.focus){
         this.focus = false;
       }
-    },
-
-    clock(){
-      this.now = new Date().getTime();
-      this.timesinceentry =  new Date(this.now - this.entrytime).toISOString().substr(11, 8);
-      this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
     },
 
     async fetchInfo() {

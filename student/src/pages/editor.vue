@@ -12,8 +12,7 @@
         :servername="servername"
         :pincode="pincode"
         :battery="battery"
-        :currenttime="currenttime"
-        :timesinceentry="timesinceentry"
+        :entrytime="entrytime"
         :componentName="componentName"
         :localLockdown="localLockdown"
         :wlanInfo="wlanInfo"
@@ -440,7 +439,6 @@
                 <div v-if="focusLostMessage || focusLockMessage" class="mb-3 text-dark fw-bold" style="white-space: pre-line">{{ focusLostMessage || focusLockMessage }}</div>
                 <div v-if="focusLockReasonLine" class="mb-3 text-dark fw-bold">{{ focusLockReasonLine }}</div>
                 <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32">
-                <div class="mt-3"> {{ timesinceentry }}</div>
             </div>
             <div v-if="localLockdown" class="mt-2">
                 <div class="input-group">
@@ -673,7 +671,7 @@
     <div id="statusbar" style="padding-left:15px;padding-right:8px;">
         <div class="statusbar-left">
             <!-- Static text with v-once to prevent re-rendering since $t apparently performs performance measures each time causing memory bloat -->
-            <span>{{ wordcount }}</span> <span v-once>{{ $t("editor.words") }}</span>,  <span>{{ charcount }}</span> <span v-once>{{$t("editor.chars")}}</span>
+            <span ref="statusWordCount">0</span> <span v-once>{{ $t("editor.words") }}</span>,  <span ref="statusCharCount">0</span> <span v-once>{{$t("editor.chars")}}</span>
             &nbsp; | &nbsp;
             <span v-once id="editselectedtext"> {{ $t("editor.selected") }}: </span> <span
                 id="editselected"> {{ selectedWordCount }}/{{ selectedCharCount }}</span>
@@ -776,8 +774,6 @@ import {SmilieReplacer} from '../components/SmilieReplacer.ts'
 import {common, createLowlight} from 'lowlight'
 import {Color} from '@tiptap/extension-color'
 import TextStyle from '@tiptap/extension-text-style'
-import moment from 'moment-timezone';
-
 import ExamHeader from '../components/ExamHeader.vue';
 import WebviewPane from '../components/WebviewPane.vue'
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
@@ -848,7 +844,7 @@ export default {
             editor: null,
             saveinterval: null,
             fetchinfointerval: null,
-            clockinterval: null,
+            statusCountInterval: null,
             loadfilelistinterval: null,
             servername: this.$route.params.servername,
             servertoken: this.$route.params.servertoken,
@@ -866,12 +862,7 @@ export default {
             config: this.$route.params.config,
             clientinfo: null,
             entrytime: 0,
-            timesinceentry: 0,
-            currenttime: 0,
-            charcount: 0,
-            wordcount: 0,
             caretContextLabel: '',
-            now: 0,
             pincode: this.$route.params.pincode,
             zoom: EDITOR_ZOOM_INITIAL,
             battery: null,
@@ -1464,14 +1455,17 @@ export default {
             const [r, g, b] = rgb.match(/\d+/g).map(Number);
             return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
         },
-        clock() {
-            // this.charcount = this.editor.storage.characterCount.characters()   //this also counts blank spaces
-            this.charcount = this.editor.getText().replace(/<[^>]*>/g, '').replace(/\s/g, '').length
-
-            this.wordcount = this.editor.storage.characterCount.words()
-            this.now = new Date().getTime()
-            this.timesinceentry = new Date(this.now - this.entrytime).toISOString().substr(11, 8)
-            this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
+        // Status bar word/char counts via DOM refs — no reactive tick on editor.vue.
+        updateEditorStatusCounts() {
+            if (!this.editor) return;
+            const wordEl = this.$refs.statusWordCount;
+            const charEl = this.$refs.statusCharCount;
+            if (wordEl) {
+                wordEl.textContent = String(this.editor.storage.characterCount.words());
+            }
+            if (charEl) {
+                charEl.textContent = String(this.editor.getText().replace(/<[^>]*>/g, '').replace(/\s/g, '').length);
+            }
         },
 
         // Strip marks, color, alignment, paragraph line-height, then normalize block nodes (unsetAllMarks before clearNodes for full-doc selection).
@@ -1568,7 +1562,7 @@ export default {
 
         // Seconds/minutes/hours since last filesystem mtime (active .htm omits label in template).
         formatHtmLocalFileAge(file) {
-            const t = this.now || Date.now();
+            const t = Date.now();
             const ms = Math.max(0, t - Number(file?.mod || 0));
             const sec = Math.floor(ms / 1000);
             if (sec < 60) return `${sec}s`;
@@ -2547,9 +2541,10 @@ export default {
         this.saveinterval.addEventListener('action', this.saveContentCallback);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
         this.saveinterval.start();
 
-        this.clockinterval = new SchedulerService(1000);
-        this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-        this.clockinterval.start();
+        this.statusCountInterval = new SchedulerService(1000);
+        this.statusCountInterval.addEventListener('action', this.updateEditorStatusCounts);
+        this.statusCountInterval.start();
+        this.$nextTick(() => this.updateEditorStatusCounts());
 
 
         this.loadFilelist()
@@ -2663,8 +2658,8 @@ export default {
         this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
         this.fetchinfointerval.stop()
 
-        this.clockinterval.removeEventListener('action', this.clock);
-        this.clockinterval.stop()
+        this.statusCountInterval.removeEventListener('action', this.updateEditorStatusCounts);
+        this.statusCountInterval.stop()
 
         signalBridge.removeAllListeners('getmaterials')
         signalBridge.removeAllListeners('finalsubmit')

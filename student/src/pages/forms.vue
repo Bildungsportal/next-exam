@@ -10,8 +10,7 @@
         :servername="servername"
         :pincode="pincode"
         :battery="battery"
-        :currenttime="currenttime"
-        :timesinceentry="timesinceentry"
+        :entrytime="entrytime"
         :componentName="componentName"
         :localLockdown="localLockdown"
         :wlanInfo="wlanInfo"
@@ -154,7 +153,6 @@
 </template>
 
 <script>
-import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
@@ -179,7 +177,6 @@ export default {
             currentFile: null,
             fetchinfointerval: null,
             loadfilelistinterval: null,
-            clockinterval: null,
             servername: this.$route.params.servername,
             servertoken: this.$route.params.servertoken,
             serverip: this.$route.params.serverip,
@@ -203,9 +200,6 @@ export default {
             config: this.$route.params.config,
             clientinfo: null,
             entrytime: 0,
-            timesinceentry: 0,
-            currenttime: 0,
-            now: new Date().getTime(),
             localfiles: null,
             battery: null,
             currentpreview: null,
@@ -258,11 +252,6 @@ export default {
             } catch (err) {
                 console.error('forms @ mounted: initial wlan/host ip error', err)
             }
-
-            this.clockinterval = new SchedulerService(1000);
-            this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-            this.clockinterval.start();
-
             this.loadfilelistinterval = new SchedulerService(10000);
             this.loadfilelistinterval.addEventListener('action', this.loadFilelist);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.loadfilelistinterval.start();
@@ -500,11 +489,6 @@ export default {
                 this.localfiles = filelist;
             }
         },
-        clock() {
-            this.now = new Date().getTime()
-            this.timesinceentry = new Date(this.now - this.entrytime).toISOString().substr(11, 8)
-            this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
-        },
 
         formatTime(unixTime) {
             const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
@@ -568,9 +552,6 @@ export default {
 
         this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
         this.fetchinfointerval.stop()
-
-        this.clockinterval.removeEventListener('action', this.clock);
-        this.clockinterval.stop()
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
         // Clean up webview by removing it from DOM to prevent crashes (blocking is handled in backend, but we still clean up local listeners)

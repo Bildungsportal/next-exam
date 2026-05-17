@@ -11,8 +11,7 @@
             :servername="servername"
             :pincode="pincode"
             :battery="battery"
-            :currenttime="currenttime"
-            :timesinceentry="timesinceentry"
+            :entrytime="entrytime"
             :componentName="componentName"
             :localLockdown="localLockdown"
             :wlanInfo="wlanInfo"
@@ -128,7 +127,6 @@
 </template>
 
 <script>
-import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
@@ -152,7 +150,6 @@ export default {
             currentFile: null,
             fetchinfointerval: null,
             loadfilelistinterval: null,
-            clockinterval: null,
             servername: this.$route.params.servername,
             servertoken: this.$route.params.servertoken,
             serverip: this.$route.params.serverip,
@@ -168,9 +165,6 @@ export default {
             lockedSection: null,
             clientinfo: null,
             entrytime: 0,
-            timesinceentry: 0,
-            currenttime: 0,
-            now: new Date().getTime(),
             localfiles: null,
             battery: null,
             warning: false,
@@ -203,11 +197,6 @@ export default {
             this.fetchinfointerval = new SchedulerService(5000);
             this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.fetchinfointerval.start();
-
-            this.clockinterval = new SchedulerService(1000);
-            this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-            this.clockinterval.start();
-
             this.loadfilelistinterval = new SchedulerService(10000);
             this.loadfilelistinterval.addEventListener('action', this.loadFilelist);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.loadfilelistinterval.start();
@@ -334,11 +323,6 @@ export default {
                 this.localfiles = filelist;
             }
         },
-        clock() {
-            this.now = new Date().getTime()
-            this.timesinceentry = new Date(this.now - this.entrytime).toISOString().substr(11, 8)
-            this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
-        },
         async fetchInfo() {
             if (isElectronWindow(window)) {
                 let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
@@ -399,10 +383,6 @@ export default {
 
         this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
         this.fetchinfointerval.stop()
-
-        this.clockinterval.removeEventListener('action', this.clock);
-        this.clockinterval.stop()
-
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
         // Remove resize event listener

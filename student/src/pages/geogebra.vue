@@ -24,8 +24,7 @@
       :servername="servername"
       :pincode="pincode"
       :battery="battery"
-      :currenttime="currenttime"
-      :timesinceentry="timesinceentry"
+      :entrytime="entrytime"
       :componentName="componentName"
       :localLockdown="localLockdown"
       :wlanInfo="wlanInfo"
@@ -176,7 +175,6 @@
 
 /* global GGBApplet */
 
-import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
 import WebviewPane from '../components/WebviewPane.vue'
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
@@ -231,7 +229,6 @@ export default {
             saveinterval: null,
             fetchinfointerval: null,
             loadfilelistinterval: null,
-            clockinterval: null,
             servername: this.$route.params.servername,
             servertoken: this.$route.params.servertoken,
             serverip: this.$route.params.serverip,
@@ -247,8 +244,6 @@ export default {
             lockedSection: null,
             clientinfo: null,
             entrytime: 0,
-            timesinceentry: 0,
-            currenttime : 0,
             now : new Date().getTime(),
             localfiles: null,
             battery: null,
@@ -361,11 +356,6 @@ export default {
             this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.fetchinfointerval.start();
             await this.fetchInfo(); // initial sync for clientinfo, serverstatus and lockedSection
-
-            this.clockinterval = new SchedulerService(1000);
-            this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-            this.clockinterval.start();
-
             this.saveinterval = new SchedulerService(20000);
             this.saveContentGgbAuto = () => this.saveContent(false, 'auto'); // detour so interval does not pass Scheduler event as first arg
             this.saveinterval.addEventListener('action', this.saveContentGgbAuto);
@@ -674,12 +664,6 @@ export default {
 
         setsource(source) {
             this.initGeoGebra(source)
-        },
-
-        clock(){
-            this.now = new Date().getTime()
-            this.timesinceentry =  new Date(this.now - this.entrytime).toISOString().substr(11, 8)
-            this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
         }, 
 
 
@@ -915,10 +899,6 @@ export default {
 
         this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
         this.fetchinfointerval.stop() 
-
-        this.clockinterval.removeEventListener('action', this.clock);
-        this.clockinterval.stop() 
-        
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
         if (this._resizeHandler) {
