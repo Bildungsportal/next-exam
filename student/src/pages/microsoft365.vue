@@ -136,6 +136,12 @@ import {getExamMaterials, loadImage, loadPDF, resetPdfPreviewToolbar} from '../u
 import {isElectronWindow} from "../types/platform.ts";
 import {SignalBridge} from '../utils/signalBridge.js'
 import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
+import {
+    applyClientinfoFromFetch,
+    applyServerstatusFromFetch,
+    resolveLockedSection,
+    serverstatusExamHeaderUiChanged,
+} from '../utils/examFetchInfoSync.js'
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -324,55 +330,38 @@ export default {
             }
         },
         async fetchInfo() {
-            if (isElectronWindow(window)) {
-                let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+            if (!isElectronWindow(window)) return;
+            const getinfo = await signalBridge.invoke('getinfoasync');
+            const hadFocus = this.focus;
 
-                this.clientinfo = getinfo.clientinfo;
-                this.token = this.clientinfo.token
-                this.focus = this.clientinfo.focus
-                this.clientname = this.clientinfo.name
-                this.exammode = this.clientinfo.exammode
-                this.pincode = this.clientinfo.pin
-                this.msOfficeShare = this.clientinfo.msofficeshare;
+            applyClientinfoFromFetch(this, getinfo.clientinfo);
+            if (getinfo.serverstatus) {
+                applyServerstatusFromFetch(this, getinfo.serverstatus, serverstatusExamHeaderUiChanged);
+            }
 
-                this.serverstatus = getinfo.serverstatus
+            const sectionIndex = resolveLockedSection(this.serverstatus, this.clientinfo);
+            if (sectionIndex !== this.lockedSection) this.lockedSection = sectionIndex;
 
-                // decide which locked section index is authoritative (client vs server)
-                const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
-                    ? this.clientinfo.lockedSection
-                    : this.serverstatus.lockedSection
+            const nextShare = this.clientinfo?.msofficeshare ?? null;
+            if (nextShare !== this.msOfficeShare) this.msOfficeShare = nextShare;
 
-                this.lockedSection = sectionIndex
+            if (hadFocus && !this.focus) {
+                this.warning = true;
+                this.entrytime = new Date().getTime();
+                signalBridge.send('collapse-browserview');
+            } else if (!hadFocus && this.focus && this.warning) {
+                this.warning = false;
+                signalBridge.send('restore-browserview');
+            }
 
-                if (!this.focus) {
-                    this.warning = true
-                    this.entrytime = new Date().getTime()
-                    signalBridge.send('collapse-browserview')
-                }
-                if (this.focus && this.warning) {
-                    this.warning = false
-                    signalBridge.send('restore-browserview')
-                }
+            this.battery = await navigator.getBattery().then(battery => battery)
+                .catch(error => { console.error('Error accessing the Battery API:', error); });
 
-                if (this.clientinfo && this.clientinfo.token) {
-                    this.online = true
-                } else {
-                    this.online = false
-                }
-
-                this.battery = await navigator.getBattery().then(battery => {
-                    return battery
-                })
-                    .catch(error => {
-                        console.error("Error accessing the Battery API:", error);
-                    });
-
-                this.internetCheckCounter++
-                if (this.internetCheckCounter % 5 === 0) {
-                    this.wlanInfo = await signalBridge.invoke('get-wlan-info')
-                    this.hostip = await signalBridge.invoke('checkhostip')
-                    this.internetCheckCounter = 0
-                }
+            this.internetCheckCounter++;
+            if (this.internetCheckCounter % 5 === 0) {
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info');
+                this.hostip = await signalBridge.invoke('checkhostip');
+                this.internetCheckCounter = 0;
             }
         },
 
