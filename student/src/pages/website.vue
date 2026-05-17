@@ -134,6 +134,12 @@ import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue';
 import {SignalBridge} from '../utils/signalBridge.js'
 import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
+import {
+    applyClientinfoFromFetch,
+    applyServerstatusFromFetch,
+    resolveLockedSection,
+    serverstatusWebsiteUiChanged,
+} from '../utils/examFetchInfoSync.js'
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -288,57 +294,56 @@ export default {
             const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
             return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed
         },  
+        // Apply website examConfig for locked section; returns true if main webview URL changed.
+        applyWebsiteConfigFromSection(sectionIndex) {
+            const section = this.serverstatus?.examSections?.[sectionIndex];
+            const groupKey = section?.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA';
+            const websiteConfig = section?.[groupKey]?.examConfig?.website || null;
+            if (!websiteConfig || typeof websiteConfig.url !== 'string') return false;
+            const nextUrl = websiteConfig.url;
+            const urlChanged = nextUrl !== this.url;
+            if (urlChanged) this.url = nextUrl;
+            if (nextUrl !== this.domain) this.domain = nextUrl;
+            const nextBlockSub = !!websiteConfig.blockSubdomains;
+            const nextBlockFolder = !!websiteConfig.blockSubfolders;
+            if (nextBlockSub !== this.blockSubdomains) this.blockSubdomains = nextBlockSub;
+            if (nextBlockFolder !== this.blockSubfolders) this.blockSubfolders = nextBlockFolder;
+            let nextAllowedDomain;
+            try {
+                nextAllowedDomain = new URL(nextUrl).hostname;
+            } catch {
+                nextAllowedDomain = nextUrl.replace(/https?:\/\//, '').split('/')[0].split(':')[0];
+            }
+            if (nextAllowedDomain !== this.allowedDomain) this.allowedDomain = nextAllowedDomain;
+            return urlChanged;
+        },
+
         async fetchInfo() {
-            let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
-            
-            this.clientinfo = getinfo.clientinfo;
-            this.token = this.clientinfo.token
-            this.focus = this.clientinfo.focus
-            this.clientname = this.clientinfo.name
-            this.exammode = this.clientinfo.exammode
-            this.pincode = this.clientinfo.pin
-            this.serverstatus = getinfo.serverstatus
+            const getinfo = await signalBridge.invoke('getinfoasync');
 
-            // decide which locked section index is authoritative (client vs server)
-            const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
-                ? this.clientinfo.lockedSection
-                : this.serverstatus.lockedSection
-
-            this.lockedSection = sectionIndex
-
-            // update url/domain based on current locked section (respect allowSectionSwitch)
-            const section = this.serverstatus?.examSections?.[sectionIndex]
-            const groupKey = section && section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA'
-            const websiteConfig = section?.[groupKey]?.examConfig?.website || null
-            if (websiteConfig && typeof websiteConfig.url === 'string') {
-                this.url = websiteConfig.url
-                this.domain = websiteConfig.url
-                this.blockSubdomains = !!websiteConfig.blockSubdomains
-                this.blockSubfolders = !!websiteConfig.blockSubfolders
-                try {
-                    const urlObj = new URL(this.url);
-                    this.allowedDomain = urlObj.hostname;
-                } catch (error) {
-                    if (typeof this.url === 'string') {
-                        this.allowedDomain = this.url.replace(/https?:\/\//, '').split('/')[0].split(':')[0];
-                    } else {
-                        this.allowedDomain = null;
-                    }
-                }
+            applyClientinfoFromFetch(this, getinfo.clientinfo);
+            if (getinfo.serverstatus) {
+                applyServerstatusFromFetch(this, getinfo.serverstatus, serverstatusWebsiteUiChanged);
             }
 
-            if (!this.focus){  this.entrytime = new Date().getTime() }
-            if (this.clientinfo && this.clientinfo.token){  this.online = true  }
-            else { this.online = false  }
+            const sectionIndex = resolveLockedSection(this.serverstatus, this.clientinfo);
+            if (sectionIndex !== this.lockedSection) this.lockedSection = sectionIndex;
 
-            this.battery = await navigator.getBattery().then(battery => { return battery })
-            .catch(error => { console.error("Error accessing the Battery API:", error);  });
-            
-            this.internetCheckCounter++
-            if (this.internetCheckCounter % 5 === 0){
-                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
-                this.hostip = await signalBridge.invoke('checkhostip')
-                this.internetCheckCounter = 0
+            const urlChanged = this.applyWebsiteConfigFromSection(sectionIndex);
+            if (urlChanged && this.$refs.wvmain && this.url) {
+                this.$refs.wvmain.setAttribute('src', this.url);
+            }
+
+            if (!this.focus) this.entrytime = new Date().getTime();
+
+            this.battery = await navigator.getBattery().then(battery => battery)
+                .catch(error => { console.error('Error accessing the Battery API:', error); });
+
+            this.internetCheckCounter++;
+            if (this.internetCheckCounter % 5 === 0) {
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info');
+                this.hostip = await signalBridge.invoke('checkhostip');
+                this.internetCheckCounter = 0;
             }
         }, 
     },

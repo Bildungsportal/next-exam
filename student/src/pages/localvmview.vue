@@ -118,6 +118,11 @@ import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue';
 import WebviewPane from '../components/WebviewPane.vue';
 import {SignalBridge} from '../utils/signalBridge.js';
 import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js';
+import {
+    applyClientinfoFromFetch,
+    applyServerstatusFromFetch,
+    serverstatusLocalvmUiChanged,
+} from '../utils/examFetchInfoSync.js';
 
 const signalBridge = new SignalBridge(window);
 const logPrefix = 'localvmview';
@@ -511,36 +516,33 @@ export default {
     },
 
     applyGetinfoPayload(getinfo) {
-      if (!getinfo?.clientinfo) {
-        return;
-      }
-      this.clientinfo = getinfo.clientinfo;
-      const nextVmState = this.clientinfo?.localVMState || null;
+      if (!getinfo?.clientinfo) return;
       const prevVmState = this.lastLocalVmState;
-      this.lastLocalVmState = nextVmState;
-      this.token = this.clientinfo.token;
       const prevFocus = this.lastFocusState;
-      this.focus = this.clientinfo.focus;
-      this.lastFocusState = !!this.focus;
-      this.clientname = this.clientinfo.name;
-      this.exammode = this.clientinfo.exammode;
-      this.pincode = this.clientinfo.pin;
+
+      applyClientinfoFromFetch(this, getinfo.clientinfo);
       if (getinfo.serverstatus) {
-        this.serverstatus = getinfo.serverstatus;
+        applyServerstatusFromFetch(this, getinfo.serverstatus, serverstatusLocalvmUiChanged);
       }
-      if ((nextVmState === 'hash_mismatch' && prevVmState !== 'hash_mismatch')
-          || (nextVmState === 'missing' && prevVmState !== 'missing')) {
-        console.warn(`${logPrefix} @ applyGetinfoPayload: ${nextVmState} -> reset VNC UI`);
-        this.showRetry = false;
-        this.statusMessage = '';
-        this.vmStateText = '';
-        this.stopConnectLoop();
-        this.teardownRfb();
+
+      const nextVmState = this.clientinfo?.localVMState || null;
+      if (nextVmState !== this.lastLocalVmState) {
+        const was = this.lastLocalVmState;
+        this.lastLocalVmState = nextVmState;
+        if ((nextVmState === 'hash_mismatch' && was !== 'hash_mismatch')
+            || (nextVmState === 'missing' && was !== 'missing')) {
+          console.warn(`${logPrefix} @ applyGetinfoPayload: ${nextVmState} -> reset VNC UI`);
+          this.showRetry = false;
+          this.statusMessage = '';
+          this.vmStateText = '';
+          this.stopConnectLoop();
+          this.teardownRfb();
+        }
       }
       if (prevFocus && !this.focus) {
         this.entrytime = new Date().getTime();
       }
-      this.online = !!(this.clientinfo && this.clientinfo.token);
+      this.lastFocusState = !!this.focus;
     },
 
     async retryConnect() {

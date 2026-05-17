@@ -109,6 +109,12 @@ import {isElectronWindow} from "../types/platform.js";
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import {SignalBridge} from '../utils/signalBridge.js'
 import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
+import {
+    applyClientinfoFromFetch,
+    applyServerstatusFromFetch,
+    resolveLockedSection,
+    serverstatusEduvidualUiChanged,
+} from '../utils/examFetchInfoSync.js'
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -373,60 +379,52 @@ export default {
                 this.localfiles = filelist;
             }
         },  
+        // Apply moodle/eduvidual examConfig for locked section; returns true if main webview URL changed.
+        applyEduvidualConfigFromSection(sectionIndex) {
+            const section = this.serverstatus?.examSections?.[sectionIndex];
+            const groupKey = section?.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA';
+            const eduConfig = section?.[groupKey]?.examConfig?.eduvidual || null;
+            if (!eduConfig) return false;
+            const nextUrl = eduConfig.url || null;
+            const nextDomain = eduConfig.moodleDomain || null;
+            const nextTestId = eduConfig.moodleTestId || null;
+            const urlChanged = nextUrl !== this.url;
+            if (urlChanged) this.url = nextUrl;
+            if (nextDomain !== this.moodleDomain) this.moodleDomain = nextDomain;
+            this.moodleTestType = null;
+            if (nextTestId !== this.moodleTestId) this.moodleTestId = nextTestId;
+            return urlChanged;
+        },
+
         async fetchInfo() {
-            
-            let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+            const getinfo = await signalBridge.invoke('getinfoasync');
 
-            this.clientinfo = getinfo.clientinfo;
-            this.token = this.clientinfo.token
-            this.focus = this.clientinfo.focus
-            this.clientname = this.clientinfo.name
-            this.exammode = this.clientinfo.exammode
-            this.pincode = this.clientinfo.pin
-
-            this.serverstatus = getinfo.serverstatus
-
-            // decide which locked section index is authoritative (client vs server)
-            const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
-                ? this.clientinfo.lockedSection
-                : this.serverstatus.lockedSection
-
-            this.lockedSection = sectionIndex
-
-            const section = this.serverstatus.examSections?.[sectionIndex]
-            const groupKey = section && section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA'
-            const eduConfig = section?.[groupKey]?.examConfig?.eduvidual || null
-            if (eduConfig) {
-                this.url = eduConfig.url || null
-                this.moodleDomain = eduConfig.moodleDomain || null
-                this.moodleTestType = null
-                this.moodleTestId = eduConfig.moodleTestId || null
+            applyClientinfoFromFetch(this, getinfo.clientinfo);
+            if (getinfo.serverstatus) {
+                applyServerstatusFromFetch(this, getinfo.serverstatus, serverstatusEduvidualUiChanged);
             }
 
-            if (!this.focus) {
-                this.entrytime = new Date().getTime()
+            const sectionIndex = resolveLockedSection(this.serverstatus, this.clientinfo);
+            const sectionChanged = sectionIndex !== this.lockedSection;
+            if (sectionChanged) this.lockedSection = sectionIndex;
+
+            const urlChanged = this.applyEduvidualConfigFromSection(sectionIndex);
+            if (urlChanged) {
+                const webview = document.getElementById('webviewmain');
+                if (webview && this.url) webview.setAttribute('src', this.url);
             }
-            if (this.clientinfo && this.clientinfo.token) {
-                this.online = true
-            } else {
-                this.online = false
-            }
 
-            this.battery = await navigator.getBattery().then(battery => {
-                return battery
-            })
-                .catch(error => {
-                    console.error("Error accessing the Battery API:", error);
-                });
+            if (!this.focus) this.entrytime = new Date().getTime();
 
+            this.battery = await navigator.getBattery().then(battery => battery)
+                .catch(error => { console.error('Error accessing the Battery API:', error); });
 
-            this.internetCheckCounter++
+            this.internetCheckCounter++;
             if (this.internetCheckCounter % 5 === 0) {
-                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
-                this.hostip = await signalBridge.invoke('checkhostip')
-                this.internetCheckCounter = 0
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info');
+                this.hostip = await signalBridge.invoke('checkhostip');
+                this.internetCheckCounter = 0;
             }
-            
         }, 
        
     },

@@ -48,6 +48,9 @@ PATH^student^examFetchInfoSync^student/src/utils/examFetchInfoSync.js shared cli
 TECH^student^editorFetchInfo^editor.vue uses examFetchInfoSync applyClientinfoFromFetch+serverstatusEditorUiChanged
 TECH^student^activesheets^fetchInfo^examFetchInfoSync; maybeReloadActiveSheetPdf by load key; no clientinfo watcher PDF reload
 TECH^student^geogebra^fetchInfo^examFetchInfoSync applyClientinfo+serverstatusExamHeaderUiChanged; injectCSS only on exammode change
+TECH^student^eduvidual^fetchInfo^examFetchInfoSync serverstatusEduvidualUiChanged; applyEduvidualConfigFromSection; webview src only on url change
+TECH^student^website^fetchInfo^examFetchInfoSync serverstatusWebsiteUiChanged; applyWebsiteConfigFromSection; webview src only on url change
+TECH^student^localvm^fetchInfo^examFetchInfoSync applyClientinfo+serverstatusLocalvmUiChanged; clientinfo localVM* in clientinfoUiChanged; VNC reset only on vm state transition
 RULE^student^typingRhythm^editor.vue isTypingRhythmExemptKey clears deltas for Backspace Delete Space Enter NumpadEnter (OS key-repeat)^student/src/pages/editor.vue handleTypingRhythmKeydown
 RULE^ui^swal2^teacher+student global left-align .swal2-html-container+.swal2-title^teacher/src/css/app.scss+student/src/css/app.scss
 TECH^student^localvmHash^sha256 base qcow2 before qemu start (runLocalVmPreStartVerify); avoids guest freeze from parallel full read^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js
