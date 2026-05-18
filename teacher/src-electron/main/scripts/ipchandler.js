@@ -22,6 +22,7 @@ import { ipcMain, dialog, session } from 'electron'
 import path, { join } from 'path'
 import log from 'electron-log';
 import { decryptBufferIfNeeded, isNxe1ExamEncrypted, unwrapNxe1ExamBuffer } from './examFileCryptoContext.js';
+import { pdfHasEmbeddedSignature, verifySubmissionPdf } from '../../../../shared/submissionPdfSign.js';
 import { networkInterfaces } from 'os'
 import { exec } from 'child_process';
 import { gateway4sync} from 'default-gateway';
@@ -1134,6 +1135,34 @@ class IpcHandler {
             } catch (e) {
                 log.error('ipchandler @ pickEncryptedPdfForPreview', e)
                 return { ok: false, code: 'ERROR', message: String(e?.message || e) }
+            }
+        })
+
+        ipcMain.handle('submissionPdfHasSignature', (_event, { pdfBase64 } = {}) => {
+            try {
+                const buf = Buffer.from(String(pdfBase64 || ''), 'base64')
+                return { hasSignature: pdfHasEmbeddedSignature(buf) }
+            } catch (e) {
+                log.error('ipchandler @ submissionPdfHasSignature', e)
+                return { hasSignature: false }
+            }
+        })
+
+        ipcMain.handle('verifySubmissionPdfSignature', (_event, { pdfBase64, password } = {}) => {
+            try {
+                const buf = Buffer.from(String(pdfBase64 || ''), 'base64')
+                const result = verifySubmissionPdf(buf, String(password || ''))
+                return {
+                    ok: !!result.ok,
+                    code: result.code,
+                    hasSignature: result.hasSignature,
+                    integrityValid: result.integrityValid,
+                    passwordMatches: result.passwordMatches,
+                    verifyError: result.verifyError || null,
+                }
+            } catch (e) {
+                log.error('ipchandler @ verifySubmissionPdfSignature', e)
+                return { ok: false, code: 'ERROR', verifyError: String(e?.message || e) }
             }
         })
 

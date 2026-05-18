@@ -150,6 +150,10 @@ import {
     applyServerstatusFromFetch,
     resolveLockedSection,
 } from '../utils/examFetchInfoSync.js'
+import {
+    ensureSubmissionSigningConfigured,
+    refreshSubmissionPdfForSubmit,
+} from '../utils/submissionSigningUi.js'
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -666,7 +670,11 @@ export default {
         },
 
         // send direct print request to teacher and append current document as base64
-        printBase64(printrequest=false, saveReason = 'n/a'){
+        async printBase64(printrequest=false, saveReason = 'n/a'){
+            if (!printrequest) {
+                await ensureSubmissionSigningConfigured(this)
+                await refreshSubmissionPdfForSubmit(this)
+            }
             if (!this.currentpreviewBase64) {
                 console.warn('activesheets @ printBase64: No PDF available to send');
                 return;
@@ -718,6 +726,9 @@ export default {
             if (!this.serverstatus || !this.serverstatus.examSections || !this.serverstatus.examSections[this.lockedSection]) {
                 console.error('activesheets @ sendExamToTeacher: Invalid section data');
                 return;
+            }
+            if (type === 'send') {
+                await ensureSubmissionSigningConfigured(this)
             }
             let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true})
 

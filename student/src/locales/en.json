@@ -298,6 +298,21 @@
         "wlanNopermissionsText": "Windows requires location permissions to retrieve WLAN information. Please enable location services in Privacy & Security settings.",
         "wlanNopermissionsTitle": "Location permission required"
     },
+    "submissionSign": {
+        "askText": "A signature password lets you verify later that your submission was not altered.",
+        "askTitle": "Sign submission?",
+        "cancel": "Cancel",
+        "confirm": "Save",
+        "dontAskAgain": "Do not ask again",
+        "no": "No",
+        "passwordConfirmPlaceholder": "Repeat password",
+        "passwordMismatch": "Passwords do not match.",
+        "passwordPlaceholder": "Signature password",
+        "passwordTitle": "Set signature password",
+        "passwordTooShort": "At least 8 characters.",
+        "setupFailed": "Could not set up signing.",
+        "yes": "Yes, sign"
+    },
     "webview": {
         "zoomin": "Zoom in",
         "zoomout": "Zoom out",

@@ -298,6 +298,21 @@
         "wlanNopermissionsText": "Windows benötigt Standortberechtigungen, um WLAN-Informationen abzurufen. Bitte aktivieren Sie die Positionsdienste in den Datenschutz- und Sicherheitseinstellungen.",
         "wlanNopermissionsTitle": "Standortberechtigung erforderlich"
     },
+    "submissionSign": {
+        "askText": "Mit einem Signatur-Passwort können Sie später prüfen, ob Ihre Abgabe unverändert ist.",
+        "askTitle": "Abgabe signieren?",
+        "cancel": "Abbrechen",
+        "confirm": "Speichern",
+        "dontAskAgain": "Nicht mehr fragen",
+        "no": "Nein",
+        "passwordConfirmPlaceholder": "Passwort wiederholen",
+        "passwordMismatch": "Die Passwörter stimmen nicht überein.",
+        "passwordPlaceholder": "Signatur-Passwort",
+        "passwordTitle": "Signatur-Passwort festlegen",
+        "passwordTooShort": "Mindestens 8 Zeichen.",
+        "setupFailed": "Signatur konnte nicht eingerichtet werden.",
+        "yes": "Ja, signieren"
+    },
     "webview": {
         "zoomin": "Vergrößern",
         "zoomout": "Verkleinern",

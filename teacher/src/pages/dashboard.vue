@@ -1862,7 +1862,7 @@ computed: {
                     ERROR: 'dashboard.openEncryptedPdfError',
                 }
                 const key = map[res.code] || 'dashboard.openEncryptedPdfError'
-                await swalQueued.fire({
+                await swalQueued({
                     icon: 'error',
                     title: this.$t(key),
                     text: res.message || '',

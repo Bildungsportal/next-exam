@@ -16,6 +16,7 @@
  */
 
 'use strict'
+import crypto from 'node:crypto'
 import {disableRestrictions, enableRestrictions} from './platformrestrictions.js';
 import fs from 'fs' 
 import archiver from 'archiver'   // causes severe race conditions with electron's own versions - always keep the same version as electron
@@ -39,6 +40,11 @@ import { detectRunningInCage } from './cageDetect.js';
 import qemuService from './qemuService.js';
 import { stopProxy } from './vncproxy.js';
 import { switchExamSection } from './switchExamSection.js';
+import {
+    deriveSigningP12,
+    signSubmissionPdf,
+    MIN_SUBMISSION_SIGN_PASSWORD_LEN,
+} from '../../../../shared/submissionPdfSign.js';
 
 
 
@@ -53,6 +59,7 @@ import { switchExamSection } from './switchExamSection.js';
         this.updateStudentIntervall = null
         this.WindowHandler = null
         this.timer = 0
+        this.submissionSigningState = { enabled: false, skipAsk: false, p12Buffer: null, displayName: '' }
     }
  
     init (mc, config) {
@@ -708,9 +715,24 @@ import { switchExamSection } from './switchExamSection.js';
         
         try {
             const data = await WindowHandler.examwindow.webContents.printToPDF(options);
-            const base64pdf = data.toString('base64');
+            let pdfBuf = Buffer.from(data);
+            const signState = this.submissionSigningState
+            if (signState?.enabled && signState.p12Buffer) {
+                try {
+                    pdfBuf = await signSubmissionPdf(pdfBuf, signState.p12Buffer, {
+                        name: signState.displayName || this.multicastClient.clientinfo.name,
+                        reason: 'Next-Exam submission',
+                        contactInfo: 'https://next-exam.at',
+                        location: 'Next-Exam',
+                    })
+                } catch (signErr) {
+                    log.error('communicationhandler @ getBase64PDF: signing failed', signErr)
+                    return { sender: 'client', message: 'PDF signing failed', status: 'error' }
+                }
+            }
+            const base64pdf = pdfBuf.toString('base64');
             const dataUrl = `data:application/pdf;base64,${base64pdf}`;
-            return { sender: "client", message:"PDF generated", dataUrl:dataUrl, base64pdf: base64pdf, status: "success" };
+            return { sender: "client", message:"PDF generated", dataUrl:dataUrl, base64pdf: base64pdf, status: "success", signed: !!(signState?.enabled && signState.p12Buffer) };
         } catch (error) {
             log.error("communicationhandler @ getBase64PDF: Error generating PDF:", error);
             return { sender: "client", message: "Error generating PDF", status: "error" };
@@ -901,8 +923,50 @@ import { switchExamSection } from './switchExamSection.js';
      * closes exam window
      * disables restrictions and blur 
      */
+    /** Clears in-memory submission signing identity (password-derived P12). */
+    clearSubmissionSigning() {
+        this.submissionSigningState = { enabled: false, skipAsk: false, p12Buffer: null, displayName: '' }
+    }
+
+    getSubmissionSigningState() {
+        const s = this.submissionSigningState
+        return { enabled: !!s.enabled, skipAsk: !!s.skipAsk }
+    }
+
+    declineSubmissionSigning({ skipAsk = false } = {}) {
+        this.submissionSigningState = {
+            enabled: false,
+            skipAsk: !!skipAsk,
+            p12Buffer: null,
+            displayName: '',
+        }
+        return { status: 'success' }
+    }
+
+    /** Configures optional PAdES signing for submission PDFs (password entered once per exam). */
+    configureSubmissionSigning({ password, passwordConfirm, displayName }) {
+        const pw = String(password ?? '')
+        const pw2 = String(passwordConfirm ?? '')
+        if (pw.length < MIN_SUBMISSION_SIGN_PASSWORD_LEN) {
+            return { status: 'error', code: 'PASSWORD_TOO_SHORT' }
+        }
+        if (pw !== pw2) {
+            return { status: 'error', code: 'PASSWORD_MISMATCH' }
+        }
+        const saltHex = crypto.randomBytes(16).toString('hex')
+        const name = String(displayName || this.multicastClient?.clientinfo?.name || 'Next-Exam Student').trim()
+        try {
+            const { p12Buffer } = deriveSigningP12(pw, saltHex, name)
+            this.submissionSigningState = { enabled: true, skipAsk: false, p12Buffer, displayName: name }
+            return { status: 'success' }
+        } catch (e) {
+            log.error('communicationhandler @ configureSubmissionSigning', e)
+            return { status: 'error', code: 'SIGN_SETUP_FAILED', message: e?.message || String(e) }
+        }
+    }
+
     async endExam(serverstatus){
-        
+        this.clearSubmissionSigning()
         WindowHandler.removeBlurListener();
       
         //only disable restrictions if not in exam mode ( seriosuly.. how could this ever happen? )

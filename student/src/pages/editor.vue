@@ -801,6 +801,10 @@ import {
     applyServerstatusFromFetch,
     resolveLockedSection,
 } from '../utils/examFetchInfoSync.js'
+import {
+    ensureSubmissionSigningConfigured,
+    refreshSubmissionPdfForSubmit,
+} from '../utils/submissionSigningUi.js'
 
 const lowlight = createLowlight(common)
 
@@ -1702,10 +1706,15 @@ export default {
 
 
         // send direct print request to teacher and append current document as base64
-        printBase64(printrequest = false, saveReason = 'n/a') {
-            //get current exam sectioninfo
+        async printBase64(printrequest = false, saveReason = 'n/a') {
+            if (!printrequest) {
+                await ensureSubmissionSigningConfigured(this)
+                await refreshSubmissionPdfForSubmit(this)
+                if (!this.currentpreviewBase64) {
+                    return
+                }
+            }
 
-            // this currentpreviewBase64 contains the current visible pdf as base64 string
             const endpoint = printrequest ? 'printjob' : 'submission'
             const url = `https://${this.serverip}:${this.serverApiPort}/server/control/${endpoint}/${this.servername}`;
             const sr = typeof saveReason === 'string' ? saveReason : 'n/a'
@@ -1757,6 +1766,9 @@ export default {
 
 
         async sendExamToTeacher(directsend = false, type = "send") {
+            if (type === 'send') {
+                await ensureSubmissionSigningConfigured(this)
+            }
             let response = await signalBridge.invoke('getPDFbase64', {
                 landscape: false,
                 servername: this.servername,

@@ -1,6 +1,7 @@
 import log from 'electron-log/renderer';
 import { Buffer } from 'buffer';
 import { swalQueued } from './swalQueue.js'
+import { maybePromptVerifySignedSubmissionPdf } from './submissionPdfPreview.js'
 
 /**
  * Dashboard explorer: read file bytes from the active exam workdir (decrypted in main when applicable).
@@ -145,8 +146,9 @@ function dashboardExplorerSendFile(file){
 // fetch file from disc - show preview
 function loadPDF(filepath, filename){
     readWorkdirFileForDashboard(this, filepath)
-    .then( (raw) => {
+    .then( async (raw) => {
         const data = raw instanceof ArrayBuffer ? raw : new Uint8Array(raw).buffer
+        await maybePromptVerifySignedSubmissionPdf(this, new Uint8Array(data))
         URL.revokeObjectURL(this.currentpreview);  //speicher freigeben
      
         let isvalid = isValidPdf(data)
@@ -418,10 +420,25 @@ async function processPrintrequest(student){
 
 
 // show base64 encoded pdf in preview panel
-function showBase64FilePreview(base64, filename){
+async function showBase64FilePreview(base64, filename){
 
     this.urlForWebview = null;
     this.webviewVisible = false;
+
+    let cleanBase64 = base64;
+    if (base64.includes(',')) {
+        cleanBase64 = base64.split(',')[1];
+    }
+    try {
+        const binaryString = atob(cleanBase64);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        await maybePromptVerifySignedSubmissionPdf(this, bytes)
+    } catch (e) {
+        log.warn('filemanager @ showBase64FilePreview: signature probe skipped', e)
+    }
 
     this.currentpreviewBase64 = base64
     this.currentpreviewType = "pdf";
@@ -429,12 +446,6 @@ function showBase64FilePreview(base64, filename){
 
     // Convert base64 to blob URL
     try {
-        // Remove data URL prefix if present
-        let cleanBase64 = base64;
-        if (base64.includes(',')) {
-            cleanBase64 = base64.split(',')[1];
-        }
-        
         const binaryString = atob(cleanBase64);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
