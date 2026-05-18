@@ -22,7 +22,14 @@ import { ipcMain, dialog, session } from 'electron'
 import path, { join } from 'path'
 import log from 'electron-log';
 import { decryptBufferIfNeeded, isNxe1ExamEncrypted, unwrapNxe1ExamBuffer } from './examFileCryptoContext.js';
-import { pdfHasEmbeddedSignature, verifySubmissionPdf } from '../../../../shared/submissionPdfSign.js';
+import {
+    decodeBipWstoken,
+    fetchBipSiteInfo,
+    pdfHasEmbeddedSignature,
+    verifySubmissionPdfBipIdentity,
+    verifySubmissionPdfIntegrity,
+    SUBMISSION_SIGN_MODE_BIP,
+} from '../../../../shared/submissionPdfSign.js';
 import { networkInterfaces } from 'os'
 import { exec } from 'child_process';
 import { gateway4sync} from 'default-gateway';
@@ -1148,20 +1155,58 @@ class IpcHandler {
             }
         })
 
-        ipcMain.handle('verifySubmissionPdfSignature', (_event, { pdfBase64, password } = {}) => {
+        ipcMain.handle('verifySubmissionPdfIntegrity', (_event, { pdfBase64 } = {}) => {
             try {
                 const buf = Buffer.from(String(pdfBase64 || ''), 'base64')
-                const result = verifySubmissionPdf(buf, String(password || ''))
+                const result = verifySubmissionPdfIntegrity(buf)
+                return {
+                    ok: !!result.integrityValid,
+                    code: result.code,
+                    hasSignature: result.hasSignature,
+                    integrityValid: result.integrityValid,
+                    signMode: result.signMode,
+                    verifyError: result.verifyError || null,
+                }
+            } catch (e) {
+                log.error('ipchandler @ verifySubmissionPdfIntegrity', e)
+                return { ok: false, code: 'ERROR', verifyError: String(e?.message || e) }
+            }
+        })
+
+        ipcMain.handle('verifySubmissionPdfViaBip', async (_event, { pdfBase64, biptest } = {}) => {
+            try {
+                const buf = Buffer.from(String(pdfBase64 || ''), 'base64')
+                const pre = verifySubmissionPdfIntegrity(buf)
+                if (!pre.hasSignature) {
+                    return { ok: false, ...pre, code: 'NO_SIGNATURE' }
+                }
+                if (pre.signMode !== SUBMISSION_SIGN_MODE_BIP) {
+                    return { ok: false, ...pre, code: 'NOT_BIP_SIGNED' }
+                }
+                const rawToken = await this.WindowHandler.waitForBipAuthToken(!!biptest)
+                const wstoken = decodeBipWstoken(rawToken)
+                if (!wstoken) {
+                    return { ok: false, code: 'BIP_TOKEN_INVALID', verifyError: 'invalid bip token' }
+                }
+                const baseUrl = this.WindowHandler.getBiPUrl(!!biptest)
+                const site = await fetchBipSiteInfo({ baseUrl, wstoken })
+                const key = String(site?.userprivateaccesskey ?? '').trim()
+                if (!key) {
+                    return { ok: false, code: 'BIP_SECRET_MISSING', verifyError: 'no userprivateaccesskey' }
+                }
+                const result = verifySubmissionPdfBipIdentity(buf, key)
                 return {
                     ok: !!result.ok,
                     code: result.code,
                     hasSignature: result.hasSignature,
                     integrityValid: result.integrityValid,
-                    passwordMatches: result.passwordMatches,
+                    signMode: result.signMode,
+                    bipIdentityValid: result.bipIdentityValid,
+                    bipUserIdInCert: result.bipUserIdInCert ?? null,
                     verifyError: result.verifyError || null,
                 }
             } catch (e) {
-                log.error('ipchandler @ verifySubmissionPdfSignature', e)
+                log.error('ipchandler @ verifySubmissionPdfViaBip', e)
                 return { ok: false, code: 'ERROR', verifyError: String(e?.message || e) }
             }
         })

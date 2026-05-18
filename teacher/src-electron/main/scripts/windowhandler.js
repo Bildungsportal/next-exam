@@ -59,7 +59,7 @@ class WindowHandler {
       this.config = null
       this.multicastClient = null
       this.multicastServer = null
-     
+      this.bipAuthPending = null
   
     }
 
@@ -139,11 +139,51 @@ class WindowHandler {
     
                 log.info('Captured Token:');
                 log.info(token);
-                this.mainwindow.webContents.send('bipToken', token);
+                if (this.bipAuthPending) {
+                    this.bipAuthPending.resolve(token)
+                    this.bipAuthPending = null
+                } else {
+                    this.mainwindow.webContents.send('bipToken', token);
+                }
                 this.bipwindow.close();
             }
           });
 
+    }
+
+    /** Opens BiP login and resolves with captured token (signature verify flow). */
+    waitForBipAuthToken(biptest, timeoutMs = 300000) {
+        return new Promise((resolve, reject) => {
+            if (this.bipAuthPending) {
+                reject(new Error('bip auth already pending'))
+                return
+            }
+            const timeout = setTimeout(() => {
+                if (!this.bipAuthPending) return
+                this.bipAuthPending = null
+                try {
+                    if (this.bipwindow && !this.bipwindow.isDestroyed()) {
+                        this.bipwindow.close()
+                    }
+                } catch {
+                    // ignore close errors
+                }
+                reject(new Error('bip login timeout'))
+            }, timeoutMs)
+            this.bipAuthPending = {
+                resolve: (token) => {
+                    clearTimeout(timeout)
+                    this.bipAuthPending = null
+                    resolve(token)
+                },
+                reject: (err) => {
+                    clearTimeout(timeout)
+                    this.bipAuthPending = null
+                    reject(err)
+                },
+            }
+            this.createBiPLoginWin(biptest)
+        })
     }
 
 

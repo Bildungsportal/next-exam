@@ -672,8 +672,8 @@
         <div class="statusbar-left">
             <!-- Static text with v-once to prevent re-rendering since $t apparently performs performance measures each time causing memory bloat -->
             <span ref="statusWordCount">0</span> <span v-once>{{ $t("editor.words") }}</span>,  <span ref="statusCharCount">0</span> <span v-once>{{$t("editor.chars")}}</span>
-            &nbsp; | &nbsp;
-            <span v-once id="editselectedtext"> {{ $t("editor.selected") }}: </span> <span
+            &nbsp; 
+            <span v-once id="editselectedtext">| &nbsp; {{ $t("editor.selected") }}: </span> <span
                 id="editselected"> {{ selectedWordCount }}/{{ selectedCharCount }}</span>
         </div>
         <div class="statusbar-right">
@@ -801,10 +801,7 @@ import {
     applyServerstatusFromFetch,
     resolveLockedSection,
 } from '../utils/examFetchInfoSync.js'
-import {
-    ensureSubmissionSigningConfigured,
-    refreshSubmissionPdfForSubmit,
-} from '../utils/submissionSigningUi.js'
+import { refreshSubmissionPdfForSubmit } from '../utils/submissionSigningUi.js'
 
 const lowlight = createLowlight(common)
 
@@ -1708,7 +1705,6 @@ export default {
         // send direct print request to teacher and append current document as base64
         async printBase64(printrequest = false, saveReason = 'n/a') {
             if (!printrequest) {
-                await ensureSubmissionSigningConfigured(this)
                 await refreshSubmissionPdfForSubmit(this)
                 if (!this.currentpreviewBase64) {
                     return
@@ -1766,9 +1762,6 @@ export default {
 
 
         async sendExamToTeacher(directsend = false, type = "send") {
-            if (type === 'send') {
-                await ensureSubmissionSigningConfigured(this)
-            }
             let response = await signalBridge.invoke('getPDFbase64', {
                 landscape: false,
                 servername: this.servername,
@@ -2686,10 +2679,12 @@ export default {
         display: none !important;
     }
 
-    body, #vuexambody {
+    html, body, #vuexambody, .editor-root {
         position: relative !important;
         height: auto !important;
         overflow: visible !important;
+        background: #ffffff !important;
+        background-color: #ffffff !important;
     }
     //body is "fixed" to prevent shifting during auto-scroll - but this limits multi-page print to 1 page
 
@@ -2728,7 +2723,14 @@ export default {
         overflow: visible !important;
         margin: 0 !important;
         border-radius: 0px !important;
-        background-color: white !important;
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+    }
+
+    .stats-rule-block,
+    .stats-rule-block .stats-rule-badge,
+    .stats-rule-block .stats-rule-hr {
+        background-color: #ffffff !important;
     }
     #vueexambody {
         overflow: hidden !important;

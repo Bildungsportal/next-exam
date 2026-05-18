@@ -1101,16 +1101,12 @@ class IpcHandler {
             return result
         })
 
-        ipcMain.handle('getSubmissionSigningState', () => {
-            return this.CommunicationHandler.getSubmissionSigningState()
+        ipcMain.handle('setBipSiteInfo', (_event, info = {}) => {
+            return this.CommunicationHandler.setBipSiteInfo(info)
         })
 
-        ipcMain.handle('configureSubmissionSigning', (_event, args = {}) => {
-            return this.CommunicationHandler.configureSubmissionSigning(args)
-        })
-
-        ipcMain.handle('declineSubmissionSigning', (_event, args = {}) => {
-            return this.CommunicationHandler.declineSubmissionSigning(args)
+        ipcMain.handle('clearBipSiteInfo', () => {
+            return this.CommunicationHandler.clearBipSiteInfo()
         })
 
 

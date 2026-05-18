@@ -5,7 +5,8 @@ import fs from 'fs'
 import log from 'electron-log'
 import moment from 'moment'
 import pdfParse from '@bingsjs/pdf-parse'
-import { PDFDocument, rgb } from 'pdf-lib/dist/pdf-lib.js'
+import { PDFDocument, PDFName, PDFDict, PDFArray, rgb } from 'pdf-lib/dist/pdf-lib.js'
+import { pdfHasEmbeddedSignature } from '../../../../shared/submissionPdfSign.js'
 import { decryptBufferIfNeeded } from './examFileCryptoContext.js'
 import { resolvePathUnderRoot, isSafePathSegment } from '../../server/src/utils/safePaths.js'
 
@@ -143,6 +144,69 @@ async function createIndexPDF(submissions, servername, mcServer) {
     return pdfBytes
 }
 
+/** True when annotation dict is a digital signature field or widget. */
+function isSignatureAnnotationDict(dict) {
+    if (!(dict instanceof PDFDict)) return false
+    const tag = (v) => (v == null ? '' : String(v))
+    if (tag(dict.get(PDFName.of('FT'))) === '/Sig') return true
+    if (tag(dict.get(PDFName.of('Type'))) === '/Sig') return true
+    if (tag(dict.get(PDFName.of('Subtype'))) === '/Sig') return true
+    return false
+}
+
+/** Removes /Sig annotations from one page (combined.pdf is print-only, not signed). */
+function stripSignatureWidgetsFromPage(page, pdfDoc) {
+    const annotsRef = page.node.get(PDFName.of('Annots'))
+    if (!annotsRef) return
+    const annots = pdfDoc.context.lookup(annotsRef)
+    if (!(annots instanceof PDFArray)) return
+    const kept = []
+    for (let i = 0; i < annots.size(); i++) {
+        const ref = annots.get(i)
+        const annot = pdfDoc.context.lookup(ref)
+        if (isSignatureAnnotationDict(annot)) continue
+        kept.push(ref)
+    }
+    if (kept.length === 0) {
+        page.node.delete(PDFName.of('Annots'))
+    } else if (kept.length < annots.size()) {
+        page.node.set(PDFName.of('Annots'), pdfDoc.context.obj(kept))
+    }
+}
+
+/** Drops catalog-level signature metadata from a fresh pdf-lib document. */
+function scrubSignatureMetadataFromDocument(pdfDoc) {
+    const catalog = pdfDoc.catalog
+    catalog.delete(PDFName.of('AcroForm'))
+    catalog.delete(PDFName.of('Perms'))
+    catalog.delete(PDFName.of('DSS'))
+    try {
+        const form = pdfDoc.getForm()
+        for (const field of [...form.getFields()]) {
+            form.removeField(field)
+        }
+    } catch {
+        // no AcroForm
+    }
+}
+
+/** Rebuilds signed submission PDFs without PKCS#7/widgets for print merge. */
+async function preparePdfBytesForMerge(pdfBytes) {
+    const buf = Buffer.isBuffer(pdfBytes) ? pdfBytes : Buffer.from(pdfBytes)
+    if (!pdfHasEmbeddedSignature(buf)) {
+        return buf
+    }
+    const src = await PDFDocument.load(buf, { ignoreEncryption: true, updateMetadata: false })
+    const dst = await PDFDocument.create()
+    const copied = await dst.copyPages(src, src.getPageIndices())
+    for (const page of copied) {
+        stripSignatureWidgetsFromPage(page, dst)
+        dst.addPage(page)
+    }
+    scrubSignatureMetadataFromDocument(dst)
+    return Buffer.from(await dst.save())
+}
+
 /** Merges PDF files from disk into one document */
 async function concatPages(mcServer, pdfsToMerge) {
     const tempPDF = await PDFDocument.create()
@@ -150,13 +214,22 @@ async function concatPages(mcServer, pdfsToMerge) {
         const raw = await fs.promises.readFile(pdfpath)
         let pdfBytes = mcServer ? decryptBufferIfNeeded(raw, mcServer, 'getLatestCombinedPdf @ concatPages') : raw
         if (isValidPdf(pdfBytes)) {
-            const pdfDoc = await PDFDocument.load(pdfBytes)
+            try {
+                pdfBytes = await preparePdfBytesForMerge(pdfBytes)
+            } catch (err) {
+                log.warn('getLatestCombinedPdf @ preparePdfBytesForMerge: strip failed, merging raw pdf', err)
+            }
+            const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true, updateMetadata: false })
             const copiedPages = await tempPDF.copyPages(pdfDoc, pdfDoc.getPageIndices())
             copiedPages.forEach((page) => {
                 tempPDF.addPage(page)
             })
         }
     }
+    for (const page of tempPDF.getPages()) {
+        stripSignatureWidgetsFromPage(page, tempPDF)
+    }
+    scrubSignatureMetadataFromDocument(tempPDF)
     const finalPDF = await tempPDF.save()
     return finalPDF
 }

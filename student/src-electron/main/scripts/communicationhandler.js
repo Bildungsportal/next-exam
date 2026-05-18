@@ -41,9 +41,11 @@ import qemuService from './qemuService.js';
 import { stopProxy } from './vncproxy.js';
 import { switchExamSection } from './switchExamSection.js';
 import {
+    buildLocalSubmissionSigningSecret,
     deriveSigningP12,
     signSubmissionPdf,
-    MIN_SUBMISSION_SIGN_PASSWORD_LEN,
+    SUBMISSION_SIGN_MODE_BIP,
+    SUBMISSION_SIGN_MODE_LOCAL,
 } from '../../../../shared/submissionPdfSign.js';
 
 
@@ -59,7 +61,7 @@ import {
         this.updateStudentIntervall = null
         this.WindowHandler = null
         this.timer = 0
-        this.submissionSigningState = { enabled: false, skipAsk: false, p12Buffer: null, displayName: '' }
+        this.bipSiteInfo = null
     }
  
     init (mc, config) {
@@ -716,23 +718,25 @@ import {
         try {
             const data = await WindowHandler.examwindow.webContents.printToPDF(options);
             let pdfBuf = Buffer.from(data);
-            const signState = this.submissionSigningState
-            if (signState?.enabled && signState.p12Buffer) {
-                try {
-                    pdfBuf = await signSubmissionPdf(pdfBuf, signState.p12Buffer, {
-                        name: signState.displayName || this.multicastClient.clientinfo.name,
-                        reason: 'Next-Exam submission',
-                        contactInfo: 'https://next-exam.at',
-                        location: 'Next-Exam',
-                    })
-                } catch (signErr) {
-                    log.error('communicationhandler @ getBase64PDF: signing failed', signErr)
-                    return { sender: 'client', message: 'PDF signing failed', status: 'error' }
-                }
+            let signed = false
+            let signMode = null
+            try {
+                const { p12Buffer, mode } = this.buildAutoSubmissionSigningP12()
+                signMode = mode
+                pdfBuf = await signSubmissionPdf(pdfBuf, p12Buffer, {
+                    name: this.multicastClient.clientinfo.name,
+                    reason: 'Next-Exam submission',
+                    contactInfo: 'https://next-exam.at',
+                    location: 'Next-Exam',
+                })
+                signed = true
+            } catch (signErr) {
+                log.error('communicationhandler @ getBase64PDF: signing failed', signErr)
+                return { sender: 'client', message: 'PDF signing failed', status: 'error' }
             }
             const base64pdf = pdfBuf.toString('base64');
             const dataUrl = `data:application/pdf;base64,${base64pdf}`;
-            return { sender: "client", message:"PDF generated", dataUrl:dataUrl, base64pdf: base64pdf, status: "success", signed: !!(signState?.enabled && signState.p12Buffer) };
+            return { sender: "client", message:"PDF generated", dataUrl:dataUrl, base64pdf: base64pdf, status: "success", signed, signMode };
         } catch (error) {
             log.error("communicationhandler @ getBase64PDF: Error generating PDF:", error);
             return { sender: "client", message: "Error generating PDF", status: "error" };
@@ -923,50 +927,46 @@ import {
      * closes exam window
      * disables restrictions and blur 
      */
-    /** Clears in-memory submission signing identity (password-derived P12). */
-    clearSubmissionSigning() {
-        this.submissionSigningState = { enabled: false, skipAsk: false, p12Buffer: null, displayName: '' }
-    }
-
-    getSubmissionSigningState() {
-        const s = this.submissionSigningState
-        return { enabled: !!s.enabled, skipAsk: !!s.skipAsk }
-    }
-
-    declineSubmissionSigning({ skipAsk = false } = {}) {
-        this.submissionSigningState = {
-            enabled: false,
-            skipAsk: !!skipAsk,
-            p12Buffer: null,
-            displayName: '',
+    /** Stores BiP site_info secrets in main only (never log). */
+    setBipSiteInfo(info) {
+        const key = String(info?.userprivateaccesskey ?? '').trim()
+        if (!key) {
+            this.bipSiteInfo = null
+            return { status: 'success', active: false }
         }
+        this.bipSiteInfo = {
+            userprivateaccesskey: key,
+            userid: info?.userid ?? null,
+            fullname: String(info?.fullname ?? '').trim(),
+        }
+        return { status: 'success', active: true }
+    }
+
+    clearBipSiteInfo() {
+        this.bipSiteInfo = null
         return { status: 'success' }
     }
 
-    /** Configures optional PAdES signing for submission PDFs (password entered once per exam). */
-    configureSubmissionSigning({ password, passwordConfirm, displayName }) {
-        const pw = String(password ?? '')
-        const pw2 = String(passwordConfirm ?? '')
-        if (pw.length < MIN_SUBMISSION_SIGN_PASSWORD_LEN) {
-            return { status: 'error', code: 'PASSWORD_TOO_SHORT' }
-        }
-        if (pw !== pw2) {
-            return { status: 'error', code: 'PASSWORD_MISMATCH' }
-        }
+    /** Builds P12 for every submission: BiP userprivateaccesskey or local pin+token+time secret. */
+    buildAutoSubmissionSigningP12() {
+        const displayName = String(this.multicastClient?.clientinfo?.name || 'Next-Exam Student').trim()
         const saltHex = crypto.randomBytes(16).toString('hex')
-        const name = String(displayName || this.multicastClient?.clientinfo?.name || 'Next-Exam Student').trim()
-        try {
-            const { p12Buffer } = deriveSigningP12(pw, saltHex, name)
-            this.submissionSigningState = { enabled: true, skipAsk: false, p12Buffer, displayName: name }
-            return { status: 'success' }
-        } catch (e) {
-            log.error('communicationhandler @ configureSubmissionSigning', e)
-            return { status: 'error', code: 'SIGN_SETUP_FAILED', message: e?.message || String(e) }
+        const bip = this.bipSiteInfo?.userprivateaccesskey
+        if (bip) {
+            return deriveSigningP12(bip, saltHex, this.bipSiteInfo.fullname || displayName, {
+                mode: SUBMISSION_SIGN_MODE_BIP,
+                bipUserId: this.bipSiteInfo.userid,
+            })
         }
+        const pin = this.multicastClient?.clientinfo?.pin ?? ''
+        const token = this.multicastClient?.clientinfo?.token ?? ''
+        const timeMs = Date.now()
+        const secret = buildLocalSubmissionSigningSecret(pin, token, timeMs)
+        return deriveSigningP12(secret, saltHex, displayName, { mode: SUBMISSION_SIGN_MODE_LOCAL })
     }
 
     async endExam(serverstatus){
-        this.clearSubmissionSigning()
+        this.clearBipSiteInfo()
         WindowHandler.removeBlurListener();
       
         //only disable restrictions if not in exam mode ( seriosuly.. how could this ever happen? )

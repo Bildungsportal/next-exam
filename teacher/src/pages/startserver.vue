@@ -478,6 +478,9 @@ export default {
                         showCancelButton: false,
                     })
 
+                    log.info('startserver @ fetchBiPData: BiP data fetched', response)
+
+                    
                     this.bipUsername = response.fullname
                     this.bipuserID = response.userid
 

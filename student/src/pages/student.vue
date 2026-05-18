@@ -579,6 +579,7 @@ export default {
                     this.pincode = ""
                     this.bipData = null
                     this.onlineExams = []
+                    signalBridge.invoke('clearBipSiteInfo')
                     const loginBtn = document.querySelector('#biploginbutton')
                     if (loginBtn) {
                         loginBtn.classList.remove('disabledbutton')
@@ -673,7 +674,13 @@ export default {
 
                         this.bipUsername = normalizeStudentClientName(response.fullname)
                         this.bipuserID = response.userid
-
+                        if (response.userprivateaccesskey) {
+                            await signalBridge.invoke('setBipSiteInfo', {
+                                userprivateaccesskey: response.userprivateaccesskey,
+                                userid: response.userid,
+                                fullname: response.fullname,
+                            })
+                        }
 
                         document.querySelector("#biploginbutton").classList.remove('btn-info')
                         document.querySelector("#biploginbutton").classList.add('btn-success')
