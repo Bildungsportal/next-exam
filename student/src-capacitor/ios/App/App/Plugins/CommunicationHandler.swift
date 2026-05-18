@@ -95,20 +95,21 @@ final class CommunicationHandler {
             do {
                 let (data, _) = try await self.urlSession.data(for: request)
 
-                guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                /*guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    mc.beaconsLost += 1
+                    return
+                }*/
+                
+                guard var updateDto = try? JSONDecoder().decode(Update.self, from: data) else {
+                    log(.error, "multicastclient @ messageReceived: JSON decode failed")
                     mc.beaconsLost += 1
                     return
                 }
-                
-                guard var info = try? JSONDecoder().decode(ServerStatus.self, from: data) else {
-                    pluginLog(.error, "multicastclient @ messageReceived: JSON decode failed")
-                    return
-                }
 
-                let status = json["status"] as? String
+                let status = updateDto.status
 
                 if status == "error" {
-                    let message = json["message"] as? String ?? ""
+                    let message = updateDto.message
 
                     if message == "notavailable" {
                         self.log(.warn, "communicationhandler @ requestUpdate: Exam Instance not found!")
@@ -125,9 +126,7 @@ final class CommunicationHandler {
                     mc.beaconsLost = 0
                     mc.clientinfo.printrequest = false
 
-                    if let serverstatus = json["serverstatus"] as? [String: Any] {
-                        mc.serverstatus = serverstatus
-                    }
+                    mc.serverstatus = updateDto.serverstatus
 
                     // TODO: processUpdatedServerstatus(serverstatus, studentstatus)
                 }

@@ -1,4 +1,4 @@
-struct GetInfoaAsync {
+struct GetInfoAsync {
     let serverlist: [ServerInfo]
     let clientinfo: ClientInfo
     let serverstatus: ServerStatus

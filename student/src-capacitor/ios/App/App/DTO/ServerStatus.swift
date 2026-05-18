@@ -46,46 +46,47 @@ struct ServerStatus: Codable {
     var moodleTestId: String = ""
     var languagetool: Bool = false
     var password: String = ""
-
-    // ── Serialized form returned to JS / IPC callers ──────────────────────────
+    
     var asDictionary: [String: Any] {
-        return [
-            "bip": bip,
-            "id": id as Any,
-            "nextexamVersion": nextexamVersion as Any,
-            "examName": examName as Any,
-            "examPassword": examPassword as Any,
-            "examDate": examDate,
-            "examDurationMinutes": examDurationMinutes,
-            "pin": pin,
-            "backupdirectory": backupdirectory,
-            "requireBiP": requireBiP,
-            "exammode": exammode,
-            "delfolderonexit": delfolderonexit,
-            "screenshotinterval": screenshotinterval,
-            "backupintervalPause": backupintervalPause,
-            "screenslocked": screenslocked,
-            "screenshotocr": screenshotocr,
-            "examTeachers": examTeachers,
-            "examSecurityKey": examSecurityKey,
-            "useExamSections": useExamSections,
-            "allowSectionSwitch": allowSectionSwitch,
-            "activeSection": activeSection,
-            "lockedSection": lockedSection,
-            "examSections": examSections.reduce(into: [String: Any]()) { result, pair in
-                result[String(pair.key)] = pair.value.asDictionary
-            },
-            "spellcheck": spellcheck,
-            "spellchecklang": spellchecklang,
-            "suggestions": suggestions,
-            "moodleTestType": moodleTestType,
-            "moodleDomain": moodleDomain,
-            "msOfficeFile": msOfficeFile,
-            "unlockonexit": unlockonexit,
-            "fontfamily": fontfamily,
-            "moodleTestId": moodleTestId,
-            "languagetool": languagetool,
-            "password": password
-        ]
+        var dict = [String: Any]()
+
+        dict["bip"]                  = bip
+        dict["id"]                   = id                   ?? NSNull()
+        dict["nextexamVersion"]      = nextexamVersion      ?? NSNull()
+        dict["examName"]             = examName             ?? NSNull()
+        dict["examPassword"]         = examPassword         ?? NSNull()
+        dict["examDate"]             = examDate
+        dict["examDurationMinutes"]  = examDurationMinutes
+        dict["pin"]                  = pin
+        dict["backupdirectory"]      = backupdirectory
+        dict["requireBiP"]           = requireBiP
+        dict["exammode"]             = exammode
+        dict["delfolderonexit"]      = delfolderonexit
+        dict["screenshotinterval"]   = screenshotinterval
+        dict["backupintervalPause"]  = backupintervalPause
+        dict["screenslocked"]        = screenslocked
+        dict["screenshotocr"]        = screenshotocr
+        dict["examTeachers"]         = examTeachers
+        dict["examSecurityKey"]      = examSecurityKey
+        dict["useExamSections"]      = useExamSections
+        dict["allowSectionSwitch"]   = allowSectionSwitch
+        dict["activeSection"]        = activeSection
+        dict["lockedSection"]        = lockedSection
+        dict["examSections"]         = examSections.reduce(into: [String: Any]()) { result, pair in
+                                           result[String(pair.key)] = pair.value.asDictionary
+                                       }
+        dict["spellcheck"]           = spellcheck
+        dict["spellchecklang"]       = spellchecklang
+        dict["suggestions"]          = suggestions
+        dict["moodleTestType"]       = moodleTestType
+        dict["moodleDomain"]         = moodleDomain
+        dict["msOfficeFile"]         = msOfficeFile
+        dict["unlockonexit"]         = unlockonexit
+        dict["fontfamily"]           = fontfamily
+        dict["moodleTestId"]         = moodleTestId
+        dict["languagetool"]         = languagetool
+        dict["password"]             = password
+
+        return dict
     }
 }

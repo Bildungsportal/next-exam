@@ -308,7 +308,6 @@ import speedometer_img from 'src/assets/img/svg/speedometer.svg'
 import server_img from 'src/assets/img/svg/server.svg'
 import login_students_img from 'src/assets/img/login_students.jpg'
 import emblem_warning_img from '/src/assets/img/svg/emblem-warning.svg'
-import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync } from '../utils/screenshotCapture.js'
 import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync, setCageWindowCaptureFallback, setLinuxKioskRunningInCage } from '../utils/screenshotCapture.js'
 import { getLinuxKioskInfo } from '../utils/linuxCageKiosk.js'
 import { Exam } from '../types/api'
@@ -318,7 +317,7 @@ import loggingBridge from "../utils/loggingBridge.js";
 import { autoCleanupMixin } from "../mixins/autoCleanupMixin.js";
 
 import { StatusBar } from "@capacitor/status-bar";
-import {isIOS} from "../types/platform.js";
+import {isElectronWindow, isIOS} from "../types/platform.js";
 
 function unhandledRejectionFunction() {
   const reason = event?.reason;

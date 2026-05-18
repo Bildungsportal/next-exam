@@ -142,8 +142,8 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
         CommunicationHandler.shared.initialize(multicastClient: self)
     }
     
-    private func getinfoasync() async -> GetInfoaAsync {
-        return GetInfoaAsync(
+    private func getinfoasync() async -> GetInfoAsync {
+        return GetInfoAsync(
             serverlist: _examServerList,
             clientinfo: clientinfo,
             serverstatus: serverstatus
