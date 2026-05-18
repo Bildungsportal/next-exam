@@ -1,0 +1,13 @@
+{
+    "name": "next-exam-shared-sign",
+    "private": true,
+    "type": "module",
+    "dependencies": {
+        "@signpdf/placeholder-plain": "^3.3.0",
+        "@signpdf/signpdf": "^3.3.0",
+        "@signpdf/signer-p12": "^3.3.0",
+        "node-forge": "^1.3.1",
+        "pdf-lib": "^1.17.1",
+        "pdf-signature-reader": "^1.4.3"
+    }
+}

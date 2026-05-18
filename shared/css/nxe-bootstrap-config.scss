@@ -1,0 +1,13 @@
+// Set before @import bootstrap — shared theme-colors for teacher + student.
+$theme-colors: (
+  "primary":    $blue-700,
+  "secondary":  $secondary,
+  "success":    $green-400,
+  "info":       $cyan-500,
+  "warning":    $yellow-400,
+  "danger":     $red-600,
+  "light":      $light,
+  "dark":       $dark,
+  "gray":       $gray-600,
+  "gray-dark":  $gray-800,
+);
