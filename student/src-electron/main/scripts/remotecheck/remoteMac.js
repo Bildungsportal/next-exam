@@ -1,14 +1,11 @@
 import { exec } from 'child_process'
 import { promisify } from 'util'
+import { appsToClose } from '../platformrestrictions.js'
 
 const execAsync = promisify(exec)
 
-const suspiciousKeywords = [
-  'teamviewer', 'anydesk', 'rustdesk', 'vnc', 'zoom', 'discord', 'skype','com.microsoft.teams',
-  'chromeremotedesktop', 'splashtop', 'dwagent',
-  'logmein', 'screenconnect', 'zoho', 'parallels','chatgpt','claude',
-  'remoteutilities', 'g2comm', 'pcvisit', 'pcvisit_support', 'pcvisit_customer', 'support 15'
-]
+// derived from appsToClose (single source of truth); lowercase + deduped for substring match against ps output
+const suspiciousKeywords = [...new Set(appsToClose.map((k) => k.toLowerCase()))]
 
 const suspiciousPorts = [
   2002, 5222, 5650, 5900, 5901, 5902, 5938,

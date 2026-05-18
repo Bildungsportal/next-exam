@@ -40,10 +40,10 @@ class EmptyWidget {
 
 
 
-// create 10 empty widgets for whole class (should be sufficient)
+// create 40 empty widgets for whole class (should be sufficient)
 function initializeStudentwidgets(){
     let widgets = []
-    for (let i = 0; i<30; i++ ){
+    for (let i = 0; i<60; i++ ){
         widgets.push(new EmptyWidget)
     }
     this.studentwidgets = widgets;

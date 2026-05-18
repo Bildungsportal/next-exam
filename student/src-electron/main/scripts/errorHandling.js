@@ -27,7 +27,6 @@ function handleRendererCrash(log, windowHandler, webContents, details, prefix) {
       try {
         if (!crashedWindow.isDestroyed()) crashedWindow.destroy();
         windowHandler.examwindow = null;
-        windowHandler.examDisplayId = null;
       } catch (err) {
         log.error(`${prefix}: Error closing exam window:`, err);
       }

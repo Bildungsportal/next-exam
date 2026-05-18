@@ -44,11 +44,11 @@ if (gl) {
             }
         }
     } else {
-        console.log("WEBGL_debug_renderer_info nicht verfügbar.");
+        console.log("WEBGL_debug_renderer_info not available.");
         detected = true;
     }
 } else {
-    console.log("WebGL wird nicht unterstützt, möglicherweise eine VM.");
+    console.log("WebGL is not supported, possibly a VM.");
     detected = true;
 }
 

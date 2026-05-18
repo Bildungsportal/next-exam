@@ -2,11 +2,10 @@
  * VUE.js Frontend - Routing 
 */
 import { createRouter as _createRouter, createWebHashHistory } from 'vue-router'
-import axios from 'axios'
 import notfound from '../pages/notfound.vue';
 import startserver from '../pages/startserver.vue';
 import dashboard from '../pages/dashboard.vue';
-import serverlist from '../pages/serverlist.vue';
+import SystemPrintPdf from '../pages/SystemPrintPdf.vue';
 
 // config is exposed to renderer via preload (contextBridge)
 function getConfig() { return typeof window !== 'undefined' && window.config ? window.config : {}; }
@@ -25,7 +24,7 @@ if (userAgent.indexOf(' electron/') > -1) {
 const routes = [
     { path: '/',                  component: startserver, beforeEnter: [addParams] },
     { path: '/startserver/:bipToken/:bipUsername/:bipuserID:',  name:"startserver",     component: startserver, beforeEnter: [addParams] },
-    { path: '/serverlist',        component: serverlist,   beforeEnter: [addParams]},
+    { path: '/system-print', name: 'system-print', component: SystemPrintPdf, beforeEnter: [addParams] },
     { path: '/dashboard/:servername/:passwd?/:bipToken/:bipUsername/:bipuserID:/:biptest', name:"dashboard", component: dashboard, beforeEnter: [addParams, getServerInfo] },
     { path: '/:pathMatch(.*)*',   component: notfound },
 ]
@@ -47,12 +46,14 @@ function addParams(to){
 //we double check the password for now..  use proper auth process in the future ;-)
 // since we almost moved to single and local instance teacher server password is not needed at all #REFACTOR ? 
 async function getServerInfo(to){
-    let hostname = electron ? "localhost" : window.location.hostname
-   
-    const config = getConfig();
-    let res = await axios.get(`https://${hostname}:${config.serverApiPort}/server/control/getserverinfo/${to.params.servername}`)
-    .then(response => {  return response.data  })
-    .catch( err => {console.error(`router @ checkPasswd:    ${err}`)})
+
+    let res
+    try {
+        res = await window.ipcRenderer.invoke('getServerInfoForDashboard', to.params.servername)
+    } catch (err) {
+        console.error(`router @ getServerInfo: ${err}`)
+        return false
+    }
 
     if (res.status === "success") { 
         to.params.pin = res.data.pin; 
@@ -62,7 +63,7 @@ async function getServerInfo(to){
         return true 
     }
     else {  
-        console.log("router @ checkPasswd: serverinfo error"); 
+        console.log("router @ getServerInfo: serverinfo error"); 
         return false
     }
 }
@@ -73,12 +74,12 @@ function extractServername(path) {
     const segments = path.split('/');
     const dashboardIndex = segments.indexOf('dashboard');
     const passwordIndex = segments.indexOf('password');
-    if (dashboardIndex !== -1 && passwordIndex !== -1 && passwordIndex > dashboardIndex) { // Sicherstellen, dass beide Schlüsselwörter vorhanden sind und 'password' nach 'dashboard' kommt
-        if (dashboardIndex + 1 < passwordIndex) {    // Gibt das Segment direkt nach 'dashboard' zurück, falls vorhanden
+    if (dashboardIndex !== -1 && passwordIndex !== -1 && passwordIndex > dashboardIndex) { // ensure both keywords are present and 'password' comes after 'dashboard'
+        if (dashboardIndex + 1 < passwordIndex) {    // return the segment directly after 'dashboard' if present
             return segments[dashboardIndex + 1];
         }
     }
-    return null; // Rückgabe von null, wenn keine gültige Struktur gefunden wurde
+    return null; // return null if no valid structure was found
 }
 
 
@@ -89,18 +90,18 @@ export function createRouter() {
         routes
     });
 
-    router.beforeEach(async (to, from, next) => {
-        if (from.name == "dashboard"){  // wir kommen aus einem exam server - blockiere verlassen sofern im exam mode
+    router.beforeEach(async (to, from) => {
+        if (from.name == "dashboard") {  // coming from an exam server - block navigation while in exam mode
             let servername = extractServername(from.path)
             const serverstatus = await window.ipcRenderer?.invoke("getserverstatus", servername)
-         
-             // if (serverstatus && serverstatus.exammode) {
-            if (serverstatus) {     // blockiere immer sofern der server noch läuft - "Exam beenden" Button killt den server - dann ist serverstatus = false
-                console.warn("router @ createRouter: Der Exam-Modus ist aktiv. Keyboard/Mouse Hotkey Navigation ist nicht erlaubt.");
-                next(false);  // Verhindert die Navigation
-            } 
-            else {  next();  }
-        } else {  next();  }
+
+            // if (serverstatus && serverstatus.exammode) {
+            if (serverstatus) {     // always block while the server is still running - "End Exam" button kills the server - then serverstatus = false
+                console.warn("router @ createRouter: Exam mode is active. Keyboard/mouse hotkey navigation is not allowed.");
+                return false
+            }
+        }
+        return true
     });
 
     return router;

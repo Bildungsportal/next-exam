@@ -7,7 +7,7 @@ export class SchedulerService extends EventTarget {
     start() {
         if (!this.handle) {
             this.handle = setInterval(() => {
-                // Auslösen eines Custom Events, das 'action' genannt wird
+                // Dispatch a custom event named 'action'
                 this.dispatchEvent(new CustomEvent('action'));
             }, this.interval);
         }

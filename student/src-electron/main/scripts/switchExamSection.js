@@ -121,10 +121,10 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
 
                 // destroy devtools window - if you don't next-exam will crash silently on reload and section switch
             if (config.development){
-                webContents.getAllWebContents().forEach(wc => {                        // alle WebViews des Childs
+                webContents.getAllWebContents().forEach(wc => {                        // all WebViews of the child
                     if (wc.hostWebContents?.id === WindowHandler.examwindow.webContents.id && wc.isDevToolsOpened?.()){
                         log.info("switchExamSection: destroying devtools window")
-                        wc.closeDevTools()                                                 // DT des WebViews schließen (auch detached)
+                        wc.closeDevTools()                                                 // close DevTools of the WebView (also when detached)
                     }
                 })
             } 

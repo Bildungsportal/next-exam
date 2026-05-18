@@ -1,0 +1,12 @@
+---
+description: Behavioral guidelines plus mandatory Graphify usage (consult graphify-out/; rebuild or --update after architecture changes). Details in @CLAUDE.md.
+alwaysApply: true
+---
+
+# behavioral guidelines
+
+Follow the behavioral guidelines in the project root file below; they override generic defaults when applicable. Section 5 binds Graphify usage and refresh after coarse architecture work.
+
+**Indentation:** In **new** files you create, use **4 spaces** per indent level (no tab indents). In **existing** files, match the file’s current indentation; do not normalize unrelated whitespace.
+
+@CLAUDE.md

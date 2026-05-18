@@ -180,24 +180,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
 
 
 
-<!-- missing comma before common subordinating conjunctions -->
-<rule id="MISSING_COMMA_BEFORE_SUBORD_CONJ" name="Komma vor Nebensatz-Konjunktionen">
-    <pattern>
-        <token negate="yes" regexp="yes">,|;|:|\.|\?|!|–|—|\(|\{|\[</token>
-        <marker>
-            <token sentenceStart="no" regexp="yes">weil|da|dass|obwohl|obgleich|obschon|wenn|falls|während|bevor|nachdem|seit|seitdem|sobald|solange|indem|damit|als|bis</token>
-        </marker>
-    </pattern>
-    <message>Vor dieser Nebensatz-Konjunktion fehlt ein Beistrich.</message>
-    <suggestion>, <match no="1"/></suggestion>
-</rule>
-
-
-
-
-
-
-
 </category>
 
 

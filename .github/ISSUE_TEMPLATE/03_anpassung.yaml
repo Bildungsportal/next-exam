@@ -27,7 +27,7 @@ body:
         Beispiel:
         Die Bezeichnung "Exam starten" ist allgemein verständlicher und verringert mögliche Verwechslungen seitens der Lehrkräfte.
     validations:
-      required: true
+      required: false
   - type: textarea
     id: impact
     attributes:

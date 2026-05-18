@@ -1,32 +1,31 @@
 <template>
 
     <div id="apphead" class="bg-dark">
-        <div v-if="online && !localLockdown" class="header-item">
-            <img :src="speedometer_img" class="white me-2" width="32" height="32" style="float: left;" />
-            <button v-if="clientinfo && clientinfo.groups  && clientinfo.group == 'a'" type="button" class="header-item btn btn-info btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> A  </button>
-            <button v-if="clientinfo && clientinfo.groups  && clientinfo.group == 'b'" type="button" class="header-item btn btn-warning btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> B  </button>
-            <span class="fs-5 align-middle me-1" style="float: left;">{{clientname}} @ {{servername}} | {{pincode}}</span>
-
-
-            <span class="fs-5 align-middle me-4 teal" style="float: left;" >| {{$t('student.connected')}}</span>
+        <div class="header-left">
+            <div v-if="online && !localLockdown" class="header-item">
+                <img src="/src/assets/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style="float: left;" />
+                <button v-if="clientinfo && clientinfo.groups  && clientinfo.group == 'a'" type="button" class="header-item btn btn-info btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> A  </button>
+                <button v-if="clientinfo && clientinfo.groups  && clientinfo.group == 'b'" type="button" class="header-item btn btn-warning btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> B  </button>
+                <span class="fs-5 align-middle me-1" style="float: left;">{{clientname}} @ {{servername}} | {{pincode}}</span>
+                <span class="fs-5 align-middle me-4 teal" style="float: left;" >| {{$t('student.connected')}}</span>
+            </div>
+            <div v-if="!online && !localLockdown" class="header-item">
+                <img src="/src/assets/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style=" float: left;" />
+                <span class="fs-5 align-middle me-1" style=" float: left;"> {{clientname}} </span>
+                <span class="fs-5 align-middle me-4 red" style="float: left;"> | {{ $t("student.disconnected") }} </span>
+            </div>
+            <div v-if="localLockdown" class="header-item">
+                <img src="/src/assets/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style="float: left;" />
+                <span class="fs-5 align-middle me-1" style="float: left;">{{clientname}}</span>
+                <span v-if="localLockdown && exammode"  class="fs-5 align-middle me-4 green" style="float: left;" >| Lokal abgesichert</span>
+                <span v-if="localLockdown && !exammode"  class="fs-5 align-middle me-4 red" style="float: left;" >| nicht abgesichert</span>
+            </div>
+            <div v-if="!online && !localLockdown && exammode" class="header-item btn btn-success p-1 me-1 btn-sm" @click="reconnect()"><img src="/src/assets/img/svg/gtk-convert.svg" class="" width="22" height="20"> {{ $t("editor.reconnect")}}</div>
+            <div v-if="!online && !localLockdown && exammode" class="header-item btn btn-danger p-1 me-1 btn-sm"  @click="gracefullyExit()"><img src="/src/assets/img/svg/dialog-cancel.svg" class="" width="22" height="20"> {{ $t("editor.unlock")}} </div>
+            <div v-if="localLockdown && exammode" class="header-item btn btn-danger p-1 pe-2 me-1 btn-sm"  @click="gracefullyExit()"><img src="/src/assets/img/svg/dialog-cancel.svg" class="" width="22" height="20"> {{ $t("editor.unlock") }}  </div>
         </div>
-        <div v-if="!online && !localLockdown" class="header-item">
-            <img :src="speedometer_img" class="white me-2" width="32" height="32" style=" float: left;" />
-            <span class="fs-5 align-middle me-1" style=" float: left;"> {{clientname}} </span>
-            <span class="fs-5 align-middle me-4 red" style="float: left;"> | {{ $t("student.disconnected") }} </span>
-        </div>
-
-        <div v-if="localLockdown" class="header-item">
-            <img :src="speedometer_img" class="white me-2" width="32" height="32" style="float: left;" />
-            <span class="fs-5 align-middle me-1" style="float: left;">{{clientname}}</span>
-            <span v-if="localLockdown && exammode"  class="fs-5 align-middle me-4 green" style="float: left;" >| Lokal abgesichert</span>
-            <span v-if="localLockdown && !exammode"  class="fs-5 align-middle me-4 red" style="float: left;" >| nicht abgesichert</span>
-        </div>
-
-        <div v-if="!online && !localLockdown && exammode" class="header-item btn btn-success p-1 me-1 btn-sm" @click="reconnect()"><img :src="gtk_convert_img" class="" width="22" height="20" /> {{ $t("editor.reconnect")}}</div>
-        <div v-if="!online && !localLockdown && exammode" class="header-item btn btn-danger p-1 me-1 btn-sm"  @click="gracefullyExit()"><img :src="dialog_cancel_img" class="" width="22" height="20" /> {{ $t("editor.unlock")}} </div>
-        <div v-if="localLockdown && exammode" class="header-item btn btn-danger p-1 me-1 btn-sm"  @click="gracefullyExit()"><img :src="dialog_cancel_img" class="" width="22" height="20" /> {{ $t("editor.unlock")}} </div>
-
+        
+     
 
         <!-- Exam sections: show all 4 section buttons and current section; if allowSectionSwitch, buttons trigger switch-exam-section IPC -->
         <div v-if="serverstatus?.useExamSections" class="header-item me-2">
@@ -44,22 +43,7 @@
             <div v-if="wlanInfo && wlanInfo?.ssid && !wlanInfo.ssid.includes('redacted') && !wlanInfo.ssid.includes('<') " style="font-size: 0.8rem;" class="me-1"> {{ wlanInfo.ssid }}  </div>
 
 
-            <!-- Shows WIFI ICON if IP is available and no WLAN info available-->
-
-            <!-- WLAN quality not available and SSID set to <redacted>  (happens on MacOS >= sequoia) -->
-            <div v-if="wlanInfo && wlanInfo.ssid && !wlanInfo.quality && hostipDisplay" class="me-2">
-              <img :title="'WiFi Information not available \nIP: '+hostipDisplay" :alt="'WiFi Information not available'" :src="wireless_connected_20_img" width="24" height="24" style="vertical-align: bottom;" />
-            </div>
-
-            <!-- WLAN SSID and quality not available (happens on windows without location services) -->
-            <div v-if="wlanInfo && !wlanInfo.ssid && !wlanInfo.quality && hostipDisplay" class="me-2">
-              <img :title="'WiFi Information not available \nIP: '+hostipDisplay" :alt="'WiFi Information not available'" :src="wireless_connected_20_img" width="24" height="24" style="vertical-align: bottom;" />
-            </div>
-            <!-- WLAN permission not available -->
-            <div v-else-if="wlanInfo && wlanInfo?.message == 'nopermissions'" class="me-2">
-                <img :title="$t('student.wlanNopermissionsText')" :alt="$t('student.wlanNopermissionsText')" :src="wireless_disconnected_img" width="24" height="24" />
-            </div>
-
+            <!-- WiFi icon (mutually exclusive states: never show 2 WiFi icons at once) -->
             <!-- Show WLAN quality -->
             <div v-if="wlanInfo && wlanInfo?.quality" class="me-2">
                 <img v-if="wlanInfo && wlanInfo.quality > 80" :src="wireless_connected_100_img"  :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" class="" width="24" height="24" style="vertical-align: bottom;" />
@@ -70,10 +54,23 @@
                 <img v-if="wlanInfo && wlanInfo.quality <= 5" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" :src="wireless_connected_00_img" width="24" height="24" style="vertical-align: bottom;" />
             </div>
 
+            <!-- WLAN permission not available -->
+            <div v-else-if="wlanInfo && wlanInfo?.message == 'nopermissions'" class="me-2">
+                <img :title="$t('student.wlanNopermissionsText')" :alt="$t('student.wlanNopermissionsText')" src="/src/assets/img/svg/network-wireless-disconnected.svg" width="24" height="24" >
+            </div>
+
             <!-- WLAN disconnected - no interface available -->
+            <div v-else-if="wlanInfo && wlanInfo?.message == 'nointerface'" class="me-2">
+                <img title="WLAN disconnected" alt="WLAN disconnected" src="/src/assets/img/svg/network-wireless-disconnected.svg" width="24" height="24" >
             <div v-if="wlanInfo && wlanInfo?.message == 'nointerface'" class="me-2">
                 <img title="WLAN disconnected" alt="WLAN disconnected" :src="wireless-disconnected" width="24" height="24" />
             </div>
+
+            <!-- WLAN info not available (e.g. SSID redacted or no SSID/quality, but IP available) -->
+            <div v-else-if="wlanInfo && hostipDisplay && !wlanInfo.quality && (!wlanInfo.ssid || wlanInfo.ssid.includes('redacted') || wlanInfo.ssid.includes('<'))" class="me-2">
+              <img :title="'WiFi Information not available \nIP: '+hostipDisplay" :alt="'WiFi Information not available'" src="/src/assets/img/svg/network-wireless-connected-20.svg" width="24" height="24" style="vertical-align: bottom;" />
+            </div>
+
 
 
             <!-- Show LAN connected if IP is available and no WLAN info available -->
@@ -147,6 +144,7 @@
     data() {
       return {
         lastShownMessage: null,
+        _nxHeaderResizeObs: null,
         battery_10_img,
         battery_20_img,
         battery_30_img,
@@ -179,6 +177,21 @@
         return this.hostip && (typeof this.hostip === 'object' ? this.hostip.hostip : this.hostip);
       }
     },
+    mounted() {
+      this._nxSetHeaderHeightVar(); // keep --nx-apphead-h synced for overlays
+      if (typeof ResizeObserver !== 'undefined') {
+        this._nxHeaderResizeObs = new ResizeObserver(() => this._nxSetHeaderHeightVar());
+        this._nxHeaderResizeObs.observe(this.$el);
+      }
+      window.addEventListener('resize', this._nxSetHeaderHeightVar);
+    },
+    beforeUnmount() {
+      window.removeEventListener('resize', this._nxSetHeaderHeightVar);
+      if (this._nxHeaderResizeObs) {
+        this._nxHeaderResizeObs.disconnect();
+        this._nxHeaderResizeObs = null;
+      }
+    },
     watch: {
       'wlanInfo.message'(newMessage) {
         if (newMessage && newMessage !== this.lastShownMessage) {
@@ -189,6 +202,12 @@
       }
     },
     methods: {
+      _nxSetHeaderHeightVar() {
+        this.$nextTick(() => {
+          const h = Math.max(0, Math.round(this.$el?.offsetHeight || 0));
+          document.documentElement.style.setProperty('--nx-apphead-h', `${h || 60}px`);
+        });
+      },
       reconnect() {
         // Restore connection
         this.$emit('reconnect');
@@ -241,6 +260,14 @@
     z-index:10000000 !important;
     color: #fff;
     padding: 10px;
+}
+
+.header-left {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 1;
+    min-width: 0;
 }
 
 .header-item {

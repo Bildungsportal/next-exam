@@ -120,10 +120,12 @@ input:focus::placeholder {
 .focuswarning {
     background-color: #ffc107 !important;
     text-align: center !important;
-    height: 200px !important;
-    width: 450px !important;
+    height: auto !important;
+    min-height: 200px !important;
+    width: min(92vw, 560px) !important;
     border: 0px solid rgb(255, 153, 0) !important;
     z-index: 100000 !important;
+    padding-bottom: 16px !important;
 }
 
 /* Zusätzlicher Container für .focuswarning und Blur-Effekt */

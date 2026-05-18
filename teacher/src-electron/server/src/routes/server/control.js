@@ -17,8 +17,7 @@
 
 import { Router } from 'express'
 const router = Router()
-import multiCastserver from '../../../../main/scripts/multicastserver.js'
-import multiCastclient from '../../../../main/scripts/multicastclient.js'
+
 import crypto from 'crypto';
 import config from '../../../../main/config.js'
 import path from 'path'
@@ -26,9 +25,11 @@ import i18n from '../../../../../src/locales/locales.js'
 const { t } = i18n.global
 import fs from 'fs' 
 import qs from 'qs'
-import axios from "axios"
-import { msalConfig } from '../../../../../src/msalutils/authConfig.ts'
+import { msalConfig } from '../../../../../src/msalutils/authConfigShared.ts'
 import log from 'electron-log';
+import { resolvePathUnderRoot, safeScreenshotFileName, safeSectionFolderId, isSafePathSegment } from '../../utils/safePaths.js';
+import { normalizeStudentClientName } from '../../../../../../shared/normalizeStudentClientName.js';
+import { isStudentReachable } from '../../../../../src/utils/studentPresence.js';
 
 import WindowHandler from '../../../../main/scripts/windowhandler.js'
 import Tesseract from 'tesseract.js';
@@ -39,7 +40,7 @@ const __dirname = import.meta.dirname;
 const fsp = fs.promises 
 
 /**
- * this route generates the nessesary codeVerifier and codeChallenge für PKCE 
+ * this route generates the necessary codeVerifier and codeChallenge for PKCE
  * authorization flow for the microsoft onedrive graph API
  * it receives a code and then redirects to /msauth which will aquire an
  * accesstoken
@@ -74,21 +75,28 @@ router.get('/msauth', async (req, res) => {
     const code = req.query.code;
     const codeVerifier =  config.codeVerifier;
     try {
-        const response = await axios.post('https://login.microsoftonline.com/common/oauth2/v2.0/token', qs.stringify({
-            client_id: msalConfig.auth.clientId,
-            grant_type: 'authorization_code',
-            scope: 'openid profile offline_access Files.ReadWrite.AppFolder Files.Read Files.ReadWrite',
-            code,
-            redirect_uri: msalConfig.auth.redirectUri,
-            code_verifier: codeVerifier,
-            }), {
+        const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 'Origin': 'https://localhost',
             },
-        });
+            body: qs.stringify({
+                client_id: msalConfig.auth.clientId,
+                grant_type: 'authorization_code',
+                scope: 'openid profile offline_access Files.ReadWrite.AppFolder Files.Read Files.ReadWrite',
+                code,
+                redirect_uri: msalConfig.auth.redirectUri,
+                code_verifier: codeVerifier,
+            }),
+        })
+        const tokenJson = await tokenResponse.json()
 
-        config.accessToken = response.data.access_token     // we received the access token - store it on global config object
+        if (!tokenResponse.ok) {
+            throw new Error(tokenJson.error_description || tokenJson.error || `${tokenResponse.status} ${tokenResponse.statusText}`)
+        }
+
+        config.accessToken = tokenJson.access_token     // we received the access token - store it on global config object
 
         let html = `
         <!DOCTYPE html>
@@ -108,7 +116,7 @@ router.get('/msauth', async (req, res) => {
         </html>`
         res.send(html);
     } catch (error) {
-        console.error(error.response.data);
+        console.error(error);
         let html = `
         <!DOCTYPE html>
         <html lang="en">
@@ -119,7 +127,7 @@ router.get('/msauth', async (req, res) => {
                 <link rel="stylesheet" href="/static/css/staticstyles.css">
             </head>
             <body><br>
-                <h4>${error.response.data.error_description}</h4> <br>
+                <h4>${error.message}</h4> <br>
                 Please close this Window and try again! <br>
                 <button onclick="window.close()" class="custom-btn custom-btn-danger">Close Window</button>
             </body>
@@ -133,124 +141,27 @@ router.get('/msauth', async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
 /**
- * STARTS an exam server instance
- * @param servername the chosen name (for example "mathe")
- * @param password the password to enter the exam (not neccessary on single instance system (app) but will be used to exit secure exam mode in the future)
- * #FIXME !!!  This route needs to be secured (anyone can start a server right now - or 1000 servers)
+ * STUDENT-ORIENTED ROUTES (Bearer student token required except: oauth, msauth, registerclient=PIN,
+ * serverlist+pong+connectedstudentips=open LAN discovery).
  */
- router.post('/start/:servername/:passwd?', async function (req, res, next) {
-    // this route may be used by localhost only
-    if (!requestSourceAllowed(req, res)) return   // for the webversion we need to check user permissions here (future stuff)
-
-    const bip = req.body.bip  // this info is also sent via multicastserver message
-    const bipId = req.body.bipId
-
-    const servername = req.params.servername 
-    const mcServer = config.examServerList[servername]
-
-    // log.info(req.body) // holds workdir: we could store the current workdirectory for every mcserver on mcserver.serverinfo in the future
-    
-    //generate random pin
-    let pin = String(Math.floor(Math.random()*9000) + 1000)  // 4 digits is enough  Math.floor(Math.random() * 9000) + 1000;
-    if (config.development){ pin = "1111" }  
-
-    // // check if server is already running locally or in LAN
-    if (mcServer) { 
-        return res.send( {sender: "server", message: t("control.serverexists"), status: "error"})
-    } 
-
-    for (const exam of multiCastclient.examServerList) {  // do not use forEach() because its run async and the interpreter will not wait for it to finish
-        if (servername == exam.servername ){
-            return res.send( {sender: "server", message: t("control.serverexistsLAN"), status: "error"})
-        }
-     }
-    
-    log.info('control @ start: Initializing new Exam Server:', servername)
-    let mcs = new multiCastserver();
-
-    if (!req.params.passwd){ 
-        mcs.init(servername, pin, "", bip, bipId)
-    }
-    else {
-        mcs.init(servername, pin, req.params.passwd, bip, bipId)
-    }
-
-    config.examServerList[servername]=mcs
-    // log.info(config.workdirectory)
-    let serverinstancedir = path.join(config.workdirectory, servername)
-
-    try {
-        await fs.promises.mkdir(serverinstancedir, { recursive: true });
-    } catch (err) {
-        // Directory might already exist, that's ok
-    }
-    res.send( {sender: "server", message: t("control.serverstarted"), status: "success"})
-    
-})
 
 
 
-/**
- * STOPS an exam server instance
- * @param servername the name of the exam server in question
- * @param csrfservertoken the servers csrf token needed to process the request (generated and transferred to the webbrowser on login) 
- */
- router.get('/stopserver/:servername/:csrfservertoken', function (req, res, next) {
-    const servername = req.params.servername
-    const mcServer = config.examServerList[servername]
+///////////////////
+/** OPEN ROUTES */
 
-    if (mcServer && req.params.csrfservertoken === mcServer.serverinfo.servertoken) {
-      
-        mcServer.broadcastInterval.stop()
-
-        mcServer.server.close();
-        //delete mcServer
-        delete config.examServerList[servername]
-        res.send( {sender: "server", message: t("control.serverstopped"), status: "success"})
-
-        
-    }
-})
-
-
-/**
- * checks serverpassword for login via VUE ROUTER
- * @param servername the chosen name (for example "mathe")
- * @param passwd the password needed to enter the dashboard  !!FIXME: use https and proper auth 
- **/
- router.get('/getserverinfo/:servername', function (req, res, next) {
-    const servername = req.params.servername 
-
-    const mcServer = config.examServerList[servername]
-
-    if (mcServer) { 
-       
-        return res.send( {
-            sender: "server", 
-            message: "success", 
-            status: "success", 
-            data: {
-            pin: mcServer.serverinfo.pin,
-            servertoken: mcServer.serverinfo.servertoken,
-            serverip: mcServer.serverinfo.ip
-            } 
-        } )
-    }
-    else { return res.send( {sender: "server", message: "server not found", status: "error"}) }
-})
-
-
-/**
- *  sends a list of all running exam servers
- */
-router.get('/serverlist', function (req, res, next) {
-    let serverlist = []
-    Object.values(config.examServerList).forEach( server => {
-        serverlist.push({servername: server.serverinfo.servername, id: server.serverinfo.id, serverip: server.serverinfo.ip, reachable: true, password: server.serverinfo.password, version: server.serverinfo.version}) 
-    });
-    res.send({serverlist:serverlist, status: "success"})
-})
 
 /**
  *  sends an "alive" signal back
@@ -260,38 +171,62 @@ router.get('/serverlist', function (req, res, next) {
 })
 
 
-router.post('/pong', function (req, res, next) {
-    res.send({ status: "success"})
+/**
+ *  sends a list of all running exam servers
+ */
+router.get('/serverlist', function (req, res, next) {
+    let serverlist = []
+    Object.values(config.examServerList).forEach( server => {
+        serverlist.push({
+            servername: server.serverinfo.servername,
+            id: server.serverinfo.id,
+            serverip: server.serverinfo.ip,
+            reachable: true,
+            version: server.serverinfo.version,
+            bip: !!server.serverinfo.bip,
+            requireBiP: !!server.serverstatus?.requireBiP,
+            examStatus: server.serverinfo.bip ? (server.serverstatus?.bipStatus || 'closed') : undefined,
+        }) 
+    });
+    res.send({serverlist:serverlist, status: "success"})
 })
 
 
 
 
-let democlients = []
-for (let i = 0; i<16; i++ ){
-    let democlient = {
-        clientname: `user-${ crypto.randomBytes(6).toString('hex')  }`,
-        token: `csrf-${crypto.randomUUID()}`,
-        ip: false,
-        hostname: false,
-        serverip: false,
-        servername: false,
-        focus: true,
-        exammode: false,
-        timestamp: new Date().getTime() ,
-        virtualized: true,  // this config setting is set by simplevmdetect.js (electron preload)
-        examtype : false,
-        pin: false,
-        screenlock: false,
-        imageurl:"user-black.svg",
-        status : {} 
+
+
+
+/**
+ * Returns reachable student IPs only while serverstatus.exammode is true; otherwise ips: [] (open LAN).
+ */
+router.get('/connectedstudentips', function (req, res) {
+    const servers = Object.values(config.examServerList)
+    if (servers.length === 0) {
+        return res.status(404).json({ sender: 'server', status: 'error', message: t('control.notfound') })
     }
-    democlients.push(democlient)
-}
+    const mcServer = servers[0]
+    if (!mcServer.serverstatus?.exammode) {
+        return res.json({ sender: 'server', status: 'success', ips: [] })
+    }
+    const now = Date.now()
+    const ips = (mcServer.studentList || [])
+        .filter((student) => isStudentReachable(student, now))
+        .map((student) => student.clientip)
+        .filter((ip) => typeof ip === 'string' && ip.length > 0)
+    return res.json({ sender: 'server', status: 'success', ips })
+})
+
+ /** OPEN ROUTES END*/
+/////////////////////
 
 
 
 
+
+
+ /////////////////////////////
+/** PROTECTED ROUTES START */
 
 
 /**
@@ -302,21 +237,20 @@ for (let i = 0; i<16; i++ ){
  *  @param clientname the name of the student
  *  @param clientip the clients ip address for api calls
  */
-
-
-
  router.post('/registerclient/:servername', async function (req, res, next) {
     const { packet } = req.body || {}
     const servername = req.params.servername
     const mcServer = config.examServerList[servername] // get the multicastserver object
-    const sessionRef = String(mcServer?.serverinfo?.pin || '')
-    let clientname, clientip, pin, version, hostname, bipuserID
+    if (!mcServer) { return res.send({ sender: "server", message: t("control.notfound"), status: "error" }) }
+    const sessionRef = String(mcServer.serverinfo?.pin || '')
+    let clientname, clientip, pin, version, hostname, bipuserID, exammode
     try {
         const payload = await processSecurePayload(packet, sessionRef)
-        ;({ clientname, clientip, pin, version, hostname, bipuserID } = payload || {})
+        ;({ clientname, clientip, pin, version, hostname, bipuserID, exammode } = payload || {})
     } catch (err) {
         return res.send({ sender: "server", message: "Wrong PIN", status: "error" })
     }
+    clientname = normalizeStudentClientName(clientname)
     const token = `csrf-${crypto.randomUUID()}`
 
     //log.info("control @ registerclient: Client Version:",version)
@@ -329,16 +263,22 @@ for (let i = 0; i<16; i++ ){
 
     //console.log(versionteacher, versionstudent)
   
-    if (!mcServer) {  return res.send({sender: "server", message:t("control.notfound"), status: "error"} )  }
     if (!pin || !clientname || !clientip || !hostname || !version) { return res.send({sender: "server", message:"Invalid registration payload", status: "error"} ) }
     if (`${versionteacher}` !== versionstudent ) {  return res.send({sender: "server", message:t("control.versionmismatch"), status: "error", version: config.version, versioninfo: config.info} )  }  
     
+    if (mcServer.serverinfo?.bip && (mcServer.serverstatus?.bipStatus || 'closed') !== 'open') {
+        return res.send({sender: "server", message:t("control.bipclosed"), status: "error"} )
+    }
+
     if (mcServer.serverstatus.requireBiP && (bipuserID === false || bipuserID === 'false' || !bipuserID)){ // allow old string values and strict false
         return res.send({sender: "server", message:t("control.biprequired"), status: "error"} ) 
     }
     try {
         if (pin == mcServer.serverinfo.pin) {
-            let registeredClient = mcServer.studentList.find(element => element.clientname === clientname)
+            if (exammode === true && !mcServer.serverstatus?.exammode) {
+                return res.json({ sender: "server", message: t("control.exammismatchregistration"), status: "error" })
+            }
+            let registeredClient = mcServer.studentList.find(element => element.clientname.toLowerCase() === clientname)
         
             
 
@@ -348,8 +288,10 @@ for (let i = 0; i<16; i++ ){
 
                 //group handling - everybody is in groupA except there is already a group configuration
                 let group = false;
-                if (mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupA?.users?.includes(clientname)) { group = 'a'; } 
-                else if (mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupB?.users?.includes(clientname)) { group = 'b';  }
+                const groupAUsers = mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupA?.users || []
+                const groupBUsers = mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupB?.users || []
+                if (groupAUsers.some((u) => String(u).toLowerCase() === clientname)) { group = 'a'; }
+                else if (groupBUsers.some((u) => String(u).toLowerCase() === clientname)) { group = 'b'; }
                 else {  // user is not in any group or no group is configured
                     group = 'a'
                    mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupA.users.push(clientname)
@@ -363,7 +305,7 @@ for (let i = 0; i<16; i++ ){
                     clientip: clientip,
                     timestamp: new Date().getTime(),
                     focus: true,
-                    exammode: false,
+                    exammode: exammode ?? false,
                     imageurl:false,
                     virtualized: false,
                     version: version,  // set at registration so isVersionMismatch is correct before first /update
@@ -371,44 +313,29 @@ for (let i = 0; i<16; i++ ){
                     status: { group: group || 'a'},    // we use this to store (per student) information about whats going on on the serverside (tasklist) and send it back on /update
                     // we allow two groups (this is just used for distribution of files by now)
                 }
-                //create folder for student
-                let studentfolder =path.join(config.workdirectory, mcServer.serverinfo.servername , clientname);
-            
-            
+                //create folder for student (canonical lowercase name)
+                const parentDir = path.join(config.workdirectory, mcServer.serverinfo.servername)
+                const targetDirName = clientname
+                let studentfolder = path.join(parentDir, targetDirName)
                 try {
-                    await fs.promises.access(studentfolder); // Check if directory exists
-                    // das verzeichnis für diesen student existiert 
-                    // auf unix ist der ordnername 100% ident - auf windows könnte es aber in der gross/kleinschreibung unterschiede geben
-                    // prüfe ob es EXAKT gleich geschrieben wurde (case-sensitiv)
-                    
-                    const parentDir = path.dirname(studentfolder);
-                    const targetDirName = path.basename(studentfolder);
                     const directories = (await fs.promises.readdir(parentDir, { withFileTypes: true }))
-                                        .filter(dirent => dirent.isDirectory())
-                                        .map(dirent => dirent.name);
-
-
-                    if (!directories.includes(targetDirName)) {  // wir haben windows ertappt.. der dateiname ist nicht 100% ident "Test" !== "test"
-                        
-                        const existingDir = directories.find(dir => dir.toLowerCase() === targetDirName.toLowerCase());
-                        if (existingDir) {
-                            const oldPath = path.join(parentDir, existingDir);
-                            const newPath = path.join(parentDir, `backup-${existingDir}`);
-                            await fs.promises.rename(oldPath, newPath);  // Umbenennen des alten Verzeichnisses
-                            log.warn(`control @ registerclient: Renaming ${oldPath} to ${newPath} - thx bill gates for the worst operating system otw`)
+                        .filter((dirent) => dirent.isDirectory())
+                        .map((dirent) => dirent.name)
+                    const existingDir = directories.find((dir) => dir.toLowerCase() === targetDirName)
+                    if (existingDir) {
+                        if (existingDir !== targetDirName) {
+                            const oldPath = path.join(parentDir, existingDir)
+                            await fs.promises.rename(oldPath, studentfolder)
+                            log.info(`control @ registerclient: Renamed workdir ${existingDir} -> ${targetDirName}`)
+                        } else {
+                            log.warn(`control @ registerclient: Using already existing directory: ${targetDirName}`)
                         }
+                    } else {
+                        await fs.promises.mkdir(studentfolder, { recursive: true })
+                        log.info(`control @ registerclient: Creating ${studentfolder}`)
                     }
-                    else {
-                        log.warn(`control @ registerclient: Using already existing directory: ${targetDirName}`)
-                    }
-                } catch (err) {
-                    // Das Verzeichnis existiert nicht, erstelle es
-                    try {
-                        await fs.promises.mkdir(studentfolder, { recursive: true });
-                        log.info(`control @ registerclient: Creating ${studentfolder}`);
-                    } catch (mkdirErr) {
-                        log.error(`control @ registerclient: Error creating directory: ${mkdirErr}`);
-                    }
+                } catch (mkdirErr) {
+                    log.error(`control @ registerclient: Error creating directory: ${mkdirErr}`)
                 }
 
                 try {
@@ -424,12 +351,14 @@ for (let i = 0; i<16; i++ ){
 
                 let now = new Date().getTime()
                 if (now - 20000 > registeredClient.timestamp) { // student probably went offline (teacher connection loss) but is coming back now
+                    registeredClient.clientname = clientname
                     registeredClient.timestamp = now
+                    registeredClient.exammode = exammode ?? false
                     log.info("control @ registerclient: student reconnected")
 
                     //inform frontend about re-connection
                     WindowHandler.mainwindow.webContents.send("reconnected", registeredClient)
-                    return res.json({sender: "server", message:"Student successfully reconnected", status: "success", token: registeredClient.token})  //send back old token
+                    return res.json({ sender: "server", message: "Student successfully reconnected", status: "success", token: registeredClient.token, reconnected: true }) // send back old token; reconnected flags student UI success copy
                 }
                 else {
                     return res.json({sender: "server", message:"Student already registered", status: "error"})
@@ -460,344 +389,6 @@ for (let i = 0; i<16; i++ ){
 
 
 
-
-
-
-/**
- * INFORM Client(s) about a "sendfile" request from the server (clients should download the file(s) via /data/download/... route) 
- * @param servename the server that waits with the file
- * @param csrfservertoken the servers token to authenticate
- * @param studenttoken the students token who should send the exam (false means everybody)
- */
- router.post('/sendtoclient/:servername/:csrfservertoken/:studenttoken', function (req, res, next) {
-    const servername = req.params.servername
-    const studenttoken = req.params.studenttoken
-    const mcServer = config.examServerList[servername]
-    const files = req.body.files   //  { files:[ {name:file.name, path:file.path }, {name:file.name, path:file.path } ] }
-   
-    if (req.params.csrfservertoken === mcServer.serverinfo.servertoken) {  //first check if csrf token is valid and server is allowed to trigger this api request
-        if (studenttoken === "all"){
-            for (let student of mcServer.studentList){ 
-                student.status['fetchfiles'] = true  
-                student.status['files'] =  files
-            }
-        }
-        else {
-            let student = mcServer.studentList.find(element => element.token === studenttoken)
-            if (student) {  
-                student.status['fetchfiles']= true 
-                student.status['files'] = files
-            }   
-        }
-        res.send( {sender: "server", message: t("control.examrequest"), status: "success"} )
-    }
-    else {
-        res.send( {sender: "server", message: t("control.actiondenied"), status: "error"} )
-    }
-})
-
-
-
-
-
-
-
-
-
-
-/**
- *  KICK client - client will get error response on next update and remove connection automatically
- * @param servename the server that wants to kick the client
- * @param csrfservertoken the servers token to authenticate
- * @param studenttoken the students token who should be kicked
- */
-//  router.get('/kick/:servername/:csrfservertoken/:studenttoken', function (req, res, next) {
-//     const servername = req.params.servername
-//     const studenttoken = req.params.studenttoken
-//     const mcServer = config.examServerList[servername]
-
-//     if (req.params.csrfservertoken === mcServer.serverinfo.servertoken) {  //first check if csrf token is valid and server is allowed to trigger this api request
-//         let student = mcServer.studentList.find(element => element.token === studenttoken)
-//         if (student) {   mcServer.studentList = mcServer.studentList.filter( el => el.token !==  studenttoken); } // remove client from studentlist
-//         res.send( {sender: "server", message: t("control.studentremove"), status: "success"} )
-//     }
-//     else {
-//         res.send( {sender: "server", message: t("control.actiondenied"), status: "error"} )
-//     }
-// })
-
-
-
-
-/**
- * SET cients SHARE LINK for microsoft365 mode
- * @param servename the servers name
- * @param csrfservertoken the servers token to authenticate
- * @param studenttoken the students token who should be kicked
- */
-router.post('/sharelink/:servername/:csrfservertoken/:studenttoken', function (req, res, next) {
-    const servername = req.params.servername
-    const studenttoken = req.params.studenttoken
-    const mcServer = config.examServerList[servername]
-    const sharelink = req.body.sharelink
-
-    if (req.params.csrfservertoken === mcServer.serverinfo.servertoken) {  //first check if csrf token is valid and server is allowed to trigger this api request
-        let student = mcServer.studentList.find(element => element.token === studenttoken)
-        if (student) {   
-            student.status.msofficeshare = sharelink
-         }
-        res.send( {sender: "server", message: t("control.studentupdate"), status: "success"} )
-    }
-    else {
-        res.send( {sender: "server", message: t("control.actiondenied"), status: "error"} )
-    }
-})
-
-
-
-
-/**
- * RESTORE cients focused state  !! USE /setstudentstatus/ instead (simplify code)
- * @param servename the server 
- * @param csrfservertoken the servers token to authenticate
- * @param studenttoken the students token who's state should be restored
- */
- router.get('/restore/:servername/:csrfservertoken/:studenttoken', function (req, res, next) {
-    const servername = req.params.servername
-    const studenttoken = req.params.studenttoken
-    const mcServer = config.examServerList[servername]
-
-    if (req.params.csrfservertoken === mcServer.serverinfo.servertoken) {  //first check if csrf token is valid and server is allowed to trigger this api request
-        let student = mcServer.studentList.find(element => element.token === studenttoken)
-        if (student) {   
-            student.status.restorefocusstate = true  // set student.status so that the student can restore its focus state on the next update
-         }
-        res.send( {sender: "server", message: t("control.staterestore"), status: "success"} )
-    }
-    else {
-        res.send( {sender: "server", message: t("control.actiondenied"), status: "error"} )
-    }
-})
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * FETCH EXAMS from connected clients (set student.status - students will then send their workdirectory to /data/receive)
- * attention!!  move to setStudentStatus eventually.. because its redundant
- * @param servename the server that wants to kick the client
- * @param csrfservertoken the servers token to authenticate
- * @param studenttoken the students token who should send the exam (false means everybody)
- */
- router.get('/fetch/:servername/:csrfservertoken/:studenttoken', function (req, res, next) {
-    const servername = req.params.servername
-    const studenttoken = req.params.studenttoken
-    const mcServer = config.examServerList[servername]
-
-    if (req.params.csrfservertoken === mcServer.serverinfo.servertoken) {  //first check if csrf token is valid and server is allowed to trigger this api request
-        if (studenttoken === "all"){
-            for (let student of mcServer.studentList){ student.status['sendexam'] = true  }
-        }
-        else {
-            let student = mcServer.studentList.find(element => element.token === studenttoken)
-            if (student) {  student.status['sendexam']= true  }   
-        }
-        res.send( {sender: "server", message: t("control.examrequest"), status: "success"} )
-    }
-    else {
-        res.send( {sender: "server", message: t("control.actiondenied"), status: "error"} )
-    }
-})
-
-
-
-
-
-
-/**
- * Get previous Serverstatus and return Serverstatus from FILE (from previous interrupted exam in order to resume)
- * @param servername the name of the server 
- * @param csrfservertoken servertoken to authenticate before the request is processed
- */
-router.post('/getserverstatus/:servername/:csrfservertoken', async function (req, res, next) {
-    const csrfservertoken = req.params.csrfservertoken
-    const servername = req.params.servername
-    const mcServer = config.examServerList[servername]
-    if (!mcServer) {  return res.send({sender: "server", message:t("control.notfound"), status: "error"} )  }
-    if (csrfservertoken !== mcServer.serverinfo.servertoken) { return res.send({sender: "server", message:t("control.tokennotvalid"), status: "error"} )}
-    // mcServer.serverstatus von der JSON-Datei wieder importieren
-    const filePath = path.join(config.workdirectory, mcServer.serverinfo.servername, 'serverstatus.json');
-    let serverstatus;
-    try {  
-        const fileContent = await fs.promises.readFile(filePath, 'utf-8');
-        serverstatus = JSON.parse(fileContent); 
-        mcServer.serverinfo.pin = serverstatus.pin  //also restore last pin to make it easier for students
-    }    
-    catch (error) {  serverstatus = false;  }
-    return res.json({sender: "server", status: "success", serverstatus: serverstatus}) 
-})
-
-//get current serverstatus from mcserver
-router.get('/getcurrentserverstatus/:servername/:csrfservertoken', function (req, res, next) {
-    const csrfservertoken = req.params.csrfservertoken
-    const servername = req.params.servername
-    const mcServer = config.examServerList[servername]
-    if (!mcServer) {  return res.send({sender: "server", message:t("control.notfound"), status: "error"} )  }
-    if (csrfservertoken !== mcServer.serverinfo.servertoken) { return res.send({sender: "server", message:t("control.tokennotvalid"), status: "error"} )}
-   
-    return res.json({sender: "server", status: "success", serverstatus: mcServer.serverstatus}) 
-})
-
-
-
-
-/**
- * Set Serverstatus 
- * Students fetch the serverstatus object every updatecycle and act on it (start exam, lockscreens,etc)
- * @param servername the name of the server
- * @param csrfservertoken servertoken to authenticate before the request is processed
- * @param req.body.serverstatus contains the whole serverstatus object
- */
-router.post('/setserverstatus/:servername/:csrfservertoken', async function (req, res, next) {
-    const csrfservertoken = req.params.csrfservertoken
-    const servername = req.params.servername
-    const mcServer = config.examServerList[servername]
-    if (!mcServer) {  return res.send({sender: "server", message:t("control.notfound"), status: "error"} )  }
-    if (csrfservertoken !== mcServer.serverinfo.servertoken) { return res.send({sender: "server", message:t("control.tokennotvalid"), status: "error"} )}
-    
-    mcServer.serverstatus = req.body.serverstatus
-    mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].msOfficeFile = false  // we cant store a file object as json
-
-    //console.log("control:", mcServer.serverstatus)
-    log.info("control @ setserverstatus: saving server status to disc")
-    
-    const workdir = path.join(config.workdirectory, mcServer.serverinfo.servername)
-    const filePath = path.join(config.workdirectory, mcServer.serverinfo.servername, 'serverstatus.json');
-
-    try {  
-        await fs.promises.mkdir(workdir, { recursive: true });
-        const jsonString = JSON.stringify(mcServer.serverstatus, null, 2);
-        // Validate JSON before writing to prevent invalid JSON files
-        JSON.parse(jsonString);
-        await fs.promises.writeFile(filePath, jsonString);  
-    }   // mcServer.serverstatus als JSON-Datei speichern
-    catch (error) {  
-        log.error(`control @ setserverstatus: ${error}` );
-        return res.json({ sender: "server", message:"could not save serverstatus to disc", status: "error" });
-    }
-
-    res.json({ sender: "server", message:t("general.ok"), status: "success" })
-})
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
- * Set STUDENT.STATUS and therefore Inform Client on the next update cycle about a denied printrequest (we handle one request at a time) and other things.
- * @param servename the server 
- * @param csrfservertoken the servers token to authenticate
- * @param studenttoken the students token who should be informed
- */
-router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', function (req, res, next) {
-    const servername = req.params.servername
-    const studenttoken = req.params.studenttoken
-    const mcServer = config.examServerList[servername]
-    
-    const printdenied = req.body.printdenied
-    const delfolder = req.body.delfolder
-    const activatePrivateSpellcheck = req.body.activatePrivateSpellcheck
-    const activatePrivateSuggestions = req.body.activatePrivateSuggestions
-    const removeprintrequest = req.body.removeprintrequest
-    const group = req.body.group
-    const kicked = req.body.kick
-    const msofficeshare = req.body.msofficeshare
-    const getmaterials = req.body.getmaterials
-
-
-    if (req.params.csrfservertoken === mcServer.serverinfo.servertoken) {  //first check if csrf token is valid and server is allowed to trigger this api request
-        
-        if (studenttoken === "all"){
-            for (let student of mcServer.studentList){ 
-                if (delfolder)  { student.status.delfolder = true   } // on the next update cycle the student gets informed to delete workfolder
-                if (group) {student.status.group = group; }
-                if (typeof msofficeshare !== 'undefined') {student.status.msofficeshare = msofficeshare; }   // we need to set this to false for every student to trigger a new upload of the msOfficeFile on section change
-                if (getmaterials) {student.status.getmaterials = true; }
-            }
-        }
-        else {
-            let student = mcServer.studentList.find(element => element.token === studenttoken)
-            if (student) {  
-                // here we handle different forms of information that needs to be set on studentstatus (dont forget to reset those values in /update/route)
-                if (printdenied){ 
-                    student.status.printdenied = true // set student.status so that the student can act on it on the next update
-                    student.printrequest = false  // unset printrequest so that dashboard fetchInfo (which fetches the studentlist) doesnt trigger it again
-                } 
-                if (delfolder)  { student.status.delfolder = true   } // on the next update cycle the student gets informed to delete workfolder
-                if (activatePrivateSpellcheck) {    // allow spellcheck for this specific student (special cases)
-                    student.status.activatePrivateSpellcheck = true; 
-                    student.status.activatePrivateSuggestions = activatePrivateSuggestions;
-                }
-                else {
-                    student.status.activatePrivateSpellcheck = false;
-                    student.status.activateSuggestions = false;
-                }
-                if (removeprintrequest == true){ student.printrequest = false }  // unset printrequest so that dashboard fetchInfo (which fetches the studentlist) doesnt trigger it again
-                if (group) {student.status.group = group; }
-                if (typeof msofficeshare !== 'undefined') {student.status.msofficeshare = msofficeshare; }
-                if (kicked) { student.status.kicked = true }
-                if (getmaterials) {student.status.getmaterials = true; }
-
-                //log.info("control @ setstudentstatus:", req.body)
-              
-            }
-            let now = new Date().getTime()
-      
-            if (now - 20000 > student.timestamp && student.status.kicked)    {
-                let student = mcServer.studentList.find(element => element.token === studenttoken)
-                if (student) {   mcServer.studentList = mcServer.studentList.filter( el => el.token !==  studenttoken); } // remove client from studentlist
-            }
-
-        }
-        res.send( {sender: "server", message: t("control.studentupdate"), status: "success"} )
-    }
-    else {
-        res.send( {sender: "server", message: t("control.actiondenied"), status: "error"} )
-    }
-})
-
-
-
-
-
-/**
- * THE FOLLOWING ROUTES ARE ACCESSED BY STUDENTS ONLY
- */
-
-
 /**
  * UPDATES Clientinfo - the specified students timestamp (used in dashboard to mark user as online) and other status updates
  * FETCHES Serverstatus & Studentstatus
@@ -807,16 +398,17 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
  */
  router.post('/update', function (req, res, next) {
     const clientinfo = req.body.clientinfo
-    const studenttoken = clientinfo.token
+    if (!clientinfo) {
+        return respondStudentAuth(res, 'authrequired')
+    }
     const exammode = clientinfo.exammode
     const servername = clientinfo.servername
 
-    //check if server and student exist
-    const mcServer = config.examServerList[servername]
-    if ( !mcServer) {  return res.send({sender: "server", message:"notavailable", status: "error"} )  }  // server is gone - disconnect student
-
-    let student = mcServer.studentList.find(element => element.token === studenttoken)
-    if ( !student ) {return res.send({ sender: "server", message:"removed", status: "error" }) } // student kicked - disconnect student
+    const auth = resolveStudentForControl(req, servername)
+    if (!auth.ok) {
+        return respondStudentAuth(res, auth.reason)
+    }
+    const { mcServer, studenttoken, student } = auth
 
     //update important student attributes
     student.focus = clientinfo.focus
@@ -828,6 +420,10 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
     student.files = clientinfo.numberOfFiles
     student.remoteassistant = clientinfo.remoteassistant
     student.version = clientinfo.version
+    if (typeof clientinfo.displayCount === 'number') student.displayCount = clientinfo.displayCount
+    if (typeof clientinfo.multiMonitor === 'boolean') student.multiMonitor = clientinfo.multiMonitor
+    if (typeof clientinfo.isRunningInCage === 'boolean') student.isRunningInCage = clientinfo.isRunningInCage
+
 
     if (clientinfo.focus) { student.status.restorefocusstate = false }  // remove task because its obviously done
     if (clientinfo.screenshotinterval == 0){ student.imageurl = "person-lines-fill.svg"  }
@@ -835,9 +431,8 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
     let studentstatus = JSON.parse(JSON.stringify(student.status))  // copy current status > send copy of original to student
    
     // teacher sets studentstatus.kick to true - the moment the student fetches his status and knwon he's kicked he will be removed from the server
-    if (student.status.kicked)    {
-        let student = mcServer.studentList.find(element => element.token === studenttoken)
-        if (student) {   mcServer.studentList = mcServer.studentList.filter( el => el.token !==  studenttoken); } // remove client from studentlist
+    if (student.status.kicked) {
+        mcServer.studentList = mcServer.studentList.filter((el) => el.token !== studenttoken)
     }
 
 
@@ -845,6 +440,7 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
     student.status.printdenied = false 
     student.status.delfolder = false 
     student.status.sendexam = false // request only once
+    student.status.sendlog = false // request only once (next-exam-student.log snapshot to teacher)
     student.status.focus = true
     student.status.getmaterials = false
     //student.status.activatePrivateSpellcheck = false   // activate only once - when student retrieved "studentstatus" we can reset some values of "student.status"
@@ -884,20 +480,21 @@ router.post('/setstudentstatus/:servername/:csrfservertoken/:studenttoken', func
  */
 router.post('/updatescreenshot', async function (req, res, next) {
     const clientinfo = req.body.clientinfo
-    const studenttoken = clientinfo.token
+    if (!clientinfo) {
+        return respondStudentAuth(res, 'authrequired')
+    }
     const servername = clientinfo.servername
-
-    // check if student@server exists
-    const mcServer = config.examServerList[servername]
-    if ( !mcServer) {  return res.send({sender: "server", message:"notavailable", status: "error"} )  }
-    let student = mcServer.studentList.find(element => element.token === studenttoken)
-    if ( !student ) {return res.send({ sender: "server", message:"removed from server", status: "error" }) } //check if the student is registered on this server
+    const auth = resolveStudentForControl(req, servername)
+    if (!auth.ok) {
+        return respondStudentAuth(res, auth.reason)
+    }
+    const { mcServer, student } = auth
   
     if (req.body.screenshot ) {
-        const screenshotBase64 = req.body.screenshot;   // Der Base64-String muss nicht konvertiert werden, er kann direkt verwendet werden
-        //let hash = crypto.createHash('md5').update(Buffer.from(screenshotBase64, 'base64')).digest("hex");  // Berechnen des MD5-Hashs des Base64-Strings
-        
-            student.imageurl = 'data:image/jpeg;base64,' + screenshotBase64; // oder 'data:image/png;base64,' je nach tatsächlichem Bildformat  
+        const screenshotBase64 = req.body.screenshot;   // the base64 string does not need to be converted, it can be used directly
+        //let hash = crypto.createHash('md5').update(Buffer.from(screenshotBase64, 'base64')).digest("hex");  // compute MD5 hash of the base64 string
+
+            student.imageurl = 'data:image/jpeg;base64,' + screenshotBase64; // or 'data:image/png;base64,' depending on actual image format
 
             // only scan screenshot in exam mode and NOT if a restoring/unlocking operation is already in process (otherwise it will lock the unlocked again)
             if (mcServer.serverstatus.exammode && mcServer.serverstatus.screenshotocr && !student.status.restorefocusstate && student.focus){
@@ -912,7 +509,11 @@ router.post('/updatescreenshot', async function (req, res, next) {
                 else {
                     // run ocr
                     try{
-                        const header = req.body.header.split(';base64,').pop();
+                        const rawHeader = req.body.header
+                        if (typeof rawHeader !== 'string' || !rawHeader.includes(';base64,')) {
+                            log.info('control @ updatescreenshot (ocr): missing or invalid header data URL')
+                        } else {
+                        const header = rawHeader.split(';base64,').pop();
                         const headerimageBuffer = Buffer.from(header, 'base64');
 
                         const publicPath = app.isPackaged
@@ -934,6 +535,7 @@ router.post('/updatescreenshot', async function (req, res, next) {
                             student.status.focus = pincodeVisible  // this sets the studentstatus object which is fetched on every update - the students react on this
                             log.info("control @ updatescreenshot (ocr): Student Screenshot does not include Exam PIN");
                         }
+                        }
                     }
                     catch(err){ log.info(`control @ updatescreenshot (ocr): ${err}`); }
                 }
@@ -942,14 +544,24 @@ router.post('/updatescreenshot', async function (req, res, next) {
             if (!student.focus) { // Archiviere Screenshot, wenn Student nicht fokussiert ist
                 log.info("control @ updatescreenshot: Student out of focus - securing screenshots");
                 let time = new Date().toISOString().substr(11, 8).replace(/:/g, "_");
-                let filepath = path.join(config.workdirectory, mcServer.serverinfo.servername, student.clientname, "focuslost");
-                let absoluteFilename = path.join(filepath, `${time}-${req.body.screenshotfilename}`);
+                const shotPart = safeScreenshotFileName(req.body.screenshotfilename) || safeScreenshotFileName('shot.png');
+                const finalName = `${time}-${shotPart}`;
+                if (!isSafePathSegment(finalName)) {
+                    log.warn(`control @ updatescreenshot: rejected screenshot filename (${finalName})`);
+                } else {
+                const filepath = resolvePathUnderRoot(config.workdirectory, [mcServer.serverinfo.servername, student.clientname, "focuslost"]);
+                const absoluteFilename = filepath ? resolvePathUnderRoot(filepath, [finalName]) : null;
             
                 try {
+                    if (!filepath || !absoluteFilename) {
+                        log.warn('control @ updatescreenshot: rejected unsafe focuslost path');
+                    } else {
                     await fs.promises.mkdir(filepath, { recursive: true });
                     let screenshotBuffer = Buffer.from(req.body.screenshot, 'base64');    // Konvertieren des Base64-Strings in einen Buffer und Speichern der Datei
                     await fs.promises.writeFile(absoluteFilename, screenshotBuffer);
+                    }
                 } catch (err) { log.error(`control @ updatescreenshot: ${err}` ); }
+                }
             }
       
     } else {
@@ -965,22 +577,19 @@ router.post('/updatescreenshot', async function (req, res, next) {
  * @param servername the name of the server at which the student is registered
  * @param token the students token to search and update the entry in the list
  */
-router.post('/printrequest/:servername/:studenttoken', async function (req, res, next) {
-    const studenttoken = req.params.studenttoken
+router.post('/submission/:servername', async function (req, res, next) {
     const servername = req.params.servername
     const pdfDocument = req.body.document
     const printrequest = req.body.printrequest
     const submissionnumber = req.body.submissionnumber
-    const lockedsection = req.body.lockedsection || 1 // default to section 1 if not provided
+    const lockedsection = safeSectionFolderId(req.body.lockedsection)
+    const saveReason = typeof req.body.saveReason === 'string' ? req.body.saveReason : 'n/a'
 
-
-    //check if server exists 
-    const mcServer = config.examServerList[servername]
-    if ( !mcServer) {  return res.send({sender: "server", message:"notavailable", status: "error"} )  }
-
-    //check if student is registered on server
-    let student = mcServer.studentList.find(element => element.token === studenttoken)
-    if ( !student ) {return res.send({ sender: "server", message:"removed", status: "error" }) }
+    const auth = resolveStudentForControl(req, servername)
+    if (!auth.ok) {
+        return respondStudentAuth(res, auth.reason)
+    }
+    const { mcServer, student } = auth
     
     if (printrequest){   
         student.printrequest = pdfDocument  // we put the base64 string of the document on printrequest which is checked by the frontend on every fetch cycle
@@ -999,36 +608,128 @@ router.post('/printrequest/:servername/:studenttoken', async function (req, res,
   
     let timestamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`
     let filename = `${servername}-${safeStudent}-${submissionnumber}-${timestamp}.pdf`
-
+    if (!isSafePathSegment(filename)) {
+        log.error(`control @ submission: rejected generated filename (${filename})`);
+        return res.status(500).send({ sender: 'server', message: t("control.submissionfailed"), status: 'error' });
+    }
 
    
     const pdfBuffer = Buffer.from(pdfDocument, 'base64');
 
-
     try {
-        const filepath = path.join(config.workdirectory, mcServer.serverinfo.servername, student.clientname, 'ABGABE', lockedsection.toString() ) // target dir
+        const filepath = resolvePathUnderRoot(config.workdirectory, [mcServer.serverinfo.servername, student.clientname, 'ABGABE', lockedsection])
+        if (!filepath) {
+            log.error('control @ submission: unsafe filepath');
+            return res.status(500).send({ sender: 'server', message: t("control.submissionfailed"), status: 'error' });
+        }
         await fsp.mkdir(filepath, { recursive: true })                                        // ensure dir
-        const absoluteFilename = path.join(filepath, filename)                                 // build path
+        const absoluteFilename = resolvePathUnderRoot(filepath, [filename])
+        if (!absoluteFilename) {
+            log.error('control @ submission: unsafe absoluteFilename');
+            return res.status(500).send({ sender: 'server', message: t("control.submissionfailed"), status: 'error' });
+        }
         await fsp.writeFile(absoluteFilename, pdfBuffer)                                       // write main
       
-        log.info(`control @ printrequest: Received and stored submission file for user: ${student.clientname}`)
+        log.info(`control @ submission: Received and stored submission file for user: ${student.clientname} saveReason=${saveReason}`)
+        WindowHandler.mainwindow.webContents.send('submission', { clientname: student.clientname, clientip: student.clientip, hostname: student.hostname, printrequest: !!printrequest, saveReason })
         // create backup of abgabe
         let backupStatus = 'skipped'                                                           // default backup status
         if (config.backupdirectory) {                                                          // optional backup
-          const backuppath = path.join(config.backupdirectory, mcServer.serverinfo.servername, student.clientname, 'ABGABE', lockedsection.toString() )
+          const backuppath = resolvePathUnderRoot(config.backupdirectory, [mcServer.serverinfo.servername, student.clientname, 'ABGABE', lockedsection])
+          if (!backuppath) {
+            log.error('control @ submission: unsafe backuppath');
+          } else {
           await fsp.mkdir(backuppath, { recursive: true })                                     // ensure backup dir
-          const absoluteBackupFilename = path.join(backuppath, filename)                       // backup path
+          const absoluteBackupFilename = resolvePathUnderRoot(backuppath, [filename])                       // backup path
+          if (!absoluteBackupFilename) {
+            log.error('control @ submission: unsafe backup file path');
+          } else {
           await fsp.writeFile(absoluteBackupFilename, pdfBuffer)                               // write backup
           backupStatus = 'ok'                                                                  // backup ok
+          }
+          }
         }
       
         res.send({ sender: 'server', message: 'success', status: 'success', backup: backupStatus }) // respond success
       } catch (err) {
-        log.error(`control @ printrequest: ${err}`)                                            // log error
+        log.error(`control @ submission: ${err}`)                                            // log error
         let message = t("control.submissionfailed")
         res.status(500).send({ sender: 'server', message: message, status: 'error' })   // respond error
       }
     
+})
+
+/**
+ * Receive PRINTJOB From Student (no ABGABE)
+ * Stores PDF under PRINTJOBS and triggers teacher-side printrequest UI flow.
+ */
+router.post('/printjob/:servername', async function (req, res, next) {
+    const servername = req.params.servername
+    const pdfDocument = req.body.document
+    const submissionnumber = req.body.submissionnumber
+    const lockedsection = safeSectionFolderId(req.body.lockedsection)
+    const saveReason = typeof req.body.saveReason === 'string' ? req.body.saveReason : 'n/a'
+
+    const auth = resolveStudentForControl(req, servername)
+    if (!auth.ok) {
+        return respondStudentAuth(res, auth.reason)
+    }
+    const { mcServer, student } = auth
+
+    // trigger teacher dashboard printrequest flow (polled via studentlist)
+    student.printrequest = pdfDocument
+
+    let safeStudent = student.clientname.replace(/\s+/g, '_')
+    let now = new Date()
+    let timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`
+    let filename = `${servername}-${safeStudent}-${submissionnumber}-${timestamp}.pdf`
+    if (!isSafePathSegment(filename)) {
+        log.error(`control @ printjob: rejected generated filename (${filename})`);
+        return res.status(500).send({ sender: 'server', message: t("control.submissionfailed"), status: 'error' });
+    }
+
+    const pdfBuffer = Buffer.from(pdfDocument, 'base64');
+
+    try {
+        const filepath = resolvePathUnderRoot(config.workdirectory, [mcServer.serverinfo.servername, student.clientname, 'PRINTJOBS', lockedsection])
+        if (!filepath) {
+            log.error('control @ printjob: unsafe filepath');
+            return res.status(500).send({ sender: 'server', message: t("control.submissionfailed"), status: 'error' });
+        }
+        await fsp.mkdir(filepath, { recursive: true })
+        const absoluteFilename = resolvePathUnderRoot(filepath, [filename])
+        if (!absoluteFilename) {
+            log.error('control @ printjob: unsafe absoluteFilename');
+            return res.status(500).send({ sender: 'server', message: t("control.submissionfailed"), status: 'error' });
+        }
+        await fsp.writeFile(absoluteFilename, pdfBuffer)
+
+        log.info(`control @ printjob: Received and stored printjob file for user: ${student.clientname} saveReason=${saveReason}`)
+        WindowHandler.mainwindow.webContents.send('submission', { clientname: student.clientname, clientip: student.clientip, hostname: student.hostname, printrequest: true, saveReason })
+
+        let backupStatus = 'skipped'
+        if (config.backupdirectory) {
+            const backuppath = resolvePathUnderRoot(config.backupdirectory, [mcServer.serverinfo.servername, student.clientname, 'PRINTJOBS', lockedsection])
+            if (!backuppath) {
+                log.error('control @ printjob: unsafe backuppath');
+            } else {
+            await fsp.mkdir(backuppath, { recursive: true })
+            const absoluteBackupFilename = resolvePathUnderRoot(backuppath, [filename])
+            if (!absoluteBackupFilename) {
+                log.error('control @ printjob: unsafe backup file path');
+            } else {
+            await fsp.writeFile(absoluteBackupFilename, pdfBuffer)
+            backupStatus = 'ok'
+            }
+            }
+        }
+
+        res.send({ sender: 'server', message: 'success', status: 'success', backup: backupStatus })
+    } catch (err) {
+        log.error(`control @ printjob: ${err}`)
+        let message = t("control.submissionfailed")
+        res.status(500).send({ sender: 'server', message: message, status: 'error' })
+    }
 })
 
 
@@ -1047,17 +748,33 @@ router.post('/printrequest/:servername/:studenttoken', async function (req, res,
 
 export default router
 
-
-
-//do not allow requests from external hosts
-function requestSourceAllowed(req,res){
-    if (req.ip == "::1"  || req.ip == "127.0.0.1" || req.ip.includes('127.0.0.1') ){ 
-      return true
-    }  
-    log.error(`Blocked request from remote Host: ${req.ip}`); 
-    res.json('Request denied') 
-    return false 
+/** Parses Authorization: Bearer <token> for student control routes (not register/oauth/msauth). */
+function bearerTokenFromRequest(req) {
+    const h = req.headers?.authorization
+    if (!h || typeof h !== 'string') return null
+    const m = /^Bearer\s+(\S+)/i.exec(h.trim())
+    return m ? m[1] : null
 }
+
+/** Resolves mcServer+student by Bearer token and servername; reason authrequired|notavailable|removed. */
+function resolveStudentForControl(req, servername) {
+    const studenttoken = bearerTokenFromRequest(req)
+    if (!studenttoken) return { ok: false, reason: 'authrequired' }
+    const mcServer = config.examServerList[servername]
+    if (!mcServer) return { ok: false, reason: 'notavailable' }
+    const student = mcServer.studentList.find((el) => el.token === studenttoken)
+    if (!student) return { ok: false, reason: 'removed' }
+    return { ok: true, mcServer, studenttoken, student }
+}
+
+/** Sends consistent JSON for student auth failures on control routes. */
+function respondStudentAuth(res, reason) {
+    if (reason === 'authrequired') return res.send({ sender: 'server', message: 'authrequired', status: 'error' })
+    if (reason === 'notavailable') return res.send({ sender: 'server', message: 'notavailable', status: 'error' })
+    return res.send({ sender: 'server', message: 'removed', status: 'error' })
+}
+
+
 
 async function processSecurePayload(packet, sessionRef) {
     const PAD = '0'; 

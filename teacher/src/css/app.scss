@@ -13,7 +13,9 @@ $theme-colors: (
   "warning":    $yellow-400,
   "danger":     $red-600,
   "light":      $light,
-  "dark":       $dark
+  "dark":       $dark,
+  "gray":       $gray-600,
+  "gray-dark":  $gray-800,
 );
 
 // 3. Full Bootstrap (generates all utilities with our overrides above)
@@ -44,15 +46,24 @@ $theme-colors: (
 .btn-teal:hover { background-color: $teal-700; }
 
 
-
 /* GREEN BORDER */
 .bs-success        { border-color: $green-400 !important; }
 .bs-success:hover  { border-color: $green-300 !important; }
 
+/* GRAY BACKGROUND */
+.bg-gray       { background-color: $gray-600 !important; }
+.bg-gray-dark  { background-color: $gray-800 !important; }
 
+.btn-gray       { background-color: $gray-600; }
+.btn-gray:hover { background-color: $gray-500; }
+.btn-gray-dark       { background-color: $gray-800; }
+.btn-gray-dark:hover { background-color: $gray-700; }
 
+.btn-outline-gray       { border-color: $gray-600; color: $gray-600; }
+.btn-outline-gray:hover { background-color: $gray-500; border-color: $gray-500; color: $gray-900; }
 
-
+.btn-outline-gray-dark       { border-color: $gray-800; color: $gray-800; }
+.btn-outline-gray-dark:hover { background-color: $gray-700; border-color: $gray-700; color: $gray-900; }
 
 .btn-primary        { background-color: $blue-400; border-color: $blue-400; }
 .btn-primary:hover  { background-color: $blue-300; border-color: $blue-300; }
@@ -85,4 +96,40 @@ $theme-colors: (
 }
 .snowwhite {
     filter: invert(100%) brightness(200%);
+}
+
+// SweetAlert2: left-align globally (overrides sweetalert2.css centering; align with student/src/css/app.scss)
+.swal2-popup {
+    text-align: left !important;
+}
+
+.swal2-html-container {
+    text-align: left !important;
+    margin-left: 2em !important;
+    overflow: visible !important;
+}
+
+.swal2-title {
+    text-align: left !important;
+    margin-left: 0.2em !important;
+}
+
+.swal2-icon {
+    margin-left: 2.5em !important;
+    margin-right: auto !important;
+}
+
+.swal2-actions {
+    width: 80% !important;
+    margin-left: 1.9em !important;
+    margin-right: 1.9em !important;
+    justify-content: flex-start !important;
+}
+
+.swal2-html-container .swal2-input,
+.swal2-html-container .swal2-textarea,
+.swal2-html-container .swal2-select,
+.swal2-html-container .swal2-file {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
 }

@@ -12,6 +12,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const pdfjsLegacyPdf = path.resolve(__dirname, 'node_modules/pdfjs-dist/legacy/build/pdf.mjs');
+const pdfjsLegacyWorker = path.resolve(__dirname, 'node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs');
 
 const buildDate = (() => {
   const now = new Date();
@@ -92,11 +94,27 @@ export default defineConfig(( ctx: any ) => {
       showBuildSummary: false,
 
       extendViteConf (viteConf: any) {
+        viteConf.server = viteConf.server || {};
+        viteConf.server.forwardConsole = false; // Vite 8+: do not mirror browser console.warn/error to the dev-server terminal (avoids duplicate lines with electron-log).
         // suppress SASS deprecation warnings for Bootstrap color functions
         viteConf.css = viteConf.css || {};
         viteConf.css.preprocessorOptions = viteConf.css.preprocessorOptions || {};
         viteConf.css.preprocessorOptions.scss = viteConf.css.preprocessorOptions.scss || {};
         viteConf.css.preprocessorOptions.scss.silenceDeprecations = ['color-functions', 'if-function'];
+
+        const sharedDir = path.resolve(__dirname, '..', 'shared');
+        viteConf.resolve = viteConf.resolve || {};
+        viteConf.resolve.alias = {
+          ...viteConf.resolve.alias,
+          'pdfjs-dist/legacy/build/pdf.mjs': pdfjsLegacyPdf,
+          'pdfjs-dist/legacy/build/pdf.worker.mjs': pdfjsLegacyWorker,
+          'next-exam-shared': sharedDir,
+        };
+        viteConf.optimizeDeps = viteConf.optimizeDeps || {};
+        viteConf.optimizeDeps.include = viteConf.optimizeDeps.include || [];
+        if (!viteConf.optimizeDeps.include.includes('pdfjs-dist')) {
+          viteConf.optimizeDeps.include.push('pdfjs-dist');
+        }
 
         viteConf.build = viteConf.build || {};
         viteConf.build.chunkSizeWarningLimit = 1500;
@@ -118,12 +136,16 @@ export default defineConfig(( ctx: any ) => {
           viteConf.plugins.push({
             name: 'quasar-electron-rewrite-assets-teacher',
             transformIndexHtml: (html) => {
-              let out = html.replace(/([\"'])\/src\/assets/g, '$1./src/assets');
+              let out = html.replace(/([`"'])\/src\/assets/g, '$1./src/assets');
               out = out.replace(/href=[\"']public\//g, 'href=\"./');
               return out;
             },
             generateBundle (_, bundle) {
+              // Vue compiles template src to backticks; CSS url() is inlined — only JS literals need backtick rewrite.
               const rewrite = (s) => s
+                .replace(/`\/src\/assets/g, '`./src/assets')
+                .replace(/\\"\/src\/assets/g, '\\"./src/assets')
+                .replace(/\\'\/src\/assets/g, "\\'./src/assets")
                 .replace(/"\/src\/assets/g, '"./src/assets')
                 .replace(/'\/src\/assets/g, "'./src/assets");
               for (const item of Object.values(bundle)) {
@@ -161,7 +183,6 @@ export default defineConfig(( ctx: any ) => {
       // https: true,
       open: true, // opens browser window automatically
       host: 'localhost',
-      port: 9300,
       vueDevtools: false
     },
 
@@ -274,6 +295,7 @@ export default defineConfig(( ctx: any ) => {
         asarUnpack: [
           'public',
         ],
+        beforePack: 'scripts/beforepack.js',
         afterPack: 'scripts/afterpack.js',
         directories: { output: `../release/${version}.${buildNumber}_${artifactDate}` },
         compression: 'normal',

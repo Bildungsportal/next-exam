@@ -1,5 +1,22 @@
 import log from 'electron-log/renderer';
 import { Buffer } from 'buffer';
+import { swalQueued } from './swalQueue.js'
+
+/**
+ * Dashboard explorer: read file bytes from the active exam workdir (decrypted in main when applicable).
+ * Used by loadPDF (PDF preview), loadTextFile (log popup), loadImage (image preview) in this module.
+ */
+async function readWorkdirFileForDashboard(ctx, filepath) {
+    const res = await window.ipcRenderer.invoke('readTeacherWorkdirFile', {
+        servername: ctx.servername,
+        servertoken: ctx.servertoken,
+        filepath,
+    })
+    if (!res || res.status !== 'success' || res.data == null) {
+        throw new Error(res?.message || 'read failed')
+    }
+    return res.data
+}
 
 
 // DASHBOARD EXPLORER
@@ -23,13 +40,8 @@ function fdelete(file){
     })
     .then((result) => {
         if (result.isConfirmed) {
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/delete/${this.servername}/${this.servertoken}`, { 
-                method: 'POST',
-                headers: {'Content-Type': 'application/json' },
-                body: JSON.stringify({ filepath:file.path })
-            })
-            .then( res => res.json() )
-            .then( result => { 
+            ipcRenderer.invoke('deleteWorkdirItem', { servername: this.servername, filepath: file.path })
+            .then( result => {
                 log.info(result)
                 this.loadFilelist(this.currentdirectory)
             }).catch(err => { log.error(err)});
@@ -42,7 +54,7 @@ function fdelete(file){
 
 // show workfloder  TODO:  the whole workfolder thing is getting to complex.. this should be a standalone vue.js component thats embedded here
 function showWorkfolder(){
-    document.querySelector("#preview").style.display = "block";
+    this.showExplorer = true;
 }
 
 
@@ -63,20 +75,25 @@ function downloadFile(file){
         return
     }
     log.info("requesting file for downlod ")
-    fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/download/${this.servername}/${this.servertoken}`, { 
-        method: 'POST',
-        headers: {'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename : file.name, path: file.path, type: file.type})
+    ipcRenderer.invoke('workdownloadExplorerItem', {
+        servername: this.servername,
+        servertoken: this.servertoken,
+        filename: file.name,
+        path: file.path,
+        type: file.type,
     })
-    .then( res => res.blob() )
-    .then( blob => {
-            //this is a trick to trigger the download dialog
-            let a = document.createElement("a");
-            a.href = window.URL.createObjectURL(blob);
-            a.setAttribute("download", file.name);
-            a.click();
+    .then((result) => {
+        if (!result || result.status !== 'success' || result.data == null) {
+            log.error('filemanager @ downloadFile:', result)
+            return
+        }
+        const blob = new Blob([result.data], { type: 'application/octet-stream' })
+        let a = document.createElement("a")
+        a.href = window.URL.createObjectURL(blob)
+        a.setAttribute("download", file.name)
+        a.click()
     })
-    .catch(err => { log.error(err)});
+    .catch(err => { log.error(err)})
 }
 
 
@@ -111,14 +128,14 @@ function dashboardExplorerSendFile(file){
     .then((input) => {
         if (input.isConfirmed) {
             let student = this.studentlist.find(element => element.token === input.value)  // fetch cerrect student that belongs to the token
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/sendtoclient/${this.servername}/${this.servertoken}/${student.token}`, { 
-                method: 'POST',
-                headers: {'Content-Type': 'application/json' },
-                body: JSON.stringify({ files:[ {name:file.name, path:file.path } ] })
+            ipcRenderer.invoke('setStudentStatus', {
+                servername: this.servername,
+                studenttoken: student.token,
+                fetchfiles: true,
+                files: [{ name: file.name, path: file.path }],
             })
-            .then( res => res.json() )
-            .then( result => { log.info(result)})
-            .catch(err => { log.error(err)});
+                .then((result) => { log.info(result) })
+                .catch((err) => { log.error(err) })
         }
     }).catch(err => { log.error(err)});
 }
@@ -127,52 +144,131 @@ function dashboardExplorerSendFile(file){
 
 // fetch file from disc - show preview
 function loadPDF(filepath, filename){
-    const form = new FormData()
-    form.append("filename", filepath)
-    //console.log(filepath)
-    fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/getpdf/${this.servername}/${this.servertoken}`, { method: 'POST', body: form })
-    .then( response => response.arrayBuffer())
-    .then( data => {
+    readWorkdirFileForDashboard(this, filepath)
+    .then( (raw) => {
+        const data = raw instanceof ArrayBuffer ? raw : new Uint8Array(raw).buffer
         URL.revokeObjectURL(this.currentpreview);  //speicher freigeben
      
         let isvalid = isValidPdf(data)
         log.info("filemanager @ loadPDF: pdf is valid: ", isvalid)
 
         this.currentpreviewBase64 = Buffer.from(data).toString('base64');
-        this.currentpreview = URL.createObjectURL(new Blob([data], {type: "application/pdf"})) 
+        this.currentpreview = URL.createObjectURL(new Blob([data], {type: "application/pdf"}))
         this.currentpreviewname = filename   //needed for preview buttons
         this.currentpreviewPath = filepath
         this.currentpreviewType = "pdf"
 
-        const pdfEmbed = document.querySelector("#pdfembed");
-        pdfEmbed.style.backgroundImage = '';
-        pdfEmbed.style.height = "85vh";
-        pdfEmbed.style.width = "60vw";
-        pdfEmbed.style.display = 'block';
-        
+        this.activesheetsPreviewPdf = null;
         this.webviewVisible = false;
-
-        document.querySelector("#pdfembed").setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=160`);
         document.querySelector("#pdfpreview").style.display = 'block';
-        document.querySelector("#openPDF").style.display = 'block';
-        document.querySelector("#downloadPDF").style.display = 'block';
-        document.querySelector("#printPDF").style.display = 'block';
-        document.querySelector("#closePDF").style.display = 'block';
-        document.querySelector("#pdfrenderer").style.display = 'none';
 
     }).catch(err => { log.error(err) });     
 }
 
 function isValidPdf(data) {
-    const header = new Uint8Array(data, 0, 5); // Lese die ersten 5 Bytes für "%PDF-"
-    // Umwandlung der Bytes in Hexadezimalwerte für den Vergleich
+    const header = new Uint8Array(data, 0, 5); // read the first 5 bytes for "%PDF-"
+    // Convert bytes to hex values for comparison
     const pdfHeader = [0x25, 0x50, 0x44, 0x46, 0x2D]; // "%PDF-" in Hex
     for (let i = 0; i < pdfHeader.length; i++) {
         if (header[i] !== pdfHeader[i]) {
-            return false; // Früher Abbruch, wenn ein Byte nicht übereinstimmt
+            return false; // early exit if a byte does not match
         }
     }
-    return true; // Alle Bytes stimmen mit dem PDF-Header überein
+    return true; // all bytes match the PDF header
+}
+
+function escapeHtml(s){
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+}
+
+/** Keep the tail of long log text; omit oldest bytes from the start. */
+function truncateLogTextForViewer(text, maxChars = 200000) {
+    const full = String(text)
+    if (full.length <= maxChars) return full
+    const omitted = full.length - maxChars
+    return `... ${omitted} chars omitted from start ...\n\n${full.slice(-maxChars)}`
+}
+
+/** Scroll log popup pre block so the latest lines are visible. */
+function scrollLogPopupPreToBottom() {
+    const pre = document.querySelector('.log-view-popup .log-pre')
+    if (pre && typeof pre.scrollTop === 'number') {
+        pre.scrollTop = pre.scrollHeight
+    }
+}
+
+function scheduleScrollLogPopupPreToBottom() {
+    scrollLogPopupPreToBottom()
+    requestAnimationFrame(() => scrollLogPopupPreToBottom())
+}
+
+// fetch file from disc - show as text (e.g. .log)
+function loadTextFile(filepath, filename){
+    const titleText = buildLogViewerTitle(this.workdirectory, filepath, filename)
+    readWorkdirFileForDashboard(this, filepath)
+        .then((raw) => {
+            const data = raw instanceof ArrayBuffer ? raw : new Uint8Array(raw).buffer
+            const decoder = new TextDecoder('utf-8')
+            const text = truncateLogTextForViewer(decoder.decode(data))
+
+            const htmlLines = String(text).split('\n').map((line) => {
+                const level = detectLogLevel(line)
+                const cls = level ? `log-line log-${level}` : 'log-line'
+                return `<span class="${cls}">${escapeHtml(line)}</span>`
+            }).join('\n')
+
+            this.$swal.fire({
+                title: titleText,
+                html: `<style>
+                    .log-view-popup{ background:#3a3f44 !important; color: rgba(255,255,255,0.92); }
+                    .log-title{ text-align:left; width:100%; font-size:1.3rem !important; line-height:1.15 !important; font-weight:600; word-break:break-all; }
+                    .log-pre{ text-align:left; white-space:pre-wrap; max-height:70vh; overflow:auto; background:#1b1e21; border:1px solid rgba(255,255,255,0.08); padding:12px; border-radius:8px; margin:0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.9rem; line-height: 0.9; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) rgba(0,0,0,0); }
+                    .log-pre::-webkit-scrollbar{ width: 8px; height: 8px; }
+                    .log-pre::-webkit-scrollbar-track{ background: rgba(0,0,0,0); }
+                    .log-pre::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.18); border-radius: 8px; border: 2px solid #1b1e21; }
+                    .log-pre::-webkit-scrollbar-thumb:hover{ background: rgba(255,255,255,0.28); }
+                    .log-line{ display:block; color: rgba(255,255,255,0.82); }
+                    .log-info{ color: #22c55e; }
+                    .log-warn{ color: #eab308; }
+                    .log-error{ color: #ef4444; }
+                    .log-debug{ color: #3b82f6; }
+                    .log-verbose{ color: #d946ef; }
+                </style><pre class="log-pre">${htmlLines}</pre>`,
+                width: '80vw',
+                customClass: { popup: 'log-view-popup', title: 'log-title' },
+                showCloseButton: true,
+                showConfirmButton: false,
+                showCancelButton: false,
+                didOpen: () => scheduleScrollLogPopupPreToBottom(),
+            })
+        })
+        .catch((err) => { log.error(err) })
+}
+
+function normalizeFsPath(p){
+    return String(p || '').replace(/\\/g, '/').replace(/\/+$/, '')
+}
+
+function buildLogViewerTitle(workdirectory, filepath, filename){
+    const wd = normalizeFsPath(workdirectory)
+    const fp = normalizeFsPath(filepath)
+    const base = filename || (fp ? fp.split('/').pop() : 'log')
+    if (wd && fp.startsWith(`${wd}/`)) {
+        return fp.slice(wd.length + 1)
+    }
+    return base
+}
+
+function detectLogLevel(line){
+    const s = String(line || '')
+    const m = s.match(/\b(info|warn|error|debug|verbose)\b/i)
+    if (!m) return null
+    return m[1].toLowerCase()
 }
 
 
@@ -181,11 +277,9 @@ function isValidPdf(data) {
 
 // fetch file from disc - show preview
 function loadImage(file){
-    const form = new FormData()
-    form.append("filename", file)
-    fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/getpdf/${this.servername}/${this.servertoken}`, { method: 'POST', body: form })
-        .then( response => response.arrayBuffer())
-        .then( data => {
+    readWorkdirFileForDashboard(this, file)
+        .then( (raw) => {
+            const data = raw instanceof ArrayBuffer ? raw : new Uint8Array(raw).buffer
             this.currentpreviewPath = file
             this.currentpreviewname = file.split('/').pop(); //needed for preview buttons
   
@@ -193,46 +287,10 @@ function loadImage(file){
 
             this.currentpreviewBase64 = Buffer.from(data).toString('base64');
             this.currentpreviewType = "image"
-            this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "image/jpeg"})) 
-            // wanted to save code here but images need to be presented in a different way than pdf.. so...
-            const pdfEmbed = document.querySelector("#pdfembed");
-            
-            // clear the pdf viewer
-            pdfEmbed.setAttribute("src", "about:blank");
-            
-            const img = new window.Image();
-            img.onload = function() {
-                const width = img.width;
-                const height = img.height;
-                const aspectRatio = width / height;
-
-                const containerWidth = window.innerWidth * 0.8;
-                const containerHeight = window.innerHeight * 0.8;
-                const containerAspectRatio = containerWidth / containerHeight;
-
-                if (aspectRatio > containerAspectRatio) {
-                    pdfEmbed.style.width = '80vw';
-                    pdfEmbed.style.height = `calc(80vw / ${aspectRatio})`;
-                } else {
-                    pdfEmbed.style.height = '80vh';
-                    pdfEmbed.style.width = `calc(80vh * ${aspectRatio})`;
-                }
-
-          
-                pdfEmbed.style.backgroundImage = `url(${this.currentpreview})`;
-
-            }.bind(this);
-            img.src = this.currentpreview;
-            
-            pdfEmbed.style.display = 'block';
+            this.currentpreview =  URL.createObjectURL(new Blob([data], {type: "image/jpeg"}))
+            this.activesheetsPreviewPdf = null;
             this.webviewVisible = false;
-        
-            document.querySelector("#pdfpreview").style.display = 'block'; 
-            document.querySelector("#openPDF").style.display = 'block';
-            document.querySelector("#downloadPDF").style.display = 'block';
-            document.querySelector("#printPDF").style.display = 'block'; 
-            document.querySelector("#closePDF").style.display = 'block';
-            document.querySelector("#pdfrenderer").style.display = 'none';
+            document.querySelector("#pdfpreview").style.display = 'block';
         }).catch(err => { log.error(err)});     
 }
 
@@ -245,13 +303,16 @@ async function getLatest(){
 
 
     this.visualfeedback(this.$t("dashboard.summarizepdf"))
-    fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/getlatest/${this.servername}/${this.servertoken}`, { 
-        method: 'POST',
-        headers: {'Content-Type': 'application/json' },
-        body: JSON.stringify({ submissions: submissions })
-    })
-    .then( response => response.json() )
-    .then( async(responseObj) => {
+    try {
+        const responseObj = await window.ipcRenderer.invoke('buildTeacherCombinedLatestPdf', {
+            servername: this.servername,
+            servertoken: this.servertoken,
+            submissions,
+        })
+        if (!responseObj || responseObj.status !== 'success') {
+            log.error('filemanager @ getLatest:', responseObj)
+            return
+        }
         if (!responseObj.pdfBuffer ){
             log.info("filemanager @ getLatest: latest work not found")
             this.visualfeedback(this.$t("dashboard.nopdf"))
@@ -265,8 +326,9 @@ async function getLatest(){
         }
         // show pdf
         this.loadPDF(responseObj.pdfPath, "combined.pdf")
-        
-    }).catch(err => { log.error(err)});
+    } catch (err) {
+        log.error(err)
+    }
 }
 
 
@@ -290,11 +352,11 @@ async function getLatest(){
  */
 async function processPrintrequest(student){
 
-    if (this.directPrintAllowed){
+    if (this.serverstatus?.directPrintAllowed){
         log.info(`filemanager @ managePrintrequest: direct print from ${student.clientname} accepted`)
         this.status(`Druckauftrag von ${student.clientname} verarbeitet`)
        
-        this.printBase64(student.printrequest, 'pdf')
+        this.printBase64(student.printrequest, 'pdf', `${student.clientname}.pdf`)
         return                   //if direct print is allowed this task ends here
     }
 
@@ -313,7 +375,7 @@ async function processPrintrequest(student){
     log.info(`filemanager @ managePrintrequest: print request from ${student.clientname} accepted`)
     
 
-    this.$swal.fire({
+    swalQueued({
         customClass: {
             popup: 'my-popup',
             title: 'my-title',
@@ -328,6 +390,7 @@ async function processPrintrequest(student){
         icon: "question",
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
+        confirmButtonColor: '#0aa2c0',
     })
     .then((result) => {
         this.printrequest = false // allow new requests
@@ -337,25 +400,12 @@ async function processPrintrequest(student){
         
             this.currentpreviewBase64 = student.printrequest
             this.currentpreview = `data:application/pdf;base64,${this.currentpreviewBase64}`;
-            this.currentpreviewname = `${student.clientname}.pdf`;  // Wird für die Vorschau-Buttons benötigt
+            this.currentpreviewname = `${student.clientname}.pdf`;  // needed for the preview buttons
             this.currentpreviewType = "pdf";
             
-            // PDF in das Embed-Element laden
-            const pdfEmbed = document.querySelector("#pdfembed");
-            pdfEmbed.style.backgroundImage = '';
-            pdfEmbed.style.height = "95vh";
-            pdfEmbed.style.width = "60vw";
-            pdfEmbed.style.display = 'block';
-            
+            this.activesheetsPreviewPdf = null;
             this.webviewVisible = false;
-
-            pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=160`);
             document.querySelector("#pdfpreview").style.display = 'block';
-            document.querySelector("#openPDF").style.display = 'none';
-            document.querySelector("#downloadPDF").style.display = 'block';
-            document.querySelector("#printPDF").style.display = 'block';
-            document.querySelector("#closePDF").style.display = 'block';
-            document.querySelector("#pdfrenderer").style.display = 'none';
         }
         else {
             this.setStudentStatus({printdenied:true}, student.token)  //inform student that request was denied
@@ -399,19 +449,8 @@ function showBase64FilePreview(base64, filename){
         this.currentpreview = base64;
     }
 
-    const pdfEmbed = document.querySelector("#pdfembed");
-    pdfEmbed.style.backgroundImage = '';
-    pdfEmbed.style.height = "85vh";
-    pdfEmbed.style.width = "60vw";
-    
-    pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=160`);
+    this.activesheetsPreviewPdf = null;
     document.querySelector("#pdfpreview").style.display = 'block';
-    document.querySelector("#openPDF").style.display = 'none';
-    document.querySelector("#downloadPDF").style.display = 'none';
-    document.querySelector("#pdfembed").style.display = 'block';
-    document.querySelector("#printPDF").style.display = 'none';
-    document.querySelector("#pdfrenderer").style.display = 'none';
-    document.querySelector("#closePDF").style.display = 'block';
 }
 
 
@@ -428,36 +467,9 @@ function showBase64PdfInRenderer(base64, filename, group){
 
     this.activesheetsPreviewFilename = filename;
     this.activesheetsPreviewPdf = base64;
-    
-    // Hide other preview components
+    this.currentpreview = null;
     this.webviewVisible = false;
-    const pdfEmbed = document.querySelector("#pdfembed");
-    if (pdfEmbed) {
-        pdfEmbed.setAttribute("src", "about:blank");
-        pdfEmbed.style.display = 'none';
-    }
-    
-    // Hide other preview buttons
-    const openPDF = document.querySelector("#openPDF");
-    const downloadPDF = document.querySelector("#downloadPDF");
-    const printPDF = document.querySelector("#printPDF");
-    const closePDF = document.querySelector("#closePDF");
-    const pdfRenderer = document.querySelector("#pdfrenderer");
-    if (pdfRenderer) {
-        pdfRenderer.style.display = 'flex';
-    }
-
-
-    if (openPDF) openPDF.style.display = 'none';
-    if (downloadPDF) downloadPDF.style.display = 'none';
-    if (printPDF) printPDF.style.display = 'none';
-    if (closePDF) closePDF.style.display = 'none';
-    
-    // Show the PDF preview pane (PdfRenderer will be shown if activesheetsPreviewPdf is set)
-    const pdfPreview = document.querySelector("#pdfpreview");
-    if (pdfPreview) {
-        pdfPreview.style.display = 'block';
-    }
+    document.querySelector("#pdfpreview").style.display = 'block';
 }
 
 // show base64 encoded image in preview panel
@@ -466,45 +478,13 @@ function showBase64ImagePreview(base64, filename){
     this.urlForWebview = null;
     this.webviewVisible = false;
 
-    const pdfEmbed = document.querySelector("#pdfembed");
-    pdfEmbed.setAttribute("src", "about:blank"); // clear the pdf viewer
-
     this.currentpreviewBase64 = base64
     this.currentpreview = `${this.currentpreviewBase64}`;
     this.currentpreviewType = "image";
     this.currentpreviewname = filename
-
-    // create demo image object to calculate width and height
-    const img = new window.Image();
-    img.onload = function() {
-        const width = img.width;
-        const height = img.height;
-        const aspectRatio = width / height;
-
-        const containerWidth = window.innerWidth * 0.8;
-        const containerHeight = window.innerHeight * 0.8;
-        const containerAspectRatio = containerWidth / containerHeight;
-
-        if (aspectRatio > containerAspectRatio) {
-            pdfEmbed.style.width = '80vw';
-            pdfEmbed.style.height = `calc(80vw / ${aspectRatio})`;
-        } else {
-            pdfEmbed.style.height = '80vh';
-            pdfEmbed.style.width = `calc(80vh * ${aspectRatio})`;
-        }
-        pdfEmbed.style.backgroundImage = `url(${this.currentpreview})`;
-
-    }.bind(this);
-    img.src = this.currentpreview;
     
-    //hide show some buttons
-    document.querySelector("#pdfembed").style.display = 'block';
+    this.activesheetsPreviewPdf = null;
     document.querySelector("#pdfpreview").style.display = 'block';
-    document.querySelector("#openPDF").style.display = 'none';
-    document.querySelector("#downloadPDF").style.display = 'none';
-    document.querySelector("#printPDF").style.display = 'none';
-    document.querySelector("#closePDF").style.display = 'block';
-    document.querySelector("#pdfrenderer").style.display = 'none';
 }
 
 
@@ -533,32 +513,53 @@ function sleep(ms) {
 
 
 //print pdf in focus - uses window.print()
-async function printBase64(documentBase64 = this.currentpreviewBase64, type=this.currentpreviewType){   //use currentpreview or a given base64 document
+async function printBase64(documentBase64 = this.currentpreviewBase64, type = this.currentpreviewType, jobTitle) {
     if (!this.defaultPrinter){
         this.showSetup()
         return
     }
-    this.visualfeedback(`Druckauftrag an Drucker übertragen`)
-    ipcRenderer.invoke("printBase64", documentBase64, this.defaultPrinter, type) 
+    const title = (jobTitle != null && String(jobTitle).trim() !== '')
+        ? String(jobTitle).trim()
+        : (this.currentpreviewname && String(this.currentpreviewname).trim()) || 'Next-Exam'
+    this.visualfeedback(this.$t('dashboard.printJobSent'))
+    try {
+        await ipcRenderer.invoke('printBase64', documentBase64, this.defaultPrinter, type, title)
+    } catch (e) {
+        log.error(`filemanager @ printBase64: ${e.message}`)
+    }
 }
 
 
-function loadFilelist(directory){
-    fetch(`https://${this.serverip}:${this.serverApiPort}/server/data/getfiles/${this.servername}/${this.servertoken}`, { 
-        method: 'POST',
-        headers: {'Content-Type': 'application/json' },
-        body: JSON.stringify({ dir : directory})
-    })
-    .then( response => response.json() )
-    .then( filelist => {
+async function loadFilelist(directory){
+    try {
+        const res = await window.ipcRenderer.invoke('listTeacherWorkdir', {
+            servername: this.servername,
+            servertoken: this.servertoken,
+            dir: directory,
+        })
+        if (!res || res.status !== 'success' || !Array.isArray(res.filelist)) {
+            log.error('filemanager @ loadFilelist:', res)
+            return
+        }
+        const filelist = res.filelist
+        // Resolve parent from listTeacherWorkdir meta row before sort (pinned dirs/files move it away from index 0).
+        const dirMeta = filelist.find((e) => typeof e?.parentdirectory === 'string' && typeof e?.currentdirectory === 'string')
+        const listedParentDir = dirMeta ? dirMeta.parentdirectory : ''
         //log.error(filelist)
-        filelist.sort()
-        filelist.reverse()
+        const pinnedDirs = ['ABGABE', 'logfiles', 'screenshots'];
+        filelist.sort((a, b) => {
+            const aPin = a.type === 'dir' && pinnedDirs.includes(a.name) ? 0 : (a.type === 'dir' ? 1 : 2);
+            const bPin = b.type === 'dir' && pinnedDirs.includes(b.name) ? 0 : (b.type === 'dir' ? 1 : 2);
+            if (aPin !== bPin) return aPin - bPin;
+            return String(a.name || '').localeCompare(String(b.name || ''))
+        })
         this.localfiles = filelist;
         this.currentdirectory = directory
-        this.currentdirectoryparent = filelist[filelist.length-1].parentdirectory // the currentdirectory and parentdirectory properties are always on [0]
+        this.currentdirectoryparent = listedParentDir
         if (directory === this.workdirectory) {this.showWorkfolder(); }
-    }).catch(err => { log.error(err)});
+    } catch (err) {
+        log.error(err)
+    }
 }
  
-export {loadFilelist, getLatest, processPrintrequest, loadImage, loadPDF, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer}
+export {loadFilelist, getLatest, processPrintrequest, loadImage, loadPDF, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer}

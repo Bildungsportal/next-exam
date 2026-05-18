@@ -24,9 +24,12 @@ logs
 *.log
 npm-debug.log*
 
-.cursor/
-
 config.js
 
 # Capacitor build artifacts (recreated on each build:ios)
 /student/src-capacitor/www/
+
+virtio-win.iso
+win11_iot.iso
+win11.qcow2
+autounattend-iso-root

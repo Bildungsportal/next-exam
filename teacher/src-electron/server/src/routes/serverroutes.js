@@ -15,13 +15,39 @@
  * If not, see <http://www.gnu.org/licenses/>
  */
 
+import crypto from 'crypto';
 import { Router } from 'express';
-export const serverRouter = Router()
-
+import log from 'electron-log';
+import { NEXT_EXAM_API_SECRET, NEXT_EXAM_API_SECRET_HEADER } from '../../../../../shared/nextExamApiSecret.js';
 import controlRoutes from './server/control.js';
 import dataRoutes from './server/data.js';
 
+export const serverRouter = Router();
 
+/** Reject /server/* unless caller sends shared app secret (OAuth browser redirects exempt). */
+function requireNextExamAppSecret(req, res, next) {
+    if (req.method === 'OPTIONS') {
+        return next();
+    }
+    const p = req.path || '';
+    if (p === '/control/oauth' || p === '/control/msauth' || p === '/control/connectedstudentips') {
+        return next();
+    }
+    const got = req.get(NEXT_EXAM_API_SECRET_HEADER);
+    if (!got || typeof got !== 'string') {
+        log.warn(`serverroutes @ requireNextExamAppSecret: missing header (${req.method} ${p})`);
+        return res.status(403).json({ status: 'error', sender: 'server', message: 'forbidden' });
+    }
+    const a = Buffer.from(NEXT_EXAM_API_SECRET, 'utf8');
+    const b = Buffer.from(got, 'utf8');
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+        log.warn(`serverroutes @ requireNextExamAppSecret: invalid secret (${req.method} ${p})`);
+        return res.status(403).json({ status: 'error', sender: 'server', message: 'forbidden' });
+    }
+    return next();
+}
+
+serverRouter.use(requireNextExamAppSecret);  //this requires the shared app secret to be sent in the header of the request
 serverRouter.use('/control/', controlRoutes);
 serverRouter.use('/data/', dataRoutes);
 

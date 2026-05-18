@@ -171,7 +171,7 @@ async function getWlanInfoLinux() {
                     ssid,
                     bssid,
                     quality,
-                    message: null
+                    message: (ssid || bssid || quality !== null) ? null : 'nointerface'
                 };
             } catch (iwError) {
                 // Only log if it's a real error
@@ -210,7 +210,7 @@ async function getWlanInfoLinux() {
                         ssid,
                         bssid,
                         quality: dbmToQualityPercent(signal),
-                        message: null
+                        message: (ssid || bssid || signal !== null) ? null : 'nointerface'
                     };
                 } catch (iwconfigError) {
                     // Only log if all methods failed with real errors (command not found, timeout)

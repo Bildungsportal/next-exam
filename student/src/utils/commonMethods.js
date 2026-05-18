@@ -21,11 +21,9 @@ export function gracefullyExit() {
       showCancelButton: true,                              // show cancel button
       cancelButtonText: this.$t("editor.cancel"),                // cancel button text
       html: needsPw ? `
-        <div class="m-2 mt-4">
-          <div class="input-group m-1 mb-1">
-            <span class="input-group-text col-3" style="width:140px;">Passwort</span>
-            <input class="form-control" type="password" id="localpassword" placeholder="Passwort">
-          </div>
+        <div class="m-2 mt-4 text-start">
+          <label for="localpassword" class="form-label mb-1">${this.$t("student.password")}</label>
+          <input class="form-control" type="password" id="localpassword" placeholder="${this.$t("student.password")}">
         </div>
       ` : "",
       didOpen: (popup) => {
@@ -72,11 +70,16 @@ export function gracefullyExit() {
         title: this.$t("editor.reconnect"), // Dialog title
         icon: 'info', // Info icon
         showCancelButton: true, // Show cancel button
-        confirmButtonText: "OK", // Confirm button text
+        confirmButtonText: this.$t("general.ok"), // Confirm button text
+        cancelButtonText: this.$t("editor.cancel"), // Cancel button text
         // Use HTML for multiple inputs
         html: `
-            <input id="swal-input-ip" class="swal2-input" type="text" value="${this.serverip}" placeholder="IP-Adresse">
-            <input id="swal-input-pin" class="swal2-input" type="number" value="${this.pincode}" placeholder="PIN">
+            <div class="nx-swal-form text-start">
+                <label for="swal-input-ip" class="form-label mb-1">${this.$t("student.ip")}</label>
+                <input id="swal-input-ip" class="swal2-input nx-swal-input" type="text" value="${this.serverip}" placeholder="${this.$t("student.ip")}">
+                <label for="swal-input-pin" class="form-label mb-1 mt-2">${this.$t("student.pin")}</label>
+                <input id="swal-input-pin" class="swal2-input nx-swal-input" type="number" value="${this.pincode}" placeholder="${this.$t("student.pin")}">
+            </div>
         `,
         preConfirm: () => {
             const ip = document.getElementById('swal-input-ip').value.trim();    // Get IP value
@@ -84,7 +87,7 @@ export function gracefullyExit() {
             const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/; // Simple IP regex
 
             if (!ip || !ipRegex.test(ip)) {
-                this.$swal.showValidationMessage("Ungültige IP-Adresse."); // Show IP error message
+                this.$swal.showValidationMessage(this.$t("student.invalidip")); // Show IP error message
                 return false;
             }
             if (!pin) {
@@ -104,9 +107,11 @@ export function gracefullyExit() {
         this.token = IPCresponse.token; // set token (used to determine server connection status)
 
         // Show success or error swal
+        // Success copy: use reconnect text when server set reconnected or UI still shows exam mode (register path may be "new" on server).
+        const successText = (IPCresponse.reconnected || this.exammode) ? this.$t("student.reconnectedinfo") : this.$t("student.registeredinfo")
         this.$swal.fire({
             title: IPCresponse.status === "success" ? "OK" : "Error", // Title based on status
-            text: IPCresponse.status === "success" ? this.$t("student.registeredinfo") : IPCresponse.message, // Text based on status
+            text: IPCresponse.status === "success" ? successText : IPCresponse.message, // Text based on status
             icon: IPCresponse.status, // Icon is 'success' or 'error'
             showCancelButton: false, // No cancel button
         });
@@ -117,6 +122,33 @@ export function gracefullyExit() {
 }
 
 
+export function applyPreviewWebviewHostLayout(splitview) {
+    const webview = document.querySelector('#preview #webview') || document.querySelector('#webview');
+    if (!webview) return;
+    if (!splitview) {
+        // Match PdfviewPaneRendered .embed-container: same width token + horizontal centering (avoid 80vw + top:10% drift).
+        webview.style.display = 'block';
+        webview.style.boxSizing = 'border-box';
+        webview.style.position = 'relative';
+        webview.style.top = '0';
+        webview.style.height = '100%';
+        webview.style.width = 'var(--nx-preview-content-width, 100%)';
+        webview.style.maxWidth = '100%';
+        webview.style.marginLeft = 'auto';
+        webview.style.marginRight = 'auto';
+    } else {
+        webview.style.height = '100%';
+        webview.style.width = '100%';
+        webview.style.position = 'relative';
+        webview.style.top = '0%';
+        webview.style.display = '';
+        webview.style.boxSizing = '';
+        webview.style.maxWidth = '';
+        webview.style.marginLeft = '';
+        webview.style.marginRight = '';
+    }
+}
+
 export function showUrl(url){
     this.webviewVisible = true;
     this.urlForWebview = url;
@@ -126,30 +158,17 @@ export function showUrl(url){
     }
 
     const applyDomChanges = () => {
-        const webview = document.querySelector("#webview");
-        if (webview) {
-            if (!this.splitview){
-                webview.style.height = "80vh";
-                webview.style.width = "80vw";
-                webview.style.position = "relative";
-                webview.style.top = "10%";
-            } else {
-                webview.style.height = "100%";
-                webview.style.width = "100%";
-                webview.style.position = "relative";
-                webview.style.top = "0%";
-            }
+        const preview = document.querySelector('#preview');
+        if (preview) {
+            preview.style.display = 'block';
         }
 
-        const embedcontainer = document.querySelector(".embed-container");
+        const embedcontainer = document.querySelector('#preview .embed-container');
         if (embedcontainer) {
             embedcontainer.style.display = 'none';
         }
 
-        const preview = document.querySelector("#preview");
-        if (preview) {
-            preview.style.display = 'block';
-        }
+        applyPreviewWebviewHostLayout(this.splitview);
     };
 
     this.$nextTick(() => applyDomChanges());

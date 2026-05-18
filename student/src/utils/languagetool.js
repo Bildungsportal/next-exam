@@ -28,7 +28,7 @@ function LTdisable(){
 
     this.canvas = document.getElementById('highlight-layer');
     this.ctx = this.canvas.getContext('2d');
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); // Vorheriges Highlighting löschen
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); // clear previous highlighting
    
     let ltdiv = document.getElementById(`languagetool`)    // the div is not existant if lt is disabled
     let eye = document.getElementById('eye')               // the div is not existant if lt is disabled
@@ -80,20 +80,20 @@ async function LTcheckAllWords(closeLT = true){
 
 
 
-    if (this.text.length == 0) { 
-        this.LTinfo = "Keine Fehler gefunden"
+    if (this.text.length == 0) {
+        this.LTinfo = this.$t('editor.ltNoErrors')
         this.spellcheckFallback = false
         return; 
     }
 
     //request LanguageTool API
-    this.LTinfo = "searching..."
+    this.LTinfo = this.$t('editor.ltSearching')
 
     try {
         const ltStatus = await signalBridge.invoke('isLanguageToolRunning')
         if (!ltStatus?.running) {
-            this.LTinfo = "Der LT-Server ist nicht erreichbar"
-            console.warn('languagetool.js @ LTcheckAllwords (status check): LT-Server ist nicht erreichbar')
+            this.LTinfo = this.$t('editor.ltUnreachable')
+            console.warn('languagetool.js @ LTcheckAllwords (status check): LT server is not reachable')
             this.spellcheckFallback = true
             this.ltRunning = false
             this.misspelledWords = []
@@ -104,7 +104,7 @@ async function LTcheckAllWords(closeLT = true){
         }
     } catch (statusError) {
         console.warn('languagetool.js @ LTcheckAllwords (status check):', statusError.message)
-        this.LTinfo = "Der LT-Server ist nicht erreichbar"
+        this.LTinfo = this.$t('editor.ltUnreachable')
         this.spellcheckFallback = true
         this.ltRunning = false
         this.misspelledWords = []
@@ -131,7 +131,7 @@ async function LTcheckAllWords(closeLT = true){
             headers,
             body: new URLSearchParams({
                 text: this.text,
-                language: this.ltLanguage || this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang
+                language: this.ltLanguage || this.getEditorExamConfig?.(this.lockedSection)?.spellchecklang || this.serverstatus?.examSections?.[this.serverstatus?.activeSection]?.spellchecklang
             }).toString()
         });
 
@@ -140,9 +140,9 @@ async function LTcheckAllWords(closeLT = true){
         const data = await response.json();      
         this.spellcheckFallback = false
   
-        this.LThandleMisspelled(data.matches)   //bereitet die liste auf - entfernt duplikate
+        this.LThandleMisspelled(data.matches)   //prepares the list - removes duplicates
         if (!this.misspelledWords.length) {
-            this.LTinfo = "Keine Fehler gefunden"
+            this.LTinfo = this.$t('editor.ltNoErrors')
             return;
         }
             
@@ -150,7 +150,7 @@ async function LTcheckAllWords(closeLT = true){
 
     } catch (error) {
         console.warn('languagetool.js @ LTcheckAllwords (catch):', error.message)  
-        this.LTinfo = "Der LT-Server ist nicht erreichbar"
+        this.LTinfo = this.$t('editor.ltUnreachable')
         this.spellcheckFallback = true
         this.ltRunning = false
         this.misspelledWords = []
@@ -201,7 +201,7 @@ function LThandleMisspelled(matches){
 
 async function LTfindWordPositions() {
     if (!this.misspelledWords || !this.textContainer || this.misspelledWords.length === 0) {
-        this.LTinfo = "Keine Fehler gefunden"
+        this.LTinfo = this.$t('editor.ltNoErrors')
         return [];
     }
 
@@ -220,7 +220,7 @@ async function LTfindWordPositions() {
             word.whitespace = true;
         }
         else if (t === 'typographical') {
-            word.color = 'rgba(146, 43, 33, 0.3)'; // rötlich, echte Typografiefehler
+            word.color = 'rgba(146, 43, 33, 0.3)'; // reddish, real typographic errors
         }
         else if (t === 'misspelling') { word.color = 'rgba(211, 84, 0, 0.3)'; }
         else if (t === 'grammar') { word.color = 'rgba(26, 115, 232, 0.35)'; }
@@ -301,10 +301,10 @@ async function LTfindWordPositions() {
                     const endsWithWordChar = /\w/.test(lastChar);
 
                     if (startsWithWordChar || endsWithWordChar) {
-                        // „normale“ Wörter → Wortgrenzen verwenden
+                        // “regular” words → use word boundaries
                         pattern = `\\b${escapedWord}\\b`;
                     } else {
-                        // z.B. " ," → keine Wortgrenzen, nur die Sequenz
+                        // e.g. “ ,” → no word boundaries, just the sequence
                         pattern = escapedWord;
                     }
                 }
@@ -487,7 +487,7 @@ function LTfindByOffsetMap(word, offsetMap) {
 //     this.canvas.height = this.textContainer.offsetHeight;
 //     this.canvas.style.top = this.textContainer.offsetTop + 'px';
 //     this.canvas.style.left = this.textContainer.offsetLeft + 'px';
-//     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); // Vorheriges Highlighting löschen
+//     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); // clear previous highlighting
     
 //      // Check if the 'position' attribute exists in the 'word' object - if not remove word object from misspelled array -  don't know if that's a good idea????
 //     // this.misspelledWords = this.misspelledWords.filter(word => {
@@ -506,13 +506,15 @@ function LTfindByOffsetMap(word, offsetMap) {
 //         }
 //         const adjustedLeft = word.position.left - this.textContainer.offsetLeft + window.scrollX;
 //         const adjustedTop = word.position.top - this.textContainer.offsetTop + window.scrollY;
-//         this.ctx.fillStyle = word.color; // Farbe und Transparenz des Highlights
-//         this.ctx.fillRect(adjustedLeft, adjustedTop+translate, word.position.width, height); // Angepasste Position und Größe
+//         this.ctx.fillStyle = word.color; // color and transparency of the highlight
+//         this.ctx.fillRect(adjustedLeft, adjustedTop+translate, word.position.width, height); // adjusted position and size
 //     });
 // }
     
 function LThighlightWords() {
-    if (!this.textContainer || (!this.serverstatus.examSections[this.serverstatus.activeSection].languagetool && !this.privateSpellcheck.activated)) {
+    const editorCfg = this.getEditorExamConfig?.(this.lockedSection) || null
+    const ltEnabled = editorCfg ? !!editorCfg.languagetool : !!this.serverstatus?.examSections?.[this.serverstatus?.activeSection]?.languagetool
+    if (!this.textContainer || (!ltEnabled && !this.privateSpellcheck.activated)) {
         console.log(this.privateSpellcheck);
         this.LTdisable(); 
         return;

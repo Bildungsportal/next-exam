@@ -37,9 +37,9 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
         send: (channel, data) => ipcRenderer.send(channel, data),
         sendSync: (channel, data) => ipcRenderer.sendSync(channel, data),
         on: (channel, func) => ipcRenderer.on(channel, (event, ...args) => func(event, ...args)),
-        invoke: (channel, ...data) => ipcRenderer.invoke(channel, ...data), // Hier mit Spread-Operator
-        removeListener: (channel, listener) => ipcRenderer.removeListener(channel, listener), // Entfernt einen Listener
-        removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel), // Entfernt alle Listener für einen Channel
+        invoke: (channel, ...data) => ipcRenderer.invoke(channel, ...data), // Using spread operator here
+        removeListener: (channel, listener) => ipcRenderer.removeListener(channel, listener), // Removes a listener
+        removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel), // Removes all listeners for a channel
     });
 
 if (webglFindings.detected || backendFindings?.isVM) {

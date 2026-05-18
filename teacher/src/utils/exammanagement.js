@@ -1,11 +1,12 @@
-import axios from "axios"
-import FormData from 'form-data'
 import log from 'electron-log/renderer';
+import examEventBus from './examEventBus.js'
+import { buildExamLogSettingsSnapshot } from './examLogSettings.js'
+import { countReachableStudents, isStudentReachable } from './studentPresence.js'
 
 
 
 // enable exam mode 
-function startExam(){
+async function startExam(){
  
     setTimeout(() => {
         this.getFiles('all'); //  trigger this one immediately to figure out if there are write problems on student pcs 
@@ -15,23 +16,102 @@ function startExam(){
         this.setStudentStatus({msofficeshare: false}, 'all');
     }
 
-    this.serverstatus.examSections[this.serverstatus.activeSection].locked = true;   // starting exammode locks the current active section
-    this.serverstatus.lockedSection = this.serverstatus.activeSection;
+    const now = Date.now()
+    const rawSection = Number(this.serverstatus.activeSection) || 1
+    const sectionIndex = Math.min(Math.max(1, rawSection), 4)
+
+    // LocalVM/QEMU hash is computed when selecting the disk (configureLocalVM) – if enabled.
+    try {
+        const examSection = this.serverstatus.examSections[sectionIndex]
+        if (examSection?.examtype === 'localvm') {
+            const hasGroups = !!examSection.groups
+            const cfgA = examSection?.groupA?.examConfig?.localvm || {}
+            const cfgB = examSection?.groupB?.examConfig?.localvm || {}
+            const wantsHashA = cfgA.calculateSha256 === true
+            const wantsHashB = cfgB.calculateSha256 === true
+            if (!hasGroups) {
+                if (cfgA.qcow2Name && wantsHashA && !cfgA.qcow2Sha256) {
+                    this.status('LocalVM: Hash fehlt – bitte VM-Disk erneut wählen.')
+                    return
+                }
+                if (cfgA.qcow2Name && !wantsHashA && !cfgA.qcow2SizeBytes) {
+                    this.status('LocalVM: Dateigröße fehlt – bitte VM-Disk erneut wählen.')
+                    return
+                }
+            } else {
+                if (cfgA.qcow2Name && wantsHashA && !cfgA.qcow2Sha256) {
+                    this.status('LocalVM: Hash fehlt (Gruppe A) – bitte VM-Disk erneut wählen.')
+                    return
+                }
+                if (cfgB.qcow2Name && wantsHashB && !cfgB.qcow2Sha256) {
+                    this.status('LocalVM: Hash fehlt (Gruppe B) – bitte VM-Disk erneut wählen.')
+                    return
+                }
+                if (cfgA.qcow2Name && !wantsHashA && !cfgA.qcow2SizeBytes) {
+                    this.status('LocalVM: Dateigröße fehlt (Gruppe A) – bitte VM-Disk erneut wählen.')
+                    return
+                }
+                if (cfgB.qcow2Name && !wantsHashB && !cfgB.qcow2SizeBytes) {
+                    this.status('LocalVM: Dateigröße fehlt (Gruppe B) – bitte VM-Disk erneut wählen.')
+                    return
+                }
+            }
+        }
+    } catch (e) {
+        log.error('exammanagement @ startExam: localvm hash missing check failed', e)
+        this.status('LocalVM: Konfiguration ungültig.')
+        return
+    }
+
+    this.serverstatus.examSections[sectionIndex].locked = true;   // starting exammode locks the current active section
+    this.serverstatus.lockedSection = sectionIndex;
+    this.serverstatus.examSections[sectionIndex].startTs = now
     
-    // Gruppenzuordnungen setzen und Schüler informieren
-    if (!this.serverstatus.examSections[this.serverstatus.activeSection].groups) {
-        // Keine Gruppen aktiviert - alle in Gruppe A
-        this.serverstatus.examSections[this.serverstatus.activeSection].groupA.users = this.studentlist.map(student => student.clientname);
+    // Set group assignments and notify students
+    if (!this.serverstatus.examSections[sectionIndex].groups) {
+        // No groups activated - all in group A
+        this.serverstatus.examSections[sectionIndex].groupA.users = this.studentlist.map(student => student.clientname);
         this.setStudentStatus({group:"a"}, 'all');
     } else {
-        // Gruppen aktiviert - Schüler gemäß gespeicherter Zuordnung informieren
+        // Groups activated - notify students according to stored assignment
         this.restoreGroupAssignments(true);
     }
 
-    this.lockscreens(false, false); // deactivate lockscreen
+    this.lockscreens(false, false, true); // deactivate lockscreen (bypass reachable gate; exam start must update server state)
     this.serverstatus.exammode = true;
+    examEventBus.examStart = new Date().toLocaleString('de-DE')
+    examEventBus._scheduleSave()
     log.info("exammanagment @ startExam: starting exammode")
+    const settingsSnap = buildExamLogSettingsSnapshot(this.serverstatus, sectionIndex)
+    examEventBus.push('examstart', {}, settingsSnap ? { settings: settingsSnap } : null)
     this.visualfeedback(this.$t("dashboard.startexam"))
+    try {
+        const resp = await this.setServerStatus()
+        if (resp && resp.status === 'error') {
+            log.error('exammanagement @ startExam: setServerStatus rejected', resp.message)
+            this.status(resp.message || 'Serverstatus konnte nicht gespeichert werden.')
+        }
+    } catch (e) {
+        log.error('exammanagement @ startExam: setServerStatus failed', e)
+        this.status('Server nicht erreichbar (Serverstatus speichern).')
+    }
+}
+
+function lockSectionForAll(sectionIndex){
+    const now = Date.now()
+    Object.values(this.serverstatus.examSections).forEach(section => { section.locked = false })
+    this.serverstatus.examSections[sectionIndex].locked = true
+    this.serverstatus.lockedSection = sectionIndex
+    this.serverstatus.examSections[sectionIndex].startTs = now
+
+    if (!this.serverstatus.examSections[sectionIndex].groups) {
+        this.serverstatus.examSections[sectionIndex].groupA.users = this.studentlist.map(student => student.clientname)
+        this.setStudentStatus({group:"a"}, 'all')
+    } else {
+        this.restoreGroupAssignments(true)
+    }
+
+    this.setStudentStatus({msofficeshare:false}, 'all')
     this.setServerStatus()
 }
 
@@ -71,21 +151,44 @@ function endExam(){
         if (result.isConfirmed) {
             Object.values(this.serverstatus.examSections).forEach(section => {   section.locked = false    })
             this.serverstatus.exammode = false;
-            this.lockscreens(false, false); // deactivate lockscreen
+            examEventBus.examEnd = new Date().toLocaleString('de-DE')
+            examEventBus._scheduleSave()
+            examEventBus.push('examend')
+            this.lockscreens(false, false, true); // deactivate lockscreen (bypass reachable gate; exam end must update server state)
             this.setServerStatus()
-        } 
-    }); 
+        }
+    });
 }
 
 
 /** 
  * Stop and Exit Exam Server Instance
  */
-function stopserver(){
+async function stopserver(){
 
     if (this.hostip){  this.getFiles('all') }      // fetch files from students before ending exam for everybody - this takes up to 8 seconds and may fail - so this is just a emergency backup and should be properly handled by the teacher
     let message = this.$t("dashboard.exitexam")
     if (!this.serverstatus.exammode) { message = this.$t("dashboard.exitexaminfo")}
+
+    const now = Date.now()
+    let freshSubmissions = Array.isArray(this.submissions) ? this.submissions : []
+    const warnSubmissions = activeSectionUsesAbgabeSubmissionWarnings(this.serverstatus)
+    if (warnSubmissions) {
+        try {
+            if (typeof window !== 'undefined' && window.ipcRenderer?.invoke) {
+                freshSubmissions = await window.ipcRenderer.invoke('getSubmissions', this.servername, JSON.stringify(this.serverstatus))
+                if (Array.isArray(freshSubmissions)) this.submissions = freshSubmissions
+            }
+        } catch (e) {
+            log.error('exammanagement @ stopserver: getSubmissions failed', e)
+        }
+    }
+
+    const showMissingSubmissionBanner = warnSubmissions && anyReachableStudentLacksSubmission(this.studentlist, freshSubmissions, now)
+    const missingSubmissionBanner = showMissingSubmissionBanner ? `
+        <div role="alert" style="margin:0 0 1rem 0;padding:0.85rem 1rem;border:3px solid #ffc107;background:transparent;color:inherit;font-weight:700;font-size:1.05em;line-height:1.35;border-radius:6px;text-align:left;">
+            ${this.$t('dashboard.stopserverMissingSubmissionWarning')}
+        </div>` : ''
 
     const bipCompletedHtml = this.serverstatus?.bip ? `
             <input class="form-check-input" style="margin-top: 0.1em;" type="checkbox" id="checkboxcompleted">
@@ -103,6 +206,7 @@ function stopserver(){
         },
         title: this.$t("dashboard.exitexamsure"),
         html: `<div class="my-content">
+            ${missingSubmissionBanner}
             <span> ${message} </span>
             <br><br>
             ${bipCompletedHtml}
@@ -125,6 +229,9 @@ function stopserver(){
                 await this.updateBiPServerInfo("offline");
             }
 
+            examEventBus.push('serverstop')
+            await examEventBus._save()  // save synchronously before navigation
+            examEventBus.clearMemory()
             await ipcRenderer.invoke("stopserver", this.servername)  // need to stop server first otherwise router.js won't route back
 
             this.$router.push({  // for some reason this doesn't work on mobile
@@ -139,18 +246,58 @@ function stopserver(){
     });    
 }
 
+// Returns whether getSubmissions data shows at least one PDF in ABGABE for this student (any section).
+function clientHasSubmissionOnDisk(submissions, clientname) {
+    if (!Array.isArray(submissions) || !clientname) return false
+    const row = submissions.find((s) => s.studentName === clientname)
+    if (!row?.sections) return false
+    for (let section = 1; section <= 4; section++) {
+        if (row.sections[section]?.path) return true
+    }
+    return false
+}
+
+// Returns true if any heartbeat-reachable student has no PDF submission in the scan.
+function anyReachableStudentLacksSubmission(studentlist, submissions, now) {
+    if (!Array.isArray(studentlist) || studentlist.length === 0) return false
+    return studentlist.some((s) => isStudentReachable(s, now) && !clientHasSubmissionOnDisk(submissions, s.clientname))
+}
+
+// True when active section is editor or activesheets (PDF ABGABE flow); submission kick/stop warnings apply only then.
+function activeSectionUsesAbgabeSubmissionWarnings(serverstatus) {
+    const t = serverstatus?.examSections?.[serverstatus?.activeSection]?.examtype
+    return t === 'editor' || t === 'activesheets'
+}
 
 
 //remove student from exam
-function kick(studenttoken, studentip){
+async function kick(studenttoken, studentip){
     if ( this.studentlist.length <= 0 ) { this.status(this.$t("dashboard.noclients")); return; }
-    
-    //get student name
-    //console.log("studentlist:", this.studentlist)
-    const studentname = this.studentlist.find(student => student.token === studenttoken).clientname
-    //console.log("studentname:", studentname)
+
+    const studentRow = this.studentlist.find(student => student.token === studenttoken)
+    if (!studentRow) { this.status(this.$t("dashboard.noclients")); return; }
+    const studentname = studentRow.clientname
 
     let delfolderonexit = false;
+
+    let freshSubmissions = Array.isArray(this.submissions) ? this.submissions : []
+    const warnSubmissions = activeSectionUsesAbgabeSubmissionWarnings(this.serverstatus)
+    if (warnSubmissions) {
+        try {
+            if (typeof window !== 'undefined' && window.ipcRenderer?.invoke) {
+                freshSubmissions = await window.ipcRenderer.invoke('getSubmissions', this.servername, JSON.stringify(this.serverstatus))
+                if (Array.isArray(freshSubmissions)) this.submissions = freshSubmissions
+            }
+        } catch (e) {
+            log.error('exammanagement @ kick: getSubmissions failed', e)
+        }
+    }
+
+    const hasSubmission = !warnSubmissions || clientHasSubmissionOnDisk(freshSubmissions, studentname)
+    const noSubmissionBanner = hasSubmission ? '' : `
+        <div role="alert" style="margin:0 0 1rem 0;padding:0.85rem 1rem;border:3px solid #ffc107;background:transparent;color:inherit;font-weight:700;font-size:1.05em;line-height:1.35;border-radius:6px;text-align:left;">
+            ${this.$t('dashboard.kickNoSubmissionWarning')}
+        </div>`
 
     this.$swal.fire({
         customClass: {
@@ -163,6 +310,7 @@ function kick(studenttoken, studentip){
         },
         title: this.$t("dashboard.sure"),
         html:  `<div class="my-content">
+        ${noSubmissionBanner}
         <span style='font-weight:bold;'>${studentname}</span> ${this.$t("dashboard.reallykick")}
         <br><br>
         
@@ -183,16 +331,18 @@ function kick(studenttoken, studentip){
     })
     .then(async (result) => {
         if (result.isConfirmed) {
- 
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${studenttoken}`, { 
-                method: 'POST',
-                headers: {'Content-Type': 'application/json' },
-                body: JSON.stringify({ delfolder : delfolderonexit, kick : true } )
+            const kickedStudent = this.studentlist.find(s => s.token === studenttoken)
+            console.log('[examlog] kick:', kickedStudent?.clientname, 'events before:', examEventBus.events.length)
+            if (kickedStudent) examEventBus.push('kick', kickedStudent)
+            ipcRenderer.invoke('setStudentStatus', {
+                servername: this.servername,
+                studenttoken,
+                delfolder: delfolderonexit,
+                kick: true,
             })
-            .then( res => res.json() )
-            .then( result => { log.info("exammanagment @ kick:", result.message)});
-        } 
-    });  
+                .then((result) => { log.info('exammanagment @ kick:', result.message) })
+        }
+    });
 }
 
 
@@ -200,15 +350,19 @@ function kick(studenttoken, studentip){
 //restore focus state for specific student -- we tell the client that his status is restored which will then (on the next update) update it's focus state on the server 
 function restore(studenttoken){
     this.visualfeedback(this.$t("dashboard.restore"),2000)
-    axios.get(`https://${this.serverip}:${this.serverApiPort}/server/control/restore/${this.servername}/${this.servertoken}/${studenttoken}`)
-        .then( response => { log.info(`exammanagment @ restore:  ${response.data.message}`)  })
-        .catch( err => {log.error(`exammanagment @ restore:  ${err}`)});
+    ipcRenderer.invoke('setStudentStatus', {
+        servername: this.servername,
+        studenttoken,
+        restorefocusstate: true,
+    })
+        .then((data) => { log.info(`exammanagment @ restore:  ${data.message}`) })
+        .catch((err) => { log.error(`exammanagment @ restore:  ${err}`) })
 }
 
 
 
 // get finished exams (ABGABE) from students
-function getFiles(who='all', feedback=false, quiet=false){
+function getFiles(who='all', feedback=false, quiet=false, includeStudentLog=false){
     this.checkDiscspace()
     if ( this.studentlist.length <= 0 ) { this.status(this.$t("dashboard.noclients")); return; }
 
@@ -222,32 +376,39 @@ function getFiles(who='all', feedback=false, quiet=false){
     }
     else { 
         log.info(`exammanagment @ getFiles: requesting files from ${who}`)
-        // fetch files from clients - this basically just sets studentstatus (we have setstudentstatus/ for that now) to inform the client(s) to send their exam
-        fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/fetch/${this.servername}/${this.servertoken}/${who}`)  // who is either all or token
-        .then(response => {
-            if (!response.ok) {  throw new Error('Network response was not ok');  }
-            return response.json(); 
+        ipcRenderer.invoke('setStudentStatus', {
+            servername: this.servername,
+            studenttoken: who,
+            sendexam: true,
+            sendlog: includeStudentLog,
         })
-        .then(data => {
-            
-            if (feedback) { this.visualfeedback(data.message, 2000);  } // Visuelles Feedback, wenn erwünscht
-            else {
-                if (!quiet) {this.status(data.message);   }// Statusnachricht anzeigen, wenn nicht im "quiet"-Modus
-            }
-        })
-        .catch(error => {  log.error(error);   });
-
-
-
+            .then((data) => {
+                if (data.status === 'error') {
+                    throw new Error(data.message || 'setStudentStatus failed')
+                }
+                if (feedback) {
+                    this.visualfeedback(data.message, 2000)
+                } else if (!quiet) {
+                    this.status(data.message)
+                }
+            })
+            .catch((error) => {
+                log.error(error)
+            })
     }
 }
 
 
 
 
-// temporarily lock screens
-function lockscreens(state, feedback=true){
-    if (this.studentlist.length === 0) { this.status(this.$t("dashboard.noclients")); return;}
+// temporarily lock screens (bypassReachableGate: start/end exam must toggle flags even if heartbeats are stale)
+function lockscreens(state, feedback=true, bypassReachableGate=false){
+    const now = Date.now();
+    if (bypassReachableGate) {
+        if (this.studentlist.length === 0) { this.status(this.$t("dashboard.noclients")); return; }
+    } else if (countReachableStudents(this.studentlist, now) === 0) {
+        this.status(this.$t("dashboard.noclients")); return;
+    }
     if (state === false) { this.serverstatus.screenslocked = false; if (feedback) { this.visualfeedback(this.$t("dashboard.unlock")); } }   // the feedback interferes with endexam screen
     else { this.serverstatus.screenslocked = true; this.visualfeedback(this.$t("dashboard.lock"))} 
     this.setServerStatus()
@@ -258,16 +419,22 @@ function lockscreens(state, feedback=true){
 
 //upload files to all students
 function sendFiles(who) {
-    if (this.studentlist.length === 0) { this.status(this.$t("dashboard.noclients")); return;}
+    const now = Date.now();
+    if (who === 'all') {
+        if (countReachableStudents(this.studentlist, now) === 0) { this.status(this.$t("dashboard.noclients")); return; }
+    } else {
+        const st = this.studentlist.find((s) => s.token === who);
+        if (!isStudentReachable(st, now)) { this.status(this.$t("dashboard.noclients")); return; }
+    }
     let htmlcontent = `<div class="my-content"> 
         ${this.$t("dashboard.filesendtext")} <br>
-        <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
+        <span style="font-size:0.8em;">(.pdf, .docx, .odt, .htm, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
         </div>`
 
     if (this.serverstatus.examSections[this.serverstatus.activeSection].groups && who == "all"){ //wenn who != "all" sondern ein studenttoken ist dann soll die datei an eine einzelne person gesandt werden
         htmlcontent =  `<div class="my-content"> 
             ${this.$t("dashboard.filesendtext")} <br>
-            <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
+            <span style="font-size:0.8em;">(.pdf, .docx, .odt, .htm, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
             <br>  <br> 
             Gruppe<br>
             <button id="fbtnA" class="swal2-button btn btn-cyan m-2" style="width: 42px; height: 42px;">A</button>
@@ -300,7 +467,7 @@ function sendFiles(who) {
             id: "swalFile",
             class:"form-control",
             multiple:"multiple",
-            accept: ".pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb"
+            accept: ".pdf, .docx, .odt, .htm, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb"
         },
         didRender: () => {
             const btnA = document.getElementById('fbtnA');
@@ -335,31 +502,29 @@ function sendFiles(who) {
             }
         }
     })
-    .then((input) => {
+    .then(async (input) => {
         this.files = input.value
         if (!this.files) { this.status(this.$t("dashboard.nofiles")); return }
         this.status(this.$t("dashboard.uploadfiles"));
 
-        //create a new form
-        const formData = new FormData()
-        formData.append('servertoken', this.servertoken);
-        formData.append('servername', this.servername);
-
+        const filesPayload = []
         for (const i of Object.keys(this.files)) {
-            let filename = encodeURIComponent(this.files[i].name) // we need to encode the filename because sending formdata encodes non-ASCII characters in a not reversable way
-            formData.append('files', this.files[i], filename)  // single file is sent as object.. multiple files as array..
+            const f = this.files[i]
+            const ab = await f.arrayBuffer()
+            filesPayload.push({ name: f.name, data: new Uint8Array(ab) })
         }
-        
-        // group managment - send files to specific group
-        if (this.serverstatus.examSections[this.serverstatus.activeSection].groups && who == "all"){ who = activeGroup}  //nur wenn who == all wurde der allgemeine filesend dialog aufgeruden. who kann auch ein student token sein
 
-        //console.log(formData)
-        axios({
-            method: "post", 
-            url: `https://${this.serverip}:${this.serverApiPort}/server/data/upload/${this.servername}/${this.servertoken}/${who}`, 
-            data: formData, 
+        // group managment - send files to specific group
+        let whoParam = who
+        if (this.serverstatus.examSections[this.serverstatus.activeSection].groups && who == "all"){ whoParam = activeGroup}  //nur wenn who == all wurde der allgemeine filesend dialog aufgeruden. who kann auch ein student token sein
+
+        window.ipcRenderer.invoke('uploadTeacherFiles', {
+            servername: this.servername,
+            servertoken: this.servertoken,
+            who: whoParam,
+            files: filesPayload,
         })
-        .then( (response) => {log.info("exmmmanagment @ sendFiles:", response.data) })
+        .then( (data) => {log.info("exmmmanagment @ sendFiles:", data) })
         .catch( err =>{ log.error(`${err}`) })
     });    
 }
@@ -378,12 +543,19 @@ function sendFiles(who) {
 
 
 
-        // show warning
+        // show warning (widget calls delfolderquestion(token) so first arg is the token string, not a DOM event)
 function delfolderquestion(event, token="all"){
-    if (this.studentlist.length === 0) { this.status(this.$t("dashboard.noclients")); return;}
+    const effectiveToken = typeof event === 'string' ? event : token;
+    const now = Date.now();
+    if (effectiveToken === 'all') {
+        if (countReachableStudents(this.studentlist, now) === 0) { this.status(this.$t("dashboard.noclients")); return; }
+    } else {
+        const st = this.studentlist.find((s) => s.token === effectiveToken);
+        if (!isStudentReachable(st, now)) { this.status(this.$t("dashboard.noclients")); return; }
+    }
     let text =  this.$t("dashboard.delsure")
 
-    if (token !== "all"){ 
+    if (effectiveToken !== "all"){
         text = this.$t("dashboard.delsinglesure")
     }
     this.$swal.fire({
@@ -404,13 +576,12 @@ function delfolderquestion(event, token="all"){
     .then((result) => {
         if (result.isConfirmed) {
                 // inform student that folder needs to be deleted
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${token}`, { 
-                method: 'POST',
-                headers: {'Content-Type': 'application/json' },
-                body: JSON.stringify({ delfolder : true } )
+            ipcRenderer.invoke('setStudentStatus', {
+                servername: this.servername,
+                studenttoken: effectiveToken,
+                delfolder: true,
             })
-            .then( res => res.json() )
-            .then( result => { log.info("exammanagment @ delfolderquestion:", result.message)});
+                .then((result) => { log.info('exammanagment @ delfolderquestion:', result.message) })
         } 
     });  
 }
@@ -420,8 +591,8 @@ function delfolderquestion(event, token="all"){
 
 /**
  * Spellcheck for specific student
- * workflow:  es wird durch einen api call an control.js der studentstatus.allowspellcheck gesetzt (object {spellchecklang, suggestions})
- * beim nächsten update holt sich der student den studentstatus und sollte allowspellcheck true sein wird
+ * workflow:  an api call to control.js sets studentstatus.allowspellcheck (object {spellchecklang, suggestions})
+ * on the next update the student fetches the studentstatus and if allowspellcheck is true
  * clientinfo.allowspellcheck (communicationhandler.js) gesetzt,  clientinfo holt sich das frontend alle 4 sek.
  * der editor (frontend) sieht dann allowspellcheck und aktiviert mittels IPC invoke (ipchandler.js) dann nodehun() und macht den spellcheckbutton sichtbar
  */
@@ -476,24 +647,23 @@ async function activateSpellcheckForStudent(token, clientname){
         if (!languagetool){
             console.log(`de-activating spellcheck for user: ${clientname} `)
             // inform student that spellcheck can be activated
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${token}`, { 
-                method: 'POST',
-                headers: {'Content-Type': 'application/json' },
-                body: JSON.stringify({ activatePrivateSpellcheck : false } )
+            ipcRenderer.invoke('setStudentStatus', {
+                servername: this.servername,
+                studenttoken: token,
+                activatePrivateSpellcheck: false,
             })
-            .then( res => res.json() )
-            .then( result => { log.info("exammanagement @ activatespellcheckforstudent: " ,result.message); this.fetchInfo();});
+                .then((result) => { log.info('exammanagement @ activatespellcheckforstudent:', result.message); this.fetchInfo() })
         }
         else {
 
             // inform student that spellcheck can be activated
-            fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/setstudentstatus/${this.servername}/${this.servertoken}/${token}`, { 
-                method: 'POST',
-                headers: {'Content-Type': 'application/json' },
-                body: JSON.stringify({ activatePrivateSpellcheck : true, activatePrivateSuggestions: suggestions} )
+            ipcRenderer.invoke('setStudentStatus', {
+                servername: this.servername,
+                studenttoken: token,
+                activatePrivateSpellcheck: true,
+                activatePrivateSuggestions: suggestions,
             })
-            .then( res => res.json() )
-            .then( result => { log.info("exammanagement @ activatespellcheckforstudent: " ,result.message); this.fetchInfo();});
+                .then((result) => { log.info('exammanagement @ activatespellcheckforstudent:', result.message); this.fetchInfo() })
         }
     })  
 }
@@ -517,4 +687,4 @@ async function activateSpellcheckForStudent(token, clientname){
 
 
 
-export {activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, endExam, kick, restore  }
+export {activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, lockSectionForAll, endExam, kick, restore  }

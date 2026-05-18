@@ -32,13 +32,14 @@
 import { exec } from 'child_process'                          // run tccutil
 import { dialog, app } from 'electron'                         // show dialog and quit
 import log from 'electron-log';
+import { examApiFetch } from '../../../../shared/examApiFetch.js';
 
 
 
 
 export async function testNetworkPermission(serverip, serverApiPort) {                // returns true if fetch works
     try {
-            const res = await fetch(`https://${serverip}:${serverApiPort}/server/control/pong`, { method: 'GET', cache: 'no-store' }) // test request
+            const res = await examApiFetch(`https://${serverip}:${serverApiPort}/server/control/pong`, { method: 'GET', cache: 'no-store' }) // test request
             return res.ok
     } catch {  return false }
 }
@@ -73,8 +74,8 @@ export async function ensureNetworkOrReset(serverip, serverApiPort) { // check o
         // ask the users if they want to reset the permissions and exit the app if they do
         let choice = await dialog.showMessageBox({
             type: 'question',
-            message: 'Der Server ist nicht erreichbar. Möchten Sie die Berechtigungen zurücksetzen und Next-Exam manuell neu starten?',
-            buttons: ['OK', 'Abbrechen'],
+            message: 'The server is not reachable. Do you want to reset the permissions and restart Next-Exam manually?',
+            buttons: ['OK', 'Cancel'],
         })
         if (choice.response === 0) {    // reset permissions and return true to quit the app
             log.warn(`testpermissionsMac @ ensureNetworkOrReset: Resetting network permissions and quitting app`);
@@ -90,7 +91,7 @@ export async function ensureNetworkOrReset(serverip, serverApiPort) { // check o
         log.error(`testpermissionsMac @ ensureNetworkOrReset: Error resetting network permissions: ${e}`);
         await dialog.showMessageBox({
             type: 'error',
-            message: 'Fehler beim Zurücksetzen der Berechtigungen',
+            message: 'Error resetting permissions',
             detail: String(e.err || e),
         })
         return false    // do not quit the app - just show warning message

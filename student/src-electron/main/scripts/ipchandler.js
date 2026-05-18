@@ -18,13 +18,14 @@
 
 import path from 'path'
 import fs from 'fs'
+import { spawn } from 'child_process'
+import { fileURLToPath } from 'url'
 import ip from 'ip'
 import net from 'net'
 import dns from 'dns'
 import i18n from '../../../src/locales/locales.js'
-
 const {t} = i18n.global
-import { ipcMain, clipboard, app, webContents } from 'electron'
+import{ipcMain, clipboard,app, webContents, dialog} from 'electron'
 import { gateway4sync } from 'default-gateway';
 import os, { networkInterfaces } from 'os'
 import log from 'electron-log';
@@ -38,10 +39,63 @@ import { updateSystemTray } from './traymenu.js';
 import { ensureNetworkOrReset } from './testpermissionsMac.js';
 import { getWlanInfo } from './getwlaninfo.js';
 import { switchExamSection } from './switchExamSection.js';
-import { startProxy } from './vncproxy.js';
+import { startProxy, stopProxy } from './vncproxy.js';
+import qemuService from './qemuService.js';
 import { getVMFindings } from './vmDetection.js';
+import { decryptExamFileBytes, decryptExamFileAllLayers, encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
+import { examApiFetch } from '../../../../shared/examApiFetch.js';
+import { normalizeStudentClientName } from '../../../../shared/normalizeStudentClientName.js';
+import { setClientFocusLock, clearClientFocusLock } from './focusLockState.js';
+import { syncClientDisplayInfo } from './displayInfo.js';
+import { captureActiveWindowScreenshot } from './cageScreenshotCapture.js';
+import {
+    detectCageInstalled,
+    detectCageKioskAppImageInstalled,
+    detectCageKioskDesktopInstalled,
+    detectRunningInCage,
+    needsCageKioskSetup,
+} from './cageDetect.js';
 
-const __dirname = import.meta.dirname;
+// Skip info-level file-save log noise when the renderer marks the write as periodic auto-save.
+const logSaveInfoUnlessAuto = (saveReason, message) => {
+    if (saveReason === 'auto') return
+    log.info(message)
+}
+
+/** Exam file key: serverstatus.encryptionPassword; local lockdown uses serverstatus.password only. */
+const resolveExamDecryptPassword = (multicastClient) => {
+    const examPw = String(multicastClient?.serverstatus?.encryptionPassword ?? '').trim();
+    if (examPw) return examPw;
+    if (multicastClient?.clientinfo?.localLockdown) {
+        return String(multicastClient?.serverstatus?.password ?? '').trim();
+    }
+    return '';
+};
+
+// Encrypt once for disk; if buffer is already NXE1, write as-is (avoids nested ciphertext).
+const encryptExamFileBytesUnlessAlready = (plainBuf, pw) => {
+    const buf = Buffer.isBuffer(plainBuf) ? plainBuf : Buffer.from(plainBuf);
+    if (isExamFileEncryptedBytes(buf)) return buf;
+    return pw ? encryptExamFileBytes(buf, pw) : buf;
+};
+
+// Resolves a single-segment filename under rootDir or returns null (blocks path traversal from IPC/renderer).
+const resolveWritablePathUnderExamDir = (rootDir, name, allowedLowerExtensions = null) => {
+    if (rootDir == null || typeof rootDir !== 'string' || name == null || typeof name !== 'string') return null;
+    const n = name.trim();
+    if (!n || n.includes('\0')) return null;
+    if (n !== path.basename(n)) return null;
+    if (n === '.' || n === '..') return null;
+    const ext = path.extname(n).toLowerCase();
+    if (allowedLowerExtensions?.length && !allowedLowerExtensions.includes(ext)) return null;
+    const stem = path.parse(n).name;
+    if (/^(CON|PRN|AUX|NUL|COM[0-9]|LPT[0-9])$/i.test(stem)) return null;
+    const rootResolved = path.resolve(rootDir);
+    const absTarget = path.resolve(path.join(rootResolved, n));
+    const rel = path.relative(rootResolved, absTarget);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) return null;
+    return absTarget;
+};
 
 const checkPortOpen = (port, host = '127.0.0.1', timeout = 1500) => {
     return new Promise((resolve) => {
@@ -81,6 +135,45 @@ class IpcHandler {
         this.CommunicationHandler = ch
 
 
+        ipcMain.handle('get-linux-kiosk-info', () => ({
+            cageInstalled: detectCageInstalled(),
+            runningInCage: detectRunningInCage(),
+            cageKioskAppImageInstalled: detectCageKioskAppImageInstalled(),
+            cageKioskDesktopInstalled: detectCageKioskDesktopInstalled(),
+            needsCageKioskSetup: needsCageKioskSetup(),
+            displayServer: platformDispatcher.displayServer,
+        }));
+
+        ipcMain.handle('get-mac-arch-info', () => platformDispatcher.macRosettaEmulation);
+
+        ipcMain.handle('quit-app', () => {
+            app.quit();
+        });
+
+        ipcMain.handle('capture-screenshot-frame', async () => {
+            return captureActiveWindowScreenshot(this.WindowHandler, this.multicastClient);
+        });
+
+        ipcMain.handle('install-linux-cage-kiosk', () => {
+            const source = process.env.APPIMAGE || process.execPath;
+            const script = app.isPackaged
+                ? path.join(process.resourcesPath, 'linux', 'install-cage-kiosk.sh')
+                : path.join(process.cwd(), 'src-electron/resources/linux/install-cage-kiosk.sh');
+            if (!fs.existsSync(script)) {
+                return Promise.resolve({ ok: false, error: `install script not found: ${script}` });
+            }
+            return new Promise((resolve) => {
+                const child = spawn('pkexec', ['/bin/sh', script, source], { env: process.env });
+                let stderr = '';
+                child.stderr?.on('data', (chunk) => { stderr += String(chunk); });
+                child.on('error', (err) => resolve({ ok: false, error: err.message }));
+                child.on('close', (code) => {
+                    if (code === 0) resolve({ ok: true });
+                    else resolve({ ok: false, error: stderr.trim() || `exit ${code}` });
+                });
+            });
+        });
+
         ipcMain.on('set-new-locale', (event, locale) => {
             log.info(`ipchandler @ set-new-locale: setting new locale to ${locale}`)
             i18n.locale = locale
@@ -93,7 +186,7 @@ class IpcHandler {
             let clientinfo = this.multicastClient.clientinfo
             let servername = clientinfo.servername
             let serverip = clientinfo.serverip
-            let token = clientinfo.token
+            let studenttoken = clientinfo.token
 
             let payload = {
                 group: clientinfo.group,
@@ -103,19 +196,20 @@ class IpcHandler {
             let examMaterials = false
             if (this.multicastClient.clientinfo.localLockdown) {
                 return false
-            } else {
-                // Fetch-Request mit den entsprechenden Optionen
-                examMaterials = await fetch(`https://${serverip}:${this.config.serverApiPort}/server/data/getexammaterials/${servername}/${token}`, {
+            }
+            else{
+                // Fetch request with the corresponding options
+                examMaterials = await examApiFetch(`https://${serverip}:${this.config.serverApiPort}/server/data/getexammaterials/${servername}`, {
                     method: "POST",
                     body: JSON.stringify(payload),
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${studenttoken}` },
                 })
-                    .then(response => response.json()) // Antwort als ArrayBuffer erhalten
-                    .then(data => {
-                        // log.info("ipchandler @ getExamMaterials: received data", data)
-                        return data
-                    })
-                    .catch(err => log.error(`ipchandler @ getExamMaterials: ${err}`));
+                .then(response => response.json()) // Receive response as JSON
+                .then(data => {
+                    // log.info("ipchandler @ getExamMaterials: received data", data)
+                    return data
+                })
+                .catch(err => log.error(`ipchandler @ getExamMaterials: ${err}`));
                 return examMaterials
             }
         })
@@ -131,6 +225,150 @@ class IpcHandler {
             } catch (err) {
                 log.error('ipchandler @ start-proxy:', err);
                 return { port: null, error: err.message };
+            }
+        });
+
+        // shut down the VNC proxy helper from renderer (e.g. localvmview beforeUnmount)
+        ipcMain.handle('stop-proxy', async () => {
+            try {
+                stopProxy();
+                return { ok: true };
+            } catch (err) {
+                log.error('ipchandler @ stop-proxy:', err);
+                return { ok: false, error: err.message };
+            }
+        });
+
+        ipcMain.handle('qemu-start-headless', async (_event, payload = {}) => {
+            try {
+                const { qcow2Name, vncPort, overlayName, blockInternet, expectedSha256, expectedSizeBytes, forceFreshOverlay } = payload || {};
+                log.info(`ipchandler @ qemu-start-headless: start requested (disk=${qcow2Name}, port=${vncPort}, blockInternet=${!!blockInternet}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
+                const vncDisplay = Number(vncPort) === 5901 ? ':1' : ':1';
+                if (this.multicastClient?.clientinfo) {
+                    this.multicastClient.clientinfo.localVMHost = null;
+                    this.multicastClient.clientinfo.localVMPort = Number(vncPort) || 5901;
+                    this.multicastClient.clientinfo.localVMState = (expectedSha256 || expectedSizeBytes) ? 'verifying_hash' : 'starting';
+                }
+                if (expectedSha256 || expectedSizeBytes) {
+                    if (!this.CommunicationHandler?.runLocalVmPreStartVerify) {
+                        throw new Error('runLocalVmPreStartVerify unavailable');
+                    }
+                    const pre = await this.CommunicationHandler.runLocalVmPreStartVerify(qcow2Name, expectedSha256 || null, expectedSha256 ? null : expectedSizeBytes);
+                    if (!pre.allowStart) {
+                        log.warn(`ipchandler @ qemu-start-headless: pre-start verify blocked start for ${qcow2Name}`);
+                        return { ok: false, error: 'localvm hash verify failed or disk missing' };
+                    }
+                }
+                const result = await qemuService.startHeadless({
+                    workdirectory: this.config.workdirectory,
+                    examdirectory: this.config.examdirectory,
+                    qcow2Name,
+                    vncDisplay,
+                    overlayName,
+                    blockInternet: !!blockInternet,
+                    forceFreshOverlay: !!forceFreshOverlay,
+                });
+                if (this.multicastClient?.clientinfo) {
+                    this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
+                    this.multicastClient.clientinfo.localVMPort = Number(vncPort) || 5901;
+                    this.multicastClient.clientinfo.localVMState = (expectedSha256 || expectedSizeBytes) ? 'running' : 'unverified_hash';
+                }
+                return { ok: true, result };
+            } catch (err) {
+                log.error('ipchandler @ qemu-start-headless', err);
+                if (this.multicastClient?.clientinfo) {
+                    this.multicastClient.clientinfo.localVMHost = null;
+                    this.multicastClient.clientinfo.localVMState = 'error';
+                }
+                return { ok: false, error: String(err?.message || err) };
+            }
+        });
+
+        ipcMain.handle('qemu-stop', async () => {
+            try {
+                await qemuService.stopVmAsync({ graceful: true, shutdownTimeoutMs: 8000, killTimeoutMs: 8000 });
+                await qemuService.killAllLocalQemu(this.config.workdirectory);
+                return { ok: true };
+            } catch (err) {
+                log.error('ipchandler @ qemu-stop', err);
+                return { ok: false, error: String(err?.message || err) };
+            }
+        });
+
+        ipcMain.handle('qemu-reset-hard', async () => {
+            try {
+                const res = await qemuService.resetVmHard();
+                return { ok: true, result: res };
+            } catch (err) {
+                log.error('ipchandler @ qemu-reset-hard', err);
+                return { ok: false, error: String(err?.message || err) };
+            }
+        });
+
+        ipcMain.handle('qemu-pick-import-disk', async () => {
+            try {
+                log.info('ipchandler @ qemu-pick-import-disk: selecting qcow2 via filepicker');
+                const result = await dialog.showOpenDialog(this.WindowHandler.mainwindow, {
+                    properties: ['openFile'],
+                    filters: [{ name: 'QEMU Disk', extensions: ['qcow2'] }],
+                });
+                if (result.canceled || !result.filePaths || !result.filePaths[0]) {
+                    log.info('ipchandler @ qemu-pick-import-disk: cancelled');
+                    return { ok: false, cancelled: true };
+                }
+                log.info(`ipchandler @ qemu-pick-import-disk: selected ${result.filePaths[0]}`);
+                const importRes = await qemuService.importDisk({ workdirectory: this.config.workdirectory, sourcePath: result.filePaths[0] });
+                if (importRes?.ok && this.multicastClient?.serverstatus?.exammode) {
+                    if (this.CommunicationHandler.localVmStartState === 'starting') {
+                        log.info('ipchandler @ qemu-pick-import-disk: localvm start already in progress, skip startExam');
+                    } else {
+                        if (this.CommunicationHandler.localVmStartState === 'blocked') {
+                            this.CommunicationHandler.localVmStartState = 'idle';
+                        }
+                        this.CommunicationHandler.startExam(this.multicastClient.serverstatus);
+                    }
+                }
+                return importRes;
+            } catch (err) {
+                log.error('ipchandler @ qemu-pick-import-disk', err);
+                return { ok: false, error: String(err?.message || err) };
+            }
+        });
+
+        ipcMain.handle('qemu-download-disk', async (_event, payload = {}) => {
+            try {
+                const { serverip, serverApiPort, servername, studenttoken, filename, overwrite } = payload || {};
+                log.info(`ipchandler @ qemu-download-disk: downloading ${filename} from teacher ${servername}@${serverip}:${serverApiPort}`);
+                const sendProgress = (p) => {
+                    try { this.WindowHandler?.mainwindow?.webContents?.send?.('qemu-download-progress', p); } catch (e) {}
+                };
+                sendProgress({ phase: 'start', filename, percent: 0 });
+                const result = await qemuService.downloadDiskFromTeacher({
+                    serverip,
+                    serverApiPort,
+                    servername,
+                    studenttoken,
+                    filename,
+                    workdirectory: this.config.workdirectory,
+                    overwrite: !!overwrite,
+                    onProgress: sendProgress,
+                });
+                log.info(`ipchandler @ qemu-download-disk: download finished (skipped=${!!result?.skipped}) ${filename}`);
+                sendProgress({ phase: 'end', filename, percent: 100 });
+                if (this.multicastClient?.serverstatus?.exammode) {
+                    if (this.CommunicationHandler.localVmStartState === 'starting') {
+                        log.info('ipchandler @ qemu-download-disk: localvm start already in progress, skip startExam');
+                    } else {
+                        if (this.CommunicationHandler.localVmStartState === 'blocked') {
+                            this.CommunicationHandler.localVmStartState = 'idle';
+                        }
+                        this.CommunicationHandler.startExam(this.multicastClient.serverstatus);
+                    }
+                }
+                return { ok: true, result };
+            } catch (err) {
+                log.error('ipchandler @ qemu-download-disk', err);
+                return { ok: false, error: String(err?.message || err) };
             }
         });
 
@@ -163,7 +401,7 @@ class IpcHandler {
             const guest = webContents.fromId(Number(guestId));
             if (!guest || guest.isDestroyed?.()) return false;
 
-            // Entferne alte Listener, um Doppel-Registrierungen zu vermeiden
+            // Remove old listeners to prevent duplicate registrations
             guest.removeAllListeners('will-navigate');
 
             // Normalize allowedUrls to object format for webFilter compatibility
@@ -439,9 +677,15 @@ class IpcHandler {
                         cmargin: {side: 'right', size: 3},
                         linespacing: '2',
                         audioRepeat: 3,
-                        languagetool: args.languagetool || false,
-                        spellchecklang: args.spellchecklang || 'de-DE',
-                        suggestions: args.suggestions || false
+                        groupA: {
+                            examConfig: {
+                                editor: {
+                                    languagetool: args.languagetool || false,
+                                    spellchecklang: args.spellchecklang || 'de-DE',
+                                    suggestions: args.suggestions || false,
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -449,7 +693,7 @@ class IpcHandler {
             // make serverstatus available for getinfoasync() so the renderer (editor) sees password and examSections
             this.multicastClient.serverstatus = serverstatus;
 
-            this.multicastClient.clientinfo.name = args.clientname;
+            this.multicastClient.clientinfo.name = normalizeStudentClientName(args.clientname);
             this.multicastClient.clientinfo.serverip = "127.0.0.1";
             this.multicastClient.clientinfo.servername = "localhost";
             this.multicastClient.clientinfo.pin = "0000";
@@ -486,20 +730,30 @@ class IpcHandler {
 
         /**
          * Set FOCUS state to false (mouse left exam window)
-         */
-        ipcMain.handle('focuslost', (event, ctrlalt = false) => {
-            let answer = false
-            if (this.config.development || !this.multicastClient.exammode) {
-                answer = {sender: "client", focus: true}
+         */ 
+        ipcMain.handle('focuslost', (event, ctrlalt=false) => { 
+            let answer = false 
+            if (platformDispatcher.runningInCage) {
+                return { sender: 'client', focus: true };
+            }
+            if (this.config.development || !this.multicastClient.clientinfo.exammode) {
+                log.info(`ipchandler @ focuslost: focuslost event was triggered but development mode is enabled or exammode is false`)
 
-            } else if (this.WindowHandler.screenlockwindows.length > 0) {
-                answer = {sender: "client", focus: true}
+                answer = { sender: "client", focus: true}
 
-            } else if (this.WindowHandler.focusTargetAllowed && ctrlalt == false) {
-                log.warn(`ipchandler @ focuslost: mouseleave event was triggered but target is allowed`)
-                answer = {sender: "client", focus: true}
+            }
+            // else if (this.WindowHandler.screenlockwindows.length > 0) {
+            //     log.info(`ipchandler @ focuslost: focuslost event was triggered but screenlockwindows is not empty`)
+            //     answer = { sender: "client", focus: true }
 
-            } else {
+            // }
+            // else if (this.WindowHandler.focusTargetAllowed && ctrlalt == false){
+            //     log.warn(`ipchandler @ focuslost: mouseleave event was triggered but target is allowed`)
+            //     answer = { sender: "client", focus: true }
+
+            // }
+            else {
+                log.warn(`ipchandler @ focuslost: focuslost event was triggered - locking down`)
                 this.WindowHandler.examwindow.moveTop();
                 this.WindowHandler.examwindow.setKiosk(true);
                 this.WindowHandler.examwindow.show();
@@ -512,6 +766,53 @@ class IpcHandler {
             return answer
         })
 
+        /**
+         * Force FOCUS state to false (security incident)
+         */
+        ipcMain.handle('securityFocusLost', (event, payload = {}) => {
+            const reason = payload?.reason || 'unknown';
+            const message = payload?.message || '';
+            log.warn(`ipchandler @ securityFocusLost: forcing lockdown (reason=${reason})`);
+
+            const examWin = this.WindowHandler?.examwindow;
+            if (examWin && !this.config.development) {
+                examWin.moveTop();
+                examWin.setKiosk(true);
+                examWin.show();
+                examWin.focus();
+            }
+
+            if (this.multicastClient?.clientinfo) {
+                setClientFocusLock(this.multicastClient.clientinfo, reason, message);
+            }
+
+            if (examWin?.webContents && !examWin.webContents.isDestroyed()) {
+                examWin.webContents.send('focusLock', { reason, message });
+            }
+
+            return { sender: "client", focus: false, reason };
+        })
+
+        /**
+         * Restore focus state locally (LocalLockdown unlock)
+         */
+        ipcMain.handle('restorefocusstateLocal', async () => {
+            if (!this.multicastClient?.clientinfo?.localLockdown) {
+                return { ok: false, reason: 'not-local-lockdown' };
+            }
+
+            clearClientFocusLock(this.multicastClient.clientinfo);
+            this.multicastClient.clientinfo.focus = true;
+
+            if (this.WindowHandler?.examwindow && !this.config.development) {
+                this.WindowHandler.examwindow.moveTop();
+                this.WindowHandler.examwindow.setKiosk(true);
+                this.WindowHandler.examwindow.show();
+                this.WindowHandler.examwindow.focus();
+            }
+
+            return { ok: true };
+        })
 
         /**
          * Returns the main config object
@@ -659,40 +960,59 @@ class IpcHandler {
 
         /**
          * Store content from editor as html file - as backup - only triggered by the teacher for now (allow manual backup !!)
-         * @param args contains an object with  {clientname:this.clientname, filename:`${filename}.html`, editorcontent: editorcontent }
+         * @param args contains an object with  { filename, editorcontent, reason?: 'auto'|'manual'|'teacherrequest'|... }
          */
         ipcMain.on('storeHTML', (event, args) => {
             const htmlContent = args.editorcontent
             const filename = args.filename
-            let htmlfilename = `${this.multicastClient.clientinfo.name}.bak`
+            const saveReason = typeof args.reason === 'string' ? args.reason : 'n/a'
+            let htmlfilename = `${this.multicastClient.clientinfo.name}.htm`
 
-            if (filename) {
-                htmlfilename = `${filename}.bak`
+            if (filename && String(filename).trim()) {
+                htmlfilename = `${String(filename).trim()}.htm`
             }
 
-            const htmlfile = path.join(this.config.examdirectory, htmlfilename);
+            const htmlfile = resolveWritablePathUnderExamDir(this.config.examdirectory, htmlfilename, ['.htm']);
+            if (!htmlfile) {
+                log.warn(`ipchandler @ storeHTML: rejected unsafe html filename (${htmlfilename})`);
+                return;
+            }
 
             if (htmlContent) {
                 // log.info("ipchandler: storeHTML: saving students work to disk...")
                 try {
-                    fs.writeFile(htmlfile, htmlContent, (err) => {
+                    const pw = resolveExamDecryptPassword(this.multicastClient);
+                    const buf = Buffer.from(String(htmlContent), 'utf8');
+                    const out = encryptExamFileBytesUnlessAlready(buf, pw);
+                    if (pw) logSaveInfoUnlessAuto(saveReason, `ipchandler @ storeHTML: encrypted write ${htmlfilename} saveReason=${saveReason}`);
+                    else logSaveInfoUnlessAuto(saveReason, `ipchandler @ storeHTML: plaintext write ${htmlfilename} saveReason=${saveReason}`);
+                    const ch = this.CommunicationHandler
+                    fs.writeFile(htmlfile, out, (err) => {
                         if (err) {
                             log.error(`ipchandler @ storeHTML: ${err.message}`);
 
-                            let alternatepath = `${htmlfile}-${this.multicastClient.clientinfo.token}.bak`
+                            let alternatepath = resolveWritablePathUnderExamDir(this.config.examdirectory, `${path.basename(htmlfile, '.htm')}-${this.multicastClient.clientinfo.token}.htm`, ['.htm']);
+                            if (!alternatepath) {
+                                log.error("ipchandler @ storeHTML: alternate path rejected");
+                                event.reply("fileerror", { sender: "client", message: "invalid alternate path", status: "error" });
+                                return;
+                            }
                             log.warn("ipchandler @ storeHTML: trying to write file as:", alternatepath)
-                            fs.writeFile(alternatepath, htmlContent, function (err) {
-                                if (err) {
-                                    log.error(err.message);
+                            fs.writeFile(alternatepath, out, (err2) =>{
+                                if (err2) {
+                                    log.error(err2.message);
                                     log.error("ipchandler @ storeHTML: giving up");
-                                    event.reply("fileerror", {sender: "client", message: err, status: "error"})
+                                    event.reply("fileerror", {sender: "client", message: err2, status: "error"})
                                 } else {
-                                    log.info("ipchandler @ storeHTML: success!");
+                                    if (ch) ch.lastExamWriteSaveReason = saveReason
+                                    logSaveInfoUnlessAuto(saveReason, "ipchandler @ storeHTML: success!");
                                     event.reply("loadfilelist")
                                 }
                             });
+                        } else {
+                            if (ch) ch.lastExamWriteSaveReason = saveReason
+                            event.reply("loadfilelist")
                         }
-                        event.reply("loadfilelist")
                     });
                 } catch (err) {
                     log.error(err)
@@ -706,9 +1026,10 @@ class IpcHandler {
          * get base64 encoded pdf from editor
          */
         ipcMain.handle('getPDFbase64', async (event, args) => {
-            log.info("ipchandler @ getPDFbase64: getting base64 encoded pdf")
+            const saveReason = typeof args.reason === 'string' ? args.reason : ''
+            logSaveInfoUnlessAuto(saveReason, "ipchandler @ getPDFbase64: getting base64 encoded pdf")
             this.multicastClient.clientinfo.submissionnumber = args.submissionnumber + 1 // clientinfo keeps track of submissions for automated submissionnumbers at section change - but this obviously happens after manual submit
-            let result = await this.CommunicationHandler.getBase64PDF(args.submissionnumber, args.sectionname, args.printBackground)   // why the hell is this function located in communicationhandler.js and not in ipchandler.js ? FIXME !
+            let result = await this.CommunicationHandler.getBase64PDF(args.submissionnumber, args.sectionname, args.printBackground, saveReason)   // why the hell is this function located in communicationhandler.js and not in ipchandler.js ? FIXME !
             return result
         })
 
@@ -716,8 +1037,9 @@ class IpcHandler {
         /**
          * Stores the ExamWindow content as PDF
          * ATTENTION there is a similar method in communicationhandler.js that also generates a pdf but retuns a base64 version of the pdf
+         * @param args.reason optional save trigger label for logs and teacher ZIP metadata (e.g. auto, manual, teacherrequest)
          */
-        ipcMain.on('printpdf', (event, args) => {
+        ipcMain.on('printpdf', (event, args) => {const saveReason = typeof args.reason === 'string' ? args.reason : 'n/a'
             // do not print if exam mode is not active anymore
             if (!this.multicastClient?.clientinfo?.exammode) {
                 log.warn("ipchandler @ printpdf: exammode is false - skipping print")
@@ -747,10 +1069,20 @@ class IpcHandler {
                     pdffilename = `${args.filename}.pdf`
 
                 }
-                const pdffilepath = path.join(this.config.examdirectory, pdffilename);  // path points to the current exam directory
-                const alternatefilename = `${pdffilename}-aux.pdf`    //thomas.pdf-aux.pdf 
-                const alternatebackupfilename = `${pdffilename}-old.pdf`;   //thomas.pdf-old.pdf
-                const alternatepath = path.join(this.config.examdirectory, alternatefilename);  // if something goes wrong we try to write a different file
+                const pdffilepath = resolveWritablePathUnderExamDir(this.config.examdirectory, pdffilename, ['.pdf']);  // path points to the current exam directory
+                if (!pdffilepath) {
+                    log.warn(`ipchandler @ printpdf: rejected unsafe pdf filename (${pdffilename})`);
+                    event.reply("fileerror", { sender: "client", message: "invalid pdf filename", status: "error" } );
+                    return;
+                }
+                const alternatefilename = `${path.basename(pdffilename, '.pdf')}-aux.pdf`    //thomas.pdf-aux.pdf
+                const alternatebackupfilename = `${path.basename(pdffilename, '.pdf')}-old.pdf`;   //thomas.pdf-old.pdf
+                const alternatepath = resolveWritablePathUnderExamDir(this.config.examdirectory, alternatefilename, ['.pdf']);  // if something goes wrong we try to write a different file
+                if (!alternatepath) {
+                    log.warn(`ipchandler @ printpdf: rejected alternate pdf path (${alternatefilename})`);
+                    event.reply("fileerror", { sender: "client", message: "invalid alternate pdf path", status: "error" } );
+                    return;
+                }
 
 
                 // aux files are files created if the main pdffilepath is not writeable (opened on windows) 
@@ -758,8 +1090,10 @@ class IpcHandler {
                     const files = fs.readdirSync(this.config.examdirectory);
                     files.forEach(file => {
                         if (file === alternatefilename) {
-                            const newPath = path.join(this.config.examdirectory, alternatebackupfilename);
-                            fs.renameSync(alternatepath, newPath);
+                            const newPath = resolveWritablePathUnderExamDir(this.config.examdirectory, alternatebackupfilename, ['.pdf']);
+                            if (newPath) {
+                                fs.renameSync(alternatepath, newPath);
+                            }
                         }
                     });
                 } catch (err) {
@@ -768,6 +1102,7 @@ class IpcHandler {
 
                 const examWindow = this.WindowHandler.examwindow
                 const webContents = examWindow?.webContents
+                const ch = this.CommunicationHandler
 
                 if (!webContents) {
                     log.error("ipchandler @ printpdf: no webContents found for examwindow")
@@ -798,7 +1133,11 @@ class IpcHandler {
                         log.error(`ipchandler @ printpdf: ${err.message}`);
                     }
                     // write the pdf to the exam directory
-                    fs.writeFile(pdffilepath, data, (err) => {
+                    const pw = resolveExamDecryptPassword(this.multicastClient);
+                    const out = encryptExamFileBytesUnlessAlready(Buffer.from(data), pw);
+                    if (pw) logSaveInfoUnlessAuto(saveReason, `ipchandler @ printpdf: encrypted write ${pdffilename} saveReason=${saveReason}`);
+                    else logSaveInfoUnlessAuto(saveReason, `ipchandler @ printpdf: plaintext write ${pdffilename} saveReason=${saveReason}`);
+                    fs.writeFile(pdffilepath, out, (err) => {
                         if (err) {
                             log.warn(`ipchandler @ printpdf: ${err.message} - writing file as: ${alternatepath} `);
                             // delete the old aux file if it exists
@@ -810,12 +1149,15 @@ class IpcHandler {
                                 log.error(`ipchandler @ printpdf (alternativer Pfad): ${err.message}`);
                             }
                             // write the pdf to the alternate path
-                            fs.writeFile(alternatepath, data, (err) => {
+                            if (pw) logSaveInfoUnlessAuto(saveReason, `ipchandler @ printpdf: encrypted write ${alternatefilename} saveReason=${saveReason}`);
+                            else logSaveInfoUnlessAuto(saveReason, `ipchandler @ printpdf: plaintext write ${alternatefilename} saveReason=${saveReason}`);
+                            fs.writeFile(alternatepath, out, (err) => {
                                 if (err) {
                                     log.error(err.message);
                                     log.error("ipchandler @ printpdf: giving up");
                                     event.reply("fileerror", {sender: "client", message: err.message, status: "error"})
                                 } else { // log.info("ipchandler @ printpdf: success!");
+                                    if (ch) ch.lastExamWriteSaveReason = saveReason
                                     if (args.reason === "teacherrequest") {
                                         this.CommunicationHandler.sendToTeacher()
                                     }
@@ -823,6 +1165,7 @@ class IpcHandler {
                                 }
                             });
                         } else { // log.info("ipchandler @ printpdf: success!");
+                            if (ch) ch.lastExamWriteSaveReason = saveReason
                             if (args.reason === "teacherrequest") {
                                 this.CommunicationHandler.sendToTeacher()
                             }
@@ -839,19 +1182,28 @@ class IpcHandler {
         })
 
         /**
-         * Saves Active Sheets form data to .bak file
+         * Saves Active Sheets form data to .htm file
          */
         ipcMain.on('saveActivesheetsBak', (event, args) => {
             try {
-                const bakFilename = args.filename ? `${args.filename}.bak` : `${this.multicastClient.clientinfo.name}.bak`;
-                const bakFilePath = path.join(this.config.examdirectory, bakFilename);
-
+                const saveReason = typeof args.reason === 'string' ? args.reason : 'n/a'
+                const htmFilename = args.filename ? `${args.filename}.htm` : `${this.multicastClient.clientinfo.name}.htm`;
+                const htmFilePath = resolveWritablePathUnderExamDir(this.config.examdirectory, htmFilename, ['.htm']);
+                if (!htmFilePath) {
+                    log.warn(`ipchandler @ saveActivesheetsBak: rejected unsafe filename (${htmFilename})`);
+                    event.reply("fileerror", { sender: "client", message: "invalid backup filename", status: "error" });
+                    return;
+                }
                 // Convert formData to JSON string
                 const jsonData = JSON.stringify(args.formData, null, 2);
 
-                // Write to .bak file
-                fs.writeFileSync(bakFilePath, jsonData, 'utf8');
-                log.info(`ipchandler @ saveActivesheetsBak: saved form data to ${bakFilename}`);
+                // Write to .htm file
+                const pw = resolveExamDecryptPassword(this.multicastClient);
+                const out = encryptExamFileBytesUnlessAlready(Buffer.from(jsonData, 'utf8'), pw);
+                if (pw) logSaveInfoUnlessAuto(saveReason, `ipchandler @ saveActivesheetsBak: encrypted write ${htmFilename}`);
+                else logSaveInfoUnlessAuto(saveReason, `ipchandler @ saveActivesheetsBak: plaintext write ${htmFilename}`);
+                fs.writeFileSync(htmFilePath, out);
+                logSaveInfoUnlessAuto(saveReason, `ipchandler @ saveActivesheetsBak: saved form data to ${htmFilename}`);
             } catch (error) {
                 log.error(`ipchandler @ saveActivesheetsBak: ${error.message}`);
                 event.reply("fileerror", {sender: "client", message: error.message, status: "error"});
@@ -863,12 +1215,13 @@ class IpcHandler {
          * Returns all found Servers and the information about this client
          */
         ipcMain.handle('getinfoasync', async (event) => {
+            syncClientDisplayInfo(this.multicastClient.clientinfo);
             let serverstatus = false
-            // serverstatus objekt wird nur bei beginn des exams an das exam window durchgereicht für basis einstellungen
-            // alle weiteren updates über das serverstatus object werden im communication handler gelesen und ggf. auf das clientinfo object gelegt
-            // dieser kommunikationsfluss muss in 2.0 gestreamlined werden #FIXME
+            // serverstatus object is only passed to the exam window at the start of the exam for base settings
+            // all further updates via the serverstatus object are read in the communication handler and applied to the clientinfo object as needed
+            // this communication flow needs to be streamlined in 2.0 #FIXME
 
-            if (this.WindowHandler.examwindow) {
+            if (this.multicastClient?.serverstatus) {
                 serverstatus = this.multicastClient.serverstatus
             }
 
@@ -876,7 +1229,7 @@ class IpcHandler {
             if (!this.multicastClient.clientinfo.exammode) {
                 const workdir = path.join(config.examdirectory, "/")
                 try {
-                    await fs.promises.mkdir(workdir, {recursive: true})  // erstellt falls nötig
+                    await fs.promises.mkdir(workdir, {recursive: true})  // creates if missing
                     const filelist = (await fs.promises.readdir(workdir, {withFileTypes: true}))
                         .filter(dirent => dirent.isFile())
                         .map(dirent => dirent.name)
@@ -974,7 +1327,7 @@ class IpcHandler {
          * @param args contains an object with  clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode
          */
         ipcMain.on('register', (event, args) => {
-            const clientname = args.clientname
+            const clientname = normalizeStudentClientName(args.clientname)
             const pin = args.pin
             const serverip = args.serverip
             const servername = args.servername
@@ -983,27 +1336,31 @@ class IpcHandler {
             const version = this.config.version
             const bipuserID = args.bipuserID
 
-            if (this.multicastClient.clientinfo.token) { //#FIXME das sollte eigentlich vom server kommen
+            if (this.multicastClient.clientinfo.token) { //#FIXME this should actually come from the server
                 event.returnValue = {sender: "client", message: t("control.alreadyregistered"), status: "error"}
             }
 
-
+            syncClientDisplayInfo(this.multicastClient.clientinfo);
+            if (this.multicastClient.clientinfo.multiMonitor && !this.config.development) {
+                event.returnValue = { status: "error", message: t("student.multimonitor") };
+                return;
+            }
 
             // Encrypt the registration payload and derive sessionRef from the pin.
-            let payload = { pin, clientname, clientip, hostname, version, bipuserID }
+            let payload = { pin, clientname, clientip, hostname, version, bipuserID, exammode: this.multicastClient.clientinfo.exammode === true }
             const url = `https://${serverip}:${this.config.serverApiPort}/server/control/registerclient/${servername}`;
-            const signal = AbortSignal.timeout(8000); // 8000 Millisekunden = 8 Sekunden AbortSignal mit einem Timeout
+            const signal = AbortSignal.timeout(8000); // 8000 milliseconds = 8 second AbortSignal timeout
 
 
             this.prepareSecurePayload(payload, pin)
             .then(packet => {
                 payload = null;
-                return fetch(url, { method: 'POST', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ packet }) });
+                return examApiFetch(url, { method: 'POST', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ packet }) });
             })
             .then(response => response.json()) 
             .then(data => {
                 if (data && data.status == "success") {  // registration successfull otherwise data would be "false"
-                    // Erfolgreiche Registrierung
+                    // Successful registration
                     this.multicastClient.clientinfo.name = clientname;
                     this.multicastClient.clientinfo.serverip = serverip;
                     this.multicastClient.clientinfo.servername = servername;
@@ -1035,17 +1392,17 @@ class IpcHandler {
                     if (data.version){
                         // compare versions and display message (teacher needs upgrade.. client needs upgrade)
                         const comparisonResult = this.compareSoftware(config.version, config.info , data.version, data.versioninfo ) //serverVersion, serverStatus, localVersion, localStatus
-                        if (comparisonResult > 0) {       event.returnValue = { status: "error", message: "Ihre Version von Next-Exam ist neuer als die der Lehrperson!" };   } 
-                        else if (comparisonResult < 0) {  event.returnValue = { status: "error", message: "Ihre Version von Next-Exam ist zu alt. Laden sie sich eine aktuelle Version herunter!" };   } 
-                        else {                            event.returnValue = { status: "error", message: "Unbekannter Fehler beim Verbindungsaufbau." };    }
+                        if (comparisonResult > 0) {       event.returnValue = { status: "error", message: t("student.versionNewer") };   }
+                        else if (comparisonResult < 0) {  event.returnValue = { status: "error", message: t("student.versionOld") };   }
+                        else {                            event.returnValue = { status: "error", message: t("student.versionUnknown") };    }
                     }
                     event.returnValue = { status: "error", message: data.message };
                 }
             })
             .catch(async error => {
-                // Fehlerbehandlung
+                // Error handling
                 let errorMessage = error.message;
-                if (error.name === 'AbortError') { errorMessage = "The request timed out";   } // Timeout-Nachricht anpassen 
+                if (error.name === 'AbortError') { errorMessage = "The request timed out";   }
                 log.error(`ipchandler @ register: ${errorMessage}`);
              
                 // on macos the permission settings in rare cases mess up the ability to fetch the teacher api 
@@ -1059,7 +1416,7 @@ class IpcHandler {
                 }
                 
                 // show warning message if the user does not want to reset the permissions
-                event.returnValue = { sender: "client", message: "Es gibt ein Problem mit dem Netzwerk, den Firewallregeln oder den Netzwerkberechtigungen! Bitte beheben sie dieses Problem und starten Sie Next-Exam neu!", status: "error" };
+                event.returnValue = { sender: "client", message: t("student.networkError"), status: "error" };
                 return;  
                     
                 
@@ -1069,26 +1426,34 @@ class IpcHandler {
 
         /**
          * Store content from Geogebra as ggb file - as backup
-         * @param args contains an object with  { filename:`${this.clientname}.ggb`, content: base64 }
+         * @param args contains an object with  { filename, content: base64, reason?: 'auto'|'manual'|'teacherrequest'|... }
          */
         ipcMain.handle('saveGGB', (event, args) => {
             const content = args.content
             const filename = args.filename
-            const reason = args.reason
-            const ggbFilePath = path.join(this.config.examdirectory, filename);
+            const saveReason = typeof args.reason === 'string' ? args.reason : 'n/a'
+            const ggbFilePath = resolveWritablePathUnderExamDir(this.config.examdirectory, filename, ['.ggb']);
+            if (!ggbFilePath) {
+                log.warn(`ipchandler @ saveGGB: rejected unsafe ggb filename (${filename})`);
+                return { sender: "client", message: "invalid filename", status: "error" };
+            }
             if (content) {
                 //log.info("ipchandler @ saveGGB: saving students work to disk...")
                 const fileData = Buffer.from(content, 'base64');
 
                 try {
-                    fs.writeFileSync(ggbFilePath, fileData);
-                    if (reason === "teacherrequest") {
+                    const pw = resolveExamDecryptPassword(this.multicastClient);
+                    const out = encryptExamFileBytesUnlessAlready(fileData, pw);
+                    if (pw) logSaveInfoUnlessAuto(saveReason, `ipchandler @ saveGGB: encrypted write ${filename} saveReason=${saveReason}`);
+                    else logSaveInfoUnlessAuto(saveReason, `ipchandler @ saveGGB: plaintext write ${filename} saveReason=${saveReason}`);
+                    fs.writeFileSync(ggbFilePath, out);
+                    if (this.CommunicationHandler) this.CommunicationHandler.lastExamWriteSaveReason = saveReason
+                    if (args.reason === "teacherrequest") {
                         this.CommunicationHandler.sendToTeacher()
                     }
                     return {sender: "client", message: t("data.filestored"), status: "success"}
                 } catch (err) {
                     this.WindowHandler.examwindow.webContents.send('fileerror', err)
-
                     log.error(`ipchandler @ saveGGB: ${err}`)
                     return {sender: "client", message: err, status: "error"}
                 }
@@ -1101,10 +1466,18 @@ class IpcHandler {
          * @param args contains an object { filename:`${this.clientname}.ggb` }
          */
         ipcMain.handle('loadGGB', (event, filename) => {
-            const ggbFilePath = path.join(this.config.examdirectory, filename);
+            const ggbFilePath = resolveWritablePathUnderExamDir(this.config.examdirectory, filename, ['.ggb']);
+            if (!ggbFilePath) {
+                log.warn(`ipchandler @ loadGGB: rejected unsafe ggb filename (${filename})`);
+                return { sender: "client", content: false , status:"error" };
+            }
             try {
                 // Read the file and convert it to base64
-                const fileData = fs.readFileSync(ggbFilePath);
+                const pw = resolveExamDecryptPassword(this.multicastClient);
+                const raw = fs.readFileSync(ggbFilePath);
+                const isEnc = isExamFileEncryptedBytes(raw);
+                if (isEnc && pw) log.info(`ipchandler @ loadGGB: decrypted read ${filename}`);
+                const fileData = (isEnc && pw) ? decryptExamFileAllLayers(raw, pw) : raw;
                 const base64GgbFile = fileData.toString('base64');
                 return {sender: "client", content: base64GgbFile, status: "success"}
             } catch (error) {
@@ -1120,9 +1493,18 @@ class IpcHandler {
         ipcMain.handle('getpdfasync', (event, filename, image = false) => {
             const workdir = path.join(config.examdirectory, "/")
             if (filename) { //return content of specific file
-                let filepath = path.join(workdir, filename)
+                const allowed = image ? ['.jpg', '.jpeg', '.png', '.gif'] : ['.pdf'];
+                let filepath = resolveWritablePathUnderExamDir(config.examdirectory, filename, allowed);
+                if (!filepath) {
+                    log.warn(`ipchandler @ getpdfasync: rejected unsafe filename(${filename})`);
+                    return { sender: "client", content: false , status:"error" };
+                }
                 try {
-                    let data = fs.readFileSync(filepath)
+                    const pw = resolveExamDecryptPassword(this.multicastClient);
+                    const raw = fs.readFileSync(filepath)
+                    const isEnc = isExamFileEncryptedBytes(raw);
+                    if (isEnc && pw) log.info(`ipchandler @ getpdfasync: decrypted read ${filename}`);
+                    const data = (isEnc && pw) ? decryptExamFileAllLayers(raw, pw) : raw
 
                     if (image) {
                         return data.toString('base64');
@@ -1141,14 +1523,22 @@ class IpcHandler {
             const workdir = path.join(config.examdirectory, "/");
 
             if (filename && !publicdir) { // Return content of specific file as string (html) to replace in editor
-                let filepath = path.join(workdir, filename);
+                let filepath = resolveWritablePathUnderExamDir(config.examdirectory, filename, ['.mp3', '.ogg', '.wav']);
+                if (!filepath) {
+                    log.warn(`ipchandler @ getAudioFile: rejected unsafe exam audio filename (${filename})`);
+                    return false;
+                }
                 const audioData = fs.readFileSync(filepath);
                 return audioData.toString('base64');
             }
 
             if (filename && publicdir) {
                 const publicBase = platformDispatcher.publicBase;
-                let filepath = path.join(publicBase, filename);
+                let filepath = resolveWritablePathUnderExamDir(publicBase, filename, ['.mp3', '.ogg', '.wav']);
+                if (!filepath) {
+                    log.warn(`ipchandler @ getAudioFile: rejected unsafe public audio filename (${filename})`);
+                    return false;
+                }
                 const audioData = fs.readFileSync(filepath);
                 return audioData.toString('base64');
             }
@@ -1161,19 +1551,38 @@ class IpcHandler {
          * ASYNC GET FILE-LIST from examdirectory
          * @param filename if set the content of the file is returned
          */
-        ipcMain.handle('getfilesasync', async (event, filename, audio = false, docx = false) => {
+        ipcMain.handle('getfilesasync', async (event, filename, audio = false, docx = false, odtRaw=false) => {
             const workdir = path.join(config.examdirectory, "/")
 
             if (filename) { //return content of specific file as string (html) to replace in editor)
                 // console.log("Received arguments:", filename, audio, docx);
-
-                let filepath = path.join(workdir, filename)
+                const allowedList = audio === true
+                    ? ['.mp3', '.ogg', '.wav']
+                    : (docx ? ['.docx'] : odtRaw ? ['.odt'] : ['.htm']);
+                let filepath = resolveWritablePathUnderExamDir(config.examdirectory, filename, allowedList);
+                if (!filepath) {
+                    log.warn(`ipchandler @ getfilesasync: rejected unsafe filename(${filename})`);
+                    return false;
+                }
+                const pw = resolveExamDecryptPassword(this.multicastClient);
+                // Helper to transparently decrypt encrypted exam files.
+                const readMaybeDecrypt = () => {
+                    const raw = fs.readFileSync(filepath);
+                    const isEnc = isExamFileEncryptedBytes(raw);
+                    if (isEnc && pw) log.info(`ipchandler @ getfilesasync: decrypted read ${filename}`);
+                    return (isEnc && pw) ? decryptExamFileAllLayers(raw, pw) : raw;
+                };
 
                 if (audio == true) { // audio file
-                    const audioData = fs.readFileSync(filepath);
+                    const audioData = readMaybeDecrypt();
                     return audioData.toString('base64');
                 } else if (docx) {  //office open xml file
-                    let result = await mammoth.convertToHtml({path: filepath})
+                    const raw = fs.readFileSync(filepath);
+                    const pwDoc = resolveExamDecryptPassword(this.multicastClient);
+                    const isEnc = isExamFileEncryptedBytes(raw);
+                    if (isEnc && pwDoc) log.info(`ipchandler @ getfilesasync: decrypted read ${filename}`);
+                    const docxBuffer = (isEnc && pwDoc) ? decryptExamFileAllLayers(raw, pwDoc) : null;
+                    let result = await mammoth.convertToHtml(docxBuffer ? { buffer: docxBuffer } : { path: filepath })
                         .then((data) => {
                             return data
                         })
@@ -1181,9 +1590,19 @@ class IpcHandler {
                             console.error(error);
                         });
                     return result
-                } else {   //bak file
+                } else if (odtRaw) {
                     try {
-                        let data = fs.readFileSync(filepath, 'utf8')
+                        const raw = readMaybeDecrypt();
+                        return raw.toString('base64');
+                    }
+                    catch (err) {
+                        log.error(`ipchandler @ getfilesasync odt: ${err}`);
+                        return false;
+                    }
+                }
+                else {   //htm backup file
+                    try {
+                        const data = readMaybeDecrypt().toString('utf8');
                         return data
                     } catch (err) {
                         log.error(`ipchandler @ getfilesasync: ${err}`);
@@ -1207,12 +1626,13 @@ class IpcHandler {
                         if (path.extname(file).toLowerCase() === ".pdf") {
                             files.push({name: file, type: "pdf", mod: mod})
                         }         //pdf
-                        else if (path.extname(file).toLowerCase() === ".bak") {
-                            files.push({name: file, type: "bak", mod: mod})
+                        else if (path.extname(file).toLowerCase() === ".htm") {
+                            files.push({name: file, type: "htm", mod: mod})
                         }   // editor| backup file to replace editor content
                         else if (path.extname(file).toLowerCase() === ".docx") {
                             files.push({name: file, type: "docx", mod: mod})
                         }   // editor| content file (from teacher) to replace content and continue writing
+                        else if  (path.extname(file).toLowerCase() === ".odt"){ files.push( {name: file, type: "odt", mod: mod})   }   // ODT → TipTap HTML in renderer
                         else if (path.extname(file).toLowerCase() === ".ggb") {
                             files.push({name: file, type: "ggb", mod: mod})
                         }  // geogebra
@@ -1237,31 +1657,85 @@ class IpcHandler {
          * ASYNC GET BACKUP FILE from examdirectory
          * @param filename filename without
          */
-        ipcMain.handle('getbackupfile', async (event, filename) => {
+        ipcMain.handle('getbackupfile', (event, filename) => {
             log.info(`ipchandler @ getbackupfile: Request received for filename: ${filename}`)
-            const workdir = path.join(config.examdirectory, "/")
-            if (filename) { //return content of specific file as string (html) to replace in editor)
-                let filepath = path.join(workdir, filename)
-                log.info(`ipchandler @ getbackupfile: Full file path: ${filepath}`)
-                try {
-                    if (!fs.existsSync(filepath)) {
-                        log.warn(`ipchandler @ getbackupfile: backup file not found: ${filepath}`);
-                        return false;
-                    }
-                    log.info(`ipchandler @ getbackupfile: backup file exists, reading content`)
-                    let data = fs.readFileSync(filepath, 'utf8')
-                    log.info(`ipchandler @ getbackupfile: Successfully read backup file, content length: ${data.length}`)
-                    return data
-                } catch (err) {
-                    log.error(`ipchandler @ getbackupfile: Error reading backup file: ${err}`);
-                    log.error(`ipchandler @ getbackupfile: Error stack: ${err.stack}`)
-                    return false
-                }
-            } else {
+            const workdir = path.join(config.examdirectory,"/")
+            if (!filename) {
                 log.warn(`ipchandler @ getbackupfile: no filename provided`);
                 return false;
             }
+            const filepath = resolveWritablePathUnderExamDir(config.examdirectory, filename, ['.htm']);
+            if (!filepath) {
+                log.warn(`ipchandler @ getbackupfile: rejected unsafe filename (${filename})`);
+                return false;
+            }
+            log.info(`ipchandler @ getbackupfile: Full file path: ${filepath}`)
+            try {
+                if (!fs.existsSync(filepath)){
+                    log.warn(`ipchandler @ getbackupfile: backup file not found: ${filepath}`);
+                    return false;
+                }
+                log.info(`ipchandler @ getbackupfile: backup file exists, reading content`)
+                let raw = fs.readFileSync(filepath);
+                if (isExamFileEncryptedBytes(raw)) {
+                    const pw = resolveExamDecryptPassword(this.multicastClient);
+                    if (!pw) {
+                        log.warn(`ipchandler @ getbackupfile: encrypted ${filename} but no key in serverstatus`);
+                        return false;
+                    }
+                    try {
+                        log.info(`ipchandler @ getbackupfile: decrypted read ${filename}`);
+                        raw = decryptExamFileAllLayers(raw, pw);
+                    } catch (e) {
+                        log.error(`ipchandler @ getbackupfile: decrypt failed ${e?.message || e}`);
+                        return false;
+                    }
+                }
+                const data = raw.toString('utf8');
+                log.info(`ipchandler @ getbackupfile: Successfully read backup file, content length: ${data.length}`)
+                return data
+            }
+            catch (err) {
+                log.error(`ipchandler @ getbackupfile: Error reading backup file: ${err}`);
+                log.error(`ipchandler @ getbackupfile: Error stack: ${err.stack}`)
+                return false
+            }
         })
+
+        /**
+         * Read/write PDF annotation JSON files in the student examdirectory.
+         * Stored visibly in: <examdirectory>/annotations/<key>.annotations.json
+         */
+        ipcMain.handle('readPdfAnnotations', async (_event, key) => {
+            try {
+                if (!key || typeof key !== 'string') return null;
+                const safeKey = key.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 180);
+                const dir = path.join(config.examdirectory, 'annotations');
+                const filepath = path.join(dir, `${safeKey}.annotations.json`);
+                if (!fs.existsSync(filepath)) return null;
+                return fs.readFileSync(filepath, 'utf8');
+            } catch (e) {
+                log.error(`ipchandler @ readPdfAnnotations: ${e?.message || e}`);
+                return null;
+            }
+        });
+
+        ipcMain.handle('writePdfAnnotations', async (_event, key, jsonString) => {
+            try {
+                if (!key || typeof key !== 'string') return { status: 'error', message: 'invalid_key' };
+                const safeKey = key.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 180);
+                const dir = path.join(config.examdirectory, 'annotations');
+                await fs.promises.mkdir(dir, { recursive: true });
+                const filepath = path.join(dir, `${safeKey}.annotations.json`);
+                // validate JSON before writing
+                JSON.parse(jsonString);
+                await fs.promises.writeFile(filepath, jsonString, 'utf8');
+                return { status: 'success', filepath };
+            } catch (e) {
+                log.error(`ipchandler @ writePdfAnnotations: ${e?.message || e}`);
+                return { status: 'error', message: e?.message || 'error' };
+            }
+        });
 
         ipcMain.on('reload-url', (event) => {
             this.WindowHandler.createEasterWin()
@@ -1289,8 +1763,6 @@ class IpcHandler {
         // New handler to get PDF from public directory for frontend parsing
         ipcMain.handle('getPdfFromPublic', async (event, pdfFilename) => {
             try {
-                // Get directory name in ESM
-                const __dirname = import.meta.dirname;
 
                 let pdfPath;
                 pdfPath = path.join(platformDispatcher.publicBase, pdfFilename);
@@ -1434,7 +1906,7 @@ class IpcHandler {
         const partsB = versionB.split('.').map(Number);
 
         for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
-            const numA = partsA[i] || 0; // Fallback auf 0, falls kein Wert vorhanden
+            const numA = partsA[i] || 0; // fallback to 0 if no value present
             const numB = partsB[i] || 0;
 
             if (numA < numB) return -1;
