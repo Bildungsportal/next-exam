@@ -665,14 +665,15 @@ export default {
                 .then(res => res.json())
                 .then(async (response) => {
                     if (response.fullname){
+                        const displayName = normalizeStudentClientName(response.fullname)
                         this.$swal.fire({
                             title: "BiP Response",
-                            text: "Verbindung hergestellt",
+                            html: `${this.$t('student.bipLoginConnected')}<br>${this.$t('student.bipLoginWelcome', { name: displayName })}`,
                             icon: 'info',
                             showCancelButton: false,
                         })
 
-                        this.bipUsername = normalizeStudentClientName(response.fullname)
+                        this.bipUsername = displayName
                         this.bipuserID = response.userid
                         if (response.userprivateaccesskey) {
                             await signalBridge.invoke('setBipSiteInfo', {
@@ -680,6 +681,7 @@ export default {
                                 userid: response.userid,
                                 fullname: response.fullname,
                             })
+                            signalBridge.invoke('prewarmSubmissionSigningP12').catch(() => {})
                         }
 
                         document.querySelector("#biploginbutton").classList.remove('btn-info')

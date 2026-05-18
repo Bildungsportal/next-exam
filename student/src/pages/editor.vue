@@ -1778,7 +1778,14 @@ export default {
                 }, true, 100, true, type)
                 return
             }
-            const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
+
+            await this.waitUntilSigningSwalPainted()
+            let response
+            try {
+                response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
+            } finally {
+                this.$swal.close()
+            }
             if (response?.status !== 'success') {
                 console.log("editor @ sendExamToTeacher: Error sending exam to teacher")
                 return
@@ -1794,6 +1801,24 @@ export default {
             }, true, 100, true, type)
         },
 
+
+        // Resolves after Swal modal is in DOM and one frame has painted (nextTick alone is too early).
+        waitUntilSigningSwalPainted() {
+            return new Promise((resolve) => {
+                this.$swal.fire({
+                    title: this.$t('editor.creatingSigningPdf'),
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        this.$swal.showLoading()
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => { setTimeout(resolve, 0) })
+                        })
+                    },
+                })
+            })
+        },
 
         // display print denied message and reason
         printdenied(why) {
@@ -2429,6 +2454,9 @@ export default {
         console.log(`editor @ mounted: Component mounted, initializing editor`)
         this.createEditor(); // this initializes the editor
         this.getExamMaterials()
+        setTimeout(() => {
+            signalBridge.invoke('prewarmSubmissionSigningP12').catch(() => {})
+        }, 400)
 
       
 

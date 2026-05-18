@@ -136,7 +136,6 @@
     "screenshot-desktop": "^1.15.4",
     "sortablejs": "^1.15.7",
     "terser": "^5.46.1",
-    "tesseract.js": "^7.0.0",
     "vue": "^3.5.33",
     "vue-draggable-next": "^2.3.0",
     "vue-i18n": "^11.3.2",

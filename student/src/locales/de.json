@@ -199,6 +199,8 @@
         "activate": "aktivieren",
         "advanced": "fortgeschritten",
         "bildungsportal": "Bildungsportal",
+        "bipLoginConnected": "Verbindung hergestellt.",
+        "bipLoginWelcome": "Willkommen {name}!",
         "cageExit": "Next-Exam beenden",
         "cageExitConfirm": "Next-Exam wirklich beenden?",
         "cageSetupButton": "Cage einrichten",

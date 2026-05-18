@@ -32,11 +32,7 @@ import { normalizeStudentClientName } from '../../../../../../shared/normalizeSt
 import { isStudentReachable } from '../../../../../src/utils/studentPresence.js';
 
 import WindowHandler from '../../../../main/scripts/windowhandler.js'
-import Tesseract from 'tesseract.js';
-let TesseractWorker = false
 
-import { app } from 'electron'
-const __dirname = import.meta.dirname;
 const fsp = fs.promises 
 
 /**
@@ -495,51 +491,6 @@ router.post('/updatescreenshot', async function (req, res, next) {
         //let hash = crypto.createHash('md5').update(Buffer.from(screenshotBase64, 'base64')).digest("hex");  // compute MD5 hash of the base64 string
 
             student.imageurl = 'data:image/jpeg;base64,' + screenshotBase64; // or 'data:image/png;base64,' depending on actual image format
-
-            // only scan screenshot in exam mode and NOT if a restoring/unlocking operation is already in process (otherwise it will lock the unlocked again)
-            if (mcServer.serverstatus.exammode && mcServer.serverstatus.screenshotocr && !student.status.restorefocusstate && student.focus){
-                //put a new distinct timestamp on multicastserver once to track how long ocr and exam mode is activated and only run ocr if the timestamp is older than 10 seconds
-                if (!mcServer.serverinfo.ocrTimestamp){
-                    mcServer.serverinfo.ocrTimestamp = new Date().getTime()
-                }
-
-                if (mcServer.serverinfo.ocrTimestamp + 20000 > new Date().getTime()){
-                    // do nothing  -  give the clients enough time to switch into kiosk mode first (this prevents false positives on exam start)
-                }
-                else {
-                    // run ocr
-                    try{
-                        const rawHeader = req.body.header
-                        if (typeof rawHeader !== 'string' || !rawHeader.includes(';base64,')) {
-                            log.info('control @ updatescreenshot (ocr): missing or invalid header data URL')
-                        } else {
-                        const header = rawHeader.split(';base64,').pop();
-                        const headerimageBuffer = Buffer.from(header, 'base64');
-
-                        const publicPath = app.isPackaged
-                        ? path.join(process.resourcesPath,'app.asar.unpacked', 'public')
-                        : path.resolve(__dirname, '../../public');
-                        
-                        if (!TesseractWorker){
-                            TesseractWorker = await Tesseract.createWorker('eng',1,{
-                                langPath: publicPath , 
-                                cachePath: config.workdirectory   
-                            });
-                        }
-                         
-                        const { data: { text } }  = await TesseractWorker.recognize(headerimageBuffer);
-                        let pincodeVisible = text.includes(mcServer.serverinfo.pin)
-
-                        if (!pincodeVisible){
-                            student.focus = pincodeVisible  // this is the local student object for the frontend
-                            student.status.focus = pincodeVisible  // this sets the studentstatus object which is fetched on every update - the students react on this
-                            log.info("control @ updatescreenshot (ocr): Student Screenshot does not include Exam PIN");
-                        }
-                        }
-                    }
-                    catch(err){ log.info(`control @ updatescreenshot (ocr): ${err}`); }
-                }
-            }
 
             if (!student.focus) { // Archiviere Screenshot, wenn Student nicht fokussiert ist
                 log.info("control @ updatescreenshot: Student out of focus - securing screenshots");

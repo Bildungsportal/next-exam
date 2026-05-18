@@ -1207,7 +1207,12 @@ class IpcHandler {
                 }
             } catch (e) {
                 log.error('ipchandler @ verifySubmissionPdfViaBip', e)
-                return { ok: false, code: 'ERROR', verifyError: String(e?.message || e) }
+                const msg = String(e?.message || e)
+                const bipFlowCodes = new Set(['BIP_AUTH_CANCELLED', 'BIP_AUTH_PENDING', 'BIP_LOGIN_TIMEOUT'])
+                if (bipFlowCodes.has(msg)) {
+                    return { ok: false, code: msg, verifyError: null }
+                }
+                return { ok: false, code: 'ERROR', verifyError: msg }
             }
         })
 

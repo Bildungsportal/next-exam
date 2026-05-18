@@ -1109,6 +1109,10 @@ class IpcHandler {
             return this.CommunicationHandler.clearBipSiteInfo()
         })
 
+        ipcMain.handle('prewarmSubmissionSigningP12', () => {
+            return this.CommunicationHandler.prewarmSubmissionSigningP12()
+        })
+
 
 
 

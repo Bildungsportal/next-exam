@@ -7,8 +7,8 @@ import 'bootstrap/dist/js/bootstrap.bundle.min';
 // more info on params: https://v2.quasar.dev/quasar-cli-vite/boot-files
 export default defineBoot(async ( { app } ) => {
     const options = {
-        confirmButtonColor: '#198754',
-        cancelButtonColor: '#b02a37',
+        confirmButtonColor: '#0aa2c0',
+        cancelButtonColor: '#6c757d',
     };
 
     app.use(i18n)

@@ -737,7 +737,13 @@ export default {
                 return
             }
 
-            const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
+            await this.waitUntilSigningSwalPainted()
+            let response
+            try {
+                response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
+            } finally {
+                this.$swal.close()
+            }
             if (response?.status !== 'success') return
             this.currentpreviewBase64 = response.base64pdf
             if (directsend) {
@@ -748,6 +754,23 @@ export default {
                 filetype: "pdf",
                 filecontent: response.dataUrl
             }, true, 100, true, type)
+        },
+
+        waitUntilSigningSwalPainted() {
+            return new Promise((resolve) => {
+                this.$swal.fire({
+                    title: this.$t('editor.creatingSigningPdf'),
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        this.$swal.showLoading()
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => { setTimeout(resolve, 0) })
+                        })
+                    },
+                })
+            })
         },
 
         // display print denied message and reason
@@ -855,6 +878,9 @@ export default {
 
             console.log(`activesheets @ mounted: Calling loadBackupFile`)
             this.loadBackupFile()
+            setTimeout(() => {
+                signalBridge.invoke('prewarmSubmissionSigningP12').catch(() => {})
+            }, 400)
 
         });
     },

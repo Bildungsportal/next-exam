@@ -1,6 +1,6 @@
 /**
  * Frontend screenshot capture using getDisplayMedia (Electron desktop capture).
- * Resize 1024px, header crop 150px, isAllBlack check; upload via fetch to teacher API.
+ * Resize to max width; upload via fetch to teacher API.
  */
 
 import { isElectronWindow } from '../types/platform';
@@ -9,18 +9,6 @@ import { examApiFetch } from 'next-exam-shared/examApiFetch.js';
 const log = { info: (...a) => console.log(...a), warn: (...a) => console.warn(...a), error: (...a) => console.error(...a) };
 
 const SCREENSHOT_MAX_WIDTH = 1200;
-const HEADER_CROP_HEIGHT = 150;
-
-/** Check if image data (RGBA) is effectively all black */
-function isAllBlack(imageData) {
-  const data = imageData.data;
-  const len = data.length;
-  const threshold = 10;
-  for (let i = 0; i < len; i += 4) {
-    if (data[i] > threshold || data[i + 1] > threshold || data[i + 2] > threshold) return false;
-  }
-  return true;
-}
 
 /** Compute hash of binary data for screenshothash (SHA-256 in browser) */
 async function hashArrayBuffer(buffer) {
@@ -33,7 +21,7 @@ async function hashArrayBuffer(buffer) {
 
 /**
  * Capture one frame from a live video element (stream already attached and playing).
- * Returns { screenshotBase64, headerBase64, isblack } or null on failure.
+ * Returns { screenshotBase64 } or null on failure.
  */
 function captureFrameFromVideo(video) {
   if (!video?.videoWidth || !video?.videoHeight) return null;
@@ -55,20 +43,9 @@ function captureFrameFromVideo(video) {
   if (!screenshotCtx) return null;
   screenshotCtx.drawImage(fullCanvas, 0, 0, fullCanvas.width, fullCanvas.height, 0, 0, sw, sh);
 
-  const headerCanvas = document.createElement('canvas');
-  headerCanvas.width = sw;
-  headerCanvas.height = Math.min(HEADER_CROP_HEIGHT, sh);
-  const headerCtx = headerCanvas.getContext('2d');
-  if (!headerCtx) return null;
-  headerCtx.drawImage(screenshotCanvas, 0, 0, sw, headerCanvas.height, 0, 0, sw, headerCanvas.height);
-
-  const headerImageData = headerCtx.getImageData(0, 0, headerCanvas.width, headerCanvas.height);
-  const isblack = isAllBlack(headerImageData);
-
   const screenshotBase64 = screenshotCanvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-  const headerBase64 = headerCanvas.toDataURL('image/jpeg', 0.85).split(',')[1];
 
-  return { screenshotBase64, headerBase64, isblack };
+  return { screenshotBase64 };
 }
 
 /** Cage fallback: capture active window via main-process capturePage. */
@@ -81,15 +58,13 @@ async function captureAndUploadFromIpc(signalBridge, config) {
       log.warn('screenshotCapture @ captureAndUploadFromIpc: empty frame');
       return false;
     }
-    const { screenshotBase64, headerBase64, isblack } = result;
+    const { screenshotBase64 } = result;
     const binary = Uint8Array.from(atob(screenshotBase64), (c) => c.charCodeAt(0));
     const screenshothash = await hashArrayBuffer(binary.buffer);
     const payload = {
       clientinfo: { ...clientinfo },
       screenshot: screenshotBase64,
       screenshothash,
-      header: headerBase64,
-      isblack,
       screenshotfilename: (clientinfo.token || 'unknown') + '.jpg',
     };
     const url = `https://${serverip}:${serverApiPort}/server/control/updatescreenshot`;
@@ -129,7 +104,7 @@ async function captureAndUpload(signalBridge, config, sharedRef) {
       log.warn('screenshotCapture @ captureAndUpload: captureFrameFromVideo returned null');
       return false;
     }
-    const { screenshotBase64, headerBase64, isblack } = result;
+    const { screenshotBase64 } = result;
 
     const binary = Uint8Array.from(atob(screenshotBase64), (c) => c.charCodeAt(0));
     const screenshothash = await hashArrayBuffer(binary.buffer);
@@ -138,7 +113,6 @@ async function captureAndUpload(signalBridge, config, sharedRef) {
       clientinfo: { ...clientinfo },
       screenshot: screenshotBase64,
       screenshothash,
-      header: headerBase64,
       screenshotfilename: (clientinfo.token || 'unknown') + '.jpg',
     };
 

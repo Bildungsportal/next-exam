@@ -6,8 +6,8 @@ import VueSweetalert2 from "vue-sweetalert2";
 // more info on params: https://v2.quasar.dev/quasar-cli-vite/boot-files
 export default defineBoot(async ( { app, router } ) => {
     const options = {
-        confirmButtonColor: '#198754',
-        cancelButtonColor: '#ff7674',
+        confirmButtonColor: '#0aa2c0',
+        cancelButtonColor: '#6c757d',
 
         // register the global hook here (as part of the default options)
         didOpen: (popup) => {

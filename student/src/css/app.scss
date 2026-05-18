@@ -1,157 +1,21 @@
+@import '../../node_modules/bootstrap/scss/functions';
+@import '../../node_modules/bootstrap/scss/variables';
+@import '../../node_modules/bootstrap/scss/variables-dark';
+@import '../../../shared/css/nxe-bootstrap-config.scss';
 @import '../../node_modules/bootstrap/scss/bootstrap';
 @import '../../node_modules/sweetalert2/dist/sweetalert2.css';
 @import './style-main.css';
+@import '../../../shared/css/nxe-theme.scss';
 
-// Here we override bootstrap color variables globally
-
-$colors: (
-  "blue":       $blue,
-  "indigo":     $indigo,
-  "purple":     $purple,
-  "pink":       $pink,
-  "red":        $red,
-  "orange":     $orange,
-  "yellow":     $yellow,
-  "green":      $green,
-  "teal":       $teal,
-  "cyan":       $cyan,
-  "white":      $white,
-  "gray":       $gray-600,
-  "gray-dark":  $gray-800
-);
-
-$theme-colors: (
-  "primary":    $blue-700,
-  "secondary":  $secondary,
-  "success":    $success,
-  "info":       $info,
-  "warning":    $warning,
-  "danger":     $danger,
-  "light":      $light,
-  "dark":       $dark
-);
-
-.teal { color: $teal-600;}
-
-
-.btn-teal       { background-color: $teal-600;}
-.btn-teal:hover { background-color: $teal-700;}
-
-.btn-outline-teal {  border-color: $teal-600; color: $teal-600;}
-.btn-outline-teal:hover { background-color: $teal-500; border-color: $teal-500; color: $gray-900;}
-
-.btn-danger       { background-color: $red-600; border-color:$red-600;}
-.btn-danger:hover { background-color: $red-500; border-color:$red-500;}
-
-.btn-cyan       { background-color: $cyan-600;}
-.btn-cyan:hover { background-color: $cyan-500;}
-
-.btn-outline-cyan {  border-color: $cyan-600; color: $cyan-600;}
-.btn-outline-cyan:hover { background-color: $cyan-500; border-color: $cyan-500; color: $gray-900;}
-
-
-.btn-warning        { background-color: $yellow-400 }
-.btn-warning:hover  { background-color: $yellow-300 }
-
-.btn-success        { background-color: $green-400; border-color:$green-400; }
-.btn-success:hover  { background-color: $green-300; border-color:$green-300;}
-
-
-.btn-primary        { background-color: $blue-400; border-color:$blue-400; }
-.btn-primary:hover  { background-color: $blue-300; border-color:$blue-300;}
-
-.btn-mediumlight        {background-color: $gray-400; border-color: $gray-400; color: $gray-900;}
-.btn-mediumlight:hover  {background-color: $gray-300; border-color: $gray-400; color: $gray-900;}
-
-
-.form-check-input:checked { 
-  background-color: $blue-600;
-  border-color: $blue-600;
-}
+.btn-mediumlight       { background-color: $gray-400; border-color: $gray-400; color: $gray-900; }
+.btn-mediumlight:hover { background-color: $gray-300; border-color: $gray-400; color: $gray-900; }
 
 #description {
-  background-color: $gray-900;
-  border-color: $teal-300;
-  color: $white;
+    background-color: $gray-900;
+    border-color: $teal-300;
+    color: $white;
 }
 
 html, body {
-  height: 100%;
-}
-
-
-
-// SweetAlert2 overrides - must be after Bootstrap to override conflicts
-.swal2-container {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  z-index: 99999 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-.swal2-popup {
-  position: relative !important;
-  z-index: 100000 !important;
-}
-
-// left align SweetAlert2 text/content globally (student)
-.swal2-title {
-  text-align: left !important;
-  margin-left: 0.2em !important;
-}
-
-
-
-
-.swal2-html-container {
-    text-align: left !important;
-    margin-left: 2em !important;
-    overflow:visible !important;
-}
-
-// also left align icon, buttons, and inputs
-.swal2-icon {
-  margin-left: 2.5em !important;
-  margin-right: auto !important;
-}
-
-.swal2-actions {
-  width: 80% !important;
-  margin-left: 1.9em !important;
-  margin-right: 1.9em !important;
-  justify-content: flex-start !important;
-}
-
-.swal2-actions .swal2-loader {
-  margin-left: 10px !important;
-  margin-right: auto !important;
-}
-
-.swal2-actions .swal2-confirm,
-.swal2-actions .swal2-cancel {
-  min-width: 140px !important;
-}
-
-.swal2-html-container .swal2-input,
-.swal2-html-container .swal2-textarea,
-.swal2-html-container .swal2-select,
-.swal2-html-container .swal2-file {
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-}
-
-.nx-swal-form {
-  max-width: 26rem;
-  overflow:visible !important;
-}
-
-.nx-swal-input {
-  width: 100% !important;
-  max-width: 26rem !important;
-  margin-top:4px;
+    height: 100%;
 }

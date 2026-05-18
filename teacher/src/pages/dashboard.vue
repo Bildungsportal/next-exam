@@ -935,24 +935,6 @@
                     <div class="setup-card">
                         <div
                             class="setup-row setup-row-split"
-                            :class="serverstatus.useExamSections ? 'setup-row-disabled' : ''"
-                            @mouseenter="serverstatus.useExamSections ? setSetupStatus($t('dashboard.sectionSettingsRequiredHint')) : null"
-                            @mouseleave="serverstatus.useExamSections ? clearSetupStatus() : null">
-                            <div class="setup-field-label">{{$t('dashboard.groups')}}</div>
-                            <div class="form-check form-switch m-0">
-                                <input
-                                    id="activategroups"
-                                    class="form-check-input"
-                                    type="checkbox"
-                                    v-model="serverstatus.examSections[1].groups"
-                                    :disabled="serverstatus.useExamSections"
-                                    @mouseenter="setSetupStatus($t('dashboard.groupinfo'))"
-                                    @mouseleave="clearSetupStatus"
-                                    @change="serverstatus.useExamSections ? null : (serverstatus.examSections[1].groups ? setupGroups(1) : setServerStatus())">
-                            </div>
-                        </div>
-                        <div
-                            class="setup-row setup-row-split"
                             :class="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? 'setup-row-disabled' : ''"
                             @mouseenter="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? setSetupStatus($t('dashboard.sectionSettingsRequiredHint')) : null"
                             @mouseleave="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? clearSetupStatus() : null">
@@ -1007,16 +989,27 @@
                     </div>
 
                     <div class="setup-card">
+                        <div
+                            class="setup-row"
+                            :class="serverstatus.useExamSections ? 'setup-row-disabled' : ''"
+                            @mouseenter="serverstatus.useExamSections ? setSetupStatus($t('dashboard.sectionSettingsRequiredHint')) : setSetupStatus($t('dashboard.groupinfo'))"
+                            @mouseleave="clearSetupStatus">
+                            <div class="form-check form-switch m-0">
+                                <input
+                                    id="activategroups"
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    v-model="serverstatus.examSections[1].groups"
+                                    :disabled="serverstatus.useExamSections"
+                                    @change="serverstatus.useExamSections ? null : (serverstatus.examSections[1].groups ? setupGroups(1) : setServerStatus())">
+                                <label class="form-check-label" for="activategroups">{{$t('dashboard.groups')}}</label>
+                            </div>
+                        </div>
+                        <div class="setup-divider"></div>
                         <div class="setup-row">
                             <div class="form-check form-switch m-0">
                                 <input v-model="muteAudio" class="form-check-input" type="checkbox" id="muteaudio" @mouseenter="setSetupStatus($t('dashboard.muteaudiointro'))" @mouseleave="clearSetupStatus">
                                 <label class="form-check-label" for="muteaudio">{{$t('dashboard.muteaudio')}}</label>
-                            </div>
-                        </div>
-                        <div class="setup-row">
-                            <div class="form-check form-switch m-0">
-                                <input id="screenshotOcr" type="checkbox" v-model="serverstatus.screenshotocr" class="form-check-input" @change="updateScreenshotInterval" @mouseenter="setSetupStatus($t('dashboard.ocrinfo'))" @mouseleave="clearSetupStatus">
-                                <label for="screenshotOcr" class="form-check-label">{{$t('dashboard.ocr')}}</label>
                             </div>
                         </div>
                         <div class="setup-divider"></div>
@@ -1479,7 +1472,6 @@ export default {
                 screenshotinterval: 4,
                 backupintervalPause:6,
                 screenslocked: false,
-                screenshotocr: false,
                 directPrintAllowed: false,
                 examTeachers: [],
                 examSecurityKey: "oI9xGzHkUFe7Lg2iTXHkYp4pDab3Nvj4kFEOqA93cZE=",
@@ -2328,7 +2320,6 @@ computed: {
             if (interval === 0) { // Screenshots deaktivieren
                 console.log("dashboard @ updateScreenshotInterval: deactivating screenshots");
                 this.serverstatus.screenshotinterval = 0;
-                this.serverstatus.screenshotocr = false;
                 this.autoscreenshot = false;
             } else {
                 console.log("dashboard @ updateScreenshotInterval: setting screenshot interval to", interval);

@@ -62,6 +62,7 @@ import {
         this.WindowHandler = null
         this.timer = 0
         this.bipSiteInfo = null
+        this.cachedSubmissionSigningP12 = null
     }
  
     init (mc, config) {
@@ -581,12 +582,6 @@ import {
             this.killScreenlock();
         }
 
-        if (serverstatus.screenshotocr) {
-            this.multicastClient.clientinfo.screenshotocr = true;
-        } else {
-            this.multicastClient.clientinfo.screenshotocr = false;
-        }
-
         if (serverstatus.screenshotinterval || serverstatus.screenshotinterval === 0) {
             if (this.multicastClient.clientinfo.screenshotinterval !== serverstatus.screenshotinterval*1000 ) {
                 log.info("communicationhandler @ processUpdatedServerstatus: ScreenshotInterval changed to", serverstatus.screenshotinterval*1000);
@@ -681,7 +676,9 @@ import {
     // ATTENTION: there is a similar method in ipchandler.js that also generates a pdf but stores it as file in the exam directory
     async getBase64PDF(submissionnumber, sectionname, printBackground=false, saveReason){
         if (saveReason !== 'auto') log.info("communicationhandler @ getBase64PDF: getting base64 encoded pdf")
-        
+        const traceTiming = saveReason === 'previewSigned' || saveReason === 'directsend'
+        const t0 = traceTiming ? Date.now() : 0
+
         // Wait for any ongoing print operation to finish (max 30 seconds)
         let waitCount = 0;
         const maxWait = 300; // 30 seconds with 100ms intervals
@@ -689,7 +686,10 @@ import {
             await this.sleep(100);
             waitCount++;
         }
-        
+        if (traceTiming && waitCount > 0) {
+            log.info(`communicationhandler @ getBase64PDF: waited ${waitCount * 100}ms for printpdf lock (${saveReason})`)
+        }
+
         if (IpcHandler.isPrintingPdf) {
             log.error("communicationhandler @ getBase64PDF: printToPDF lock timeout - another print operation is still running");
             return { sender: "client", message: "PDF generation timeout - another print operation is in progress", status: "error" };
@@ -716,16 +716,23 @@ import {
         IpcHandler.isPrintingPdf = true;
         
         try {
+            const tPrint = traceTiming ? Date.now() : 0
             const data = await WindowHandler.examwindow.webContents.printToPDF(options);
+            if (traceTiming) {
+                log.info(`communicationhandler @ getBase64PDF: printToPDF ${Date.now() - tPrint}ms (${saveReason})`)
+            }
             let pdfBuf = Buffer.from(data);
             let signed = false
             let signMode = null
             const signReasons = new Set(['submit', 'directsend', 'submitexam', 'previewSigned'])
             if (signReasons.has(saveReason)) {
                 try {
-                    const { p12Buffer, mode } = this.buildAutoSubmissionSigningP12()
+                    const tP12 = Date.now()
+                    const { p12Buffer, mode } = this.ensureSubmissionSigningP12()
+                    const p12Ms = Date.now() - tP12
                     signMode = mode
                     const signedAt = new Date()
+                    const tSign = Date.now()
                     pdfBuf = await signSubmissionPdf(pdfBuf, p12Buffer, {
                         name: this.multicastClient.clientinfo.name,
                         signMode: mode,
@@ -735,6 +742,9 @@ import {
                         contactInfo: 'https://next-exam.at',
                         location: 'Next-Exam',
                     })
+                    if (traceTiming) {
+                        log.info(`communicationhandler @ getBase64PDF: p12 ${p12Ms}ms sign ${Date.now() - tSign}ms total ${Date.now() - t0}ms (${saveReason})`)
+                    }
                     signed = true
                 } catch (signErr) {
                     log.error('communicationhandler @ getBase64PDF: signing failed', signErr)
@@ -939,6 +949,7 @@ import {
         const key = String(info?.userprivateaccesskey ?? '').trim()
         if (!key) {
             this.bipSiteInfo = null
+            this.invalidateSubmissionSigningP12()
             return { status: 'success', active: false }
         }
         this.bipSiteInfo = {
@@ -946,12 +957,45 @@ import {
             userid: info?.userid ?? null,
             fullname: String(info?.fullname ?? '').trim(),
         }
+        this.invalidateSubmissionSigningP12()
         return { status: 'success', active: true }
     }
 
     clearBipSiteInfo() {
         this.bipSiteInfo = null
+        this.invalidateSubmissionSigningP12()
         return { status: 'success' }
+    }
+
+    /** Drops cached P12 so the next sign uses fresh BiP/local identity material. */
+    invalidateSubmissionSigningP12() {
+        this.cachedSubmissionSigningP12 = null
+    }
+
+    /** Builds signing P12 once per exam session (or after BiP login); reused for every submission. */
+    ensureSubmissionSigningP12() {
+        if (this.cachedSubmissionSigningP12?.p12Buffer?.length) {
+            return this.cachedSubmissionSigningP12
+        }
+        this.cachedSubmissionSigningP12 = this.materializeSubmissionSigningP12()
+        return this.cachedSubmissionSigningP12
+    }
+
+    /** Warms RSA/P12 on main after exam view load so submit does not block the UI. */
+    prewarmSubmissionSigningP12() {
+        return new Promise((resolve) => {
+            setImmediate(() => {
+                try {
+                    const t0 = Date.now()
+                    this.ensureSubmissionSigningP12()
+                    log.info(`communicationhandler @ prewarmSubmissionSigningP12: ready in ${Date.now() - t0}ms`)
+                    resolve({ status: 'success' })
+                } catch (e) {
+                    log.error('communicationhandler @ prewarmSubmissionSigningP12', e)
+                    resolve({ status: 'error', message: e?.message || String(e) })
+                }
+            })
+        })
     }
 
     /** Resolves student public/icons/icon.png for the submission stamp (dev + packaged). */
@@ -976,8 +1020,8 @@ import {
         return null;
     }
 
-    /** Builds P12 for every submission: BiP userprivateaccesskey or local pin+token+time secret. */
-    buildAutoSubmissionSigningP12() {
+    /** Creates P12: BiP userprivateaccesskey or local pin+token+time secret (called once per cache cycle). */
+    materializeSubmissionSigningP12() {
         const displayName = String(this.multicastClient?.clientinfo?.name || 'Next-Exam Student').trim()
         const saltHex = crypto.randomBytes(16).toString('hex')
         const bip = this.bipSiteInfo?.userprivateaccesskey

@@ -15,7 +15,6 @@ export type Exam = {
   screenshotinterval: number,
   backupintervalPause: number,
   screenslocked: boolean, // Remove?
-  screenshotocr: boolean, // Remove?
   examStudents: Student[],
   examTeachers: Teacher[],
   examSecurityKey: string | null, // Remove?

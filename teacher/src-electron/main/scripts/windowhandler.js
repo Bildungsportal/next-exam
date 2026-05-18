@@ -79,6 +79,9 @@ class WindowHandler {
     }
 
     createBiPLoginWin(biptest) {
+        if (this.bipwindow && !this.bipwindow.isDestroyed()) {
+            this.bipwindow.close()
+        }
         this.bipwindow = new BrowserWindow({
             title: 'Next-Exam',
             icon: join(getPublicBase(), 'icons', 'icon.png'),
@@ -141,7 +144,7 @@ class WindowHandler {
                 log.info(token);
                 if (this.bipAuthPending) {
                     this.bipAuthPending.resolve(token)
-                    this.bipAuthPending = null
+                    this.clearBipAuthPendingState()
                 } else {
                     this.mainwindow.webContents.send('bipToken', token);
                 }
@@ -149,14 +152,40 @@ class WindowHandler {
             }
           });
 
+        this.bipwindow.on('closed', () => {
+            this.bipwindow = null
+            this.abortBipAuthPending('BIP_AUTH_CANCELLED')
+        })
+    }
+
+    /** Clears pending auth wait without rejecting (success path). */
+    clearBipAuthPendingState() {
+        if (!this.bipAuthPending) return
+        if (this.bipAuthPending.timeout) clearTimeout(this.bipAuthPending.timeout)
+        this.bipAuthPending = null
+    }
+
+    /** Rejects pending BiP auth wait (window closed, timeout, superseded). */
+    abortBipAuthPending(code = 'BIP_AUTH_CANCELLED') {
+        if (!this.bipAuthPending) return
+        const pending = this.bipAuthPending
+        this.bipAuthPending = null
+        if (pending.timeout) clearTimeout(pending.timeout)
+        pending.reject(new Error(code))
     }
 
     /** Opens BiP login and resolves with captured token (signature verify flow). */
     waitForBipAuthToken(biptest, timeoutMs = 300000) {
         return new Promise((resolve, reject) => {
             if (this.bipAuthPending) {
-                reject(new Error('bip auth already pending'))
-                return
+                const winAlive = this.bipwindow && !this.bipwindow.isDestroyed()
+                if (!winAlive) {
+                    this.abortBipAuthPending('BIP_AUTH_CANCELLED')
+                } else {
+                    this.bipwindow.focus()
+                    reject(new Error('BIP_AUTH_PENDING'))
+                    return
+                }
             }
             const timeout = setTimeout(() => {
                 if (!this.bipAuthPending) return
@@ -168,12 +197,13 @@ class WindowHandler {
                 } catch {
                     // ignore close errors
                 }
-                reject(new Error('bip login timeout'))
+                reject(new Error('BIP_LOGIN_TIMEOUT'))
             }, timeoutMs)
             this.bipAuthPending = {
+                timeout,
                 resolve: (token) => {
                     clearTimeout(timeout)
-                    this.bipAuthPending = null
+                    this.clearBipAuthPendingState()
                     resolve(token)
                 },
                 reject: (err) => {
