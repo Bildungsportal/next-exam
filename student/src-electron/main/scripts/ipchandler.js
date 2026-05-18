@@ -45,6 +45,8 @@ import { getVMFindings } from './vmDetection.js';
 import { decryptExamFileBytes, decryptExamFileAllLayers, encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
 import { examApiFetch } from '../../../../shared/examApiFetch.js';
 import { normalizeStudentClientName } from '../../../../shared/normalizeStudentClientName.js';
+import { buildNextExamMoodleProof } from '../../../../shared/buildNextExamMoodleProof.js';
+import { NEXT_EXAM_MOODLE_PROOF_HEADER } from '../../../../shared/nextExamMoodleProofSecret.js';
 import { setClientFocusLock, clearClientFocusLock } from './focusLockState.js';
 import { syncClientDisplayInfo } from './displayInfo.js';
 import { captureActiveWindowScreenshot } from './cageScreenshotCapture.js';
@@ -61,6 +63,42 @@ const logSaveInfoUnlessAuto = (saveReason, message) => {
     if (saveReason === 'auto') return
     log.info(message)
 }
+
+/** Per-guest webRequest hooks for eduvidual Moodle proof headers. */
+const eduvidualMoodleProofHooks = new Map();
+
+/** Remove Moodle proof header injection for an eduvidual webview guest. */
+const detachEduvidualMoodleProofHeaders = (guestId) => {
+    const id = Number(guestId);
+    const entry = eduvidualMoodleProofHooks.get(id);
+    if (!entry) return;
+    try {
+        entry.session.webRequest.onBeforeSendHeaders(entry.filter, null);
+    } catch (e) {
+        log.debug('ipchandler @ detachEduvidualMoodleProofHeaders:', e?.message || e);
+    }
+    eduvidualMoodleProofHooks.delete(id);
+};
+
+/** Attach HMAC proof header on requests to moodleDomain (quizaccess_nextexam contract). */
+const attachEduvidualMoodleProofHeaders = (guest, { moodleDomain, moodleTestId, exammode }) => {
+    if (!guest || guest.isDestroyed?.()) return false;
+    detachEduvidualMoodleProofHeaders(guest.id);
+    if (!exammode || !moodleDomain || moodleTestId == null || moodleTestId === '') return false;
+
+    const proof = buildNextExamMoodleProof(moodleTestId);
+    const host = String(moodleDomain).replace(/^https?:\/\//i, '').split('/')[0];
+    const filter = { urls: [`*://${host}/*`, `*://*.${host}/*`] };
+    const handler = (details, callback) => {
+        details.requestHeaders[NEXT_EXAM_MOODLE_PROOF_HEADER] = proof;
+        details.requestHeaders['X-Next-Exam-Client'] = '1';
+        callback({ requestHeaders: details.requestHeaders });
+    };
+    guest.session.webRequest.onBeforeSendHeaders(filter, handler);
+    eduvidualMoodleProofHooks.set(guest.id, { session: guest.session, filter, handler });
+    log.info(`ipchandler @ attachEduvidualMoodleProofHeaders: guest ${guest.id} quiz ${moodleTestId} host ${host}`);
+    return true;
+};
 
 /** Exam file key: serverstatus.encryptionPassword; local lockdown uses serverstatus.password only. */
 const resolveExamDecryptPassword = (multicastClient) => {
@@ -460,7 +498,12 @@ class IpcHandler {
 
         // IPC handler for mode-specific webview blocking - supports eduvidual, forms, rdp modes
         // For website mode, prefer using start-blocking-for-webview with webFilter.js instead
-        ipcMain.handle('start-blocking-for-website-webview', (event, { guestId, mode, allowedDomain, baseUrl, blockSubdomains, blockSubfolders, moodleTestId, moodleDomain, formsUrl }) => {
+        ipcMain.handle('detach-eduvidual-moodle-proof', (event, { guestId }) => {
+            detachEduvidualMoodleProofHeaders(guestId);
+            return true;
+        });
+
+        ipcMain.handle('start-blocking-for-website-webview', (event, { guestId, mode, allowedDomain, baseUrl, blockSubdomains, blockSubfolders, moodleTestId, moodleDomain, formsUrl, exammode }) => {
             const guest = webContents.fromId(Number(guestId));
             if (!guest || guest.isDestroyed?.()) return false;
 
@@ -546,7 +589,11 @@ class IpcHandler {
                     log.info(`ipchandler @ start-blocking-for-website-webview [${mode}]: allowed navigation to`, url);
                 }
             });
-              
+
+            if (mode === 'eduvidual') {
+                attachEduvidualMoodleProofHeaders(guest, { moodleDomain, moodleTestId, exammode });
+            }
+
             return true;
         });
 

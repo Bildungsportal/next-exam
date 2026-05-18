@@ -237,33 +237,11 @@ export default {
                 const iframe = shadowRoot.querySelector('iframe');
                 if (iframe) { iframe.style.height = '100%'; } 
                 
-                // Setup blocking in backend via IPC - this ensures events are caught early
-                const setupBackendBlocking = async () => {
-                    if (webview.getWebContentsId) {
-                        const guestId = webview.getWebContentsId();
-                        if (guestId) {
-                            try {
-                                if(isElectronWindow(window)) {
-                                    await signalBridge.invoke('start-blocking-for-website-webview', {
-                                        guestId,
-                                        mode: 'eduvidual',
-                                        moodleTestId: this.moodleTestId,
-                                        moodleDomain: this.moodleDomain
-                                    });
-                                    console.log(`eduvidual @ mounted: backend blocking setup for webview ${guestId}`);
-                                }
-                            } catch (error) {
-                                console.error('eduvidual @ mounted: failed to setup backend blocking', error);
-                            }
-                        }
-                    }
-                };
-                
                 // Try to setup blocking immediately, retry on dom-ready if needed
-                setupBackendBlocking().catch(() => {
+                this.setupEduvidualWebviewBackend().catch(() => {
                     const retrySetup = () => {
                         setTimeout(() => {
-                            setupBackendBlocking().catch(() => {
+                            this.setupEduvidualWebviewBackend().catch(() => {
                                 console.warn('eduvidual @ mounted: backend blocking setup failed, will retry');
                             });
                         }, 100);
@@ -358,6 +336,21 @@ export default {
             webview.setAttribute("src", this.url);
         },
 
+        // URL filter + Moodle proof headers for main eduvidual webview (guest webContents).
+        async setupEduvidualWebviewBackend() {
+            const webview = document.getElementById('webviewmain');
+            if (!webview?.getWebContentsId || !isElectronWindow(window)) return;
+            const guestId = webview.getWebContentsId();
+            if (!guestId) return;
+            await signalBridge.invoke('start-blocking-for-website-webview', {
+                guestId,
+                mode: 'eduvidual',
+                moodleTestId: this.moodleTestId,
+                moodleDomain: this.moodleDomain,
+                exammode: this.exammode,
+            });
+        },
+
         formatTime(unixTime) {
             const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
             return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed
@@ -397,6 +390,7 @@ export default {
 
         async fetchInfo() {
             const getinfo = await signalBridge.invoke('getinfoasync');
+            const prevExammode = this.exammode;
 
             applyClientinfoFromFetch(this, getinfo.clientinfo);
             if (getinfo.serverstatus) {
@@ -411,6 +405,11 @@ export default {
             if (urlChanged) {
                 const webview = document.getElementById('webviewmain');
                 if (webview && this.url) webview.setAttribute('src', this.url);
+            }
+            if (sectionChanged || urlChanged || this.exammode !== prevExammode) {
+                this.setupEduvidualWebviewBackend().catch((err) => {
+                    console.warn('eduvidual @ fetchInfo: webview backend setup', err);
+                });
             }
 
             if (!this.focus) this.entrytime = new Date().getTime();
@@ -438,6 +437,12 @@ export default {
         // Clean up webview event listeners (blocking is handled in backend, but we still clean up local listeners)
         const webview = document.getElementById('webviewmain');
         if (webview) {
+            if (webview.getWebContentsId && isElectronWindow(window)) {
+                const guestId = webview.getWebContentsId();
+                if (guestId) {
+                    signalBridge.invoke('detach-eduvidual-moodle-proof', { guestId }).catch(() => {});
+                }
+            }
             if (this._onDidFinishLoad) {
                 webview.removeEventListener('did-finish-load', this._onDidFinishLoad);
             }
