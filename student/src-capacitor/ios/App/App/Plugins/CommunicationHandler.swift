@@ -99,6 +99,11 @@ final class CommunicationHandler {
                     mc.beaconsLost += 1
                     return
                 }
+                
+                guard var info = try? JSONDecoder().decode(ServerStatus.self, from: data) else {
+                    pluginLog(.error, "multicastclient @ messageReceived: JSON decode failed")
+                    return
+                }
 
                 let status = json["status"] as? String
 
