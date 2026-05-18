@@ -1,7 +1,6 @@
 <template>
     <div class="editor-root">
 
-
     <!-- HEADER START -->
     <exam-header
         :serverstatus="serverstatus"
@@ -801,8 +800,6 @@ import {
     applyServerstatusFromFetch,
     resolveLockedSection,
 } from '../utils/examFetchInfoSync.js'
-import { refreshSubmissionPdfForSubmit } from '../utils/submissionSigningUi.js'
-
 const lowlight = createLowlight(common)
 
 // signalBridge instance centralizes ipc calls with platform checks
@@ -1704,11 +1701,9 @@ export default {
 
         // send direct print request to teacher and append current document as base64
         async printBase64(printrequest = false, saveReason = 'n/a') {
-            if (!printrequest) {
-                await refreshSubmissionPdfForSubmit(this)
-                if (!this.currentpreviewBase64) {
-                    return
-                }
+            if (!this.currentpreviewBase64) {
+                console.warn('editor @ printBase64: No PDF available to send')
+                return
             }
 
             const endpoint = printrequest ? 'printjob' : 'submission'
@@ -1762,34 +1757,41 @@ export default {
 
 
         async sendExamToTeacher(directsend = false, type = "send") {
-            let response = await signalBridge.invoke('getPDFbase64', {
+            const pdfArgs = {
                 landscape: false,
                 servername: this.servername,
                 clientname: this.clientname,
                 submissionnumber: this.submissionnumber,
-                sectionname: this.serverstatus.examSections[this.lockedSection].sectionname
-            })
-
-            if (response?.status == "success") {
-                let base64pdf = response.base64pdf
-                let dataUrl = response.dataUrl
-
-                if (directsend) {   //direct send to teacher without displaying the print preview
-                    this.currentpreviewBase64 = base64pdf
-                    this.printBase64(false, 'directsend')
+                sectionname: this.serverstatus.examSections[this.lockedSection].sectionname,
+            }
+            if (type === 'print') {
+                const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'print' })
+                if (response?.status !== 'success') {
+                    console.log("editor @ sendExamToTeacher: Error sending exam to teacher")
                     return
                 }
-
-                let file = {
+                this.currentpreviewBase64 = response.base64pdf
+                this.loadPDF({
                     filename: `${this.clientname}.pdf`,
                     filetype: "pdf",
-                    filecontent: dataUrl
-                }
-                this.loadPDF(file, true, 100, true, type)  //this opens the pdf file in the print preview and populates base64 preview
-            } 
-            else {
-                console.log("editor @ sendExamToTeacher: Error sending exam to teacher")
+                    filecontent: response.dataUrl
+                }, true, 100, true, type)
+                return
             }
+            const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
+            if (response?.status !== 'success') {
+                console.log("editor @ sendExamToTeacher: Error sending exam to teacher")
+                return
+            }
+            this.currentpreviewBase64 = response.base64pdf
+            if (directsend) {
+                return this.printBase64(false, 'directsend')
+            }
+            this.loadPDF({
+                filename: `${this.clientname}.pdf`,
+                filetype: "pdf",
+                filecontent: response.dataUrl
+            }, true, 100, true, type)
         },
 
 

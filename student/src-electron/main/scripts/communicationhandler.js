@@ -720,19 +720,26 @@ import {
             let pdfBuf = Buffer.from(data);
             let signed = false
             let signMode = null
-            try {
-                const { p12Buffer, mode } = this.buildAutoSubmissionSigningP12()
-                signMode = mode
-                pdfBuf = await signSubmissionPdf(pdfBuf, p12Buffer, {
-                    name: this.multicastClient.clientinfo.name,
-                    reason: 'Next-Exam submission',
-                    contactInfo: 'https://next-exam.at',
-                    location: 'Next-Exam',
-                })
-                signed = true
-            } catch (signErr) {
-                log.error('communicationhandler @ getBase64PDF: signing failed', signErr)
-                return { sender: 'client', message: 'PDF signing failed', status: 'error' }
+            const signReasons = new Set(['submit', 'directsend', 'submitexam', 'previewSigned'])
+            if (signReasons.has(saveReason)) {
+                try {
+                    const { p12Buffer, mode } = this.buildAutoSubmissionSigningP12()
+                    signMode = mode
+                    const signedAt = new Date()
+                    pdfBuf = await signSubmissionPdf(pdfBuf, p12Buffer, {
+                        name: this.multicastClient.clientinfo.name,
+                        signMode: mode,
+                        signedAt,
+                        logoPngPath: this.resolveSubmissionStampIconPath(),
+                        reason: 'Next-Exam submission',
+                        contactInfo: 'https://next-exam.at',
+                        location: 'Next-Exam',
+                    })
+                    signed = true
+                } catch (signErr) {
+                    log.error('communicationhandler @ getBase64PDF: signing failed', signErr)
+                    return { sender: 'client', message: 'PDF signing failed', status: 'error' }
+                }
             }
             const base64pdf = pdfBuf.toString('base64');
             const dataUrl = `data:application/pdf;base64,${base64pdf}`;
@@ -945,6 +952,28 @@ import {
     clearBipSiteInfo() {
         this.bipSiteInfo = null
         return { status: 'success' }
+    }
+
+    /** Resolves student public/icons/icon.png for the submission stamp (dev + packaged). */
+    resolveSubmissionStampIconPath() {
+        const here = import.meta.dirname;
+        const candidates = [
+            join(app.getAppPath(), 'public/icons/icon.png'),
+            join(process.resourcesPath, 'app.asar.unpacked', 'public/icons/icon.png'),
+            join(here, '../../../public/icons/icon.png'),
+            join(here, '../../public/icons/icon.png'),
+        ];
+        for (const p of candidates) {
+            try {
+                if (p && fs.existsSync(p)) {
+                    return p;
+                }
+            } catch {
+                // try next candidate
+            }
+        }
+        log.warn('communicationhandler @ resolveSubmissionStampIconPath: icon.png not found');
+        return null;
     }
 
     /** Builds P12 for every submission: BiP userprivateaccesskey or local pin+token+time secret. */

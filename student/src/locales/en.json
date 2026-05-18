@@ -70,6 +70,8 @@
         "codeblock": "codeblock",
         "columnafter": "columnafter",
         "copy": "copy",
+        "creatingPdf": "Creating PDF …",
+        "creatingSigningPdf": "Creating and signing PDF …",
         "cut": "cut",
         "delcolumn": "delcolumn",
         "deletetable": "deletetable",

@@ -150,8 +150,6 @@ import {
     applyServerstatusFromFetch,
     resolveLockedSection,
 } from '../utils/examFetchInfoSync.js'
-import { refreshSubmissionPdfForSubmit } from '../utils/submissionSigningUi.js'
-
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
 
@@ -668,14 +666,11 @@ export default {
 
         // send direct print request to teacher and append current document as base64
         async printBase64(printrequest=false, saveReason = 'n/a'){
-            if (!printrequest) {
-                await refreshSubmissionPdfForSubmit(this)
-            }
             if (!this.currentpreviewBase64) {
                 console.warn('activesheets @ printBase64: No PDF available to send');
                 return;
             }
-            
+
             const endpoint = printrequest ? 'printjob' : 'submission'
             const url = `https://${this.serverip}:${this.serverApiPort}/server/control/${endpoint}/${this.servername}`;
             const sr = typeof saveReason === 'string' ? saveReason : 'n/a'
@@ -718,33 +713,41 @@ export default {
         },
 
         async sendExamToTeacher(directsend=false, type="send"){
-            // Generate PDF from current view (with filled form fields)
-            if (!this.serverstatus || !this.serverstatus.examSections || !this.serverstatus.examSections[this.lockedSection]) {
+            if (!this.serverstatus?.examSections?.[this.lockedSection]) {
                 console.error('activesheets @ sendExamToTeacher: Invalid section data');
                 return;
             }
-            let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true})
-
-            if (response?.status == "success"){
-                let base64pdf = response.base64pdf
-                let dataUrl = response.dataUrl
-                
-                // Store the base64 PDF for later use
-                this.currentpreviewBase64 = base64pdf
-                
-                if (directsend){   //direct send to teacher without displaying the print preview
-                    this.printBase64(false, 'directsend')
-                    return
-                }
-
-                let file = {
+            const pdfArgs = {
+                landscape: false,
+                servername: this.servername,
+                clientname: this.clientname,
+                submissionnumber: this.submissionnumber,
+                sectionname: this.serverstatus.examSections[this.lockedSection].sectionname,
+                printBackground: true,
+            }
+            if (type === 'print') {
+                const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'print' })
+                if (response?.status !== 'success') return
+                this.currentpreviewBase64 = response.base64pdf
+                this.loadPDF({
                     filename: `${this.clientname}.pdf`,
                     filetype: "pdf",
-                    filecontent: dataUrl
-                }
-                this.loadPDF(file, true, 100, true, type)  //this opens the pdf file in the print preview and populates base64 preview
-                this.currentpreviewBase64 = base64pdf  // Store base64 for submission
+                    filecontent: response.dataUrl
+                }, true, 100, true, type)
+                return
             }
+
+            const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
+            if (response?.status !== 'success') return
+            this.currentpreviewBase64 = response.base64pdf
+            if (directsend) {
+                return this.printBase64(false, 'directsend')
+            }
+            this.loadPDF({
+                filename: `${this.clientname}.pdf`,
+                filetype: "pdf",
+                filecontent: response.dataUrl
+            }, true, 100, true, type)
         },
 
         // display print denied message and reason
@@ -1025,6 +1028,7 @@ export default {
 .split-divider:hover::before {
     background: rgba(13, 110, 253, 0.55);
 }
+
 
 #preview {
     display: none;

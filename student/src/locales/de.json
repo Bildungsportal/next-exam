@@ -70,6 +70,8 @@
         "codeblock": "Codeblock",
         "columnafter": "Spalte einfügen",
         "copy": "kopieren",
+        "creatingPdf": "Erstelle PDF …",
+        "creatingSigningPdf": "Erstelle und signiere PDF …",
         "cut": "ausschneiden",
         "delcolumn": "Spalte löschen",
         "deletetable": "Tabelle löschen",
