@@ -800,7 +800,6 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
     resolveLockedSection,
-    serverstatusEditorUiChanged,
 } from '../utils/examFetchInfoSync.js'
 
 const lowlight = createLowlight(common)
@@ -1260,7 +1259,7 @@ export default {
             applyClientinfoFromFetch(this, getinfo.clientinfo, { trackPrivateSpellcheck: true });
 
             const serverstatusChanged = getinfo.serverstatus
-                ? applyServerstatusFromFetch(this, getinfo.serverstatus, serverstatusEditorUiChanged)
+                ? applyServerstatusFromFetch(this, getinfo.serverstatus)
                 : false;
 
             const sectionIndex = resolveLockedSection(this.serverstatus, this.clientinfo);

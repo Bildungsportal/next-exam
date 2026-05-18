@@ -1,11 +1,13 @@
 ---
-description: Behavioral guidelines plus mandatory Graphify usage (consult graphify-out/; rebuild or --update after architecture changes). Details in @CLAUDE.md.
+description: Behavioral guidelines — requires Read of CLAUDE.md first (see 00-read-claude-md-first.mdc).
 alwaysApply: true
 ---
 
 # behavioral guidelines
 
-Follow the behavioral guidelines in the project root file below; they override generic defaults when applicable. Section 5 binds Graphify usage and refresh after coarse architecture work.
+**Prerequisite:** You must have run `Read` on `CLAUDE.md` this session (rule `00-read-claude-md-first.mdc`). If not, stop and read it now.
+
+Follow `CLAUDE.md` in full; it overrides generic defaults. Section 5 binds `memory.md`; §6 binds Graphify (`graphify-out/`, rebuild after architecture changes).
 
 **Indentation:** In **new** files you create, use **4 spaces** per indent level (no tab indents). In **existing** files, match the file’s current indentation; do not normalize unrelated whitespace.
 

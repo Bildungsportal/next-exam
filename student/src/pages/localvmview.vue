@@ -121,7 +121,6 @@ import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/lin
 import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
-    serverstatusLocalvmUiChanged,
 } from '../utils/examFetchInfoSync.js';
 
 const signalBridge = new SignalBridge(window);
@@ -522,7 +521,7 @@ export default {
 
       applyClientinfoFromFetch(this, getinfo.clientinfo);
       if (getinfo.serverstatus) {
-        applyServerstatusFromFetch(this, getinfo.serverstatus, serverstatusLocalvmUiChanged);
+        applyServerstatusFromFetch(this, getinfo.serverstatus);
       }
 
       const nextVmState = this.clientinfo?.localVMState || null;

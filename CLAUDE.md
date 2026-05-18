@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+**Cursor / agents:** If you are reading this via a rule attachment only, stop — run `Read` on `CLAUDE.md` first (see `.cursor/rules/00-read-claude-md-first.mdc`, `AGENTS.md`).
+
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.

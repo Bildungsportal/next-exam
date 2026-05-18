@@ -300,7 +300,6 @@ import { normalizeStudentClientName } from 'next-exam-shared/normalizeStudentCli
 import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
-    serverstatusStudentLobbyUiChanged,
 } from '../utils/examFetchInfoSync.js'
 
 
@@ -1128,7 +1127,7 @@ export default {
 
 
             applyClientinfoFromFetch(this, getinfo.clientinfo);
-            applyServerstatusFromFetch(this, getinfo.serverstatus || null, serverstatusStudentLobbyUiChanged);
+            applyServerstatusFromFetch(this, getinfo.serverstatus || null);
 
             if (getinfo.clientinfo.exammode) {
                 return;

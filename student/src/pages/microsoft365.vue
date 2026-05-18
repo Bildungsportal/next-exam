@@ -140,7 +140,6 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
     resolveLockedSection,
-    serverstatusExamHeaderUiChanged,
 } from '../utils/examFetchInfoSync.js'
 
 // signalBridge instance centralizes ipc calls with platform checks
@@ -336,7 +335,7 @@ export default {
 
             applyClientinfoFromFetch(this, getinfo.clientinfo);
             if (getinfo.serverstatus) {
-                applyServerstatusFromFetch(this, getinfo.serverstatus, serverstatusExamHeaderUiChanged);
+                applyServerstatusFromFetch(this, getinfo.serverstatus);
             }
 
             const sectionIndex = resolveLockedSection(this.serverstatus, this.clientinfo);

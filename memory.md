@@ -1,4 +1,5 @@
 @memV1
+RULE^agent^claudeMdFirst^first tool Read CLAUDE.md every session+subagent; @ attach ≠ Read; see .cursor/rules/00-read-claude-md-first.mdc+AGENTS.md
 RULE^agent^memRW^read CLAUDE §5+this file before nontrivial; append atoms post-learn; dedup; prune
 TECH^vue^api^Options API teacher/src; mirror sibling file; no script setup unless user migrates
 IPC^teacher^writeTeacherWorkdirUtf8File^invoke({servername,filepath,utf8})→write UTF-8; basename must end _editor_timeline.json; servername must exist in examServerList^teacher ipchandler.js+studentEditorTimeline.js
@@ -44,17 +45,16 @@ IPC^teacher^buildTeacherCombinedLatestPdf^invoke({servername,servertoken,submiss
 TECH^student^previewWebview^applyPreviewWebviewHostLayout(splitview) sets #preview #webview box; showUrl calls it; WebviewPane host no Vue inline style (re-render wiped 80vw); inner nx-webview-pane-fill; guest no d-block; setZoomFactor dom-ready+try/catch; pass splitview prop editor+activesheets^student/src/utils/commonMethods.js+student/src/components/WebviewPane.vue
 TECH^student^examHeaderClock^ExamHeader :entrytime ms; tickHeaderClock updates ref headerClock textContent+title (no reactive tick); pages drop clockinterval/currenttime/timesinceentry props^student/src/components/ExamHeader.vue
 TECH^student^editorStatusCounts^editor.vue statusWordCount/statusCharCount refs+updateEditorStatusCounts SchedulerService 1Hz (no parent re-render)^student/src/pages/editor.vue
-PATH^student^examFetchInfoSync^student/src/utils/examFetchInfoSync.js shared clientinfo+serverstatus fetchInfo diff; editor+activesheets import
-TECH^student^editorFetchInfo^editor.vue uses examFetchInfoSync applyClientinfoFromFetch+serverstatusEditorUiChanged
-TECH^student^activesheets^fetchInfo^examFetchInfoSync; maybeReloadActiveSheetPdf by load key; no clientinfo watcher PDF reload
-TECH^student^geogebra^fetchInfo^examFetchInfoSync applyClientinfo+serverstatusExamHeaderUiChanged; injectCSS only on exammode change
-TECH^student^eduvidual^fetchInfo^examFetchInfoSync serverstatusEduvidualUiChanged; applyEduvidualConfigFromSection; webview src only on url change
-TECH^student^website^fetchInfo^examFetchInfoSync serverstatusWebsiteUiChanged; applyWebsiteConfigFromSection; webview src only on url change
-TECH^student^localvm^fetchInfo^examFetchInfoSync applyClientinfo+serverstatusLocalvmUiChanged; clientinfo localVM* in clientinfoUiChanged; VNC reset only on vm state transition
-TECH^student^forms^fetchInfo^examFetchInfoSync serverstatusFormsUiChanged; applyFormsUrlFromSection; webview src only on url change
-TECH^student^ms365^fetchInfo^examFetchInfoSync applyClientinfo+serverstatusExamHeaderUiChanged; msofficeshare in clientinfoUiChanged; collapse/restore browserview only on focus transition
-TECH^student^rdp^fetchInfo^examFetchInfoSync serverstatusRdpUiChanged; applyRdpConfigFromSection; webview src only on url change
-TECH^student^lobby^fetchInfo^student.vue applyClientinfoFromFetch+serverstatusStudentLobbyUiChanged (=localvm slice); examtype/servername/serverip in clientinfoUiChanged
+PATH^student^examFetchInfoSync^student/src/utils/examFetchInfoSync.js applyClientinfoFromFetch+applyServerstatusFromFetch; serverstatus compare JSON replacer activeSheets→filename+len+checksum not filecontent
+RULE^student^pin^noFetchSync^applyClientinfoFromFetch must not set vm.pincode; lobby=user input; exam=router params from register mirror
+TECH^student^activesheets^fetchInfo^maybeReloadActiveSheetPdf activeSheetLoadKey; no clientinfo watcher PDF reload
+TECH^student^geogebra^fetchInfo^injectCSS only on exammode change
+TECH^student^eduvidual^fetchInfo^applyEduvidualConfigFromSection; webview src only on url change
+TECH^student^website^fetchInfo^applyWebsiteConfigFromSection; webview src only on url change
+TECH^student^localvm^fetchInfo^clientinfo localVM* in clientinfoUiChanged; VNC reset only on vm state transition
+TECH^student^forms^fetchInfo^applyFormsUrlFromSection; webview src only on url change
+TECH^student^ms365^fetchInfo^msofficeshare in clientinfoUiChanged; collapse/restore browserview only on focus transition
+TECH^student^rdp^fetchInfo^applyRdpConfigFromSection; webview src only on url change
 RULE^student^typingRhythm^editor.vue isTypingRhythmExemptKey clears deltas for Backspace Delete Space Enter NumpadEnter (OS key-repeat)^student/src/pages/editor.vue handleTypingRhythmKeydown
 RULE^ui^swal2^teacher+student global left-align .swal2-html-container+.swal2-title^teacher/src/css/app.scss+student/src/css/app.scss
 TECH^student^localvmHash^sha256 base qcow2 before qemu start (runLocalVmPreStartVerify); avoids guest freeze from parallel full read^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js
