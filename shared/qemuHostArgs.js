@@ -61,12 +61,28 @@ export function getQemuMachineArgs() {
 
 const OVMF_FIRMWARE_JSON = '60-edk2-ovmf-x86_64-4m.json';
 
+/** QEMU share dir: Windows <prefix>/share; Linux /usr/bin → /usr/share. */
+function resolveQemuShareDir(binDir) {
+    const candidates = [
+        path.join(binDir, 'share'),
+        path.join(binDir, '..', 'share'),
+    ];
+    for (const dir of candidates) {
+        try {
+            if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
+                return dir;
+            }
+        } catch (e) {}
+    }
+    return candidates[0];
+}
+
 /** Resolve OVMF CODE + VARS template from distro layout (QEMU json descriptor or common paths). */
 export function resolveSystemQemuFirmwarePaths(binDir) {
     const fromJson = _resolveOvmfFromQemuFirmwareJson(binDir);
     if (fromJson) return fromJson;
 
-    const share = path.join(binDir, '..', 'share');
+    const share = resolveQemuShareDir(binDir);
     const pairs = [
         [path.join(share, 'edk2-x86_64-code.fd'), path.join(share, 'edk2-x86_64-vars.fd')],
         [path.join(share, 'edk2-x86_64-code.fd'), path.join(share, 'edk2-i386-vars.fd')],
@@ -81,13 +97,14 @@ export function resolveSystemQemuFirmwarePaths(binDir) {
     }
     throw new Error(
         'OVMF firmware not found (Linux: edk2-ovmf; Windows: QEMU installer share/). '
-        + 'UEFI Windows VMs need CODE+VARS pflash files.'
+        + `UEFI Windows VMs need CODE+VARS pflash files. Searched under ${share}.`
     );
 }
 
-/** Read paths from /usr/share/qemu/firmware/*.json (Arch/Fedora/Debian). */
+/** Read paths from share/qemu/firmware/*.json (Arch/Fedora/Debian). */
 function _resolveOvmfFromQemuFirmwareJson(binDir) {
-    const jsonPath = path.join(binDir, '..', 'share', 'qemu', 'firmware', OVMF_FIRMWARE_JSON);
+    const share = resolveQemuShareDir(binDir);
+    const jsonPath = path.join(share, 'qemu', 'firmware', OVMF_FIRMWARE_JSON);
     if (!fs.existsSync(jsonPath)) return null;
     try {
         const j = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));

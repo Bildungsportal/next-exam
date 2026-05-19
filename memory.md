@@ -61,6 +61,8 @@ RULE^ui^colors^shared^btn-cyan+swal confirm=$cyan-600^shared/css/nxe-theme.scss;
 RULE^ui^swal2^teacher+student layout+btn colors^shared/css/nxe-theme.scss
 TECH^localvm^qemuSystem^system PATH only; public/qemu=autounattend.iso; linux q35 auto-OVMF,-drive if=virtio,-boot order=c; win32 pflash+virtio-blk bootindex=1^shared/qemuHostArgs.js
 TECH^localvm^qemuDialogs^shared/qemuLocalVmDialogs.js teacher+student; missing→download; HypervisorPlatform→elevated enable IPC^qemuLocalVmDialogs.js
+BUG^localvm^hypervisorCheck^Get-WindowsOptionalFeature needs admin→false negative; fix Win32_ComputerSystem.HypervisorPresent fallback^shared/qemuWinPlatform.js
+BUG^localvm^ovmfPath^Windows binDir=<qemu>/ not /usr/bin; share=join(binDir,share) not ../share^shared/qemuHostArgs.js resolveQemuShareDir
 RULE^localvm^display^teacher bootDisk/install=interactive display; student headless=-display none+-vnc; win WHPX use -vga virtio not std (boot spinner)^shared/qemuHostArgs.js
 RULE^localvm^teacherBoot^killExistingQemuInstances before teacher interactive spawn; stale -display none holds qcow2 lock^teacher qemuService.js
 TECH^localvm^isoDl^teacher downloadFile uses stream pipeline to .part then rename; skip if dest>=MIN_COMPLETE_BYTES; cleanup stale .part^teacher qemuService.js
