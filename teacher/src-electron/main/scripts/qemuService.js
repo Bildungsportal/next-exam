@@ -493,6 +493,72 @@ async function bootDisk({ workdirectory, qcow2Name }) {
     return { ok: true };
 }
 
+const IMPORT_COPY_LOG_BYTES = 64 * 1024 * 1024;
+
+/** Wait until dest file on disk has expected byte size (Windows AV can delay copyFile/pipeline finish). */
+async function waitForFileSize(dest, expectedBytes, { intervalMs = 400, timeoutMs = 3600000 } = {}) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        try {
+            const st = await fs.promises.stat(dest);
+            if (st.size === expectedBytes) {
+                return;
+            }
+        } catch (e) {}
+        await new Promise((resolve) => { setTimeout(resolve, intervalMs); });
+    }
+    throw new Error(`copy timeout: ${dest} did not reach ${expectedBytes} bytes`);
+}
+
+/** Stream copy with progress logs; win32 uses size watchdog when pipeline stalls after data is on disk. */
+async function copyQcow2ToDest(src, dest) {
+    const total = (await fs.promises.stat(src)).size;
+    const copyStart = Date.now();
+    let copied = 0;
+    let lastLog = 0;
+
+    const rs = fs.createReadStream(src, { highWaterMark: 1024 * 1024 });
+    const ws = fs.createWriteStream(dest);
+    const counter = new Transform({
+        transform(chunk, _enc, cb) {
+            copied += chunk.length;
+            if (copied - lastLog >= IMPORT_COPY_LOG_BYTES) {
+                lastLog = copied;
+                const pct = total > 0 ? Math.round((copied * 100) / total) : 0;
+                log.info(`qemuService @ importDisk: copy ${pct}% (${copied}/${total})`);
+            }
+            cb(null, chunk);
+        },
+    });
+
+    const pipeDone = pipeline(rs, counter, ws);
+    if (process.platform === 'win32') {
+        const watchdog = waitForFileSize(dest, total).then(() => {
+            rs.destroy();
+            ws.destroy();
+            log.info('qemuService @ importDisk: win32 watchdog — dest size ok, releasing streams');
+        });
+        await Promise.race([pipeDone, watchdog]);
+        try {
+            await pipeDone;
+        } catch (e) {
+            const st = await fs.promises.stat(dest).catch(() => null);
+            if (!st || st.size !== total) {
+                throw e;
+            }
+            log.info(`qemuService @ importDisk: pipeline error after complete copy (${e?.message || e})`);
+        }
+    } else {
+        await pipeDone;
+    }
+
+    const destStat = await fs.promises.stat(dest);
+    if (destStat.size !== total) {
+        throw new Error(`copy size mismatch: expected ${total} got ${destStat.size}`);
+    }
+    log.info(`qemuService @ importDisk: copy done in ${Date.now() - copyStart}ms (${total} bytes)`);
+}
+
 async function importDisk({ workdirectory, sourcePath }) {
     const qemuDir = getQemuDir(workdirectory);
     await ensureDir(qemuDir);
@@ -523,9 +589,7 @@ async function importDisk({ workdirectory, sourcePath }) {
     }
     const srcStat = await fs.promises.stat(src);
     log.info(`qemuService @ importDisk: copying ${srcStat.size} bytes…`);
-    const copyStart = Date.now();
-    await fs.promises.copyFile(src, dest);
-    log.info(`qemuService @ importDisk: copy done in ${Date.now() - copyStart}ms`);
+    await copyQcow2ToDest(src, dest);
     return { ok: true, filename };
 }
 

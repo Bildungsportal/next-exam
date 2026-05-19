@@ -1,7 +1,7 @@
 
 import CryptoJS from 'crypto-js';
 import log from 'electron-log/renderer';
-import { ensureQemuAvailableForLocalVmUi } from 'next-exam-shared/qemuLocalVmDialogs.js';
+import { ensureQemuAvailableForLocalVmUi, showLocalVmQemuIssueDialog } from 'next-exam-shared/qemuLocalVmDialogs.js';
 
 function ensureGroupsAndExamConfig(section) {
     const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
@@ -817,6 +817,70 @@ async function ensureQemuAvailableForLocalVm(vm) {
     });
 }
 
+function showQemuMissingWarning(vm, check = {}) {
+    return showLocalVmQemuIssueDialog({
+        swal: vm.$swal,
+        t: vm.$t.bind(vm),
+        invoke: (channel, ...args) => window.ipcRenderer?.invoke?.(channel, ...args),
+        i18nPrefix: 'dashboard',
+        check,
+        cancelKey: 'cancel',
+    });
+}
+
+/** Boot qcow2; Swal loader while main runs deep QEMU check + spawn (slow on Windows). */
+async function bootLocalVmDisk(vm, { ipc, diskName }) {
+    const statusEl = document.getElementById('qemuHashStatus');
+    const setStatus = (msg) => {
+        try {
+            if (statusEl) statusEl.textContent = msg ?? '';
+        } catch (e) {}
+    };
+    const setBootBusy = (busy) => {
+        try {
+            document.querySelectorAll('button[data-qemu-boot]').forEach((b) => {
+                b.disabled = busy;
+            });
+        } catch (e) {}
+    };
+
+    log.info(`examsetup @ bootLocalVmDisk: start disk=${diskName}`);
+    setBootBusy(true);
+    setStatus('Prüfe QEMU (WHPX, Module, CPU)…');
+    try {
+        vm.$swal.showLoading();
+    } catch (e) {}
+
+    try {
+        const bootRes = await ipc.invoke('qemu-boot-disk', { qcow2Name: diskName });
+        if (bootRes?.qemuMissing) {
+            try { vm.$swal.hideLoading(); } catch (e) {}
+            await showQemuMissingWarning(vm, bootRes);
+            return;
+        }
+        if (!bootRes?.ok) {
+            await vm.$swal.fire({
+                icon: 'error',
+                title: 'LocalVM',
+                text: bootRes?.error || 'QEMU konnte nicht gestartet werden.',
+            });
+            return;
+        }
+        setStatus('VM gestartet.');
+        log.info('examsetup @ bootLocalVmDisk: ok');
+    } catch (e) {
+        log.error('examsetup @ bootLocalVmDisk', e);
+        await vm.$swal.fire({
+            icon: 'error',
+            title: 'LocalVM',
+            text: String(e?.message || e),
+        });
+    } finally {
+        try { vm.$swal.hideLoading(); } catch (e) {}
+        setBootBusy(false);
+    }
+}
+
 function buildQemuDiskRowsHtml(disks, selectedDisk) {
     return (disks || []).map((d) => {
         const raw = String(d);
@@ -1044,7 +1108,7 @@ async function configureLocalVM(presetGroup){
                     try {
                         const res = await ipc.invoke('qemu-install-default');
                         if (res?.qemuMissing) {
-                            await showQemuMissingWarning(this);
+                            await showQemuMissingWarning(this, res);
                             return;
                         }
                         if (!res || res.ok !== true) {
@@ -1237,30 +1301,7 @@ async function configureLocalVM(presetGroup){
                 const enc = btn.getAttribute('data-qemu-boot');
                 const diskName = enc ? decodeURIComponent(enc) : '';
                 if (!diskName) return;
-                if (!(await ensureQemuAvailableForLocalVm(this))) {
-                    return;
-                }
-                try {
-                    const bootRes = await ipc.invoke('qemu-boot-disk', { qcow2Name: diskName });
-                    if (bootRes?.qemuMissing) {
-                        await showQemuMissingWarning(this);
-                        return;
-                    }
-                    if (!bootRes?.ok) {
-                        await this.$swal.fire({
-                            icon: 'error',
-                            title: 'LocalVM',
-                            text: bootRes?.error || 'QEMU konnte nicht gestartet werden.',
-                        });
-                        return;
-                    }
-                } catch (e) {
-                    await this.$swal.fire({
-                        icon: 'error',
-                        title: 'LocalVM',
-                        text: String(e?.message || e),
-                    });
-                }
+                await bootLocalVmDisk(this, { ipc, diskName });
             });
             const browseBtn = document.getElementById('qemuBrowseBtn');
             browseBtn?.addEventListener('click', async () => {
@@ -1322,7 +1363,7 @@ async function configureLocalVM(presetGroup){
                 try {
                     const res = await ipc.invoke('qemu-install-default');
                     if (res?.qemuMissing) {
-                        await showQemuMissingWarning(this);
+                        await showQemuMissingWarning(this, res);
                         return;
                     }
                     if (!res || res.ok !== true) {

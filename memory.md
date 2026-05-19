@@ -64,7 +64,7 @@ TECH^localvm^qemuDialogs^shared/qemuLocalVmDialogs.js teacher+student; missing�
 TECH^localvm^qemuCheck^quick=stat+1xwhere win no --version spawn; deep=probe+WHPX+virtio+cpu^shared/qemuAvailability.js
 TECH^localvm^diskDialog^no qemu-check on open; check only boot/install; pick+import split IPC^examsetup configureLocalVM
 TECH^localvm^logging^electron-log main+renderer; qemuAvailability+qemuService+ipchandler+examsetup phases^LocalVM
-BUG^localvm^import^pick file already in QEMU dir→copyFile self-copy hung UI; skip src===dest; same-volume link^qemuService importDisk
+BUG^localvm^import^pick file already in QEMU dir→skip src===dest; win32 copyFile hangs post-copy→stream+size watchdog^qemuService copyQcow2ToDest
 BUG^localvm^hypervisorCheck^Get-WindowsOptionalFeature needs admin→false negative; fix Win32_ComputerSystem.HypervisorPresent fallback^shared/qemuWinPlatform.js
 BUG^localvm^ovmfPath^Windows binDir=<qemu>/ not /usr/bin; share=join(binDir,share) not ../share^shared/qemuHostArgs.js resolveQemuShareDir
 RULE^localvm^display^teacher bootDisk/install=interactive display; student headless=-display none+-vnc; win WHPX use -vga virtio not std (boot spinner)^shared/qemuHostArgs.js
