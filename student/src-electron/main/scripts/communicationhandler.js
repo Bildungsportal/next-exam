@@ -694,18 +694,21 @@ import {
             log.error("communicationhandler @ getBase64PDF: printToPDF lock timeout - another print operation is still running");
             return { sender: "client", message: "PDF generation timeout - another print operation is in progress", status: "error" };
         }
+
+        const signReasons = new Set(['submit', 'directsend', 'submitexam', 'previewSigned'])
+        const isSigningExport = signReasons.has(saveReason)
+        const headerTemplate = `<div style='display: inline-block; height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-left: 30px; margin-top:10px;'><span style="float:left;">${this.multicastClient.clientinfo.servername}</span><span style="float:left;">&nbsp;|&nbsp; </span><span style="float:left;">${sectionname}</span><span style="float:left;">&nbsp;|&nbsp; </span><span class=date style="float:left;"></span><span style="float:left;">&nbsp;|&nbsp;Abgabe: ${submissionnumber}</span><span style="float:right;">${this.multicastClient.clientinfo.name}</span></div>`
+        const footerTemplatePageNums = "<div style='height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-bottom:10px;'><span class=pageNumber></span>|<span class=totalPages></span></div>"
         
         var options = {
-            margins: {top:0.5, right:0, bottom:0.5, left:0 },
+            margins: { top: 0.5, right: 0, bottom: isSigningExport ? 0 : 0.5, left: 0 },
             pageSize: 'A4',
-            printBackground: printBackground,
+            printBackground: isSigningExport ? false : printBackground,
             printSelectionOnly: false,
             landscape: false,
-            displayHeaderFooter:true,
-
-  
-            footerTemplate: "<div style='height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-bottom:10px;'><span class=pageNumber></span>|<span class=totalPages></span></div>",
-            headerTemplate: `<div style='display: inline-block; height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-left: 30px; margin-top:10px;'><span style="float:left;">${this.multicastClient.clientinfo.servername}</span><span style="float:left;">&nbsp;|&nbsp; </span><span style="float:left;">${sectionname}</span><span style="float:left;">&nbsp;|&nbsp; </span><span class=date style="float:left;"></span><span style="float:left;">&nbsp;|&nbsp;Abgabe: ${submissionnumber}</span><span style="float:right;">${this.multicastClient.clientinfo.name}</span></div>`,
+            displayHeaderFooter: true,
+            footerTemplate: isSigningExport ? '<div></div>' : footerTemplatePageNums,
+            headerTemplate,
             preferCSSPageSize: false
         }
         
@@ -724,8 +727,7 @@ import {
             let pdfBuf = Buffer.from(data);
             let signed = false
             let signMode = null
-            const signReasons = new Set(['submit', 'directsend', 'submitexam', 'previewSigned'])
-            if (signReasons.has(saveReason)) {
+            if (isSigningExport) {
                 try {
                     const tP12 = Date.now()
                     const { p12Buffer, mode } = this.ensureSubmissionSigningP12()

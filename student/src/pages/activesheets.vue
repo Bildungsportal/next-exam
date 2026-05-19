@@ -1135,6 +1135,7 @@ export default {
         height: auto !important;
         max-height: none !important;
         position:absolute !important;
+        background-color: #ffffff !important;
     }
 
     ::-webkit-scrollbar {

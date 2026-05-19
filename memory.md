@@ -89,3 +89,5 @@ TECH^moodle^proof^shared/nextExamMoodleProofSecret.js+buildNextExamMoodleProof.j
 TECH^submissionSign^pades^auto always; bip=userprivateaccesskey; local=sha256(pin|token|timeMs); rewritePdfForPlainSignpdf before plainAddPlaceholder; swal inline editor+activesheets sendExamToTeacher/printBase64^shared/submissionPdfSign.js
 BUG^submissionPdf^footerGrayBands^printBackground:true on submit painted #editormaincontainer #eeeefa in PDF side margins; stats-rule row shows gray bands; fix editor @media print white bg+submissionSigningUi printBackground false^editor.vue+submissionSigningUi.js
 TECH^submissionPdf^visibleStamp^addSubmissionStampToPdf last page center; logo student/public/icons/icon.png; name+datetime+BiP signed; before plainAddPlaceholder^shared/submissionPdfSign.js+communicationhandler resolveSubmissionStampIconPath
+BUG^submissionPdf^sigWidgetLine^plainAddPlaceholder default widgetRect [0,0,0,0]; fix HIDDEN_SIG_WIDGET_RECT^shared/submissionPdfSign.js
+BUG^submissionPdf^bottomGrayLine^signed printToPDF bottom margin+footer band; fix isSigningExport bottom:0 empty footer printBackground:false; keep editor #statusbar border in print^communicationhandler

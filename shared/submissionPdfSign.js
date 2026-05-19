@@ -204,6 +204,9 @@ const STAMP_WIDTH = 220;
 const STAMP_HEIGHT = 50;
 const STAMP_BOTTOM_PT = 76;
 
+// Default signpdf widget [0,0,0,0] draws a visible gray edge line in common PDF viewers.
+const HIDDEN_SIG_WIDGET_RECT = [-20, -20, -1, -1];
+
 /** Formats stamp timestamp as DD.MM.YYYY HH:mm. */
 function formatSubmissionStampDate(signedAt) {
     const date = signedAt instanceof Date ? signedAt : new Date(signedAt);
@@ -358,6 +361,7 @@ export async function signSubmissionPdf(pdfBuffer, p12Buffer, meta = {}) {
         contactInfo: meta.contactInfo || 'https://next-exam.at',
         name: meta.name || 'Next-Exam Student',
         location: meta.location || 'Next-Exam',
+        widgetRect: HIDDEN_SIG_WIDGET_RECT,
     });
     const signer = new P12Signer(p12Buffer, { passphrase: INTERNAL_P12_PASSPHRASE });
     return getSignPdfClient().sign(withPlaceholder, signer);

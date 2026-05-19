@@ -2720,15 +2720,16 @@ export default {
 
     #statusbar {
         position: relative !important;
+        top: -4px !important;
         box-shadow: 0px 0px 0px transparent !important;
         background-color: white !important;
         border-top: 1px solid #c5c5c5 !important;
-        //margin-right: var(--js-margin) !important;
-        margin-left: 14px !important;
-        width: var(--js-editorWidth) !important;
+        margin-left: 30px !important;
+        width: calc(var(--js-editorWidth) - 30px) !important;
         display: flex !important;
         align-items: center !important;
         justify-content: space-between !important;
+        padding-left: 0px !important;
     }
     #editorcontent {
         border: 0px !important;
