@@ -466,8 +466,12 @@ class IpcHandler {
          * QEMU integration (LocalVM, qcow2 in workdir/QEMU)
          */
         ipcMain.handle('qemu-check-available', async (_event, opts = {}) => {
+            const quick = opts?.deep === false || opts?.quick === true;
+            log.info(`ipchandler @ qemu-check-available: start quick=${quick} opts=${JSON.stringify(opts || {})}`);
             try {
-                return await checkQemuAvailability(opts)
+                const res = await checkQemuAvailability(opts);
+                log.info(`ipchandler @ qemu-check-available: ok=${res.ok} missing=${(res.missing || []).join(',') || '-'}`);
+                return res;
             } catch (e) {
                 log.error('ipchandler @ qemu-check-available', e)
                 const install = getQemuInstallInfo()
@@ -510,8 +514,11 @@ class IpcHandler {
         })
 
         ipcMain.handle('qemu-list-disks', async () => {
+            log.info(`ipchandler @ qemu-list-disks: workdirectory=${config.workdirectory}`);
             try {
-                return await qemuService.listDisks({ workdirectory: config.workdirectory })
+                const disks = await qemuService.listDisks({ workdirectory: config.workdirectory });
+                log.info(`ipchandler @ qemu-list-disks: returning ${disks.length} name(s)`);
+                return disks;
             } catch (e) {
                 log.error('ipchandler @ qemu-list-disks', e)
                 return []
@@ -562,16 +569,54 @@ class IpcHandler {
         })
 
         ipcMain.handle('qemu-boot-disk', async (_event, payload = {}) => {
+            const { qcow2Name } = payload || {};
+            log.info(`ipchandler @ qemu-boot-disk: qcow2=${qcow2Name}`);
             try {
-                const avail = await checkQemuAvailability()
+                log.info('ipchandler @ qemu-boot-disk: deep QEMU check…');
+                const avail = await checkQemuAvailability();
                 if (!avail.ok) {
                     log.warn('ipchandler @ qemu-boot-disk: QEMU not available', avail.missing)
                     return { ok: false, qemuMissing: true, missing: avail.missing }
                 }
-                const { qcow2Name } = payload || {}
                 return await qemuService.bootDisk({ workdirectory: config.workdirectory, qcow2Name })
             } catch (e) {
                 log.error('ipchandler @ qemu-boot-disk', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
+
+        ipcMain.handle('qemu-pick-disk-file', async () => {
+            log.info('ipchandler @ qemu-pick-disk-file: opening file dialog…');
+            try {
+                const result = await dialog.showOpenDialog(this.WindowHandler.mainwindow, {
+                    properties: ['openFile'],
+                    filters: [{ name: 'QEMU Disk', extensions: ['qcow2'] }],
+                })
+                if (result.canceled || !result.filePaths || !result.filePaths[0]) {
+                    log.info('ipchandler @ qemu-pick-disk-file: cancelled');
+                    return { ok: false, cancelled: true }
+                }
+                log.info(`ipchandler @ qemu-pick-disk-file: selected ${result.filePaths[0]}`);
+                return { ok: true, sourcePath: result.filePaths[0] }
+            } catch (e) {
+                log.error('ipchandler @ qemu-pick-disk-file', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
+
+        ipcMain.handle('qemu-import-disk', async (_event, payload = {}) => {
+            try {
+                const { sourcePath } = payload || {}
+                if (!sourcePath) {
+                    log.warn('ipchandler @ qemu-import-disk: missing sourcePath');
+                    return { ok: false, error: 'invalid sourcePath' }
+                }
+                log.info(`ipchandler @ qemu-import-disk: import ${sourcePath}`);
+                const res = await qemuService.importDisk({ workdirectory: config.workdirectory, sourcePath });
+                log.info(`ipchandler @ qemu-import-disk: done ok=${res.ok} filename=${res.filename} skipped=${!!res.skipped} linked=${!!res.linked}`);
+                return res;
+            } catch (e) {
+                log.error('ipchandler @ qemu-import-disk', e)
                 return { ok: false, error: String(e?.message || e) }
             }
         })

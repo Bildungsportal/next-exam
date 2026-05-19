@@ -70,7 +70,7 @@ export async function ensureQemuAvailableForLocalVmUi({
 }) {
     let check;
     try {
-        check = await invoke(QEMU_IPC.CHECK_AVAILABLE, { quick: true });
+        check = await invoke(QEMU_IPC.CHECK_AVAILABLE, { deep: false });
     } catch (e) {
         console.error('qemuLocalVmDialogs @ ensureQemuAvailableForLocalVmUi', e);
         await showQemuMissingDialog({ swal, t, invoke, i18nPrefix, check: {} });

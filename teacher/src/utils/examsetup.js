@@ -1,5 +1,6 @@
 
 import CryptoJS from 'crypto-js';
+import log from 'electron-log/renderer';
 import { ensureQemuAvailableForLocalVmUi } from 'next-exam-shared/qemuLocalVmDialogs.js';
 
 function ensureGroupsAndExamConfig(section) {
@@ -837,6 +838,28 @@ function buildQemuDiskRowsHtml(disks, selectedDisk) {
     }).join('');
 }
 
+/** List qcow2 names; short retry helps Windows right after copy/link. */
+async function listQemuDisksWithRetry(ipc) {
+    const attempts = 4;
+    for (let i = 0; i < attempts; i += 1) {
+        log.info(`examsetup @ listQemuDisksWithRetry: attempt ${i + 1}/${attempts}`);
+        try {
+            const disks = await ipc.invoke('qemu-list-disks');
+            if (Array.isArray(disks) && disks.length > 0) {
+                log.info(`examsetup @ listQemuDisksWithRetry: found ${disks.length} disk(s)`);
+                return disks;
+            }
+        } catch (e) {
+            log.warn(`examsetup @ listQemuDisksWithRetry: failed (${e?.message || e})`);
+        }
+        if (i < attempts - 1) {
+            await new Promise((resolve) => { setTimeout(resolve, 200); });
+        }
+    }
+    log.warn('examsetup @ listQemuDisksWithRetry: no disks after retries');
+    return [];
+}
+
 /** File picker + import IPC; refresh disk list in open LocalVM Swal. */
 async function pickImportAndRefreshQemuDiskList(ipc, { statusEl, listEl, labelEl, setSelectedDisk } = {}) {
     const setStatus = (msg) => {
@@ -844,30 +867,46 @@ async function pickImportAndRefreshQemuDiskList(ipc, { statusEl, listEl, labelEl
             if (statusEl) statusEl.textContent = msg ?? '';
         } catch (e) {}
     };
+    log.info('examsetup @ pickImport: opening file picker…');
     setStatus('Öffne Dateiauswahl…');
-    let importRes;
+    let pick;
     try {
-        importRes = await ipc.invoke('qemu-pick-import-disk');
+        pick = await ipc.invoke('qemu-pick-disk-file');
     } catch (e) {
+        log.error('examsetup @ pickImport: pick failed', e);
         setStatus(String(e?.message || e));
         return null;
     }
-    if (importRes?.cancelled) {
+    if (pick?.cancelled) {
+        log.info('examsetup @ pickImport: cancelled');
         setStatus('');
         return null;
     }
+    if (!pick?.ok || !pick.sourcePath) {
+        log.warn(`examsetup @ pickImport: pick error ${pick?.error || 'unknown'}`);
+        setStatus(pick?.error ? String(pick.error) : 'Dateiauswahl fehlgeschlagen.');
+        return null;
+    }
+    log.info(`examsetup @ pickImport: selected ${pick.sourcePath}`);
+    setStatus('Kopiere qcow2…');
+    let importRes;
+    try {
+        importRes = await ipc.invoke('qemu-import-disk', { sourcePath: pick.sourcePath });
+    } catch (e) {
+        log.error('examsetup @ pickImport: import failed', e);
+        setStatus(String(e?.message || e));
+        return null;
+    }
     if (!importRes?.ok || !importRes?.filename) {
+        log.warn(`examsetup @ pickImport: import error ${importRes?.error || 'unknown'}`);
         setStatus(importRes?.error ? String(importRes.error) : 'Import fehlgeschlagen.');
         return null;
     }
-    let disks = [];
-    try {
-        disks = await ipc.invoke('qemu-list-disks');
-    } catch (e) {
-        disks = [];
-    }
-    if (!Array.isArray(disks) || disks.length === 0) {
-        setStatus('Keine qcow2 Disk gefunden.');
+    log.info(`examsetup @ pickImport: import ok filename=${importRes.filename} skipped=${!!importRes.skipped} linked=${!!importRes.linked}`);
+    setStatus('Aktualisiere Liste…');
+    const disks = await listQemuDisksWithRetry(ipc);
+    if (!disks.length) {
+        setStatus('Import fertig, aber qcow2 nicht in QEMU-Ordner sichtbar.');
         return null;
     }
     const selected = disks.includes(importRes.filename) ? importRes.filename : disks[0];
@@ -877,6 +916,7 @@ async function pickImportAndRefreshQemuDiskList(ipc, { statusEl, listEl, labelEl
     if (labelEl) labelEl.textContent = selected;
     if (setSelectedDisk) setSelectedDisk(selected);
     setStatus(importRes.skipped ? 'Bereits im QEMU-Ordner.' : '');
+    log.info(`examsetup @ pickImport: UI refreshed selected=${selected}`);
     return { selected, disks };
 }
 
@@ -884,6 +924,7 @@ async function pickImportAndRefreshQemuDiskList(ipc, { statusEl, listEl, labelEl
  * LocalVM (QEMU qcow2 selection in workdir/EXAM-TEACHER/QEMU)
  */
 async function configureLocalVM(presetGroup){
+    log.info(`examsetup @ configureLocalVM: start presetGroup=${presetGroup}`);
     const ipc = window.ipcRenderer;
     if (!ipc) {
         this.$swal.fire({
@@ -891,10 +932,6 @@ async function configureLocalVM(presetGroup){
             title: 'LocalVM',
             text: 'Local QEMU integration is not available in this environment.'
         });
-        return;
-    }
-
-    if (!(await ensureQemuAvailableForLocalVm(this))) {
         return;
     }
 
@@ -912,13 +949,15 @@ async function configureLocalVM(presetGroup){
     let disks = [];
     try {
         disks = await ipc.invoke('qemu-list-disks');
+        log.info(`examsetup @ configureLocalVM: list-disks count=${Array.isArray(disks) ? disks.length : 0}`);
     } catch (error) {
-        console.error('examsetup @ configureLocalVM: qemu-list-disks failed', error);
+        log.error('examsetup @ configureLocalVM: qemu-list-disks failed', error);
         disks = [];
     }
 
     let preferredDisk = null;
     if (!Array.isArray(disks) || disks.length === 0) {
+        log.info('examsetup @ configureLocalVM: no disks → empty dialog');
         const firstHtml = `<div style="text-align:left;">
             <div><b>Keine QEMU-VM gefunden</b> im Workdirectory unter <code>EXAM-TEACHER/QEMU</code>.</div>
             <div style="margin-top:8px;">Du kannst jetzt eine VM <b>vollautomatisch installieren</b> (inkl. Download der ISOs). Das kann <b>~10 Minuten</b> dauern.</div>
@@ -950,14 +989,19 @@ async function configureLocalVM(presetGroup){
                 const installBtn = document.getElementById('qemuInstallBtn');
 
                 browseBtn?.addEventListener('click', async () => {
+                    log.info('examsetup @ configureLocalVM: browse (empty dialog)');
                     const res = await pickImportAndRefreshQemuDiskList(ipc, { statusEl });
                     if (!res) return;
                     preferredDisk = res.selected;
+                    log.info(`examsetup @ configureLocalVM: reopening disk picker preferred=${preferredDisk}`);
                     try { this.$swal.close(); } catch (e) {}
                     setTimeout(() => { configureLocalVM.call(this, presetGroup); }, 50);
                 });
 
                 installBtn?.addEventListener('click', async () => {
+                    if (!(await ensureQemuAvailableForLocalVm(this))) {
+                        return;
+                    }
                     let onProgress = null;
                     try {
                         if (statusEl) statusEl.textContent = 'Starte VM-Build…';
@@ -1193,6 +1237,9 @@ async function configureLocalVM(presetGroup){
                 const enc = btn.getAttribute('data-qemu-boot');
                 const diskName = enc ? decodeURIComponent(enc) : '';
                 if (!diskName) return;
+                if (!(await ensureQemuAvailableForLocalVm(this))) {
+                    return;
+                }
                 try {
                     const bootRes = await ipc.invoke('qemu-boot-disk', { qcow2Name: diskName });
                     if (bootRes?.qemuMissing) {
@@ -1230,6 +1277,9 @@ async function configureLocalVM(presetGroup){
             });
             const installBtn = document.getElementById('qemuInstallBtn');
             installBtn?.addEventListener('click', async () => {
+                if (!(await ensureQemuAvailableForLocalVm(this))) {
+                    return;
+                }
                 try {
                     const statusEl = document.getElementById('qemuHashStatus');
                     if (statusEl) statusEl.textContent = 'Starte VM-Build…';

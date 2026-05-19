@@ -320,11 +320,14 @@ async function runToCompletion(cmd, args, options = {}) {
 async function listDisks({ workdirectory }) {
     const dir = getQemuDir(workdirectory);
     await ensureDir(dir);
+    log.info(`qemuService @ listDisks: scanning ${dir}`);
     const entries = await fs.promises.readdir(dir, { withFileTypes: true });
-    return entries
+    const names = entries
         .filter((e) => e.isFile() && e.name.toLowerCase().endsWith('.qcow2'))
         .map((e) => e.name)
         .sort((a, b) => a.localeCompare(b));
+    log.info(`qemuService @ listDisks: found ${names.length} disk(s) [${names.join(', ')}]`);
+    return names;
 }
 
 async function hashDisk({ workdirectory, qcow2Name }) {
@@ -454,6 +457,7 @@ async function installDefaultVm({ workdirectory, onProgress = null }) {
 
 // Teacher boot: -display gtk window; student uses -display none + VNC only.
 async function bootDisk({ workdirectory, qcow2Name }) {
+    log.info(`qemuService @ bootDisk: qcow2=${qcow2Name} workdirectory=${workdirectory}`);
     const qemuDir = getQemuDir(workdirectory);
     await ensureDir(qemuDir);
     const filename = path.basename(String(qcow2Name || ''));
@@ -497,10 +501,31 @@ async function importDisk({ workdirectory, sourcePath }) {
     const filename = path.basename(src);
     if (!filename.toLowerCase().endsWith('.qcow2')) throw new Error('invalid file type');
     const dest = path.resolve(path.join(qemuDir, filename));
+    log.info(`qemuService @ importDisk: src=${src} dest=${dest}`);
     if (src === dest) {
+        log.info(`qemuService @ importDisk: skipped (already in QEMU folder)`);
         return { ok: true, filename, skipped: true };
     }
+    if (fs.existsSync(dest)) {
+        log.info(`qemuService @ importDisk: removing existing ${dest}`);
+        await fs.promises.unlink(dest);
+    }
+    try {
+        const srcStat = await fs.promises.stat(src);
+        const destDirStat = await fs.promises.stat(path.dirname(dest));
+        if (srcStat.dev === destDirStat.dev) {
+            log.info(`qemuService @ importDisk: hardlink (same volume, ${srcStat.size} bytes)`);
+            await fs.promises.link(src, dest);
+            return { ok: true, filename, linked: true };
+        }
+    } catch (e) {
+        log.info(`qemuService @ importDisk: link failed, copying (${e?.message || e})`);
+    }
+    const srcStat = await fs.promises.stat(src);
+    log.info(`qemuService @ importDisk: copying ${srcStat.size} bytes…`);
+    const copyStart = Date.now();
     await fs.promises.copyFile(src, dest);
+    log.info(`qemuService @ importDisk: copy done in ${Date.now() - copyStart}ms`);
     return { ok: true, filename };
 }
 

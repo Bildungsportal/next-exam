@@ -62,7 +62,9 @@ RULE^ui^swal2^teacher+student layout+btn colors^shared/css/nxe-theme.scss
 TECH^localvm^qemuSystem^system PATH only; public/qemu=autounattend.iso; linux q35 auto-OVMF,-drive if=virtio,-boot order=c; win32 pflash+virtio-blk bootindex=1^shared/qemuHostArgs.js
 TECH^localvm^qemuDialogs^shared/qemuLocalVmDialogs.js teacher+student; missing→download; HypervisorPlatform→elevated enable IPC^qemuLocalVmDialogs.js
 TECH^localvm^qemuCheck^quick=stat+1xwhere win no --version spawn; deep=probe+WHPX+virtio+cpu^shared/qemuAvailability.js
-BUG^localvm^import^pick file already in QEMU dir→copyFile self-copy hung UI; skip src===dest^qemuService importDisk
+TECH^localvm^diskDialog^no qemu-check on open; check only boot/install; pick+import split IPC^examsetup configureLocalVM
+TECH^localvm^logging^electron-log main+renderer; qemuAvailability+qemuService+ipchandler+examsetup phases^LocalVM
+BUG^localvm^import^pick file already in QEMU dir→copyFile self-copy hung UI; skip src===dest; same-volume link^qemuService importDisk
 BUG^localvm^hypervisorCheck^Get-WindowsOptionalFeature needs admin→false negative; fix Win32_ComputerSystem.HypervisorPresent fallback^shared/qemuWinPlatform.js
 BUG^localvm^ovmfPath^Windows binDir=<qemu>/ not /usr/bin; share=join(binDir,share) not ../share^shared/qemuHostArgs.js resolveQemuShareDir
 RULE^localvm^display^teacher bootDisk/install=interactive display; student headless=-display none+-vnc; win WHPX use -vga virtio not std (boot spinner)^shared/qemuHostArgs.js
