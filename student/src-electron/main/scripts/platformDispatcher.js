@@ -31,6 +31,13 @@ import { pathToFileURL } from 'url';
 import os from 'os';
 import path from 'path';
 import dotenv from 'dotenv';
+import {
+    detectCageInstalled,
+    detectCageKioskAppImageInstalled,
+    detectCageKioskDesktopInstalled,
+    detectRunningInCage,
+    needsCageKioskSetup,
+} from './cageDetect.js';
 dotenv.config();
 const __dirname = import.meta.dirname;
 
@@ -48,6 +55,12 @@ class PlatformDispatcher {
     this.isGNOME = this._isGNOME();
     this.isUnity = this._isUNITY();
     this.isWayland = this._isWayland();
+    this.cageInstalled = this.platform === 'linux' ? detectCageInstalled() : false;
+    this.runningInCage = this.platform === 'linux' ? detectRunningInCage() : false;
+    this.isCageSession = this.runningInCage;
+    this.cageKioskAppImageInstalled = this.platform === 'linux' ? detectCageKioskAppImageInstalled() : false;
+    this.cageKioskDesktopInstalled = this.platform === 'linux' ? detectCageKioskDesktopInstalled() : false;
+    this.needsCageKioskSetup = this.platform === 'linux' ? needsCageKioskSetup() : false;
     this.jre = this._detectJREId();
     this.publicBase = this._getPublicBase();
     this.jreDir = this._resolveJREDir();
@@ -60,6 +73,38 @@ class PlatformDispatcher {
     this.workdirectory = this._getWorkdirectory();
     this.logfile = this._getLogfile();
     this.desktopName = this._whichDesktopName();
+    this.macRosettaEmulation = this._detectMacRosettaEmulation();
+    this.runningUnderMacRosetta = this.macRosettaEmulation.runningUnderRosetta;
+  }
+
+  // True when Apple Silicon runs this x64 binary under Rosetta (sysctl.proc_translated).
+  _detectMacRosettaEmulation() {
+    const processArch = this.arch;
+    if (this.platform !== 'darwin') {
+      return { runningUnderRosetta: false, nativeHostArch: null, processArch, procTranslated: false };
+    }
+    let nativeHostArch = null;
+    try {
+      nativeHostArch = execSync('uname -m', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
+    } catch {
+      return { runningUnderRosetta: false, nativeHostArch: null, processArch, procTranslated: false };
+    }
+    let procTranslated = false;
+    try {
+      procTranslated = Number(
+        execSync('sysctl -n sysctl.proc_translated', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim()
+      ) === 1;
+    } catch {
+      procTranslated = false;
+    }
+    const runningUnderRosetta =
+      nativeHostArch === 'arm64' && processArch === 'x64' && procTranslated;
+    if (runningUnderRosetta) {
+      this.messages.push(
+        `platformDispatcher @ _detectMacRosettaEmulation: x64 process on arm64 host (Rosetta); native=${nativeHostArch} process=${processArch}`
+      );
+    }
+    return { runningUnderRosetta, nativeHostArch, processArch, procTranslated };
   }
 
   _isIOS() {
@@ -72,6 +117,9 @@ class PlatformDispatcher {
     }
 
     else if (this.platform === 'linux') {
+      if (this.runningInCage) {
+        return "cage";
+      }
       if (this._isGNOME()) {
         return "gnome-shell";
       } else if (this._isKDE()) {

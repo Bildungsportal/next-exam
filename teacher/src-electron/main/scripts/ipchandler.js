@@ -18,193 +18,54 @@
 
 
 import fs from 'fs'
-//import i18n from '../../renderer/src/locales/locales.js'
-//const { t } = i18n.global
-import { BrowserWindow, ipcMain, dialog, session } from 'electron'
-import {join} from 'path'
+import { ipcMain, dialog, session } from 'electron'
+import path, { join } from 'path'
 import log from 'electron-log';
+import { decryptBufferIfNeeded, isNxe1ExamEncrypted, unwrapNxe1ExamBuffer } from './examFileCryptoContext.js';
 import { networkInterfaces } from 'os'
 import { exec } from 'child_process';
 import { gateway4sync} from 'default-gateway';
 import ip from 'ip'
 import dns from 'dns'
+import net from 'node:net'
+import qemuService from './qemuService.js'
+import archiver from 'archiver'
 
 import server from "../../server/src/server.js"
+import { resolvePathUnderRoot, isSafePathSegment } from '../../server/src/utils/safePaths.js'
 import checkDiskSpace from 'check-disk-space';
+import { enqueuePrintJob } from './printjobhandler.js'
+import { buildTeacherCombinedLatestPdf } from './getLatestCombinedPdf.js'
+import multiCastserver from './multicastserver.js'
+import i18n from '../../../src/locales/locales.js'
 
+const { t } = i18n.global
+
+/** Zip a folder for dashboard explorer download (same behaviour as data.js zipDirectory). */
+function zipExplorerDirectory(sourceDir, outPath) {
+    const archive = archiver('zip', { zlib: { level: 9 } })
+    const stream = fs.createWriteStream(outPath)
+    return new Promise((resolve, reject) => {
+        archive
+            .directory(sourceDir, false)
+            .on('error', (err) => reject(err))
+            .pipe(stream)
+        stream.on('close', () => resolve())
+        archive.finalize()
+    })
+}
 
 class IpcHandler {
     constructor () {
         this.multicastClient = null
         this.config = null
         this.WindowHandler = null
-        this.printQueue = []
-        this.isProcessingPrint = false
     }
     init (mc, config, wh, ch) {
         this.multicastClient = mc
         this.config = config
         this.WindowHandler = wh  
         this.CommunicationHandler = ch
-
-        /**
-         * Process print queue sequentially - one job at a time
-         */
-        this._processPrintQueue = async () => {
-            if (this.isProcessingPrint) {
-                return; // Already processing
-            }
-
-            this.isProcessingPrint = true;
-
-            while (this.printQueue.length > 0) {
-                const job = this.printQueue.shift(); // Get first job from queue
-                log.info(`ipchandler @ _processPrintQueue: Processing print job (${this.printQueue.length} remaining in queue)`);
-
-                try {
-                    await this._processPrintJob(job.docBase64, job.printerName, job.previewType);
-                    job.resolve(true);
-                } catch (error) {
-                    log.error(`ipchandler @ _processPrintQueue: Print job failed: ${error.message}`);
-                    job.reject(error);
-                }
-            }
-
-            this.isProcessingPrint = false;
-            log.info('ipchandler @ _processPrintQueue: Print queue empty, processing stopped');
-        };
-
-        /**
-         * Process a single print job - returns Promise that resolves after print callback completes
-         */
-        this._processPrintJob = async (docBase64, printerName, previewType) => {
-            return new Promise((resolve, reject) => {
-                let hiddenWin = new BrowserWindow({
-                    show: false,
-                    useContentSize: true, // Ensure width/height refers to content area
-                    webPreferences: {
-                        plugins: true,
-                        webSecurity: false,
-                        zoomFactor: 1.0  // Force 1:1 scaling to ignore system scale factor
-                    }
-                });
-                
-                // Set zoom factor to 1.0 to ignore system DPI scaling (fixes Chromium print bug)
-                hiddenWin.webContents.setZoomFactor(1.0);
-                
-                let dataUrl = ``;
-                if (previewType === "pdf") {
-                    dataUrl = `data:application/pdf;base64,${docBase64}`;
-                } 
-                else if (previewType === "image") {
-                    dataUrl = `data:image/jpeg;base64,${docBase64}`;
-                } else {
-                    log.error('ipchandler @ _processPrintJob: Invalid preview type!');
-                    if (hiddenWin && !hiddenWin.isDestroyed()) {
-                        hiddenWin.close();
-                    }
-                    reject(new Error('Invalid preview type'));
-                    return;
-                }
-
-                hiddenWin.on('closed', () => { hiddenWin = null; });
-
-                hiddenWin.webContents.on('did-stop-loading', async () => {
-                    try {
-                        const isPDFRendered = await hiddenWin.webContents.executeJavaScript(`
-                            new Promise(resolve => {
-                                let elapsed = 0;
-                                const interval = 500; // Check every 500 ms
-                                const timeout = 2000; // Maximum 2 seconds wait
-                                const checkPDFLoaded = () => {
-                                    const embed = document.querySelector('embed[type="application/pdf"]');
-                                    const img = document.querySelector('img');
-
-                                    if (embed && embed.clientHeight > 0) {
-                                        clearInterval(timer);
-                                        setTimeout(() => {
-                                            resolve(true); // PDF is assumed to be fully rendered
-                                        }, 1000);
-                                    } 
-                                    else if (img && img.clientHeight > 0) {
-                                        clearInterval(timer);
-                                        resolve(true); // Image is fully rendered
-                                    }    
-                                    else if (elapsed >= timeout) {
-                                        clearInterval(timer);
-                                        resolve(false); // Time expired, not rendered
-                                    } 
-                                    else { elapsed += interval; }
-                                };
-                                const timer = setInterval(checkPDFLoaded, interval);
-                            });
-                        `);
-                        
-                        if (isPDFRendered) {
-                            log.info(`ipchandler @ _processPrintJob: base64 ${previewType} received - printing on: ${printerName}`)
-                            
-                            // add timeout to avoid hanging queue when print callback never fires
-                            const printTimeout = setTimeout(() => {
-                                log.error(`ipchandler @ _processPrintJob: print job timeout for printer ${printerName}`);
-                                if (hiddenWin && !hiddenWin.isDestroyed()) {
-                                    hiddenWin.close();
-                                }
-                                reject(new Error('Print job timeout'));
-                            }, 10000);
-
-                            hiddenWin.webContents.print({ 
-                                silent: true, 
-                                deviceName: printerName,
-                                printBackground: true,
-                                scaleFactor: 1,
-                                pagesPerSheet: 1,
-                                landscape: false,
-                                pageSize: 'A4', 
-                                margins: {
-                                    marginType: 'none'
-                                }
-                            }, (success, failureReason) => {
-                                clearTimeout(printTimeout);
-                                // log if print job was handed over to OS or failed
-                                if (!success) {
-                                    log.error(`ipchandler @ _processPrintJob: print job failed for printer ${printerName}: ${failureReason || 'unknown reason'}`);
-                                    if (hiddenWin && !hiddenWin.isDestroyed()) {
-                                        hiddenWin.close();
-                                    }
-                                    reject(new Error(failureReason || 'Print job failed'));
-                                } else {
-                                    log.info(`ipchandler @ _processPrintJob: print job successfully handed over to OS for printer ${printerName}`);
-                                    if (hiddenWin && !hiddenWin.isDestroyed()) {
-                                        hiddenWin.close();
-                                    }
-                                    resolve(true);
-                                }
-                            });
-                        } else {
-                            log.error('ipchandler @ _processPrintJob: Rendering/Print failed!');
-                            if (hiddenWin && !hiddenWin.isDestroyed()) {
-                                hiddenWin.close();
-                            }
-                            reject(new Error('Rendering/Print failed'));
-                        }
-                    } catch (error) {
-                        log.error(`ipchandler @ _processPrintJob: Error during print job: ${error.message}`);
-                        if (hiddenWin && !hiddenWin.isDestroyed()) {
-                            hiddenWin.close();
-                        }
-                        reject(error);
-                    }
-                });
-
-                hiddenWin.loadURL(dataUrl).catch((error) => {
-                    log.error(`ipchandler @ _processPrintJob: Error loading URL: ${error.message}`);
-                    if (hiddenWin && !hiddenWin.isDestroyed()) {
-                        hiddenWin.close();
-                    }
-                    reject(error);
-                });
-            });
-        };
 
         /**
          *  Start BIP Login Sequence
@@ -235,17 +96,266 @@ class IpcHandler {
 
 
 
-        // returns the current serverstatus object of the given server(name)
+        /** Returns the in-memory serverstatus object for a running exam server, or false if none. */
         ipcMain.handle('getserverstatus', (event, servername) => { 
             const mcServer = this.config.examServerList[servername]
             if (mcServer ) { return mcServer.serverstatus  }
             else {           return false  }
         }) 
 
+        /** Reads serverstatus.json for a loaded exam server, sets mcServer.serverinfo.pin from the file, returns { status, serverstatus } with parsed JSON or serverstatus false when the file is missing or unreadable (error envelope when the server is not in memory). */
+        ipcMain.handle('getServerStatusFromDisk', async (_event, servername) => {
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer) {
+                return { sender: 'server', status: 'error', message: t('control.notfound'), serverstatus: false }
+            }
+            const filePath = join(this.config.workdirectory, mcServer.serverinfo.servername, 'serverstatus.json')
+            try {
+                const fileContent = await fs.promises.readFile(filePath, 'utf-8')
+                const parsed = JSON.parse(fileContent)
+                mcServer.serverinfo.pin = parsed.pin
+                return { sender: 'server', status: 'success', serverstatus: parsed }
+            } catch (_err) {
+                return { sender: 'server', status: 'success', serverstatus: false }
+            }
+        })
 
-        // stops the current exam server 
-        // (this is a copy of the /stopserver/:servername route in control.js )
-        // rethink concept that local requests go to the API (this had a non electron server version in mind but makes no sense in electron only app)
+        /** Applies payload.serverstatus to mcServer, validates optional 4-digit pin when present, clears active-section msOfficeFile, writes serverstatus.json under workdir and mirrors it to backupdirectory when configured. */
+        ipcMain.handle('setServerStatus', async (_event, payload) => {
+            const { servername, serverstatus: incoming } = payload || {}
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer) {
+                return { sender: 'server', message: t('control.notfound'), status: 'error' }
+            }
+            if (!incoming || typeof incoming !== 'object') {
+                return { sender: 'server', message: t('control.invalidpayload'), status: 'error' }
+            }
+            let normalizedPin = null
+            if (incoming.pin !== undefined && incoming.pin !== null) {
+                const pinStr = String(incoming.pin).trim()
+                if (!/^\d{4}$/.test(pinStr)) {
+                    return { sender: 'server', message: t('control.invalidpin'), status: 'error' }
+                }
+                normalizedPin = pinStr
+            }
+            const examSections = incoming.examSections
+            const activeSection = incoming.activeSection
+            if (!examSections || typeof examSections !== 'object' || activeSection == null || examSections[activeSection] == null || typeof examSections[activeSection] !== 'object') {
+                log.warn('ipchandler @ setServerStatus: invalid examSections or activeSection')
+                return { sender: 'server', message: t('control.invalidpayload'), status: 'error' }
+            }
+            mcServer.serverstatus = incoming
+            mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].msOfficeFile = false
+            if (normalizedPin !== null) {
+                mcServer.serverinfo.pin = normalizedPin
+            }
+            log.info('ipchandler @ setServerStatus: saving server status to disc')
+            const workdir = resolvePathUnderRoot(this.config.workdirectory, [mcServer.serverinfo.servername])
+            const filePath = resolvePathUnderRoot(this.config.workdirectory, [mcServer.serverinfo.servername, 'serverstatus.json'])
+            try {
+                if (!workdir || !filePath) {
+                    log.error('ipchandler @ setServerStatus: unsafe workdir or filePath')
+                    return { sender: 'server', message: 'could not save serverstatus to disc', status: 'error' }
+                }
+                await fs.promises.mkdir(workdir, { recursive: true })
+                const jsonString = JSON.stringify(mcServer.serverstatus, null, 2)
+                JSON.parse(jsonString)
+                await fs.promises.writeFile(filePath, jsonString)
+                if (this.config.backupdirectory) {
+                    const backupExamDir = resolvePathUnderRoot(this.config.backupdirectory, [mcServer.serverinfo.servername])
+                    const backupFilePath = resolvePathUnderRoot(this.config.backupdirectory, [mcServer.serverinfo.servername, 'serverstatus.json'])
+                    try {
+                        if (!backupExamDir || !backupFilePath) {
+                            log.error('ipchandler @ setServerStatus: unsafe backup path')
+                        } else {
+                            await fs.promises.mkdir(backupExamDir, { recursive: true })
+                            await fs.promises.writeFile(backupFilePath, jsonString)
+                        }
+                    } catch (backupErr) {
+                        log.error('ipchandler @ setServerStatus: backup mirror failed', backupErr)
+                    }
+                }
+            } catch (error) {
+                log.error(`ipchandler @ setServerStatus: ${error}`)
+                return { sender: 'server', message: 'could not save serverstatus to disc', status: 'error' }
+            }
+            return { sender: 'server', message: t('general.ok'), status: 'success' }
+        })
+
+        /** Merges flags into student.status for one token or all; sendexam+sendlog; fetchfiles+files queues client download; msofficeshare; restorefocus; print/group/kick/materials; spellcheck if activatePrivateSpellcheck key present; may remove kicked student after timestamp gate. */
+        ipcMain.handle('setStudentStatus', (_event, payload) => {
+            const p = payload || {}
+            const servername = p.servername
+            const studenttoken = p.studenttoken
+            if (typeof servername !== 'string' || !servername) {
+                return { sender: 'server', message: t('control.notfound'), status: 'error' }
+            }
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer) {
+                return { sender: 'server', message: t('control.notfound'), status: 'error' }
+            }
+            const printdenied = p.printdenied
+            const delfolder = p.delfolder
+            const activatePrivateSpellcheck = p.activatePrivateSpellcheck
+            const activatePrivateSuggestions = p.activatePrivateSuggestions
+            const removeprintrequest = p.removeprintrequest
+            const group = p.group
+            const kicked = p.kick
+            const msofficeshare = p.msofficeshare
+            const getmaterials = p.getmaterials
+            const sendlog = p.sendlog
+            const sendexam = p.sendexam
+            const fetchfiles = p.fetchfiles
+            const filesPayload = p.files
+
+            if (studenttoken === 'all') {
+                for (const student of mcServer.studentList) {
+                    if (sendexam) {
+                        student.status.sendexam = true
+                        if (sendlog) {
+                            student.status.sendlog = true
+                        }
+                    }
+                    if (fetchfiles && filesPayload !== undefined) {
+                        student.status.fetchfiles = true
+                        student.status.files = filesPayload
+                    }
+                    if (delfolder) {
+                        student.status.delfolder = true
+                    }
+                    if (group) {
+                        student.status.group = group
+                    }
+                    if (typeof msofficeshare !== 'undefined') {
+                        student.status.msofficeshare = msofficeshare
+                    }
+                    if (getmaterials) {
+                        student.status.getmaterials = true
+                    }
+                }
+            } else {
+                const student = mcServer.studentList.find((element) => element.token === studenttoken)
+                if (student) {
+                    if (sendexam) {
+                        student.status.sendexam = true
+                        if (sendlog) {
+                            student.status.sendlog = true
+                        }
+                    }
+                    if (fetchfiles && filesPayload !== undefined) {
+                        student.status.fetchfiles = true
+                        student.status.files = filesPayload
+                    }
+                    if (p.restorefocusstate === true) {
+                        student.status.restorefocusstate = true
+                    }
+                    if (printdenied) {
+                        student.status.printdenied = true
+                        student.printrequest = false
+                    }
+                    if (delfolder) {
+                        student.status.delfolder = true
+                    }
+                    if (Object.prototype.hasOwnProperty.call(p, 'activatePrivateSpellcheck')) {
+                        if (activatePrivateSpellcheck) {
+                            student.status.activatePrivateSpellcheck = true
+                            student.status.activatePrivateSuggestions = activatePrivateSuggestions
+                        } else {
+                            student.status.activatePrivateSpellcheck = false
+                            student.status.activateSuggestions = false
+                        }
+                    }
+                    if (removeprintrequest === true) {
+                        student.printrequest = false
+                    }
+                    if (group) {
+                        student.status.group = group
+                    }
+                    if (typeof msofficeshare !== 'undefined') {
+                        student.status.msofficeshare = msofficeshare
+                    }
+                    if (kicked) {
+                        student.status.kicked = true
+                    }
+                    if (getmaterials) {
+                        student.status.getmaterials = true
+                    }
+                    const now = Date.now()
+                    if (now - 20000 > student.timestamp && student.status.kicked) {
+                        mcServer.studentList = mcServer.studentList.filter((el) => el.token !== studenttoken)
+                    }
+                }
+            }
+            return {
+                sender: 'server',
+                message: (sendexam || fetchfiles) ? t('control.examrequest') : t('control.studentupdate'),
+                status: 'success',
+            }
+        })
+
+        /** Returns pin, servertoken, server ip, and id for a running exam server (wrapped in status/data) or an error when that server is not loaded. */
+        ipcMain.handle('getServerInfoForDashboard', (_event, servername) => {
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer) {
+                return { sender: 'server', message: 'server not found', status: 'error' }
+            }
+            return {
+                sender: 'server',
+                message: 'success',
+                status: 'success',
+                data: {
+                    pin: mcServer.serverinfo.pin,
+                    servertoken: mcServer.serverinfo.servertoken,
+                    serverip: mcServer.serverinfo.ip,
+                    id: mcServer.serverinfo.id,
+                },
+            }
+        })
+
+
+        /** Creates and registers a new multiCastserver for servername with a random PIN (fixed 1111 in development), optional exam password and BiP flags, and ensures the per-server workdir folder exists. */
+        ipcMain.handle('startExamServer', async (_event, payload) => {
+            try {
+                const { servername: rawName, passwd: examPasswd, bip, bipId } = payload || {}
+                const servername = typeof rawName === 'string' ? rawName.trim().toLowerCase() : ''
+                if (!servername) {
+                    return { sender: 'server', message: t('control.notfound'), status: 'error' }
+                }
+                const mcExisting = this.config.examServerList[servername]
+                if (mcExisting) {
+                    return { sender: 'server', message: t('control.serverexists'), status: 'error' }
+                }
+                for (const exam of this.multicastClient.examServerList) {
+                    if (servername === exam.servername) {
+                        return { sender: 'server', message: t('control.serverexistsLAN'), status: 'error' }
+                    }
+                }
+                let pin = String(Math.floor(Math.random() * 9000) + 1000)
+                if (this.config.development) { pin = '1111' }
+                log.info(`ipchandler @ startExamServer: Initializing new Exam Server: ${servername}`)
+                const mcs = new multiCastserver()
+                const pwd = typeof examPasswd === 'string' && examPasswd ? examPasswd : ''
+                if (!pwd) {
+                    mcs.init(servername, pin, '', bip, bipId)
+                } else {
+                    mcs.init(servername, pin, pwd, bip, bipId)
+                }
+                this.config.examServerList[servername] = mcs
+                const serverinstancedir = join(this.config.workdirectory, servername)
+                try {
+                    await fs.promises.mkdir(serverinstancedir, { recursive: true })
+                } catch (_err) {
+                    // Directory might already exist
+                }
+                return { sender: 'server', message: t('control.serverstarted'), status: 'success' }
+            } catch (err) {
+                log.error('ipchandler @ startExamServer:', err)
+                return { sender: 'server', message: String(err && err.message ? err.message : err), status: 'error' }
+            }
+        })
+
+
+        /** Stops broadcast interval and HTTPS listener for the exam server, removes it from examServerList and from the multicast client LAN server list. */
         ipcMain.handle('stopserver', (event, servername) => { 
             const mcServer = this.config.examServerList[servername]
             if (mcServer ) { 
@@ -270,6 +380,55 @@ class IpcHandler {
             }
         }) 
 
+        /** Persist current student screenshot (data URL) into workdir/<server>/<student>/screenshots/ */
+        ipcMain.handle('saveStudentScreenshot', async (_event, payload) => {
+            try {
+                const servername = typeof payload?.servername === 'string' ? payload.servername.trim() : ''
+                const clientname = typeof payload?.clientname === 'string' ? payload.clientname.trim() : ''
+                const imageDataUrl = typeof payload?.imageDataUrl === 'string' ? payload.imageDataUrl : ''
+                if (!servername || !clientname || !imageDataUrl) {
+                    return { ok: false, error: 'invalid_arguments' }
+                }
+                if (clientname.includes('..') || clientname.includes('/') || clientname.includes('\\')) {
+                    return { ok: false, error: 'invalid_clientname' }
+                }
+                const mcServer = this.config.examServerList[servername]
+                if (!mcServer) {
+                    return { ok: false, error: 'server_not_found' }
+                }
+                const comma = imageDataUrl.indexOf(',')
+                if (comma < 12 || !imageDataUrl.startsWith('data:image/')) {
+                    return { ok: false, error: 'invalid_image_dataurl' }
+                }
+                const header = imageDataUrl.slice(0, comma).toLowerCase()
+                const b64 = imageDataUrl.slice(comma + 1)
+                if (!header.includes(';base64')) {
+                    return { ok: false, error: 'invalid_image_dataurl' }
+                }
+                let ext = '.jpg'
+                if (header.includes('image/png')) ext = '.png'
+                else if (header.includes('image/webp')) ext = '.webp'
+                else if (header.includes('image/jpeg') || header.includes('image/jpg')) ext = '.jpg'
+                const buf = Buffer.from(b64, 'base64')
+                if (!buf.length) {
+                    return { ok: false, error: 'empty_image' }
+                }
+                const now = new Date()
+                const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
+                const timeStr = now.toISOString().substr(11, 8).replace(/:/g, '_')
+                const screenshotsDir = join(this.config.workdirectory, servername, clientname, 'screenshots')
+                await fs.promises.mkdir(screenshotsDir, { recursive: true })
+                const filename = `screenshot-${dateStr}-${timeStr}${ext}`
+                const absoluteFilename = join(screenshotsDir, filename)
+                await fs.promises.writeFile(absoluteFilename, buf)
+                log.info(`ipchandler @ saveStudentScreenshot: wrote ${absoluteFilename}`)
+                return { ok: true, path: absoluteFilename }
+            } catch (e) {
+                log.error('ipchandler @ saveStudentScreenshot', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
+
 
 
 
@@ -289,27 +448,81 @@ class IpcHandler {
         })  
 
 
-        // returns a list of available VirtualBox VMs on the teacher machine
-        ipcMain.handle('get-vm-list', async () => {
-            return await new Promise((resolve) => {
-                exec('VBoxManage list vms', { encoding: 'utf8' }, (error, stdout) => {
-                    if (error) {
-                        log.error('ipchandler @ get-vm-list: VBoxManage failed', error);
-                        resolve([]);
-                        return;
-                    }
-                    const lines = stdout.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-                    const names = [];
-                    for (const line of lines) {
-                        const match = line.match(/\"(.+?)\"/);
-                        if (match && match[1]) {
-                            names.push(match[1]);
-                        }
-                    }
-                    resolve(names);
-                });
-            });
-        })  
+        /**
+         * QEMU integration (LocalVM, qcow2 in workdir/QEMU)
+         */
+        ipcMain.handle('qemu-list-disks', async () => {
+            try {
+                return await qemuService.listDisks({ workdirectory: config.workdirectory })
+            } catch (e) {
+                log.error('ipchandler @ qemu-list-disks', e)
+                return []
+            }
+        })
+
+        ipcMain.handle('qemu-install-default', async () => {
+            try {
+                log.info('ipchandler @ qemu-install-default: requested');
+                const sendProgress = (p) => {
+                    try { this.WindowHandler?.mainwindow?.webContents?.send?.('qemu-install-progress', p); } catch (e) {}
+                };
+                sendProgress({ phase: 'start', file: null, percent: 0 });
+                const res = await qemuService.installDefaultVm({ workdirectory: config.workdirectory, onProgress: sendProgress })
+                sendProgress({ phase: 'end', file: null, percent: 100 });
+                return res;
+            } catch (e) {
+                log.error('ipchandler @ qemu-install-default', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
+
+        ipcMain.handle('qemu-hash-disk', async (_event, payload = {}) => {
+            try {
+                const { qcow2Name } = payload || {}
+                const sha256 = await qemuService.hashDisk({ workdirectory: config.workdirectory, qcow2Name })
+                return { ok: true, sha256 }
+            } catch (e) {
+                log.error('ipchandler @ qemu-hash-disk', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
+
+        ipcMain.handle('qemu-stat-disk', async (_event, payload = {}) => {
+            try {
+                const { qcow2Name } = payload || {}
+                const { size } = await qemuService.statDisk({ workdirectory: config.workdirectory, qcow2Name })
+                return { ok: true, size }
+            } catch (e) {
+                log.error('ipchandler @ qemu-stat-disk', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
+
+        ipcMain.handle('qemu-boot-disk', async (_event, payload = {}) => {
+            try {
+                const { qcow2Name } = payload || {}
+                return await qemuService.bootDisk({ workdirectory: config.workdirectory, qcow2Name })
+            } catch (e) {
+                log.error('ipchandler @ qemu-boot-disk', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
+
+        ipcMain.handle('qemu-pick-import-disk', async () => {
+            try {
+                const result = await dialog.showOpenDialog(this.WindowHandler.mainwindow, {
+                    properties: ['openFile'],
+                    filters: [{ name: 'QEMU Disk', extensions: ['qcow2'] }],
+                })
+                if (result.canceled || !result.filePaths || !result.filePaths[0]) {
+                    return { ok: false, cancelled: true }
+                }
+                return await qemuService.importDisk({ workdirectory: config.workdirectory, sourcePath: result.filePaths[0] })
+            } catch (e) {
+                log.error('ipchandler @ qemu-pick-import-disk', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
 
 
         // log out of microsoft 365
@@ -500,6 +713,34 @@ class IpcHandler {
 
 
         /**
+         * Save exam event log to <workdir>/<servername>/examlog.json
+         */
+        ipcMain.handle('saveExamLog', async (event, servername, payload) => {
+            const filePath = join(config.workdirectory, servername, 'examlog.json')
+            try {
+                await fs.promises.writeFile(filePath, JSON.stringify(payload, null, 2))
+                return true
+            } catch (err) {
+                log.error(`ipchandler @ saveExamLog: ${err}`)
+                return false
+            }
+        })
+
+        /**
+         * Load exam event log from <workdir>/<servername>/examlog.json
+         */
+        ipcMain.handle('loadExamLog', async (event, servername) => {
+            const filePath = join(config.workdirectory, servername, 'examlog.json')
+            try {
+                const raw = await fs.promises.readFile(filePath, 'utf-8')
+                return JSON.parse(raw)
+            } catch (err) {
+                return null  // file not found or invalid — start fresh
+            }
+        })
+
+
+        /**
          * returns old exam folders in workdirectory
          */
 
@@ -543,16 +784,356 @@ class IpcHandler {
             return examdir
         })
 
+        /** Deletes file/dir under workdir/<servername>. Called from teacher/src/utils/filemanager.js fdelete (explorer delete confirm). */
+        ipcMain.handle('deleteWorkdirItem', async (_event, payload = {}) => {
+            const servername = payload?.servername
+            const filepath = payload?.filepath
+            if (!servername || typeof filepath !== 'string' || !filepath.trim()) {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer) {
+                return { status: 'error', sender: 'server', message: t('data.tokennotvalid') }
+            }
+            const examRoot = path.resolve(path.join(this.config.workdirectory, mcServer.serverinfo.servername))
+            const absTarget = path.resolve(filepath)
+            const rel = path.relative(examRoot, absTarget)
+            if (rel.startsWith('..') || path.isAbsolute(rel)) {
+                log.warn(`ipchandler @ deleteWorkdirItem: path outside exam root (${filepath})`)
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            try {
+                const stats = await fs.promises.stat(absTarget)
+                if (stats.isDirectory()) {
+                    await fs.promises.rm(absTarget, { recursive: true, force: true })
+                } else {
+                    await fs.promises.unlink(absTarget)
+                }
+                return { status: 'success', sender: 'server', message: t('data.fdeleted') }
+            } catch (err) {
+                log.error('ipchandler @ deleteWorkdirItem:', err)
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+        })
+
+        /** Dashboard explorer: download one file or zip a folder. Called from teacher/src/utils/filemanager.js downloadFile. */
+        ipcMain.handle('workdownloadExplorerItem', async (_event, payload = {}) => {
+            const servername = payload?.servername
+            const servertoken = payload?.servertoken
+            const type = payload?.type
+            const filename = payload?.filename
+            const filepath = payload?.path ?? payload?.filepath
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer || servertoken !== mcServer.serverinfo?.servertoken) {
+                return { status: 'error', sender: 'server', message: t('data.tokennotvalid') }
+            }
+            if (!filepath || typeof filepath !== 'string') {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            const examRoot = path.resolve(path.join(this.config.workdirectory, mcServer.serverinfo.servername))
+            const absTarget = path.resolve(filepath)
+            const rel = path.relative(examRoot, absTarget)
+            if (rel.startsWith('..') || path.isAbsolute(rel)) {
+                log.warn(`ipchandler @ workdownloadExplorerItem: path outside exam root (${filepath})`)
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            try {
+                if (type === 'file') {
+                    const raw = await fs.promises.readFile(absTarget)
+                    const out = decryptBufferIfNeeded(raw, mcServer, 'ipchandler @ workdownloadExplorerItem')
+                    return { status: 'success', sender: 'server', data: out }
+                }
+                if (type === 'dir') {
+                    const base = path.basename(String(filename ?? 'export').trim() || 'export')
+                    const zipSegment = base.toLowerCase().endsWith('.zip') ? base : `${base}.zip`
+                    if (!isSafePathSegment(zipSegment)) {
+                        return { status: 'error', sender: 'server', message: t('data.fileerror') }
+                    }
+                    const zipfilepath = resolvePathUnderRoot(this.config.tempdirectory, [zipSegment])
+                    if (!zipfilepath) {
+                        return { status: 'error', sender: 'server', message: t('data.fileerror') }
+                    }
+                    await zipExplorerDirectory(absTarget, zipfilepath)
+                    const zipBuf = await fs.promises.readFile(zipfilepath)
+                    try {
+                        await fs.promises.unlink(zipfilepath)
+                    } catch (e) {
+                        /* ignore */
+                    }
+                    return { status: 'success', sender: 'server', data: zipBuf }
+                }
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            } catch (err) {
+                log.error('ipchandler @ workdownloadExplorerItem:', err)
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+        })
+
+
+        /** Teacher UPLOADS + student fetchfiles flags. Called from teacher/src/utils/exammanagement.js sendFiles (swal file picker). */
+        ipcMain.handle('uploadTeacherFiles', async (_event, payload = {}) => {
+            const servername = payload?.servername
+            const servertoken = payload?.servertoken
+            const studenttoken = payload?.who ?? payload?.studenttoken
+            const fileItems = payload?.files
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer || servertoken !== mcServer.serverinfo?.servertoken) {
+                return { status: 'error', sender: 'server', message: t('data.tokennotvalid') }
+            }
+            if (!Array.isArray(fileItems) || fileItems.length === 0) {
+                return { status: 'error', sender: 'server', message: 'No files uploaded' }
+            }
+            let uploaddirectory = resolvePathUnderRoot(this.config.workdirectory, [mcServer.serverinfo.servername, 'UPLOADS'])
+            try {
+                if (!uploaddirectory) {
+                    log.error('ipchandler @ uploadTeacherFiles: unsafe UPLOADS path')
+                    return { status: 'error', sender: 'server', message: 'Invalid path' }
+                }
+                await fs.promises.mkdir(uploaddirectory, { recursive: true })
+            } catch (err) {
+                /* directory may already exist */
+            }
+            const storedFiles = []
+            for (const item of fileItems) {
+                const rawName = item?.name ?? 'upload'
+                let filename = path.basename(decodeURIComponent(rawName))
+                if (!isSafePathSegment(filename)) {
+                    log.error(`ipchandler @ uploadTeacherFiles: rejected unsafe upload name (${rawName})`)
+                    continue
+                }
+                const absoluteFilepath = resolvePathUnderRoot(uploaddirectory, [filename])
+                if (!absoluteFilepath) {
+                    log.error(`ipchandler @ uploadTeacherFiles: rejected path for (${filename})`)
+                    continue
+                }
+                const data = item?.data
+                const buf = Buffer.isBuffer(data) ? data : Buffer.from(data ?? [])
+                try {
+                    await fs.promises.writeFile(absoluteFilepath, buf)
+                    storedFiles.push({ name: filename, path: absoluteFilepath })
+                } catch (e) {
+                    log.error('ipchandler @ uploadTeacherFiles: write failed', e)
+                }
+            }
+            const files = storedFiles
+            if (studenttoken === 'all') {
+                for (const student of mcServer.studentList) {
+                    student.status['fetchfiles'] = true
+                    student.status['files'] = files
+                }
+            } else if (studenttoken === 'a' || studenttoken === 'b') {
+                let groupArray = []
+                if (studenttoken === 'a') {
+                    groupArray = mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupA.users
+                }
+                if (studenttoken === 'b') {
+                    groupArray = mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].groupB.users
+                }
+                if (groupArray.length > 0) {
+                    for (const name of groupArray) {
+                        const student = mcServer.studentList.find((element) => element.clientname === name)
+                        if (student) {
+                            student.status['fetchfiles'] = true
+                            student.status['files'] = files
+                        }
+                    }
+                } else {
+                    return { status: 'error', sender: 'server', message: 'No students found' }
+                }
+            } else {
+                const student = mcServer.studentList.find((element) => element.token === studenttoken)
+                if (student) {
+                    student.status['fetchfiles'] = true
+                    student.status['files'] = files
+                }
+            }
+            return { status: 'success', sender: 'server', message: 'Files uploaded' }
+        })
+
+        /** Lists workdir tree for dashboard explorer; called from teacher/src/utils/filemanager.js loadFilelist (explorer + refresh). */
+        ipcMain.handle('listTeacherWorkdir', async (_event, payload = {}) => {
+            const servername = payload?.servername
+            const servertoken = payload?.servertoken
+            const dirRaw = payload?.dir
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer || servertoken !== mcServer.serverinfo?.servertoken) {
+                return { status: 'error', message: t('data.tokennotvalid') }
+            }
+            if (!dirRaw || typeof dirRaw !== 'string') {
+                return { status: 'error', message: t('data.fileerror') }
+            }
+            const examRoot = path.resolve(path.join(this.config.workdirectory, mcServer.serverinfo.servername))
+            const absDir = path.resolve(dirRaw)
+            const rel = path.relative(examRoot, absDir)
+            if (rel.startsWith('..') || path.isAbsolute(rel)) {
+                log.warn(`ipchandler @ listTeacherWorkdir: dir outside exam root (${dirRaw})`)
+                return { status: 'error', message: t('data.fileerror') }
+            }
+            const folders = []
+            folders.push({ currentdirectory: absDir, parentdirectory: path.dirname(absDir) })
+            const omitExtensions = ['.json']
+            try {
+                const names = await fs.promises.readdir(absDir)
+                for (const file of names) {
+                    const filepath = path.join(absDir, file)
+                    const ext = path.extname(file).toLowerCase()
+                    const allowListedJson = ext === '.json' && file.endsWith('_editor_timeline.json')
+                    try {
+                        const stats = await fs.promises.stat(filepath)
+                        if (stats.isDirectory()) {
+                            folders.push({ path: filepath, name: file, type: 'dir', ext: '', parent: absDir })
+                        } else if (stats.isFile() && (allowListedJson || !omitExtensions.includes(ext))) {
+                            folders.push({ path: filepath, name: file, type: 'file', ext: ext, parent: absDir })
+                        }
+                    } catch (innerErr) {
+                        log.error('ipchandler @ listTeacherWorkdir: stat failed', innerErr)
+                    }
+                }
+            } catch (err) {
+                log.error('ipchandler @ listTeacherWorkdir: readdir failed', err)
+                return { status: 'error', message: t('data.fileerror') }
+            }
+            return { status: 'success', filelist: folders }
+        })
+
+        /** Teacher workdir read + NXE1 decrypt in main; called from teacher/src/utils/filemanager.js loadPDF, loadTextFile, loadImage. */
+        ipcMain.handle('readTeacherWorkdirFile', async (_event, payload = {}) => {
+            const servername = payload?.servername
+            const servertoken = payload?.servertoken
+            const filepath = payload?.filepath
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer || servertoken !== mcServer.serverinfo?.servertoken) {
+                return { status: 'error', sender: 'server', message: t('data.tokennotvalid') }
+            }
+            if (!filepath || typeof filepath !== 'string') {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            const examRoot = path.resolve(path.join(this.config.workdirectory, mcServer.serverinfo.servername))
+            const absTarget = path.resolve(filepath)
+            const rel = path.relative(examRoot, absTarget)
+            if (rel.startsWith('..') || path.isAbsolute(rel)) {
+                log.warn(`ipchandler @ readTeacherWorkdirFile: path outside exam root (${filepath})`)
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            try {
+                const raw = await fs.promises.readFile(absTarget)
+                const out = decryptBufferIfNeeded(raw, mcServer, 'ipchandler @ readTeacherWorkdirFile')
+                return { status: 'success', sender: 'server', data: out }
+            } catch (err) {
+                if (err && err.code === 'ENOENT') {
+                    return { status: 'error', sender: 'server', message: t('data.fileerror'), code: 'ENOENT' }
+                }
+                log.error('ipchandler @ readTeacherWorkdirFile:', err)
+                return { status: 'error', sender: 'server', message: t('data.fileerror'), code: err?.code }
+            }
+        })
+
+        /** Writes UTF-8 JSON from trusted teacher renderer; basename must end with _editor_timeline.json. */
+        ipcMain.handle('writeTeacherWorkdirUtf8File', async (_event, payload = {}) => {
+            const servername = payload?.servername
+            const filepath = payload?.filepath
+            const utf8 = payload?.utf8
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer) {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            if (!filepath || typeof filepath !== 'string' || typeof utf8 !== 'string') {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            const base = path.basename(filepath)
+            if (!base.endsWith('_editor_timeline.json')) {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            const absTarget = path.resolve(filepath)
+            try {
+                await fs.promises.mkdir(path.dirname(absTarget), { recursive: true })
+                await fs.promises.writeFile(absTarget, utf8, 'utf8')
+                return { status: 'success', sender: 'server', message: 'ok' }
+            } catch (err) {
+                log.error('ipchandler @ writeTeacherWorkdirUtf8File:', err)
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+        })
+
+        /** Builds index.pdf + merged combined.pdf from submission paths; called from teacher/src/utils/filemanager.js getLatest. */
+        ipcMain.handle('buildTeacherCombinedLatestPdf', async (_event, payload = {}) => {
+            const servername = payload?.servername
+            const servertoken = payload?.servertoken
+            const submissions = payload?.submissions
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer || servertoken !== mcServer.serverinfo?.servertoken) {
+                return { status: 'error', sender: 'server', message: t('data.tokennotvalid') }
+            }
+            if (!Array.isArray(submissions)) {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            try {
+                const result = await buildTeacherCombinedLatestPdf({
+                    workdirectory: this.config.workdirectory,
+                    backupdirectory: this.config.backupdirectory,
+                    mcServer,
+                    submissions,
+                })
+                return { status: 'success', sender: 'server', ...result }
+            } catch (err) {
+                log.error('ipchandler @ buildTeacherCombinedLatestPdf:', err)
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+        })
+
 
         /** Get Specific Submission by filepath as base64 string */
         ipcMain.handle('getSpecificSubmissionBase64', async (event, filepath) => {
             try {
-                const submission = fs.readFileSync(filepath, 'base64')
+                let raw = fs.readFileSync(filepath)
+                const rel = path.relative(this.config.workdirectory, filepath)
+                const servername = rel.split(path.sep)[0]
+                const mcServer = this.config.examServerList[servername]
+                if (mcServer) {
+                    raw = decryptBufferIfNeeded(raw, mcServer, 'ipchandler @ getSpecificSubmissionBase64')
+                }
+                const submission = raw.toString('base64')
                 return { submission: submission, status: "success" }
             }
             catch (e) {
                 log.error(`ipchandler @ getSpecificSubmissionBase64: ${e}`)
                 return { submission: false, status: "error" }
+            }
+        })
+
+        /** Pick a PDF from disk; decrypt NXE1 layers with encryption secret when present; return base64 for preview. */
+        ipcMain.handle('pickEncryptedPdfForPreview', async (_event, encryptionPassword) => {
+            const win = this.WindowHandler?.mainwindow
+            try {
+                const dlg = await dialog.showOpenDialog(win || undefined, {
+                    properties: ['openFile'],
+                    filters: [{ name: 'PDF', extensions: ['pdf'] }],
+                })
+                if (dlg.canceled || !dlg.filePaths?.[0]) {
+                    return { ok: false, cancelled: true }
+                }
+                const filePath = dlg.filePaths[0]
+                let plain = await fs.promises.readFile(filePath)
+                if (isNxe1ExamEncrypted(plain)) {
+                    const unwrapped = unwrapNxe1ExamBuffer(plain, encryptionPassword, 'pickEncryptedPdfForPreview')
+                    if (!unwrapped.ok) {
+                        return { ok: false, code: unwrapped.code }
+                    }
+                    plain = unwrapped.buffer
+                }
+                const probe = plain.subarray(0, Math.min(plain.length, 2048)).toString('binary')
+                if (!probe.includes('%PDF-')) {
+                    return { ok: false, code: 'NOT_PDF' }
+                }
+                return {
+                    ok: true,
+                    base64: plain.toString('base64'),
+                    filename: path.basename(filePath),
+                    filePath,
+                }
+            } catch (e) {
+                log.error('ipchandler @ pickEncryptedPdfForPreview', e)
+                return { ok: false, code: 'ERROR', message: String(e?.message || e) }
             }
         })
 
@@ -642,7 +1223,7 @@ class IpcHandler {
 
 
          /**
-         * get latest bak file from specific student directory
+         * get latest student html backup (.htm) from specific student directory
          */
         ipcMain.handle('getLatestBakFile', async (event, servername, studentName) => {
             const mcServer = this.config.examServerList[servername]
@@ -653,8 +1234,8 @@ class IpcHandler {
             //check if directory exists
             if (!fs.existsSync(dir)) { return { sender: "server", message:"notfound", status: "error", filepath: false } }
 
-            //in the student directroy there are several backup directories  that contain a bak file /20251112_10_20_13/
-            // the bakfile naming scheme is studentname.bak ... we only need the latest one that has the studentname as filename
+            //in the student directroy there are several backup directories  that contain an htm backup /20251112_10_20_13/
+            // the backup naming scheme is studentname.htm ... we only need the latest one that has the studentname as filename
             // ignore directories: ABGABE and focuslost
             const backupDirectories = fs.readdirSync(dir, { withFileTypes: true })
                 .filter(dirent => dirent.isDirectory() && dirent.name !== 'ABGABE' && dirent.name !== 'focuslost')
@@ -670,10 +1251,10 @@ class IpcHandler {
             
             let latestBackupDirectory = backupDirectories[0].name
             log.info("ipchandler @ getLatestBakFile: Searching for latest backup file in:", dir, latestBackupDirectory)
-            const latestBakFilepath = join(dir, latestBackupDirectory, studentName + '.bak')
+            const latestBakFilepath = join(dir, latestBackupDirectory, studentName + '.htm')
             const latestBackupDirectoryPath = join(dir, latestBackupDirectory)
             
-            //get latest bak file  - check if file exists
+            //get latest htm backup  - check if file exists
             if (!fs.existsSync(latestBakFilepath)) { return { sender: "server", message:"notfound", status: "error", filepath: false, latestBackupDirectoryPath:latestBackupDirectoryPath || false } }
             //return the existing and checked filepath or if no file was found false
             return { sender: "server", message:"success", status: "success", filepath: latestBakFilepath, latestBackupDirectoryPath: latestBackupDirectoryPath }
@@ -710,31 +1291,11 @@ class IpcHandler {
 
 
         /**
-         * Print a Document as base64 string via webcontents.print() without specific platformdependent libraries
-         * INFO: it is currently not possible to get a "finished-rendering" event from the chrome-pdf-plugin. therefore timeouts are used as a workaround
-         * Uses a print queue to handle multiple simultaneous requests sequentially
+         * Print a document as base64 (PDF or image); queue + raster pipeline live in printjobhandler.js
          */
-        ipcMain.handle('printBase64', async (event, docBase64, printerName, previewType) => {
+        ipcMain.handle('printBase64', async (event, docBase64, printerName, previewType, jobTitle) => {
             try {
-                return await new Promise((resolve, reject) => {
-                    // Add job to queue
-                    this.printQueue.push({
-                        docBase64,
-                        printerName,
-                        previewType,
-                        resolve,
-                        reject
-                    });
-
-                    log.info(`ipchandler @ printBase64: Print request added to queue (${this.printQueue.length} jobs in queue)`);
-
-                    // Start queue processing if not already running
-                    if (!this.isProcessingPrint) {
-                        this._processPrintQueue().catch((error) => {
-                            log.error(`ipchandler @ printBase64: Queue processing error: ${error.message}`);
-                        });
-                    }
-                });
+                return await enqueuePrintJob(docBase64, printerName, previewType, jobTitle)
             } catch (error) {
                 log.warn(`ipchandler @ printBase64: returning error to renderer: ${error.message}`);
                 return { success: false, error: error.message };
@@ -747,6 +1308,121 @@ class IpcHandler {
         /**
          * re-check hostip and enable multicast client
          */ 
+        ipcMain.handle('checkhostip', async () => {
+            // Collect all available network interfaces with IP addresses
+            const interfaces = networkInterfaces()
+            this.availableInterfaces = null
+            
+            // Collect all IPv4 addresses
+            Object.keys(interfaces).forEach((interfaceName) => {
+                interfaces[interfaceName].forEach((iface) => {
+                    // Filter out loopback and local addresses
+                    if (iface.family === 'IPv4' &&
+                        !iface.address.startsWith('127.') &&
+                        !iface.address.startsWith('169.254.')) {
+                        if (!this.availableInterfaces) {
+                            this.availableInterfaces = []
+                        }
+                        this.availableInterfaces.push({
+                            name: interfaceName,
+                            address: iface.address
+                        })
+                    }
+                })
+            })
+
+            // Save the old IP address
+            const oldHostIp = this.config.hostip
+
+            // If a preferred interface is set, use it to quickly get an IP
+            if (this.preferredInterface) {
+                const preferred = this.availableInterfaces?.find(iface => iface.name === this.preferredInterface)
+                if (preferred) {
+                    this.config.hostip = preferred.address
+                    this.config.interface = preferred.name
+                    // Check if a gateway exists for the preferred interface
+                    try {
+                        const {gateway, version, int} = gateway4sync(preferred.name)
+                        this.config.gateway = int === this.preferredInterface
+                    } catch (e) {
+                        this.config.gateway = false
+                    }
+                }
+            }
+            else {
+                try {
+                    const {gateway, version, int} =  gateway4sync()
+                    this.config.hostip = ip.address(int)
+                    this.config.interface = int
+                    this.config.gateway = true
+                }
+                catch (e) {
+                    this.config.hostip = false
+                    this.config.gateway = false
+                }
+
+                if (!this.config.hostip) {
+                    try {
+                        this.config.hostip = ip.address() //this delivers an ip even if gateway is not set - the first ip address of the system
+                        // use this address to find the name of the interface
+                        const interfaceName = Object.keys(interfaces).find(key => interfaces[key].some(iface => iface.address === this.config.hostip))
+                        this.config.interface = interfaceName
+
+                    }
+                    catch (e) {
+                        log.error("ipcHandler @ checkhostip: Unable to determine ip address")
+                        this.config.hostip = false
+                        this.config.gateway = false
+                        this.config.interface = false
+                    }
+                }
+            }
+
+            // check if multicast client is running - otherwise start it
+            if (this.config.hostip == "127.0.0.1") { this.config.hostip = false }
+
+            // Check if the IP has changed and reinitialize everything if necessary
+            if (oldHostIp !== this.config.hostip && this.config.hostip) {
+                log.info(`main: IP changed from ${oldHostIp} to ${this.config.hostip}, reinitializing services...`)
+
+                // Reinitialize multicast client on IP change (multicastclient is only used for discovery of other exam servers)
+                if (this.multicastClient && this.multicastClient.client.address()) { // check if multicast client is actually running
+                    try {
+                        await this.multicastClient.stop()
+                        this.multicastClient.init(this.config.gateway)
+                        log.info('main: Multicast client reinitialized')
+                    }
+                    catch (e) {
+                        log.error('main: Failed to reinitialize multicast client:', e)
+                    }
+                }
+
+                // Restart Express server on IP change
+                if (server) {
+                    if (server.listening) {
+                        server.close(() => {
+                            log.info(`main: Express server stopped due to IP change`)
+                            server.listen(config.serverApiPort, () => {
+                                log.info(`main: Express server restarted on https://${config.hostip}:${config.serverApiPort}`)
+                            })
+                        })
+                    }
+                    else {
+                        server.listen(config.serverApiPort, () => {
+                            log.info(`main: Express server started on https://${config.hostip}:${config.serverApiPort}`)
+                        })
+                    }
+                }
+            }
+
+            return { 
+                hostip: this.config.hostip, 
+                interface: this.config.interface,
+                availableInterfaces: this.availableInterfaces,
+                preferredInterface: this.preferredInterface 
+            }
+        })
+
         ipcMain.on('checkhostip', async (event) => { 
             // Collect all available network interfaces with IP addresses
             const interfaces = networkInterfaces()
@@ -900,6 +1576,64 @@ class IpcHandler {
             }
         })
 
+        /**
+         * Check whether a host is reachable on a TCP port (teacher app)
+         */
+        ipcMain.handle('checkHostReachable', async (_event, host, port = 443, timeoutMs = 1500) => {
+            if (!host || typeof host !== 'string') {
+                return { ok: false, error: 'invalid-host' };
+            }
+            const lookupHost = host.trim().replace(/^https?:\/\//i, '').split('/')[0];
+            if (!lookupHost) {
+                return { ok: false, error: 'empty-host' };
+            }
+            const p = typeof port === 'number' && Number.isFinite(port) ? port : 443;
+            const t = typeof timeoutMs === 'number' && Number.isFinite(timeoutMs) ? timeoutMs : 1500;
+            const tryConnect = async (targetHost) =>
+                await new Promise((resolve) => {
+                    let done = false;
+                    const finish = (ok, error) => {
+                        if (done) return;
+                        done = true;
+                        resolve({ ok, error: error || null });
+                    };
+                    try {
+                        const socket = net.connect({ host: targetHost, port: p });
+                        socket.setTimeout(t);
+                        socket.once('connect', () => {
+                            socket.end();
+                            finish(true, null);
+                        });
+                        socket.once('timeout', () => {
+                            socket.destroy();
+                            finish(false, 'timeout');
+                        });
+                        socket.once('error', (err) => {
+                            socket.destroy();
+                            finish(false, err?.code || err?.message || 'error');
+                        });
+                    } catch (err) {
+                        finish(false, err?.message || 'error');
+                    }
+                });
+
+            let addrs = null;
+            try {
+                addrs = await dns.promises.lookup(lookupHost, { all: true });
+            } catch (e) {
+                addrs = null;
+            }
+
+            const targets = Array.isArray(addrs) && addrs.length ? addrs.map((a) => a.address) : [lookupHost];
+            let lastErr = null;
+            for (const th of targets) {
+                const r = await tryConnect(th);
+                if (r.ok) return { ok: true, error: null };
+                lastErr = r.error || lastErr;
+            }
+            return { ok: false, error: lastErr || 'unreachable' };
+        })
+
 
 
 
@@ -944,7 +1678,8 @@ class IpcHandler {
 
             try {
                 const fileBuffer = await fileResponse.arrayBuffer();
-                fs.writeFileSync(join(studentarchivedir, fileName), Buffer.from(fileBuffer));
+                const buf = Buffer.from(fileBuffer);
+                fs.writeFileSync(join(studentarchivedir, fileName), buf);
             } catch (e) {log.error(e)}
 
             const pdfFileResponse = await fetch(`https://graph.microsoft.com/v1.0/me/drive/items/${fileID}/content?format=pdf`, {

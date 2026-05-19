@@ -137,6 +137,10 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
         // silently ignore errors
     }
 
+    if (platformDispatcher.runningInCage) {
+        return;
+    }
+
     if (platformDispatcher.isKDE) {
         log.info("platformrestrictions @ enableRestrictions: enabling KDE restrictions");
         childProcess.execFile('kreadconfig5', ['--file', 'kwinrc', '--group', 'Desktops', '--key', 'Number'], (error, stdout, stderr) => {
@@ -150,6 +154,14 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
         log.info("platformrestrictions @ enableRestrictions: reconfiguring kwin");
         childProcess.execFile('kwriteconfig5', ['--file', `${platformDispatcher.homedirectory}/.config/kwinrc`,'--group', 'ModifierOnlyShortcuts','--key','Meta','""']);
         childProcess.execFile('kwriteconfig5', ['--file','kwinrc','--group','Desktops','--key','Number','1']);
+
+        // Übersicht (Overview) deaktivieren
+        childProcess.execFile('kwriteconfig6', ['--file', 'kwinrc', '--group', 'Plugins', '--key', 'overviewEnabled', 'false']);
+        // Desktop-Gitter (Grid) deaktivieren
+        childProcess.execFile('kwriteconfig6', ['--file', 'kwinrc', '--group', 'Plugins', '--key', 'desktopgridEnabled', 'false']);
+        // Deaktiviert alle globalen Wischgesten (Desktop-Wechsel, Übersicht etc.)
+        childProcess.execFile('kwriteconfig6', ['--file', 'kwinrc', '--group', 'Gestures', '--key', 'Enabled', 'false']);
+
         childProcess.execFile('qdbus', ['org.kde.KWin','/KWin','reconfigure']);
         childProcess.execFile('qdbus', ['org.kde.KWin','/KWin','setCurrentDesktop','1']);
         log.info("platformrestrictions @ enableRestrictions: disabling effects");
@@ -174,16 +186,10 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
             const wmKeys = [...gnomeShortcutConfig.wm.critical, ...gnomeShortcutConfig.wm.niceToHave];
             for (const binding of wmKeys) {
                 logGsettingsValue(gnomeShortcutConfig.wm.schema, binding, 'enable-gnome-wm-before-set');
-                childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.wm.schema, binding, `['']`]);
+                childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.wm.schema, binding, `[]`]);
                 logGsettingsValue(gnomeShortcutConfig.wm.schema, binding, 'enable-gnome-wm-after-set');
             }
             childProcess.exec('gsettings set org.gnome.desktop.wm.preferences num-workspaces 1');
-            if (!platformDispatcher.isWayland) {
-                configStore.linux.srvrkeysNoneSet = true;
-                childProcess.exec('setxkbmap -option srvrkeys:none', (err) => {
-                    if (err) log.warn('platformrestrictions @ enableRestrictions (GNOME/Unity): setxkbmap srvrkeys:none failed', err.message);
-                });
-            }
         } catch (err) {
             log.error(`platformrestrictions @ enableRestrictions (gsettings/wm): ${err}`);
         }
@@ -194,32 +200,32 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
                 const waylandKeys = [...gnomeShortcutConfig.mutterWayland.critical, ...gnomeShortcutConfig.mutterWayland.niceToHave];
                 for (const binding of waylandKeys) {
                     logGsettingsValue(gnomeShortcutConfig.mutterWayland.schema, binding, 'enable-gnome-wayland-before-set');
-                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.mutterWayland.schema, binding, `['']`]);
-                    childProcess.execFile('dconf', ['write', `/org/gnome/mutter/wayland/keybindings/${binding}`, `['']`]);
+                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.mutterWayland.schema, binding, `[]`]);
+                    childProcess.execFile('dconf', ['write', `/org/gnome/mutter/wayland/keybindings/${binding}`, '@as []']);
                     logGsettingsValue(gnomeShortcutConfig.mutterWayland.schema, binding, 'enable-gnome-wayland-after-set');
                 }
                 const shellKeys = [...gnomeShortcutConfig.shell.critical, ...gnomeShortcutConfig.shell.niceToHave];
                 for (const binding of shellKeys) {
                     logGsettingsValue(gnomeShortcutConfig.shell.schema, binding, 'enable-gnome-shell-before-set');
-                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.shell.schema, binding, `['']`]);
+                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.shell.schema, binding, `[]`]);
                     logGsettingsValue(gnomeShortcutConfig.shell.schema, binding, 'enable-gnome-shell-after-set');
                 }
                 const mutterKeys = [...gnomeShortcutConfig.mutter.critical, ...gnomeShortcutConfig.mutter.niceToHave];
                 for (const binding of mutterKeys) {
                     logGsettingsValue(gnomeShortcutConfig.mutter.schema, binding, 'enable-gnome-mutter-before-set');
-                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.mutter.schema, binding, `['']`]);
+                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.mutter.schema, binding, `[]`]);
                     logGsettingsValue(gnomeShortcutConfig.mutter.schema, binding, 'enable-gnome-mutter-after-set');
                 }
                 const dockKeys = [...gnomeShortcutConfig.dashToDock.critical, ...gnomeShortcutConfig.dashToDock.niceToHave];
                 for (const binding of dockKeys) {
                     logGsettingsValue(gnomeShortcutConfig.dashToDock.schema, binding, 'enable-gnome-dock-before-set');
-                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.dashToDock.schema, binding, `['']`]);
+                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.dashToDock.schema, binding, `[]`]);
                     logGsettingsValue(gnomeShortcutConfig.dashToDock.schema, binding, 'enable-gnome-dock-after-set');
                 }
                 // Ubuntu Tiling Assistant (Super+Arrow) – overrides mutter when present
                 const tilingKeys = [...gnomeShortcutConfig.tilingAssistant.critical, ...gnomeShortcutConfig.tilingAssistant.niceToHave];
                 for (const binding of tilingKeys) {
-                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.tilingAssistant.schema, binding, `['']`], () => {});
+                    childProcess.execFile('gsettings', ['set', gnomeShortcutConfig.tilingAssistant.schema, binding, `[]`], () => {});
                 }
                 childProcess.execFile('gsettings', ['set', 'org.gnome.mutter', 'overlay-key', `''`]);
                 childProcess.exec('gsettings set org.gnome.mutter dynamic-workspaces false');
@@ -232,7 +238,7 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
                     if (dumpErr) log.debug(`platformrestrictions @ enableRestrictions: dconf dump custom-keybindings failed: ${dumpErr.message}`);
                     childProcess.execFile('dconf', ['read', `${customKeybindingsPath}`], (readErr, listStdout) => {
                         if (!readErr && listStdout != null) configStore.linux.gnomeCustomKeybindingsListBackup = listStdout.trim();
-                        childProcess.execFile('dconf', ['write', customKeybindingsPath, '[]'], (writeErr) => {
+                        childProcess.execFile('dconf', ['write', customKeybindingsPath, '@as []'], (writeErr) => {
                             if (writeErr) log.debug(`platformrestrictions @ enableRestrictions: dconf write custom-keybindings [] failed: ${writeErr.message}`);
                         });
                     });
@@ -264,6 +270,13 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
         }
     }
 
+    if (!platformDispatcher.isWayland) {
+        configStore.linux.srvrkeysNoneSet = true;
+        childProcess.exec('setxkbmap -option srvrkeys:none', (err) => {
+            if (err) log.warn('platformrestrictions @ enableRestrictions (linux): setxkbmap srvrkeys:none failed', err.message);
+        });
+    }
+
     try {
         childProcess.execFile('wl-copy', ['-c']);
         childProcess.exec('xclip -i /dev/null');
@@ -281,6 +294,10 @@ export function disableLinuxRestrictions(configStore) {
     childProcess.exec('xclip -i /dev/null');
     childProcess.exec('xclip -selection clipboard');
     childProcess.exec('xsel -bc');
+
+    if (platformDispatcher.runningInCage) {
+        return;
+    }
 
     if (platformDispatcher.isKDE) {
         log.info("platformrestrictions @ disableRestrictions (linux): KDE detected");

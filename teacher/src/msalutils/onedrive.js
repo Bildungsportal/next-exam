@@ -1,7 +1,4 @@
 import log from 'electron-log/renderer';
-
-
-
 //upload file to authorized onedrive "next-exam" appfolder
 async function uploadselect() {
     this.$swal.fire({
@@ -128,16 +125,15 @@ async function onedriveUploadSingle(student,file){
             return
         }
 
-        // WRITE Share link to student info ojbect so it can be retrieved on the next student update 
+        // WRITE Share link to student info object so it can be retrieved on the next student update 
         // together with the new examtype microsoft365 and directly load and secure the sharinglink
-        fetch(`https://${this.serverip}:${this.serverApiPort}/server/control/sharelink/${this.servername}/${this.servertoken}/${studenttoken}`, { 
-            method: 'POST',
-            headers: {'Content-Type': 'application/json' },
-            body: JSON.stringify({ sharelink: sharingLink  })
-            })
-        .then( res => res.json())
-        .then( response => {log.info(response.message) })
-        .catch(err => { log.error(err) })
+        ipcRenderer.invoke('setStudentStatus', {
+            servername: this.servername,
+            studenttoken,
+            msofficeshare: sharingLink,
+        })
+            .then((response) => { log.info(response.message) })
+            .catch((err) => { log.error(err) })
     });
 }
 

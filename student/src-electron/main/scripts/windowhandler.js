@@ -25,7 +25,6 @@ import { activeWindow } from 'get-windows';
 import platformDispatcher from './platformDispatcher.js';
 import {fileURLToPath} from "node:url";
 import path from 'path';
-import * as devtoolsInstaller from 'electron-devtools-installer';
 
 const __dirname = import.meta.dirname;
 
@@ -54,12 +53,10 @@ function getRendererIndexPath() {
 
 class WindowHandler {
     constructor () {
-      this.blockwindows = []
       this.screenlockwindows = []
       this.screenlockWindow = null
       this.mainwindow = null
       this.examwindow = null
-      this.examDisplayId = null  // reserved display ID for exam window (set immediately when window is created)
       this.splashwin = null
       this.bipwindow = null
       this.config = null
@@ -102,9 +99,11 @@ class WindowHandler {
 
     installVueJsDevTools(win) {
         if (!app.isPackaged) {
-            devtoolsInstaller.installExtension(devtoolsInstaller.VUEJS_DEVTOOLS)
-                .then((name) => console.log(`Added Extension: ${name.name}`))
-                .catch((err) => console.log('An error occurred: ', err));
+            // Dev-only: keep optional dependency out of release builds.
+            import('electron-devtools-installer')
+                .then((m) => m.installExtension(m.VUEJS_DEVTOOLS))
+                .then((name) => log.info(`windowhandler @ devtools: Added Extension: ${name.name}`))
+                .catch((err) => log.warn(`windowhandler @ devtools: install skipped: ${err?.message || err}`));
         }
     }
 
@@ -159,9 +158,9 @@ class WindowHandler {
 
         this.bipwindow.webContents.on('will-redirect', (event, url) => {
             log.info('windowhandler @ createBiPLoginWin: Redirecting to:', url);
-            // Prüfen, ob die URL das gewünschte Format hat
+            // Check whether the URL has the expected format
             if (url.startsWith('bildungsportal://')) {
-                event.preventDefault(); // Verhindert den Standard-Redirect
+                event.preventDefault(); // Prevents the default redirect
                 const prefix = 'bildungsportal://token=';
 
                 const token = url.substring(prefix.length);
@@ -210,172 +209,6 @@ class WindowHandler {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /**
-     * BlockWindow (to cover additional screens)
-     * @param display 
-     */
-    newBlockWin(display) {
-        let blockwin = new BrowserWindow({
-            x: display.bounds.x + 0,
-            y: display.bounds.y + 0,
-            parent: this.examwindow,
-            skipTaskbar:true,
-            title: 'Next-Exam',
-            width: display.bounds.width,
-            height: display.bounds.height,
-            closable: false,
-            alwaysOnTop: true,
-            focusable: false,   //doesn't work with kiosk mode (no kiosk mode possible.. why?)
-            minimizable: false,
-            // resizable:false,   // leads to weird 20px bottomspace on windows
-            movable: false,
-            frame: false,
-            icon: join(platformDispatcher.publicBase, 'icons', 'icon.png'),
-            webPreferences: {
-                preload: join(__dirname, './preload/electron-preload.cjs'),
-            },
-        });
-    
-        let url = "notfound"
-        if (app.isPackaged) {
-            blockwin.loadFile(getRendererIndexPath(), {hash: `#/${url}/`})
-        } 
-        else {
-            url = `${process.env.APP_URL}/#/${url}/`
-            blockwin.loadURL(url)
-        }
-        
-        blockwin.removeMenu() 
-        blockwin.setMinimizable(false)
-
-        // Position window on specific display BEFORE showing it
-        blockwin.setBounds({
-            x: display.bounds.x,
-            y: display.bounds.y,
-            width: display.bounds.width,
-            height: display.bounds.height
-        });
-
-        blockwin.setAlwaysOnTop(true, "screen-saver", 1) 
-        blockwin.show()
-
-        if (process.platform ==='darwin') { 
-            blockwin.setFullScreen(true);
-            blockwin.on('leave-full-screen', () => {
-                blockwin.setFullScreen(true); // sofort wieder zurücksetzen
-            }); 
-        }  
-        else {   
-            blockwin.setKiosk(true); // Kiosk = "take over main screen". on macos that's why we use fullScreen workaround with event listener
-        }
-        blockwin.moveTop();
-        blockwin.display = display
-        this.blockwindows.push(blockwin)
-    }
-
-
-    // block all screens with a blockwindow
-    async initBlockWindows(){
-        let displays = screen.getAllDisplays()
-        //log.info(`windowhandler @ initBlockWindows: found ${displays.length} displays`)
-        
-        if (!this.config.development) {  // lock all screens
-            if (displays.length <= 1) return
-            // Wait for exam window to be visible and positioned; never create block windows before that
-            let examReady = false
-            if (this.examwindow && !this.examwindow.isDestroyed()) {
-                let retries = 0
-                const maxRetries = 10
-                while (!this.examwindow.isVisible() && retries < maxRetries) {
-                    await this.sleep(100)
-                    retries++
-                }
-                if (this.examwindow.isVisible()) {
-                    examReady = true
-                    // Additional wait to ensure positioning is complete on Wayland
-                    await this.sleep(200)
-                }
-            }
-            
-            if (!examReady) {
-                log.info("windowhandler @ initBlockWindows: exam window not ready, skipping block window creation")
-                return
-            }
-            
-            // Clean up destroyed block windows from array
-            this.blockwindows = this.blockwindows.filter(blockwin => blockwin && !blockwin.isDestroyed())
-            
-            // Get all existing windows and determine their displays
-            const usedDisplayIds = new Set()
-            
-            // First, use the reserved exam display ID (set immediately when exam window was created)
-            // This ensures the screen is reserved even if the window isn't fully initialized yet
-            if (this.examDisplayId !== undefined && this.examDisplayId !== null) {
-                usedDisplayIds.add(this.examDisplayId)
-            }
-            
-            // Check exam window display (as fallback/verification, but reserved ID takes priority)
-            if (this.examwindow && !this.examwindow.isDestroyed()) {
-                try {
-                    const bounds = this.examwindow.getBounds()
-                    const display = screen.getDisplayMatching(bounds)
-                    if (display && display.id !== undefined && display.id !== null) {
-                        usedDisplayIds.add(display.id)
-                        log.info(`windowhandler @ initBlockWindows: exam window is on display ${display.id}`)
-                    }
-                } catch (err) {
-                    log.error(`windowhandler @ initBlockWindows: error getting exam window display: ${err}`)
-                }
-            }
-            
-            // Check block windows displays
-            for (const blockwin of this.blockwindows) {
-                try {
-                    const bounds = blockwin.getBounds()
-                    const display = screen.getDisplayMatching(bounds)
-                    if (display && display.id !== undefined && display.id !== null) {
-                        usedDisplayIds.add(display.id)
-                        log.info(`windowhandler @ initBlockWindows: block window found on display ${display.id}`)
-                    }
-                } catch (err) {
-                    log.error(`windowhandler @ initBlockWindows: error getting block window display: ${err}`)
-                }
-            }
-            
-            // Create block windows for displays that don't have exam or block windows
-            for (let display of displays){
-                if (usedDisplayIds.has(display.id)) {
-                    log.info(`windowhandler @ initBlockWindows: skipping display ${display.id} - already has exam or block window`)
-                    continue
-                }
-                
-                log.info("windowhandler @ initBlockWindows: create blockwin on:",display.id)
-                this.newBlockWin(display)  // add blockwindows for displays without exam window
-            }
-            
-            await this.sleep(1000)
-            this.blockwindows.forEach( (blockwin) => {
-                if (blockwin && !blockwin.isDestroyed()) {
-                    blockwin.moveTop();
-                }
-            })
-        }
-    }
 
 
 
@@ -483,6 +316,16 @@ class WindowHandler {
      * @param serverstatus the serverstatus object containing info about spellcheck language etc. 
      */
     async createExamWindow(examtype, token, serverstatus, primarydisplay) {
+        if (this.examwindow && !this.examwindow.isDestroyed?.()) {
+            log.warn('windowhandler @ createExamWindow: examwindow already exists, skip duplicate create');
+            try {
+                this.examwindow.show();
+                this.examwindow.focus();
+            } catch (e) {
+                log.debug('windowhandler @ createExamWindow: focus existing examwindow', e?.message);
+            }
+            return;
+        }
         // just to be sure we check some important vars here
         if (examtype !== "rdp" && examtype !== "website" &&  examtype !== "forms" && examtype !== "eduvidual" && examtype !== "editor" && examtype !== "math" && examtype !== "microsoft365" && examtype !== "activesheets" && examtype !== "localvm" || !token){  // for now.. we probably should stop everything here
             log.warn("missing parameters for exam-mode or mode not in allowed list!")
@@ -496,13 +339,6 @@ class WindowHandler {
                 const displays = screen.getAllDisplays()
                 primarydisplay = displays[0] || primarydisplay
             }
-        }
-        
-        // Immediately reserve the display ID for the exam window (before window is fully initialized)
-        // This prevents block windows from being created on the same screen
-        if (primarydisplay && primarydisplay.id) {
-            this.examDisplayId = primarydisplay.id
-            log.info(`windowhandler @ createExamWindow: reserving display ${this.examDisplayId} for exam window`)
         }
         
         let px = 0
@@ -554,7 +390,6 @@ class WindowHandler {
                     this.examwindow.setKiosk(true);
                 
                     await this.sleep(500)
-                    await this.initBlockWindows()
                     this.examwindow.moveTop()
                     this.examwindow.focus()
                     
@@ -590,7 +425,6 @@ class WindowHandler {
       
                 this.examwindow.destroy(); 
                 this.examwindow = null;
-                this.examDisplayId = null  // reset reserved display ID when exam window is destroyed
                 disableRestrictions(this.examwindow)
                 this.multicastClient.clientinfo.exammode = false
                 this.multicastClient.clientinfo.focus = true
@@ -780,7 +614,6 @@ class WindowHandler {
             else {              
                 this.examwindow.destroy(); 
                 this.examwindow = null;
-                this.examDisplayId = null  // reset reserved display ID when exam window is closed
                 this.checkWindowInterval.stop()
                 //disableRestrictions(this.examwindow)  //do not disable twice
                 this.multicastClient.clientinfo.exammode = false
@@ -860,8 +693,8 @@ class WindowHandler {
             height: windowHeight,
             minWidth: 850,
             minHeight: 600,
-            resizable: false, // verhindert das Ändern der Größe  
-            fullscreenable: false, // verhindert den Vollbildmodus - wichtig für macos denn wenn auf macos das mainwindow auf fullscreen ist greift beim examwindow der kiosk mode nicht  - electron bug (needs example code): >> https://github.com/electron/electron/issues/44755
+            resizable: false, // prevents resizing
+            fullscreenable: false, // prevents fullscreen mode - important for macOS: when the mainwindow is fullscreen on macOS the kiosk mode does not take effect on the examwindow - electron bug (needs example code): >> https://github.com/electron/electron/issues/44755
             show: true,
             //visibleOnAllWorkspaces: true,
             
@@ -916,6 +749,7 @@ class WindowHandler {
             log.info(`windowhandler @ createMainWindow: Loading URL: ${url}`)
             this.mainwindow.loadURL(url)
         }
+
     }
 
 
@@ -1031,6 +865,9 @@ class WindowHandler {
 
     //adds blur listener when entering exammode   // blur event isnt fired on macos MISSIONCONTROL (which cant be deactivated anymore) - damn you apple!
     addBlurListener(window = "examwindow"){
+        if (platformDispatcher.runningInCage) {
+            return;
+        }
         if (window === "examwindow"){ 
             log.info(`windowhandler @ addBlurListener: Setting Blur Event for ${window}`)
             this.examwindow.addListener('blur', () => this.blurevent(this)) 
@@ -1067,10 +904,10 @@ class WindowHandler {
         const hasActiveScreenlock = winhandler.screenlockwindows.some(win => win && !win.isDestroyed() && win.isVisible())
         // Also check clientinfo.screenlock flag as fallback in case array was cleared but windows still exist
         if (hasActiveScreenlock || winhandler.multicastClient?.clientinfo?.screenlock) { return }// do nothing if screenlockwindow stole focus // do not trigger an infinite loop between exam window and screenlock window (stealing each others focus because screenlockwindow appears above exam window and will capture a klick and therefore steal focus)
-        if (winhandler.focusTargetAllowed){ 
+        if (!winhandler.focusTargetAllowed){ 
             winhandler.examwindow.moveTop();
             winhandler.examwindow.show(); 
-            winhandler.examwindow.focus(); //trotzdem focus zurück auf die app
+            winhandler.examwindow.focus(); // still return focus to the app
             log.warn(`windowhandler @ blurevent: blurevent was triggered but target is allowed`)
             return
         } 

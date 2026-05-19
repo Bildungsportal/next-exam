@@ -1,5 +1,5 @@
 <template>
-  <div class="column" style="height: 100%">
+  <div class="column nx-rdp-root" style="height: 100%; position: relative;">
     <!-- HEADER START -->
     <exam-header
         :serverstatus="serverstatus"
@@ -84,7 +84,11 @@
 
 
     <!-- angabe/pdf preview start -->
-    <div id="preview" class="fadeinfast p-4">
+    <div
+        id="preview"
+        class="fadeinfast p-4"
+        style="--nx-preview-chrome-top: 80px; --nx-preview-top-offset: 0px; --nx-preview-content-width: 90%;"
+    >
         <WebviewPane
             id="webview"
             :src="urlForWebview || ''"
@@ -93,10 +97,11 @@
             :block-external="true"
             @close="hidepreview"
         />
-        <PdfviewPane
+        <PdfviewPaneRendered
             :localLockdown="localLockdown"
             :examtype="examtype"
             :toolbar="pdfPreviewUi"
+            :preview="pdfPreviewState"
             @close="hidepreview"
         />
     </div>
@@ -133,10 +138,11 @@ import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {getExamMaterials, loadImage, loadPDF, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
-import PdfviewPane from '../components/PdfviewPane.vue'
+import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue'
 import {isElectronWindow} from "../types/platform.ts";
 import {SignalBridge} from '../utils/signalBridge.js'
+import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -187,18 +193,19 @@ export default {
             webviewVisible: false,
             internetCheckCounter: 0,
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
+            pdfPreviewState: null,
         }
     },
-    components: {ExamHeader, PdfviewPane, WebviewPane},
+    components: {ExamHeader, PdfviewPaneRendered, WebviewPane},
     async mounted() {
         console.log("RdpViewer.vue @ mounted: rdpConfig", this.rdpConfig)
 
         this.getExamMaterials()
 
         this.entrytime = new Date().getTime()
-        // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
+        // do not use setInterval() for intervals as it keeps all objects of the callbacks including fetch() responses in memory until the interval is stopped
         this.fetchinfointerval = new SchedulerService(5000);
-        this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+        this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
         this.fetchinfointerval.start();
         await this.fetchInfo(); // initial sync for clientinfo, serverstatus, lockedSection and rdpConfig
 
@@ -207,10 +214,10 @@ export default {
         this.loadfilelistinterval.start();
 
         this.clockinterval = new SchedulerService(1000);
-        this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+        this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
         this.clockinterval.start();
 
-        document.body.addEventListener('mouseleave', this.sendFocuslost);
+        attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
 
         this.loadFilelist()
 
@@ -291,9 +298,9 @@ export default {
 
         hidepreview() {
             resetPdfPreviewToolbar(this);
+            this.pdfPreviewState = null;
             let preview = document.querySelector("#preview")
             preview.style.display = 'none';
-            preview.setAttribute("src", "about:blank");
             URL.revokeObjectURL(this.currentpreview);
         },
 
@@ -303,6 +310,7 @@ export default {
             return new Promise(resolve => setTimeout(resolve, ms));
         },
         async sendFocuslost() {
+            if (await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
             if (isElectronWindow(window)) {
                 let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
                 if (!this.config.development && !response.focus) {  //immediately block frontend
@@ -313,15 +321,15 @@ export default {
 
         //checks if arraybuffer contains a valid pdf file
         isValidPdf(data) {
-            const header = new Uint8Array(data, 0, 5); // Lese die ersten 5 Bytes für "%PDF-"
-            // Umwandlung der Bytes in Hexadezimalwerte für den Vergleich
+            const header = new Uint8Array(data, 0, 5); // read the first 5 bytes for "%PDF-"
+            // Convert bytes to hex values for comparison
             const pdfHeader = [0x25, 0x50, 0x44, 0x46, 0x2D]; // "%PDF-" in Hex
             for (let i = 0; i < pdfHeader.length; i++) {
                 if (header[i] !== pdfHeader[i]) {
-                    return false; // Früher Abbruch, wenn ein Byte nicht übereinstimmt
+                    return false; // early exit if a byte does not match
                 }
             }
-            return true; // Alle Bytes stimmen mit dem PDF-Header überein
+            return true; // all bytes match the PDF header
         },
         async loadFilelist() {
             if (isElectronWindow(window)) {
@@ -359,9 +367,11 @@ export default {
                 this.lockedSection = sectionIndex
 
                 const section = this.serverstatus.examSections?.[sectionIndex]
-                this.rdpConfig = section?.rdpConfig || null
+                const groupKey = section && section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA'
+                this.rdpConfig = section?.[groupKey]?.examConfig?.rdp || null
+                const protocol = this.rdpConfig?.protocol === 'http' ? 'http' : 'https'
                 this.rdpUrl = this.rdpConfig && this.rdpConfig.domain
-                    ? `https://${this.rdpConfig.domain}/RDWeb/webclient/index.html`
+                    ? `${protocol}://${this.rdpConfig.domain}/RDWeb/webclient/index.html`
                     : null
 
                 if (!this.focus) {
@@ -426,7 +436,7 @@ export default {
     width: 100% !important;
     display: block;
     position: relative;
-    top: 0;
+    top: 0 !important;
     left: 0;
 }
 
@@ -460,11 +470,12 @@ export default {
 #preview {
     display: none;
     position: absolute;
-    top: 0;
+    top: var(--nx-preview-chrome-top, 148px);
     left: 0;
-    width: 100vw;
-    height: 100vh;
-    background-color: rgba(0, 0, 0, 0.4);
+    width: 100%;
+    box-sizing: border-box;
+    height: calc(100% - var(--nx-preview-chrome-top, 148px));
+  
     z-index: 100000;
 }
 

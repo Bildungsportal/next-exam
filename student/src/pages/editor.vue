@@ -1,4 +1,5 @@
 <template>
+    <div class="editor-root">
 
 
     <!-- HEADER START -->
@@ -52,7 +53,7 @@
 
 
             <button :title="$t('editor.clear')"
-                    @click="editor.chain().focus().clearNodes().run();editor.chain().focus().unsetColor().run()"
+                    @click="clearFormatting()"
                     class="invisible-button btn btn-outline-warning p-1 me-2 mb-1 btn-sm"><img
                 src="/src/assets/img/svg/draw-eraser.svg" class="white" width="22" height="22"></button>
 
@@ -69,14 +70,14 @@
                     class="invisible-button btn btn-outline-success p-1 me-2 mb-1 btn-sm "><img
                 src="/src/assets/img/svg/format-text-underline.svg" class="white" width="22" height="22"></button>
 
-            <button :title="$t('editor.heading1')" @click="editor.chain().focus().toggleHeading({ level: 1 }).run()"
+            <!-- <button :title="$t('editor.heading1')" @click="editor.chain().focus().toggleHeading({ level: 1 }).run()"
                     :class="{ 'is-active': editor.isActive('heading', { level: 1 }) }"
                     class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img
                 src="/src/assets/img/svg/h1.svg" width="22" height="22"></button>
             <button :title="$t('editor.heading2')" @click="editor.chain().focus().toggleHeading({ level: 2 }).run()"
                     :class="{ 'is-active': editor.isActive('heading', { level: 2 }) }"
                     class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/h2.svg" width="22" height="22"></button>
+                src="/src/assets/img/svg/h2.svg" width="22" height="22"></button> -->
             <button :title="$t('editor.heading3')" @click="editor.chain().focus().toggleHeading({ level: 3 }).run()"
                     :class="{ 'is-active': editor.isActive('heading', { level: 3 }) }"
                     class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img
@@ -89,10 +90,10 @@
                     :class="{ 'is-active': editor.isActive('heading', { level: 5 }) }"
                     class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img
                 src="/src/assets/img/svg/h5.svg" width="22" height="22"></button>
-            <button :title="$t('editor.heading6')" @click="editor.chain().focus().toggleHeading({ level: 6 }).run()"
+            <!-- <button :title="$t('editor.heading6')" @click="editor.chain().focus().toggleHeading({ level: 6 }).run()"
                     :class="{ 'is-active': editor.isActive('heading', { level: 6 }) }"
                     class="invisible-button btn btn-outline-secondary p-1 me-2 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/h6.svg" width="22" height="22"></button>
+                src="/src/assets/img/svg/h6.svg" width="22" height="22"></button> -->
 
 
             <button :title="$t('editor.subscript')" @click="editor.chain().focus().toggleSubscript().run()"
@@ -163,9 +164,11 @@
                     class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img
                 src="/src/assets/img/svg/key-enter.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.line')" @click="editor.chain().focus().setHorizontalRule().run()"
-                    class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img
+                    class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm"><img
                 src="/src/assets/img/svg/newline.svg" class="white" width="22" height="22"></button>
-
+            <button :title="$t('editor.statsrule')" @click="editor.chain().focus().setStatsRule().run()"
+                    class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img
+                src="/src/assets/img/svg/statsbreaker.svg" class="" width="22" height="22"></button>
 
             <button :title="$t('editor.more')" id="more" @click="showMore();this.LTdisable()"
                     class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img
@@ -292,9 +295,11 @@
                     src="/src/assets/img/svg/view-split-left-right.svg" class="white" width="22" height="22"></div>
 
                 <div v-if="!localLockdown" id="printfinalexam"
-                     class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm"
-                     @click="sendExamToTeacher(false, 'print')" :title="$t('editor.print')"><img
-                    src="/src/assets/img/svg/print.svg" class="white" width="22" height="22"></div>
+                     class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm pe-2 ps-1" 
+                     @click="sendExamToTeacher(false, 'print')" :title="$t('editor.printTooltip')"><img
+                    src="/src/assets/img/svg/print.svg" class="white" width="22" height="22"
+                    style="vertical-align: top;"> {{ $t('editor.print') }}
+                </div>
                 <div v-if="!localLockdown" id="sendfinalexam"
                      class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm pe-2 ps-1 "
                      @click="sendExamToTeacher(false, 'send')" :title="$t('editor.sendfinalexam')"><img
@@ -312,12 +317,17 @@
                 </div>
 
                 <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
-                    <div v-if="(file.filetype == 'bak')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
+                    <div v-if="(file.filetype == 'htm')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
                          @click="selectedFile=file.filename; loadBase64file(file)"><img
                         src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22"
                         style="vertical-align: top;"> {{ file.filename }}
                     </div>
                     <div v-if="(file.filetype == 'docx')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
+                         @click="selectedFile=file.filename; loadBase64file(file)"><img
+                        src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22"
+                        style="vertical-align: top;"> {{ file.filename }}
+                    </div>
+                    <div v-if="(file.filetype == 'odt')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
                          @click="selectedFile=file.filename; loadBase64file(file)"><img
                         src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22"
                         style="vertical-align: top;"> {{ file.filename }}
@@ -362,12 +372,17 @@
                 <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
                  
 
-                    <div v-if="(file.type == 'bak' && !file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}     ({{ new Date(this.now - file.mod).toISOString().substr(11, 5) }})</div>
-                    <div v-if="(file.type == 'bak' && file.name.includes( clientname) )" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.bak'}"  @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
+                    <div v-if="file.type == 'htm'" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.htm'}" @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ file.name }}<template v-if="!isActiveLocalHtmFile(file)"> ({{ formatHtmLocalFileAge(file) }})</template></div>
 
 
                     <div v-if="(file.type == 'docx')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
                          @click="selectedFile=file.name; loadDOCX(file.name)"><img
+                        src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22"
+                        style="vertical-align: top;"> {{ file.name }}
+                    </div>
+
+                    <div v-if="(file.type == 'odt')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
+                         @click="selectedFile=file.name; loadODT(file.name)"><img
                         src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22"
                         style="vertical-align: top;"> {{ file.name }}
                     </div>
@@ -422,8 +437,31 @@
         <div id="focuswarning" class="infodiv p-4 d-block focuswarning">
             <div class="mb-3 row">
                 <div class="mb-3 "> {{ $t('editor.leftkiosk') }} <br> {{ $t('editor.tellsomeone') }}</div>
+                <div v-if="focusLostMessage || focusLockMessage" class="mb-3 text-dark fw-bold" style="white-space: pre-line">{{ focusLostMessage || focusLockMessage }}</div>
+                <div v-if="focusLockReasonLine" class="mb-3 text-dark fw-bold">{{ focusLockReasonLine }}</div>
                 <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32">
                 <div class="mt-3"> {{ timesinceentry }}</div>
+            </div>
+            <div v-if="localLockdown" class="mt-2">
+                <div class="input-group">
+                    <span class="input-group-text">{{ $t('student.password') }}</span>
+                    <input
+                        ref="localUnlockInput"
+                        v-model="localUnlockPassword"
+                        class="form-control"
+                        type="password"
+                        autocomplete="current-password"
+                        :placeholder="$t('student.password')"
+                        @input="localUnlockError = false"
+                        @keyup.enter="tryUnlockLocalLockdown"
+                    >
+                    <button class="btn btn-outline-dark" type="button" :disabled="localUnlockBusy" @click="tryUnlockLocalLockdown">
+                        {{ $t('editor.unlock') }}
+                    </button>
+                </div>
+                <div v-if="localUnlockError" class="mt-2 text-dark">
+                    {{ $t("general.wrongpassword") }}
+                </div>
             </div>
         </div>
     </div>
@@ -443,29 +481,32 @@
 
     <!-- NORMAL VIEW START -->
     <!-- PDF Preview Container -->
-    <div v-if="!splitview" id="preview" class=" p-4">
+    <div v-if="!splitview" id="preview" class="p-4 editor-preview-overlay" style="--nx-preview-top-offset: 60px; --nx-preview-content-width: 90%;">
         <WebviewPane
             id="webview"
             :src="urlForWebview"
             :visible="webviewVisible"
+            :splitview="splitview"
+            :showClose="!splitview"
             :allowed-url="urlForWebview"
             :block-external="true"
             @close="hidepreview"
         />
 
-        <PdfviewPane
+        <PdfviewPaneRendered
             :localLockdown="localLockdown"
             :examtype="examtype"
             :toolbar="pdfPreviewUi"
+            :preview="pdfPreviewState"
             @close="hidepreview"
-            @printBase64="printBase64"
+            @printBase64="(pr) => printBase64(pr, 'manual')"
             @insertImage="insertImage"
         />
 
     </div>
     <!-- Editor Container -->
     <div v-if="!splitview" id="editormaincontainer"
-         style="height: 100%; overflow-x:auto; overflow-y: scroll; background-color: #eeeefa;">
+         style="height: 100%; overflow-x:auto; overflow-y: auto; background-color: #eeeefa;">
         <div id="editorcontainer" class="shadow" style="">
             <!-- Wrapper with dynamic key so EditorContent is not hoisted and ref owner context is preserved -->
             <div v-if="editor" :key="'main-' + (editor ? 'ready' : '')">
@@ -479,49 +520,47 @@
 
 
     <!-- SPLITVIEW START -->
-    <div v-if="splitview" class="split-view-container"
-         style="overflow: hidden; display: flex !important; flex-direction: row !important; height: 100% !important;">
+    <div v-if="splitview" class="split-view-container">
         <!-- PDF Preview Container -->
-        <div id="preview" class="fadeinfast splitback"
-             style="background-repeat: no-repeat; background-position: center; flex-grow: 1 !important; display: block !important; position: static !important; top: 0 !important; left: auto !important; width: auto !important; height: auto !important; background-color: transparent !important; z-index: auto !important; backdrop-filter: none !important;">
+        <div
+            id="preview"
+            :class="['fadeinfast', 'splitback', 'split-pane', 'split-pane--left', 'p-0', { 'splitback--empty': !pdfPreviewState }]"
+            :style="{ flexBasis: splitLeftPct + '%', '--nx-preview-scroll-padding': '6px' }"
+        >
             <WebviewPane
                 id="webview"
                 :src="urlForWebview"
                 :visible="webviewVisible"
+                :splitview="splitview"
+                :showClose="!splitview"
                 :allowed-url="urlForWebview"
                 :block-external="true"
             />
-            <div class="embed-container"
-                 style="position: relative !important; top: 0 !important; left: 0 !important; transform: none !important; display: block !important; height:100% !important; margin-top:0;">
-                <embed src="" id="pdfembed"
-                       style="border-radius:0 !important; background-size:contain; width:100% !important; height: 100% !important; background-color:transparent !important;"></embed>
-                <div v-show="examtype === 'editor' && pdfPreviewUi.showInsert" class="btn btn-secondary white splitinsert d-flex" id="insert-button" @click="insertImage()"
-                     :title="$t('editor.insert')"
-                     style="position: absolute; top: 60px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
-
-                <div v-show="!localLockdown && pdfPreviewUi.showPrint" class="btn  btn-secondary splitprint d-flex" id="print-button" @click="printBase64(true)"
-                     :title="$t('editor.print')"
-                     style="position: absolute; top: 110px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
-                <div v-show="!localLockdown && pdfPreviewUi.showSend" class="btn  btn-secondary splitsend d-flex" id="send-button" @click="printBase64()"
-                     :title="$t('editor.send')"
-                     style="position: absolute; top: 144px; right:20px; z-index:100000; width: 70px; border: none !important; border-radius: 0.2rem !important; box-shadow: 0px -10px 0px rgba(0, 0, 0, 0) !important; padding: 16px !important; cursor: pointer !important; align-items: center !important; justify-content: center !important; margin-top: 0px !important; background-size: 28px; background-repeat: no-repeat; background-position: center;"></div>
-
-                <div v-show="pdfPreviewUi.showZoom" id="pdfZoom"
-                     style="position: absolute; top:40px; right:20px; z-index:100000; height: 64px;">
-                    <button class="btn btn-secondary  white  splitzoomin"
-                            style="width:70px; height: 32px; margin-bottom:2px;  background-repeat: no-repeat; background-position: center; "
-                            id="zoomIn"></button>
-                    <br>
-                    <button class="btn btn-secondary white   splitzoomout"
-                            style="width:70px; height: 32px; margin-bottom:2px; background-repeat: no-repeat; background-position: center;"
-                            id="zoomOut"></button>
-                </div>
-
-            </div>
+            <PdfviewPaneRendered
+                :localLockdown="localLockdown"
+                :examtype="examtype"
+                :toolbar="pdfPreviewUi"
+                :preview="pdfPreviewState"
+                :showClose="false"
+                :style="!pdfPreviewState ? 'display:none;' : ''"
+                @close="hidepreview"
+                @printBase64="(pr) => printBase64(pr, 'manual')"
+                @insertImage="insertImage"
+            />
         </div>
+        <div
+            class="split-divider"
+            role="separator"
+            aria-orientation="vertical"
+            :aria-valuenow="Math.round(splitLeftPct)"
+            aria-valuemin="20"
+            aria-valuemax="80"
+            @pointerdown.prevent="startSplitResize"
+            title="Drag to resize"
+        ></div>
         <!-- Editor Container -->
-        <div id="editormaincontainer"
-             style="min-width:230mm!important;padding:10px; overflow-x: auto !important; overflow-y: scroll !important; background-color: #eeeefa !important;">
+        <div id="editormaincontainer" class="split-pane split-pane--right"
+             style="padding:10px; overflow-x: auto !important; overflow-y: auto !important; background-color: #eeeefa !important;">
             <div id="editorcontainer" class="shadow">
                 <!-- Wrapper with dynamic key so EditorContent is not hoisted and ref owner context is preserved -->
                 <div v-if="editor" :key="'split-' + (editor ? 'ready' : '')">
@@ -573,7 +612,7 @@
                      style=" display: inline-block; text-align: center;  margin-left:10px;"> {{ $t('editor.update') }}
                 </div>
                 <div class="" style=" width:100%;display: inline-block; text-align:right;  "
-                     @click="LTresetIgnorelist();LTcheckAllWordsAndHighlight(false);" title="IgnoreList löschen">
+                     @click="LTresetIgnorelist();LTcheckAllWordsAndHighlight(false);" title="Clear ignore list">
                     <span v-if="ignoreList.size > 0" class="text-mini"> ({{ ignoreList.size }}) ignored</span>
                     <img class="white" width=20 height=20 src="/src/assets/img/svg/edit-delete.svg"
                          style=" cursor: pointer; margin-left:3px; vertical-align: middle;">
@@ -616,7 +655,7 @@
 
                 <div v-if="entry.message" class="fw-bold">{{ entry.rule.category.name }}</div>
                 <div
-                    v-if="serverstatus.examSections[serverstatus.activeSection].suggestions || privateSpellcheck.suggestions">
+                    v-if="getEditorExamConfig(lockedSection).suggestions || privateSpellcheck.suggestions">
                     <div v-if="entry.message">{{ entry.message }}</div>
                     <div v-if="entry.replacements" class="replacement">
                         <span v-if="entry.replacements[0]">  {{ entry.replacements[0].value }}</span>
@@ -631,23 +670,78 @@
     <!-- LANGUAGE TOOL END -->
 
 
-    <div id="statusbar" style="padding-left:15px;">
-        <!-- Statischer Text mit v-once, um das Neurendern zu verhindern da $t offenbar jedesmal performance measures durchführt die zu memory bloat führen -->
-        <span v-once>{{ $t("editor.words") }}:</span> <span>{{ wordcount }}</span> | <span v-once>{{
-            $t("editor.chars")
-        }}:</span> <span>{{ charcount }}</span>
-        &nbsp;
-        <span v-once id="editselectedtext"> {{ $t("editor.selected") }}: </span> <span
-        id="editselected"> {{ selectedWordCount }}/{{ selectedCharCount }}</span>
-        <img @click="zoomin(); LTupdateHighlights();" src="/src/assets/img/svg/zoom-in.svg" class="zoombutton">
-        <img @click="zoomout(); LTupdateHighlights();" src="/src/assets/img/svg/zoom-out.svg" class="zoombutton">
+    <div id="statusbar" style="padding-left:15px;padding-right:8px;">
+        <div class="statusbar-left">
+            <!-- Static text with v-once to prevent re-rendering since $t apparently performs performance measures each time causing memory bloat -->
+            <span>{{ wordcount }}</span> <span v-once>{{ $t("editor.words") }}</span>,  <span>{{ charcount }}</span> <span v-once>{{$t("editor.chars")}}</span>
+            &nbsp; | &nbsp;
+            <span v-once id="editselectedtext"> {{ $t("editor.selected") }}: </span> <span
+                id="editselected"> {{ selectedWordCount }}/{{ selectedCharCount }}</span>
+        </div>
+        <div class="statusbar-right">
+            <span class="caret-context-label" :title="caretContextLabel">{{ caretContextLabel }}</span>
+            <img @click="zoomin(); LTupdateHighlights();" src="/src/assets/img/svg/zoom-in.svg" class="zoombutton">
+            <img @click="zoomout(); LTupdateHighlights();" src="/src/assets/img/svg/zoom-out.svg" class="zoombutton">
+        </div>
     </div>
     <!-- EDITOR END -->
+    </div>
 </template>
 
 <script>
 import {Editor, EditorContent, VueNodeViewRenderer} from '@tiptap/vue-3'
+import {NodeSelection} from '@tiptap/pm/state'
 import Image from '@tiptap/extension-image';
+
+/** Base Image node drops width/height/style on parse; ODT import and round-tripped HTML need them preserved. */
+const ImageWithDimensions = Image.extend({
+    addAttributes() {
+        return {
+            ...this.parent?.(),
+            width: {
+                default: null,
+                parseHTML: (element) => element.getAttribute('width'),
+                renderHTML: (attributes) => {
+                    if (!attributes.width) return {};
+                    return { width: attributes.width };
+                },
+            },
+            height: {
+                default: null,
+                parseHTML: (element) => element.getAttribute('height'),
+                renderHTML: (attributes) => {
+                    if (!attributes.height) return {};
+                    return { height: attributes.height };
+                },
+            },
+            style: {
+                default: null,
+                parseHTML: (element) => element.getAttribute('style'),
+                renderHTML: (attributes) => {
+                    if (!attributes.style) return {};
+                    return { style: attributes.style };
+                },
+            },
+        };
+    },
+});
+
+/** Paragraph drops inline styles on parse; ODT import uses per-paragraph line-height. */
+const ParagraphWithLineHeight = Paragraph.extend({
+    addAttributes() {
+        return {
+            ...this.parent?.(),
+            lineHeight: {
+                default: null,
+                parseHTML: (element) => element.style?.lineHeight || null,
+                renderHTML: (attributes) => {
+                    if (!attributes.lineHeight) return {};
+                    return { style: `line-height: ${attributes.lineHeight}` };
+                },
+            },
+        };
+    },
+});
 import TextAlign from '@tiptap/extension-text-align'
 import Document from '@tiptap/extension-document'
 import Paragraph from '@tiptap/extension-paragraph'
@@ -659,6 +753,7 @@ import BulletList from '@tiptap/extension-bullet-list'
 import HardBreak from '@tiptap/extension-hard-break'
 import ListItem from '@tiptap/extension-list-item'
 import HorizontalRule from '@tiptap/extension-horizontal-rule'
+import { StatsRule } from '../components/statsRule.ts'
 import Heading from '@tiptap/extension-heading'
 import OrderedList from '@tiptap/extension-ordered-list'
 import Bold from '@tiptap/extension-bold'
@@ -685,7 +780,7 @@ import moment from 'moment-timezone';
 
 import ExamHeader from '../components/ExamHeader.vue';
 import WebviewPane from '../components/WebviewPane.vue'
-import PdfviewPane from '../components/PdfviewPane.vue'
+import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {
@@ -699,24 +794,29 @@ import {
     LTbuildOffsetMap,
     LTfindByOffsetMap,
 } from '../utils/languagetool.js'
-import {getExamMaterials, loadDOCX, loadHTML, loadImage, loadPDF, playAudio, resetPdfPreviewToolbar} from '../utils/filehandler.js'
+import {getExamMaterials, loadDOCX, loadHTML, loadImage, loadODT, loadPDF, playAudio, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 
 import {SignalBridge} from '../utils/signalBridge.js'
+import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
+import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
 
 const lowlight = createLowlight(common)
 
 // signalBridge instance centralizes ipc calls with platform checks
-const signalBridge = new SignalBridge(window);
+const signalBridge = new SignalBridge(window)
 
-
+// Default zoom for #editorcontainer (screen); @media print forces zoom 1 separately.
+const EDITOR_ZOOM_INITIAL = 1.6
+const EDITOR_ZOOM_MIN = 0.85
+const EDITOR_ZOOM_MAX = 2.2
 
 export default {
     components: {
         EditorContent,
         ExamHeader,
         WebviewPane,
-        PdfviewPane
+        PdfviewPaneRendered
     },
     data() {
         const status = this.$route.params.serverstatus;
@@ -731,12 +831,16 @@ export default {
                 activeSection = examSections[activeSectionIndex] || {};
             }
         }
+        const initialEditorCfg = activeSection?.groupA?.examConfig?.editor || {};
 
         return {
             index: 0,
             componentName: 'Writer',
             online: true,
             focus: true,
+            focusLostMessage: '',
+            focusLockReason: '',
+            focusLockMessage: '',
             exammode: false,
             examtype: this.$route.params.examtype,
             selectedFile: null,
@@ -752,6 +856,9 @@ export default {
             token: this.$route.params.token,
             clientname: this.$route.params.clientname,
             localLockdown: this.$route.params.localLockdown,
+            localUnlockPassword: '',
+            localUnlockError: false,
+            localUnlockBusy: false,
             localfiles: null,
             serverApiPort: this.$route.params.serverApiPort,
             clientApiPort: this.$route.params.clientApiPort,
@@ -763,9 +870,10 @@ export default {
             currenttime: 0,
             charcount: 0,
             wordcount: 0,
+            caretContextLabel: '',
             now: 0,
             pincode: this.$route.params.pincode,
-            zoom: 1.5,
+            zoom: EDITOR_ZOOM_INITIAL,
             battery: null,
             proseMirrorMargin: '30mm',
             editorWidth: '210mm',
@@ -775,6 +883,7 @@ export default {
             currentRange: 0,
             word: "",
             editorcontentcontainer: null,
+            editorContent: null,
             serverstatus: status,
             linespacing: activeSection.linespacing || '2',
             fontfamily: activeSection.fontfamily || "sans",
@@ -796,6 +905,8 @@ export default {
             LTactive: false,
             spellcheckFallback: false,
             splitview: false,
+            splitLeftPct: 50,
+            _splitResizing: false,
             currentPDFZoom: 80,
             currentPDFData: null,
             ignoreList: new Set(),
@@ -812,13 +923,16 @@ export default {
             allowedUrls: [],
             lockedSection: 1,
             internetCheckCounter:0,
-            LThost: activeSection.languagetoolhost || "http://127.0.0.1",
-            LTport: activeSection.languagetoolport || "8088",
-            ltLanguage: activeSection.spellchecklang || "de-DE",
+            LThost: initialEditorCfg.languagetoolhost || "http://127.0.0.1",
+            LTport: initialEditorCfg.languagetoolport || "8088",
+            ltLanguage: initialEditorCfg.spellchecklang || "de-DE",
             clipboardHistory: [],
             showClipboardSidebar: false,
             clipboardTooltip: { text: '', shown: false, x: 0, y: 0 },
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
+            pdfPreviewState: null,
+            typingRhythm: { lastTs: 0, deltas: [], lastLogTs: 0 },
+            typingRhythmKeydownListener: null,
         }
     },
     computed: {
@@ -840,16 +954,15 @@ export default {
         showLanguageToolSidebar() {
             // returns true if LanguageTool sidebar should be visible
             if (this.privateSpellcheck?.activated) return true;
-            const status = this.serverstatus;
-            if (!status || !status.examSections) return false;
-            const allowSwitch = !!status.allowSectionSwitch;
-            const sectionIndex = status.useExamSections === false
-                ? 1
-                : (allowSwitch
-                    ? (this.clientinfo?.lockedSection ?? this.lockedSection ?? status.activeSection ?? 0)
-                    : (status.lockedSection ?? status.activeSection ?? 0));
-            const section = status.examSections[sectionIndex] || status.examSections[1] || {};
-            return !!section.languagetool;
+            const cfg = this.getEditorExamConfig();
+            return !!cfg?.languagetool;
+        },
+        focusLockReasonLine() {
+            const code = this.focusLockReason;
+            if (!code) return '';
+            const key = `editor.focusLockReason_${code}`;
+            const text = this.$te(key) ? this.$t(key) : code;
+            return `${this.$t('editor.focusLockReason')}: ${text}`;
         },
     },
 
@@ -859,17 +972,32 @@ export default {
         focus(newValue) {
             if (!newValue) {
                 this.$nextTick(() => this.$refs.focusWarningOverlay?.focus()); // DOM .focus() steals focus from editor
+                if (this.localLockdown) {
+                    this.$nextTick(() => this.$refs.localUnlockInput?.focus());
+                }
+                return;
             }
+            this.focusLostMessage = '';
+            this.focusLockReason = '';
+            this.focusLockMessage = '';
         },
     },
 
 
     methods: {
+
+        // Sync focus-lock overlay fields from main-process clientinfo.
+        syncFocusLockFromClientinfo(clientinfo) {
+            this.focusLockReason = clientinfo?.focusLockReason || '';
+            this.focusLockMessage = clientinfo?.focusLockMessage || '';
+        },
+
         // from filehandler.js
         getExamMaterials: getExamMaterials,
         loadPDF: loadPDF,
         loadHTML: loadHTML,
         loadDOCX: loadDOCX,
+        loadODT: loadODT,
         loadImage: loadImage,
         playAudio: playAudio,
 
@@ -892,6 +1020,120 @@ export default {
         LTresetIgnorelist: LTresetIgnorelist,
         LTbuildOffsetMap: LTbuildOffsetMap,
         LTfindByOffsetMap: LTfindByOffsetMap,
+
+
+        getEditorExamConfig(sectionIndexIn = null) {
+            const status = this.serverstatus;
+            if (!status || !status.examSections) return {};
+            const allowSwitch = !!status.allowSectionSwitch;
+            const sectionIndex = sectionIndexIn != null
+                ? sectionIndexIn
+                : (status.useExamSections === false
+                    ? 1
+                    : (allowSwitch
+                        ? (this.clientinfo?.lockedSection ?? this.lockedSection ?? status.activeSection ?? 0)
+                        : (status.lockedSection ?? status.activeSection ?? 0)));
+            const section = status.examSections?.[sectionIndex] || status.examSections?.[1] || null;
+            const groupKey = section && section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA'
+            return section?.[groupKey]?.examConfig?.editor || {};
+        },
+
+        // Teacher-set ODT/DOCX template under examConfig.editor.editorTemplate (not materials).
+        getEditorTemplateFromExamConfig(sectionIndexIn = null) {
+            const status = this.serverstatus;
+            if (!status || !status.examSections) return null;
+            const allowSwitch = !!status.allowSectionSwitch;
+            const sectionIndex = sectionIndexIn != null
+                ? sectionIndexIn
+                : (status.useExamSections === false
+                    ? 1
+                    : (allowSwitch
+                        ? (this.clientinfo?.lockedSection ?? this.lockedSection ?? status.activeSection ?? 0)
+                        : (status.lockedSection ?? status.activeSection ?? 0)));
+            const section = status.examSections?.[sectionIndex] || status.examSections?.[1] || null;
+            if (!section || section.examtype !== 'editor') return null;
+            const groupKey = section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA';
+            const tmpl = section[groupKey]?.examConfig?.editor?.editorTemplate;
+            if (!tmpl?.filename || !tmpl?.filecontent) return null;
+            let ft = tmpl.filetype;
+            if (ft !== 'docx' && ft !== 'odt') {
+                const n = String(tmpl.filename).toLowerCase();
+                if (n.endsWith('.docx')) ft = 'docx';
+                else if (n.endsWith('.odt')) ft = 'odt';
+                else return null;
+            }
+            return { ...tmpl, filetype: ft };
+        },
+
+        // Wait until TipTap is ready (same readiness as backup restore).
+        async waitForEditorReady(maxAttempts = 50, delayMs = 100) {
+            for (let attempts = 0; attempts < maxAttempts; attempts++) {
+                if (this.editor && this.editor.isEditable !== undefined && this.editor.commands) {
+                    await this.sleep(delayMs);
+                    return true;
+                }
+                await this.sleep(delayMs);
+            }
+            console.error(`editor @ waitForEditorReady: Editor not ready after ${maxAttempts} attempts`);
+            return false;
+        },
+
+        // Silent import of teacher template (no replace dialog); runs only after backup was skipped or absent.
+        async autoLoadEditorTemplateIfConfigured() {
+            const file = this.getEditorTemplateFromExamConfig();
+            if (!file) return;
+            console.log(`editor @ autoLoadEditorTemplateIfConfigured: Loading template ${file.filename}`);
+            this.webviewVisible = false;
+            this.selectedFile = file.filename;
+            if (file.filetype === 'docx') {
+                await this.loadDOCX(file, true, true);
+            } else if (file.filetype === 'odt') {
+                await this.loadODT(file, true, true);
+            }
+        },
+
+        syncEditorLanguageSettings() {
+            const cfg = this.getEditorExamConfig(this.lockedSection);
+            this.LThost = cfg.languagetoolhost || "http://127.0.0.1";
+            this.LTport = cfg.languagetoolport || "8088";
+            this.ltLanguage = cfg.spellchecklang || "de-DE";
+        },
+
+
+
+
+        startSplitResize(e) {
+            // Use pointer events to support mouse + touch.
+            if (!this.splitview) return;
+            this._splitResizing = true;
+            window.addEventListener('pointermove', this.onSplitResizeMove, { passive: false });
+            window.addEventListener('pointerup', this.stopSplitResize, { passive: true });
+            window.addEventListener('pointercancel', this.stopSplitResize, { passive: true });
+            this.onSplitResizeMove(e);
+        },
+
+        onSplitResizeMove(e) {
+            if (!this._splitResizing) return;
+            e.preventDefault();
+            const container = document.querySelector('.split-view-container');
+            if (!container) return;
+            const rect = container.getBoundingClientRect();
+            const x = Math.min(Math.max(e.clientX - rect.left, 0), rect.width);
+            const pct = (x / rect.width) * 100;
+            const minLeftPx = 320;
+            const minRightPx = 420;
+            const minPct = (minLeftPx / rect.width) * 100;
+            const maxPct = 100 - (minRightPx / rect.width) * 100;
+            const clamped = Math.min(Math.max(pct, minPct), maxPct);
+            this.splitLeftPct = Math.min(80, Math.max(20, Math.round(clamped * 10) / 10));
+        },
+
+        stopSplitResize() {
+            this._splitResizing = false;
+            window.removeEventListener('pointermove', this.onSplitResizeMove);
+            window.removeEventListener('pointerup', this.stopSplitResize);
+            window.removeEventListener('pointercancel', this.stopSplitResize);
+        },
 
         LTshowWord(word) {
             this.currentLTword = word
@@ -922,13 +1164,13 @@ export default {
                 caretRange.setStart(range.startContainer, range.startOffset);
                 caretRange.setEnd(range.startContainer, range.startOffset);
 
-                // Setze den Auswahlbereich (Selection) auf den Anfang des Range-Objekts
+                // Set the selection to the beginning of the range object
                 const selection = window.getSelection();
-                selection.removeAllRanges(); // Entferne alle bestehenden Bereiche aus der aktuellen Auswahl
-                selection.addRange(caretRange); // Fügt die neue Range hinzu, die den Caret positioniert
+                selection.removeAllRanges(); // remove all existing ranges from the current selection
+                selection.addRange(caretRange); // add the new range that positions the caret
 
-                // Optional: Scroll das Element in die Sicht, falls nötig
-                editableElement.focus(); // Richtet den Fokus auf das editierbare Element
+                // Optional: scroll the element into view if needed
+                editableElement.focus(); // focus the editable element
                 caretRange.startContainer.parentNode.scrollIntoView({
                     block: 'center',
                     inline: 'nearest',
@@ -939,27 +1181,27 @@ export default {
 
         isValidFullDomainName(str) {
             try {
-                // Füge https:// hinzu, wenn kein Protokoll angegeben ist
+                // Add https:// if no protocol is specified
                 const urlString = str.includes('://') ? str : 'https://' + str;
                 const url = new URL(urlString);
 
-                // Prüfe ob Protokoll korrekt ist
+                // Check whether the protocol is correct
                 if (url.protocol !== 'http:' && url.protocol !== 'https:') {
                     return false;
                 }
 
-                // Prüfe ob Host vorhanden und gültig ist
+                // Check whether host is present and valid
                 if (!url.hostname || url.hostname.length < 1) {
                     return false;
                 }
 
-                // Prüfe ob Host mindestens einen gültigen Domain-Teil enthält
+                // Check whether host contains at least one valid domain part
                 const parts = url.hostname.split('.');
                 if (parts.length < 2) {
                     return false;
                 }
 
-                // Prüfe ob jeder Domain-Teil gültig ist
+                // Check whether every domain part is valid
                 const validPart = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/;
                 return parts.every(part =>
                     part.length > 0 &&
@@ -984,6 +1226,9 @@ export default {
                 return
             } else if (file.filetype == 'docx') {
                 this.loadDOCX(file, true)
+                return
+            } else if (file.filetype == 'odt') {
+                this.loadODT(file, true)
                 return
             } else if (file.filetype == 'audio') {
                 this.playAudio(file, true)
@@ -1021,6 +1266,7 @@ export default {
             this.clientinfo = getinfo.clientinfo;
             this.token = this.clientinfo.token
             this.focus = this.clientinfo.focus
+            this.syncFocusLockFromClientinfo(this.clientinfo);
             this.clientname = this.clientinfo.name
             this.exammode = this.clientinfo.exammode
             this.pincode = this.clientinfo.pin
@@ -1036,6 +1282,8 @@ export default {
                 : this.serverstatus.lockedSection
 
             this.lockedSection = sectionIndex
+
+            this.syncEditorLanguageSettings()
 
             // console.log(this.serverstatus)
             if (this.pincode !== "0000") {
@@ -1059,11 +1307,11 @@ export default {
                 this.serverstatus &&
                 this.serverstatus.examSections &&
                 this.serverstatus.examSections[this.lockedSection] &&
-                this.serverstatus.examSections[this.lockedSection].languagetool === false
+                this.getEditorExamConfig(this.lockedSection).languagetool === false
             ) {
                 if (this.privateSpellcheck.activate == false && this.LTactive) {
                     this.LTdisable()
-                    this.privateSpellcheck.activated = false   // das wird eigentlich eh im communication handler für clientinfo bereits auf false gesetzt und bei fetchinfo() übernommen
+                    this.privateSpellcheck.activated = false   // this is already set to false in the communication handler for clientinfo and picked up via fetchinfo()
                 }
             }
 
@@ -1119,16 +1367,16 @@ export default {
                 sel.addRange(range);
             }
 
-            if (this.serverstatus.examSections[this.serverstatus.activeSection].languagetool || this.privateSpellcheck) {
+            if (this.getEditorExamConfig().languagetool || this.privateSpellcheck) {
                 this.LTupdateHighlights()
             }
 
-            // Prüfen, ob der Cursor direkt innerhalb eines <code>-Elements ist oder ob gerade ein Code-Block erstellt wird
-            // ohne diesen block wird auch im code durch deutsche " ersetzt. hier gibt es einen bug und ein neuer codeblock
-            // bekommt ohne ersichtlichen grund ein deutsches oberes hochkomma wenn es das erste " in einer neuen zeile ist
-            // Prüfen, ob wir vl gerade erst einen Code-Block erstellen (erstes zeichen auch erkennen)
+            // Check whether the cursor is directly inside a <code> element or a code block is being created
+            // without this block, German " is also substituted inside code. there is a bug where a new code block
+            // gets a German upper quotation mark for no apparent reason when it is the first " in a new line
+            // Check whether we might be just creating a code block (also detect the first character)
 
-            if (this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang === 'de-DE') {
+            if (this.getEditorExamConfig().spellchecklang === 'de-DE') {
                 if (e.key === '"') {
                     const selection = window.getSelection();
                     const range = selection.getRangeAt(0);
@@ -1226,6 +1474,111 @@ export default {
             this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
         },
 
+        // Strip marks, color, alignment, paragraph line-height, then normalize block nodes (unsetAllMarks before clearNodes for full-doc selection).
+        clearFormatting() {
+            if (!this.editor) return
+            this.editor.chain().focus()
+                .unsetAllMarks()
+                .unsetColor()
+                .unsetTextAlign()
+                .resetAttributes('paragraph', 'lineHeight')
+                .clearNodes()
+                .run()
+        },
+
+        // Refresh status-bar text for block path, alignment, and marks at the selection anchor.
+        updateCaretContextLabel() {
+            if (!this.editor?.state) {
+                this.caretContextLabel = ''
+                return
+            }
+            const {state} = this.editor
+            const sel = state.selection
+            if (sel instanceof NodeSelection) {
+                const fragment = this.caretContextLabelForNode(sel.node)
+                this.caretContextLabel = fragment || this.$t('editor.caretCtxUnknown', {type: sel.node.type.name})
+                return
+            }
+            const {$from} = sel
+            const parts = []
+            for (let d = 1; d <= $from.depth; d++) {
+                const fragment = this.caretContextLabelForNode($from.node(d))
+                if (fragment) parts.push(fragment)
+            }
+            const parent = $from.parent
+            if ((parent.type.name === 'paragraph' || parent.type.name === 'heading') && parent.attrs.textAlign) {
+                const alignKey = {
+                    left: 'editor.caretCtxAlignLeft',
+                    center: 'editor.caretCtxAlignCenter',
+                    right: 'editor.caretCtxAlignRight',
+                    justify: 'editor.caretCtxAlignJustify',
+                }[parent.attrs.textAlign]
+                if (alignKey) parts.push(this.$t(alignKey))
+            }
+            $from.marks().forEach((mark) => {
+                const fragment = this.caretContextLabelForMark(mark)
+                if (fragment) parts.push(fragment)
+            })
+            this.caretContextLabel = parts.join(' · ')
+        },
+        // Map a document block node to a translated caret-context fragment (empty if omitted from UI).
+        caretContextLabelForNode(node) {
+            const name = node.type.name
+            if (name === 'heading') {
+                return this.$t('editor.caretCtxHeading', {level: node.attrs.level ?? ''})
+            }
+            const keyByName = {
+                paragraph: 'editor.caretCtxParagraph',
+                blockquote: 'editor.caretCtxBlockquote',
+                codeBlock: 'editor.caretCtxCodeBlock',
+                bulletList: 'editor.caretCtxBulletList',
+                orderedList: 'editor.caretCtxOrderedList',
+                listItem: 'editor.caretCtxListItem',
+                tableCell: 'editor.caretCtxTableCell',
+                tableHeader: 'editor.caretCtxTableHeader',
+                horizontalRule: 'editor.caretCtxHorizontalRule',
+                statsRule: 'editor.caretCtxStatsRule',
+                image: 'editor.caretCtxImage',
+            }
+            const i18nKey = keyByName[name]
+            return i18nKey ? this.$t(i18nKey) : ''
+        },
+        // Map an active mark to a translated caret-context fragment (supports textStyle color).
+        caretContextLabelForMark(mark) {
+            const keyByName = {
+                bold: 'editor.caretCtxBold',
+                italic: 'editor.caretCtxItalic',
+                underline: 'editor.caretCtxUnderline',
+                code: 'editor.caretCtxCode',
+                subscript: 'editor.caretCtxSubscript',
+                superscript: 'editor.caretCtxSuperscript',
+            }
+            const i18nKey = keyByName[mark.type.name]
+            if (i18nKey) return this.$t(i18nKey)
+            if (mark.type.name === 'textStyle' && mark.attrs?.color) {
+                return this.$t('editor.caretCtxColor', {color: mark.attrs.color})
+            }
+            return ''
+        },
+
+        // True when this row is the document that receives the 20s auto-save (.htm).
+        isActiveLocalHtmFile(file) {
+            return !!(file && file.type === 'htm' && this.currentFile && file.name === `${this.currentFile}.htm`);
+        },
+
+        // Seconds/minutes/hours since last filesystem mtime (active .htm omits label in template).
+        formatHtmLocalFileAge(file) {
+            const t = this.now || Date.now();
+            const ms = Math.max(0, t - Number(file?.mod || 0));
+            const sec = Math.floor(ms / 1000);
+            if (sec < 60) return `${sec}s`;
+            const min = Math.floor(sec / 60);
+            if (min < 60) return `${min} min`;
+            const h = Math.floor(min / 60);
+            const m = min % 60;
+            return `${h}h ${m}m`;
+        },
+
         //get all files in user directory
         async loadFilelist() {
             let filelist = await signalBridge.invoke('getfilesasync', null)
@@ -1302,14 +1655,16 @@ export default {
                     confirmButtonText: 'Ok',
                     cancelButtonText: this.$t("editor.cancel"),
                     inputValidator: (value) => {
-                        const regex = /^[A-Za-z0-9]+$/;
-                        if (!value.match(regex)) {
+                        const v = typeof value === 'string' ? value.trim() : '';
+                        const regex = /^[A-Za-z0-9]{1,20}$/;
+                        if (!v.match(regex)) {
                             return this.$t("math.nospecial");
                         }
                     },
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        filename = `${result.value}`
+                        const stem = String(result.value ?? '').trim();
+                        filename = `${stem}`
                         this.currentFile = filename
                     }
                     else {return; }
@@ -1346,9 +1701,9 @@ export default {
                 previewElement.classList.remove('fadeinfast');
             }
 
-            // SAVE AS HTML (bak) - also save editorcontent as *html file - used to re-populate the editor window in case something went completely wrong
+            // SAVE AS HTML (.htm) - also save editorcontent as *html file - used to re-populate the editor window in case something went completely wrong
             let editorcontent = this.editor.getHTML(); 
-            signalBridge.send('storeHTML', {filename: filename, editorcontent: editorcontent })
+            signalBridge.send('storeHTML', { filename: filename, editorcontent: editorcontent, reason: why })
             
             // SAVE AS PDF - inform mainprocess to save webcontent as pdf (see @media css query for adjustments for pdf)
             // printPDF will trigger a reload of the filelist if finished and send files to teacher if reason (why) is "teacherrequest"
@@ -1364,22 +1719,25 @@ export default {
 
 
         // send direct print request to teacher and append current document as base64
-        printBase64(printrequest = false) {
+        printBase64(printrequest = false, saveReason = 'n/a') {
             //get current exam sectioninfo
 
             // this currentpreviewBase64 contains the current visible pdf as base64 string
-            const url = `https://${this.serverip}:${this.serverApiPort}/server/control/printrequest/${this.servername}/${this.token}`;
+            const endpoint = printrequest ? 'printjob' : 'submission'
+            const url = `https://${this.serverip}:${this.serverApiPort}/server/control/${endpoint}/${this.servername}`;
+            const sr = typeof saveReason === 'string' ? saveReason : 'n/a'
             const payload = {
                 document: this.currentpreviewBase64,
                 printrequest: printrequest,
                 submissionnumber: this.submissionnumber,
-                lockedsection: this.lockedSection  // this is needed to save the current section files to the correct section folder on the server
+                lockedsection: this.lockedSection,  // this is needed to save the current section files to the correct section folder on the server
+                saveReason: sr
             }
 
-            fetch(url, {
+            examApiFetch(url, {
                 method: "POST",
                 cache: "no-store",
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', Authorization: `Bearer ${this.token}`},
                 body: JSON.stringify(payload),
             })
             .then(response => {
@@ -1387,7 +1745,7 @@ export default {
             })
             .then(data => {
                 if (data.message == "success") {
-                    this.submissionnumber++   // successful submission -> increment number
+                    if (!printrequest) { this.submissionnumber++ }   // successful submission -> increment number
                     let message = this.$t("editor.saved")
                     if (printrequest) {
                         message = this.$t("editor.requestsent")
@@ -1430,7 +1788,7 @@ export default {
 
                 if (directsend) {   //direct send to teacher without displaying the print preview
                     this.currentpreviewBase64 = base64pdf
-                    this.printBase64()
+                    this.printBase64(false, 'directsend')
                     return
                 }
 
@@ -1466,11 +1824,11 @@ export default {
             })
         },
         zoomin() {
-            if (this.zoom < 4) this.zoom += 0.1
+            if (this.zoom < EDITOR_ZOOM_MAX) this.zoom = Math.min(EDITOR_ZOOM_MAX, this.zoom + 0.1)
             document.getElementById(`editorcontainer`).style.zoom = this.zoom
         },
         zoomout() {
-            if (this.zoom > 0.5) this.zoom -= 0.1
+            if (this.zoom > EDITOR_ZOOM_MIN) this.zoom = Math.max(EDITOR_ZOOM_MIN, this.zoom - 0.1)
             document.getElementById(`editorcontainer`).style.zoom = this.zoom
         },
         setCSSVariable(variableName, value) {
@@ -1495,20 +1853,78 @@ export default {
             if (!html || html.trim() === '') return;
             this.clipboardHistory = [html, ...this.clipboardHistory.filter(item => item !== html)].slice(0, 10);
         },
-        copySelection() {
+        async copySelection() {
             const selection = window.getSelection();
-            if (!selection.rangeCount) return;
-            const range = selection.getRangeAt(0);
-            const div = document.createElement('div');
-            div.appendChild(range.cloneContents());
-            const html = div.innerHTML;
-            this.selectedText = html;
-            this.addToClipboardHistory(html);
+            if (selection?.rangeCount) {
+                const range = selection.getRangeAt(0);
+                const div = document.createElement('div');
+                div.appendChild(range.cloneContents());
+                const html = div.innerHTML;
+                const text = selection.toString ? selection.toString() : '';
+                const hasPayload = (!selection.isCollapsed) && ((html && html.trim()) || (text && text.trim()));
+                if (hasPayload) {
+                    this.selectedText = html;
+                    this.addToClipboardHistory(html);
+                    return;
+                }
+            }
+
+            if (!this.webviewVisible) return;
+            const webview = document.getElementById('safebrowser');
+            if (!webview || typeof webview.executeJavaScript !== 'function') return;
+
+            try {
+                const waitForDomReady = (timeoutMs = 750) => {
+                    if (typeof webview.getWebContentsId === 'function') {
+                        const id = webview.getWebContentsId();
+                        if (id) return Promise.resolve();
+                    }
+                    return new Promise((resolve) => {
+                        let done = false;
+                        const cleanup = () => {
+                            if (done) return;
+                            done = true;
+                            try { webview.removeEventListener('dom-ready', onReady); } catch (_) {}
+                            resolve();
+                        };
+                        const onReady = () => cleanup();
+                        try { webview.addEventListener('dom-ready', onReady, { once: true }); } catch (_) { /* ignore */ }
+                        setTimeout(cleanup, timeoutMs);
+                    });
+                };
+
+                const readSelection = () => webview.executeJavaScript(`
+                    (() => {
+                        const sel = window.getSelection?.();
+                        if (!sel || sel.rangeCount === 0) return { html: '', text: '' };
+                        const range = sel.getRangeAt(0);
+                        const div = document.createElement('div');
+                        div.appendChild(range.cloneContents());
+                        return { html: div.innerHTML || '', text: sel.toString() || '' };
+                    })()
+                `, true);
+
+                let result = await readSelection();
+                if (!result || (!result.html && !result.text)) {
+                    await waitForDomReady();
+                    result = await readSelection();
+                }
+
+                const html = (result && typeof result.html === 'string') ? result.html : '';
+                const text = (result && typeof result.text === 'string') ? result.text : '';
+                const payload = html && html.trim() ? html : (text && text.trim() ? `<p>${text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</p>` : '');
+                if (!payload) return;
+
+                this.selectedText = payload;
+                this.addToClipboardHistory(payload);
+            } catch (err) {
+                console.log('editor @ copySelection: webview selection failed:', err?.message || err);
+            }
         },
-        cutSelection() {
+        async cutSelection() {
             const selection = window.getSelection();
-            if (!selection.rangeCount) return;
-            this.copySelection();
+            if (!selection?.rangeCount) return;
+            await this.copySelection();
             this.editor.chain().focus().deleteSelection().run();
         },
         toggleClipboardSidebar() {
@@ -1562,7 +1978,6 @@ export default {
         async toggleSplitview() {
             this.splitview = !this.splitview;
             this.webviewVisible = false
-            this.zoom = 1
             this.LTdisable();  //close lt
             await this.sleep(1000) //wait for re-rendering of #preview div 
 
@@ -1592,6 +2007,7 @@ export default {
 
         hidepreview() {
             resetPdfPreviewToolbar(this);
+            this.pdfPreviewState = null;
             let preview = document.querySelector("#preview")
             preview.style.display = 'none';
             preview.setAttribute("src", "about:blank");
@@ -1638,14 +2054,58 @@ export default {
                 }
             });
         },
-        async sendFocuslost(ctrlalt = false) {
-            let response = await signalBridge.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
-            if (response && !this.config.development && !response.focus) {  //immediately block frontend
-                this.focus = false
+        async sendFocuslost(ctrlalt = false, options = {}) {
+            const { instantBlock = false, forceBackendLock = false, message = '' } = options;
+            if (!forceBackendLock && await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
+            if (message) this.focusLostMessage = message;
+            if (instantBlock && !this.config.development) {
+                this.focus = false;
                 const editorcontentcontainer = document.getElementById('editorcontent');
-                if (!editorcontentcontainer) return;
-                const editableDiv = editorcontentcontainer.firstElementChild;
-                if (editableDiv) editableDiv.blur()  // remove text cursor (carret)
+                const editableDiv = editorcontentcontainer?.firstElementChild;
+                if (editableDiv) editableDiv.blur(); // remove text cursor (caret)
+            }
+
+            const response = forceBackendLock
+                ? await signalBridge.invoke('securityFocusLost', { reason: 'typingRhythm', message, ctrlalt })
+                : await signalBridge.invoke('focuslost', ctrlalt); // refocus, go back to kiosk, inform teacher
+
+            if (forceBackendLock) {
+                this.focus = false;
+                const editorcontentcontainer = document.getElementById('editorcontent');
+                const editableDiv = editorcontentcontainer?.firstElementChild;
+                if (editableDiv) editableDiv.blur(); // remove text cursor (caret)
+                return;
+            }
+
+            if (response && !this.config.development && !response.focus) { // immediately block frontend
+                this.focus = false;
+                const editorcontentcontainer = document.getElementById('editorcontent');
+                const editableDiv = editorcontentcontainer?.firstElementChild;
+                if (editableDiv) editableDiv.blur(); // remove text cursor (caret)
+            }
+        },
+        async tryUnlockLocalLockdown() {
+            if (!this.localLockdown) return;
+
+            const expected = this.serverstatus?.password ?? "";
+            const provided = this.localUnlockPassword ?? "";
+            if (!expected || provided !== expected) {
+                this.localUnlockError = true;
+                return;
+            }
+
+            this.localUnlockBusy = true;
+            try {
+                const result = await signalBridge.invoke('restorefocusstateLocal');
+                if (result?.ok) {
+                    this.localUnlockPassword = '';
+                    this.localUnlockError = false;
+                    this.focus = true;
+                    return;
+                }
+                this.localUnlockError = true;
+            } finally {
+                this.localUnlockBusy = false;
             }
         },
         handleCtrlAlt(event) {
@@ -1673,15 +2133,8 @@ export default {
             if (!this.serverstatus || !this.serverstatus.examSections) {
                 return false;
             }
-            const status = this.serverstatus;
-            const allowSwitch = !!status.allowSectionSwitch;
-            const sectionIndex = status.useExamSections === false
-                ? 1
-                : (allowSwitch
-                    ? (this.clientinfo?.lockedSection ?? this.lockedSection ?? status.activeSection ?? 0)
-                    : (status.lockedSection ?? status.activeSection ?? 0));
-            const section = status.examSections[sectionIndex] || status.examSections[1];
-            if (!section || !section.languagetool) {
+            const cfg = this.getEditorExamConfig();
+            if (!cfg || !cfg.languagetool) {
                 return false;
             }
             if (this.ltRunning && !force) {
@@ -1743,7 +2196,7 @@ export default {
                 await this.startLanguageTool({silent: true, force: true});
 
                 this.spellcheckFallback = false;
-                this.LTinfo = "LanguageTool gestartet. Erneut prüfen...";
+                this.LTinfo = "LanguageTool started. Checking again...";
                 await this.sleep(1000);
                 await this.LTcheckAllWords(false);
 
@@ -1761,7 +2214,7 @@ export default {
                 extensions: [
                     Typography,
 
-                    Image.configure({
+                    ImageWithDimensions.configure({
                         inline: true,
                         allowBase64: true,
                     }),
@@ -1779,9 +2232,10 @@ export default {
                     HardBreak,
                     Heading,
                     HorizontalRule,
+                    StatsRule,
                     ListItem,
                     OrderedList,
-                    Paragraph,
+                    ParagraphWithLineHeight,
                     Text,
                     Bold,
                     Code,
@@ -1808,9 +2262,9 @@ export default {
                             addKeyboardShortcuts() {
                                 return {
                                     '"': () => {
-                                        // Verhindere Ersetzung in Code-Blöcken
+                                        // Prevent substitution inside code blocks
                                         if (this.editor.isActive('code')) {
-                                            return this.editor.commands.insertContent('"')  // dieser ersetungscode garantiert dass im codeblock zusammen mit dem keydown event check keine ersetzungen stattfinden
+                                            return this.editor.commands.insertContent('"')  // this substitution code ensures that no replacements happen in code blocks together with the keydown event check
                                         }
                                         return false
                                     }
@@ -1820,65 +2274,50 @@ export default {
                         .configure({lowlight}),
                 ],
                 content: ``,
+                onCreate: () => {
+                    this.$nextTick(() => this.updateCaretContextLabel())
+                },
+                onTransaction: () => {
+                    this.updateCaretContextLabel()
+                },
             });
         },
+        
         async loadBackupFile(filename = false) {
-            // check if there is a bak file in the exam directory and load it
+            // check if there is an htm backup in the exam directory and load it
             // This must run early to read the file before editor overwrites it after 20 seconds
-            let backupfileName = filename ? filename : this.clientname + ".bak"
-            console.log(`editor @ loadBackupFile: Checking for backup file: ${backupfileName}`)
+            const backupfileName = filename ? filename : this.clientname + ".htm";
+            console.log(`editor @ loadBackupFile: Checking for backup file: ${backupfileName}`);
             try {
-                let backupfileContent = await signalBridge.invoke('getbackupfile', backupfileName)
+                const backupfileContent = await signalBridge.invoke('getbackupfile', backupfileName);
+                const ready = await this.waitForEditorReady();
+                if (!ready) return;
 
                 if (backupfileContent) {
-                    console.log(`editor @ loadBackupFile: Backup file found, waiting for editor to be ready before showing dialog`)
-                    // Wait for editor to be fully initialized before showing dialog
-                    const waitForEditor = async () => {
-                        let attempts = 0
-                        const maxAttempts = 50 // 5 seconds max wait
-
-                        while (attempts < maxAttempts) {
-                            if (this.editor && this.editor.isEditable !== undefined && this.editor.commands) {
-                                console.log(`editor @ loadBackupFile: Editor ready, showing dialog`)
-                                // Wait one more frame to ensure DOM is ready
-                                await this.sleep(100)
-                                this.$swal.fire({
-                                    title: this.$t("editor.backupfound"),
-                                    html: `${this.$t("editor.replacecontent1")} <b>${backupfileName}</b> ${this.$t("editor.replacecontent2")}`,
-                                    icon: "question",
-                                    showCancelButton: true,
-                                    cancelButtonText: this.$t("editor.cancel"),
-                                    reverseButtons: true,
-                                    allowOutsideClick: false,
-                                    allowEscapeKey: true
-                                })
-                                .then(async (result) => {
-                                    if (result.isConfirmed) {
-                                        console.log(`editor @ loadBackupFile: User confirmed, loading backup file`)
-                                        this.editor.commands.clearContent(true)
-                                        this.editor.commands.insertContent(backupfileContent)
-                                    } else {
-                                        console.log(`editor @ loadBackupFile: User cancelled loading backup file`)
-                                    }
-                                })
-                                .catch((error) => {
-                                    console.error(`editor @ loadBackupFile: Error showing dialog: ${error}`)
-                                })
-                                return
-                            }
-                            attempts++
-                            await this.sleep(100)
-                        }
-                        console.error(`editor @ loadBackupFile: Editor not ready after ${maxAttempts} attempts`)
+                    console.log(`editor @ loadBackupFile: Backup file found, showing dialog`);
+                    const result = await this.$swal.fire({
+                        title: this.$t("editor.backupfound"),
+                        html: `${this.$t("editor.replacecontent1")} <b>${backupfileName}</b> ${this.$t("editor.replacecontent2")}`,
+                        icon: "question",
+                        showCancelButton: true,
+                        cancelButtonText: this.$t("editor.cancel"),
+                        reverseButtons: true,
+                        allowOutsideClick: false,
+                        allowEscapeKey: true,
+                    });
+                    if (result.isConfirmed) {
+                        console.log(`editor @ loadBackupFile: User confirmed, loading backup file`);
+                        this.editor.commands.clearContent(true);
+                        this.editor.commands.insertContent(backupfileContent);
+                        return;
                     }
-                    waitForEditor()
-                } 
-                else {
-                    console.log(`editor @ loadBackupFile: No backup file found or content is empty`)
+                    console.log(`editor @ loadBackupFile: User cancelled loading backup file`);
+                } else {
+                    console.log(`editor @ loadBackupFile: No backup file found or content is empty`);
                 }
-            }
-            catch (error) {
-                console.error(`editor @ loadBackupFile: Error loading backup file: ${error}`)
+                await this.autoLoadEditorTemplateIfConfigured();
+            } catch (error) {
+                console.error(`editor @ loadBackupFile: Error loading backup file: ${error}`);
             }
         },
 
@@ -1890,6 +2329,55 @@ export default {
             event.preventDefault()
             event.stopPropagation();
         },
+
+        /** Keys whose OS auto-repeat looks like scripted timing — exclude from typingRhythm statistics */
+        isTypingRhythmExemptKey(e) {
+            const code = e.code;
+            if (code === 'Backspace' || code === 'Delete' || code === 'Space') return true;
+            if (code === 'Enter' || code === 'NumpadEnter') return true;
+            const key = e.key;
+            if (key === 'Backspace' || key === 'Delete' || key === 'Enter') return true;
+            if (key === ' ') return true;
+            return false;
+        },
+
+        handleTypingRhythmKeydown(e) {
+            if (e.isComposing) return;
+            if (this.isTypingRhythmExemptKey(e)) {
+                const s = this.typingRhythm;
+                s.deltas = [];
+                s.lastTs = 0;
+                return;
+            }
+            const now = Date.now();
+            const s = this.typingRhythm;
+            if (s.lastTs > 0) {
+                const dt = now - s.lastTs;
+                if (dt >= 0 && dt <= 2000) {
+                    s.deltas.push(dt);
+                    if (s.deltas.length > 10) s.deltas.shift();
+                } else {
+                    s.deltas = [];
+                }
+            }
+            s.lastTs = now;
+
+            if (s.deltas.length !== 10) return;
+            const mean = s.deltas.reduce((a, b) => a + b, 0) / s.deltas.length;
+            const variance = s.deltas.reduce((acc, v) => acc + (v - mean) ** 2, 0) / s.deltas.length;
+            const stdev = Math.sqrt(variance);
+            const tooFast = mean < 45;
+            const tooRegular = stdev < 6;
+
+            if ((tooFast || tooRegular) && now - s.lastLogTs > 2000) {
+                s.lastLogTs = now;
+                console.log('editor @ typingRhythm: suspicious typing rhythm', { meanMs: mean, stdevMs: stdev, deltasMs: [...s.deltas] });
+                if (this.focus) {
+                    this.sendFocuslost(false, { instantBlock: true, forceBackendLock: true, message: 'Automatisierte Texteingabe erkannt\nDieser Computer ist möglicherweise kompromittiert' });
+                }
+            }
+        },
+
 
     },
 
@@ -1950,10 +2438,15 @@ export default {
 
         console.log(`editor @ mounted: Component mounted, initializing editor`)
         this.createEditor(); // this initializes the editor
-        this.zoomin()
         this.getExamMaterials()
 
       
+
+        signalBridge.on('focusLock', (_event, payload = {}) => {
+            this.focusLockReason = payload.reason || '';
+            this.focusLockMessage = payload.message || '';
+            if (!this.config.development) this.focus = false;
+        });
 
         signalBridge.on('getmaterials', (event) => {  // get exam materials from teacher
             console.log("editor @ getmaterials: get materials request received")
@@ -1967,7 +2460,7 @@ export default {
 
         signalBridge.on('submitexam', (event, why) => {  //send current work as base64 to teacher
             console.log("editor @ submitexam: submit exam request received")
-            this.printBase64()
+            this.printBase64(false, typeof why === 'string' ? why : 'submitexam')
         });
 
         signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
@@ -2021,7 +2514,7 @@ export default {
             this.style.display = 'none';
             this.setAttribute("src", "about:blank");
             URL.revokeObjectURL(this.currentpreview);
-            // this.classList.add('fadeinfast');  // wird entfernt sobald pdf sichtbar ist um flickering zu vermeiden und hier wieder hinzugefügt
+            // this.classList.add('fadeinfast');  // removed once the pdf is visible to avoid flickering, then added back here
         });
 
         document.querySelector("#mugshotpreview").addEventListener("click", function () {
@@ -2044,18 +2537,18 @@ export default {
         this.currentFile = this.clientname
         this.entrytime = new Date().getTime()
 
-        // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
+        // do not use setInterval() for intervals as it keeps all objects of the callbacks including fetch() responses in memory until the interval is stopped
         this.fetchinfointerval = new SchedulerService(5000);
-        this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+        this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
         this.fetchinfointerval.start();
 
-        this.saveContentCallback = () => this.saveContent(true, 'auto');  // wegs 2 parameter muss dieser umweg genommen werden sonst kann ich den eventlistener nicht mehr entfernen
+        this.saveContentCallback = () => this.saveContent(true, 'auto');  // this detour is needed because of 2 parameters, otherwise the event listener cannot be removed
         this.saveinterval = new SchedulerService(20000);
-        this.saveinterval.addEventListener('action', this.saveContentCallback);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+        this.saveinterval.addEventListener('action', this.saveContentCallback);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
         this.saveinterval.start();
 
         this.clockinterval = new SchedulerService(1000);
-        this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+        this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
         this.clockinterval.start();
 
 
@@ -2082,10 +2575,11 @@ export default {
         document.getElementById('editormaincontainer').addEventListener('scroll', this.LTupdateHighlights, {passive: true});
 
         // block editor on escape
-        document.body.addEventListener('mouseleave', this.sendFocuslost);
-        // document.body.addEventListener('keydown', this.handleCtrlAlt);
-        window.addEventListener('visibilitychange', this.handleVisibilityChange);
-
+        if (!this.config.development) {
+            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
+            // document.body.addEventListener('keydown', this.handleCtrlAlt);
+            window.addEventListener('visibilitychange', this.handleVisibilityChange);
+        }
 
       
         // get wlan info and host ip for internet check
@@ -2097,6 +2591,8 @@ export default {
             if (this.editorContent) {
                 this.editorContent.addEventListener('paste', this.handlePaste, true);
                 this.editorContent.addEventListener('drop', this.handleDrop, true);
+                this.typingRhythmKeydownListener = this.handleTypingRhythmKeydown.bind(this);
+                this.editorContent.addEventListener('keydown', this.typingRhythmKeydownListener, true);
             }
             console.log(`editor @ mounted: Calling loadBackupFile`)
             this.loadBackupFile()
@@ -2119,6 +2615,9 @@ export default {
         if (this.editorContent) {
             this.editorContent.removeEventListener('paste', this.handlePaste, true);
             this.editorContent.removeEventListener('drop', this.handleDrop, true);
+            if (this.typingRhythmKeydownListener) {
+                this.editorContent.removeEventListener('keydown', this.typingRhythmKeydownListener, true);
+            }
         }
         //document.removeEventListener('input', this.checkAllWordsOnSpacebar)
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
@@ -2128,6 +2627,7 @@ export default {
         document.removeEventListener('click', this.hideSpellcheckMenu);
         this.editorcontentcontainer.removeEventListener('mouseup', this.getSelectedTextInfo);
         document.getElementById('editormaincontainer').removeEventListener('scroll', this.LTupdateHighlights, {passive: true});
+        this.stopSplitResize()
 
         this.saveinterval.removeEventListener('action', this.saveContentCallback);
 
@@ -2186,15 +2686,16 @@ export default {
 @media print { //this controls how the editor view is printed (to pdf)
 
 
-    #editortoolbar, #webview, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer, span.NXTEhighlight::after, #highlight-layer, #languagetool, #clipboard-sidebar, .split-view-container, #preview, #pdfembed {
+    #editortoolbar, #webview, #mugshotpreview, #apphead, #editselected, #editselectedtext, #focuswarning, .focus-container, #specialcharsdiv, #aplayer, span.NXTEhighlight::after, #highlight-layer, #languagetool, #clipboard-sidebar, #preview, #pdfembed, .pdf-toolbar, .split-divider, .caret-context-label {
         display: none !important;
     }
+
     body, #vuexambody {
         position: relative !important;
         height: auto !important;
         overflow: visible !important;
     }
-    //body ist "fixed" um beim autoscrollen nicht zu verscheben - mehrseitiger print wird dadurch aber auf 1seite beschränkt
+    //body is "fixed" to prevent shifting during auto-scroll - but this limits multi-page print to 1 page
 
     #statusbar {
         position: relative !important;
@@ -2204,6 +2705,9 @@ export default {
         //margin-right: var(--js-margin) !important;
         margin-left: 14px !important;
         width: var(--js-editorWidth) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
     }
     #editorcontent {
         border: 0px !important;
@@ -2248,8 +2752,13 @@ export default {
         border-right: var(--js-borderright) !important;
         border-left: var(--js-borderleft) !important;
         margin-bottom: 4px !important;
+        caret-color: transparent !important; // hide native text caret in print / PDF capture
     }
 
+    .ProseMirror-gapcursor,
+    .prosemirror-dropcursor {
+        display: none !important;
+    }
 
     .ProseMirror {
         hr {
@@ -2323,6 +2832,16 @@ audio::-webkit-media-controls-panel {
 Other Styles
 */
 
+.editor-root {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
 #editorcontainer {
     border-radius: 0;
     margin-top: 20px;
@@ -2330,7 +2849,7 @@ Other Styles
     margin-left: auto;
     margin-right: auto;
     margin-bottom: 50px;
-    zoom: 1;
+    zoom: 1.6;
     font-family: var(--js-fontfamily);
 
 }
@@ -2344,6 +2863,7 @@ Other Styles
 #editorcontent div.tiptap {
     overflow-x: auto;
     overflow-y: hidden;
+    font-size: var(--js-fontsize);
     line-height: var(--js-linespacing) !important;
     width: var(--js-editorWidth);
     border-radius: 0px;
@@ -2355,10 +2875,22 @@ Other Styles
     //font-size: 10px;
 }
 
+#editormaincontainer {
+    box-sizing: border-box;
+    width: 100%;
+    scrollbar-gutter: stable;
+    padding-right: 0px;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.split-view-container #editormaincontainer {
+    padding-right: 0px !important;
+}
+
 
 #statusbar {
     position: relative;
-    bottom: 0px;
     width: 100%;
     height: 28px;
     background-color: #eeeefa;
@@ -2366,11 +2898,40 @@ Other Styles
     padding-left: 6px;
     box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
     font-size: 0.9em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    box-sizing: border-box;
+}
+
+.statusbar-left {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.statusbar-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.caret-context-label {
+    max-width: min(480px, 38vw);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
 }
 
 .zoombutton {
     height: 24px;
-    float: right;
+    flex-shrink: 0;
     cursor: pointer;
 
 }
@@ -2438,7 +2999,82 @@ Other Styles
 }
 
 
-#insert-button {
+.split-pane {
+    flex: 0 0 auto;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.split-pane--right {
+    flex: 1 1 auto;
+    overflow: visible;
+}
+
+.split-pane--left {
+    background-repeat: no-repeat;
+    background-position: center;
+    background-color: transparent;
+    position: static;
+    top: 0;
+    left: auto;
+    width: auto;
+    height: auto;
+    z-index: auto;
+    backdrop-filter: none;
+    display: block;
+}
+
+.split-divider {
+    flex: 0 0 10px;
+    cursor: col-resize;
+    position: relative;
+    background: transparent;
+    touch-action: none;
+}
+
+.split-divider::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 4px;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.split-divider:hover::before {
+    background: rgba(13, 110, 253, 0.55);
+}
+
+.split-view-container {
+    user-select: none;
+    display: flex ;
+    flex-direction: row ;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100% ;
+    overflow: hidden;
+}
+
+/* Splitview must override overlay preview hidden state */
+.split-view-container #preview {
+    display: block;
+    position: relative;
+    width: auto;
+    height: auto;
+    background-color: transparent;
+    backdrop-filter: none;
+    z-index: auto;
+}
+
+.split-view-container #editorcontent,
+.split-view-container .pdf-scroll-container {
+    user-select: text;
+}
+
+
+.splitinsert {
     border: none;
     border-radius: 0px;
     border-top-right-radius: 6px;
@@ -2454,12 +3090,12 @@ Other Styles
     margin-top: 30px;
 }
 
-#insert-button img {
+.splitinsert img {
     width: 32px;
     height: 52px;
 }
 
-#print-button {
+.splitprint {
     border: none;
     border-radius: 0px;
     border-top-right-radius: 6px;
@@ -2474,12 +3110,12 @@ Other Styles
     margin-top: 30px;
 }
 
-#print-button img {
+.splitprint img {
     width: 32px;
     height: 52px;
 }
 
-#send-button {
+.splitsend {
     border: none;
     border-radius: 0px;
     border-top-right-radius: 6px;
@@ -2494,7 +3130,7 @@ Other Styles
     margin-top: 10px;
 }
 
-#send-button img {
+.splitsend img {
     width: 32px;
     height: 52px;
 }
@@ -2535,8 +3171,25 @@ Other Styles
 }
 
 .ProseMirror {
+    // Collapse UA block margins; single between-block gap scales with exam line-height setting.
+    p,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    blockquote,
+    pre,
+    ul,
+    ol,
+    li {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
     > * + * {
-        margin-top: 0.75em;
+        margin-top: max(0.25em, calc((var(--js-linespacing) - 1) * 1em));
     }
 
     ul,
@@ -2557,7 +3210,7 @@ Other Styles
     h4,
     h5,
     h6 {
-        line-height: 1.1;
+        line-height: var(--js-linespacing) !important;
     }
 
     code {
@@ -2878,7 +3531,23 @@ Other Styles
 
 //mus integrate images this way otherwise they won't be integrated in the final build
 .splitback {
-    background-image: url('/src/assets/img/svg/edit-copy-light.svg');
+    position: relative;
+}
+.splitback.splitback--empty::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url('/src/assets/img/svg/document-replace.svg');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 180px;
+    opacity: 0.85;
+}
+.splitback > * {
+    position: relative;
+    z-index: 1;
 }
 
 .splitzoomin {

@@ -1,4 +1,5 @@
 <template>
+    <div class="activesheets-root">
     <!-- HEADER START -->
     <exam-header
     :serverstatus="serverstatus"
@@ -23,8 +24,12 @@
     <!-- filelist start - show local files from workfolder (pdf and gbb only)-->
     <div id="toolbar" class="d-inline p-1 pt-0"> 
               
+        <div :title="$t('editor.splitview')" @click="toggleSplitview()"
+             class="invisible-button btn btn-outline-info p-0 ms-1 me-1 mb-0 btn-sm">
+            <img src="/src/assets/img/svg/view-split-left-right.svg" class="" width="22" height="22">
+        </div>
         <button v-if="!localLockdown" :title="$t('editor.backup')" @click="saveContent(true, 'manual');" class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm"><img src="/src/assets/img/svg/document-save.svg" class="" width="22" height="22" ></button>
-        <button v-if="!localLockdown" id="printfinalexam" class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm" @click="sendExamToTeacher(false, 'print')" :title="$t('editor.print')"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" ></button>
+        <button v-if="!localLockdown" id="printfinalexam" class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm pe-2 ps-1" @click="sendExamToTeacher(false, 'print')" :title="$t('editor.print')"><img src="/src/assets/img/svg/print.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.print') }}</button>
         <button v-if="!localLockdown" id="sendfinalexam"  class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm pe-2 ps-1 " @click="sendExamToTeacher(false, 'send')" :title="$t('editor.sendfinalexam')"><img src="/src/assets/img/svg/document-send.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.finalsubmit') }}</button>
 
 
@@ -32,7 +37,7 @@
         <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
 
         <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
-            <div v-if="(file.filetype == 'bak')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+            <div v-if="(file.filetype == 'htm')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
             <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
             <div v-if="(file.filetype == 'audio')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
             <div v-if="(file.filetype == 'image')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
@@ -44,7 +49,7 @@
 
 
         <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
-                <div v-if="(file.type == 'bak')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadBAK(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
+                <div v-if="(file.type == 'htm')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadBAK(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
 
                 
                 <div v-if="(file.type == 'pdf')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
@@ -59,27 +64,49 @@
     
   
 
-    <!-- angabe/pdf preview start -->
-    <div id="preview" class="p-4">
+    <div class="activesheets-body" :class="splitview ? 'split-view-container' : ''">
+        <div
+            id="preview"
+            :class="splitview ? ['p-0', 'split-pane', 'split-pane--left', 'splitback', { 'splitback--empty': !pdfPreviewState }] : 'p-4'"
+            :style="splitview ? { flexBasis: splitLeftPct + '%', '--nx-preview-scroll-padding': '6px' } : { '--nx-preview-top-offset': '60px', '--nx-preview-content-width': '90%' }"
+        >
         <WebviewPane
             id="webview"
             :src="urlForWebview || ''"
             :visible="webviewVisible"
+            :splitview="splitview"
+            :showClose="!splitview"
             :allowed-url="urlForWebview"
             :block-external="true"
             @close="hidepreview"
         />
-        <PdfviewPane
+        <PdfviewPaneRendered
             :localLockdown="localLockdown"
             :examtype="examtype"
             :toolbar="pdfPreviewUi"
+            :preview="pdfPreviewState"
+            :showClose="!splitview"
+            :style="!pdfPreviewState ? 'display:none;' : ''"
             @close="hidepreview"
-            @printBase64="printBase64"                                  
+            @printBase64="(pr) => printBase64(pr, 'manual')"
         />
-    </div>
-    <!-- angabe/pdf preview end -->
-
-    <div id="content">
+        </div>
+        <div
+            v-if="splitview"
+            class="split-divider"
+            role="separator"
+            aria-orientation="vertical"
+            :aria-valuenow="Math.round(splitLeftPct)"
+            aria-valuemin="20"
+            aria-valuemax="80"
+            @pointerdown.prevent="startSplitResize"
+            title="Drag to resize"
+        ></div>
+        <div
+            id="content"
+            :class="splitview ? 'split-pane split-pane--right' : ''"
+            :style="splitview ? { flexBasis: (100 - splitLeftPct) + '%' } : null"
+        >
         <div v-if="!focus" class="focus-container">
             <div id="focuswarning" class="infodiv p-4 d-block focuswarning" >
                 <div class="mb-3 row">
@@ -97,6 +124,13 @@
             :blacklist="blacklist"
         />
     
+        </div>
+    </div>
+
+    <div id="statusbar" style="padding-left:15px;">
+        <img @click="zoomin();" src="/src/assets/img/svg/zoom-in.svg" class="zoombutton">
+        <img @click="zoomout();" src="/src/assets/img/svg/zoom-out.svg" class="zoombutton">
+    </div>
     </div>
 </template>
 
@@ -106,13 +140,20 @@ import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import { getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../utils/filehandler.js'
-import PdfviewPane from '../components/PdfviewPane.vue'
+import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue';
 import PdfOverlay from '../components/PdfRenderer.vue';
 import {SignalBridge} from '../utils/signalBridge.js'
+import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
+import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
+
+// Default zoom for #content (screen); @media print hides zoom UI.
+const ACTIVESHEETS_ZOOM_INITIAL = 1.0
+const ACTIVESHEETS_ZOOM_MIN = 0.85
+const ACTIVESHEETS_ZOOM_MAX = 2.2
 
 export default {
     data() {
@@ -178,9 +219,14 @@ export default {
             customFields: [],
             blacklist: [],
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
+            pdfPreviewState: null,
+            splitview: false,
+            splitLeftPct: 50,
+            _splitResizing: false,
+            zoom: ACTIVESHEETS_ZOOM_INITIAL,
         }
     }, 
-    components: { ExamHeader, PdfviewPane, WebviewPane, PdfOverlay },  
+    components: { ExamHeader, PdfviewPaneRendered, WebviewPane, PdfOverlay },  
     methods: { 
         // ... (Deine existierenden Methoden: getExamMaterials, loadPDF, etc. behalten) ...
         // from filehandler.js
@@ -190,15 +236,81 @@ export default {
         gracefullyExit:gracefullyExit,
         showUrl:showUrl,
         reconnect:reconnect,
+        zoomin() {
+            if (this.zoom < ACTIVESHEETS_ZOOM_MAX) this.zoom = Math.min(ACTIVESHEETS_ZOOM_MAX, this.zoom + 0.1)
+            const el = document.getElementById(`content`)
+            if (el) el.style.zoom = this.zoom
+        },
+        zoomout() {
+            if (this.zoom > ACTIVESHEETS_ZOOM_MIN) this.zoom = Math.max(ACTIVESHEETS_ZOOM_MIN, this.zoom - 0.1)
+            const el = document.getElementById(`content`)
+            if (el) el.style.zoom = this.zoom
+        },
         getUrlDisplay(allowedUrl) {
             return typeof allowedUrl === 'object' ? allowedUrl.url : allowedUrl;
         },
         hidepreview(){
             resetPdfPreviewToolbar(this);
+            this.pdfPreviewState = null;
             let preview = document.querySelector("#preview")
-            preview.style.display = 'none';
+            if (!this.splitview) preview.style.display = 'none';
             preview.setAttribute("src", "about:blank");
             URL.revokeObjectURL(this.currentpreview);
+        },
+
+        toggleSplitview() {
+            const next = !this.splitview;
+            this.splitview = next;
+            this.$nextTick(() => {
+                const preview = document.querySelector("#preview");
+                if (!preview) return;
+
+                // entering splitview: remove inline display:none so CSS layout can size the pane
+                if (this.splitview) {
+                    preview.style.display = '';
+                    if (this._onPreviewClick) preview.removeEventListener("click", this._onPreviewClick);
+                    return;
+                }
+
+                // leaving splitview: also close preview (no overlay left behind)
+                resetPdfPreviewToolbar(this);
+                this.pdfPreviewState = null;
+                preview.style.display = 'none';
+                URL.revokeObjectURL(this.currentpreview);
+                if (this._onPreviewClick) preview.addEventListener("click", this._onPreviewClick);
+            });
+        },
+
+        startSplitResize(e) {
+            if (!this.splitview) return;
+            this._splitResizing = true;
+            window.addEventListener('pointermove', this.onSplitResizeMove, { passive: false });
+            window.addEventListener('pointerup', this.stopSplitResize, { passive: true });
+            window.addEventListener('pointercancel', this.stopSplitResize, { passive: true });
+            this.onSplitResizeMove(e);
+        },
+
+        onSplitResizeMove(e) {
+            if (!this._splitResizing) return;
+            e.preventDefault();
+            const container = document.querySelector('.split-view-container');
+            if (!container) return;
+            const rect = container.getBoundingClientRect();
+            const x = Math.min(Math.max(e.clientX - rect.left, 0), rect.width);
+            const pct = (x / rect.width) * 100;
+            const minLeftPx = 320;
+            const minRightPx = 420;
+            const minPct = (minLeftPx / rect.width) * 100;
+            const maxPct = 100 - (minRightPx / rect.width) * 100;
+            const clamped = Math.min(Math.max(pct, minPct), maxPct);
+            this.splitLeftPct = Math.min(80, Math.max(20, Math.round(clamped * 10) / 10));
+        },
+
+        stopSplitResize() {
+            this._splitResizing = false;
+            window.removeEventListener('pointermove', this.onSplitResizeMove);
+            window.removeEventListener('pointerup', this.stopSplitResize);
+            window.removeEventListener('pointercancel', this.stopSplitResize);
         },
         loadBase64file(file){
             this.webviewVisible = false
@@ -213,6 +325,7 @@ export default {
         },
        
         async sendFocuslost(){
+            if (await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
             let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
             if (!this.config.development && !response.focus){  //immediately block frontend
                 this.focus = false 
@@ -229,9 +342,9 @@ export default {
         },
         
         async loadBackupFile(filename=false){
-            // check if there is a bak file in the exam directory and load it
+            // check if there is an htm backup in the exam directory and load it
             // This must run early to read the file before it gets overwritten
-            let backupfileName = filename ? filename : this.clientname + ".bak"
+            let backupfileName = filename ? filename : this.clientname + ".htm"
             console.log(`activesheets @ loadBackupFile: Checking for backup file: ${backupfileName}`)
             try {
                 let backupfileContent = await signalBridge.invoke('getbackupfile', backupfileName )
@@ -301,7 +414,7 @@ export default {
                 if (!skipDialog) {
                     const result = await this.$swal.fire({
                         title: this.$t('editor.backupfound') || 'Backup gefunden',
-                        html: `${this.$t('editor.replacecontent1') || 'Möchten Sie die aktuellen Eingaben wirklich durch die gesicherten Werte aus'} <b>${filename}</b> ${this.$t('editor.replacecontent2') || 'ersetzen?'}`,
+                        html: `${this.$t('editor.replacecontent1') || 'Do you really want to replace the current input with the saved values from'} <b>${filename}</b> ${this.$t('editor.replacecontent2') || '?'}`,
                         icon: "question",
                         showCancelButton: true,
                         cancelButtonText: this.$t("editor.cancel") || "Abbrechen",
@@ -314,11 +427,11 @@ export default {
                     }
                 }
                 
-                // Read the .bak file via IPC
+                // Read the .htm file via IPC
                 const bakContent = await signalBridge.invoke('getbackupfile', filename);
                 
                 if (!bakContent) {
-                    console.warn('activesheets @ loadBAK: No content found in .bak file');
+                    console.warn('activesheets @ loadBAK: No content found in .htm file');
                     this.$swal.fire({
                         title: this.$t('editor.error') || 'Fehler',
                         text: this.$t('editor.backupnotfound') || 'Backup-Datei konnte nicht gelesen werden',
@@ -365,7 +478,7 @@ export default {
                     timerProgressBar: true
                 });
             } catch (error) {
-                console.error('activesheets @ loadBAK: Error loading .bak file:', error);
+                console.error('activesheets @ loadBAK: Error loading .htm file:', error);
                 this.$swal.fire({
                     title: this.$t('editor.error') || 'Fehler',
                     text: this.$t('editor.backuperror') || 'Fehler beim Laden der Backup-Datei',
@@ -528,10 +641,11 @@ export default {
                 }
             });
             
-            // Save form data to .bak file via IPC
+            // Save form data to .htm file via IPC
             signalBridge.send('saveActivesheetsBak', {
                 filename: filename || this.clientname,
-                formData: formData
+                formData: formData,
+                reason: why
             });
 
             // SAVE AS PDF - inform mainprocess to save webcontent as pdf
@@ -542,7 +656,7 @@ export default {
                 signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: this.currentpreviewBase64 })  
             } else {
                 // Otherwise generate from current view
-                let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true})
+                let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true, reason: why})
                 if (response?.status == "success") {
                     signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })  
                 }
@@ -551,30 +665,33 @@ export default {
         },
 
         // send direct print request to teacher and append current document as base64
-        printBase64(printrequest=false){  
+        printBase64(printrequest=false, saveReason = 'n/a'){
             if (!this.currentpreviewBase64) {
                 console.warn('activesheets @ printBase64: No PDF available to send');
                 return;
             }
             
-            const url = `https://${this.serverip}:${this.serverApiPort}/server/control/printrequest/${this.servername}/${this.token}`;
+            const endpoint = printrequest ? 'printjob' : 'submission'
+            const url = `https://${this.serverip}:${this.serverApiPort}/server/control/${endpoint}/${this.servername}`;
+            const sr = typeof saveReason === 'string' ? saveReason : 'n/a'
             const payload = {
                 document: this.currentpreviewBase64,
                 printrequest: printrequest,
                 submissionnumber: this.submissionnumber,
-                lockedsection: this.lockedSection
+                lockedsection: this.lockedSection,
+                saveReason: sr
             }
 
-            fetch(url, {
+            examApiFetch(url, {
                 method: "POST",
                 cache: "no-store",
-                headers: {'Content-Type': 'application/json'},
+                headers: {'Content-Type': 'application/json', Authorization: `Bearer ${this.token}`},
                 body: JSON.stringify(payload),
             })
             .then(response => { return response.json();  })
             .then(data => {
                 if (data.message == "success"){
-                    this.submissionnumber++   // successful submission -> increment number
+                    if (!printrequest) { this.submissionnumber++ }   // successful submission -> increment number
                     let message = this.$t("editor.saved")
                     if (printrequest){ message = this.$t("editor.requestsent") }
                 
@@ -611,7 +728,7 @@ export default {
                 this.currentpreviewBase64 = base64pdf
                 
                 if (directsend){   //direct send to teacher without displaying the print preview
-                    this.printBase64()
+                    this.printBase64(false, 'directsend')
                     return
                 }
 
@@ -675,8 +792,10 @@ export default {
         this.entrytime = new Date().getTime()  
     
         this.$nextTick(async () => { 
-
             await this.fetchInfo()  // Initial fetch for clientinfo, serverstatus and lockedSection
+
+            const content = document.getElementById(`content`)
+            if (content) content.style.zoom = this.zoom
 
             this.fetchinfointerval = new SchedulerService(5000);
             this.fetchinfointerval.addEventListener('action',  this.fetchInfo);
@@ -687,19 +806,19 @@ export default {
             this.loadfilelistinterval.start();
             
             this.clockinterval = new SchedulerService(1000);
-            this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.clockinterval.start();
                 
 
 
             this.saveContentCallback = () => this.saveContent(true, 'auto');  // wegs 2 parameter muss dieser umweg genommen werden sonst kann ich den eventlistener nicht mehr entfernen
             this.saveinterval = new SchedulerService(20000);
-            this.saveinterval.addEventListener('action', this.saveContentCallback );  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.saveinterval.addEventListener('action', this.saveContentCallback );  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.saveinterval.start();
 
 
-            document.body.addEventListener('mouseleave', this.sendFocuslost);
-            
+            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
+
             signalBridge.on('getmaterials', (event) => {   this.getExamMaterials()  });
             
             signalBridge.on('finalsubmit', (event) => {  // triggered on exit exam mode - send exam to teacher
@@ -709,8 +828,8 @@ export default {
 
             signalBridge.on('submitexam', (event, why) => {  //send current work as base64 to teacher
                 console.log("activesheets @ submitexam: submit exam request received")
-                this.printBase64() 
-            }); 
+                this.printBase64(false, typeof why === 'string' ? why : 'submitexam')
+            });
             
             signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
                 console.log("activesheets @ save: Teacher saverequest received")
@@ -782,6 +901,7 @@ export default {
         signalBridge.removeAllListeners('submitexam');
         signalBridge.removeAllListeners('save');
         signalBridge.removeAllListeners('denied');
+        this.stopSplitResize()
     },
     
 }
@@ -798,30 +918,155 @@ export default {
 
 <style scoped lang="scss">
 
-
-
 #toolbar {
     z-index: 10001;
     background-color: rgba(var(--bs-dark-rgb))
 }
 
+.activesheets-root {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
+.activesheets-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
 #content {
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: auto;
     height: 100%;
+    min-height: 0;
+    scrollbar-gutter: stable;
+    width: 100%;
+    overscroll-behavior: contain;
+    background-color: #eee;
+}
+
+:deep(.pdf-scroll-container) {
+    overflow: visible;
+    height: auto;
+    max-height: none;
+    min-height: fit-content;
+}
+
+.split-view-container {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    overflow: hidden;
+}
+
+.split-pane {
+    flex: 0 0 auto;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.split-pane--right {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    overscroll-behavior: contain;
+}
+
+.split-pane--left {
+    background-color: transparent;
+}
+
+#statusbar {
+    position: relative;
+    bottom: 0px;
+    width: 100%;
+    height: 28px;
+    background-color: #eeeefa;
+    padding: 2px;
+    padding-left: 6px;
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.2);
+    font-size: 0.9em;
+}
+
+.zoombutton {
+    height: 24px;
+    float: right;
+    cursor: pointer;
+}
+
+.zoombutton:hover {
+    filter: invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(82%) contrast(119%);
+}
+
+/* must integrate images this way otherwise they won't be integrated in the final build */
+.splitback {
+    position: relative;
+}
+.splitback.splitback--empty::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url('/src/assets/img/svg/document-replace.svg');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 180px;
+    opacity: 0.85;
+}
+.splitback > * {
+    position: relative;
+    z-index: 1;
+}
+
+.split-divider {
+    flex: 0 0 10px;
+    cursor: col-resize;
+    position: relative;
+    background: transparent;
+    touch-action: none;
+}
+
+.split-divider::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 4px;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.split-divider:hover::before {
+    background: rgba(13, 110, 253, 0.55);
 }
 
 #preview {
     display: none;
     position: absolute;
-    top:0;
+    top: var(--nx-preview-top-offset, var(--nx-apphead-h, 60px));
     left: 0;
     width:100vw;
-    height: 100vh;
+    height: calc(100vh - var(--nx-preview-top-offset, var(--nx-apphead-h, 60px)));
     background-color: rgba(0, 0, 0, 0.4);
     z-index:100001;
     backdrop-filter: blur(2px);
   
+}
+
+.split-view-container #preview {
+    display: block;
+    position: relative;
+    width: auto;
+    height: auto;
+    background-color: transparent;
+    backdrop-filter: none;
+    z-index: auto;
 }
 
  //this controls how the activesheets view is printed (to pdf)

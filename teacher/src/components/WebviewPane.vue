@@ -3,7 +3,7 @@
       
         <ul
         class="nav nav-tabs position-absolute top-0 start-0 end-0 w-100 bg-white"
-        style="z-index:2000; pointer-events:auto; font-size:1.1rem;"
+        style="z-index:10001; pointer-events:auto; font-size:1.1rem;"
         @mousedown.stop
         @click.stop
       >
@@ -11,7 +11,7 @@
         <li class="nav-item">
           <div
             type="button"
-            class="nav-link btn btn-light btn-sm"
+            class="nav-link btn btn-light btn-sm webview-toolbar-btn"
             @click.stop="goHome"
             style="width:40px; text-align:center;"
           >⌂</div>
@@ -19,7 +19,7 @@
         <li class="nav-item">
           <div
             type="button"
-            class="nav-link btn btn-light btn-sm"
+            class="nav-link btn btn-light btn-sm webview-toolbar-btn"
             :disabled="!canGoBack"
             :class="{ disabled: !canGoBack }"
             @click.stop="goBack"
@@ -29,7 +29,7 @@
         <li class="nav-item">
           <div
             type="button"
-            class="nav-link btn btn-light btn-sm"
+            class="nav-link btn btn-light btn-sm webview-toolbar-btn"
             :disabled="!canGoForward"
             :class="{ disabled: !canGoForward }"
             @click.stop="goForward"
@@ -40,7 +40,7 @@
 
         <li class="nav-item ms-auto">  <div
           type="button"
-          class="nav-link btn btn-light btn-sm"
+          class="nav-link btn btn-light btn-sm webview-toolbar-btn"
           @click.stop="closePane"
           style="width:40px; text-align:center; font-weight:bold;"
         >&times;</div> </li>
@@ -52,7 +52,7 @@
         ref="wv"
         :src="src || ''"
         class="position-absolute start-0 w-100 "
-        style="top:42px; z-index:10000; height:calc(100% - 42px);"
+        style="top:42px; z-index:9999; height:calc(100% - 42px);"
       />
     </div>
   </template>
@@ -116,4 +116,14 @@
     }
   }
   </script>
-  
+
+<style scoped>
+/* Pointer on toolbar; .disabled had pointer-events:none so cursor leaked from webview below */
+.webview-toolbar-btn {
+  cursor: pointer !important;
+}
+.webview-toolbar-btn.disabled {
+  pointer-events: auto;
+  cursor: pointer !important;
+}
+</style>

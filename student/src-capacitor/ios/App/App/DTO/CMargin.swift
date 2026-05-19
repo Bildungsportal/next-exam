@@ -1,8 +1,7 @@
-struct CMargin {
-    var side: String
-    var size: Int
+struct CMargin: Codable {
+    var side: String = "right"
+    var size: Int = 3
 
-    // ── Serialized form returned to JS / IPC callers ──────────────────────────
     var asDictionary: [String: Any] {
         return [
             "side": side,

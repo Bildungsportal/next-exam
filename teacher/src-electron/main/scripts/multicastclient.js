@@ -41,12 +41,12 @@ class MulticastClient {
         this.gateway = gateway
         try {
             this.client = dgram.createSocket('udp4')
-            // Bind auf 0.0.0.0, damit alle Interfaces abgedeckt sind; eigentliche Interface-Wahl über addMembership()
-            this.client.bind(this.PORT, '0.0.0.0', () => { 
+            // Bind to 0.0.0.0 to cover all interfaces; actual interface selection via addMembership()
+            this.client.bind(this.PORT, '0.0.0.0', () => {
                 this.client.setBroadcast(true)
                 this.client.setMulticastTTL(128); 
                 try {
-                    // join multicast group auf der tatsächlich ermittelten Interface-IP
+                    // join multicast group on the actually determined interface IP
                     this.client.addMembership(this.MULTICAST_ADDR, config.hostip)
                     log.info(`multicastclient @ init: joined ${this.MULTICAST_ADDR} on iface ${config.hostip}`);
                 } catch (e) {
@@ -73,8 +73,8 @@ class MulticastClient {
         try {
             this.client.dropMembership(this.MULTICAST_ADDR, config.hostip)
         } catch(e){}
-        this.client.close() // schließt den UDP-Socket
-        if (this.refreshExamsScheduler) this.refreshExamsScheduler.stop() // stoppt den Scheduler
+        this.client.close() // closes the UDP socket
+        if (this.refreshExamsScheduler) this.refreshExamsScheduler.stop() // stops the scheduler
         return true
     }
 

@@ -58,7 +58,7 @@ class MulticastServer {
             version: config.version
         }
         
-        // Bind auf 0.0.0.0, damit der Server auf allen lokalen Interfaces senden kann; tatsächliche Multicast-Route über setMulticastInterface()
+        // Bind to 0.0.0.0 so the server can send on all local interfaces; actual multicast routing via setMulticastInterface()
         this.server.bind(this.SRC_PORT, '0.0.0.0', () => {
             this.server.setBroadcast(true)
             this.server.setMulticastTTL(128)
@@ -88,6 +88,8 @@ class MulticastServer {
             id: this.serverinfo.id,
             ip: this.serverinfo.ip,
             bip: this.serverinfo.bip,
+            requireBiP: !!this.serverstatus?.requireBiP,
+            examStatus: this.serverinfo.bip ? (this.serverstatus?.bipStatus || 'closed') : undefined,
             version: config.version
         }
         const preparedMessage = new Buffer.from(JSON.stringify(message))

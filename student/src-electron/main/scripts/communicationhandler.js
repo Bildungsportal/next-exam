@@ -18,7 +18,7 @@
 'use strict'
 import {disableRestrictions, enableRestrictions} from './platformrestrictions.js';
 import fs from 'fs' 
-import archiver from 'archiver'   // das macht krasseste racecoditions mit electron eigenen versionen - unbedingt die selbe version behalten wie electron
+import archiver from 'archiver'   // causes severe race conditions with electron's own versions - always keep the same version as electron
 import extract from 'extract-zip'
 import { join } from 'path'
 import { screen, ipcMain, app, BrowserWindow, webContents } from 'electron'
@@ -26,16 +26,22 @@ import WindowHandler from './windowhandler.js'
 import IpcHandler from './ipchandler.js'
 import log from 'electron-log';
 import {SchedulerService} from './schedulerservice.ts'
-import crypto from 'crypto';
-import path from 'path';
 import platformDispatcher from './platformDispatcher.js';
+import { encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
 import { runRemoteCheck } from './remoteCheck.js'
+import { logNetworkActiveProcesses, findNonLanguageToolOn8088 } from './networkActiveProcesses.js'
 import { getVMFindings } from './vmDetection.js'
+import { examApiFetch } from '../../../../shared/examApiFetch.js'
 import languageToolServer from './lt-server.js';
-import virtualBoxService from './virtualBoxService.js';
+import { setClientFocusLock, clearClientFocusLock } from './focusLockState.js';
+import { syncClientDisplayInfo } from './displayInfo.js';
+import { detectRunningInCage } from './cageDetect.js';
+import qemuService from './qemuService.js';
 import { stopProxy } from './vncproxy.js';
-const __dirname = import.meta.dirname; 
 import { switchExamSection } from './switchExamSection.js';
+
+
+
  /**
   * Handles information fetching from the server and acts on status updates
   */
@@ -52,8 +58,186 @@ import { switchExamSection } from './switchExamSection.js';
     init (mc, config) {
         this.multicastClient = mc
         this.config = config
+        this.lastExamWriteSaveReason = 'n/a' // updated on successful examdir writes; sent with ZIP to teacher /receive
+        this.localVmStartState = 'idle' // idle|starting|blocked
         this.updateScheduler = new SchedulerService(this.requestUpdate.bind(this), 5000)
         this.updateScheduler.start()
+    }
+
+    /** Exam lockdown: focus=false + kiosk refocus; optional reason/message for overlay (IPC focusLock). */
+    applySecurityFocusLost(reason = 'unknown', message = '') {
+        if (this.config.development) return;
+
+
+        log.warn(`communicationhandler @ applySecurityFocusLost: forcing lockdown (reason=${reason})`);
+        const ci = this.multicastClient?.clientinfo;
+        if (ci) setClientFocusLock(ci, reason, message);
+        const examWin = WindowHandler?.examwindow;
+        if (examWin && !this.config?.development) {
+            examWin.moveTop();
+            examWin.setKiosk(true);
+            examWin.show();
+            examWin.focus();
+        }
+        if (examWin?.webContents && !examWin.webContents.isDestroyed()) {
+            examWin.webContents.send('focusLock', { reason: reason || '', message: message || '' });
+        }
+    }
+
+    // Encrypts all unencrypted files in the current examdirectory. 
+    async encryptExamdirectoryFiles() {
+        if (this.multicastClient?.clientinfo?.examtype === 'localvm') return;
+        const pw = String(this.multicastClient?.serverstatus?.encryptionPassword ?? '').trim();
+        if (!pw) return;
+        const dir = this.config?.examdirectory;
+        if (!dir) return;
+        let dirents;
+        try {
+            dirents = await fs.promises.readdir(dir, { withFileTypes: true });
+        } catch (e) {
+            log.error('communicationhandler @ encryptExamdirectoryFiles: readdir failed', e);
+            return;
+        }
+        for (const d of dirents) {
+            if (!d.isFile()) continue;
+            const name = d.name;
+            if (name === 'next-exam-student.log') continue;
+            const abs = join(dir, name);
+            let raw;
+            try {
+                raw = await fs.promises.readFile(abs);
+            } catch (e) {
+                continue;
+            }
+            if (isExamFileEncryptedBytes(raw)) continue;
+            let out;
+            try {
+                out = encryptExamFileBytes(raw, pw);
+            } catch (e) {
+                log.error(`communicationhandler @ encryptExamdirectoryFiles: encrypt failed ${name}`, e);
+                continue;
+            }
+            log.info(`communicationhandler @ encryptExamdirectoryFiles: encrypted write ${name}`);
+            const tmp = `${abs}.encpart`;
+            try {
+                await fs.promises.writeFile(tmp, out);
+                await fs.promises.rename(tmp, abs);
+            } catch (e) {
+                try { await fs.promises.unlink(tmp); } catch {}
+            }
+        }
+    }
+
+    // SHA-256 of base qcow2 before QEMU start (full read while VM runs starves guest disk I/O).
+    async runLocalVmPreStartVerify(qcow2Name, expectedSha256, expectedSizeBytes) {
+        try {
+            if (expectedSha256) {
+                log.info(`communicationhandler @ runLocalVmPreStartVerify: sha256 before start for ${qcow2Name}`);
+            } else {
+                log.info(`communicationhandler @ runLocalVmPreStartVerify: size check before start for ${qcow2Name} (expectedBytes=${expectedSizeBytes})`);
+            }
+            const verify = expectedSha256
+                ? await qemuService.verifyDiskSha256({
+                    workdirectory: this.config.workdirectory,
+                    qcow2Name,
+                    expectedSha256,
+                })
+                : await qemuService.verifyDiskSize({
+                    workdirectory: this.config.workdirectory,
+                    qcow2Name,
+                    expectedSizeBytes,
+                });
+            if (!verify.ok) {
+                if (verify.error === 'disk not found') {
+                    this.multicastClient.clientinfo.localVMHost = null;
+                    this.multicastClient.clientinfo.localVMState = 'missing';
+                } else {
+                    this.multicastClient.clientinfo.localVMHost = null;
+                    this.multicastClient.clientinfo.localVMState = 'error';
+                }
+                return { allowStart: false };
+            }
+            if (!verify.match) {
+                const mismatch = expectedSha256 ? 'hash mismatch' : 'size mismatch';
+                log.warn(`communicationhandler @ runLocalVmPreStartVerify: ${mismatch} for ${qcow2Name}`);
+                this.multicastClient.clientinfo.localVMHost = null;
+                this.multicastClient.clientinfo.localVMState = 'hash_mismatch';
+                return { allowStart: false };
+            }
+            if (expectedSha256) {
+                log.info(`communicationhandler @ runLocalVmPreStartVerify: hash OK for ${qcow2Name}`);
+            } else {
+                log.info(`communicationhandler @ runLocalVmPreStartVerify: size OK for ${qcow2Name} (actualBytes=${verify.actual}, expectedBytes=${expectedSizeBytes})`);
+            }
+            return { allowStart: true };
+        } catch (e) {
+            log.error('communicationhandler @ runLocalVmPreStartVerify', e);
+            this.multicastClient.clientinfo.localVMHost = null;
+            this.multicastClient.clientinfo.localVMState = 'error';
+            return { allowStart: false };
+        }
+    }
+
+    async preflightLocalVm(serverstatus, effectiveSection) {
+        const examSection = serverstatus.examSections[effectiveSection];
+        const hasGroups = !!examSection?.groups;
+        let group = this.multicastClient.clientinfo.group || 'a';
+        if (hasGroups) {
+            const clientname = this.multicastClient.clientinfo.name;
+            const groupA = examSection.groupA?.users ?? [];
+            const groupB = examSection.groupB?.users ?? [];
+            if (groupB.includes(clientname)) group = 'b';
+            else if (groupA.includes(clientname)) group = 'a';
+            else group = 'a';
+        } else {
+            group = 'a';
+        }
+
+        const vmConfig = group === 'b'
+            ? (examSection?.groupB?.examConfig?.localvm || {})
+            : (examSection?.groupA?.examConfig?.localvm || {});
+
+        const qcow2Name = vmConfig.qcow2Name;
+        const vncPort = Number(vmConfig.vncPort || 5901);
+        const calculateSha256 = vmConfig.calculateSha256 === true;
+        const expectedSha256 = calculateSha256 ? vmConfig.qcow2Sha256 : null;
+        const expectedSizeBytes = !calculateSha256 ? vmConfig.qcow2SizeBytes : null;
+        const blockInternet = !!vmConfig.blockInternet;
+
+        this.multicastClient.clientinfo.examtype = 'localvm';
+        this.multicastClient.clientinfo.localVMHost = null;
+        this.multicastClient.clientinfo.localVMPort = vncPort;
+
+        log.info(`communicationhandler @ preflightLocalVm: cfg (disk=${qcow2Name || '-'}, port=${vncPort}, blockInternet=${blockInternet}, calcHash=${calculateSha256}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
+
+        if (!qcow2Name) {
+            this.multicastClient.clientinfo.localVMState = 'missing';
+            return { allowStart: false };
+        }
+        if (calculateSha256 && !expectedSha256) {
+            log.error('communicationhandler @ preflightLocalVm: calculateSha256 enabled but qcow2Sha256 missing');
+            this.multicastClient.clientinfo.localVMState = 'error';
+            return { allowStart: false };
+        }
+        if (!calculateSha256 && (typeof expectedSizeBytes !== 'number' || !Number.isFinite(expectedSizeBytes) || expectedSizeBytes <= 0)) {
+            log.error('communicationhandler @ preflightLocalVm: calculateSha256 disabled but qcow2SizeBytes missing');
+            this.multicastClient.clientinfo.localVMState = 'error';
+            return { allowStart: false };
+        }
+
+        this.multicastClient.clientinfo.localVMState = 'verifying_hash';
+        const verifyRes = await this.runLocalVmPreStartVerify(qcow2Name, expectedSha256, calculateSha256 ? null : Number(expectedSizeBytes));
+        if (!verifyRes.allowStart) {
+            return { allowStart: false };
+        }
+
+        return {
+            allowStart: true,
+            qcow2Name,
+            vncPort,
+            overlayName: `${qcow2Name}.overlay.${this.multicastClient.clientinfo.servername || 'exam'}.${this.multicastClient.clientinfo.pin || '0'}.qcow2`,
+            blockInternet,
+        };
     }
 
     
@@ -61,30 +245,77 @@ import { switchExamSection } from './switchExamSection.js';
 
 
     async requestUpdate(){
+        syncClientDisplayInfo(this.multicastClient.clientinfo);
+        this.multicastClient.clientinfo.isRunningInCage =
+            process.platform === 'linux' ? detectRunningInCage() : false;
 
         this.timer++   // we use timer to time loops with different intervals without introducing new unneccesary schedulers
         if (this.timer % 20 === 0 ){  // run every 20*5 (updateloop) seconds
 
-            const usesRemoteAssistant = await runRemoteCheck(process.platform)
+            // run both detectors in parallel on the same tick:
+            // (1) runRemoteCheck = static keyword/port match against appsToClose
+            // (2) networkActiveProcesses = algorithmic detection of any network-active app
+            // merge process names into one keywords list so the teacher also sees apps we don't know by name
+            const [keywordHit, netScan, ltFakes] = await Promise.all([
+                runRemoteCheck(process.platform),
+                logNetworkActiveProcesses({ mode: 'both' }).catch((err) => {
+                    log.warn(`communicationhandler @ requestUpdate: networkActiveProcesses scan failed: ${err.message}`);
+                    return { processes: [] };
+                }),
+                findNonLanguageToolOn8088().catch((err) => {
+                    log.warn(`communicationhandler @ requestUpdate: port 8088 check failed: ${err.message}`);
+                    return [];
+                }),
+            ]);
 
-            if (usesRemoteAssistant) {
-                log.warn('main @ ready: Possible remote assistance detected');
-                for (const keyword of usesRemoteAssistant.keywords) {
-                    log.warn(`main @ ready: Keyword ${keyword} detected`);
+            if (ltFakes.length) {
+                const occupantSummary = ltFakes.map((o) => `${o.name}(pid=${o.pid})`).join(', ');
+                log.warn(
+                    `communicationhandler @ requestUpdate: non-LanguageTool listener on port 8088: ${occupantSummary}`
+                );
+                if (this.multicastClient.clientinfo.exammode ) {
+                    this.applySecurityFocusLost('ltPort8088');
                 }
-                for (const port of usesRemoteAssistant.ports) {
-                    log.warn(`main @ ready: Port ${port} detected`);
+                const ra = this.multicastClient.clientinfo.remoteassistant || { keywords: [], ports: [] };
+                this.multicastClient.clientinfo.remoteassistant = { ...ra, languagetoolFake: true };
+            } else if (this.multicastClient.clientinfo.remoteassistant?.languagetoolFake) {
+                const ra = { ...this.multicastClient.clientinfo.remoteassistant };
+                delete ra.languagetoolFake;
+                if (!ra.keywords?.length && !ra.ports?.length) {
+                    delete this.multicastClient.clientinfo.remoteassistant;
+                } else {
+                    this.multicastClient.clientinfo.remoteassistant = ra;
                 }
-                this.multicastClient.clientinfo.remoteassistant = usesRemoteAssistant
             }
 
-            if (this.multicastClient.clientinfo.exammode){
-                WindowHandler.initBlockWindows()  // check if there is a new screen that needs to be blocked
+            const algorithmicNames = [...new Set(netScan.processes.map((p) => p.name))];
+            const keywordHits = keywordHit ? keywordHit.keywords : [];
+            const mergedKeywords = [...new Set([...keywordHits, ...algorithmicNames])];
+
+            if (mergedKeywords.length || (keywordHit && keywordHit.ports.length)) {
+                if (keywordHit) {
+                    log.warn('main @ ready: Possible remote assistance detected');
+                    for (const keyword of keywordHit.keywords) {
+                        log.warn(`main @ ready: Keyword ${keyword} detected`);
+                    }
+                    for (const port of keywordHit.ports) {
+                        log.warn(`main @ ready: Port ${port} detected`);
+                    }
+                }
+                const ra = this.multicastClient.clientinfo.remoteassistant || { keywords: [], ports: [] };
+                this.multicastClient.clientinfo.remoteassistant = {
+                    ...ra,
+                    keywords: mergedKeywords,
+                    ports: keywordHit ? keywordHit.ports : (ra.ports || []),
+                };
             }
 
         }
 
-        if (this.multicastClient.clientinfo.localLockdown){return}
+        if (this.multicastClient.clientinfo.localLockdown
+            && (this.multicastClient.clientinfo.serverip === '127.0.0.1' || this.multicastClient.clientinfo.servername === 'localhost')) {
+            return;
+        }
 
         // connection lost reset triggered  no serversignal for 20 seconds
         if (this.multicastClient.beaconsLost >= 5 ){  
@@ -100,40 +331,48 @@ import { switchExamSection } from './switchExamSection.js';
             if (this.multicastClient.clientinfo.virtualized && !this.multicastClient.clientinfo.vmFindings) {
                 this.multicastClient.clientinfo.vmFindings = getVMFindings();
             }
-            let payload = {clientinfo: this.multicastClient.clientinfo}
+            const bearer = this.multicastClient.clientinfo.token
+            if (bearer) {
+                let payload = {clientinfo: this.multicastClient.clientinfo}
 
-            fetch(`https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/update`, {
-                method: "POST",
-                cache: "no-store",
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
-            })
-            .then(response => {
-                if (!response.ok) { throw new Error('Network response was not ok'); }
-                return response.json();
-            })
-            .then(data => {
-                if (data.status === "error") {
-                    if      (data.message === "notavailable"){ log.warn('communicationhandler @ requestUpdate: Exam Instance not found!');        this.multicastClient.beaconsLost = 5; }    // exam instance not available but server reachable
-                    else if (data.message === "removed"){      
-                        log.warn('communicationhandler @ requestUpdate: Student registration not found!'); 
-                        this.kickStudent()
-                    }   // student got kicked - we handle this differently now. teacher stores "kicked" for student to collect. student is removed from server when collecting kicked info. student closes exam and cleans up.
-                    else {                                     log.warn(`communicationhandler @ requestUpdate: ${this.multicastClient.beaconsLost} Heartbeat lost..`);              this.multicastClient.beaconsLost += 1;}   // heartbeat lost server not reachable
-                } else if (data.status === "success") {
-                    this.multicastClient.beaconsLost = 0; // Dies zählt ebenfalls als erfolgreicher Heartbeat - Verbindung halten
-                    this.multicastClient.clientinfo.printrequest = false  //set this to false after the request left the client to prevent double triggering
-                    const serverStatusDeepCopy = JSON.parse(JSON.stringify(data.serverstatus));
-                    const studentStatusDeepCopy = JSON.parse(JSON.stringify(data.studentstatus)); 
-                    this.processUpdatedServerstatus(serverStatusDeepCopy, studentStatusDeepCopy);// Verarbeitung der empfangenen Daten
-                }
-            })
-            .catch(error => {
-                this.multicastClient.beaconsLost += 1;
-                log.error(`communicationhandler @ requestUpdate: (${this.multicastClient.beaconsLost}) ${error}`);
-            });
+                examApiFetch(`https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/update`, {
+                    method: "POST",
+                    cache: "no-store",
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${bearer}`,
+                    },
+                    body: JSON.stringify(payload),
+                })
+                .then(response => {
+                    if (!response.ok) { throw new Error('Network response was not ok'); }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === "error") {
+                        if      (data.message === "notavailable"){ log.warn('communicationhandler @ requestUpdate: Exam Instance not found!');        this.multicastClient.beaconsLost = 5; }    // exam instance not available but server reachable
+                        else if (data.message === "removed"){
+                            log.warn('communicationhandler @ requestUpdate: Student registration not found!');
+                            this.kickStudent()
+                        }   // student got kicked - we handle this differently now. teacher stores "kicked" for student to collect. student is removed from server when collecting kicked info. student closes exam and cleans up.
+                        else if (data.message === "authrequired") {
+                            log.warn('communicationhandler @ requestUpdate: missing or invalid Authorization Bearer')
+                            this.multicastClient.beaconsLost += 1
+                        }
+                        else {                                     log.warn(`communicationhandler @ requestUpdate: ${this.multicastClient.beaconsLost} Heartbeat lost..`);              this.multicastClient.beaconsLost += 1;}   // heartbeat lost server not reachable
+                    } else if (data.status === "success") {
+                        this.multicastClient.beaconsLost = 0; // This also counts as a successful heartbeat - keep connection alive
+                        this.multicastClient.clientinfo.printrequest = false  //set this to false after the request left the client to prevent double triggering
+                        const serverStatusDeepCopy = JSON.parse(JSON.stringify(data.serverstatus));
+                        const studentStatusDeepCopy = JSON.parse(JSON.stringify(data.studentstatus));
+                        this.processUpdatedServerstatus(serverStatusDeepCopy, studentStatusDeepCopy);// Process received data
+                    }
+                })
+                .catch(error => {
+                    this.multicastClient.beaconsLost += 1;
+                    log.error(`communicationhandler @ requestUpdate: (${this.multicastClient.beaconsLost}) ${error}`);
+                });
+            }
         }
         else { // prevent focus warning block if no connection 
             this.multicastClient.clientinfo.focus = true  // if not connected but still in exam mode you could trigger a focus warning and nobody is able to unlock you
@@ -166,7 +405,12 @@ import { switchExamSection } from './switchExamSection.js';
     async processUpdatedServerstatus(serverstatus, studentstatus){
         this.multicastClient.serverstatus = serverstatus;
 
-        const kicked = await this.handleStudentStatusUpdates(studentstatus);
+        let kicked = false;
+        try {
+            kicked = await this.handleStudentStatusUpdates(studentstatus);
+        } catch (e) {
+            log.error('communicationhandler @ processUpdatedServerstatus: handleStudentStatusUpdates failed (continuing with server sync)', e);
+        }
         if (kicked) {
             return;
         }
@@ -180,7 +424,7 @@ import { switchExamSection } from './switchExamSection.js';
             return false;
         }
 
-        if (studentstatus.printdenied) {
+        if (studentstatus.printdenied && WindowHandler.examwindow) {
             WindowHandler.examwindow.webContents.send('denied');
         }
 
@@ -199,7 +443,9 @@ import { switchExamSection } from './switchExamSection.js';
                 }
             } catch (error) { 
                 delfolder = false;
-                WindowHandler.examwindow.webContents.send('fileerror', error);
+                if (WindowHandler.examwindow) {
+                    WindowHandler.examwindow.webContents.send('fileerror', error);
+                }
                 log.error(`communicationhandler @ processUpdatedServerstatus: Can not delete directory - ${error} `);
             }
 
@@ -215,7 +461,7 @@ import { switchExamSection } from './switchExamSection.js';
                             else { fs.unlinkSync(filePath); }
                         }
                         catch (error) {
-                            log.error(`communicationhandler @ processUpdatedServerstatus: (delfolder) Fehler beim Löschen der Datei/Verzeichnis: ${filePath}`, error);
+                            log.error(`communicationhandler @ processUpdatedServerstatus: (delfolder) Error deleting file/directory: ${filePath}`, error);
                         }
                     });
                 }
@@ -231,6 +477,7 @@ import { switchExamSection } from './switchExamSection.js';
 
         if (studentstatus.restorefocusstate === true){
             log.info("communicationhandler @ processUpdatedServerstatus: restoring focus state for student");
+            clearClientFocusLock(this.multicastClient.clientinfo);
             this.multicastClient.clientinfo.focus = true;
             if (WindowHandler.examwindow && !this.config.development){ 
                 WindowHandler.examwindow.setKiosk(true);
@@ -253,6 +500,9 @@ import { switchExamSection } from './switchExamSection.js';
 
         if (studentstatus.sendexam === true){
             this.sendExamToTeacher();
+        }
+        if (studentstatus.sendlog === true){
+            this.sendStudentLogToTeacher();
         }
         if (studentstatus.fetchfiles === true){
             this.requestFileFromServer(studentstatus.files);
@@ -346,6 +596,12 @@ import { switchExamSection } from './switchExamSection.js';
         }
         
         if (serverstatus.exammode && !this.multicastClient.clientinfo.exammode){
+            const lockedSection = Number(serverstatus.lockedSection || 1);
+            const examtype = serverstatus?.examSections?.[lockedSection]?.examtype;
+            if (examtype === 'localvm' && this.localVmStartState !== 'idle') {
+                log.info(`communicationhandler @ processUpdatedServerstatus: localvm start suppressed (state=${this.localVmStartState})`);
+                return;
+            }
             log.info("communicationhandler @ processUpdatedServerstatus: exammode activated");
             this.killScreenlock();
             this.startExam(serverstatus);
@@ -354,6 +610,17 @@ import { switchExamSection } from './switchExamSection.js';
             log.info("communicationhandler @ processUpdatedServerstatus: exammode deactivated");
             this.killScreenlock();
             this.endExam(serverstatus);
+        }
+
+        if (!serverstatus.exammode && this.multicastClient.clientinfo.examtype === 'localvm') {
+            const st = this.multicastClient.clientinfo.localVMState;
+            const inPreflightState = st === 'missing' || st === 'hash_mismatch' || st === 'verifying_hash' || st === 'error';
+            if (inPreflightState || this.localVmStartState !== 'idle') {
+                log.info('communicationhandler @ processUpdatedServerstatus: localvm exammode off -> clearing preflight state');
+                this.multicastClient.clientinfo.localVMState = null;
+                this.multicastClient.clientinfo.localVMHost = null;
+                this.localVmStartState = 'idle';
+            }
         }
     }
 
@@ -371,18 +638,20 @@ import { switchExamSection } from './switchExamSection.js';
 
 
     // send base64 pdf to teacher
-    sendBase64PDFtoTeacher(base64pdf, section=1){
-        const url = `https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/printrequest/${this.multicastClient.clientinfo.servername}/${this.multicastClient.clientinfo.token}`;
+    sendBase64PDFtoTeacher(base64pdf, section=1, saveReason='sectionchange'){
+        const url = `https://${this.multicastClient.clientinfo.serverip}:${this.config.serverApiPort}/server/control/submission/${this.multicastClient.clientinfo.servername}`;
+        const sr = typeof saveReason === 'string' ? saveReason : 'sectionchange'
         const payload = {
             document: base64pdf,
-            printrequest: false,    
+            printrequest: false,
             submissionnumber: this.multicastClient.clientinfo.submissionnumber,
-            lockedsection: section
+            lockedsection: section,
+            saveReason: sr
         }
-        fetch(url, {
+        examApiFetch(url, {
             method: "POST",
             body: JSON.stringify(payload),
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.multicastClient.clientinfo.token}` },
         })
         .then(response => { return response.json();  })
         .then(data => {
@@ -400,8 +669,8 @@ import { switchExamSection } from './switchExamSection.js';
 
     //get base64 pdf from editor
     // ATTENTION: there is a similar method in ipchandler.js that also generates a pdf but stores it as file in the exam directory
-    async getBase64PDF(submissionnumber, sectionname, printBackground=false){
-        log.info("communicationhandler @ getBase64PDF: getting base64 encoded pdf")
+    async getBase64PDF(submissionnumber, sectionname, printBackground=false, saveReason){
+        if (saveReason !== 'auto') log.info("communicationhandler @ getBase64PDF: getting base64 encoded pdf")
         
         // Wait for any ongoing print operation to finish (max 30 seconds)
         let waitCount = 0;
@@ -513,43 +782,85 @@ import { switchExamSection } from './switchExamSection.js';
        
         if (!primary || primary === "" || !primary.id){ primary = displays[0] }       
 
-        this.multicastClient.clientinfo.exammode = true
         // when allowSectionSwitch: client chooses section, clientinfo.lockedSection is authoritative; do not overwrite with server
         if (!serverstatus.allowSectionSwitch || !this.multicastClient.clientinfo.lockedSection) {
             this.multicastClient.clientinfo.lockedSection = serverstatus.lockedSection;
         }
         const effectiveSection = this.multicastClient.clientinfo.lockedSection;
+
+        const examtype = serverstatus.examSections[effectiveSection].examtype;
+
+        // LocalVM must run preflight BEFORE exammode and BEFORE opening the exam window.
+        if (examtype === 'localvm') {
+            if (WindowHandler.examwindow) {
+                log.warn('communicationhandler @ startExam: localvm requested but examwindow already exists');
+                return;
+            }
+            if (this.localVmStartState !== 'idle') {
+                log.info(`communicationhandler @ startExam: localvm start suppressed (state=${this.localVmStartState})`);
+                return;
+            }
+            this.localVmStartState = 'starting';
+            try {                
+                let preflight = null;
+                try {
+                    preflight = await this.preflightLocalVm(serverstatus, effectiveSection);
+                } catch (e) {
+                    log.error('communicationhandler @ startExam: preflightLocalVm failed', e);
+                    this.multicastClient.clientinfo.localVMState = 'error';
+                    this.multicastClient.clientinfo.exammode = false;
+                    this.localVmStartState = 'blocked';
+                    return;
+                }
+                if (!preflight?.allowStart) {
+                    this.multicastClient.clientinfo.exammode = false;
+                    this.localVmStartState = 'blocked';
+                    return;
+                }
+                try {
+                    await qemuService.startHeadless({
+                        workdirectory: this.config.workdirectory,
+                        examdirectory: this.config.examdirectory,
+                        qcow2Name: preflight.qcow2Name,
+                        vncDisplay: ':1',
+                        overlayName: preflight.overlayName,
+                        blockInternet: preflight.blockInternet,
+                    });
+                    this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
+                    this.multicastClient.clientinfo.localVMPort = Number(preflight.vncPort) || 5901;
+                    this.multicastClient.clientinfo.localVMState = 'running';
+                } catch (e) {
+                    log.error('communicationhandler @ startExam: qemu start failed', e);
+                    this.multicastClient.clientinfo.localVMHost = null;
+                    this.multicastClient.clientinfo.localVMState = 'error';
+                    this.multicastClient.clientinfo.exammode = false;
+                    this.localVmStartState = 'blocked';
+                    return;
+                }
+
+                this.multicastClient.clientinfo.exammode = true
+                this.multicastClient.clientinfo.examtype = examtype
+                this.multicastClient.clientinfo.cmargin = serverstatus.examSections[effectiveSection].cmargin
+                this.multicastClient.clientinfo.linespacing = serverstatus.examSections[effectiveSection].linespacing
+                this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[effectiveSection].audioRepeat
+                log.info("communicationhandler @ startExam: creating exam window")
+                WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+                this.localVmStartState = 'idle';
+            } catch (e) {
+                this.localVmStartState = 'blocked';
+                throw e;
+            }
+            return;
+        }
+
+        this.multicastClient.clientinfo.exammode = true
         this.multicastClient.clientinfo.cmargin = serverstatus.examSections[effectiveSection].cmargin  // this is used to configure margin settings for the editor
         this.multicastClient.clientinfo.linespacing = serverstatus.examSections[effectiveSection].linespacing // we try to double linespacing on demand in pdf creation
         this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[effectiveSection].audioRepeat // restrict repetition of audio files (for listening comprehension)
 
-        const examtype = serverstatus.examSections[effectiveSection].examtype;
-
         if (!WindowHandler.examwindow){  // why do we check? because exammode is left if the server connection gets lost but students could reconnect while the exam window is still open and we don't want to create a second one
             log.info("communicationhandler @ startExam: creating exam window")
             this.multicastClient.clientinfo.examtype = examtype
-
-            if (examtype === 'localvm') {
-                try {
-                    const vmConfig = serverstatus.examSections[effectiveSection].localVMConfig || {};
-                    const vmName = vmConfig.vmName;
-                    if (!vmName) {
-                        log.error("communicationhandler @ startExam: no vmName configured for localvm examtype");
-                        this.multicastClient.clientinfo.exammode = false;
-                        return;
-                    }
-                    this.multicastClient.clientinfo.localVMHost = null;
-                    this.multicastClient.clientinfo.localVMState = null;
-                    const vmResult = await virtualBoxService.startVmAndResolveHost(vmName);
-                    this.multicastClient.clientinfo.localVMHost = vmResult.ip;
-                    this.multicastClient.clientinfo.localVMState = vmResult.state;
-                } catch (err) {
-                    log.error("communicationhandler @ startExam: LocalVM start failed", err);
-                    this.multicastClient.clientinfo.exammode = false;
-                    return;
-                }
-            }
-
             WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
         }
         else if (WindowHandler.examwindow){  //reconnect into active exam session with exam window already open
@@ -562,9 +873,7 @@ import { switchExamSection } from './switchExamSection.js';
                     await enableRestrictions(WindowHandler)
                     await this.sleep(2000) // wait an additional 2 sec for windows restrictions to kick in (they steal focus)
                     WindowHandler.addBlurListener();
-                    // For reconnect: initialize block windows after window is repositioned
                     await this.sleep(500)
-                    await WindowHandler.initBlockWindows()
                     WindowHandler.examwindow.moveTop()
                     WindowHandler.examwindow.focus()
                 }   
@@ -580,8 +889,6 @@ import { switchExamSection } from './switchExamSection.js';
                 return  // in that case.. we are finished here !
             }
         }
-        // Note: For new exam windows, initBlockWindows() is called in did-finish-load handler
-        // to ensure window is fully positioned (important for Wayland/KWin)
     }
 
 
@@ -596,7 +903,6 @@ import { switchExamSection } from './switchExamSection.js';
     async endExam(serverstatus){
         
         WindowHandler.removeBlurListener();
-        stopProxy();
       
         //only disable restrictions if not in exam mode ( seriosuly.. how could this ever happen? )
         if (this.multicastClient.clientinfo.exammode){
@@ -620,11 +926,11 @@ import { switchExamSection } from './switchExamSection.js';
             try { 
                 // destroy devtools window
                 if (this.config.development || this.config.showdevtools){
-                    const allWebContents = webContents.getAllWebContents()                        // alle WebViews des Childs
+                    const allWebContents = webContents.getAllWebContents()                        // all WebViews of the child
                     for (const wc of allWebContents) {
                         if (WindowHandler.examwindow && wc.hostWebContents?.id === WindowHandler.examwindow.webContents.id && wc.isDevToolsOpened?.()){
                             log.info("communicationhandler @ endExam: destroying devtools window")
-                            wc.closeDevTools()                                                 // DT des WebViews schließen (auch detached)
+                            wc.closeDevTools()                                                 // Close DevTools of the WebView (also when detached)
                         }
                     }
                     // Wait for all DevTools to be closed before closing the exam window
@@ -634,23 +940,26 @@ import { switchExamSection } from './switchExamSection.js';
                 this.closeExamWindowSafely()
             }
             catch(e){ log.error('communicationhandler @ endExam: ',e)}
-           
-            try {
-                for (let blockwindow of WindowHandler.blockwindows){
-                    blockwindow.close(); 
-                    blockwindow.destroy(); 
-                    blockwindow = null;
-                }
-            } catch (e) { 
-                WindowHandler.blockwindows = []
-                log.error("communicationhandler @ endExam: no functional blockwindow to handle")
-            }  
         }
-        WindowHandler.blockwindows = []
         
         this.multicastClient.clientinfo.msofficeshare = false
         this.multicastClient.clientinfo.focus = true
         this.multicastClient.clientinfo.localLockdown = false;
+
+        // stop VNC proxy + shutdown VM after window teardown to avoid reconnect loops
+        stopProxy();
+        try {
+            log.info('communicationhandler @ endExam: requesting VM shutdown');
+            await qemuService.stopVmAsync({ graceful: true, shutdownTimeoutMs: 8000, killTimeoutMs: 8000 });
+        } catch (e) {
+            log.warn('communicationhandler @ endExam: shutdown failed, killing VM');
+            await qemuService.stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
+        }
+        try {
+            await qemuService.killAllLocalQemu(this.config.workdirectory);
+        } catch (e) {
+            log.warn('communicationhandler @ endExam: killAllLocalQemu sweep', e);
+        }
 
         if (languageToolServer.languageToolProcess){
             languageToolServer.stopServer(); // Kill LanguageTool server when exam window is closed
@@ -702,52 +1011,56 @@ import { switchExamSection } from './switchExamSection.js';
         this.multicastClient.clientinfo.ip = false
         this.multicastClient.clientinfo.serverip = false
         this.multicastClient.clientinfo.servername = false
-        this.multicastClient.clientinfo.focus = true  // we are focused 
+        this.multicastClient.clientinfo.focus = true  // we are focused
         //this.multicastClient.clientinfo.exammode = false   // do not set to false until exam window is actually closed  (this is done in endExam())
         this.multicastClient.clientinfo.timestamp = false
         this.multicastClient.clientinfo.localLockdown = false
         //this.multicastClient.clientinfo.virtualized = false  // this check happens only at the application start.. do not reset once set
+        // Do not reset desktop capture stream here: kiosk/exam cannot show OS getDisplayMedia prompts; stream must live until app quit.
     }
  
 
 
 
     /**
-     * diese methode holt sich, die vom teacher zum download bereitgelegten dateien
-     * über das update interval wird der trigger zum download und die filelist erhalten
-     * @param {*} files 
+     * fetches files made available for download by the teacher
+     * the trigger and file list are received via the update interval
+     * @param {*} files
      */
     requestFileFromServer(files){
         let servername = this.multicastClient.clientinfo.servername
         let serverip = this.multicastClient.clientinfo.serverip
-        let token = this.multicastClient.clientinfo.token
+        let studenttoken = this.multicastClient.clientinfo.token
         let backupfile = false
         for (const file of files) {
-            if (file.name && file.name.includes('bak')){   // this will always set the last bak file as backup file if there is more than one bak file
+            if (file.name && file.name.toLowerCase().endsWith('.htm')){   // this will always set the last htm backup as backup file if there is more than one
                 backupfile = file.name
             }
         }
         
 
-        // Daten für den POST-Request vorbereiten
+        // Prepare data for the POST request
         let data = JSON.stringify({ 'files': files, 'type': 'studentfilerequest' });
 
-        // Fetch-Request mit den entsprechenden Optionen
-        fetch(`https://${serverip}:${this.config.serverApiPort}/server/data/download/${servername}/${token}`, {
+        // Fetch request with the corresponding options
+        examApiFetch(`https://${serverip}:${this.config.serverApiPort}/server/data/download/${servername}`, {
             method: "POST",
             body: data,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${studenttoken}` },
         })
         .then(response => response.arrayBuffer()) // Antwort als ArrayBuffer erhalten
         .then(buffer => {
-            let absoluteFilepath = join(this.config.tempdirectory, token.concat('.zip'));
+            let absoluteFilepath = join(this.config.tempdirectory, studenttoken.concat('.zip'));
             fs.writeFile(absoluteFilepath, Buffer.from(buffer), (err) => {
-                if (err) { log.error(err);  } 
+                if (err) { log.error(err);  }
                 else {
-                    extract(absoluteFilepath, { dir: this.config.examdirectory }) 
+                    extract(absoluteFilepath, { dir: this.config.examdirectory })
                     .then(() => {
                         log.info("CommunicationHandler @ requestFileFromServer: files received and extracted");
-                        return fs.promises.unlink(absoluteFilepath); // Verwendung der Promise-basierten API von fs
+                        return fs.promises.unlink(absoluteFilepath); // Using the promise-based fs API
+                    })
+                    .then(async () => {
+                        await this.encryptExamdirectoryFiles();
                     })
                     .then(() => {
                         if (backupfile && WindowHandler.examwindow) {
@@ -771,6 +1084,11 @@ import { switchExamSection } from './switchExamSection.js';
     async sendExamToTeacher(){
         //send save trigger to exam window
         if (WindowHandler.examwindow){  //there is a running exam - save current work first!
+            // localvm has no renderer-side save flow; send ZIP directly
+            if (this.multicastClient?.clientinfo?.examtype === 'localvm') {
+                this.sendToTeacher()
+                return
+            }
             try {
                 WindowHandler.examwindow.webContents.send('save','teacherrequest')   //trigger, why  (teacherrequest will also trigger sendToTeacher() but only after saving the pdf is complete)
             }
@@ -801,7 +1119,7 @@ import { switchExamSection } from './switchExamSection.js';
         let zipfilename = this.multicastClient.clientinfo.name.concat('.zip')
         let servername = this.multicastClient.clientinfo.servername
         let serverip = this.multicastClient.clientinfo.serverip
-        let token = this.multicastClient.clientinfo.token
+        let studenttoken = this.multicastClient.clientinfo.token
         let zipfilepath = join(this.config.tempdirectory, zipfilename);
      
 
@@ -814,16 +1132,55 @@ import { switchExamSection } from './switchExamSection.js';
 
         // sending the whole directory as zip file base64encoded via JSON isn't probably the best method but it works while all formData approaches failed with
         // fetch() while they worked with ax ios() - not even chatgpt or stackoverflow could help ^^ i think it is related to the specific formData module that cant be imported without "window error"
-        const url = `https://${serverip}:${this.config.serverApiPort}/server/data/receive/${servername}/${token}`;
-        fetch(url, {
+        const url = `https://${serverip}:${this.config.serverApiPort}/server/data/receive/${servername}`;
+        const zipPayload = {
+            file: base64File,
+            filename: zipfilename,
+            lastExamWriteSaveReason: typeof this.lastExamWriteSaveReason === 'string' ? this.lastExamWriteSaveReason : 'n/a'
+        }
+        examApiFetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ file: base64File, filename: zipfilename }),
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${studenttoken}` },
+            body: JSON.stringify(zipPayload),
         })
         .then(response => response.json())
-        .then(data => { log.info(`communicationhandler @ sendExamToTeacher: teacher response: ${data.message}`); })
+        .then(data => {
+            log.info(`communicationhandler @ sendExamToTeacher: teacher response: ${data.message}`);
+            if (data && (data.status === 'success' || data.message === 'success')) {
+                this.lastExamWriteSaveReason = 'n/a';
+            }
+        })
         .catch(error => {log.error(`communicationhandler @ sendExamToTeacher: ${error}`); });
      }
+
+    // Upload next-exam-student.log from workdirectory root when teacher requests log snapshot (separate from ZIP backup).
+    sendStudentLogToTeacher(){
+        const logPath = platformDispatcher.logfile
+        if (!fs.existsSync(logPath)) {
+            log.warn(`communicationhandler @ sendStudentLogToTeacher: missing ${logPath}`)
+            return
+        }
+        let base64File
+        try {
+            base64File = fs.readFileSync(logPath).toString('base64')
+        } catch (e) {
+            log.error(`communicationhandler @ sendStudentLogToTeacher: read failed ${e}`)
+            return
+        }
+        const servername = this.multicastClient.clientinfo.servername
+        const serverip = this.multicastClient.clientinfo.serverip
+        const studenttoken = this.multicastClient.clientinfo.token
+        const clientname = this.multicastClient.clientinfo.name
+        const url = `https://${serverip}:${this.config.serverApiPort}/server/data/studentlog/${servername}`
+        examApiFetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${studenttoken}` },
+            body: JSON.stringify({ file: base64File, clientname }),
+        })
+            .then((response) => response.json())
+            .then((data) => { log.info(`communicationhandler @ sendStudentLogToTeacher: ${data.message || data.status}`) })
+            .catch((error) => { log.error(`communicationhandler @ sendStudentLogToTeacher: ${error}`) })
+    }
 
 
 

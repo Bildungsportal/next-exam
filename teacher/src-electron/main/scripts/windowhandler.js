@@ -22,12 +22,11 @@ import { join } from 'path'
 import path from 'path'
 import { fileURLToPath } from 'node:url'
 import log from 'electron-log'
-import * as devtoolsInstaller from 'electron-devtools-installer';
 
 const __dirname = import.meta.dirname
 
 // Base path for public assets (icons, etc.): packaged = app.asar.unpacked/public, dev = project public
-function getPublicBase() {
+export function getPublicBase() {
   if (app.isPackaged) {
     const unpacked = join(process.resourcesPath, 'app.asar.unpacked', 'public');
     return fs.existsSync(unpacked) ? unpacked : join(process.resourcesPath, 'app.asar.unpacked');
@@ -39,7 +38,7 @@ function getPublicBase() {
 
 
 // Renderer built into public/ (one copy); when packaged use app.asar.unpacked/public
-function getRendererIndexPath() {
+export function getRendererIndexPath() {
   if (app.isPackaged) {
     const unpacked = join(process.resourcesPath, 'app.asar.unpacked', 'public', 'index.html');
     if (fs.existsSync(unpacked)) return unpacked;
@@ -130,9 +129,9 @@ class WindowHandler {
 
         this.bipwindow.webContents.on('will-redirect', (event, url) => {
             log.info('Redirecting to:', url);
-            // Prüfen, ob die URL das gewünschte Format hat
+            // Check whether the URL has the expected format
             if (url.startsWith('bildungsportal://')) {
-                event.preventDefault(); // Verhindert den Standard-Redirect
+                event.preventDefault(); // Prevents the default redirect
                 const prefix = 'bildungsportal://token=';
 
                 const token = url.substring(prefix.length);
@@ -158,9 +157,11 @@ class WindowHandler {
 
     installVueJsDevTools(win) {
         if (!app.isPackaged) {
-            devtoolsInstaller.installExtension(devtoolsInstaller.VUEJS_DEVTOOLS)
-                .then((name) => console.log(`Added Extension: ${name.name}`))
-                .catch((err) => console.log('An error occurred: ', err));
+            // Dev-only: keep optional dependency out of release builds.
+            import('electron-devtools-installer')
+                .then((m) => m.installExtension(m.VUEJS_DEVTOOLS))
+                .then((name) => log.info(`windowhandler @ devtools: Added Extension: ${name.name}`))
+                .catch((err) => log.warn(`windowhandler @ devtools: install skipped: ${err?.message || err}`));
         }
     }
 
@@ -255,10 +256,10 @@ class WindowHandler {
                 log.info("windowhandler @ close: do not close running exam this way"); e.preventDefault(); 
                 dialog.showMessageBoxSync(this.mainwindow, {
                     type: 'info', 
-                    buttons: ['OK'], // Nur ein Button
+                    buttons: ['OK'], // Single button only
                     defaultId: 0,
-                    title: 'Prüfung läuft',
-                    message: 'Beenden Sie zuerst die laufende Prüfung!'
+                    title: 'Exam running',
+                    message: 'Please end the running exam first!'
                 });
                 return
             }

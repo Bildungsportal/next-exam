@@ -16,15 +16,15 @@ export default defineBoot(async ( { app, router } ) => {
         confirmButtonColor: '#198754',
         cancelButtonColor: '#ff7674',
 
-        // HIER verschieben wir den globalen Hook (als Teil der Standardoptionen)
+        // register the global hook here (as part of the default options)
         didOpen: (popup) => {
-            // Elemente finden: popup (vom Hook übergeben), Container und Backdrop (über DOM-Query)
+            // find elements: popup (passed from hook), container and backdrop (via DOM query)
             const elementsToControl = [
                 popup,
                 document.querySelector('.swal2-container'),
             ];
 
-            // Transitions entfernen, um Flimmern bei schnellen Events (wie Druck) zu verhindern
+            // Remove transitions to prevent flickering on rapid events (like printing)
             elementsToControl
                 .filter(el => el)
                 .forEach(el => {

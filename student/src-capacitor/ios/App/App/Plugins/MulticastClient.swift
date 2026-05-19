@@ -97,7 +97,7 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
         set { dataQueue.async(flags: .barrier) { self._examServerList = newValue } }
     }
 
-    var serverstatus: [String: Any] = [:]
+    var serverstatus  = ServerStatus()
     var clientinfo    = ClientInfo()
     var beaconsLost: Int  = 0
     var kicked: Bool      = false
@@ -112,11 +112,11 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
     public override func load() {
         //pluginLog(.info, "MulticastClientPlugin loaded – starting multicast listener")
         startMulticast()
-        IPCBridge.shared.registerInvokeHandler("getinfoasync") { [weak self] _ throws -> Any? in
+        IPCBridge.shared.handle("getinfoasync") { [weak self] _ throws -> Any? in
             guard let self else { throw PluginError.notInitialized }
             return await self.getinfoasync().asDictionary
         }
-        IPCBridge.shared.registerSendSyncHandler("register") { [weak self] event in
+        IPCBridge.shared.on("register") { [weak self] event in
             guard let self else {
                 event.returnValue = ["error": "not initialized"]
                 return
@@ -142,42 +142,11 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
         CommunicationHandler.shared.initialize(multicastClient: self)
     }
     
-    private func getinfoasync() async -> GetInfoaAsync {
-        return GetInfoaAsync(
+    private func getinfoasync() async -> GetInfoAsync {
+        return GetInfoAsync(
             serverlist: _examServerList,
             clientinfo: clientinfo,
-            serverstatus: ServerStatus(
-                exammode: true,
-                delfolderonexit: false,
-                spellcheck: true,
-                spellchecklang: "de-DE",
-                suggestions: false,
-                moodleTestType: "",
-                moodleDomain: "",
-                screenshotinterval: 0,
-                msOfficeFile: false,
-                screenslocked: false,
-                pin: "0000",
-                unlockonexit: false,
-                fontfamily: "sans-serif",
-                moodleTestId: "",
-                languagetool: false,
-                password: "sfdsf",
-                useExamSections: false,
-                activeSection: 1,
-                lockedSection: 1,
-                examSections: [
-                    1: ExamSection(
-                        examtype: "math",
-                        cmargin: CMargin(side: "right", size: 3),
-                        linespacing: "2",
-                        audioRepeat: 3,
-                        languagetool: false,
-                        spellchecklang: "de-DE",
-                        suggestions: false
-                    )
-                ]
-            )
+            serverstatus: serverstatus
         )
     }
     
@@ -229,6 +198,7 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
             var request = URLRequest(url: url, timeoutInterval: 8.0) // 8-second timeout
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("NEXT_EXAM_API_SECRET", forHTTPHeaderField: "x-next-exam-app-secret")
             request.httpBody = try JSONSerialization.data(withJSONObject: ["packet": packet.asDictionary])
             
             let delegate = LocalNetworkSessionDelegate()
@@ -253,6 +223,7 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
                 self.clientinfo.pin        = pin
                 
                 print("ipchandler @ register: successfully registered at \(servername) @ \(serverip) as \(clientname)")
+                print("ipchandler @ register: successfully registered, response: ", response)
                 
                 // Notify so screenshot scheduler can start immediately on successful connect
                 NotificationCenter.default.post(

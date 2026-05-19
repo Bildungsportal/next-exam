@@ -1,6 +1,6 @@
 import fs from 'fs';
+import path from 'path';
 import dotenv from 'dotenv';
-
 // load .env (same as student / quasar way)
 dotenv.config();
 

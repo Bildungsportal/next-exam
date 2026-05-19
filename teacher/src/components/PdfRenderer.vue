@@ -17,7 +17,7 @@
                     :disabled="localCustomFields.length === 0"
                     @click.stop="undoLastField"
                     style="  margin-left: 5px;"
-                    title="Rückgängig"
+                    title="Undo"
                 >
                     ↶
                 </button>
@@ -26,7 +26,7 @@
                 <div type="button" id="closePDF" class="nav-link btn btn-light btn-sm" :title="$t('dashboard.close')" @click.stop="closePane" style="width:40px; height:45px !important;text-align:center; font-weight:bold;">&times;</div> 
             </li>
         </ul>
-        <div class="activesheets-banner">
+        <div class="basematerial-banner">
             <div class="banner-pill" :class="{ 'banner-pill--warning': pdfHasWarning }">
                 {{ pdfHasWarning ? pdfWarningText : $t('pdf.activesheets') }}
             </div>
@@ -36,7 +36,7 @@
                 type="button"
                 :class="['btn btn-sm edit-tool-btn', drawMode === 'textarea' ? 'edit-tool-active' : 'edit-tool-inactive']"
                 @click.stop="setDrawMode('textarea')"
-                title="Textfeld zeichnen"
+                title="Draw text field"
             >
                 <span class="edit-tool-icon edit-tool-icon-rect">▭</span>
                 <span class="edit-tool-label">Textarea</span>
@@ -45,7 +45,7 @@
                 type="button"
                 :class="['btn btn-sm edit-tool-btn', drawMode === 'checkbox' ? 'edit-tool-active' : 'edit-tool-inactive']"
                 @click.stop="setDrawMode('checkbox')"
-                title="Checkbox platzieren"
+                title="Place checkbox"
             >
                 <span class="edit-tool-icon">☑</span>
                 <span class="edit-tool-label">Checkbox</span>
@@ -63,7 +63,7 @@
                 type="button"
                 :class="['btn btn-sm edit-tool-btn', drawMode === 'textinput' ? 'edit-tool-active' : 'edit-tool-inactive']"
                 @click.stop="setDrawMode('textinput')"
-                title="Textfeld (1 Zeile) zeichnen"
+                title="Draw text input (1 line)"
             >
                 <span class="edit-tool-icon">─</span>
                 <span class="edit-tool-label">Text</span>
@@ -72,10 +72,10 @@
                 type="button"
                 :class="['btn btn-sm edit-tool-btn', drawMode === 'delete' ? 'edit-tool-active edit-tool-delete-active' : 'edit-tool-inactive']"
                 @click.stop="setDrawMode('delete')"
-                title="Feld löschen"
+                title="Delete field"
             >
                 <span class="edit-tool-icon">✕</span>
-                <span class="edit-tool-label">Löschen</span>
+                <span class="edit-tool-label">Delete</span>
             </button>
         </div>
         <div v-if="effectiveLoading" class="overlay">
@@ -246,7 +246,7 @@
 </template>
 
 <script>
-import { parsePdfToPages } from '../utils/pdfparser/index.js';
+import { parsePdfToPages } from 'next-exam-shared/pdfparser/index.js';
 import Swal from 'sweetalert2';
 
 export default {
@@ -340,6 +340,27 @@ export default {
         }
     },
     methods: {
+        async ensurePdfOverlayFontsReady() {
+            // Ensure webfonts are loaded before canvas.measureText drives cloze positioning.
+            if (!document?.fonts) return;
+            try {
+                await Promise.all([
+                    document.fonts.load('16px hv'),
+                    document.fonts.load('16px carlito-regular'),
+                    document.fonts.load('16px carlito-bold'),
+                    document.fonts.load('16px carlito-italic'),
+                    document.fonts.load('16px carlito-bold-italic'),
+                    document.fonts.load('16px Latin-Modern-Math'),
+                    document.fonts.load('16px caladea'),
+                    document.fonts.load('16px dejavuserif'),
+                    document.fonts.load('16px notosanssymbols'),
+                    document.fonts.ready,
+                ]);
+            } catch (e) {
+                // If fonts fail to load, parsing still proceeds (fallback metrics may drift).
+                console.warn('PdfOverlay: font loading skipped', e?.message || e);
+            }
+        },
         async processPdf(base64Data) {
             if (!base64Data) {
                 this.parsedPages = [];
@@ -349,6 +370,7 @@ export default {
             this.isParsing = true;
             this.warningShown = false; // Reset warning flag for new PDF
             try {
+                await this.ensurePdfOverlayFontsReady();
                 const uint8 = this.base64ToUint8Array(base64Data);
                 this.parsedPages = await parsePdfToPages(uint8);
             } catch (error) {
@@ -791,7 +813,7 @@ export default {
     color: #5a3c00;
 }
 
-.activesheets-banner {
+.basematerial-banner {
     position: fixed;
     top: 40px;
     left: 50%;

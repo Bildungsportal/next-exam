@@ -31,7 +31,7 @@
         <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
 
         <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
-            <div v-if="(file.filetype == 'bak')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+            <div v-if="(file.filetype == 'htm')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
             <div v-if="(file.filetype == 'docx')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
             <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
             <div v-if="(file.filetype == 'audio')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
@@ -66,10 +66,11 @@
             :block-external="true"
             @close="hidepreview"
         />
-        <PdfviewPane
+        <PdfviewPaneRendered
             :localLockdown="localLockdown"
             :examtype="examtype"
             :toolbar="pdfPreviewUi"
+            :preview="pdfPreviewState"
             @close="hidepreview"
         />
     </div>
@@ -86,6 +87,27 @@
                     <div class="mb-3 "> {{$t('editor.leftkiosk')}} <br> {{$t('editor.tellsomeone')}} </div>
                     <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32" >
                     <div class="mt-3"> {{ formatTime(entrytime) }}</div>
+                </div>
+                <div v-if="localLockdown" class="mt-2">
+                    <div class="input-group">
+                        <span class="input-group-text">{{ $t('student.password') }}</span>
+                        <input
+                            ref="localUnlockInput"
+                            v-model="localUnlockPassword"
+                            class="form-control"
+                            type="password"
+                            autocomplete="current-password"
+                            :placeholder="$t('student.password')"
+                            @input="localUnlockError = false"
+                            @keyup.enter="tryUnlockLocalLockdown"
+                        >
+                        <button class="btn btn-outline-dark" type="button" :disabled="localUnlockBusy" @click="tryUnlockLocalLockdown">
+                            {{ $t('editor.unlock') }}
+                        </button>
+                    </div>
+                    <div v-if="localUnlockError" class="mt-2 text-dark">
+                        {{ $t("general.wrongpassword") }}
+                    </div>
                 </div>
             </div>
         </div>
@@ -110,9 +132,10 @@ import ExamHeader from '../components/ExamHeader.vue';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import { getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../utils/filehandler.js'
-import PdfviewPane from '../components/PdfviewPane.vue'
+import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue';
 import {SignalBridge} from '../utils/signalBridge.js'
+import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -141,6 +164,9 @@ export default {
             pincode : this.$route.params.pincode,
             config: this.$route.params.config,
             localLockdown: this.$route.params.localLockdown,
+            localUnlockPassword: '',
+            localUnlockError: false,
+            localUnlockBusy: false,
 
             // section and url will be resolved on first fetchInfo based on allowSectionSwitch
             lockedSection: null,
@@ -176,9 +202,17 @@ export default {
             _onPreviewClick: null,
             internetCheckCounter:0,
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
+            pdfPreviewState: null,
         }
-    }, 
-    components: { ExamHeader, PdfviewPane, WebviewPane },  
+    },
+    watch: {
+        focus(newValue) {
+            if (!newValue && this.localLockdown) {
+                this.$nextTick(() => this.$refs.localUnlockInput?.focus());
+            }
+        },
+    },
+    components: { ExamHeader, PdfviewPaneRendered, WebviewPane },  
     methods: { 
 
         // from filehandler.js
@@ -197,9 +231,9 @@ export default {
         
         hidepreview(){
             resetPdfPreviewToolbar(this);
+            this.pdfPreviewState = null;
             let preview = document.querySelector("#preview")
             preview.style.display = 'none';
-            preview.setAttribute("src", "about:blank");
             URL.revokeObjectURL(this.currentpreview);
         },
 
@@ -221,10 +255,35 @@ export default {
         },
        
         async sendFocuslost(){
+            if (await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
             let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
             if (!this.config.development && !response.focus){  //immediately block frontend
                 this.focus = false 
             }  
+        },
+        async tryUnlockLocalLockdown() {
+            if (!this.localLockdown) return;
+
+            const expected = this.serverstatus?.password ?? "";
+            const provided = this.localUnlockPassword ?? "";
+            if (!expected || provided !== expected) {
+                this.localUnlockError = true;
+                return;
+            }
+
+            this.localUnlockBusy = true;
+            try {
+                const result = await signalBridge.invoke('restorefocusstateLocal');
+                if (result?.ok) {
+                    this.localUnlockPassword = '';
+                    this.localUnlockError = false;
+                    this.focus = true;
+                    return;
+                }
+                this.localUnlockError = true;
+            } finally {
+                this.localUnlockBusy = false;
+            }
         },
         async loadFilelist(){
             let filelist = await signalBridge.invoke('getfilesasync', null)
@@ -259,11 +318,13 @@ export default {
 
             // update url/domain based on current locked section (respect allowSectionSwitch)
             const section = this.serverstatus?.examSections?.[sectionIndex]
-            if (section && typeof section.domainname === 'string') {
-                this.url = section.domainname
-                this.domain = section.domainname
-                this.blockSubdomains = !!section.blockSubdomains
-                this.blockSubfolders = !!section.blockSubfolders
+            const groupKey = section && section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA'
+            const websiteConfig = section?.[groupKey]?.examConfig?.website || null
+            if (websiteConfig && typeof websiteConfig.url === 'string') {
+                this.url = websiteConfig.url
+                this.domain = websiteConfig.url
+                this.blockSubdomains = !!websiteConfig.blockSubdomains
+                this.blockSubfolders = !!websiteConfig.blockSubfolders
                 try {
                     const urlObj = new URL(this.url);
                     this.allowedDomain = urlObj.hostname;
@@ -300,22 +361,30 @@ export default {
     
         this.$nextTick(async () => { // Code that will run only after the entire view has been rendered
             
-            // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
+            // do not use setInterval() for intervals as it keeps all objects of the callbacks including fetch() responses in memory until the interval is stopped
             this.fetchinfointerval = new SchedulerService(5000);
-            this.fetchinfointerval.addEventListener('action',  this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.fetchinfointerval.addEventListener('action',  this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.fetchinfointerval.start();
             await this.fetchInfo(); // initial sync for clientinfo, serverstatus and url
+
+            try {
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+                this.hostip = await signalBridge.invoke('checkhostip')
+                this.internetCheckCounter = 0
+            } catch (err) {
+                console.error('website @ mounted: initial wlan/host ip error', err)
+            }
                 
             this.loadfilelistinterval = new SchedulerService(20000);
             this.loadfilelistinterval.addEventListener('action',  this.loadFilelist);
             this.loadfilelistinterval.start();
             
             this.clockinterval = new SchedulerService(1000);
-            this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.clockinterval.start();
                 
-            document.body.addEventListener('mouseleave', this.sendFocuslost);
-            
+            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
+
             signalBridge.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
                 console.log("website @ getmaterials: get materials request received")
                 this.getExamMaterials() 
@@ -383,7 +452,7 @@ export default {
                 if (config.showdevtools){ webview.openDevTools();   }
                 const css = ``;
                 webview.executeJavaScript(`
-                    (() => {  // Anonyme Funktion für eigenen Scope sonst wird beim reload der page (absenden der form ) die variable erneut deklariert und failed
+                    (() => {  // anonymous function for its own scope, otherwise the variable is re-declared on page reload (form submit) and fails
                         const style = document.createElement('style');
                         style.type = 'text/css';
                         style.innerHTML = \`${css}\`;
@@ -526,10 +595,10 @@ iframe{
 #preview {
     display: none;
     position: absolute;
-    top:0;
+    top: var(--nx-preview-top-offset, var(--nx-apphead-h, 60px));
     left: 0;
     width:100vw;
-    height: 100vh;
+    height: calc(100vh - var(--nx-preview-top-offset, var(--nx-apphead-h, 60px)));
     background-color: rgba(0, 0, 0, 0.4);
     z-index:100001;
     backdrop-filter: blur(2px);

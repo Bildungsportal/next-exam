@@ -93,17 +93,21 @@ export default defineConfig(( ctx: any ) => {
       showBuildSummary: false,
 
       extendViteConf (viteConf: any) {
+        viteConf.server = viteConf.server || {};
+        viteConf.server.forwardConsole = false; // Vite 8+: do not mirror browser console.warn/error to the dev-server terminal (avoids duplicate lines with electron-log).
         // Suppress SASS deprecation warnings for Bootstrap color functions
         viteConf.css = viteConf.css || {};
         viteConf.css.preprocessorOptions = viteConf.css.preprocessorOptions || {};
         viteConf.css.preprocessorOptions.scss = viteConf.css.preprocessorOptions.scss || {};
         viteConf.css.preprocessorOptions.scss.silenceDeprecations = ['color-functions', 'if-function'];
         // Resolve pdfjs-dist legacy build (package has no exports for legacy subpath)
+        const sharedDir = path.resolve(__dirname, '..', 'shared');
         viteConf.resolve = viteConf.resolve || {};
         viteConf.resolve.alias = {
           ...viteConf.resolve.alias,
           'pdfjs-dist/legacy/build/pdf.mjs': pdfjsLegacyPdf,
           'pdfjs-dist/legacy/build/pdf.worker.mjs': pdfjsLegacyWorker,
+          'next-exam-shared': sharedDir,
         };
         // Ensure single copy of TipTap/ProseMirror to avoid "Duplicate use of selection JSON ID gapcursor"
         viteConf.resolve.dedupe = viteConf.resolve.dedupe || [];
@@ -133,12 +137,18 @@ export default defineConfig(( ctx: any ) => {
           viteConf.plugins.push({
             name: 'quasar-electron-rewrite-assets',
             transformIndexHtml: (html) => {
-              let out = html.replace(/(["'])\/src\/assets/g, '$1./src/assets');
+              let out = html.replace(/([`"'])\/src\/assets/g, '$1./src/assets');
               out = out.replace(/href=["']public\//g, 'href="./');
               return out;
             },
             generateBundle (_, bundle) {
-              const rewrite = (s) => s.replace(/"\/src\/assets/g, '"./src/assets').replace(/'\/src\/assets/g, "'./src/assets");
+              // Vue compiles template src to backticks; CSS url() is inlined — only JS literals need backtick rewrite.
+              const rewrite = (s) => s
+                .replace(/`\/src\/assets/g, '`./src/assets')
+                .replace(/\\"\/src\/assets/g, '\\"./src/assets')
+                .replace(/\\'\/src\/assets/g, "\\'./src/assets")
+                .replace(/"\/src\/assets/g, '"./src/assets')
+                .replace(/'\/src\/assets/g, "'./src/assets");
               for (const item of Object.values(bundle)) {
                 const entry = item as { type?: string; code?: string; source?: string | Buffer };
                 if (entry?.type === 'chunk' && entry.code) entry.code = rewrite(entry.code);
@@ -292,10 +302,14 @@ export default defineConfig(( ctx: any ) => {
         productName,
         buildVersion: `${version}.${buildNumber}`,
         asar: { smartUnpack: true },
+        beforePack: 'scripts/beforepack.js',
         afterPack: 'scripts/afterpack.js',
         asarUnpack: [
           'public/**/*',
           'node_modules/get-windows/**/*',
+        ],
+        extraResources: [
+          { from: 'src-electron/resources/linux', to: 'linux' },
         ],
         directories: { output: `../release/${version}.${buildNumber}_${artifactDate}` },
         compression: 'normal',

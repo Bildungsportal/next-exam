@@ -1,15 +1,42 @@
 
 import CryptoJS from 'crypto-js';
 
-/**
- * Website
- */
-function getTestURL(){
-    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-    let savedBlockSubdomains = false;
-    let savedBlockSubfolders = false;
+function ensureGroupsAndExamConfig(section) {
+    const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    const groupB = section.groupB || (section.groupB = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    if (!groupA.examConfig) groupA.examConfig = {};
+    if (!groupB.examConfig) groupB.examConfig = {};
+    return { groupA, groupB };
+}
 
-    this.$swal.fire({
+function ensureEditorExamConfig(section) {
+    const { groupA, groupB } = ensureGroupsAndExamConfig(section);
+    if (!groupA.examConfig.editor) groupA.examConfig.editor = {};
+    if (!groupB.examConfig.editor) groupB.examConfig.editor = {};
+    return { groupA, groupB };
+}
+
+/**
+ * Website: configure per group (A/B) or for all (AB when groups off).
+ * Stores settings in group.examConfig.website and removes legacy section.domainname/blockSub*.
+ * @param {'a'|'b'|'all'|undefined} presetGroup
+ */
+async function configureWebsite(presetGroup) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    const hasGroups = !!section.groups;
+    const whoNorm = String(presetGroup || 'all').toLowerCase();
+    const activeGroup = hasGroups ? (whoNorm === 'b' ? 'b' : whoNorm === 'a' ? 'a' : 'a') : 'all';
+
+    const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    const groupB = section.groupB || (section.groupB = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    if (!groupA.examConfig) groupA.examConfig = {};
+    if (!groupB.examConfig) groupB.examConfig = {};
+
+    const currentConfig = activeGroup === 'b' ? (groupB.examConfig.website || {}) : (groupA.examConfig.website || {});
+    let savedBlockSubdomains = !!currentConfig.blockSubdomains;
+    let savedBlockSubfolders = !!currentConfig.blockSubfolders;
+
+    const result = await this.$swal.fire({
         customClass: {
             popup: 'my-popup',
             title: 'my-title',
@@ -21,26 +48,22 @@ function getTestURL(){
         title: this.$t("dashboard.website"),
         icon: 'question',
         input: 'text',
+        inputValue: currentConfig.url || '',
+        inputPlaceholder: 'https://www.classtime.com',
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
         html: `
-            <div class="my-content">
-                zB.: https://www.classtime.com
-            </div>
             <div class="my-content" style="margin-top: 10px; text-align: left; display: inline-block;">
                 <label style="display: block; margin-bottom: 4px; font-size: 0.85em; cursor: pointer;" title="${this.$t("dashboard.blockSubdomainsInfo")}">
-                    <input type="checkbox" id="websiteBlockSubdomains" style="margin-right: 6px;"${section.blockSubdomains ? ' checked' : ''}> ${this.$t("dashboard.blockSubdomains")}
+                    <input type="checkbox" id="websiteBlockSubdomains" style="margin-right: 6px;"${savedBlockSubdomains ? ' checked' : ''}> ${this.$t("dashboard.blockSubdomains")}
                 </label>
                 <label style="display: block; font-size: 0.85em; cursor: pointer;" title="${this.$t("dashboard.blockSubfoldersInfo")}">
-                    <input type="checkbox" id="websiteBlockSubfolders" style="margin-right: 6px;"${section.blockSubfolders ? ' checked' : ''}> ${this.$t("dashboard.blockSubfolders")}
+                    <input type="checkbox" id="websiteBlockSubfolders" style="margin-right: 6px;"${savedBlockSubfolders ? ' checked' : ''}> ${this.$t("dashboard.blockSubfolders")}
                 </label>
             </div>
             `,
-        didOpen: () => {
-            document.getElementsByClassName('my-custom-input')[0].value = section.domainname || ''
-        },
         inputValidator: (value) => {
-            if (!isValidFullDomainName(value)) {return 'Ungültige Domain!'}
+            if (!isValidFullDomainName(value)) return 'Invalid domain!'
         },
         preConfirm: () => {
             const blockSubdomainsEl = document.getElementById('websiteBlockSubdomains');
@@ -48,26 +71,51 @@ function getTestURL(){
             savedBlockSubdomains = blockSubdomainsEl ? blockSubdomainsEl.checked : false;
             savedBlockSubfolders = blockSubfoldersEl ? blockSubfoldersEl.checked : false;
         }
-    })
-    .then((input) => {
-        let domainname = input.value
-        section.domainname = isValidFullDomainName(domainname) ? domainname : null
-        section.blockSubdomains = savedBlockSubdomains
-        section.blockSubfolders = savedBlockSubfolders
+    });
 
-        if (!section.domainname) { section.examtype = "math"}
-        else { this.backupinterval.stop(); this.autobackup = false;}  // no auto backup in this exam mode
-        this.setServerStatus()
-    })
+    if (!result.isConfirmed) return;
+
+    const url = String(result.value || '').trim();
+    if (!isValidFullDomainName(url)) return;
+
+    const nextConfig = { url, blockSubdomains: savedBlockSubdomains, blockSubfolders: savedBlockSubfolders };
+
+    if (!hasGroups) {
+        groupA.examConfig.website = nextConfig;
+        groupB.examConfig.website = nextConfig;
+    } else if (activeGroup === 'b') {
+        groupB.examConfig.website = nextConfig;
+    } else {
+        groupA.examConfig.website = nextConfig;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(section, 'domainname')) delete section.domainname;
+    if (Object.prototype.hasOwnProperty.call(section, 'blockSubdomains')) delete section.blockSubdomains;
+    if (Object.prototype.hasOwnProperty.call(section, 'blockSubfolders')) delete section.blockSubfolders;
+
+    this.setServerStatus();
 }
 
 
 /**
- * Eduvidual
+ * Eduvidual: configure per group (A/B) or for all (AB when groups off).
+ * Stores settings in group.examConfig.eduvidual and removes legacy section.moodle* fields.
+ * @param {'a'|'b'|'all'|undefined} presetGroup
  */
-async function getTestID(){
-    
-    this.$swal.fire({
+async function configureEduvidual(presetGroup) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    const hasGroups = !!section.groups;
+    const whoNorm = String(presetGroup || 'all').toLowerCase();
+    const activeGroup = hasGroups ? (whoNorm === 'b' ? 'b' : 'a') : 'all';
+
+    const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    const groupB = section.groupB || (section.groupB = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    if (!groupA.examConfig) groupA.examConfig = {};
+    if (!groupB.examConfig) groupB.examConfig = {};
+
+    const currentConfig = activeGroup === 'b' ? (groupB.examConfig.eduvidual || {}) : (groupA.examConfig.eduvidual || {});
+
+    const result = await this.$swal.fire({
         customClass: {
             popup: 'my-popup',
             title: 'my-title',
@@ -78,48 +126,63 @@ async function getTestID(){
         },
         title: this.$t("dashboard.eduvidualid"),
         icon: 'question',
+        input: 'url',
+        inputValue: currentConfig.url || '',
+        inputPlaceholder: 'https://www.eduvidual.at/mod/quiz/view.php?id=6153159',
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
-        input: 'url',
-        inputLabel: this.$t("dashboard.eduvidualidhint"),
-        inputPlaceholder: 'https://www.eduvidual.at/mod/quiz/view.php?id=6153159',
-        html: `                    
-            <div class="my-content" style="width: 150px; margin: auto auto;">
-                <img  width="24" height="24" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACUAAAAlCAIAAABK/LdUAAAACXBIWXMAABYlAAAWJQFJUiTwAAAGuUlEQVRYw6VXbWxbVxl+zznXvnZsN99N4zRNmjhNnGbd2m5dtlDWaV9oyia1qGJNoWzt2JAQXwEKQiAGqNCuaehAZBJsA/UHiEFRWdSsBVFKO4HSHx0gLWqb5jtpnPjGdh37+n6cc15+xG0+7DQOHB3Jx77vOY+f55znvO8liAgAANB10YT/qT22SdnsZzkGK3dHiJDnhGIfyXHm+IyUCADwt2s2IjRVsNXiYZGX7KjN9Z8W5sGHQ6KyRI5p5EKfVeRR/QX0HvHS0qkzbxE/QACAyaTIBc/tQSGRUBYo59cnyLtXjAMtriJPdkhj8Ap1+Zz+4ILHmEbMsVNGSvIhGheVZWp9BQohfn1ZjyRlJlhq8Mrs1fec/iAAzOMhrAYNARBQom6gSyGVZaq/CATHdy4ml0CmBq9M/vJQyZ7X5r7ShfRwlaBulSCiysClkKYaV0UJCoFvXUhEEmnImbMnRo8/V/n1HkKVTDyYA8y9u1RIGZJRMgd5X617fSkIgb/462wkIbWzHeHuY2s/9SNHcWX285n2IubqPERwKkAAGCUqIADZEnAj6iMhvNh1pPHmz9T1jQUf/+yy/pvfyNza9AyXiHOGvQt5f13eug+PVfT/FAHWff7UXSWX6gm4GigAANBisqyAAQECd1gycFzo9F99AyVcrf9uV28+l8v7Pb1/uaFKRNOUKNnAhBVNyHhSouRVl9qLhroBwCppGKh4AXVxsjv2ldYChWXTc86AOZKMxQUi9k9Y/RMWAJQXQ+Dci4Uz/5yb/peGn0vCADGREpMxXlmsZOO3GkEZI9ub3N486lIJRaH+qo1p/2AuNzdS1vNHHtpabyXkcMie0PjCVWnmfZY2xkrd52GlRYrbRYkU6tttrP+Dwo0BYVqiZqf9yEG3izZtVFsf8Xq8Dp+bZsObV3Q1XXD17X305uXyB7YasajkPLWva2EAECBkGX64yvMJZlJ9ax/t/8C/5X6RSiWnNeOFLvCWLPFo9vMJiMTWAVy5oiY094nHSSLsv6/JoaoT//oPD+zkW/csPQOLl5vnp6Rmat5pSb53PKftS4Rdx3fB7Wl/Y9C9xhfquya5MPZ3LYrBLJql8Xhca+l5hiXDyT8dU86fWJGZ6/XHIR72b96Ut8YTD4WSkZi5f6mSC7LcYjwe1/raW5x62N9Qq3rylJ7X2fsdy1Kb1dSju1gy4m+ozfN6bD0Vuj7EAzv5tj1LIjPl5HGN8rjW99UWOzpVUb/R43VvCNa4PHmO948r5zqyMzu6S9EjVU0Bj9cN3J66MYxCWgfeXP5Snx9+9OVH2SdDZ+zoVMWmDZ41bpjVgCn5pYXJWEJ+9HfpKZTV2+alGOh1HfkYE0bV5hrFQQFlXItGbmnmq7/B9U2ZQPkqBYB/D1o76lSXgwCAt/4hWnv4FErQxqaRc3R6MBpCy6zctJ5S5nj32+Rm75w45Gavs/M5StmG4AZGATm3U8Zk/y17627R+GRW5Rf4LD30BpupN9gcPHo+NZsa7RsBKcGdD7EpsIyq+nLKiLOzlQz0koFeZ2crZaSqvlwBCaYO3B67NiZ9pXZb5wo5EjLOpzfYHDz6Z33WHLk2gYjozsfbYQayqm4dJdTZ0ersaKWEVtWtYwQxEUWESChq6ra1/ySqnuWungWjDD/4Gpt7P/EHPWGOXJ8EKdDlw9thhrw6UEwpcTpZdaCYIcdoCBUnN8yp8SjfvltsfupeJs2WUuf9Hlv74Nj+M6mEPXIjDFKi6sVkjIKs3lhYXVNIUWA8jA4XSBwdmEHvWvvTP8m16MiKhwCpyh1Fr53TdT4yEAEUqKiYjFHCpW3i7AwiAcoi4YRpCOvAG/dQciGtZfnNRTkbms1vnNWTfGQwTqQExQnJOCSiIDg4VG5YU5M6f3C3bHpq5er07i7CPfODDDxsHu7RdTE8nAAhkCnIJSoqCDE6qkvfWvvgm7mkqqz5gUJGwYQAsu5h85tndV0OjxhESHCoBCEyYxqGtNpPI1Nyx1tCMCO/31Uj0Gx9q0c3cGjcBslt0w5pkj/xClY0rq7mXzb/3Ymp9N0ppra1WD84H/nO00PjKBHImrLyl39MWK4vbLji+18iJQZvWYueF20nX+tJdTwLAPbh0+MaAti55//pKEdcpK6y+LGYjiYzZjXlP3+6bKD7RrgKwkn4P9pLBw/Biy8dPPTy51559fvpoubMZ7rbL+0FKHjgj+2X9gK0pX/3AYD8HsDJvvPtl/YCDGtzcc+m17rzSZ6eHPndTv77M/VtXaX+L/12y2Xj+om6R7/4hVPPTPywyPdfXxuLF8NH7dIAAAAASUVORK5CYII="/>
-            </div>
-           
-        `,
-        didOpen: () => {
-            document.getElementById('swal2-input').value = this.serverstatus.examSections[this.serverstatus.activeSection].moodleURL
-        },
+        html: `<div class="my-content">${this.$t("dashboard.eduvidualTestUrlHint")}</div>`,
         inputValidator: (value) => {
-            if (!value || !isValidMoodleDomainName(value) ) {return this.$t("dashboard.moodleInvalidDomain")}
-            let { moodledomain, testid } = extractDomainAndId(value);
-            if ( !testid) { return this.$t("dashboard.moodleInvalidId")}
+            if (!value || !isValidMoodleDomainName(value)) return this.$t("dashboard.moodleInvalidDomain");
+            const { testid } = extractDomainAndId(value);
+            if (!testid) return this.$t("dashboard.moodleInvalidId");
         }
-    }).then((input) => {
-        if (!input.value ) {
-            this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math";
-            return;
-        }
+    });
 
-        let { moodledomain, testid } = extractDomainAndId(input.value);
+    if (!result.isConfirmed) return;
+    const url = String(result.value || '').trim();
+    if (!url) return;
 
-        this.serverstatus.examSections[this.serverstatus.activeSection].moodleTestId = testid
-        this.serverstatus.examSections[this.serverstatus.activeSection].moodleDomain = moodledomain
-        this.serverstatus.examSections[this.serverstatus.activeSection].moodleURL = input.value
+    const { moodledomain, testid } = extractDomainAndId(url);
+    const nextConfig = { url, moodleDomain: moodledomain, moodleTestId: testid };
 
-        this.backupinterval.stop(); 
-        this.autobackup = false;  // no auto backup in this exam mode
-        this.setServerStatus()
-    })  
+    if (!hasGroups) {
+        groupA.examConfig.eduvidual = nextConfig;
+        groupB.examConfig.eduvidual = nextConfig;
+    } else if (activeGroup === 'b') {
+        groupB.examConfig.eduvidual = nextConfig;
+    } else {
+        groupA.examConfig.eduvidual = nextConfig;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(section, 'moodleURL')) delete section.moodleURL;
+    if (Object.prototype.hasOwnProperty.call(section, 'moodleTestId')) delete section.moodleTestId;
+    if (Object.prototype.hasOwnProperty.call(section, 'moodleDomain')) delete section.moodleDomain;
+
+    this.backupinterval.stop();
+    this.autobackup = false;
+    this.setServerStatus();
 }
 
 
 /**
- * Forms (Google or Microsoft)
+ * Forms (Google or Microsoft): configure per group (A/B) or for all (AB when groups off).
+ * Stores settings in group.examConfig.gforms and removes legacy section.formsUrl.
+ * @param {'a'|'b'|'all'|undefined} presetGroup
  */
-async function getFormsID(){
+async function configureForms(presetGroup){
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    const hasGroups = !!section.groups;
+    const whoNorm = String(presetGroup || 'all').toLowerCase();
+    const activeGroup = hasGroups ? (whoNorm === 'b' ? 'b' : whoNorm === 'a' ? 'a' : 'a') : 'all';
+
+    const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    const groupB = section.groupB || (section.groupB = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    if (!groupA.examConfig) groupA.examConfig = {};
+    if (!groupB.examConfig) groupB.examConfig = {};
+
+    const currentConfig = activeGroup === 'b' ? (groupB.examConfig.gforms || {}) : (groupA.examConfig.gforms || {});
+
     this.$swal.fire({
         customClass: {
             popup: 'my-popup',
@@ -155,7 +218,8 @@ async function getFormsID(){
             </div>
         </div>`,
         didOpen: () => {
-            document.getElementsByClassName('my-custom-input')[0].value = this.serverstatus.examSections[this.serverstatus.activeSection]?.formsUrl
+            const el = document.getElementsByClassName('my-custom-input')[0];
+            if (el) el.value = currentConfig.url || this.serverstatus.examSections[this.serverstatus.activeSection]?.formsUrl || '';
         },
         inputValidator: (value) => {
             if (!value) {return this.$t("dashboard.moodleInvalidId")}
@@ -164,15 +228,40 @@ async function getFormsID(){
     }).then((input) => {
         const val = input.value ? input.value.trim() : "";
         if (!val) {
-            this.serverstatus.examSections[this.serverstatus.activeSection].examtype = "math"
+            return;
         }
         else {
-            this.serverstatus.examSections[this.serverstatus.activeSection].formsUrl = val
+            const url = val;
+            let provider = 'unknown';
+            try {
+                const u = new URL(url);
+                const host = (u.hostname || '').toLowerCase();
+                if (host.includes('google') || host.includes('forms.gle')) provider = 'google';
+                if (host.includes('office') || host.includes('microsoft')) provider = 'microsoft';
+            } catch (e) {
+                provider = 'unknown';
+            }
+            const nextConfig = { url, provider };
+
+            if (!hasGroups) {
+                groupA.examConfig.gforms = nextConfig;
+                groupB.examConfig.gforms = nextConfig;
+            } else if (activeGroup === 'b') {
+                groupB.examConfig.gforms = nextConfig;
+            } else {
+                groupA.examConfig.gforms = nextConfig;
+            }
+
+            if (Object.prototype.hasOwnProperty.call(section, 'formsUrl')) delete section.formsUrl;
             this.backupinterval.stop();
             this.autobackup = false;
         }
         this.setServerStatus()
     })  
+}
+
+async function getFormsID() {
+    return configureForms.call(this, 'all');
 }
 
 
@@ -193,178 +282,403 @@ async function configureMath(){
     
 }
 
+/** Returns picked PDF File[] or null if dialog cancelled (native input, no SweetAlert file step). */
+function pickPdfFilesFromUser() {
+    return new Promise((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.pdf,application/pdf';
+        input.multiple = true;
+        let settled = false;
+        const settle = (files) => {
+            if (settled) return;
+            settled = true;
+            window.removeEventListener('focus', onWinFocus);
+            input.remove();
+            resolve(files && files.length ? files : null);
+        };
+        const onWinFocus = () => {
+            setTimeout(() => {
+                if (!settled && (!input.files || input.files.length === 0)) settle(null);
+            }, 300);
+        };
+        input.addEventListener('change', () => {
+            settle(input.files?.length ? Array.from(input.files) : null);
+        });
+        document.body.appendChild(input);
+        window.addEventListener('focus', onWinFocus);
+        requestAnimationFrame(() => input.click());
+    });
+}
 
-/**
- * Active Sheets (PDF Forms)
- * @param {boolean} forceDialog - If true, show dialog even if PDF already exists
- */
-async function configureActivesheets(forceDialog = false){
-    let htmlcontent = `<div class="my-content"> 
-        ${this.$t("dashboard.activesheetshint") || "Bitte wählen Sie eine PDF-Datei aus, die interaktive Formularfelder enthält."} <br>
-        <span style="font-size:0.8em;">(.pdf)</span>
-        </div>`
+function activesheetsIsPdfFile(file) {
+    return (file.type && file.type.includes('pdf')) || (file.name && file.name.toLowerCase().endsWith('.pdf'));
+}
 
-    // Show group selection buttons only if groups are enabled
-    if (this.serverstatus.examSections[this.serverstatus.activeSection].groups) {
-        htmlcontent = `<div class="my-content"> 
-            ${this.$t("dashboard.activesheetshint") || "Bitte wählen Sie eine PDF-Datei aus, die interaktive Formularfelder enthält."} <br>
-            <span style="font-size:0.8em;">(.pdf)</span>
-            <br>  <br> 
-            Gruppe<br>
-            <button id="fbtnA" class="swal2-button btn btn-cyan m-2" style="width: 42px; height: 42px;">A</button>
-            <button id="fbtnB" class="swal2-button btn btn-warning m-2" style="width: 42px; height: 42px;filter: grayscale(90%);">B</button>
-            <button id="fbtnC" class="swal2-button btn btn-warning m-2" style="padding:0px;width: 42px; height: 42px;filter: grayscale(90%); background: linear-gradient(-60deg, #0dcaf0 50%, #ffc107 50%);">AB</button>
-        </div>`
-    }
-         
-    let activeGroup = this.serverstatus.examSections[this.serverstatus.activeSection].groups ? "a" : "all"  // Default to group A if groups enabled, otherwise "all"
+function microsoft365IsTemplateFile(file) {
+    const name = (file && file.name) ? String(file.name).toLowerCase() : '';
+    return name.endsWith('.docx') || name.endsWith('.xlsx');
+}
 
-    this.$swal.fire({
-        customClass: {
-            popup: 'my-popup',
-            title: 'my-title',
-            content: 'my-content',
-            input: 'my-custom-input',
-            inputLabel: 'my-input-label',
-            actions: 'my-swal2-actions',
-            htmlContainer: 'my-html-container'
-        },
-        title: this.$t("dashboard.activesheets") || "Active Sheets",
-        html: htmlcontent,
-        icon: "success",
-        input: 'file',
-        showCancelButton: true,
-        cancelButtonText: this.$t("dashboard.cancel"),
-        inputAttributes: {
-            type: "file",
-            name: "files",
-            id: "swalFile",
-            class: "form-control",
-            multiple: "multiple",
-            accept: ".pdf"
-        },
-        didRender: () => {
-            const btnA = document.getElementById('fbtnA');
-            const btnB = document.getElementById('fbtnB');
-            const btnC = document.getElementById('fbtnC');
-            if (btnA && !btnA.dataset.listenerAdded) {
-                btnA.addEventListener('click', () => {
-                    btnA.style.filter = "grayscale(0%)"
-                    btnB.style.filter = "grayscale(90%)"
-                    btnC.style.filter = "grayscale(90%)"
-                    activeGroup = "a"
-                });
-                btnA.dataset.listenerAdded = 'true';
-            }
-            if (btnB && !btnB.dataset.listenerAdded) {
-                btnB.addEventListener('click', () => {
-                    btnA.style.filter = "grayscale(90%)"
-                    btnB.style.filter = "grayscale(0%)"
-                    btnC.style.filter = "grayscale(90%)"
-                    activeGroup = "b"
-                });
-                btnB.dataset.listenerAdded = 'true';
-            }
-            if (btnC && !btnC.dataset.listenerAdded) {
-                btnC.addEventListener('click', () => {
-                    btnA.style.filter = "grayscale(90%)"
-                    btnB.style.filter = "grayscale(90%)"
-                    btnC.style.filter = "grayscale(0%)"
-                    activeGroup = "all"
-                });
-                btnC.dataset.listenerAdded = 'true';
-            }
-        },
-        inputValidator: (value) => {
-            if (!value) {
-                return this.$t("dashboard.nopdfselected") || "Bitte wählen Sie eine PDF-Datei aus!";
-            }
-            const files = value;
-            // Handle FileList (array-like object) or single File
-            const fileArray = files.length !== undefined ? Array.from(files) : [files];
-            for (const file of fileArray) {
-                if (!(file.type && file.type.includes("pdf")) && !file.name.toLowerCase().endsWith('.pdf')) {
-                    return this.$t("dashboard.invalidpdf") || "Ungültige PDF-Datei!";
-                }
-            }
-        },
-    })
-    .then(async (input) => {
-        if (!input.value) {   return;   } // no further processing if no files are selected
+function editorTemplateIsAllowedFile(file) {
+    const name = (file && file.name) ? String(file.name).toLowerCase() : '';
+    return name.endsWith('.odt') || name.endsWith('.docx');
+}
 
-        this.status(this.$t("dashboard.processingfiles") || "Dateien werden verarbeitet...");
-        // Handle FileList (array-like object) or single File or Array
-        const files = Array.isArray(input.value) 
-            ? input.value 
-            : input.value.length !== undefined 
-                ? Array.from(input.value) 
-                : [input.value];
+/** Returns picked .odt/.docx File or null if dialog cancelled (native input, same pattern as activesheets PDF picker). */
+function pickEditorTemplateFromUser() {
+    return new Promise((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.odt,.docx,application/vnd.oasis.opendocument.text,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        input.multiple = false;
+        let settled = false;
+        const settle = (file) => {
+            if (settled) return;
+            settled = true;
+            window.removeEventListener('focus', onWinFocus);
+            input.remove();
+            resolve(file || null);
+        };
+        const onWinFocus = () => {
+            setTimeout(() => {
+                if (!settled && (!input.files || input.files.length === 0)) settle(null);
+            }, 300);
+        };
+        input.addEventListener('change', () => {
+            settle(input.files && input.files.length ? input.files[0] : null);
+        });
+        document.body.appendChild(input);
+        window.addEventListener('focus', onWinFocus);
+        requestAnimationFrame(() => input.click());
+    });
+}
 
-        // Process each file
-        let firstFileBase64 = null;
-        let firstFileName = null;
-        for (const file of files) {
-            try {
-                // Check file size and warn if larger than 8 MB
-                const maxSizeBytes = 8 * 1024 * 1024; // 8 MB in bytes
-                if (file.size > maxSizeBytes) {
-                    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-                    this.$swal.fire({
-                        customClass: {
-                            popup: 'my-popup',
-                            title: 'my-title',
-                            content: 'my-content',
-                            actions: 'my-swal2-actions'
-                        },
-                        title: this.$t("dashboard.filesizewarning"),
-                        html: `<div style="text-align: left;">${this.$t("dashboard.filesizewarningtext", { filename: file.name, size: fileSizeMB })}</div>`,
-                        icon: 'warning',
-                    
-                        showConfirmButton: true,
-                        confirmButtonText: 'OK'
-                    });
-                }
-
-                // Convert first file to Base64 for preview
-                if (!firstFileBase64) {
-                    firstFileBase64 = await readFileAsBase64(file);
-                    firstFileName = file.name;
-                }
-
-                // Use the shared function to add file as exam material with IsActiveSheet flag
-                await addFileAsExamMaterial(
-                    file,
-                    null, // filename not needed when using File object
-                    activeGroup,
-                    this.serverstatus,
-                    this.serverstatus.activeSection,
-                    true // isActiveSheet = true
-                );
-               
-            } catch (error) {
-                console.error(`examsetup @ configureActivesheets: Error processing file ${file.name}:`, error);
-            }
-        }
-
-        this.setServerStatus()
-        
-        // Show PdfRenderer for the first file if available
-        if (firstFileBase64 && firstFileName) {
-            if (typeof this.showBase64PdfInRenderer === 'function') {
-                const previewGroup = activeGroup === 'b' ? 'B' : 'A';
-                this.showBase64PdfInRenderer(firstFileBase64, firstFileName, previewGroup);
-            }
-        }
-    });    
+/** Returns picked Office template File or null if dialog cancelled (native input). */
+function pickOfficeTemplateFromUser() {
+    return new Promise((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.xlsx,.docx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        input.multiple = false;
+        let settled = false;
+        const settle = (file) => {
+            if (settled) return;
+            settled = true;
+            window.removeEventListener('focus', onWinFocus);
+            input.remove();
+            resolve(file || null);
+        };
+        const onWinFocus = () => {
+            setTimeout(() => {
+                if (!settled && (!input.files || input.files.length === 0)) settle(null);
+            }, 300);
+        };
+        input.addEventListener('change', () => {
+            settle(input.files && input.files.length ? input.files[0] : null);
+        });
+        document.body.appendChild(input);
+        window.addEventListener('focus', onWinFocus);
+        requestAnimationFrame(() => input.click());
+    });
 }
 
 /**
+ * Active Sheets (PDF Forms): native file picker; group preset from sidebar or default when opening from exam-type menu.
+ * @param {'a'|'b'|'all'|undefined} presetGroup - With groups off, always "all"; with groups on, default "a" if omitted (call from sidebar with explicit preset).
+ */
+async function configureActivesheets(presetGroup) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    let activeGroup = 'all';
+    if (!section.groups) {
+        activeGroup = 'all';
+    } else if (presetGroup === 'a' || presetGroup === 'b' || presetGroup === 'all') {
+        activeGroup = presetGroup;
+    } else {
+        activeGroup = 'a';
+    }
+
+    const files = await pickPdfFilesFromUser();
+    if (!files || !files.length) return;
+
+    const bad = files.filter((f) => !activesheetsIsPdfFile(f));
+    if (bad.length) {
+        await this.$swal.fire({
+            customClass: { popup: 'my-popup', title: 'my-title', content: 'my-content', actions: 'my-swal2-actions' },
+            title: this.$t("dashboard.invalidpdf"),
+            icon: 'error',
+            showConfirmButton: true,
+        });
+        return;
+    }
+
+    this.status(this.$t("dashboard.processingfiles"));
+
+    let firstFileBase64 = null;
+    let firstFileName = null;
+    for (const file of files) {
+        try {
+            const maxSizeBytes = 8 * 1024 * 1024;
+            if (file.size > maxSizeBytes) {
+                const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                await this.$swal.fire({
+                    customClass: { popup: 'my-popup', title: 'my-title', content: 'my-content', actions: 'my-swal2-actions' },
+                    title: this.$t("dashboard.filesizewarning"),
+                    html: `<div style="text-align: left;">${this.$t("dashboard.filesizewarningtext", { filename: file.name, size: fileSizeMB })}</div>`,
+                    icon: 'warning',
+                    showConfirmButton: true,
+                    confirmButtonText: 'OK',
+                });
+            }
+
+            if (!firstFileBase64) {
+                firstFileBase64 = await readFileAsBase64(file);
+                firstFileName = file.name;
+            }
+
+            await addFileAsExamMaterial(
+                file,
+                null,
+                activeGroup,
+                this.serverstatus,
+                this.serverstatus.activeSection,
+                true,
+            );
+        } catch (error) {
+            console.error(`examsetup @ configureActivesheets: Error processing file ${file.name}:`, error);
+        }
+    }
+
+    this.setServerStatus();
+
+    if (firstFileBase64 && firstFileName && typeof this.showBase64PdfInRenderer === 'function') {
+        const previewGroup = activeGroup === 'b' ? 'B' : 'A';
+        this.showBase64PdfInRenderer(firstFileBase64, firstFileName, previewGroup);
+    }
+}
+
+/**
+ * Microsoft365: configure Office template per group (A/B) or for all (AB when groups off).
+ * Stores template in group.examConfig.microsoft365.template (base64 + name).
+ * @param {'a'|'b'|'all'|undefined} presetGroup
+ */
+async function configureMicrosoft365Template(presetGroup) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    const hasGroups = !!section.groups;
+    const whoNorm = String(presetGroup || 'all').toLowerCase();
+    const activeGroup = hasGroups ? (whoNorm === 'b' ? 'b' : whoNorm === 'a' ? 'a' : 'a') : 'all';
+
+    const groupA = section.groupA;
+    const groupB = section.groupB;
+    if (!groupA.examConfig) groupA.examConfig = {};
+    if (!groupB.examConfig) groupB.examConfig = {};
+    if (!groupA.examConfig.microsoft365) groupA.examConfig.microsoft365 = {};
+    if (!groupB.examConfig.microsoft365) groupB.examConfig.microsoft365 = {};
+
+    const file = await pickOfficeTemplateFromUser();
+    if (!file) return;
+    if (!microsoft365IsTemplateFile(file)) {
+        await this.$swal.fire({
+            customClass: { popup: 'my-popup', title: 'my-title', content: 'my-content', actions: 'my-swal2-actions' },
+            title: this.$t("dashboard.invalid_file"),
+            text: this.$t("dashboard.invalid_file_text"),
+            icon: 'error',
+            showConfirmButton: true,
+        });
+        return;
+    }
+
+    const filecontent = await readFileAsBase64(file);
+    const template = { filename: file.name, filecontent, mimetype: file.type || '' };
+
+    if (!hasGroups) {
+        groupA.examConfig.microsoft365.template = template;
+        groupB.examConfig.microsoft365.template = template;
+    } else if (activeGroup === 'b') {
+        groupB.examConfig.microsoft365.template = template;
+    } else {
+        groupA.examConfig.microsoft365.template = template;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(section, 'msOfficeFile')) delete section.msOfficeFile;
+    this.setServerStatus();
+}
+
+/**
+ * Editor exam: optional per-group ODT/DOCX template under examConfig.editor.editorTemplate (same subtree as spellcheck etc.).
+ * @param {'a'|'b'|'all'|undefined} presetGroup
+ */
+async function configureEditorTemplate(presetGroup) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
+    const hasGroups = !!section.groups;
+    const whoNorm = String(presetGroup || 'all').toLowerCase();
+    const activeGroup = hasGroups ? (whoNorm === 'b' ? 'b' : whoNorm === 'a' ? 'a' : 'a') : 'all';
+
+    const groupA = section.groupA;
+    const groupB = section.groupB;
+    if (!groupA.examConfig) groupA.examConfig = {};
+    if (!groupB.examConfig) groupB.examConfig = {};
+    if (!groupA.examConfig.editor || typeof groupA.examConfig.editor !== 'object') groupA.examConfig.editor = {};
+    if (!groupB.examConfig.editor || typeof groupB.examConfig.editor !== 'object') groupB.examConfig.editor = {};
+
+    const file = await pickEditorTemplateFromUser();
+    if (!file) return;
+    if (!editorTemplateIsAllowedFile(file)) {
+        await this.$swal.fire({
+            customClass: { popup: 'my-popup', title: 'my-title', content: 'my-content', actions: 'my-swal2-actions' },
+            title: this.$t('dashboard.editorTemplateInvalid'),
+            text: this.$t('dashboard.editorTemplateInvalidText'),
+            icon: 'error',
+            showConfirmButton: true,
+        });
+        return;
+    }
+
+    const filecontent = await readFileAsBase64(file);
+    const checksum = await calculateMD5(file);
+    const filetype = determineFiletype(file, file.name);
+    const template = { filename: file.name, filecontent, filetype, checksum };
+
+    if (!hasGroups) {
+        groupA.examConfig.editor.editorTemplate = { ...template };
+        groupB.examConfig.editor.editorTemplate = { ...template };
+    } else if (activeGroup === 'b') {
+        groupB.examConfig.editor.editorTemplate = { ...template };
+    } else {
+        groupA.examConfig.editor.editorTemplate = { ...template };
+    }
+
+    this.setServerStatus();
+}
+
+function removeEditorTemplate(group) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
+    const clearCfg = (g) => {
+        if (!g?.examConfig?.editor || typeof g.examConfig.editor !== 'object') return;
+        g.examConfig.editor.editorTemplate = {};
+    };
+    if (!section.groups || group === 'all') {
+        clearCfg(section.groupA);
+        clearCfg(section.groupB);
+    } else if (group === 'b') {
+        clearCfg(section.groupB);
+    } else {
+        clearCfg(section.groupA);
+    }
+    this.setServerStatus();
+}
+
+function removeMicrosoft365Template(group) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
+    const clearCfg = (g) => {
+        if (!g || !g.examConfig) return;
+        if (!g.examConfig.microsoft365) g.examConfig.microsoft365 = {};
+        g.examConfig.microsoft365.template = {};
+    };
+    if (!section.groups || group === 'all') {
+        clearCfg(section.groupA);
+        clearCfg(section.groupB);
+    } else if (group === 'b') {
+        clearCfg(section.groupB);
+    } else {
+        clearCfg(section.groupA);
+    }
+    this.setStudentStatus({ msofficeshare: false }, 'all');
+    this.setServerStatus();
+}
+
+function removeWebsiteUrl(group) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
+    const clearCfg = (g) => {
+        if (!g || !g.examConfig) return;
+        g.examConfig.website = {};
+    };
+    if (!section.groups || group === 'all') {
+        clearCfg(section.groupA);
+        clearCfg(section.groupB);
+    } else if (group === 'b') {
+        clearCfg(section.groupB);
+    } else {
+        clearCfg(section.groupA);
+    }
+    this.setServerStatus();
+}
+
+function removeEduvidualUrl(group) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
+    const clearCfg = (g) => {
+        if (!g || !g.examConfig) return;
+        g.examConfig.eduvidual = {};
+    };
+    if (!section.groups || group === 'all') {
+        clearCfg(section.groupA);
+        clearCfg(section.groupB);
+    } else if (group === 'b') {
+        clearCfg(section.groupB);
+    } else {
+        clearCfg(section.groupA);
+    }
+    this.setServerStatus();
+}
+
+function removeRdp(group) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
+    const clearCfg = (g) => {
+        if (!g || !g.examConfig) return;
+        g.examConfig.rdp = {};
+    };
+    if (!section.groups || group === 'all') {
+        clearCfg(section.groupA);
+        clearCfg(section.groupB);
+    } else if (group === 'b') {
+        clearCfg(section.groupB);
+    } else {
+        clearCfg(section.groupA);
+    }
+    this.setServerStatus();
+}
+
+function removeFormsUrl(group) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
+    const clearCfg = (g) => {
+        if (!g || !g.examConfig) return;
+        g.examConfig.gforms = {};
+    };
+    if (!section.groups || group === 'all') {
+        clearCfg(section.groupA);
+        clearCfg(section.groupB);
+    } else if (group === 'b') {
+        clearCfg(section.groupB);
+    } else {
+        clearCfg(section.groupA);
+    }
+    this.setServerStatus();
+}
+/**
  * RDP
  */
-async function configureRDP(){
-    let savedDomain = ''; // Store domain value before dialog closes (Electron 39 compatibility)
+async function configureRDP(presetGroup){
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    const hasGroups = !!section.groups;
+    const whoNorm = String(presetGroup || 'all').toLowerCase();
+    const activeGroup = hasGroups ? (whoNorm === 'b' ? 'b' : 'a') : 'all';
 
-    this.$swal.fire({
+    const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    const groupB = section.groupB || (section.groupB = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    if (!groupA.examConfig) groupA.examConfig = {};
+    if (!groupB.examConfig) groupB.examConfig = {};
+
+    const currentConfig = activeGroup === 'b' ? (groupB.examConfig.rdp || {}) : (groupA.examConfig.rdp || {});
+    const currentValue = currentConfig.domain || '';
+
+    const result = await this.$swal.fire({
         customClass: {
             popup: 'my-popup',
             title: 'my-title',
@@ -375,123 +689,593 @@ async function configureRDP(){
         title: this.$t("dashboard.rdp"),
         icon: 'question',
         html: `
-        <div class="my-content">
-            <span class="text">${this.$t("dashboard.rdpconfiginfo")}</span>
-            <br> <br>
-            <label>
-                <input type="text" id="domain" class="form-control my-select" placeholder="rdweb.schule.lan">
-            </label>
-            
-        </div>
+            <div class="my-content">
+                <div>${this.$t("dashboard.rdpconfiginfo")}</div>
+                <div style="position:relative; margin-top:10px;">
+                    <input id="rdpDomain" class="form-control" value="${currentValue}" placeholder="rdweb.schule.lan">
+                    <span id="rdpDomainStatus" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-weight:bold; cursor:help;"></span>
+                </div>
+            </div>
         `,
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
         didOpen: () => {
-            if (this.serverstatus.examSections[this.serverstatus.activeSection].rdpConfig) {
-                document.getElementById('domain').value = this.serverstatus.examSections[this.serverstatus.activeSection].rdpConfig.domain || ''
-            }
+            const hostEl = document.getElementById('rdpDomain');
+            const statusEl = document.getElementById('rdpDomainStatus');
+            const confirmBtn = this.$swal.getConfirmButton();
+            if (confirmBtn) confirmBtn.disabled = true;
+            const setStatus = (state) => {
+                if (!statusEl) return;
+                if (state === 'ok') {
+                    statusEl.textContent = '✓';
+                    statusEl.style.color = '#28a745';
+                    statusEl.title = this.$t('dashboard.host_ok');
+                    if (confirmBtn) confirmBtn.disabled = false;
+                } else if (state === 'warn') {
+                    statusEl.textContent = '▲';
+                    statusEl.style.color = '#ffc107';
+                    statusEl.title = this.$t('dashboard.host_warn');
+                    if (confirmBtn) confirmBtn.disabled = true;
+                } else {
+                    statusEl.textContent = '';
+                    statusEl.removeAttribute('title');
+                    if (confirmBtn) confirmBtn.disabled = true;
+                }
+            };
+            let t = null;
+            const scheduleResolve = () => {
+                const raw = hostEl?.value || '';
+                if (!raw.trim()) {
+                    setStatus('none');
+                    return;
+                }
+                if (t) clearTimeout(t);
+                t = setTimeout(async () => {
+                    try {
+                        const rawTrimmed = raw.trim();
+                        const asUrl = rawTrimmed.includes('://') ? rawTrimmed : `https://${rawTrimmed}`;
+                        const u = new URL(asUrl);
+                        const port = u.port ? Number.parseInt(u.port, 10) : (u.protocol === 'http:' ? 80 : 443);
+                        const res = await window.ipcRenderer?.invoke?.('checkHostReachable', u.hostname, port, 1500);
+                        if (!res || !res.ok) {
+                            setStatus('warn');
+                            return;
+                        }
+                        setStatus('ok');
+                    } catch (e) {
+                        setStatus('warn');
+                    }
+                }, 600);
+            };
+            hostEl?.addEventListener('input', scheduleResolve);
+            scheduleResolve();
         },
         preConfirm: () => {
-            // Save domain value before dialog closes (Electron 39 compatibility)
-            const domainElement = document.getElementById('domain');
-            savedDomain = domainElement ? domainElement.value.trim() : '';
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const domain = savedDomain; // Use saved value instead of reading from DOM
-            
-            if (!domain) {
-                this.$swal.fire({
-                    title: "Fehler",
-                    text: "Bitte geben Sie eine gültige Domain ein.",
-                    icon: "error"
-                });
-                return;
-            }
-
-            const rdpConfig = {
-                domain: domain
-            }
-
-            this.serverstatus.examSections[this.serverstatus.activeSection].rdpConfig = rdpConfig;
-            this.setServerStatus();
-        }
+            const hostEl = document.getElementById('rdpDomain');
+            const raw = String(hostEl?.value || '').trim();
+            if (!raw) return this.$t("dashboard.invalidDomain");
+            return (async () => {
+                try {
+                    const asUrl = raw.includes('://') ? raw : `https://${raw}`;
+                    const u = new URL(asUrl);
+                    const port = u.port ? Number.parseInt(u.port, 10) : (u.protocol === 'http:' ? 80 : 443);
+                    const res = await window.ipcRenderer?.invoke?.('checkHostReachable', u.hostname, port, 1500);
+                    if (!res || !res.ok) return this.$t('dashboard.host_warn');
+                    return raw;
+                } catch (e) {
+                    return this.$t('dashboard.host_warn');
+                }
+            })();
+        },
     });
+
+    if (!result.isConfirmed) return;
+
+    const raw = String(result.value || '').trim();
+    if (!raw) return;
+
+    let domain = raw;
+    let protocol = 'https';
+    try {
+        const asUrl = raw.includes('://') ? raw : `https://${raw}`;
+        const u = new URL(asUrl);
+        protocol = u.protocol === 'http:' ? 'http' : 'https';
+        domain = u.host;
+    } catch (e) {
+        domain = raw;
+    }
+
+    const nextConfig = { domain, protocol };
+
+    if (!hasGroups) {
+        groupA.examConfig.rdp = nextConfig;
+        groupB.examConfig.rdp = nextConfig;
+    } else if (activeGroup === 'b') {
+        groupB.examConfig.rdp = nextConfig;
+    } else {
+        groupA.examConfig.rdp = nextConfig;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(section, 'rdpConfig')) delete section.rdpConfig;
+    this.setServerStatus();
 }
 
 
 /**
- * LocalVM (VirtualBox VM selection)
+ * LocalVM (QEMU qcow2 selection in workdir/EXAM-TEACHER/QEMU)
  */
-async function configureLocalVM(){
+async function configureLocalVM(presetGroup){
     const ipc = window.ipcRenderer;
     if (!ipc) {
         this.$swal.fire({
             icon: 'error',
             title: 'LocalVM',
-            text: 'Local VirtualBox integration is not available in this environment.'
-        });
-        return;
-    }
-
-    let vmNames = [];
-    try {
-        vmNames = await ipc.invoke('get-vm-list');
-    } catch (error) {
-        console.error('examsetup @ configureLocalVM: get-vm-list failed', error);
-        vmNames = [];
-    }
-
-    if (!Array.isArray(vmNames) || vmNames.length === 0) {
-        this.$swal.fire({
-            icon: 'warning',
-            title: 'LocalVM',
-            text: 'Keine VirtualBox-VMs gefunden. Bitte prüfen Sie die VBoxManage-Installation.'
+            text: 'Local QEMU integration is not available in this environment.'
         });
         return;
     }
 
     const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-    const currentVmName = section.localVMConfig && section.localVMConfig.vmName ? section.localVMConfig.vmName : '';
+    const hasGroups = !!section.groups;
+    const whoNorm = String(presetGroup || 'all').toLowerCase();
+    const activeGroup = hasGroups ? (whoNorm === 'b' ? 'b' : 'a') : 'all';
+    const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    const groupB = section.groupB || (section.groupB = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
+    if (!groupA.examConfig) groupA.examConfig = {};
+    if (!groupB.examConfig) groupB.examConfig = {};
+    if (!groupA.examConfig.localvm) groupA.examConfig.localvm = {};
+    if (!groupB.examConfig.localvm) groupB.examConfig.localvm = {};
 
-    const inputOptions = vmNames.reduce((acc, name) => {
-        acc[name] = name;
-        return acc;
-    }, {});
+    let disks = [];
+    try {
+        disks = await ipc.invoke('qemu-list-disks');
+    } catch (error) {
+        console.error('examsetup @ configureLocalVM: qemu-list-disks failed', error);
+        disks = [];
+    }
 
-    let selectedVmName = currentVmName || vmNames[0];
+    let preferredDisk = null;
+    if (!Array.isArray(disks) || disks.length === 0) {
+        const firstHtml = `<div style="text-align:left;">
+            <div><b>Keine QEMU-VM gefunden</b> im Workdirectory unter <code>EXAM-TEACHER/QEMU</code>.</div>
+            <div style="margin-top:8px;">Du kannst jetzt eine VM <b>vollautomatisch installieren</b> (inkl. Download der ISOs). Das kann <b>~10 Minuten</b> dauern.</div>
+            <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-sm btn-cyan" id="qemuInstallBtn">Installieren (~10 Min)</button>
+                <button type="button" class="btn btn-sm btn-cyan" id="qemuBrowseBtn">Datei wählen…</button>
+            </div>
+            <div id="qemuHashStatus" style="margin-top:10px; font-size:0.9em; color:#6c757d;"></div>
+        </div>`;
 
-    await this.$swal.fire({
+        const result = await this.$swal.fire({
+            customClass: {
+                popup: 'my-popup',
+                title: 'my-title',
+                content: 'my-content',
+                actions: 'my-swal2-actions',
+                cancelButton: 'btn btn-cyan',
+            },
+            title: 'LocalVM',
+            icon: 'warning',
+            html: firstHtml,
+            showCancelButton: true,
+            showConfirmButton: false,
+            cancelButtonText: this.$t('dashboard.cancel'),
+            allowOutsideClick: false,
+            didOpen: () => {
+                const statusEl = document.getElementById('qemuHashStatus');
+                const browseBtn = document.getElementById('qemuBrowseBtn');
+                const installBtn = document.getElementById('qemuInstallBtn');
+
+                browseBtn?.addEventListener('click', async () => {
+                    try {
+                        if (statusEl) statusEl.textContent = 'Öffne Dateiauswahl…';
+                    } catch (e) {}
+                    try {
+                        const importRes = await ipc.invoke('qemu-pick-import-disk');
+                        if (importRes && importRes.ok && importRes.filename) {
+                            preferredDisk = importRes.filename;
+                        }
+                    } catch (e) {}
+                    try {
+                        disks = await ipc.invoke('qemu-list-disks');
+                    } catch (e) {
+                        disks = [];
+                    }
+                    if (!Array.isArray(disks) || disks.length === 0) {
+                        if (statusEl) statusEl.textContent = 'Keine qcow2 Disk gefunden.';
+                        return;
+                    }
+                    try { this.$swal.close(); } catch (e) {}
+                    setTimeout(() => { configureLocalVM.call(this, presetGroup); }, 50);
+                });
+
+                installBtn?.addEventListener('click', async () => {
+                    let onProgress = null;
+                    try {
+                        if (statusEl) statusEl.textContent = 'Starte VM-Build…';
+                    } catch (e) {}
+                    try {
+                        onProgress = (_event, payload) => {
+                            const el = document.getElementById('qemuHashStatus');
+                            if (!el) return;
+                            const phase = payload?.phase || '';
+                            const file = payload?.file || '';
+                            const pct = typeof payload?.percent === 'number' ? payload.percent : null;
+                            if (phase === 'skip' && file) {
+                                el.textContent = `${file}: bereits vorhanden`;
+                                return;
+                            }
+                            if ((phase === 'downloading' || phase === 'start' || phase === 'done') && file) {
+                                el.textContent = pct != null ? `${file}: ${pct}%` : `${file}`;
+                                return;
+                            }
+                            if (phase === 'start') {
+                                el.textContent = 'VM-Build: starte Downloads…';
+                                return;
+                            }
+                            if (phase === 'end') {
+                                el.textContent = 'VM-Build: Download fertig, starte QEMU…';
+                            }
+                        };
+                        ipc.removeAllListeners?.('qemu-install-progress');
+                        ipc.on?.('qemu-install-progress', onProgress);
+                    } catch (e) {}
+
+                    try {
+                        const res = await ipc.invoke('qemu-install-default');
+                        if (!res || res.ok !== true) {
+                            await this.$swal.fire({
+                                icon: 'error',
+                                title: 'LocalVM',
+                                text: `VM-Build konnte nicht gestartet werden: ${res?.error || 'unbekannter Fehler'}`,
+                            });
+                            return;
+                        }
+                    } catch (e) {
+                        await this.$swal.fire({
+                            icon: 'error',
+                            title: 'LocalVM',
+                            text: `VM-Build konnte nicht gestartet werden: ${String(e?.message || e)}`,
+                        });
+                        return;
+                    } finally {
+                        try {
+                            if (onProgress) {
+                                ipc.removeListener?.('qemu-install-progress', onProgress);
+                            }
+                        } catch (e) {}
+                    }
+
+                    try { this.$swal.close(); } catch (e) {}
+                    setTimeout(() => { configureLocalVM.call(this, presetGroup); }, 50);
+                });
+            },
+        });
+
+        if (!result.isDismissed) {
+            return;
+        }
+
+        return;
+    }
+
+    const currentDisk =
+        activeGroup === 'b'
+            ? (groupB.examConfig.localvm.qcow2Name || '')
+            : (groupA.examConfig.localvm.qcow2Name || '');
+    const currentBlockInternet =
+        activeGroup === 'b'
+            ? !!groupB.examConfig.localvm.blockInternet
+            : !!groupA.examConfig.localvm.blockInternet;
+    const currentCalculateSha256 =
+        activeGroup === 'b'
+            ? (groupB.examConfig.localvm.calculateSha256 === true)
+            : (groupA.examConfig.localvm.calculateSha256 === true);
+
+    let selectedDisk =
+        preferredDisk && disks.includes(preferredDisk)
+            ? preferredDisk
+            : (currentDisk && disks.includes(currentDisk) ? currentDisk : (disks[0] || ''));
+
+    const rowsHtml = disks.map((d) => {
+        const raw = String(d);
+        const safeLabel = raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        const encoded = encodeURIComponent(raw);
+        const isActive = raw === selectedDisk;
+        return `<div class="qemu-row" style="display:flex; align-items:center; gap:8px; margin:6px 0;">
+            <button
+                type="button"
+                class="btn btn-sm ${isActive ? 'btn-teal' : 'btn-outline-secondary'} qemu-select"
+                data-qemu-select="${encoded}"
+                title="${safeLabel}"
+                style="flex:1; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
+            >
+                ${safeLabel}
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-qemu-boot="${encoded}">Boot</button>
+        </div>`;
+    }).join('');
+
+    const html = `<div class="my-content" style="text-align:left; padding:0px!important;">
+        <div style="padding:0px; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(255,255,255,0.03);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-end; gap:10px;">
+                <div>
+                    <div style="font-weight:700; margin-bottom:2px;">QEMU Disks</div>
+                    <div style="font-size:0.85em; color:#6c757d;"><code>EXAM-TEACHER/QEMU</code></div>
+                </div>
+                <div style="font-size:0.8em; color:#6c757d;">Auswahl: <span id="qemuSelectedLabel">${selectedDisk ? String(selectedDisk).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;') : '-'}</span></div>
+            </div>
+            <div style="margin-top:10px;" id="qemuDiskList">
+                ${rowsHtml || '<div class="text-muted">Keine Disks gefunden.</div>'}
+            </div>
+        </div>
+
+        <div style="margin:4px 0; height:1px; background:rgba(255,255,255,0.08);"></div>
+
+        <div style="padding:0; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(255,255,255,0.03);">
+            <div style="font-weight:700; margin-bottom:8px;">Erweitert</div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                <label for="qemuBlockInternet" style="margin:0; font-size:0.85em;">Internet in der VM blockieren</label>
+                <label class="form-check form-switch" style="margin:0;">
+                    <input class="form-check-input" type="checkbox" role="switch" id="qemuBlockInternet" ${currentBlockInternet ? 'checked' : ''}>
+                </label>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:8px;">
+                <label for="qemuCalculateSha256" style="margin:0; font-size:0.85em;">
+                    SHA256 Hash überprüfen
+                    <span
+                        title="Wenn diese Option deaktiviert ist wird die VM Integrität über die Dateigrösse kontrolliert"
+                        style="margin-left:6px; color:#6c757d; cursor:help; font-weight:700;"
+                    >i</span>
+                </label>
+                <label class="form-check form-switch" style="margin:0;">
+                    <input class="form-check-input" type="checkbox" role="switch" id="qemuCalculateSha256" ${currentCalculateSha256 ? 'checked' : ''}>
+                </label>
+            </div>
+        </div>
+
+        <div style="margin:4px 0; height:1px; background:rgba(255,255,255,0.08);"></div>
+
+        <div style="padding:0; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(255,255,255,0.03);">
+            <div style="font-weight:700; margin-bottom:8px;">Aktionen</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" class="btn btn-sm btn-cyan" id="qemuBrowseBtn">Dateisystem durchsuchen…</button>
+                <button type="button" class="btn btn-sm btn-cyan" id="qemuInstallBtn">Neue VM bauen (~10 Min)</button>
+            </div>
+            <div id="qemuHashStatus" style="margin-top:8px; font-size:0.85em; color:#6c757d;"></div>
+        </div>
+    </div>`;
+
+    const pick = await this.$swal.fire({
         customClass: {
             popup: 'my-popup',
             title: 'my-title',
             content: 'my-content',
-            input: 'my-custom-input-select',
             actions: 'my-swal2-actions'
         },
-        title: 'LocalVM',
+        title: hasGroups ? `LocalVM – Gruppe ${activeGroup.toUpperCase()}` : 'LocalVM – Gruppe AB',
         icon: 'question',
-        input: 'select',
-        inputOptions,
-        inputValue: selectedVmName,
+        html,
         showCancelButton: true,
         cancelButtonText: this.$t('dashboard.cancel'),
-        preConfirm: (value) => {
-            selectedVmName = value || '';
-            if (!selectedVmName) {
-                return 'Bitte wählen Sie eine VM aus.';
+        showLoaderOnConfirm: true,
+        backdrop: true,
+        allowOutsideClick: () => !this.$swal.isLoading(),
+        preConfirm: async () => {
+            const blockInternet = !!document.getElementById('qemuBlockInternet')?.checked;
+            const calculateSha256 = !!document.getElementById('qemuCalculateSha256')?.checked;
+            try {
+                const statusEl = document.getElementById('qemuHashStatus');
+                if (statusEl) statusEl.textContent = calculateSha256 ? 'Berechne SHA-256…' : 'Prüfe Dateigröße…';
+            } catch (e) {}
+            try {
+                const list = document.getElementById('qemuDiskList');
+                const activeBtn = list?.querySelector?.('button.btn-teal[data-qemu-select]');
+                const enc = activeBtn?.getAttribute?.('data-qemu-select');
+                const diskName = enc ? decodeURIComponent(enc) : '';
+                if (diskName) {
+                    selectedDisk = diskName;
+                }
+            } catch (e) {}
+            if (!selectedDisk) {
+                return 'Please select a disk.';
             }
-            return true;
+            let sizeBytes = null;
+            try {
+                const statRes = await ipc.invoke('qemu-stat-disk', { qcow2Name: selectedDisk });
+                sizeBytes = statRes && statRes.ok ? statRes.size : null;
+            } catch (e) {
+                sizeBytes = null;
+            }
+            if (typeof sizeBytes !== 'number' || !Number.isFinite(sizeBytes) || sizeBytes <= 0) {
+                return 'Konnte Dateigröße der qcow2 Disk nicht ermitteln.';
+            }
+            if (!calculateSha256) {
+                return { selectedDisk, sha256: null, sizeBytes, blockInternet, calculateSha256: false };
+            }
+            try {
+                const hashRes = await ipc.invoke('qemu-hash-disk', { qcow2Name: selectedDisk });
+                const sha256 = hashRes && hashRes.ok ? hashRes.sha256 : null;
+                if (!sha256) {
+                    return 'Konnte SHA-256 Hash der qcow2 Disk nicht berechnen.';
+                }
+                return { selectedDisk, sha256, sizeBytes, blockInternet, calculateSha256: true };
+            } catch (e) {
+                return 'Konnte SHA-256 Hash der qcow2 Disk nicht berechnen.';
+            }
+        },
+        didOpen: () => {
+            const list = document.getElementById('qemuDiskList');
+            list?.addEventListener('click', async (ev) => {
+                const selBtn = ev?.target?.closest?.('button[data-qemu-select]');
+                if (selBtn) {
+                    const enc = selBtn.getAttribute('data-qemu-select');
+                    const diskName = enc ? decodeURIComponent(enc) : '';
+                    if (diskName) {
+                        selectedDisk = diskName;
+                        const label = document.getElementById('qemuSelectedLabel');
+                        if (label) label.textContent = diskName;
+                        const all = list.querySelectorAll('button[data-qemu-select]');
+                        all.forEach((b) => {
+                            b.classList.remove('btn-teal');
+                            b.classList.add('btn-outline-secondary');
+                        });
+                        selBtn.classList.remove('btn-outline-secondary');
+                        selBtn.classList.add('btn-teal');
+                    }
+                    return;
+                }
+                const btn = ev?.target?.closest?.('button[data-qemu-boot]');
+                if (!btn) return;
+                const enc = btn.getAttribute('data-qemu-boot');
+                const diskName = enc ? decodeURIComponent(enc) : '';
+                if (!diskName) return;
+                try {
+                    await ipc.invoke('qemu-boot-disk', { qcow2Name: diskName });
+                } catch (e) {}
+            });
+            const browseBtn = document.getElementById('qemuBrowseBtn');
+            browseBtn?.addEventListener('click', async () => {
+                let imported = null;
+                const statusEl = document.getElementById('qemuHashStatus');
+                if (statusEl) statusEl.textContent = 'Importiere qcow2…';
+                try {
+                    const importRes = await ipc.invoke('qemu-pick-import-disk');
+                    if (importRes && importRes.ok && importRes.filename) {
+                        imported = importRes.filename;
+                    }
+                } catch (e) {}
+                if (!imported) {
+                    if (statusEl) statusEl.textContent = '';
+                    return;
+                }
+                try {
+                    disks = await ipc.invoke('qemu-list-disks');
+                } catch (e) {
+                    disks = [];
+                }
+
+                if (!Array.isArray(disks) || disks.length === 0) {
+                    if (statusEl) statusEl.textContent = 'Import abgeschlossen, aber keine qcow2 Disk gefunden.';
+                    return;
+                }
+
+                selectedDisk = disks.includes(imported) ? imported : (disks[0] || imported);
+
+                const listEl = document.getElementById('qemuDiskList');
+                if (listEl) {
+                    const rows = disks.map((d) => {
+                        const raw = String(d);
+                        const safeLabel = raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+                        const encoded = encodeURIComponent(raw);
+                        const isActive = raw === selectedDisk;
+                        return `<div class="qemu-row" style="display:flex; align-items:center; gap:8px; margin:6px 0;">
+                            <button
+                                type="button"
+                                class="btn btn-sm ${isActive ? 'btn-teal' : 'btn-outline-secondary'} qemu-select"
+                                data-qemu-select="${encoded}"
+                                title="${safeLabel}"
+                                style="flex:1; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
+                            >
+                                ${safeLabel}
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-qemu-boot="${encoded}">Boot</button>
+                        </div>`;
+                    }).join('');
+                    listEl.innerHTML = rows || '<div class="text-muted">Keine Disks gefunden.</div>';
+                }
+                const label = document.getElementById('qemuSelectedLabel');
+                if (label) label.textContent = selectedDisk;
+                if (statusEl) statusEl.textContent = '';
+            });
+            const installBtn = document.getElementById('qemuInstallBtn');
+            installBtn?.addEventListener('click', async () => {
+                try {
+                    const statusEl = document.getElementById('qemuHashStatus');
+                    if (statusEl) statusEl.textContent = 'Starte VM-Build…';
+                } catch (e) {}
+                let onProgress = null;
+                try {
+                    onProgress = (_event, payload) => {
+                        const statusEl = document.getElementById('qemuHashStatus');
+                        if (!statusEl) return;
+                        const phase = payload?.phase || '';
+                        const file = payload?.file || '';
+                        const pct = typeof payload?.percent === 'number' ? payload.percent : null;
+                        if (phase === 'skip' && file) {
+                            statusEl.textContent = `${file}: bereits vorhanden`;
+                            return;
+                        }
+                        if ((phase === 'downloading' || phase === 'start' || phase === 'done') && file) {
+                            statusEl.textContent = pct != null ? `${file}: ${pct}%` : `${file}`;
+                            return;
+                        }
+                        if (phase === 'start') {
+                            statusEl.textContent = 'VM-Build: starte Downloads…';
+                            return;
+                        }
+                        if (phase === 'end') {
+                            statusEl.textContent = 'VM-Build: Download fertig, starte QEMU…';
+                        }
+                    };
+                    ipc.removeAllListeners?.('qemu-install-progress');
+                    ipc.on?.('qemu-install-progress', onProgress);
+                } catch (e) {}
+                try {
+                    const res = await ipc.invoke('qemu-install-default');
+                    if (!res || res.ok !== true) {
+                        await this.$swal.fire({
+                            icon: 'error',
+                            title: 'LocalVM',
+                            text: `VM-Build konnte nicht gestartet werden: ${res?.error || 'unbekannter Fehler'}`,
+                        });
+                        return;
+                    }
+                } catch (e) {
+                    await this.$swal.fire({
+                        icon: 'error',
+                        title: 'LocalVM',
+                        text: `VM-Build konnte nicht gestartet werden: ${String(e?.message || e)}`,
+                    });
+                    return;
+                } finally {
+                    try {
+                        if (onProgress) {
+                            ipc.removeListener?.('qemu-install-progress', onProgress);
+                        }
+                    } catch (e) {}
+                }
+                try { this.$swal.close(); } catch (e) {}
+                setTimeout(() => { configureLocalVM.call(this, presetGroup); }, 50);
+            });
         }
-    }).then((result) => {
-        if (!result.isConfirmed) {
-            return;
-        }
-        section.localVMConfig = {
-            vmName: selectedVmName
-        };
-        this.setServerStatus();
     });
+    if (!pick.isConfirmed) return;
+
+    const finalDisk = pick.value?.selectedDisk || selectedDisk;
+    const calculateSha256 = pick.value?.calculateSha256 === true;
+    const sha256 = calculateSha256 ? (pick.value?.sha256 || null) : null;
+    const sizeBytes = pick.value?.sizeBytes ?? null;
+    const blockInternet = !!pick.value?.blockInternet;
+    if (!finalDisk || (typeof sizeBytes !== 'number' || !Number.isFinite(sizeBytes) || sizeBytes <= 0) || (calculateSha256 && !sha256)) {
+        await this.$swal.fire({
+            icon: 'error',
+            title: 'LocalVM',
+            text: calculateSha256 ? 'Konnte SHA-256 Hash der qcow2 Disk nicht berechnen.' : 'Konnte Dateigröße der qcow2 Disk nicht ermitteln.'
+        });
+        return;
+    }
+
+    const nextCfg = { qcow2Name: finalDisk, vncPort: 5901, calculateSha256, qcow2Sha256: sha256, qcow2SizeBytes: sizeBytes, blockInternet };
+    if (!hasGroups) {
+        groupA.examConfig.localvm = nextCfg;
+        groupB.examConfig.localvm = { ...nextCfg };
+    } else if (activeGroup === 'b') {
+        groupB.examConfig.localvm = nextCfg;
+    } else {
+        groupA.examConfig.localvm = nextCfg;
+    }
+    this.setServerStatus();
 }
 
 
@@ -519,6 +1303,10 @@ async function configureEditor(){
         marginValueDisplay.textContent = marginValueInput.value;
     };
 
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    const { groupA } = ensureEditorExamConfig(section);
+    const cfg = groupA.examConfig.editor || {};
+
     const { value: language } = await this.$swal.fire({
         customClass: {
             popup: 'my-popup-sprachen',
@@ -534,8 +1322,8 @@ async function configureEditor(){
             <div>
                 <label >
                     <h6>${this.$t("dashboard.cmargin-value")}</h6>
-                    <input style="width:100px" type="range" id="marginValue" name="margin_value" min="2" max="5" step="0.5" value="${this.serverstatus.examSections[this.serverstatus.activeSection].cmargin.size}" />
-                    <div style="width:32px; display: inline-block"  id="marginValueDisplay">${this.serverstatus.examSections[this.serverstatus.activeSection].cmargin.size}</div>(cm)
+                    <input style="width:100px" type="range" id="marginValue" name="margin_value" min="2" max="5" step="0.5" value="${cfg.cmargin?.size ?? 3}" />
+                    <div style="width:32px; display: inline-block"  id="marginValueDisplay">${cfg.cmargin?.size ?? 3}</div>(cm)
                 </label>
                 <br>
                 <label>
@@ -615,42 +1403,42 @@ async function configureEditor(){
         didOpen: () => {
             const marginValueInput = document.getElementById('marginValue');
             marginValueInput.addEventListener('input', updateMarginValueDisplay);
-            document.getElementById('checkboxLT').checked = this.serverstatus.examSections[this.serverstatus.activeSection].languagetool
-            document.getElementById('checkboxsuggestions').checked = this.serverstatus.examSections[this.serverstatus.activeSection].suggestions
-            document.getElementById('audiorepeat').value = this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat
+            document.getElementById('checkboxLT').checked = !!cfg.languagetool
+            document.getElementById('checkboxsuggestions').checked = !!cfg.suggestions
+            document.getElementById('audiorepeat').value = String(cfg.audioRepeat ?? '0')
             
-            // Setze den Radio-Button für linespacing
-            const linespacing = this.serverstatus.examSections[this.serverstatus.activeSection].linespacing;
+            // Set the radio button for linespacing
+            const linespacing = String(cfg.linespacing ?? '2');
             const radioButton = document.querySelector(`input[name="linespacing"][value="${linespacing}"]`);
             if (radioButton) {
                 radioButton.checked = true;
             }
 
-            // Setze den Radio-Button für fontfamily
-            const fontfamily = this.serverstatus.examSections[this.serverstatus.activeSection].fontfamily;
+            // Set the radio button for fontfamily
+            const fontfamily = String(cfg.fontfamily ?? 'sans-serif');
             const fontfamilyRadioButton = document.querySelector(`input[name="fontfamily"][value="${fontfamily}"]`);
             if (fontfamilyRadioButton) {
                 fontfamilyRadioButton.checked = true;
             }
 
-            // Setze den Radio-Button für correction_margin
-            const correctionMargin = this.serverstatus.examSections[this.serverstatus.activeSection].cmargin.side;
+            // Set the radio button for correction_margin
+            const correctionMargin = String(cfg.cmargin?.side ?? 'right');
             const correctionMarginRadioButton = document.querySelector(`input[name="correction_margin"][value="${correctionMargin}"]`);
             if (correctionMarginRadioButton) {
                 correctionMarginRadioButton.checked = true;
             }
 
-            // Setze den Wert für die Sprache
-            const language = this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang;
+            // Set the value for the language
+            const language = String(cfg.spellchecklang ?? 'de-DE');
             const selectElement = document.querySelector('.swal2-select');
             if (selectElement) {
-                // Verzögerung beim Setzen des Werts
+                // delay when setting the value
                 setTimeout(() => {
                     selectElement.value = language;
                 }, 100);
             }
 
-            const defaultFontSize = this.serverstatus.examSections[this.serverstatus.activeSection].fontsize || '12pt';
+            const defaultFontSize = String(cfg.fontsize || '12pt');
             // console.log("defaultFontSize:", defaultFontSize)
             const selectElement2 = document.getElementById('fontsize');
             if (selectElement2) {
@@ -669,8 +1457,8 @@ async function configureEditor(){
             const hostStatus = document.getElementById('languagetoolhostStatus');
             
             // Initialize LanguageTool host and port fields
-            const savedHost = this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost;
-            const savedPort = this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolport;
+            const savedHost = cfg.languagetoolhost;
+            const savedPort = cfg.languagetoolport;
             
             // Set default values or saved values
             if (savedHost) {
@@ -701,11 +1489,11 @@ async function configureEditor(){
                 if (state === 'ok') {
                     hostStatus.textContent = '✓';
                     hostStatus.style.color = '#28a745';
-                    hostStatus.title = this.$t('dashboard.host_ok') || 'Host erfolgreich aufgelöst';
+                    hostStatus.title = this.$t('dashboard.host_ok');
                 } else if (state === 'warn') {
                     hostStatus.textContent = '▲';
                     hostStatus.style.color = '#ffc107';
-                    hostStatus.title = this.$t('dashboard.host_warn') || 'Host konnte nicht aufgelöst werden';
+                    hostStatus.title = this.$t('dashboard.host_warn');
                 } else {
                     hostStatus.textContent = '';
                     hostStatus.removeAttribute('title');
@@ -725,11 +1513,11 @@ async function configureEditor(){
                 }
             }
             
-            // Event Listener für checkboxLT, um den Status von checkboxsuggestions und checkboxCustomHost anzupassen
+            // Event listener for checkboxLT to adjust the state of checkboxsuggestions and checkboxCustomHost
             checkboxLT.addEventListener('change', () => {
                 checkboxSuggestions.disabled = !checkboxLT.checked;
                 checkboxCustomHost.disabled = !checkboxLT.checked;
-                // Wenn checkboxLT abgewählt wird, sollen suggestions und custom host zusätzlich zurückgesetzt werden:
+                // When checkboxLT is unchecked, suggestions and custom host should also be reset:
                 if (!checkboxLT.checked) {
                     checkboxSuggestions.checked = false;
                     checkboxCustomHost.checked = false;
@@ -742,7 +1530,7 @@ async function configureEditor(){
                 }
             });
             
-            // Event Listener für checkboxCustomHost, um das Textinput zu aktivieren/deaktivieren
+            // Event listener for checkboxCustomHost to enable/disable the text input
             checkboxCustomHost.addEventListener('change', () => {
                 const enabled = checkboxCustomHost.checked;
                 languagetoolhostInput.disabled = !enabled;
@@ -757,7 +1545,7 @@ async function configureEditor(){
                 }
             });
 
-            // DNS-Check während der Dialog offen ist (debounced)
+            // DNS check while the dialog is open (debounced)
             let ltResolveTimeout = null;
             const scheduleResolve = () => {
                 if (!checkboxCustomHost.checked || languagetoolhostInput.disabled) {
@@ -794,7 +1582,7 @@ async function configureEditor(){
 
             if (languagetoolhostInput) {
                 languagetoolhostInput.addEventListener('input', scheduleResolve);
-                // Initialen Check für Default-Wert nur, wenn Custom Host aktiv ist
+                // Initial check for default value only when custom host is active
                 if (checkboxCustomHost.checked) {
                     scheduleResolve();
                 }
@@ -823,8 +1611,9 @@ async function configureEditor(){
             const audioRepeatElement = document.getElementById('audiorepeat');
             const fontSizeElement = document.getElementById('fontsize');
 
-            this.serverstatus.examSections[this.serverstatus.activeSection].suggestions = checkboxSuggestionsElement ? checkboxSuggestionsElement.checked : false; 
-            this.serverstatus.examSections[this.serverstatus.activeSection].languagetool = checkboxLTElement ? checkboxLTElement.checked : false;
+            const patch = {};
+            patch.suggestions = checkboxSuggestionsElement ? checkboxSuggestionsElement.checked : false;
+            patch.languagetool = checkboxLTElement ? checkboxLTElement.checked : false;
             
             // Save LanguageTool host (as resolved IP) and port values if custom host checkbox is checked
             if (checkboxCustomHostElement && checkboxCustomHostElement.checked && languagetoolhostElement) {
@@ -832,15 +1621,15 @@ async function configureEditor(){
                 const protocolMatch = rawHost.match(/^(https?:\/\/)/i);
                 const protocol = protocolMatch ? protocolMatch[1] : 'http://';
                 const hostForConfig = resolvedLtIp ? `${protocol}${resolvedLtIp}` : rawHost;
-                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost = hostForConfig;
+                patch.languagetoolhost = hostForConfig;
                 if (languagetoolportElement && languagetoolportElement.value) {
-                    this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolport = languagetoolportElement.value;
+                    patch.languagetoolport = languagetoolportElement.value;
                 } else {
-                    this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolport = '8088';
+                    patch.languagetoolport = '8088';
                 }
             } else {
-                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolhost = null;
-                this.serverstatus.examSections[this.serverstatus.activeSection].languagetoolport = null;
+                patch.languagetoolhost = null;
+                patch.languagetoolport = null;
             } 
 
             const radioButtons = document.querySelectorAll('input[name="correction_margin"]');
@@ -872,33 +1661,165 @@ async function configureEditor(){
             });
 
             if (marginValue && selectedMargin) {
-                this.serverstatus.examSections[this.serverstatus.activeSection].cmargin = {
+                patch.cmargin = {
                     side: selectedMargin,
                     size: parseFloat(marginValue)
                 }
-               // console.log( this.serverstatus.cmargin)
             }
 
+            patch.linespacing = selectedSpacing
+            patch.fontfamily = selectedFont
+            patch.fontsize = fontSize
+            patch.audioRepeat = audioRepeat
 
-            this.serverstatus.examSections[this.serverstatus.activeSection].linespacing = selectedSpacing
-            this.serverstatus.examSections[this.serverstatus.activeSection].fontfamily = selectedFont
-            this.serverstatus.examSections[this.serverstatus.activeSection].fontsize = fontSize
-            this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat = audioRepeat
+            const selectEl = document.querySelector('.swal2-select');
+            const spellchecklang = selectEl ? String(selectEl.value || '') : '';
+            patch.spellchecklang = spellchecklang || 'de-DE';
+            if (patch.spellchecklang === 'none') {
+                patch.languagetool = false;
+                patch.suggestions = false;
+                patch.languagetoolhost = null;
+                patch.languagetoolport = null;
+            }
+
+            setEditorExamConfigPatch.call(this, patch);
         }
     })
-    if (language) {
-        this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang = language
-        if (language === 'none'){this.serverstatus.examSections[this.serverstatus.activeSection].languagetool = false}
-    }  
-    else {
-        this.serverstatus.examSections[this.serverstatus.activeSection].spellchecklang = 'de-DE'
-    }
-
-    this.setServerStatus()
+    if (!language) return;
 }   
 
+function setEditorExamConfigPatch(patch) {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
 
+    const { groupA, groupB } = ensureEditorExamConfig(section);
+    const prev = groupA.examConfig.editor || {};
+    const next = { ...prev, ...patch };
+    if (Object.prototype.hasOwnProperty.call(next, 'cmargin')) {
+        next.cmargin = { side: 'right', size: next.cmargin?.size ?? 3 };
+    }
 
+    groupA.examConfig.editor = next;
+    const templateB = groupB.examConfig.editor?.editorTemplate;
+    if (section.groups) {
+        groupB.examConfig.editor = { ...next, editorTemplate: templateB !== undefined ? templateB : next.editorTemplate };
+    } else {
+        groupB.examConfig.editor = { ...next };
+    }
+
+    this.backupinterval.stop();
+    this.autobackup = false;
+    this.setServerStatus();
+}
+
+async function configureCustomLanguageToolHost() {
+    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
+    if (!section) return;
+
+    const { groupA } = ensureEditorExamConfig(section);
+    const cfg = groupA.examConfig.editor || {};
+
+    let resolvedLtIp = null;
+    const inputHost = (cfg.languagetoolhost || '').toString();
+    const inputPort = (cfg.languagetoolport || '8088').toString();
+
+    const result = await this.$swal.fire({
+        title: this.$t('dashboard.customhost'),
+        icon: 'question',
+        html: `
+            <div class="my-content" style="text-align:left; margin:0 12px;">
+                <label class="form-label">${this.$t('dashboard.host')}</label>
+                <div style="position:relative;">
+                    <input id="ltHost" class="form-control" value="${inputHost || ''}" placeholder="http://host-or-ip">
+                    <span id="ltHostStatus" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-weight:bold; cursor:help;"></span>
+                </div>
+                <label class="form-label" style="margin-top:8px;">${this.$t('dashboard.port')}</label>
+                <input id="ltPort" class="form-control" value="${inputPort}" placeholder="8088">
+            </div>
+        `,
+        showCancelButton: true,
+        cancelButtonText: this.$t('dashboard.cancel'),
+        confirmButtonText: this.$t('dashboard.save'),
+        didOpen: () => {
+            const hostEl = document.getElementById('ltHost');
+            const statusEl = document.getElementById('ltHostStatus');
+            const setStatus = (state) => {
+                if (!statusEl) return;
+                if (state === 'ok') {
+                    statusEl.textContent = '✓';
+                    statusEl.style.color = '#28a745';
+                    statusEl.title = this.$t('dashboard.host_ok');
+                } else if (state === 'warn') {
+                    statusEl.textContent = '▲';
+                    statusEl.style.color = '#ffc107';
+                    statusEl.title = this.$t('dashboard.host_warn');
+                } else {
+                    statusEl.textContent = '';
+                    statusEl.removeAttribute('title');
+                }
+            };
+            let t = null;
+            const scheduleResolve = () => {
+                const raw = hostEl?.value || '';
+                if (!raw.trim()) {
+                    resolvedLtIp = null;
+                    setStatus('none');
+                    return;
+                }
+                if (t) clearTimeout(t);
+                t = setTimeout(async () => {
+                    try {
+                        const hostOnly = raw.trim().replace(/^https?:\/\//i, '').split('/')[0];
+                        const res = await window.ipcRenderer?.invoke?.('resolveHostToIp', hostOnly);
+                        if (!res || !res.ok || !res.ip) {
+                            resolvedLtIp = null;
+                            setStatus('warn');
+                            return;
+                        }
+                        resolvedLtIp = res.ip;
+                        setStatus('ok');
+                    } catch (e) {
+                        resolvedLtIp = null;
+                        setStatus('warn');
+                    }
+                }, 600);
+            };
+            hostEl?.addEventListener('input', scheduleResolve);
+            scheduleResolve();
+        },
+        preConfirm: () => {
+            const hostEl = document.getElementById('ltHost');
+            const portEl = document.getElementById('ltPort');
+            const rawHost = (hostEl?.value || '').trim();
+            const rawPort = (portEl?.value || '').trim();
+            if (!rawHost) return this.$t('dashboard.host_required');
+            if (rawPort && !/^\d+$/.test(rawPort)) return this.$t('dashboard.port_invalid');
+            return true;
+        },
+    });
+
+    if (!result.isConfirmed) return;
+
+    const hostEl = document.getElementById('ltHost');
+    const portEl = document.getElementById('ltPort');
+    const rawHost = (hostEl?.value || '').trim();
+    const rawPort = (portEl?.value || '').trim();
+    const protocolMatch = rawHost.match(/^(https?:\/\/)/i);
+    const protocol = protocolMatch ? protocolMatch[1] : 'http://';
+    const hostForConfig = resolvedLtIp ? `${protocol}${resolvedLtIp}` : rawHost;
+
+    setEditorExamConfigPatch.call(this, {
+        languagetoolhost: hostForConfig,
+        languagetoolport: rawPort || '8088',
+    });
+}
+
+function removeCustomLanguageToolHost() {
+    setEditorExamConfigPatch.call(this, {
+        languagetoolhost: null,
+        languagetoolport: null,
+    });
+}
 
 // Helper functions
 
@@ -929,27 +1850,27 @@ function isValidMoodleDomainName(url) {
 
 function isValidFullDomainName(str) {
     try {
-        // const urlString = str.includes('://') ? str : 'https://' + str; // Entfernt: Kein automatisches Hinzufügen von https://
-        const urlString = str; // Nutzt den String direkt
-        const url = new URL(urlString); // Erzeugt einen Fehler, wenn das Protokoll fehlt
-        
-        // Prüfe ob Protokoll korrekt ist
+        // const urlString = str.includes('://') ? str : 'https://' + str; // Removed: no automatic prepending of https://
+        const urlString = str; // use the string directly
+        const url = new URL(urlString); // throws an error if the protocol is missing
+
+        // Check whether the protocol is correct
         if (url.protocol !== 'http:' && url.protocol !== 'https:') {
             return false;
         }
 
-        // Prüfe ob Host vorhanden und gültig ist
+        // Check whether host is present and valid
         if (!url.hostname || url.hostname.length < 1) {
             return false;
         }
 
-        // Prüfe ob Host mindestens einen gültigen Domain-Teil enthält
+        // Check whether host contains at least one valid domain part
         const parts = url.hostname.split('.');
         if (parts.length < 2) {
             return false;
         }
 
-        // Prüfe ob jeder Domain-Teil gültig ist
+        // Check whether every domain part is valid
         const validPart = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/;
         return parts.every(part => 
             part.length > 0 && 
@@ -958,7 +1879,7 @@ function isValidFullDomainName(str) {
         );
 
     } catch (e) {
-        // Fängt den Fehler der new URL(urlString) ab, wenn das Protokoll fehlt (z.B. bei 'classtime.com')
+        // Catches the error from new URL(urlString) when the protocol is missing (e.g. 'classtime.com')
         return false;
     }
 }
@@ -968,21 +1889,25 @@ function isValidFullDomainName(str) {
 
 /**
  * define materials for exam
- * für jeden prüfungsabschnitt können materialien festgelegt werden die während der prüfung verfügbar sein sollen
- * diese werden bei prüfungsbeginn auf die clients verteilt bzw. beim start des entsprechenden abschnitts auf die clients verteilt
- * @param {*} who ist in diesem fall immer "all"
+ * materials can be defined for each exam section that should be available during the exam
+ * these are distributed to clients at the start of the exam or at the start of the corresponding section
+ * @param {string} who "all" (select group) | "a" | "b" (target group predefined)
  * @returns 
  */
 function defineMaterials(who) {
+    const hasGroups = !!this.serverstatus.examSections[this.serverstatus.activeSection].groups;
+    const whoNorm = String(who || 'all').toLowerCase();
+    const presetGroup = whoNorm === 'b' ? 'b' : whoNorm === 'a' ? 'a' : 'all';
+
     let htmlcontent = `<div class="my-content"> 
         ${this.$t("dashboard.filesendtext")} <br>
-        <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
+        <span style="font-size:0.8em;">(.pdf, .docx, .odt, .htm, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
         </div>`
 
-    if (this.serverstatus.examSections[this.serverstatus.activeSection].groups && who == "all") {
+    if (hasGroups && presetGroup === "all") {
         htmlcontent = `<div class="my-content"> 
             ${this.$t("dashboard.filesendtext")} <br>
-            <span style="font-size:0.8em;">(.pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
+            <span style="font-size:0.8em;">(.pdf, .docx, .odt, .htm, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb)</span>
             <br>  <br> 
             Gruppe<br>
             <button id="fbtnA" class="swal2-button btn btn-cyan m-2" style="width: 42px; height: 42px;">A</button>
@@ -1004,7 +1929,7 @@ function defineMaterials(who) {
         </div>
     </div>`
          
-    let activeGroup = "a"  // prinzipiell ist jeder user automatisch in der gruppe a
+    let activeGroup = hasGroups ? (presetGroup === "all" ? "a" : presetGroup) : "a"
     let savedAllowedUrl = ''; // Store allowedURL value before dialog closes (Electron 39 compatibility)
     let savedBlockSubdomains = false;
     let savedBlockSubfolders = false;
@@ -1031,7 +1956,7 @@ function defineMaterials(who) {
             id: "swalFile",
             class: "form-control",
             multiple: "multiple",
-            accept: ".pdf, .docx, .bak, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb"
+            accept: ".pdf, .docx, .odt, .htm, .ogg, .wav, .mp3, .jpg, .png, .gif, .ggb"
         },
         didRender: () => {
             const btnA = document.getElementById('fbtnA');
@@ -1039,27 +1964,27 @@ function defineMaterials(who) {
             const btnC = document.getElementById('fbtnC');
             if (btnA && !btnA.dataset.listenerAdded) {
                 btnA.addEventListener('click', () => {
-                    btnA.style.filter = "grayscale(0%)"
-                    btnB.style.filter = "grayscale(90%)"
-                    btnC.style.filter = "grayscale(90%)"
+                    if (btnA) btnA.style.filter = "grayscale(0%)"
+                    if (btnB) btnB.style.filter = "grayscale(90%)"
+                    if (btnC) btnC.style.filter = "grayscale(90%)"
                     activeGroup = "a"
                 });
                 btnA.dataset.listenerAdded = 'true';
             }
             if (btnB && !btnB.dataset.listenerAdded) {
                 btnB.addEventListener('click', () => {
-                    btnA.style.filter = "grayscale(90%)"
-                    btnB.style.filter = "grayscale(0%)"
-                    btnC.style.filter = "grayscale(90%)"
+                    if (btnA) btnA.style.filter = "grayscale(90%)"
+                    if (btnB) btnB.style.filter = "grayscale(0%)"
+                    if (btnC) btnC.style.filter = "grayscale(90%)"
                     activeGroup = "b"
                 });
                 btnB.dataset.listenerAdded = 'true';
             }
             if (btnC && !btnC.dataset.listenerAdded) {
                 btnC.addEventListener('click', () => {
-                    btnA.style.filter = "grayscale(90%)"
-                    btnB.style.filter = "grayscale(90%)"
-                    btnC.style.filter = "grayscale(0%)"
+                    if (btnA) btnA.style.filter = "grayscale(90%)"
+                    if (btnB) btnB.style.filter = "grayscale(90%)"
+                    if (btnC) btnC.style.filter = "grayscale(0%)"
                     activeGroup = "all"
                 });
                 btnC.dataset.listenerAdded = 'true';
@@ -1196,7 +2121,8 @@ function determineFiletype(file, filename) {
     let filetype = "";
     if (file && file.type) {
         if (file.type.includes("pdf")) { filetype = "pdf"; }
-        else if (file.type.includes("bak")) { filetype = "bak"; }
+        else if (file.type.includes("html")) { filetype = "htm"; }
+        else if (file.type.includes("opendocument.text")) { filetype = "odt"; }
         else if (file.type.includes("openxml")) { filetype = "docx"; }
         else if (file.type.includes("ggb")) { filetype = "ggb"; }
         else if (file.type.includes("audio") || file.type.includes("ogg") || file.type.includes("wav")) { filetype = "audio"; }
@@ -1207,7 +2133,8 @@ function determineFiletype(file, filename) {
     if (!filetype && filename) {
         const lowerName = filename.toLowerCase();
         if (lowerName.endsWith('.pdf')) { filetype = "pdf"; }
-        else if (lowerName.endsWith('.bak')) { filetype = "bak"; }
+        else if (lowerName.endsWith('.htm')) { filetype = "htm"; }
+        else if (lowerName.endsWith('.odt')) { filetype = "odt"; }
         else if (lowerName.endsWith('.docx')) { filetype = "docx"; }
         else if (lowerName.endsWith('.ggb')) { filetype = "ggb"; }
         else if (lowerName.endsWith('.ogg') || lowerName.endsWith('.wav') || lowerName.endsWith('.mp3')) { filetype = "audio"; }
@@ -1341,13 +2268,13 @@ function openAllowedUrl(allowedUrl){
     this.urlForWebview = url;        // this is used to open the allowed url in the webview pane
     this.webviewVisible = true;             // this is used to show the webview pane
 
-    document.querySelector("#pdfpreview").style.display = 'block';
-    document.querySelector("#openPDF").style.display = 'none';
-    document.querySelector("#downloadPDF").style.display = 'none';
-    document.querySelector("#printPDF").style.display = 'none';
-    document.querySelector("#closePDF").style.display = 'none';
-    document.querySelector("#pdfembed").style.display = 'none';
-    document.querySelector("#pdfrenderer").style.display = 'none';
+    const pdfPreview = document.querySelector("#pdfpreview");
+    if (pdfPreview) pdfPreview.style.display = 'block';
+    // Toolbar/renderer nodes are absent until PdfviewPaneRendered / PdfRenderer mount (dashboard v-if).
+    for (const sel of ['#openPDF', '#downloadPDF', '#printPDF', '#closePDF', '#pdfrenderer']) {
+        const el = document.querySelector(sel);
+        if (el) el.style.display = 'none';
+    }
 }
 
 
@@ -1365,4 +2292,4 @@ function openAllowedUrl(allowedUrl){
 
 
 
-export { getTestURL, getTestID, getFormsID, configureEditor, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }
+export { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, configureEditorTemplate, removeEditorTemplate, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, getFormsID, configureEditor, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }

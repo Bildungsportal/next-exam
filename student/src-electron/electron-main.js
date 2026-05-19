@@ -38,7 +38,9 @@ import JreHandler from './main/scripts/jre-handler.js';
 import { checkParentProcess } from './main/scripts/checkparent.js';
 
 import { toggleMacOSLockdown } from './main/scripts/platformrestrictions.js';
+import { stopProxy } from './main/scripts/vncproxy.js';
 import { initErrorHandling } from './main/scripts/errorHandling.js';
+import { syncClientDisplayInfo } from './main/scripts/displayInfo.js';
 JreHandler.init()
 
 if (!config.development && process.argv.some(arg => arg.startsWith('--inspect') || arg.startsWith('--remote-debugging'))) {  // disable options to read v8 heap on production builds
@@ -100,9 +102,11 @@ log.debug(`main: OS: ${process.platform} ${process.arch}`)
 log.debug(`main: Arch: ${process.arch}`)
 log.debug(`main: Desktop: ${platformDispatcher.desktopName}`)
 log.debug(`main: Display server: ${platformDispatcher.displayServer}`)
+if (platformDispatcher.runningUnderMacRosetta) {
+    log.warn('main: Intel (x64) build running under Rosetta on Apple Silicon — install the arm64 build');
+}
 
-
-WindowHandler.init(multicastClient, config)  // mainwindow, examwindow, blockwindow
+WindowHandler.init(multicastClient, config)  // mainwindow, examwindow
 CommHandler.init(multicastClient, config)    // starts "beacon" intervall and fetches information from the teacher - acts on it (startexam, stopexam, sendfile, getfile)
 IpcHandler.init(multicastClient, config, WindowHandler, CommHandler)  //controll all Inter Process Communication
 initErrorHandling(log, WindowHandler);
@@ -180,6 +184,8 @@ app.on('window-all-closed', async () => {  // last window closed – clear stora
     if (WindowHandler.checkWindowInterval?.stop) WindowHandler.checkWindowInterval.stop()
     if (CommHandler.updateScheduler?.stop) CommHandler.updateScheduler.stop()
     if (multicastClient.refreshExamsScheduler?.stop) multicastClient.refreshExamsScheduler.stop()
+    // ensure any running vncproxy-helper child is terminated before quit
+    try { stopProxy() } catch (err) { log.warn('main @ window-all-closed: stopProxy failed', err) }
     WindowHandler.mainwindow = null
 
     try {
@@ -232,29 +238,57 @@ async function runParentProcessCheck() {
 app.whenReady()
 .then(async ()=>{
 
+    syncClientDisplayInfo(multicastClient.clientinfo);
+
     nativeTheme.themeSource = 'light'  // prevent theme settings from being adopted from windows
     session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
-    // Use system picker (KDE/PipeWire dialog on Linux) when available; fallback to first screen
-    session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
-        desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
-            try {
-                if (sources.length > 0) {
-                    callback({ video: sources[0] });
-                } else {
-                    log.warn('main @ setDisplayMediaRequestHandler: no screen sources available');
+    if (platformDispatcher.runningInCage) {
+        session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+            desktopCapturer.getSources({ types: ['window'] }).then((sources) => {
+                try {
+                    let picked = sources[0];
+                    if (sources.length) {
+                        const nextExam = sources.find((s) => /next-exam|next exam/i.test(s.name));
+                        if (nextExam) picked = nextExam;
+                    }
+                    if (picked) {
+                        callback({ video: picked });
+                    } else {
+                        log.warn('main @ setDisplayMediaRequestHandler (cage): no window sources');
+                        callback(null);
+                    }
+                } catch (e) {
+                    log.warn('main @ setDisplayMediaRequestHandler (cage):', e?.message || e);
                     callback(null);
                 }
-            } catch (e) {
-                log.warn('main @ setDisplayMediaRequestHandler: exception in handler', e?.message || e);
+            }).catch((err) => {
+                log.warn('main @ setDisplayMediaRequestHandler (cage):', err?.message || err);
                 callback(null);
-            }
-        }).catch((err) => {
-            log.warn('main @ setDisplayMediaRequestHandler:', err?.message || err);
-            callback(null);
-        });
-    }, { useSystemPicker: true });
-
+            });
+        }, { useSystemPicker: false });
+    } else {
+        // Use system picker (KDE/PipeWire dialog on Linux) when available; fallback to first screen
+        session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+            desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+                try {
+                    if (sources.length > 0) {
+                        callback({ video: sources[0] });
+                    } else {
+                        log.warn('main @ setDisplayMediaRequestHandler: no screen sources available');
+                        callback(null);
+                    }
+                } catch (e) {
+                    log.warn('main @ setDisplayMediaRequestHandler: exception in handler', e?.message || e);
+                    callback(null);
+                }
+            }).catch((err) => {
+                log.warn('main @ setDisplayMediaRequestHandler:', err?.message || err);
+                callback(null);
+            });
+        }, { useSystemPicker: true });
+    }
+    
     toggleMacOSLockdown(true);
    
     /******* Create main window *******/

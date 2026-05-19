@@ -31,7 +31,7 @@
         <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
 
         <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
-            <div v-if="(file.filetype == 'bak')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+            <div v-if="(file.filetype == 'htm')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
             <div v-if="(file.filetype == 'docx')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
             <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
             <div v-if="(file.filetype == 'audio')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
@@ -68,10 +68,11 @@
             :block-external="true"
             @close="hidepreview"
         />
-        <PdfviewPane
+        <PdfviewPaneRendered
             :localLockdown="localLockdown"
             :examtype="examtype"
             :toolbar="pdfPreviewUi"
+            :preview="pdfPreviewState"
             @close="hidepreview"
         />
     </div> 
@@ -109,12 +110,13 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 import {isElectronWindow} from "../types/platform.js";
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import {SignalBridge} from '../utils/signalBridge.js'
+import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
 
 import { getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../utils/filehandler.js'
-import PdfviewPane from '../components/PdfviewPane.vue'
+import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue';
 
 export default {
@@ -175,9 +177,10 @@ export default {
             _onPreviewClick: null,
             internetCheckCounter:0,
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
+            pdfPreviewState: null,
         }
     }, 
-    components: { ExamHeader, PdfviewPane, WebviewPane },  
+    components: { ExamHeader, PdfviewPaneRendered, WebviewPane },  
     mounted() {
         signalBridge.on('getmaterials', (event) => {
             console.log("eduvidual @ getmaterials: get materials request received")
@@ -195,23 +198,31 @@ export default {
         this.$nextTick(async () => { // Code that will run only after the entire view has been rendered
                   
 
-            // intervalle nicht mit setInterval() da dies sämtliche objekte der callbacks inklusive fetch() antworten im speicher behält bis das interval gestoppt wird
+            // do not use setInterval() for intervals as it keeps all objects of the callbacks including fetch() responses in memory until the interval is stopped
             this.fetchinfointerval = new SchedulerService(5000);
-            this.fetchinfointerval.addEventListener('action',  this.fetchInfo);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.fetchinfointerval.addEventListener('action',  this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.fetchinfointerval.start();
             await this.fetchInfo(); // initial sync for clientinfo, serverstatus and moodle url
+
+            try {
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+                this.hostip = await signalBridge.invoke('checkhostip')
+                this.internetCheckCounter = 0
+            } catch (err) {
+                console.error('eduvidual @ mounted: initial wlan/host ip error', err)
+            }
                 
             this.loadfilelistinterval = new SchedulerService(20000);
             this.loadfilelistinterval.addEventListener('action',  this.loadFilelist);
             this.loadfilelistinterval.start();
             
             this.clockinterval = new SchedulerService(1000);
-            this.clockinterval.addEventListener('action', this.clock);  // Event-Listener hinzufügen, der auf das 'action'-Event reagiert (reagiert nur auf 'action' von dieser instanz und interferiert nicht)
+            this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.clockinterval.start();
-                
-            document.body.addEventListener('mouseleave', this.sendFocuslost);
-            
-            
+
+            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
+
+
             this.loadFilelist()
             this.getExamMaterials()
 
@@ -302,8 +313,8 @@ export default {
                 };
                 webview.addEventListener('did-finish-load', this._onDidFinishLoad);
                 
-                this._onDidStartLoading = () => { this.isLoading = true;   }; // Zeige das Overlay während des Ladens
-                this._onDidStopLoading = () => {   this.isLoading = false;  };           // Verberge das Overlay, wenn das Laden gestoppt ist
+                this._onDidStartLoading = () => { this.isLoading = true;   }; // show the overlay while loading
+                this._onDidStopLoading = () => {   this.isLoading = false;  };           // hide the overlay when loading stops
                 webview.addEventListener('did-start-loading', this._onDidStartLoading);
                 webview.addEventListener('did-stop-loading', this._onDidStopLoading);
             }
@@ -341,9 +352,9 @@ export default {
 
         hidepreview(){
             resetPdfPreviewToolbar(this);
+            this.pdfPreviewState = null;
             let preview = document.querySelector("#preview")
             preview.style.display = 'none';
-            preview.setAttribute("src", "about:blank");
             URL.revokeObjectURL(this.currentpreview);
         },
 
@@ -357,6 +368,7 @@ export default {
             return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed
         },
         async sendFocuslost(){
+            if (await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
             if (isElectronWindow(window)) {
                 let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
                 if (!this.config.development && !response.focus) {  //immediately block frontend
@@ -397,11 +409,13 @@ export default {
             this.lockedSection = sectionIndex
 
             const section = this.serverstatus.examSections?.[sectionIndex]
-            if (section) {
-                this.url = section.moodleURL
-                this.moodleDomain = section.moodleDomain
-                this.moodleTestType = section.moodleTestType
-                this.moodleTestId = section.moodleTestId
+            const groupKey = section && section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA'
+            const eduConfig = section?.[groupKey]?.examConfig?.eduvidual || null
+            if (eduConfig) {
+                this.url = eduConfig.url || null
+                this.moodleDomain = eduConfig.moodleDomain || null
+                this.moodleTestType = null
+                this.moodleTestId = eduConfig.moodleTestId || null
             }
 
             if (!this.focus) {
@@ -549,10 +563,10 @@ iframe{
 #preview {
     display: none;
     position: absolute;
-    top:0;
+    top: var(--nx-preview-top-offset, var(--nx-apphead-h, 60px));
     left: 0;
     width:100vw;
-    height: 100vh;
+    height: calc(100vh - var(--nx-preview-top-offset, var(--nx-apphead-h, 60px)));
     background-color: rgba(0, 0, 0, 0.4);
     z-index:100001;
     backdrop-filter: blur(2px);

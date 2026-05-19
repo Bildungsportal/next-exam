@@ -29,9 +29,54 @@
     <!-- Header END -->
 
     <div v-show="!isLoading" id="wrapper" class="w-100 h-100 d-flex">
+        <!-- LocalVM preflight overlay (must stay in student.vue; exam window opens only after checks pass) -->
+        <div v-if="showLocalVmPreflightOverlay" class="localvm-preflight-backdrop">
+            <div class="localvm-preflight-card">
+                <div class="localvm-preflight-title">LocalVM</div>
+
+                <div v-if="localVmIsVerifying" class="localvm-preflight-verify">
+                    <div class="localvm-preflight-spinner" aria-hidden="true"></div>
+                    <div class="localvm-preflight-text">{{ localVmVerifyingText }}</div>
+                    <div class="localvm-preflight-subtext">{{ $t('student.vmVerifyingHashHint') }}</div>
+                </div>
+
+                <div v-else-if="localVmFixPhase === 'waiting_for_start'" class="localvm-preflight-text">
+                    {{ $t('student.localvmFixWaitingForStart') }}
+                </div>
+
+                <div v-else-if="localVmIsMissing" class="localvm-preflight-text">
+                    {{ $t('student.localvmMissingDisk') }}
+                </div>
+
+                <div v-else-if="localVmIsMismatch" class="localvm-preflight-text">
+                    {{ $t('student.localvmDiskMismatch') }}
+                </div>
+
+                <div v-else class="localvm-preflight-text">
+                    {{ $t('student.localvmStartError') }}
+                </div>
+
+                <div class="localvm-preflight-actions">
+                    <button v-if="localVmCanFix && !localVmFixPhase" class="btn btn-primary btn-sm" @click="downloadVm" :disabled="localVmBusy">
+                        {{ $t('student.localvmDownloadButton') }}
+                    </button>
+                    <button v-if="localVmCanFix && !localVmFixPhase" class="btn btn-cyan btn-sm" @click="browseVm" :disabled="localVmBusy">
+                        {{ $t('student.localvmBrowseButton') }}
+                    </button>
+                </div>
+
+                <div v-if="localVmFixPhase && localVmCanFix && !localVmIsVerifying" class="localvm-preflight-verify" style="margin-top: 12px;">
+                    <div class="localvm-preflight-spinner" aria-hidden="true"></div>
+                    <div class="localvm-preflight-text">
+                        {{ localVmFixPhase === 'waiting_for_start' ? $t('student.localvmWaitingForStart') : $t('student.localvmDownloading') }}
+                    </div>
+                    <div v-if="localVmFixPhase !== 'waiting_for_start' && localVmDownloadPercent != null" class="localvm-preflight-subtext">{{ localVmDownloadPercent }}%</div>
+                </div>
+            </div>
+        </div>
 
         <!-- SIDEBAR START -->
-        <div class="p-3 text-white bg-dark h-100" style="width: 240px; min-width: 240px;">
+        <div class="p-3 text-white bg-dark h-100 student-sidebar" style="width: 240px; min-width: 240px;">
             <div class="btn btn-light ms-1 text-start infobutton nobutton">
                 <img :src='server_img' class="me-2" width="16" height="16"> {{ $t('student.exams') }}
             </div>
@@ -69,19 +114,41 @@
             <!-- BIP Section END -->
 
 
-            <div @click="setupLocalLockdown()" class="btn btn-sm btn-outline-secondary ms-1 mt-3 mb-4"
+            <div @click="setupLocalLockdown()" class="btn btn-sm btn-outline-secondary ms-1 mt-3 mb-1"
                  :class="(token)? 'disabledexam':''" style="font-size:0.9em"> {{ $t("student.localLockdown") }}
             </div>
-
+            <button v-if="showCageKioskInstallBtn"
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary ms-1 mb-4 d-block"
+                    :class="(token) ? 'disabledexam' : ''"
+                    :disabled="!!token"
+                    style="font-size:0.9em"
+                    :title="$t('student.cageSetupText')"
+                    @click="promptCageKioskSetup">
+                {{ $t('student.cageSetupButton') }}
+            </button>
 
             <div><br>
                 <div id="statusdiv" class="btn btn-warning m-1"></div>
             </div>
             <br>
 
-            <button class="btn btn-outline-secondary btn-sm ms-1 mt-3 mb-2" style="position: absolute; bottom:32px;"
-                    @click="toggleLocale">{{ inactivelocale }}
-            </button>
+            <div class="sidebar-bottom-btns ms-3">
+                <button type="button" class="btn btn-outline-secondary btn-sm sidebar-locale-btn ms-1"
+                        @click="toggleLocale">{{ inactivelocale }}
+                </button>
+                <button type="button"
+                        class="btn btn-outline-danger btn-sm sidebar-exit-btn"
+                        :class="token ? 'disabledexam' : ''"
+                        :disabled="!!token"
+                        :title="$t('student.cageExit')" :aria-label="$t('student.cageExit')"
+                        @click="quitNextExam">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                        <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                    </svg>
+                </button>
+            </div>
 
             <span @click="showCopyleft()"
                   style="position: absolute; bottom:2px; left: 6px; font-size:0.8em;cursor: pointer;">
@@ -100,7 +167,7 @@
                 <div v-if="!bipToken" class="input-group  mb-1">
                     <span class="input-group-text col-3" style="width:135px;"
                           id="inputGroup-sizing-lg">{{ $t("student.username") }}</span>
-                    <input ref="userInput" v-model="username" @paste.prevent @drop.prevent type="text"
+                    <input ref="userInput" v-model="username" @input="onUsernameInput" @paste.prevent @drop.prevent type="text"
                            required="required" maxlength="25" class="form-control" id="user" placeholder=""
                            style="width:200px;max-width:200px;min-width:135px;">
                 </div>
@@ -172,18 +239,27 @@
                                                                              :value="$t('student.register')"
                                                                              @click="registerClient(server.serverip,server.servername)">
 
-                              <router-link :to="{ name: 'math', params: { token: 'csrf-cf20e998-3ba7-4867-bc3e-94609d665cd6' } }">
-                                Test Page
-                              </router-link>
-                              <router-link to="math/csrf-cf20e998-3ba7-4867-bc3e-94609d665cd6">
-                                Test Page Static
-                              </router-link>
-                              
-                              <!-- not logged in, bip server      --> <input v-if="server.bip" style="width:200px;"
-                                                                               :id="server.servername" type="button"
-                                                                               name="register" class="btn btn-sm"
-                                                                               :value="server.examStatus ? server.examStatus : 'restricted'"
-                                                                               :class="{'btn-teal': server.examStatus == 'open', 'btn-warning': server.examStatus == 'closed' || !server.examStatus, 'btn-secondary': server.examStatus == 'offline' }"/>
+                                <router-link :to="{ name: 'math', params: { token: 'csrf-cf20e998-3ba7-4867-bc3e-94609d665cd6' } }">
+                                    Test Page
+                                </router-link>
+                                <router-link to="math/csrf-cf20e998-3ba7-4867-bc3e-94609d665cd6">
+                                    Test Page Static
+                                </router-link>
+
+                                <!-- not logged in, bip server, BiP required --> <input v-if="server.bip && server.requireBiP" style="width:200px;"
+                                                                                       :id="server.servername" type="button"
+                                                                                       name="register" class="btn btn-sm btn-secondary"
+                                                                                       value="restricted"/>
+
+                                <!-- not logged in, bip server, exam closed/offline (only if not restricted) --> <input v-if="server.bip && !server.requireBiP && server.examStatus && server.examStatus !== 'open'" style="width:200px;"
+                                                                                                                      :id="server.servername" type="button"
+                                                                                                                      name="register" class="btn btn-sm btn-secondary"
+                                                                                                                      :value="server.examStatus"/>
+                                <!-- not logged in, bip server, BiP NOT required --> <input v-if="server.bip && !server.requireBiP && (!server.examStatus || server.examStatus === 'open')" style="width:200px;"
+                                                                                           :id="server.servername" type="button"
+                                                                                           name="register" class="btn btn-sm btn-info"
+                                                                                           :value="$t('student.register')"
+                                                                                           @click="registerClient(server.serverip,server.servername)">
                             </div>
                             <div v-if="token" style="margin-top:2px; padding:0px;">
                                 <!-- logged in, not on this server --> <input
@@ -191,14 +267,11 @@
                                 :id="server.servername" disabled type="button" name="register"
                                 class="btn btn-sm btn-secondary"
                                 :value="server.examStatus ? server.examStatus : $t('student.register')"/>
-                                <!-- logged in, not on this server, bip server, restricted --> <input
-                                v-if="clientinfo.servername !== server.servername && server.bip && !server.examStatus"
+                                <!-- logged in, not on this server, bip server --> <input
+                                v-if="clientinfo.servername !== server.servername && server.bip"
                                 style="width:200px;" :id="server.servername" disabled type="button" name="register"
-                                class="btn btn-sm btn-secondary" value="restricted"/>
-                                <!-- logged in, not on this server, bip server  --> <input
-                                v-if="clientinfo.servername !== server.servername && server.bip && server.examStatus"
-                                style="width:200px;" :id="server.servername" disabled type="button" name="register"
-                                class="btn btn-sm btn-secondary" :value="server.examStatus"/>
+                                class="btn btn-sm btn-secondary"
+                                :value="server.examStatus ? server.examStatus : (server.requireBiP ? 'restricted' : $t('student.register'))"/>
                                 <!-- logged in, on this server       --> <input
                                 v-if="clientinfo.servername === server.servername" style="width:200px;"
                                 :id="server.servername" disabled type="button" name="register"
@@ -235,13 +308,17 @@ import speedometer_img from 'src/assets/img/svg/speedometer.svg'
 import server_img from 'src/assets/img/svg/server.svg'
 import login_students_img from 'src/assets/img/login_students.jpg'
 import emblem_warning_img from '/src/assets/img/svg/emblem-warning.svg'
-import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync } from '../utils/screenshotCapture.js'
+import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync, setCageWindowCaptureFallback, setLinuxKioskRunningInCage } from '../utils/screenshotCapture.js'
+import { getLinuxKioskInfo } from '../utils/linuxCageKiosk.js'
 import { Exam } from '../types/api'
+import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
+import { normalizeStudentClientName } from 'next-exam-shared/normalizeStudentClientName.js'
 import loggingBridge from "../utils/loggingBridge.js";
 import { autoCleanupMixin } from "../mixins/autoCleanupMixin.js";
 
 import { StatusBar } from "@capacitor/status-bar";
-import {isIOS} from "../types/platform.js";
+import {isElectronWindow, isIOS} from "../types/platform.js";
+import {router} from "../router/index.js";
 
 function unhandledRejectionFunction() {
   const reason = event?.reason;
@@ -270,6 +347,7 @@ export default {
             username: this.$route.params.config.development ? "Thomas" : "" as string | boolean,
             pincode: this.$route.params.config.development ? "1111" : "" as string,
             clientinfo: {},
+            serverstatus: null,
             serverlist: [],
             serverlistAdvanced: [],
             serverApiPort: this.$route.params.serverApiPort,
@@ -287,6 +365,13 @@ export default {
             networkerror: false,
             localLockdown: false,
             isLoading: true,
+            platformKiosk: {
+                cageInstalled: false,
+                runningInCage: false,
+                cageKioskAppImageInstalled: false,
+                cageKioskDesktopInstalled: false,
+                needsCageKioskSetup: false,
+            },
 
             biptest: true,
             bipToken: false,
@@ -298,6 +383,9 @@ export default {
             validip: true,
             serverFailureCount: {}, // Track failed ping attempts for manually added servers
             activeDialog: false,
+            localVmBusy: false,
+            localVmDownloadPercent: null,
+            localVmFixPhase: null,
 
             timer: null,
 
@@ -316,11 +404,119 @@ export default {
         },
         canSelectInterface() {
             return !this.token && this.hostip?.availableInterfaces?.length > 1;
-        }
+        },
+
+        showLocalVmPreflightOverlay() {
+            const st = this.clientinfo?.localVMState;
+            const inPreflightState = st === 'missing' || st === 'hash_mismatch' || st === 'verifying_hash' || st === 'error';
+            return !!this.token && !this.clientinfo?.exammode && this.clientinfo?.examtype === 'localvm' && inPreflightState;
+        },
+        localVmIsMissing() {
+            return this.clientinfo?.localVMState === 'missing';
+        },
+        localVmIsMismatch() {
+            return this.clientinfo?.localVMState === 'hash_mismatch';
+        },
+        localVmIsVerifying() {
+            return this.clientinfo?.localVMState === 'verifying_hash';
+        },
+        localVmCanFix() {
+            return this.localVmIsMissing || this.localVmIsMismatch || this.clientinfo?.localVMState === 'error';
+        },
+        localVmVerifyingText() {
+            const cfg = this.getLocalVmConfig?.() || {};
+            return cfg.calculateSha256 === true ? this.$t('student.vmVerifyingHash') : this.$t('student.vmVerifyingSize');
+        },
+        showCageKioskInstallBtn() {
+            const k = this.platformKiosk;
+            return isElectronWindow(window) && k.displayServer !== 'n/a' && !k.runningInCage && k.needsCageKioskSetup;
+        },
+    },
+    watch: {
+        'clientinfo.localVMState'(nextState) {
+            const st = String(nextState || '');
+            const inPreflightState = st === 'missing' || st === 'hash_mismatch' || st === 'verifying_hash' || st === 'error';
+            if (!inPreflightState) {
+                this.localVmFixPhase = null;
+                this.localVmDownloadPercent = null;
+                this.localVmBusy = false;
+            }
+        },
     },
 
 
     methods: {
+        // Force lowercase while typing so reconnects match regardless of caps lock.
+        onUsernameInput() {
+            const normalized = normalizeStudentClientName(this.username);
+            if (normalized !== this.username) {
+                this.username = normalized;
+            }
+        },
+
+        async promptCageKioskSetup() {
+            const result = await this.$swal.fire({
+                title: this.$t('student.cageSetupTitle'),
+                html: `${this.$t('student.cageSetupText')}<br><br>${this.$t('student.cageSetupTextRoot')}<br><br>
+                    <label><input type="checkbox" id="cage-setup-dismiss"> ${this.$t('student.cageSetupDontShow')}</label>`,
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: this.$t('student.cageSetupInstall'),
+                cancelButtonText: this.$t('student.cageSetupLater'),
+                willClose: (popup) => {
+                    if (popup.querySelector('#cage-setup-dismiss')?.checked) {
+                        localStorage.setItem('next-exam-cage-kiosk-setup-dismissed', '1');
+                    }
+                },
+            });
+            if (!result.isConfirmed) return;
+            const install = await signalBridge.invoke('install-linux-cage-kiosk');
+            if (install?.ok) {
+                this.platformKiosk = await signalBridge.invoke('get-linux-kiosk-info');
+                await this.$swal.fire({
+                    html: `${this.$t('student.cageSetupSuccess')}<br><br>${this.$t('student.cageSetupSuccessHint')}`,
+                    icon: 'success',
+                });
+            } else {
+                await this.$swal.fire({
+                    title: this.$t('student.cageSetupFailed'),
+                    text: install?.error || '',
+                    icon: 'error',
+                });
+            }
+        },
+
+        async maybeOfferCageKioskSetup() {
+            const k = this.platformKiosk;
+            if (!isElectronWindow(window) || this.config.development) return;
+            if (k.runningInCage || !k.needsCageKioskSetup) return;
+            if (localStorage.getItem('next-exam-cage-kiosk-setup-dismissed') === '1') return;
+            await this.promptCageKioskSetup();
+        },
+
+        async warnMacRosettaArch() {
+            await this.$swal.fire({
+                title: this.$t('student.macRosettaArchTitle'),
+                html: this.$t('student.macRosettaArchText'),
+                icon: 'warning',
+                confirmButtonText: this.$t('student.macRosettaArchOk'),
+            });
+        },
+
+        quitNextExam() {
+            if (this.token) return;
+            this.$swal.fire({
+                title: this.$t('student.cageExit'),
+                text: this.$t('student.cageExitConfirm'),
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: this.$t('student.cageExit'),
+                cancelButtonText: this.$t('dashboard.cancel'),
+            }).then((result) => {
+                if (result.isConfirmed) signalBridge.invoke('quit-app');
+            });
+        },
+
         toggleLocale() {
             // Switch between 'de' and 'en'
             this.$i18n.locale = this.$i18n.locale === 'de' ? 'en' : 'de';
@@ -499,7 +695,7 @@ export default {
                             showCancelButton: false,
                         })
 
-                        this.bipUsername = response.fullname
+                        this.bipUsername = normalizeStudentClientName(response.fullname)
                         this.bipuserID = response.userid
 
 
@@ -567,14 +763,18 @@ export default {
                             <input class="form-check-input"  name=etesttype type="radio" id="math" value="math">
                             <label class="form-check-label" for="math"> ${this.$t("student.math")} </label>
                     </div>
-                    <div class=" m-2 mt-4"> 
-                        <div class="input-group  m-1 mb-1"> 
-                            <span class="input-group-text col-3" style="width:140px;">${this.$t("student.username")} </span>
-                            <input class="form-control" type=text id=localuser placehoder='Username'>
+                    <div class=" m-2 mt-4">
+                        <div class="input-group  m-1 mb-1">
+                            <span class="input-group-text col-3" style="width:175px;">${this.$t("student.username")} </span>
+                            <input class="form-control" type=text id=localuser placehoder='Username' style="width:200px;">
                         </div>
-                        <div class="input-group m-1 mb-1"> 
-                            <span class="input-group-text col-3" style="width:140px;">${this.$t("student.password")}</span>
-                            <input class="form-control" type=password id=localpassword placehoder='Password'>
+                        <div class="input-group m-1 mb-1">
+                            <span class="input-group-text col-3" style="width:175px;">${this.$t("student.password")}</span>
+                            <input class="form-control" type=password id=localpassword placeholder='Passwort' style="width:200px;">
+                        </div>
+                        <div class="input-group m-1 mb-1">
+                            <span class="input-group-text col-3" style="width:175px;">${this.$t("student.passwordconfirm")}</span>
+                            <input class="form-control" type=password id=localpasswordconfirm placeholder='Passwort' style="width:200px;">
                         </div>
                     </div>
                     <hr id="spellcheckSeparator" style="display: block;">
@@ -596,6 +796,14 @@ export default {
                 didOpen: () => {
                     const localUserElement = document.getElementById("localuser");
                     const localPasswordElement = document.getElementById("localpassword");
+const localPasswordConfirmElement = document.getElementById("localpasswordconfirm");
+
+                    localUserElement.addEventListener('input', () => {
+                        const normalized = normalizeStudentClientName(localUserElement.value);
+                        if (normalized !== localUserElement.value) {
+                            localUserElement.value = normalized;
+                        }
+                    });
 
                     this.autoEventListener(localUserElement,"keypress", function (e) {
                         // var lettersOnly = /^[a-zA-Z ]+$/;
@@ -624,11 +832,12 @@ export default {
                     // Add listener directly to input fields to catch Enter when focused
                     this.autoEventListener(localUserElement,'keydown', handleEnterKey);
                     this.autoEventListener(localPasswordElement,'keydown', handleEnterKey);
-
+localPasswordConfirmElement.addEventListener('keydown', handleEnterKey);
                     // Store handler reference for cleanup (will be cleaned up when dialog closes)
                     this._enterKeyHandler = handleEnterKey;
                     this._enterKeyHandlerUser = handleEnterKey;
                     this._enterKeyHandlerPassword = handleEnterKey;
+this._enterKeyHandlerPasswordConfirm = handleEnterKey;
 
                     const checkboxLT = document.getElementById('checkboxLT');
                     const checkboxSuggestions = document.getElementById('checkboxsuggestions');
@@ -659,16 +868,16 @@ export default {
                     // Initial: suggestions-Checkbox deaktivieren, falls LT nicht gecheckt ist
                     checkboxSuggestions.disabled = !checkboxLT.checked;
 
-                    // Event Listener für checkboxLT, um den Status von checkboxsuggestions anzupassen
+                    // Event listener for checkboxLT to adjust the state of checkboxsuggestions
                   this.autoEventListener(checkboxLT,'change', () => {
                         checkboxSuggestions.disabled = !checkboxLT.checked;
-                        // Wenn checkboxLT abgewählt wird, soll suggestions zusätzlich zurückgesetzt werden:
+                        // When checkboxLT is unchecked, suggestions should also be reset:
                         if (!checkboxLT.checked) {
                             checkboxSuggestions.checked = false;
                         }
                     });
 
-                    // Event Listener für Radio-Buttons, um Spellcheck-Sektion ein/auszublenden
+                    // Event listener for radio buttons to show/hide the spellcheck section
                     this.autoEventListener(editorRadio,'change', toggleSpellcheckSection);
                     this.autoEventListener(mathRadio,'change', toggleSpellcheckSection);
 
@@ -691,6 +900,7 @@ export default {
                     // Remove listeners from input fields if they still exist
                     const localUserElement = document.getElementById("localuser");
                     const localPasswordElement = document.getElementById("localpassword");
+                    const localPasswordConfirmElement = document.getElementById("localpasswordconfirm");
                     if (localUserElement && this._enterKeyHandlerUser) {
                         localUserElement.removeEventListener('keydown', this._enterKeyHandlerUser);
                         this._enterKeyHandlerUser = null;
@@ -699,17 +909,23 @@ export default {
                         localPasswordElement.removeEventListener('keydown', this._enterKeyHandlerPassword);
                         this._enterKeyHandlerPassword = null;
                     }
+                    if (localPasswordConfirmElement && this._enterKeyHandlerPasswordConfirm) {
+                        localPasswordConfirmElement.removeEventListener('keydown', this._enterKeyHandlerPasswordConfirm);
+                        this._enterKeyHandlerPasswordConfirm = null;
+                    }
                 },
                 preConfirm: () => {
                     // Save all input values before dialog closes (Electron 39 compatibility)
                     const localUserElement = document.getElementById('localuser');
                     const localPasswordElement = document.getElementById('localpassword');
+                    const localPasswordConfirmElement = document.getElementById('localpasswordconfirm');
                     const checkboxLTElement = document.getElementById('checkboxLT');
                     const checkboxSuggestionsElement = document.getElementById('checkboxsuggestions');
                     const radioButtons = document.querySelectorAll('input[name="etesttype"]');
 
-                    savedUsername = localUserElement ? localUserElement.value.trim() : '';
+                    savedUsername = localUserElement ? normalizeStudentClientName(localUserElement.value) : '';
                     savedPassword = localPasswordElement ? localPasswordElement.value : '';
+                    const passwordConfirm = localPasswordConfirmElement ? localPasswordConfirmElement.value : '';
                     savedLanguagetool = checkboxLTElement ? checkboxLTElement.checked : false;
                     savedSuggestions = checkboxSuggestionsElement ? checkboxSuggestionsElement.checked : false;
 
@@ -725,7 +941,11 @@ export default {
                         return false;
                     }
                     if (!savedPassword || savedPassword === '') {
-                        this.$swal.showValidationMessage(this.$t("student.nopin") || 'Password is required');
+                        this.$swal.showValidationMessage(this.$t("student.nopassword") || 'Password is required');
+                        return false;
+                    }
+                    if (savedPassword !== passwordConfirm) {
+                        this.$swal.showValidationMessage(this.$t("student.pwdmismatch") || 'Passwords do not match');
                         return false;
                     }
                 }
@@ -733,8 +953,7 @@ export default {
                 if (result.isConfirmed) {
 
                     let exammode = savedExammode; // Use saved value instead of reading from DOM
-                    let username = savedUsername; // Use saved value instead of reading from DOM
-                    username = username.replace(/^\s+|\s+$/g, '');  // Check username - remove leading and trailing spaces
+                    let username = normalizeStudentClientName(savedUsername);
                     let password = savedPassword; // Use saved value instead of reading from DOM
 
                     if (username == "" || password == "") {
@@ -812,6 +1031,7 @@ export default {
                 (server1.id || server1.servername) === (server2.id || server2.servername) &&
                 server1.examStatus === server2.examStatus &&
                 server1.bip === server2.bip &&
+                !!server1.requireBiP === !!server2.requireBiP &&
                 server1.reachable === server2.reachable &&
                 server1.serverip === server2.serverip
             );
@@ -882,10 +1102,14 @@ export default {
                     if (existingInNewList.examStatus !== exam.examStatus) {
                         existingInNewList.examStatus = exam.examStatus;
                     }
+                    if (typeof exam.requireBiP !== 'undefined' && !!existingInNewList.requireBiP !== !!exam.requireBiP) {
+                        existingInNewList.requireBiP = !!exam.requireBiP;
+                    }
                 } else if (existingInCurrentList) {
                     const updatedServer = {
                         ...existingInCurrentList,
                         examStatus: exam.examStatus,
+                        ...(typeof exam.requireBiP !== 'undefined' ? { requireBiP: !!exam.requireBiP } : {}),
                     };
                     newServerlist.push(updatedServer);
                 } else {
@@ -897,6 +1121,7 @@ export default {
                         timestamp: Date.now(),
                         bip: true,
                         examStatus: exam.examStatus,
+                        requireBiP: typeof exam.requireBiP !== 'undefined' ? !!exam.requireBiP : false,
                         version: exam.version
                     };
                     newServerlist.push(newServer);
@@ -938,16 +1163,17 @@ export default {
             let getinfo = await signalBridge.invoke('getinfoasync')  // gets serverlist and clientinfo from multicastclient
 
 
-            if (getinfo.clientinfo.exammode) {
-                return;
-            }  // do not stress ui updates if exammode is active
-
             // Only update if clientinfo has actually changed
             const clientInfoStr = JSON.stringify(getinfo.clientinfo);
             const currentClientInfoStr = JSON.stringify(this.clientinfo);
             if (clientInfoStr !== currentClientInfoStr) {
                 this.clientinfo = getinfo.clientinfo;
             }
+            this.serverstatus = getinfo.serverstatus || null;
+
+            if (getinfo.clientinfo.exammode) {
+                return;
+            }  // do not stress ui updates if exammode is active
 
             // Only set token if changed
             const newToken = this.clientinfo.token;
@@ -977,9 +1203,9 @@ export default {
                         this.safeAssign('validip', true);
                         // Give some user feedback here
                         if (this.serverlistAdvanced.length == 0) {
-                            this.status("Suche nach Prüfungen...")
+                            this.status("Searching for exams...")
                         }
-                        this.autoFetch(`https://${this.serverip}:${this.serverApiPort}/server/control/serverlist`)
+                        examApiFetch(`https://${this.serverip}:${this.serverApiPort}/server/control/serverlist`)
                             .then(response => response.json()) // Parse JSON response
                             .then(data => {
                                 if (data && data.status === "success") {
@@ -1079,7 +1305,7 @@ export default {
                 const serverIdentifier = this.getServerIdentifier(server);
                 const isManual = this.isManuallyAddedServer(server);
                 const signal = AbortSignal.timeout(4000); // 4000 milliseconds = 4 seconds
-                this.autoFetch(`https://${server.serverip}:${this.serverApiPort}/server/control/pong`, {
+                examApiFetch(`https://${server.serverip}:${this.serverApiPort}/server/control/pong`, {
                     method: 'GET',
                     signal
                 })
@@ -1122,6 +1348,79 @@ export default {
             }
         },
 
+        getLocalVmConfig() {
+            const sectionIndex = Number(this.clientinfo?.lockedSection || 1);
+            const section = this.serverstatus?.examSections?.[sectionIndex] || {};
+            const group = this.clientinfo?.group === 'b' ? 'b' : 'a';
+            const cfg = group === 'b' ? (section?.groupB?.examConfig?.localvm || {}) : (section?.groupA?.examConfig?.localvm || {});
+            return cfg || {};
+        },
+
+        async downloadVm() {
+            if (this.localVmBusy) return;
+            try {
+                this.localVmBusy = true;
+                this.localVmDownloadPercent = null;
+                this.localVmFixPhase = 'downloading';
+                const cfg = this.getLocalVmConfig();
+                const filename = cfg.qcow2Name;
+                const overwrite = this.clientinfo?.localVMState === 'hash_mismatch';
+                if (!filename) {
+                await this.status(this.$t('student.localvmNoVmConfigured'));
+                    return;
+                }
+            await this.status(this.$t('student.localvmDownloadingFromTeacher'));
+                const res = await signalBridge.invoke('qemu-download-disk', {
+                    serverip: this.clientinfo?.serverip,
+                    serverApiPort: this.serverApiPort,
+                    servername: this.clientinfo?.servername,
+                    studenttoken: this.token,
+                    filename,
+                    overwrite
+                });
+                if (!res || !res.ok) {
+                await this.status(this.$t('student.localvmDownloadFailed'));
+                    this.localVmFixPhase = null;
+                    return;
+                }
+            await this.status(this.$t('student.localvmDownloadDoneWaiting'));
+                this.localVmFixPhase = 'waiting_for_start';
+            } catch (e) {
+                log.error('student.vue @ downloadVm', e);
+            await this.status(this.$t('student.localvmDownloadFailed'));
+                this.localVmFixPhase = null;
+            } finally {
+                this.localVmBusy = false;
+                if (this.localVmFixPhase !== 'waiting_for_start') {
+                    this.localVmDownloadPercent = null;
+                }
+            }
+        },
+
+        async browseVm() {
+            if (this.localVmBusy) return;
+            try {
+                this.localVmBusy = true;
+                this.localVmFixPhase = 'importing';
+                await this.status(this.$t('student.localvmImporting'));
+                const res = await signalBridge.invoke('qemu-pick-import-disk', {});
+                const filename = res && res.ok ? res.filename : null;
+                if (!filename) {
+                    await this.status(this.$t('student.localvmImportCancelled'));
+                    this.localVmFixPhase = null;
+                    return;
+                }
+                await this.status(this.$t('student.localvmImportDoneWaiting', { filename }));
+                this.localVmFixPhase = 'waiting_for_start';
+            } catch (e) {
+                log.error('student.vue @ browseVm', e);
+                await this.status(this.$t('student.localvmImportFailed'));
+                this.localVmFixPhase = null;
+            } finally {
+                this.localVmBusy = false;
+            }
+        },
+
 
         extractServerNames(list) {
             return list.map(item => item.servername).sort();
@@ -1161,17 +1460,28 @@ export default {
                 this.$swal.fire({ title: "Error", text: this.$t("student.nopin"), icon: 'error', showCancelButton: false });
                 return;
             }
-            /*if (!hasActiveScreenshotStream()) {
-                const ok = await ensureDisplayStreamAsync();
-                if (!ok) {
-                    this.$swal.fire({ title: "Error", text: this.$t("student.screenshotpermission"), icon: 'error', showCancelButton: false });
+            if (!this.platformKiosk.runningInCage) {
+                /*
+                if (!hasActiveScreenshotStream()) {
+                    const ok = await ensureDisplayStreamAsync();
+                    if (!ok) {
+                        this.$swal.fire({ title: "Error", text: this.$t("student.screenshotpermission"), icon: 'error', showCancelButton: false });
+                        return;
+                    }
+                }
+                if (!isFullDesktopCaptureLikely() && !this.$route.params.config.development) {
+                    this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
                     return;
                 }
+                */
+            } else {
+                setCageWindowCaptureFallback(true);
             }
-            if (!isFullDesktopCaptureLikely() && !this.$route.params.config.development) {
-                this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
+            const displayInfo = await signalBridge.invoke('getinfoasync');
+            if (displayInfo?.clientinfo?.multiMonitor && !this.$route.params.config.development) {
+                this.$swal.fire({ title: "Error", text: this.$t("student.multimonitor"), icon: 'error', showCancelButton: false });
                 return;
-            }*/
+            }
 
             const charMap = {
                     'ć': 'c',
@@ -1184,9 +1494,10 @@ export default {
 
 
                 //check username - remove leading and trailing spaces
-                this.username = this.username
-                    .replace(/^\s+|\s+$/g, '')
-                    .replace(/[^\x00-\x7F]/g, char => charMap[char] || char); // Replace using the map
+                this.username = normalizeStudentClientName(
+                    this.username
+                        .replace(/[^\x00-\x7F]/g, char => charMap[char] || char)
+                );
 
 
                 //  console.log({clientname:this.username, servername:servername, serverip, serverip, pin:this.pincode, bipuserID:this.bipuserID })
@@ -1206,9 +1517,10 @@ export default {
                 }
 
                 if (IPCresponse && IPCresponse.status === "success") {
+                    const okBody = IPCresponse.reconnected ? this.$t("student.reconnectedinfo") : this.$t("student.registeredinfo")
                     this.$swal.fire({
                         title: "OK",
-                        html: `<div style="white-space: pre-line;">${this.$t("student.registeredinfo")}</div>`,
+                        html: `<div style="white-space: pre-line;">${okBody}</div>`,
                         icon: 'success',
                         timer: 6000,
                         showCancelButton: false,
@@ -1227,6 +1539,15 @@ export default {
                         showCancelButton: false,
                     })
                 }
+
+            signalBridge.on('updateReceived', (update) => {
+                loggingBridge.info("updateReceived, examMode: ", update.serverstatus.exammode, router)
+                if (update.serverstatus.exammode) {
+                    router.push({
+                        path: '/math/csrf-cf20e998-3ba7-4867-bc3e-94609d665cd6'
+                    })
+                }
+            });
         },
         showCopyleft() {
             this.$swal.fire({
@@ -1313,10 +1634,10 @@ export default {
 //   if (delta > 200) { // Threshold for macOS occlusion/suspension
 
 //     this.$swal({
-//       title: 'Ausbruch erkannt!',
-//       text: `Die App wurde für ${Math.round(delta)}ms unterbrochen.`,
+//       title: 'Breakout detected!',
+//       text: `The app was suspended for ${Math.round(delta)}ms.`,
 //       icon: 'warning',
-//       confirmButtonText: 'Verstanden'
+//       confirmButtonText: 'Understood'
 //     });
 //   }
 
@@ -1328,6 +1649,19 @@ export default {
 
 
         this.isLoading = false;
+
+        if (isElectronWindow(window)) {
+            if (!this.config.development) {
+                const macArch = await signalBridge.invoke('get-mac-arch-info');
+                if (macArch?.runningUnderRosetta) {
+                    await this.warnMacRosettaArch();
+                }
+            }
+            this.platformKiosk = await getLinuxKioskInfo(signalBridge);
+            setLinuxKioskRunningInCage(this.platformKiosk.runningInCage);
+            setCageWindowCaptureFallback(!!this.platformKiosk.runningInCage);
+            await this.maybeOfferCageKioskSetup();
+        }
 
         // Focus username input field when component is mounted
         this.$nextTick(() => {
@@ -1359,6 +1693,11 @@ export default {
             this.fetchBiPData(token)
         });
 
+        signalBridge.on('qemu-download-progress', (_event, payload) => {
+            const pct = payload && typeof payload.percent === 'number' ? payload.percent : null;
+            this.localVmDownloadPercent = pct;
+        });
+
         // Screenshot scheduler only in main window (this page); exam window never loads student.vue
         initScreenshotScheduler(signalBridge);
 
@@ -1369,7 +1708,14 @@ export default {
 
     },
     beforeUnmount() {
-      window.removeEventListener('unhandledrejection', unhandledRejectionFunction);
+        this.fetchinterval.removeEventListener('action', this.fetchInfo);
+        this.fetchinterval.stop()
+
+        this.autoUpdateInterval.removeEventListener('action', this.bipAutoUpdate);
+        this.autoUpdateInterval.stop()
+
+        signalBridge.removeAllListeners('qemu-download-progress');
+        window.removeEventListener('unhandledrejection', unhandledRejectionFunction);
     }
 }
 </script>
@@ -1417,7 +1763,7 @@ body {
 
 
 .disabledbutton {
-    /* intentionally left blank: class kept for compatibility */
+    display: inherit;
 }
 
 .disabledexam {
@@ -1428,6 +1774,73 @@ body {
 .disabledtext {
     filter: contrast(40%) grayscale(100%) brightness(130%) blur(0.6px);
     pointer-events: none;
+}
+
+.localvm-preflight-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 200000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.localvm-preflight-card {
+    width: 100%;
+    max-width: 520px;
+    border-radius: 10px;
+    background: rgba(33, 37, 41, 0.95);
+    color: #f8f9fa;
+    padding: 16px 18px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    text-align: center;
+}
+
+.localvm-preflight-title {
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.localvm-preflight-verify {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+}
+
+.localvm-preflight-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #93c5fd;
+    border-radius: 50%;
+    animation: localvm-preflight-spin 0.85s linear infinite;
+}
+
+@keyframes localvm-preflight-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.localvm-preflight-text {
+    font-size: 0.95em;
+}
+
+.localvm-preflight-subtext {
+    font-size: 0.85em;
+    color: rgba(248, 249, 250, 0.75);
+}
+
+.localvm-preflight-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
 }
 
 #content {
@@ -1447,6 +1860,41 @@ body {
 #statusdiv {
     display: block !important;
     width: 200px;
+}
+
+.student-sidebar {
+    position: relative;
+}
+
+.sidebar-bottom-btns {
+    position: absolute;
+    bottom: 32px;
+    left: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.sidebar-bottom-btns .btn {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.125rem;
+    line-height: 1;
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+}
+
+.sidebar-bottom-btns .sidebar-locale-btn {
+    line-height: 1;
+}
+
+.sidebar-bottom-btns .sidebar-exit-btn {
+    width: 2.125rem;
+    min-width: 2.125rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
 }
 
 /* CSS classes for fade-in and fade-out */

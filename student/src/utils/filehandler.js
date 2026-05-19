@@ -1,7 +1,8 @@
 import { Buffer } from 'buffer';
 import DOMPurify from 'dompurify';
 import mammoth from 'mammoth';
-import {SignalBridge} from './signalBridge.js'
+import {SignalBridge} from './signalBridge.js';
+import {odtToTiptapHtml} from './odtToTiptapHtml.js';
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -14,6 +15,14 @@ export function resetPdfPreviewToolbar(vm) {
         showSend: false,
         showZoom: false,
     });
+}
+
+/** showUrl() hides .embed-container; clear that inline style when showing PDF/image again. */
+function restorePdfPreviewRoot() {
+    const preview = document.querySelector('#preview');
+    if (!preview) return;
+    const root = preview.querySelector('.embed-container');
+    if (root) root.style.removeProperty('display');
 }
 
 // fetch file from disc - show preview
@@ -30,18 +39,15 @@ export async function loadPDF(file, base64 = false, zoom=180, submission=false, 
     this.currentPDFZoom = zoom
     URL.revokeObjectURL(this.currentpreview);
     this.webviewVisible = false
-
-    const embedcontainer = document.querySelector(".embed-container");
-    embedcontainer.style.display = 'flex';
-
-    const pdfEmbed = document.querySelector("#pdfembed");
-    pdfEmbed.style.backgroundImage = ``;  // clear a previous image preview
+    const filename = typeof file === 'string' ? file : (file?.filename || file?.name || file?.originalname || '');
+    let fallbackUrl = '';
     
     if (base64){
-        const response = await fetch(file.filecontent); // lade die Data-URL  //filecontent contains a url data:application/pdf;base64,b23d342dsn2....
-        const blob = await response.blob(); // konvertiere in Blob
-        this.currentpreview = URL.createObjectURL(blob); // erzeuge Object URL
+        const response = await fetch(file.filecontent); // load the data URL  //filecontent contains a url data:application/pdf;base64,b23d342dsn2....
+        const blob = await response.blob(); // convert to blob
+        this.currentpreview = URL.createObjectURL(blob); // create object URL
         this.currentpreviewBase64 = file.filecontent.split(',')[1];  // we only need the base64 data not the complete url
+        fallbackUrl = file.filecontent || '';
     }
     else {   //fetch file from filesystem
         let data = await signalBridge.invoke('getpdfasync', file )
@@ -62,52 +68,19 @@ export async function loadPDF(file, base64 = false, zoom=180, submission=false, 
         this.currentpreviewBase64 = Buffer.from(data).toString('base64');
     }
 
-    if(!this.splitview){
-        pdfEmbed.style.height = "80vh";
-        pdfEmbed.style.width = "90vw";  
-    }
-    else {   // SPLITVIEW
-
-    }
-
-    try{
-        const zoomInButton = document.getElementById("zoomIn");
-        const zoomOutButton = document.getElementById("zoomOut");
-
-        // Entferne bestehende Event-Listener, bevor neue hinzugefügt werden
-        zoomInButton.removeEventListener('click', this.zoomInHandler);
-        zoomOutButton.removeEventListener('click', this.zoomOutHandler);
-
-        // Definiere neue Event-Listener
-        this.zoomInHandler = () => {
-            this.currentPDFZoom += 20; // Erhöht den Zoom um 10%
-            this.loadPDF(file, base64, this.currentPDFZoom, submission)
-            
-        };
-        this.zoomOutHandler = () => {
-            this.currentPDFZoom = Math.max(40, this.currentPDFZoom - 20); // Verhindert, dass der Zoom unter 40% geht
-          
-            this.loadPDF(file, base64, this.currentPDFZoom, submission)
-            
-        };
-        // Füge die Event-Listener erneut hinzu
-        zoomInButton.addEventListener('click', this.zoomInHandler);
-        zoomOutButton.addEventListener('click', this.zoomOutHandler);
-    }
-    catch(e){
-        console.error("filehandler @ loadPDF: error", e)
-    }
-
-
-
-
-    // pdf anzeigen
-    pdfEmbed.setAttribute("src", `${this.currentpreview}#toolbar=0&navpanes=0&scrollbar=0&zoom=${this.currentPDFZoom}`);
+    this.pdfPreviewState = {
+        kind: 'pdf',
+        url: this.currentpreview,
+        filename,
+        fallbackUrl,
+    };
 
 
 
     //hide/show some buttons
-    document.querySelector("#preview").style.display = 'block';
+    const preview = document.querySelector("#preview");
+    if (preview) preview.style.display = 'block';
+    restorePdfPreviewRoot();
 
     Object.assign(this.pdfPreviewUi, {
         showInsert: false,
@@ -121,15 +94,15 @@ export async function loadPDF(file, base64 = false, zoom=180, submission=false, 
 
 //checks if arraybuffer contains a valid pdf file
 function isValidPdf(data) {
-    const header = new Uint8Array(data, 0, 5); // Lese die ersten 5 Bytes für "%PDF-"
-    // Umwandlung der Bytes in Hexadezimalwerte für den Vergleich
+    const header = new Uint8Array(data, 0, 5); // read the first 5 bytes for "%PDF-"
+    // Convert bytes to hex values for comparison
     const pdfHeader = [0x25, 0x50, 0x44, 0x46, 0x2D]; // "%PDF-" in Hex
     for (let i = 0; i < pdfHeader.length; i++) {
         if (header[i] !== pdfHeader[i]) {
-            return false; // Früher Abbruch, wenn ein Byte nicht übereinstimmt
+            return false; // early exit if a byte does not match
         }
     }
-    return true; // Alle Bytes stimmen mit dem PDF-Header überein
+    return true; // all bytes match the PDF header
 }
 
 
@@ -189,8 +162,11 @@ export async function loadHTML(file){
             
             this.editor.commands.clearContent(true)
             this.editor.commands.insertContent(data)  
-            //set currentFile to the loaded filename remove extension .bak from filename
-            let filename = file.replace(/\.bak$/, '')  //remove extension .bak from filename
+            //set currentFile to the loaded filename remove extension .htm from filename
+            let filename = file.replace(/\.htm$/, '')  //remove extension .htm from filename
+            if (/[/\\]/.test(filename) || filename.includes('..')) {
+                filename = this.clientname
+            }
             this.currentFile = filename
         } 
     }); 
@@ -198,54 +174,155 @@ export async function loadHTML(file){
 
 
 
-// get file from local examdirectory and replace editor content with it
-export async function loadDOCX(file, base64=false){
-    let base64content;
-    let filename = file
-    if (base64){
-        filename = file.filename
-        base64content = file.filecontent.split(',')[1];
+// get file from local examdirectory and replace editor content with it (silent=true skips confirm dialog, e.g. teacher-set editor template on startup)
+export async function loadDOCX(file, base64 = false, silent = false) {
+    let filename = file;
+    if (base64) {
+        filename = file.filename;
     }
 
-    this.LTdisable()
+    const doLoad = async () => {
+        this.LTdisable();
+        if (base64) {
+            const response = await fetch(file.filecontent);
+            const arrayBuffer = await response.arrayBuffer();
+            const mammothResult = await mammoth.convertToHtml({ arrayBuffer });
+            const html = mammothResult.value;
+            this.editor.commands.clearContent(true);
+            this.editor.commands.insertContent(html);
+        } else {
+            const data = await signalBridge.invoke('getfilesasync', file, false, true);
+            this.editor.commands.clearContent(true);
+            const cleanHtml = DOMPurify.sanitize(data.value);
+            parseHTMLString(cleanHtml);
+            this.editor.commands.insertContent(cleanHtml);
+        }
+        if (base64 && filename) {
+            let stem = String(filename).replace(/\.docx$/i, '');
+            if (/[/\\]/.test(stem) || stem.includes('..')) {
+                stem = this.clientname;
+            }
+            this.currentFile = stem;
+        }
+    };
+
+    if (silent) {
+        try {
+            await doLoad();
+        } catch (err) {
+            console.error('filehandler @ loadDOCX:', err);
+            this.$swal.fire({
+                title: this.$t('general.error'),
+                text: String(err?.message || err),
+                icon: 'error',
+                timer: 4000,
+            });
+        }
+        return;
+    }
+
     this.$swal.fire({
         title: this.$t("editor.replace"),
-        html:  `${this.$t("editor.replacecontent1")} <b>${filename}</b> ${this.$t("editor.replacecontent2")}`,
+        html: `${this.$t("editor.replacecontent1")} <b>${filename}</b> ${this.$t("editor.replacecontent2")}`,
         icon: "question",
         showCancelButton: true,
         cancelButtonText: this.$t("editor.cancel"),
-        reverseButtons: true
-    })
-    .then(async (result) => {
+        reverseButtons: true,
+    }).then(async (result) => {
         if (result.isConfirmed) {
-            
-            if (base64){
-                const response = await fetch(file.filecontent); // Data-URL abrufen
-                const arrayBuffer = await response.arrayBuffer(); // ArrayBuffer erstellen
-
-                mammoth.convertToHtml({ arrayBuffer }) // DOCX zu HTML konvertieren
-                .then(result => {
-                    const html = result.value; // HTML-Ergebnis erhalten
-                    this.editor.commands.clearContent(true); // Editor-Inhalt leeren
-                    this.editor.commands.insertContent(html); // HTML einfügen
-                })
-                .catch(error => console.error(error)); // Fehler ausgeben
-
+            try {
+                await doLoad();
+            } catch (err) {
+                console.error('filehandler @ loadDOCX:', err);
+                this.$swal.fire({
+                    title: this.$t('general.error'),
+                    text: String(err?.message || err),
+                    icon: 'error',
+                    timer: 4000,
+                });
             }
-            else{
-                let data = await signalBridge.invoke('getfilesasync', file, false, true )   // signal, filename, audiofile, docxfile // converts the file to html in case of docx with mammoth
-                this.editor.commands.clearContent(true)
-            
-                const cleanHtml = DOMPurify.sanitize(data.value);
-                const body = parseHTMLString(cleanHtml);
-                
-                this.editor.commands.insertContent(cleanHtml)
-                // body.childNodes.forEach(node => {  processNode(node); });
+        }
+    });
+}
+
+/** Loads an ODT from disk or base64 material into the TipTap editor (renderer converts via odtToTiptapHtml). silent=true skips confirm dialog. */
+export async function loadODT(file, base64 = false, silent = false) {
+    let filename = file;
+    if (base64) {
+        filename = file.filename;
+    }
+
+    const doLoad = async () => {
+        this.LTdisable();
+        let arrayBuffer;
+        if (base64) {
+            const response = await fetch(file.filecontent);
+            arrayBuffer = await response.arrayBuffer();
+        } else {
+            const b64 = await signalBridge.invoke('getfilesasync', file, false, false, true);
+            if (!b64 || typeof b64 !== 'string') {
+                this.$swal.fire({
+                    title: this.$t('general.error'),
+                    text: this.$t('general.error'),
+                    icon: 'error',
+                    timer: 2500,
+                });
+                return;
             }
-        
-        
-        } 
-    }); 
+            const bin = atob(b64);
+            const u8 = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+            arrayBuffer = u8.buffer;
+        }
+        const { html } = await odtToTiptapHtml(arrayBuffer);
+        const cleanHtml = DOMPurify.sanitize(html);
+        const body = parseHTMLString(cleanHtml);
+        this.editor.commands.clearContent(true);
+        this.editor.commands.insertContent(body.innerHTML);
+        let stem = String(filename).replace(/\.odt$/i, '');
+        if (/[/\\]/.test(stem) || stem.includes('..')) {
+            stem = this.clientname;
+        }
+        this.currentFile = stem;
+    };
+
+    if (silent) {
+        try {
+            await doLoad();
+        } catch (err) {
+            console.error('filehandler @ loadODT:', err);
+            this.$swal.fire({
+                title: this.$t('general.error'),
+                text: String(err?.message || err),
+                icon: 'error',
+                timer: 4000,
+            });
+        }
+        return;
+    }
+
+    this.$swal.fire({
+        title: this.$t('editor.replace'),
+        html: `${this.$t('editor.replacecontent1')} <b>${filename}</b> ${this.$t('editor.replacecontent2')}`,
+        icon: 'question',
+        showCancelButton: true,
+        cancelButtonText: this.$t('editor.cancel'),
+        reverseButtons: true,
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                await doLoad();
+            } catch (err) {
+                console.error('filehandler @ loadODT:', err);
+                this.$swal.fire({
+                    title: this.$t('general.error'),
+                    text: String(err?.message || err),
+                    icon: 'error',
+                    timer: 4000,
+                });
+            }
+        }
+    });
 }
 
 
@@ -259,13 +336,12 @@ export async function loadImage(file, base64=false){
     URL.revokeObjectURL(this.currentpreview);
 
     this.webviewVisible = false
-    const embedcontainer = document.querySelector(".embed-container");
-    embedcontainer.style.display = 'flex';
+    const filename = typeof file === 'string' ? file : (file?.filename || file?.name || file?.originalname || '');
 
     if (base64){
-        const response = await fetch(file.filecontent); // lade die Data-URL  //filecontent contains a url data:application/pdf;base64,b23d342dsn2....
-        const blob = await response.blob(); // konvertiere in Blob
-        this.currentpreview = URL.createObjectURL(blob); // erzeuge Object URL
+        const response = await fetch(file.filecontent); // load the data URL  //filecontent contains a url data:application/pdf;base64,b23d342dsn2....
+        const blob = await response.blob(); // convert to blob
+        this.currentpreview = URL.createObjectURL(blob); // create object URL
         this.currentpreviewBase64 = file.filecontent.split(',')[1];  // we only need the base64 data not the complete url
     }
     else {
@@ -274,37 +350,12 @@ export async function loadImage(file, base64=false){
         this.currentpreviewBase64 = Buffer.from(data).toString('base64');
     }
 
-
-    const pdfEmbed = document.querySelector("#pdfembed");
-    
-    // Create an image element to determine the dimensions of the image
-    // always resize the pdfembed div to the same aspect ratio of the given image
-    const img = new window.Image();
-    img.onload = function() {
-        const width = img.width;
-        const height = img.height;
-        const aspectRatio = width / height;
-
-        const containerWidth = window.innerWidth * 0.8;
-        const containerHeight = window.innerHeight * 0.8;
-        const containerAspectRatio = containerWidth / containerHeight;
-
-        if(!this.splitview){
-            if (aspectRatio > containerAspectRatio) {
-                pdfEmbed.style.width = '80vw';
-                pdfEmbed.style.height = `calc(80vw / ${aspectRatio})`;
-            } else {
-                pdfEmbed.style.height = '80vh';
-                pdfEmbed.style.width = `calc(80vh * ${aspectRatio})`;
-            }
-        }
-        pdfEmbed.style.backgroundImage = `url(${this.currentpreview})`;
-    }.bind(this);
-    img.src = this.currentpreview;
-
-
-    // clear the pdf viewer
-    pdfEmbed.setAttribute("src", "about:blank");
+    this.pdfPreviewState = {
+        kind: 'image',
+        url: this.currentpreview,
+        filename,
+        fallbackUrl: base64 ? (file?.filecontent || '') : '',
+    };
 
 
 
@@ -315,7 +366,9 @@ export async function loadImage(file, base64=false){
         showZoom: false,
     });
 
-    document.querySelector("#preview").style.display = 'block'; 
+    const preview = document.querySelector("#preview");
+    if (preview) preview.style.display = 'block';
+    restorePdfPreviewRoot();
 }
 
 
@@ -367,7 +420,7 @@ export async function playAudio(file, base64=false) {
                         
                         if (base64Data) {
                             this.audioSource = `data:audio/mp3;base64,${base64Data}`;
-                            audioPlayer.load(); // Lädt die neue Quelle
+                            audioPlayer.load(); // loads the new source
                             audioPlayer.play().then(() => { 
                                 console.log('filehandler @ playAudio: Playback started');
                                 audioFile.playbacks -= 1
@@ -387,7 +440,7 @@ export async function playAudio(file, base64=false) {
 
             if (base64Data) {
                 this.audioSource = `data:audio/mpeg;base64,${base64Data}`;
-                audioPlayer.load(); // Lädt die neue Quelle
+                audioPlayer.load(); // loads the new source
             } else { console.error('filehandler @ playAudio: Keine Daten empfangen'); }
         } catch (error) { console.error('filehandler @ playAudio: Fehler beim Empfangen der MP3-Datei:', error); } 
     }
@@ -405,7 +458,7 @@ async function soundtest(context){
             }
             
             context.audioSource = `data:audio/mp3;base64,${base64Data}`;
-            audioPlayer.load(); // Lädt die neue Quelle
+            audioPlayer.load(); // loads the new source
             audioPlayer.play().then(async () => { 
                 await context.sleep(2000)
                 if (soundtest){
@@ -436,18 +489,28 @@ export async function loadGGB(file, base64=false){
     .then(async (result) => {
         if (result.isConfirmed) {
 
-            const geogebraWebview = document.getElementById('geogebraframe');
-            if (!geogebraWebview) {
-                console.error('filehandler @ loadGGB: geogebra webview not found'); // one line comment
-                return;
+            const applyBase64ToGgb = (base64GgbFile) => {
+                if (typeof window !== 'undefined' && window.ggbApplet && typeof window.ggbApplet.setBase64 === 'function') {
+                    window.ggbApplet.setBase64(base64GgbFile)
+                    return true
+                }
+                const geogebraWebview = document.getElementById('geogebraframe');
+                if (geogebraWebview && typeof geogebraWebview.executeJavaScript === 'function') {
+                    const safeBase64 = JSON.stringify(base64GgbFile);
+                    geogebraWebview.executeJavaScript(`window.loadBase64FromHost(${safeBase64})`);
+                    return true
+                }
+                return false
             }
 
             if (!base64){
-                const result = await signalBridge.invoke('loadGGB', file);
-                if (result.status === "success") {
-                    const base64GgbFile = result.content;
-                    const safeBase64 = JSON.stringify(base64GgbFile);
-                    geogebraWebview.executeJavaScript(`window.loadBase64FromHost(${safeBase64})`);
+                const loadResult = await signalBridge.invoke('loadGGB', file);
+                if (loadResult.status === "success") {
+                    const base64GgbFile = loadResult.content;
+                    if (!applyBase64ToGgb(base64GgbFile)) {
+                        console.error('filehandler @ loadGGB: no GeoGebra surface (applet or webview) found'); // one line comment
+                        return
+                    }
                     this.currentFile = filename
                 } else {
                     console.error('filehandler @ loadGGB: Error loading file');
@@ -455,8 +518,10 @@ export async function loadGGB(file, base64=false){
             }
             else {
                 const base64GgbFile = file.filecontent.split(',')[1];
-                const safeBase64 = JSON.stringify(base64GgbFile);
-                geogebraWebview.executeJavaScript(`window.loadBase64FromHost(${safeBase64})`);
+                if (!applyBase64ToGgb(base64GgbFile)) {
+                    console.error('filehandler @ loadGGB: no GeoGebra surface (applet or webview) found'); // one line comment
+                    return
+                }
                 this.currentFile = filename
             }
         } 
