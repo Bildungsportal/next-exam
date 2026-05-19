@@ -59,11 +59,12 @@ TECH^student^rdp^fetchInfo^applyRdpConfigFromSection; webview src only on url ch
 RULE^student^typingRhythm^editor.vue isTypingRhythmExemptKey clears deltas for Backspace Delete Space Enter NumpadEnter (OS key-repeat)^student/src/pages/editor.vue handleTypingRhythmKeydown
 RULE^ui^colors^shared^btn-cyan+swal confirm=$cyan-600^shared/css/nxe-theme.scss; app.scss imports nxe-bootstrap-config+nxe-theme
 RULE^ui^swal2^teacher+student layout+btn colors^shared/css/nxe-theme.scss
-TECH^localvm^qemuBundled^public/qemu/{win|lin|mac}; copy distro HW modules → <platform>/lib/qemu (e.g. /usr/lib/qemu); spawn sets QEMU_MODULE_DIR via buildQemuSpawnEnv; probe -vga virtio; QEMU_GUEST_VGA=virtio; install ISO -vga std^shared/qemuAvailability.js
-RULE^localvm^display^teacher bootDisk/install=-display gtk (bundled default none; needs lib/qemu ui-gtk.so); student startHeadless=-display none+-vnc^teacher+student qemuService.js
+TECH^localvm^qemuSystem^no bundle default; resolve system PATH+win ProgramFiles* scan+where.exe; NEXT_EXAM_USE_BUNDLED_QEMU=1→public/qemu/{win|lin|mac}; getQemuInstallInfo+qemu-open-install-page IPC; UEFI binDir/../share^shared/qemuAvailability.js+qemuInstallInfo.js
+TECH^localvm^qemuDialogs^shared/qemuLocalVmDialogs.js teacher+student; missing→download; HypervisorPlatform→elevated enable IPC^qemuLocalVmDialogs.js
+RULE^localvm^display^teacher bootDisk/install=interactive display; student headless=-display none+-vnc; win WHPX use -vga virtio not std (boot spinner)^shared/qemuHostArgs.js
 RULE^localvm^teacherBoot^killExistingQemuInstances before teacher interactive spawn; stale -display none holds qcow2 lock^teacher qemuService.js
 TECH^localvm^isoDl^teacher downloadFile uses stream pipeline to .part then rename; skip if dest>=MIN_COMPLETE_BYTES; cleanup stale .part^teacher qemuService.js
-BUG^localvm^whpx^win32 -cpu max,vmx=off (not host); -accel whpx,kernel-irqchip=off; teacher display sdl; win std vga preview^shared/qemuHostArgs.js
+BUG^localvm^whpx^HypervisorPlatform required; win UEFI pflash+Skylake,+nx,+popcnt; smp cores=4,threads=1; rtc localtime; -vga none+virtio-vga; guest RAM getQemuMemoryMb host>8GiB→8192 else 4096 cap 45%^qemuHostArgs.js
 TECH^localvm^qemuAvail^fallback PATH+win ProgramFiles if bundled missing; renderer qemuMissingWarningHtml.js only^shared+ipchandler
 TECH^student^localvmHash^sha256 base qcow2 before qemu start (runLocalVmPreStartVerify); avoids guest freeze from parallel full read^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js
 TECH^student^localvmStart^localVmStartState idle|starting|blocked; qemu-download/import must not set idle while starting (parallel startExam)^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js

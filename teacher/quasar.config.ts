@@ -332,7 +332,7 @@ export default defineConfig(( ctx: any ) => {
           icon: 'public/icons/icon.ico',
           target: [{ target: 'portable', arch: ['x64'] }, { target: 'msi', arch: ['x64'] }],
           artifactName: artifactNamePattern,
-          files: ['**/*', '!public/qemu/lin/**', '!public/qemu/mac/**'],
+          files: ['**/*', '!public/qemu/**'],
           // electron-builder 26: use signtoolOptions to enable signing (no win.sign boolean)
           ...(signEnabled && {
             signtoolOptions: { certificateSubjectName: 'OSOS Austria', signingHashAlgorithms: ['sha256'] },

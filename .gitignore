@@ -29,3 +29,10 @@ virtio-win.iso
 win11_iot.iso
 win11.qcow2
 autounattend-iso-root
+
+# QEMU: system install only (use teacher/public/qemu/winbak locally; NEXT_EXAM_USE_BUNDLED_QEMU=1 for dev)
+teacher/public/qemu/win/
+teacher/public/qemu/winbak/
+student/public/qemu/win/
+student/public/qemu/mac/
+teacher/public/qemu/mac/

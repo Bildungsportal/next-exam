@@ -1,9 +1,0 @@
-{
-  "description": "virtiofsd vhost-user-fs",
-  "type": "fs",
-  "binary": "/usr/lib/virtiofsd",
-  "features": [
-      "migrate-precopy",
-      "separate-options"
-  ]
-}

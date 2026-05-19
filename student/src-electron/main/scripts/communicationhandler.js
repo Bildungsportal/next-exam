@@ -148,7 +148,10 @@ import {
             }
             log.warn('communicationhandler @ ensureQemuAvailableForLocalVm: QEMU missing', check.missing);
             try {
-                WindowHandler.mainwindow?.webContents?.send('qemu-not-available', { missing: check.missing });
+                WindowHandler.mainwindow?.webContents?.send('qemu-not-available', {
+                    missing: check.missing,
+                    hypervisorPlatform: check.hypervisorPlatform,
+                });
             } catch (e) {
                 log.debug('communicationhandler @ ensureQemuAvailableForLocalVm: send failed', e?.message);
             }

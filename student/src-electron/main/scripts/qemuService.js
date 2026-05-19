@@ -15,8 +15,14 @@ import {
 import {
     getQemuAccelArgs,
     getQemuCpuArg,
-    getQemuGuestVga,
+    getQemuMachineArgs,
+    getQemuMemoryArg,
+    getQemuRtcArgs,
+    getQemuSmpArgs,
+    getQemuUsbTabletArgs,
     getQemuVirtioDiskDriveArg,
+    getQemuVgaDeviceArgs,
+    getQemuWinUefiRuntimeExtras,
 } from '../../../../shared/qemuHostArgs.js';
 
 let vmProc = null;
@@ -47,7 +53,7 @@ async function getResolvedQemu() {
     if (!r.ok) {
         if (r.virtioVgaUnavailable && !r.qemuModuleDir) {
             throw new Error(
-                'QEMU HW-Module fehlen: nach public/qemu/lin/lib/qemu den Ordner /usr/lib/qemu kopieren (für -vga virtio).'
+                'QEMU HW-Module fehlen (z. B. /usr/lib/qemu). Linux: qemu-system-x86 Paket installieren.'
             );
         }
         throw new Error(`QEMU not available (missing: ${(r.missing || []).join(', ')})`);
@@ -382,20 +388,22 @@ async function startHeadless({ workdirectory, examdirectory, qcow2Name, vncDispl
         ? ['-netdev', `user,id=net0,restrict=on,${webdavGuestFwd}`, '-device', 'virtio-net-pci,netdev=net0']
         : ['-netdev', 'user,id=n0', '-device', 'virtio-net-pci,netdev=n0'];
 
+    const uefiExtras = await getQemuWinUefiRuntimeExtras({ binDir, qemuWorkDir: qemuDir });
     const args = [
-        ...getQemuAccelArgs(),
-        '-cpu', getQemuCpuArg(),
-        '-m', '8192',
-        '-smp', '4',
-        // writeback+threads avoids long stalls many hosts show with cache=none+aio=native on large Windows images
+        ...getQemuAccelArgs({ runtime: true }),
+        ...getQemuMemoryArg(),
+        ...getQemuSmpArgs(),
+        ...getQemuRtcArgs(),
+        ...getQemuMachineArgs(),
+        ...uefiExtras,
+        '-cpu', getQemuCpuArg({ profile: 'runtime' }),
         ...getQemuVirtioDiskDriveArg(overlayPath),
-        '-vga', getQemuGuestVga(),
+        ...getQemuVgaDeviceArgs({ profile: 'runtime' }),
         '-display', 'none',
         '-vnc', vncDisplay,
         '-qmp', `unix:${path.join(qemuDir, 'qmp.sock')},server=on,wait=off`,
         ...netArgs,
-        '-device', 'usb-ehci',
-        '-device', 'usb-tablet',
+        ...getQemuUsbTabletArgs({ profile: 'runtime' }),
         '-boot', 'order=c',
     ];
 

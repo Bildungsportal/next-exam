@@ -25,7 +25,7 @@ import net from 'net'
 import dns from 'dns'
 import i18n from '../../../src/locales/locales.js'
 const {t} = i18n.global
-import{ipcMain, clipboard,app, webContents, dialog} from 'electron'
+import { ipcMain, clipboard, app, webContents, dialog, shell } from 'electron'
 import { gateway4sync } from 'default-gateway';
 import os, { networkInterfaces } from 'os'
 import log from 'electron-log';
@@ -41,7 +41,12 @@ import { getWlanInfo } from './getwlaninfo.js';
 import { switchExamSection } from './switchExamSection.js';
 import { startProxy, stopProxy } from './vncproxy.js';
 import qemuService from './qemuService.js';
-import { checkQemuAvailability } from '../../../../shared/qemuAvailability.js';
+import {
+    checkQemuAvailability,
+    getQemuInstallInfo,
+    getWindowsHypervisorPlatformState,
+    requestEnableWindowsHypervisorPlatform,
+} from '../../../../shared/qemuAvailability.js';
 import { getVMFindings } from './vmDetection.js';
 import { decryptExamFileBytes, decryptExamFileAllLayers, encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
 import { examApiFetch } from '../../../../shared/examApiFetch.js';
@@ -282,7 +287,42 @@ class IpcHandler {
                 return await checkQemuAvailability();
             } catch (e) {
                 log.error('ipchandler @ qemu-check-available', e);
-                return { ok: false, missing: ['qemu-system-x86_64', 'qemu-img'] };
+                const install = getQemuInstallInfo();
+                return {
+                    ok: false,
+                    missing: ['qemu-system-x86_64', 'qemu-img'],
+                    downloadUrl: install.downloadUrl,
+                    installHint: install.installHint,
+                };
+            }
+        });
+
+        ipcMain.handle('qemu-open-install-page', async () => {
+            try {
+                const { downloadUrl } = getQemuInstallInfo();
+                await shell.openExternal(downloadUrl);
+                return { ok: true };
+            } catch (e) {
+                log.error('ipchandler @ qemu-open-install-page', e);
+                return { ok: false, error: String(e?.message || e) };
+            }
+        });
+
+        ipcMain.handle('qemu-check-hypervisor-platform', async () => {
+            try {
+                return await getWindowsHypervisorPlatformState();
+            } catch (e) {
+                log.error('ipchandler @ qemu-check-hypervisor-platform', e);
+                return { supported: false, enabled: false, state: 'error' };
+            }
+        });
+
+        ipcMain.handle('qemu-request-enable-hypervisor-platform', async () => {
+            try {
+                return requestEnableWindowsHypervisorPlatform();
+            } catch (e) {
+                log.error('ipchandler @ qemu-request-enable-hypervisor-platform', e);
+                return { ok: false, error: String(e?.message || e) };
             }
         });
 

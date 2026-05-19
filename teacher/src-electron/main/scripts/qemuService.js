@@ -17,9 +17,16 @@ import {
 import {
     getQemuAccelArgs,
     getQemuCpuArg,
-    getQemuGuestVga,
+    getQemuMachineArgs,
+    getQemuMemoryArg,
+    getQemuRtcArgs,
+    getQemuSmpArgs,
     getQemuTeacherDisplayArgs,
+    getQemuUsbTabletArgs,
     getQemuVirtioDiskDriveArg,
+    getQemuVgaDeviceArgs,
+    getQemuWinUefiInstallExtras,
+    getQemuWinUefiRuntimeExtras,
 } from '../../../../shared/qemuHostArgs.js';
 
 const DEFAULTS = {
@@ -235,7 +242,7 @@ async function getResolvedQemu() {
     if (!r.ok) {
         if (r.virtioVgaUnavailable && !r.qemuModuleDir) {
             throw new Error(
-                'QEMU HW-Module fehlen: nach public/qemu/lin/lib/qemu den Ordner /usr/lib/qemu kopieren (für -vga virtio).'
+                'QEMU HW-Module fehlen (z. B. /usr/lib/qemu). Linux: qemu-system-x86 Paket installieren.'
             );
         }
         throw new Error(`QEMU not available (missing: ${(r.missing || []).join(', ')})`);
@@ -281,7 +288,12 @@ async function spawnTeacherInteractiveQemu(qemuSystem, args, binDir) {
             stdio: ['ignore', 'ignore', 'pipe'],
         });
         let stderr = '';
-        proc.stderr?.on('data', (d) => { stderr += String(d); });
+        proc.stderr?.on('data', (d) => {
+            const chunk = String(d);
+            stderr += chunk;
+            const line = chunk.trim();
+            if (line) log.warn(`qemuService: qemu stderr: ${line}`);
+        });
         proc.on('error', reject);
         const timer = setTimeout(() => {
             try { proc.unref(); } catch (e) {}
@@ -411,29 +423,29 @@ async function installDefaultVm({ workdirectory, onProgress = null }) {
     try { onProgress?.({ phase: 'starting-qemu', file: DEFAULTS.diskName, percent: 0 }); } catch (e) {}
     log.info(`qemuService @ installDefaultVm: assets ready (iso=${isoPath}, virtio=${virtioPath}, answerIso=${answerIsoPath}, disk=${diskPath})`);
 
+    const { qemuSystem, binDir } = await getResolvedQemu();
+    const uefiExtras = await getQemuWinUefiInstallExtras({
+        binDir,
+        qemuWorkDir: qemuDir,
+        isoPath,
+        virtioPath,
+        answerIsoPath,
+    });
     const args = [
         ...getQemuAccelArgs(),
-        '-m', '8192',
-        '-smp', '4',
-        '-cpu', getQemuCpuArg(),
-        '-machine', 'q35',
+        ...getQemuMemoryArg(),
+        ...getQemuSmpArgs(),
+        ...getQemuRtcArgs(),
+        ...getQemuMachineArgs(),
+        '-cpu', getQemuCpuArg({ profile: 'uefi-install' }),
         ...getQemuVirtioDiskDriveArg(diskPath),
-        '-drive', `file=${isoPath},media=cdrom,if=none,id=winiso,readonly=on`,
-        '-device', 'ide-cd,bus=ide.0,drive=winiso',
-        '-drive', `file=${virtioPath},media=cdrom,if=none,id=virtiocd,readonly=on`,
-        '-device', 'ide-cd,bus=ide.1,drive=virtiocd',
-        '-drive', `file=${answerIsoPath},media=cdrom,if=none,id=answercd,readonly=on`,
-        '-device', 'ide-cd,bus=ide.2,drive=answercd',
-        '-vga', 'std',
+        ...uefiExtras,
+        ...getQemuVgaDeviceArgs({ profile: 'uefi-install' }),
         ...getQemuTeacherDisplayArgs(),
-        '-boot', 'once=d',
-        '-device', 'usb-ehci',
-        '-device', 'usb-tablet',
+        ...getQemuUsbTabletArgs({ profile: 'uefi-install' }),
         '-device', 'virtio-net-pci,netdev=n0',
         '-netdev', 'user,id=n0',
     ];
-
-    const { qemuSystem, binDir } = await getResolvedQemu();
     const { pid } = await spawnTeacherInteractiveQemu(qemuSystem, args, binDir);
     log.info(`qemuService @ installDefaultVm: qemu started pid=${pid || 'unknown'}`);
 
@@ -454,23 +466,24 @@ async function bootDisk({ workdirectory, qcow2Name }) {
     const diskPath = path.join(qemuDir, filename);
     await fs.promises.access(diskPath, fs.constants.R_OK);
 
+    const { qemuSystem, binDir } = await getResolvedQemu();
+    const uefiExtras = await getQemuWinUefiRuntimeExtras({ binDir, qemuWorkDir: qemuDir });
     const args = [
-        ...getQemuAccelArgs(),
-        '-m', '8192',
-        '-smp', '4',
-        '-cpu', getQemuCpuArg(),
-        '-machine', 'q35',
+        ...getQemuAccelArgs({ runtime: true }),
+        ...getQemuMemoryArg(),
+        ...getQemuSmpArgs(),
+        ...getQemuRtcArgs(),
+        ...getQemuMachineArgs(),
+        ...uefiExtras,
+        '-cpu', getQemuCpuArg({ profile: 'runtime' }),
         ...getQemuVirtioDiskDriveArg(diskPath),
-        '-vga', getQemuGuestVga(),
+        ...getQemuVgaDeviceArgs({ profile: 'runtime' }),
         ...getQemuTeacherDisplayArgs(),
-        '-device', 'qemu-xhci',
-        '-device', 'usb-tablet',
+        ...getQemuUsbTabletArgs({ profile: 'runtime' }),
         '-device', 'virtio-net-pci,netdev=n0',
         '-netdev', 'user,id=n0',
         '-boot', 'order=c',
     ];
-
-    const { qemuSystem, binDir } = await getResolvedQemu();
     const { pid } = await spawnTeacherInteractiveQemu(qemuSystem, args, binDir);
     log.info(`qemuService @ bootDisk: qemu started pid=${pid || 'unknown'}`);
     return { ok: true };

@@ -1,6 +1,6 @@
 
 import CryptoJS from 'crypto-js';
-import { buildQemuMissingWarningHtml } from 'next-exam-shared/qemuMissingWarningHtml.js';
+import { ensureQemuAvailableForLocalVmUi } from 'next-exam-shared/qemuLocalVmDialogs.js';
 
 function ensureGroupsAndExamConfig(section) {
     const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
@@ -802,32 +802,18 @@ async function configureRDP(presetGroup){
 }
 
 
-/** Swal when qemu-system-x86_64 / qemu-img are not on PATH (LocalVM). */
-async function showQemuMissingWarning(vm) {
-    await vm.$swal.fire({
-        icon: 'warning',
-        title: vm.$t('dashboard.qemuMissingTitle'),
-        html: buildQemuMissingWarningHtml(vm.$t('dashboard.qemuMissingText')),
-        confirmButtonText: vm.$t('dashboard.qemuMissingConfirm'),
-    });
-}
-
-/** IPC probe; false when QEMU missing (warning already shown). */
+/** IPC probe; false when QEMU / Hypervisor missing (shared swal + actions). */
 async function ensureQemuAvailableForLocalVm(vm) {
-    const ipc = window.ipcRenderer;
-    if (!ipc) {
+    if (!window.ipcRenderer) {
         return false;
     }
-    try {
-        const res = await ipc.invoke('qemu-check-available');
-        if (res?.ok) {
-            return true;
-        }
-    } catch (e) {
-        console.error('examsetup @ ensureQemuAvailableForLocalVm', e);
-    }
-    await showQemuMissingWarning(vm);
-    return false;
+    return ensureQemuAvailableForLocalVmUi({
+        swal: vm.$swal,
+        t: vm.$t.bind(vm),
+        invoke: (channel, ...args) => window.ipcRenderer.invoke(channel, ...args),
+        i18nPrefix: 'dashboard',
+        cancelKey: 'cancel',
+    });
 }
 
 /**
