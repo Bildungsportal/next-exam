@@ -15,6 +15,7 @@ import {
     buildQemuSpawnEnv,
     resolveQemuModuleDir,
 } from '../../../../shared/qemuAvailability.js';
+import { getQemuAccelArgs, getQemuCpuArg } from '../../../../shared/qemuHostArgs.js';
 
 const DEFAULTS = {
     isoUrl: 'https://software-static.download.prss.microsoft.com/dbazure/888969d5-f34g-4e03-ac9d-1f9786c66749/26100.1.240331-1435.ge_release_CLIENT_IOT_LTSC_EVAL_x64FRE_en-us.iso',
@@ -389,22 +390,6 @@ async function ensureDisk(qemuDir) {
     return diskPath;
 }
 
-function getAccelArgs() {
-    const platform = process.platform;
-    if (platform === 'linux') return ['-enable-kvm'];
-    if (platform === 'win32') return ['-accel', 'whpx'];
-    if (platform === 'darwin') return ['-accel', 'hvf'];
-    return [];
-}
-
-function getCpuArg() {
-    const cpu = 'host,hv_relaxed,hv_spinlocks=0x1fff,hv_vapic,hv_time';
-    if (process.platform === 'linux') return cpu;
-    if (process.platform === 'win32') return cpu;
-    if (process.platform === 'darwin') return cpu;
-    return cpu;
-}
-
 /** Bundled QEMU defaults to "none"; ui-gtk.so needs explicit -display gtk for a window. */
 function getTeacherInteractiveDisplayArgs() {
     if (process.platform === 'darwin') return ['-display', 'cocoa'];
@@ -428,10 +413,10 @@ async function installDefaultVm({ workdirectory, onProgress = null }) {
     log.info(`qemuService @ installDefaultVm: assets ready (iso=${isoPath}, virtio=${virtioPath}, answerIso=${answerIsoPath}, disk=${diskPath})`);
 
     const args = [
-        ...getAccelArgs(),
+        ...getQemuAccelArgs(),
         '-m', '8192',
         '-smp', '4',
-        '-cpu', getCpuArg(),
+        '-cpu', getQemuCpuArg(),
         '-machine', 'q35',
         '-drive', `file=${diskPath},if=virtio,cache=none,aio=native`,
         '-drive', `file=${isoPath},media=cdrom,if=none,id=winiso,readonly=on`,
@@ -471,10 +456,10 @@ async function bootDisk({ workdirectory, qcow2Name }) {
     await fs.promises.access(diskPath, fs.constants.R_OK);
 
     const args = [
-        ...getAccelArgs(),
+        ...getQemuAccelArgs(),
         '-m', '8192',
         '-smp', '4',
-        '-cpu', getCpuArg(),
+        '-cpu', getQemuCpuArg(),
         '-machine', 'q35',
         '-drive', `file=${diskPath},if=virtio`,
         '-vga', QEMU_GUEST_VGA,

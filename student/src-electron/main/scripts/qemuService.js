@@ -13,20 +13,13 @@ import {
     buildQemuSpawnEnv,
     resolveQemuModuleDir,
 } from '../../../../shared/qemuAvailability.js';
+import { getQemuAccelArgs, getQemuCpuArg } from '../../../../shared/qemuHostArgs.js';
 
 let vmProc = null;
 let vmDisk = null;
 let vmVncDisplay = null;
 let vmOverlayPath = null;
 let vmQmpPath = null;
-
-function getCpuArg() {
-    const cpu = 'host,hv_relaxed,hv_spinlocks=0x1fff,hv_vapic,hv_time';
-    if (process.platform === 'linux') return cpu;
-    if (process.platform === 'win32') return cpu;
-    if (process.platform === 'darwin') return cpu;
-    return cpu;
-}
 
 function getQemuDir(workdirectory) {
     return path.join(workdirectory, 'QEMU');
@@ -386,8 +379,8 @@ async function startHeadless({ workdirectory, examdirectory, qcow2Name, vncDispl
         : ['-netdev', 'user,id=n0', '-device', 'virtio-net-pci,netdev=n0'];
 
     const args = [
-        '-enable-kvm',
-        '-cpu', getCpuArg(),
+        ...getQemuAccelArgs(),
+        '-cpu', getQemuCpuArg(),
         '-m', '8192',
         '-smp', '4',
         // writeback+threads avoids long stalls many hosts show with cache=none+aio=native on large Windows images
