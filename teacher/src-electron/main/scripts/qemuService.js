@@ -1,6 +1,9 @@
 import fs from 'fs';
+import { createWriteStream } from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
+import { Transform } from 'stream';
+import { pipeline } from 'stream/promises';
 import { fileURLToPath } from 'url';
 import http from 'http';
 import https from 'https';
@@ -48,6 +51,13 @@ async function ensureDir(dir) {
 
 const QEMU_DOWNLOAD_HEADERS = {
     'User-Agent': 'Next-Exam/2.0 (LocalVM QEMU downloader)',
+    'Accept-Encoding': 'identity',
+};
+
+/** Min on-disk size before we treat a download as complete (avoids re-downloading after partial runs). */
+const MIN_COMPLETE_BYTES = {
+    [DEFAULTS.isoName]: 3 * 1024 * 1024 * 1024,
+    [DEFAULTS.virtioName]: 100 * 1024 * 1024,
 };
 
 function existingDownloadSize(destPath) {
@@ -59,8 +69,15 @@ function existingDownloadSize(destPath) {
     }
 }
 
-/** HTTP(S) download into an open file handle; explicit writes (no pipe) for reliable Windows disk I/O. */
-function downloadUrlToFd(url, fd, tmpPath, ctx) {
+function isCompleteDownload(destPath, destBase) {
+    const bytes = existingDownloadSize(destPath);
+    const min = MIN_COMPLETE_BYTES[destBase];
+    if (min) return bytes >= min;
+    return bytes > 0;
+}
+
+/** Stream HTTP(S) body to tmpPath; pipeline waits until all bytes are flushed to disk. */
+function downloadUrlToPath(url, tmpPath, ctx) {
     const { onProgress, destBase, tmpBase } = ctx;
     return new Promise((resolve, reject) => {
         const u = new URL(url);
@@ -69,19 +86,19 @@ function downloadUrlToFd(url, fd, tmpPath, ctx) {
             if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
                 res.resume();
                 const nextUrl = new URL(res.headers.location, url).href;
-                log.info(`qemuService @ downloadUrlToFd: redirect ${res.statusCode} -> ${nextUrl}`);
+                log.info(`qemuService @ downloadUrlToPath: redirect ${res.statusCode} -> ${nextUrl}`);
                 resolve({ redirect: nextUrl });
                 return;
             }
             if (res.statusCode !== 200) {
+                res.resume();
                 reject(new Error(`download failed: ${res.statusCode} ${res.statusMessage || ''}`.trim()));
                 return;
             }
             const total = Number(res.headers['content-length'] || 0) || 0;
             let received = 0;
-            let offset = 0;
             let lastPct = -1;
-            let lastDiskCheckAt = 0;
+            let lastDiskPct = -1;
             const loggedMilestones = new Set();
             const reportProgress = (phase, percent) => {
                 try {
@@ -94,45 +111,41 @@ function downloadUrlToFd(url, fd, tmpPath, ctx) {
             };
             reportProgress('start', 0);
 
-            res.on('data', (chunk) => {
-                res.pause();
-                fd.write(chunk, 0, chunk.length, offset)
-                    .then(() => {
-                        offset += chunk.length;
-                        received += chunk.length;
-                        if (total > 0) {
-                            const pct = Math.floor((received / total) * 100);
-                            if (pct !== lastPct) {
-                                lastPct = pct;
-                                reportProgress('downloading', pct);
-                            }
-                            if (pct === 5 || pct === 25 || pct === 50 || pct === 75 || pct === 90) {
-                                if (!loggedMilestones.has(pct)) {
-                                    loggedMilestones.add(pct);
-                                    log.info(`qemuService @ downloadUrlToFd: ${tmpBase} ${pct}% (${received} bytes)`);
-                                }
+            const progressTap = new Transform({
+                transform(chunk, _enc, cb) {
+                    received += chunk.length;
+                    if (total > 0) {
+                        const pct = Math.min(100, Math.floor((received / total) * 100));
+                        if (pct !== lastPct) {
+                            lastPct = pct;
+                            reportProgress('downloading', pct);
+                        }
+                        if (pct === 5 || pct === 25 || pct === 50 || pct === 75 || pct === 90) {
+                            if (!loggedMilestones.has(pct)) {
+                                loggedMilestones.add(pct);
+                                const diskBytes = existingDownloadSize(tmpPath);
+                                log.info(`qemuService @ downloadUrlToPath: ${tmpBase} ${pct}% (stream ${received}, disk ${diskBytes})`);
                             }
                         }
-                        if (received - lastDiskCheckAt >= 4 * 1024 * 1024) {
-                            lastDiskCheckAt = received;
-                            const diskBytes = existingDownloadSize(tmpPath);
-                            if (diskBytes === 0 && received > 1024 * 1024) {
-                                return Promise.reject(new Error(
-                                    `download disk stall: ${received} bytes received but ${tmpBase} stays 0 bytes on disk`
-                                ));
-                            }
+                    } else if (received - (lastDiskPct * 50 * 1024 * 1024) >= 50 * 1024 * 1024) {
+                        const diskBytes = existingDownloadSize(tmpPath);
+                        const approxPct = Math.min(99, Math.floor(diskBytes / (50 * 1024 * 1024)));
+                        if (approxPct !== lastDiskPct) {
+                            lastDiskPct = approxPct;
+                            reportProgress('downloading', null);
                         }
-                        res.resume();
-                    })
-                    .catch((err) => {
-                        try { res.destroy(); } catch (e) {}
-                        reject(err);
-                    });
+                    }
+                    cb(null, chunk);
+                },
             });
-            res.on('end', () => {
-                resolve({ redirect: null, received, total });
-            });
-            res.on('error', reject);
+
+            const out = createWriteStream(tmpPath, { flags: 'w' });
+            pipeline(res, progressTap, out)
+                .then(() => {
+                    const partBytes = existingDownloadSize(tmpPath);
+                    resolve({ redirect: null, received, total, partBytes });
+                })
+                .catch(reject);
         });
         req.on('error', reject);
     });
@@ -145,39 +158,42 @@ async function downloadFile(url, destPath, onProgress = null) {
     const tmpBase = path.basename(tmpPath);
     const destBase = path.basename(destPath);
 
-    const existingBytes = existingDownloadSize(destPath);
-    if (existingBytes > 0) {
-        log.info(`qemuService @ downloadFile: skip exists ${destPath} (${existingBytes} bytes)`);
+    if (isCompleteDownload(destPath, destBase)) {
+        const existingBytes = existingDownloadSize(destPath);
+        log.info(`qemuService @ downloadFile: skip complete ${destPath} (${existingBytes} bytes)`);
+        try { fs.unlinkSync(tmpPath); } catch (e) {}
         try { onProgress?.({ phase: 'skip', file: destBase, percent: 100 }); } catch (e) {}
         return { ok: true, skipped: true, path: destPath };
     }
-    if (existingBytes === 0 && fs.existsSync(destPath)) {
+    if (fs.existsSync(destPath)) {
         try { fs.unlinkSync(destPath); } catch (e) {}
     }
     try { fs.unlinkSync(tmpPath); } catch (e) {}
 
     log.info(`qemuService @ downloadFile: ${url} -> ${tmpPath} (rename to ${destPath} when done)`);
-    let fd = await fs.promises.open(tmpPath, 'w');
     let currentUrl = url;
     let downloadCompleted = false;
     try {
         for (let hop = 0; hop < 12; hop++) {
-            const result = await downloadUrlToFd(currentUrl, fd, tmpPath, { onProgress, destBase, tmpBase });
+            const result = await downloadUrlToPath(currentUrl, tmpPath, { onProgress, destBase, tmpBase });
             if (result.redirect) {
-                await fd.close();
-                fd = null;
                 try { fs.unlinkSync(tmpPath); } catch (e) {}
-                fd = await fs.promises.open(tmpPath, 'w');
                 currentUrl = result.redirect;
                 continue;
             }
-            await fd.sync();
-            const partBytes = existingDownloadSize(tmpPath);
+            const partBytes = result.partBytes ?? existingDownloadSize(tmpPath);
             if (partBytes <= 0) {
                 throw new Error(`download wrote no data (${tmpBase})`);
             }
-            if (result.received > 0 && partBytes < result.received) {
-                throw new Error(`download incomplete: received ${result.received} bytes, on disk ${partBytes} (${tmpBase})`);
+            if (result.total > 0 && partBytes < result.total * 0.99) {
+                throw new Error(
+                    `download incomplete: expected ~${result.total} bytes, on disk ${partBytes} (${tmpBase})`
+                );
+            }
+            if (result.received > 0 && partBytes < result.received * 0.99) {
+                throw new Error(
+                    `download incomplete: received ${result.received} bytes, on disk ${partBytes} (${tmpBase})`
+                );
             }
             log.info(`qemuService @ downloadFile: received ${result.received} bytes, on disk ${partBytes} (${tmpBase})`);
             downloadCompleted = true;
@@ -186,15 +202,13 @@ async function downloadFile(url, destPath, onProgress = null) {
         if (!downloadCompleted) {
             throw new Error('download failed: too many redirects');
         }
-        await fd.close();
-        fd = null;
         await fs.promises.rename(tmpPath, destPath);
+        try { fs.unlinkSync(tmpPath); } catch (e) {}
         log.info(`qemuService @ downloadFile: done ${destPath}`);
         try { onProgress?.({ phase: 'done', file: destBase, percent: 100 }); } catch (e) {}
         return { ok: true, skipped: false, path: destPath };
     } catch (e) {
         log.error('qemuService @ downloadFile failed', e);
-        try { if (fd) await fd.close(); } catch (err) {}
         try { fs.unlinkSync(tmpPath); } catch (err) {}
         throw e;
     }
@@ -407,8 +421,10 @@ async function installDefaultVm({ workdirectory, onProgress = null }) {
 
     await downloadFile(DEFAULTS.isoUrl, isoPath, onProgress);
     await downloadFile(DEFAULTS.virtioUrl, virtioPath, onProgress);
+    try { onProgress?.({ phase: 'creating-disk', file: DEFAULTS.diskName, percent: 0 }); } catch (e) {}
     const answerIsoPath = await ensureAnswerIsoPresent(qemuDir);
     const diskPath = await ensureDisk(qemuDir);
+    try { onProgress?.({ phase: 'starting-qemu', file: DEFAULTS.diskName, percent: 0 }); } catch (e) {}
     log.info(`qemuService @ installDefaultVm: assets ready (iso=${isoPath}, virtio=${virtioPath}, answerIso=${answerIsoPath}, disk=${diskPath})`);
 
     const args = [

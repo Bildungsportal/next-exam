@@ -939,7 +939,15 @@ async function configureLocalVM(presetGroup){
                                 return;
                             }
                             if ((phase === 'downloading' || phase === 'start' || phase === 'done') && file) {
-                                el.textContent = pct != null ? `${file}: ${pct}%` : `${file}`;
+                                el.textContent = pct != null ? `${file}: ${pct}%` : `${file}: …`;
+                                return;
+                            }
+                            if (phase === 'creating-disk') {
+                                el.textContent = 'VM-Build: erstelle qcow2-Disk…';
+                                return;
+                            }
+                            if (phase === 'starting-qemu') {
+                                el.textContent = 'VM-Build: starte QEMU-Installation…';
                                 return;
                             }
                             if (phase === 'start') {
@@ -947,7 +955,7 @@ async function configureLocalVM(presetGroup){
                                 return;
                             }
                             if (phase === 'end') {
-                                el.textContent = 'VM-Build: Download fertig, starte QEMU…';
+                                el.textContent = 'VM-Build: fertig.';
                             }
                         };
                         ipc.removeAllListeners?.('qemu-install-progress');
@@ -1262,7 +1270,15 @@ async function configureLocalVM(presetGroup){
                             return;
                         }
                         if ((phase === 'downloading' || phase === 'start' || phase === 'done') && file) {
-                            statusEl.textContent = pct != null ? `${file}: ${pct}%` : `${file}`;
+                            statusEl.textContent = pct != null ? `${file}: ${pct}%` : `${file}: …`;
+                            return;
+                        }
+                        if (phase === 'creating-disk') {
+                            statusEl.textContent = 'VM-Build: erstelle qcow2-Disk…';
+                            return;
+                        }
+                        if (phase === 'starting-qemu') {
+                            statusEl.textContent = 'VM-Build: starte QEMU-Installation…';
                             return;
                         }
                         if (phase === 'start') {
@@ -1270,7 +1286,7 @@ async function configureLocalVM(presetGroup){
                             return;
                         }
                         if (phase === 'end') {
-                            statusEl.textContent = 'VM-Build: Download fertig, starte QEMU…';
+                            statusEl.textContent = 'VM-Build: fertig.';
                         }
                     };
                     ipc.removeAllListeners?.('qemu-install-progress');

@@ -62,6 +62,7 @@ RULE^ui^swal2^teacher+student layout+btn colors^shared/css/nxe-theme.scss
 TECH^localvm^qemuBundled^public/qemu/{win|lin|mac}; copy distro HW modules → <platform>/lib/qemu (e.g. /usr/lib/qemu); spawn sets QEMU_MODULE_DIR via buildQemuSpawnEnv; probe -vga virtio; QEMU_GUEST_VGA=virtio; install ISO -vga std^shared/qemuAvailability.js
 RULE^localvm^display^teacher bootDisk/install=-display gtk (bundled default none; needs lib/qemu ui-gtk.so); student startHeadless=-display none+-vnc^teacher+student qemuService.js
 RULE^localvm^teacherBoot^killExistingQemuInstances before teacher interactive spawn; stale -display none holds qcow2 lock^teacher qemuService.js
+TECH^localvm^isoDl^teacher downloadFile uses stream pipeline to .part then rename; skip if dest>=MIN_COMPLETE_BYTES; cleanup stale .part^teacher qemuService.js
 TECH^localvm^qemuAvail^fallback PATH+win ProgramFiles if bundled missing; renderer qemuMissingWarningHtml.js only^shared+ipchandler
 TECH^student^localvmHash^sha256 base qcow2 before qemu start (runLocalVmPreStartVerify); avoids guest freeze from parallel full read^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js
 TECH^student^localvmStart^localVmStartState idle|starting|blocked; qemu-download/import must not set idle while starting (parallel startExam)^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js
