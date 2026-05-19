@@ -301,7 +301,7 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
 } from '../utils/examFetchInfoSync.js'
-import { buildQemuMissingWarningHtml } from 'next-exam-shared/qemuAvailability.js'
+import { buildQemuMissingWarningHtml } from 'next-exam-shared/qemuMissingWarningHtml.js'
 
 
 // Capture unhandled promise rejections

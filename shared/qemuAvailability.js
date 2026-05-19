@@ -1,7 +1,5 @@
 import { spawn } from 'child_process';
 
-export const QEMU_DOWNLOAD_URL = 'https://www.qemu.org/download/';
-
 const PROBE_TIMEOUT_MS = 8000;
 
 /** Platform command names required for LocalVM (qemu-system-x86_64 + qemu-img). */
@@ -55,14 +53,4 @@ export async function checkQemuAvailability() {
         }
     }
     return { ok: missing.length === 0, missing };
-}
-
-/** Swal html: message + link to official QEMU download page. */
-export function buildQemuMissingWarningHtml(message) {
-    const text = String(message || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/"/g, '&quot;')
-        .replace(/\n/g, '<br>');
-    return `<p style="text-align:left;">${text}</p><p style="margin-top:12px;text-align:left;"><a href="${QEMU_DOWNLOAD_URL}" target="_blank" rel="noopener noreferrer">${QEMU_DOWNLOAD_URL}</a></p>`;
 }

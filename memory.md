@@ -59,7 +59,7 @@ TECH^student^rdp^fetchInfo^applyRdpConfigFromSection; webview src only on url ch
 RULE^student^typingRhythm^editor.vue isTypingRhythmExemptKey clears deltas for Backspace Delete Space Enter NumpadEnter (OS key-repeat)^student/src/pages/editor.vue handleTypingRhythmKeydown
 RULE^ui^colors^shared^btn-cyan+swal confirm=$cyan-600^shared/css/nxe-theme.scss; app.scss imports nxe-bootstrap-config+nxe-theme
 RULE^ui^swal2^teacher+student layout+btn colors^shared/css/nxe-theme.scss
-TECH^localvm^qemuAvail^shared/qemuAvailability.js checkQemuAvailability+buildQemuMissingWarningHtml; IPC qemu-check-available; teacher configureLocalVM+install+boot; student startExam localvm→qemu-not-available^shared+teacher examsetup+student communicationhandler
+TECH^localvm^qemuAvail^shared/qemuAvailability.js checkQemuAvailability main only; renderer shared/qemuMissingWarningHtml.js; IPC qemu-check-available^teacher+student ipchandler+examsetup+student.vue
 TECH^student^localvmHash^sha256 base qcow2 before qemu start (runLocalVmPreStartVerify); avoids guest freeze from parallel full read^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js
 TECH^student^localvmStart^localVmStartState idle|starting|blocked; qemu-download/import must not set idle while starting (parallel startExam)^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js
 TECH^student^examWin^createExamWindow no-op if examwindow exists (orphan second BrowserWindow)^student/src-electron/main/scripts/windowhandler.js

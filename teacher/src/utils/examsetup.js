@@ -1,6 +1,6 @@
 
 import CryptoJS from 'crypto-js';
-import { buildQemuMissingWarningHtml } from 'next-exam-shared/qemuAvailability.js';
+import { buildQemuMissingWarningHtml } from 'next-exam-shared/qemuMissingWarningHtml.js';
 
 function ensureGroupsAndExamConfig(section) {
     const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
