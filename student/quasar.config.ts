@@ -319,7 +319,7 @@ export default defineConfig(( ctx: any ) => {
           icon: 'public/icons/256x256.png',
           artifactName: artifactNamePattern,
           // Quasar UnPackaged root has electron-main.js, index.html, preload/, assets/ – include all, exclude other platforms’ JRE
-          files: ['**/*', '!public/minimal-jre-11-win/**', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**'],
+          files: ['**/*', '!public/minimal-jre-11-win/**', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**', '!public/qemu/win/**', '!public/qemu/mac/**'],
         },
         mac: {
           icon: 'public/icons/icon.png',
@@ -330,7 +330,7 @@ export default defineConfig(( ctx: any ) => {
           entitlementsInherit: 'scripts/entitlements.mac.plist',
           category: 'public.app-category.utilities',
           target: { target: 'dmg', arch: ['x64', 'arm64'] },
-          files: ['**/*', '!public/minimal-jre-11-win/**', '!public/minimal-jre-11-lin/**'],
+          files: ['**/*', '!public/minimal-jre-11-win/**', '!public/minimal-jre-11-lin/**', '!public/qemu/win/**', '!public/qemu/lin/**'],
         },
         dmg: { sign: false },
         portable: { useZip: false, unpackDirName: 'next-exam-student', splashImage: 'public/splash.bmp' },
@@ -345,7 +345,7 @@ export default defineConfig(( ctx: any ) => {
           icon: 'public/icons/icon.ico',
           target: [{ target: 'portable', arch: ['x64'] }, { target: 'msi', arch: ['x64'] }],
           artifactName: artifactNamePattern,
-          files: ['**/*', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**', '!public/minimal-jre-11-lin/**'],
+          files: ['**/*', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**', '!public/minimal-jre-11-lin/**', '!public/qemu/lin/**', '!public/qemu/mac/**'],
           ...(signEnabled && {
             sign: true,
             signtoolOptions: { certificateSubjectName: 'OSOS Austria', signingHashAlgorithms: ['sha256'] },

@@ -306,7 +306,7 @@ export default defineConfig(( ctx: any ) => {
           category: 'Utility',
           icon: 'public/icons/256x256.png',
           artifactName: artifactNamePattern,
-          files: ['**/*'],
+          files: ['**/*', '!public/qemu/win/**', '!public/qemu/mac/**'],
         },
         mac: {
           icon: 'public/icons/icon.png',
@@ -317,7 +317,7 @@ export default defineConfig(( ctx: any ) => {
           entitlementsInherit: 'scripts/entitlements.mac.plist',
           category: 'public.app-category.utilities',
           target: { target: 'dmg', arch: ['x64', 'arm64'] },
-          files: ['**/*'],
+          files: ['**/*', '!public/qemu/win/**', '!public/qemu/lin/**'],
         },
         dmg: { sign: false },
         portable: { useZip: false, unpackDirName: 'next-exam-teacher', splashImage: 'public/splash.bmp' },
@@ -332,7 +332,7 @@ export default defineConfig(( ctx: any ) => {
           icon: 'public/icons/icon.ico',
           target: [{ target: 'portable', arch: ['x64'] }, { target: 'msi', arch: ['x64'] }],
           artifactName: artifactNamePattern,
-          files: ['**/*'],
+          files: ['**/*', '!public/qemu/lin/**', '!public/qemu/mac/**'],
           // electron-builder 26: use signtoolOptions to enable signing (no win.sign boolean)
           ...(signEnabled && {
             signtoolOptions: { certificateSubjectName: 'OSOS Austria', signingHashAlgorithms: ['sha256'] },

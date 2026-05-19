@@ -1171,8 +1171,23 @@ async function configureLocalVM(presetGroup){
                     const bootRes = await ipc.invoke('qemu-boot-disk', { qcow2Name: diskName });
                     if (bootRes?.qemuMissing) {
                         await showQemuMissingWarning(this);
+                        return;
                     }
-                } catch (e) {}
+                    if (!bootRes?.ok) {
+                        await this.$swal.fire({
+                            icon: 'error',
+                            title: 'LocalVM',
+                            text: bootRes?.error || 'QEMU konnte nicht gestartet werden.',
+                        });
+                        return;
+                    }
+                } catch (e) {
+                    await this.$swal.fire({
+                        icon: 'error',
+                        title: 'LocalVM',
+                        text: String(e?.message || e),
+                    });
+                }
             });
             const browseBtn = document.getElementById('qemuBrowseBtn');
             browseBtn?.addEventListener('click', async () => {

@@ -7,6 +7,12 @@ import crypto from 'crypto';
 import net from 'net';
 import { startExamWebdav, stopExamWebdav, EXAM_WEBDAV_PORT, EXAM_WEBDAV_MOUNT_PATH } from './examWebdavServer.js';
 import { NEXT_EXAM_API_SECRET, NEXT_EXAM_API_SECRET_HEADER } from '../../../../shared/nextExamApiSecret.js';
+import {
+    resolveQemuBinaries,
+    QEMU_GUEST_VGA,
+    buildQemuSpawnEnv,
+    resolveQemuModuleDir,
+} from '../../../../shared/qemuAvailability.js';
 
 let vmProc = null;
 let vmDisk = null;
@@ -37,6 +43,20 @@ function diskPath(workdirectory, qcow2Name) {
 function isSafeFilename(name) {
     const base = path.basename(name);
     return base === name && !!base && !base.includes('..') && !base.includes('/') && !base.includes('\\');
+}
+
+async function getResolvedQemu() {
+    const r = await resolveQemuBinaries();
+    if (!r.ok) {
+        if (r.virtioVgaUnavailable && !r.qemuModuleDir) {
+            throw new Error(
+                'QEMU HW-Module fehlen: nach public/qemu/lin/lib/qemu den Ordner /usr/lib/qemu kopieren (für -vga virtio).'
+            );
+        }
+        throw new Error(`QEMU not available (missing: ${(r.missing || []).join(', ')})`);
+    }
+    log.info(`qemuService: using QEMU from ${r.binDir} modules=${resolveQemuModuleDir(r.binDir) || 'default'}`);
+    return r;
 }
 
 function spawnLogged(cmd, args, options = {}) {
@@ -314,6 +334,7 @@ function stopVm() {
     return true;
 }
 
+// Student exam VM: headless + VNC only (no GTK); teacher bootDisk uses interactive display instead.
 async function startHeadless({ workdirectory, examdirectory, qcow2Name, vncDisplay = ':1', overlayName = null, blockInternet = false, forceFreshOverlay = false }) {
     const qemuDir = getQemuDir(workdirectory);
     await ensureDir(qemuDir);
@@ -339,9 +360,13 @@ async function startHeadless({ workdirectory, examdirectory, qcow2Name, vncDispl
             await fs.promises.unlink(overlayPath);
         } catch (e) {}
     }
+    const { qemuImg, qemuSystem, binDir } = await getResolvedQemu();
     if (!fs.existsSync(overlayPath)) {
         log.info(`qemuService @ startHeadless: creating overlay ${overlayFilename}`);
-        const res = await runToCompletion('qemu-img', ['create', '-f', 'qcow2', '-F', 'qcow2', '-b', disk, overlayPath], { cwd: qemuDir });
+        const res = await runToCompletion(qemuImg, ['create', '-f', 'qcow2', '-F', 'qcow2', '-b', disk, overlayPath], {
+            cwd: binDir,
+            env: buildQemuSpawnEnv(binDir),
+        });
         if (res.exitCode !== 0) {
             throw new Error(`qemu-img overlay failed: ${res.stderr || res.stdout}`);
         }
@@ -367,8 +392,7 @@ async function startHeadless({ workdirectory, examdirectory, qcow2Name, vncDispl
         '-smp', '4',
         // writeback+threads avoids long stalls many hosts show with cache=none+aio=native on large Windows images
         '-drive', `file=${overlayPath},if=virtio,cache=writeback,aio=threads`,
-        // virtio GPU needs virtio-win display driver in guest; use qxl or std if the screen stays black.
-        '-vga', 'virtio',
+        '-vga', QEMU_GUEST_VGA,
         '-display', 'none',
         '-vnc', vncDisplay,
         '-qmp', `unix:${path.join(qemuDir, 'qmp.sock')},server=on,wait=off`,
@@ -383,7 +407,11 @@ async function startHeadless({ workdirectory, examdirectory, qcow2Name, vncDispl
         // same commands for now (linux first); platform-specific tuning later
     }
 
-    const proc = spawnLogged('qemu-system-x86_64', args, { cwd: qemuDir, stdio: 'ignore' });
+    const proc = spawnLogged(qemuSystem, args, {
+        cwd: binDir,
+        env: buildQemuSpawnEnv(binDir),
+        stdio: 'ignore',
+    });
 
     const vncPort = vncDisplayToPort(vncDisplay);
     log.info(`qemuService @ startHeadless: waiting for VNC 127.0.0.1:${vncPort}`);

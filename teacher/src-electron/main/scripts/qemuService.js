@@ -6,6 +6,12 @@ import http from 'http';
 import https from 'https';
 import log from 'electron-log';
 import crypto from 'crypto';
+import {
+    resolveQemuBinaries,
+    QEMU_GUEST_VGA,
+    buildQemuSpawnEnv,
+    resolveQemuModuleDir,
+} from '../../../../shared/qemuAvailability.js';
 
 const DEFAULTS = {
     isoUrl: 'https://software-static.download.prss.microsoft.com/dbazure/888969d5-f34g-4e03-ac9d-1f9786c66749/26100.1.240331-1435.ge_release_CLIENT_IOT_LTSC_EVAL_x64FRE_en-us.iso',
@@ -204,11 +210,69 @@ async function sha256File(filePath) {
     });
 }
 
+async function getResolvedQemu() {
+    const r = await resolveQemuBinaries();
+    if (!r.ok) {
+        if (r.virtioVgaUnavailable && !r.qemuModuleDir) {
+            throw new Error(
+                'QEMU HW-Module fehlen: nach public/qemu/lin/lib/qemu den Ordner /usr/lib/qemu kopieren (für -vga virtio).'
+            );
+        }
+        throw new Error(`QEMU not available (missing: ${(r.missing || []).join(', ')})`);
+    }
+    log.info(`qemuService: using QEMU from ${r.binDir} modules=${resolveQemuModuleDir(r.binDir) || 'default'}`);
+    return r;
+}
+
+function sleepMs(ms) {
+    return new Promise((r) => setTimeout(r, ms));
+}
+
+/** Stop stale headless QEMU (e.g. old -display none runs) so the disk lock and GTK window are free. */
+async function killExistingQemuInstances() {
+    if (process.platform === 'win32') {
+        const r = await runToCompletion('taskkill', ['/F', '/IM', 'qemu-system-x86_64.exe']);
+        log.info(`qemuService @ killExistingQemuInstances: taskkill exit=${r.exitCode}`);
+        return;
+    }
+    const term = await runToCompletion('killall', ['-TERM', 'qemu-system-x86_64']);
+    log.info(`qemuService @ killExistingQemuInstances: killall -TERM exit=${term.exitCode}`);
+    await sleepMs(600);
+    const kill = await runToCompletion('killall', ['-KILL', 'qemu-system-x86_64']);
+    log.info(`qemuService @ killExistingQemuInstances: killall -KILL exit=${kill.exitCode}`);
+}
+
 function spawnLogged(cmd, args, options = {}) {
     log.info(`qemuService: spawn ${cmd} ${args.join(' ')}`);
     const proc = spawn(cmd, args, { ...options });
     proc.on('error', (e) => log.error(`qemuService: spawn error ${cmd}`, e));
     return proc;
+}
+
+/** Teacher GTK window: kill stale VMs, spawn detached, fail fast when QEMU exits (e.g. disk lock). */
+async function spawnTeacherInteractiveQemu(qemuSystem, args, binDir) {
+    await killExistingQemuInstances();
+    return await new Promise((resolve, reject) => {
+        log.info(`qemuService: spawn ${qemuSystem} ${args.join(' ')}`);
+        const proc = spawn(qemuSystem, args, {
+            cwd: binDir,
+            env: buildQemuSpawnEnv(binDir),
+            detached: true,
+            stdio: ['ignore', 'ignore', 'pipe'],
+        });
+        let stderr = '';
+        proc.stderr?.on('data', (d) => { stderr += String(d); });
+        proc.on('error', reject);
+        const timer = setTimeout(() => {
+            try { proc.unref(); } catch (e) {}
+            resolve({ pid: proc.pid });
+        }, 1500);
+        proc.on('exit', (code, signal) => {
+            clearTimeout(timer);
+            const detail = stderr.trim() || `exit ${code}${signal ? ` signal ${signal}` : ''}`;
+            reject(new Error(detail));
+        });
+    });
 }
 
 async function runToCompletion(cmd, args, options = {}) {
@@ -300,7 +364,11 @@ async function ensureDisk(qemuDir) {
         log.warn(`qemuService @ ensureDisk: reusing existing disk ${diskPath} (no reinstall will run)`);
         return diskPath;
     }
-    const res = await runToCompletion('qemu-img', ['create', '-f', 'qcow2', diskPath, DEFAULTS.diskSize], { cwd: qemuDir });
+    const { qemuImg, binDir } = await getResolvedQemu();
+    const res = await runToCompletion(qemuImg, ['create', '-f', 'qcow2', diskPath, DEFAULTS.diskSize], {
+        cwd: binDir,
+        env: buildQemuSpawnEnv(binDir),
+    });
     if (res.exitCode !== 0) {
         throw new Error(`qemu-img failed: ${res.stderr || res.stdout}`);
     }
@@ -321,6 +389,12 @@ function getCpuArg() {
     if (process.platform === 'win32') return cpu;
     if (process.platform === 'darwin') return cpu;
     return cpu;
+}
+
+/** Bundled QEMU defaults to "none"; ui-gtk.so needs explicit -display gtk for a window. */
+function getTeacherInteractiveDisplayArgs() {
+    if (process.platform === 'darwin') return ['-display', 'cocoa'];
+    return ['-display', 'gtk'];
 }
 
 async function installDefaultVm({ workdirectory, onProgress = null }) {
@@ -351,6 +425,7 @@ async function installDefaultVm({ workdirectory, onProgress = null }) {
         '-drive', `file=${answerIsoPath},media=cdrom,if=none,id=answercd,readonly=on`,
         '-device', 'ide-cd,bus=ide.2,drive=answercd',
         '-vga', 'std',
+        ...getTeacherInteractiveDisplayArgs(),
         '-boot', 'once=d',
         '-device', 'usb-ehci',
         '-device', 'usb-tablet',
@@ -358,13 +433,14 @@ async function installDefaultVm({ workdirectory, onProgress = null }) {
         '-netdev', 'user,id=n0',
     ];
 
-    const proc = spawnLogged('qemu-system-x86_64', args, { cwd: qemuDir, detached: true, stdio: 'ignore' });
-    try { proc.unref(); } catch (e) {}
-    log.info(`qemuService @ installDefaultVm: qemu started pid=${proc?.pid || 'unknown'}`);
+    const { qemuSystem, binDir } = await getResolvedQemu();
+    const { pid } = await spawnTeacherInteractiveQemu(qemuSystem, args, binDir);
+    log.info(`qemuService @ installDefaultVm: qemu started pid=${pid || 'unknown'}`);
 
     return { ok: true, qemuDir, diskName: DEFAULTS.diskName, vncDisplay: DEFAULTS.vncDisplay };
 }
 
+// Teacher boot: -display gtk window; student uses -display none + VNC only.
 async function bootDisk({ workdirectory, qcow2Name }) {
     const qemuDir = getQemuDir(workdirectory);
     await ensureDir(qemuDir);
@@ -385,7 +461,8 @@ async function bootDisk({ workdirectory, qcow2Name }) {
         '-cpu', getCpuArg(),
         '-machine', 'q35',
         '-drive', `file=${diskPath},if=virtio`,
-        '-vga', 'virtio',
+        '-vga', QEMU_GUEST_VGA,
+        ...getTeacherInteractiveDisplayArgs(),
         '-device', 'qemu-xhci',
         '-device', 'usb-tablet',
         '-device', 'virtio-net-pci,netdev=n0',
@@ -393,8 +470,9 @@ async function bootDisk({ workdirectory, qcow2Name }) {
         '-boot', 'order=c',
     ];
 
-    const proc = spawnLogged('qemu-system-x86_64', args, { cwd: qemuDir, detached: true, stdio: 'ignore' });
-    try { proc.unref(); } catch (e) {}
+    const { qemuSystem, binDir } = await getResolvedQemu();
+    const { pid } = await spawnTeacherInteractiveQemu(qemuSystem, args, binDir);
+    log.info(`qemuService @ bootDisk: qemu started pid=${pid || 'unknown'}`);
     return { ok: true };
 }
 
