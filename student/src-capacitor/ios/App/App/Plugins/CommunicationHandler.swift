@@ -81,6 +81,8 @@ final class CommunicationHandler {
         var request = URLRequest(url: url, timeoutInterval: 10)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("NEXT_EXAM_API_SECRET", forHTTPHeaderField: "x-next-exam-app-secret")
+        request.setValue("Bearer "+(self.multicastClient?.clientinfo.token ?? ""), forHTTPHeaderField: "Authorization")
 
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: payload)
@@ -94,14 +96,39 @@ final class CommunicationHandler {
 
             do {
                 let (data, _) = try await self.urlSession.data(for: request)
+                
+                //print("multicastclient @ messageReceived: ", String(data: data, encoding: .utf8) ?? "Unable to decode data as UTF-8")
 
                 /*guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                     mc.beaconsLost += 1
                     return
                 }*/
                 
-                guard var updateDto = try? JSONDecoder().decode(Update.self, from: data) else {
-                    log(.error, "multicastclient @ messageReceived: JSON decode failed")
+                let updateDto: Update
+                do {
+                    updateDto = try JSONDecoder().decode(Update.self, from: data)
+                } catch let DecodingError.keyNotFound(key, context) {
+                    let path = context.codingPath.map { $0.stringValue }.joined(separator: " → ")
+                    log(.error, "multicastclient @ messageReceived: missing key '\(key.stringValue)' at path '\(path)' – \(context.debugDescription)")
+                    mc.beaconsLost += 1
+                    return
+                } catch let DecodingError.typeMismatch(type, context) {
+                    let path = context.codingPath.map { $0.stringValue }.joined(separator: " → ")
+                    log(.error, "multicastclient @ messageReceived: type mismatch for type '\(type)' at path '\(path)' – \(context.debugDescription)")
+                    mc.beaconsLost += 1
+                    return
+                } catch let DecodingError.valueNotFound(type, context) {
+                    let path = context.codingPath.map { $0.stringValue }.joined(separator: " → ")
+                    log(.error, "multicastclient @ messageReceived: value not found for type '\(type)' at path '\(path)' – \(context.debugDescription)")
+                    mc.beaconsLost += 1
+                    return
+                } catch let DecodingError.dataCorrupted(context) {
+                    let path = context.codingPath.map { $0.stringValue }.joined(separator: " → ")
+                    log(.error, "multicastclient @ messageReceived: data corrupted at path '\(path)' – \(context.debugDescription)")
+                    mc.beaconsLost += 1
+                    return
+                } catch {
+                    log(.error, "multicastclient @ messageReceived: JSON decode failed – \(error)")
                     mc.beaconsLost += 1
                     return
                 }

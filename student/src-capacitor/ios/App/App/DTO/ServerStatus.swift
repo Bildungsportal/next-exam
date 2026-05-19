@@ -3,7 +3,7 @@ import Foundation
 struct ServerStatus: Codable {
 
     var bip: Bool = false
-    var id: String? = nil
+    var id: String? = nil // No included in recieved update dto
     var nextexamVersion: String? = nil
     var examName: String? = nil
     var examPassword: String? = nil
@@ -35,17 +35,19 @@ struct ServerStatus: Codable {
         4: ExamSection()
     ]
 
-    var spellcheck: Bool = false
-    var spellchecklang: String = "de-DE"
-    var suggestions: Bool = false
-    var moodleTestType: String = ""
-    var moodleDomain: String = "eduvidual.at"
-    var msOfficeFile: Bool = false
-    var unlockonexit: Bool = false
-    var fontfamily: String = "sans-serif"
-    var moodleTestId: String = ""
-    var languagetool: Bool = false
-    var password: String = ""
+    //var spellcheck: Bool = false // No included in recieved update dto
+    //var spellchecklang: String = "de-DE" // No included in recieved update dto
+    //var suggestions: Bool = false // No included in recieved update dto
+    //var moodleTestType: String = "" // No included in recieved update dto
+    //var moodleDomain: String = "eduvidual.at" // No included in recieved update dto
+    //var msOfficeFile: Bool = false // No included in recieved update dto
+    //var unlockonexit: Bool = false // No included in recieved update dto
+    //var fontfamily: String = "sans-serif" // No included in recieved update dto
+    //var moodleTestId: String = "" // No included in recieved update dto
+    //var languagetool: Bool = false // No included in recieved update dto
+    //var password: String = "" // No included in recieved update dto
+    var directPrintAllowed: Bool = false
+    var encryptionPassword: String = "b8f14dbcf8546fcc31bf41fe0d099d2baf7df6d34024290ce7b36c5e1d7c92fd"
     
     var asDictionary: [String: Any] {
         var dict = [String: Any]()
@@ -75,17 +77,19 @@ struct ServerStatus: Codable {
         dict["examSections"]         = examSections.reduce(into: [String: Any]()) { result, pair in
                                            result[String(pair.key)] = pair.value.asDictionary
                                        }
-        dict["spellcheck"]           = spellcheck
-        dict["spellchecklang"]       = spellchecklang
-        dict["suggestions"]          = suggestions
-        dict["moodleTestType"]       = moodleTestType
-        dict["moodleDomain"]         = moodleDomain
-        dict["msOfficeFile"]         = msOfficeFile
-        dict["unlockonexit"]         = unlockonexit
-        dict["fontfamily"]           = fontfamily
-        dict["moodleTestId"]         = moodleTestId
-        dict["languagetool"]         = languagetool
-        dict["password"]             = password
+        //dict["spellcheck"]           = spellcheck
+        //dict["spellchecklang"]       = spellchecklang
+        //dict["suggestions"]          = suggestions
+        //dict["moodleTestType"]       = moodleTestType
+        //dict["moodleDomain"]         = moodleDomain
+        //dict["msOfficeFile"]         = msOfficeFile
+        //dict["unlockonexit"]         = unlockonexit
+        //dict["fontfamily"]           = fontfamily
+        //dict["moodleTestId"]         = moodleTestId
+        //dict["languagetool"]         = languagetool
+        //dict["password"]             = password
+        dict["directPrintAllowed"]   = directPrintAllowed
+        dict["encryptionPassword"]   = encryptionPassword
 
         return dict
     }

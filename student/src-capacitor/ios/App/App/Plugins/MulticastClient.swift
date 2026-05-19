@@ -198,6 +198,7 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
             var request = URLRequest(url: url, timeoutInterval: 8.0) // 8-second timeout
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("NEXT_EXAM_API_SECRET", forHTTPHeaderField: "x-next-exam-app-secret")
             request.httpBody = try JSONSerialization.data(withJSONObject: ["packet": packet.asDictionary])
             
             let delegate = LocalNetworkSessionDelegate()
@@ -222,6 +223,7 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
                 self.clientinfo.pin        = pin
                 
                 print("ipchandler @ register: successfully registered at \(servername) @ \(serverip) as \(clientname)")
+                print("ipchandler @ register: successfully registered, response: ", response)
                 
                 // Notify so screenshot scheduler can start immediately on successful connect
                 NotificationCenter.default.post(

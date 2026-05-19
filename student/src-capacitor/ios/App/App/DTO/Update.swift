@@ -12,6 +12,7 @@ struct Update: Codable {
         return [
             "sender": sender,
             "message": message,
+            "status": status,
             "serverstatus": serverstatus,
             "studentstatus": studentstatus,
         ]

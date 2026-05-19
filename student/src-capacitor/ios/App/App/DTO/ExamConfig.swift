@@ -56,11 +56,11 @@ struct RdpConfig: Codable {
 }
 
 struct EditorConfig: Codable {
-    var editorTemplate: EditorTemplate?
+    var editorTemplate: EditorTemplate = EditorTemplate()
     
     var asDictionary: [String: Any] {
         var dict = [String: Any]()
-        dict["editorTemplate"] = editorTemplate?.asDictionary ?? NSNull()
+        dict["editorTemplate"] = editorTemplate.asDictionary
         return dict
     }
 }

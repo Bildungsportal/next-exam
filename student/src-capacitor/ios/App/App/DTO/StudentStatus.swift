@@ -1,34 +1,28 @@
 import Foundation
 
 struct StudentStatus: Codable {
-    var clientname: String
-    var hostname: String
-    var token: String
-    var clientip: String
-    var timestamp: Int
+    var group: String
+    var restorefocusstate: Bool
+    var printdenied: Bool
+    var delfolder: Bool
+    var sendexam: Bool
+    var sendlog: Bool
     var focus: Bool
-    var exammode: Bool
-    var imageurl: Bool
-    var virtualized: Bool
-    var version: String
-    var bipuserID: String
-    var status: String
+    var getmaterials: Bool
 
     // ── Serialized form returned to JS / IPC callers ──────────────────────────
     var asDictionary: [String: Any] {
-        return [
-            "clientname": clientname,
-            "hostname": hostname,
-            "token": token,
-            "clientip": clientip,
-            "timestamp": clientip,
-            "focus": focus,
-            "exammode": exammode,
-            "imageurl": imageurl,
-            "virtualized": virtualized,
-            "version": version,
-            "bipuserID": bipuserID,
-            "status": status
-        ]
-    }
+            var dict = [String: Any]()
+
+            dict["group"]             = group
+            dict["restorefocusstate"] = restorefocusstate
+            dict["printdenied"]       = printdenied
+            dict["delfolder"]         = delfolder
+            dict["sendexam"]          = sendexam
+            dict["sendlog"]           = sendlog
+            dict["focus"]             = focus
+            dict["getmaterials"]      = getmaterials
+
+            return dict
+        }
 }
