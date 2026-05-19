@@ -119,9 +119,23 @@ function _resolveOvmfFromQemuFirmwareJson(binDir) {
     return null;
 }
 
-export async function ensureWritableNvramVars(qemuWorkDir, varsTemplatePath) {
+/** One OVMF vars file per qcow2 so install/imported disks keep their own UEFI boot entries. */
+export function getQemuNvramVarsFilename(qcow2Name) {
+    const base = path.basename(String(qcow2Name || ''));
+    if (!base || !base.toLowerCase().endsWith('.qcow2')) {
+        return 'nvram.vars';
+    }
+    return `${base}.nvram.vars`;
+}
+
+export async function ensureWritableNvramVars(qemuWorkDir, varsTemplatePath, destName = 'nvram.vars') {
     await fs.promises.mkdir(qemuWorkDir, { recursive: true });
-    const dest = path.join(qemuWorkDir, 'nvram.vars');
+    const dest = path.join(qemuWorkDir, destName);
+    const legacy = path.join(qemuWorkDir, 'nvram.vars');
+    if (!fs.existsSync(dest) && destName !== 'nvram.vars' && fs.existsSync(legacy)) {
+        await fs.promises.copyFile(legacy, dest);
+        return dest;
+    }
     if (!fs.existsSync(dest)) {
         await fs.promises.copyFile(varsTemplatePath, dest);
     }
@@ -180,6 +194,7 @@ export function getQemuUsbTabletArgs() {
 
 export function getQemuTeacherDisplayArgs() {
     if (process.platform === 'darwin') return ['-display', 'cocoa'];
+    if (process.platform === 'win32') return ['-display', 'sdl'];
     return ['-display', 'gtk'];
 }
 
@@ -212,22 +227,32 @@ export function getQemuQmpArgs(qemuWorkDir) {
 }
 
 /** Win32: explicit OVMF pflash + nvram copy. Linux/mac: QEMU loads firmware for q35 automatically. */
-export async function getQemuUefiInstallExtras({ binDir, qemuWorkDir, isoPath, virtioPath, answerIsoPath }) {
+export async function getQemuUefiInstallExtras({ binDir, qemuWorkDir, isoPath, virtioPath, answerIsoPath, qcow2Name }) {
     const cdrom = [...getQemuInstallCdromArgs(isoPath, virtioPath, answerIsoPath), '-boot', 'once=d'];
     if (process.platform !== 'win32') {
         return cdrom;
     }
     const { code, varsTemplate } = resolveSystemQemuFirmwarePaths(binDir);
-    const nvram = await ensureWritableNvramVars(qemuWorkDir, varsTemplate);
+    const nvramName = getQemuNvramVarsFilename(qcow2Name || 'win11.qcow2');
+    const nvram = await ensureWritableNvramVars(qemuWorkDir, varsTemplate, nvramName);
     return [...getQemuUefiPflashArgs(code, nvram), ...cdrom];
 }
 
 /** Win32 only: manual pflash. Linux/mac: auto OVMF for q35; boot via -boot order=c in qemuService. */
-export async function getQemuUefiRuntimeExtras({ binDir, qemuWorkDir }) {
+export async function getQemuUefiRuntimeExtras({ binDir, qemuWorkDir, qcow2Name }) {
     if (process.platform !== 'win32') {
         return [];
     }
     const { code, varsTemplate } = resolveSystemQemuFirmwarePaths(binDir);
-    const nvram = await ensureWritableNvramVars(qemuWorkDir, varsTemplate);
+    const nvramName = getQemuNvramVarsFilename(qcow2Name);
+    const nvram = await ensureWritableNvramVars(qemuWorkDir, varsTemplate, nvramName);
     return getQemuUefiPflashArgs(code, nvram);
+}
+
+/** Legacy BIOS -boot order=c conflicts with UEFI bootindex on Win32. */
+export function getQemuLegacyBootOrderArgs() {
+    if (process.platform === 'win32') {
+        return [];
+    }
+    return ['-boot', 'order=c'];
 }

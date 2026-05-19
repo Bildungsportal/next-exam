@@ -604,7 +604,7 @@ class IpcHandler {
             }
         })
 
-        ipcMain.handle('qemu-import-disk', async (_event, payload = {}) => {
+        ipcMain.handle('qemu-import-disk', async (event, payload = {}) => {
             try {
                 const { sourcePath } = payload || {}
                 if (!sourcePath) {
@@ -612,7 +612,14 @@ class IpcHandler {
                     return { ok: false, error: 'invalid sourcePath' }
                 }
                 log.info(`ipchandler @ qemu-import-disk: import ${sourcePath}`);
-                const res = await qemuService.importDisk({ workdirectory: config.workdirectory, sourcePath });
+                const sendProgress = (p) => {
+                    try { event.sender?.send?.('qemu-import-progress', p); } catch (e) {}
+                };
+                const res = await qemuService.importDisk({
+                    workdirectory: config.workdirectory,
+                    sourcePath,
+                    onProgress: sendProgress,
+                });
                 log.info(`ipchandler @ qemu-import-disk: done ok=${res.ok} filename=${res.filename} skipped=${!!res.skipped} linked=${!!res.linked}`);
                 return res;
             } catch (e) {

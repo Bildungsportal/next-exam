@@ -952,7 +952,18 @@ async function pickImportAndRefreshQemuDiskList(ipc, { statusEl, listEl, labelEl
         return null;
     }
     log.info(`examsetup @ pickImport: selected ${pick.sourcePath}`);
-    setStatus('Kopiere qcow2…');
+    setStatus('Kopiere qcow2… 0%');
+    let onImportProgress = null;
+    try {
+        onImportProgress = (_event, payload) => {
+            const pct = typeof payload?.percent === 'number' ? payload.percent : null;
+            if (pct != null) {
+                setStatus(`Kopiere qcow2… ${pct}%`);
+            }
+        };
+        ipc.removeAllListeners?.('qemu-import-progress');
+        ipc.on?.('qemu-import-progress', onImportProgress);
+    } catch (e) {}
     let importRes;
     try {
         importRes = await ipc.invoke('qemu-import-disk', { sourcePath: pick.sourcePath });
@@ -960,6 +971,12 @@ async function pickImportAndRefreshQemuDiskList(ipc, { statusEl, listEl, labelEl
         log.error('examsetup @ pickImport: import failed', e);
         setStatus(String(e?.message || e));
         return null;
+    } finally {
+        try {
+            if (onImportProgress) {
+                ipc.removeListener?.('qemu-import-progress', onImportProgress);
+            }
+        } catch (e) {}
     }
     if (!importRes?.ok || !importRes?.filename) {
         log.warn(`examsetup @ pickImport: import error ${importRes?.error || 'unknown'}`);

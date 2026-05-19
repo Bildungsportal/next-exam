@@ -64,10 +64,12 @@ TECH^localvm^qemuDialogs^shared/qemuLocalVmDialogs.js teacher+student; missing�
 TECH^localvm^qemuCheck^quick=stat+1xwhere win no --version spawn; deep=probe+WHPX+virtio+cpu^shared/qemuAvailability.js
 TECH^localvm^diskDialog^no qemu-check on open; check only boot/install; pick+import split IPC^examsetup configureLocalVM
 TECH^localvm^logging^electron-log main+renderer; qemuAvailability+qemuService+ipchandler+examsetup phases^LocalVM
+IPC^localvm^importProgress^qemu-import-progress→#qemuHashStatus Kopiere qcow2 N%^examsetup+ipchandler
 BUG^localvm^import^pick file already in QEMU dir→skip src===dest; win32 copyFile hangs post-copy→stream+size watchdog^qemuService copyQcow2ToDest
 BUG^localvm^hypervisorCheck^Get-WindowsOptionalFeature needs admin→false negative; fix Win32_ComputerSystem.HypervisorPresent fallback^shared/qemuWinPlatform.js
 BUG^localvm^ovmfPath^Windows binDir=<qemu>/ not /usr/bin; share=join(binDir,share) not ../share^shared/qemuHostArgs.js resolveQemuShareDir
-RULE^localvm^display^teacher bootDisk/install=interactive display; student headless=-display none+-vnc; win WHPX use -vga virtio not std (boot spinner)^shared/qemuHostArgs.js
+RULE^localvm^display^teacher win32=-display sdl; linux gtk; student headless+vnc; win -vga none+virtio-vga^shared/qemuHostArgs.js
+TECH^localvm^nvram^win32 per qcow2→<name>.nvram.vars; no -boot order=c on win UEFI; bootindex on virtio-blk^shared/qemuHostArgs.js
 RULE^localvm^teacherBoot^killExistingQemuInstances before teacher interactive spawn; stale -display none holds qcow2 lock^teacher qemuService.js
 TECH^localvm^isoDl^teacher downloadFile uses stream pipeline to .part then rename; skip if dest>=MIN_COMPLETE_BYTES; cleanup stale .part^teacher qemuService.js
 BUG^localvm^whpx^HypervisorPlatform required; win UEFI pflash+Skylake,+nx,+popcnt; smp cores=4,threads=1; rtc localtime; -vga none+virtio-vga; guest RAM getQemuMemoryMb host>8GiB→8192 else 4096 cap 45%^qemuHostArgs.js

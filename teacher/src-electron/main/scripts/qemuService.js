@@ -27,6 +27,7 @@ import {
     getQemuVgaDeviceArgs,
     getQemuUefiInstallExtras,
     getQemuUefiRuntimeExtras,
+    getQemuLegacyBootOrderArgs,
 } from '../../../../shared/qemuHostArgs.js';
 
 const DEFAULTS = {
@@ -433,6 +434,7 @@ async function installDefaultVm({ workdirectory, onProgress = null }) {
         isoPath,
         virtioPath,
         answerIsoPath,
+        qcow2Name: DEFAULTS.diskName,
     });
     const args = [
         ...getQemuAccelArgs(),
@@ -471,7 +473,7 @@ async function bootDisk({ workdirectory, qcow2Name }) {
     await fs.promises.access(diskPath, fs.constants.R_OK);
 
     const { qemuSystem, binDir } = await getResolvedQemu();
-    const uefiExtras = await getQemuUefiRuntimeExtras({ binDir, qemuWorkDir: qemuDir });
+    const uefiExtras = await getQemuUefiRuntimeExtras({ binDir, qemuWorkDir: qemuDir, qcow2Name: filename });
     const args = [
         ...getQemuAccelArgs({ runtime: true }),
         ...getQemuMemoryArg(),
@@ -486,7 +488,7 @@ async function bootDisk({ workdirectory, qcow2Name }) {
         ...getQemuUsbTabletArgs(),
         '-device', 'virtio-net-pci,netdev=n0',
         '-netdev', 'user,id=n0',
-        '-boot', 'order=c',
+        ...getQemuLegacyBootOrderArgs(),
     ];
     const { pid } = await spawnTeacherInteractiveQemu(qemuSystem, args, binDir);
     log.info(`qemuService @ bootDisk: qemu started pid=${pid || 'unknown'}`);
@@ -510,21 +512,38 @@ async function waitForFileSize(dest, expectedBytes, { intervalMs = 400, timeoutM
     throw new Error(`copy timeout: ${dest} did not reach ${expectedBytes} bytes`);
 }
 
+function reportCopyProgress(onProgress, copied, total) {
+    if (!onProgress) return;
+    const percent = total > 0 ? Math.min(100, Math.round((copied * 100) / total)) : 0;
+    try {
+        onProgress({ phase: 'copying', percent, copied, total });
+    } catch (e) {}
+}
+
 /** Stream copy with progress logs; win32 uses size watchdog when pipeline stalls after data is on disk. */
-async function copyQcow2ToDest(src, dest) {
+async function copyQcow2ToDest(src, dest, onProgress = null) {
     const total = (await fs.promises.stat(src)).size;
     const copyStart = Date.now();
     let copied = 0;
     let lastLog = 0;
+    let lastUiPct = -1;
+
+    try {
+        onProgress?.({ phase: 'start', percent: 0, copied: 0, total });
+    } catch (e) {}
 
     const rs = fs.createReadStream(src, { highWaterMark: 1024 * 1024 });
     const ws = fs.createWriteStream(dest);
     const counter = new Transform({
         transform(chunk, _enc, cb) {
             copied += chunk.length;
+            const pct = total > 0 ? Math.min(100, Math.round((copied * 100) / total)) : 0;
+            if (pct !== lastUiPct) {
+                lastUiPct = pct;
+                reportCopyProgress(onProgress, copied, total);
+            }
             if (copied - lastLog >= IMPORT_COPY_LOG_BYTES) {
                 lastLog = copied;
-                const pct = total > 0 ? Math.round((copied * 100) / total) : 0;
                 log.info(`qemuService @ importDisk: copy ${pct}% (${copied}/${total})`);
             }
             cb(null, chunk);
@@ -557,9 +576,12 @@ async function copyQcow2ToDest(src, dest) {
         throw new Error(`copy size mismatch: expected ${total} got ${destStat.size}`);
     }
     log.info(`qemuService @ importDisk: copy done in ${Date.now() - copyStart}ms (${total} bytes)`);
+    try {
+        onProgress?.({ phase: 'done', percent: 100, copied: total, total });
+    } catch (e) {}
 }
 
-async function importDisk({ workdirectory, sourcePath }) {
+async function importDisk({ workdirectory, sourcePath, onProgress = null }) {
     const qemuDir = getQemuDir(workdirectory);
     await ensureDir(qemuDir);
     const src = path.resolve(String(sourcePath || ''));
@@ -589,7 +611,7 @@ async function importDisk({ workdirectory, sourcePath }) {
     }
     const srcStat = await fs.promises.stat(src);
     log.info(`qemuService @ importDisk: copying ${srcStat.size} bytes…`);
-    await copyQcow2ToDest(src, dest);
+    await copyQcow2ToDest(src, dest, onProgress);
     return { ok: true, filename };
 }
 
