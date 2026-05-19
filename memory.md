@@ -61,7 +61,7 @@ RULE^ui^colors^shared^btn-cyan+swal confirm=$cyan-600^shared/css/nxe-theme.scss;
 RULE^ui^swal2^teacher+student layout+btn colors^shared/css/nxe-theme.scss
 TECH^localvm^qemuSystem^system PATH only; public/qemu=autounattend.iso; linux q35 auto-OVMF,-drive if=virtio,-boot order=c; win32 pflash+virtio-blk bootindex=1^shared/qemuHostArgs.js
 TECH^localvm^qemuDialogs^shared/qemuLocalVmDialogs.js teacher+student; missing→download; HypervisorPlatform→elevated enable IPC^qemuLocalVmDialogs.js
-TECH^localvm^qemuCheck^disk dialog quick=true binaries only; boot/install deep WHPX+virtio+cpu^shared/qemuAvailability.js
+TECH^localvm^qemuCheck^quick=stat+1xwhere win no --version spawn; deep=probe+WHPX+virtio+cpu^shared/qemuAvailability.js
 BUG^localvm^import^pick file already in QEMU dir→copyFile self-copy hung UI; skip src===dest^qemuService importDisk
 BUG^localvm^hypervisorCheck^Get-WindowsOptionalFeature needs admin→false negative; fix Win32_ComputerSystem.HypervisorPresent fallback^shared/qemuWinPlatform.js
 BUG^localvm^ovmfPath^Windows binDir=<qemu>/ not /usr/bin; share=join(binDir,share) not ../share^shared/qemuHostArgs.js resolveQemuShareDir

@@ -182,7 +182,17 @@ function probeCommandOnce(command) {
     });
 }
 
-async function resolveBinaryPath(baseName) {
+function findQemuImgInBinDir(binDir) {
+    for (const name of executableCandidates('qemu-img')) {
+        const p = path.join(binDir, name);
+        if (isExistingExecutableFile(p)) {
+            return path.resolve(p);
+        }
+    }
+    return null;
+}
+
+async function resolveBinaryPath(baseName, { quick = false } = {}) {
     const candidates = [...probePathsForBinary(baseName)];
     for (const p of await whereWindowsExecutables(baseName)) {
         const n = path.normalize(p);
@@ -194,11 +204,50 @@ async function resolveBinaryPath(baseName) {
         if (!isExistingExecutableFile(candidate)) {
             continue;
         }
+        if (quick) {
+            return path.resolve(candidate);
+        }
         if (await probeCommandOnce(candidate)) {
             return path.resolve(candidate);
         }
     }
     return null;
+}
+
+/** Resolve qemu-system + qemu-img; quick=stat only (disk dialog), no --version spawn per candidate. */
+async function resolveQemuBinaryPair({ quick = false } = {}) {
+    if (quick && process.platform === 'win32') {
+        for (const p of await whereWindowsExecutables('qemu-system-x86_64')) {
+            if (!isExistingExecutableFile(p)) continue;
+            const binDir = path.dirname(path.resolve(p));
+            const qemuImg = findQemuImgInBinDir(binDir);
+            if (qemuImg) {
+                return { qemuSystem: path.resolve(p), qemuImg, binDir };
+            }
+        }
+        for (const dir of listWindowsQemuInstallDirs()) {
+            for (const name of executableCandidates('qemu-system-x86_64')) {
+                const systemPath = path.join(dir, name);
+                if (!isExistingExecutableFile(systemPath)) continue;
+                const qemuImg = findQemuImgInBinDir(dir);
+                if (qemuImg) {
+                    return { qemuSystem: path.resolve(systemPath), qemuImg, binDir: dir };
+                }
+            }
+        }
+        return { qemuSystem: null, qemuImg: null, binDir: null };
+    }
+
+    const qemuSystem = await resolveBinaryPath('qemu-system-x86_64', { quick });
+    if (!qemuSystem) {
+        return { qemuSystem: null, qemuImg: null, binDir: null };
+    }
+    const binDir = path.dirname(qemuSystem);
+    let qemuImg = findQemuImgInBinDir(binDir);
+    if (!qemuImg) {
+        qemuImg = await resolveBinaryPath('qemu-img', { quick });
+    }
+    return { qemuSystem, qemuImg, binDir };
 }
 
 /** HW modules: <prefix>/lib/qemu, Linux /usr/lib/qemu, QEMU_MODULE_DIR env. */
@@ -392,8 +441,7 @@ export async function resolveQemuBinaries({ deep = true } = {}) {
     }
 
     if (!cachedResolved) {
-        const qemuSystem = await resolveBinaryPath('qemu-system-x86_64');
-        const qemuImg = await resolveBinaryPath('qemu-img');
+        const { qemuSystem, qemuImg, binDir } = await resolveQemuBinaryPair({ quick: !deep });
         if (!qemuSystem || !qemuImg) {
             cachedResolved = null;
             const missing = [];
@@ -407,7 +455,7 @@ export async function resolveQemuBinaries({ deep = true } = {}) {
         cachedResolved = {
             qemuSystem,
             qemuImg,
-            binDir: path.dirname(qemuSystem),
+            binDir: binDir || path.dirname(qemuSystem),
             deep: false,
         };
     }
