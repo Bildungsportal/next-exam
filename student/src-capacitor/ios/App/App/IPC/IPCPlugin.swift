@@ -48,7 +48,7 @@ public class IPCPlugin: CAPPlugin, CAPBridgedPlugin {
 
     // ── Emit (Native → Web) ───────────────────────────────────────────────────
 
-    public func emit(channel: String, payload: Any? = nil) {
+    public func send(channel: String, payload: Any? = nil) {
         notifyListeners(channel, data: ["payload": payload as Any])
     }
     

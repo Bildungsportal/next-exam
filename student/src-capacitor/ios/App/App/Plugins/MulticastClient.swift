@@ -112,11 +112,11 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
     public override func load() {
         //pluginLog(.info, "MulticastClientPlugin loaded – starting multicast listener")
         startMulticast()
-        IPCBridge.shared.registerInvokeHandler("getinfoasync") { [weak self] _ throws -> Any? in
+        IPCBridge.shared.handle("getinfoasync") { [weak self] _ throws -> Any? in
             guard let self else { throw PluginError.notInitialized }
             return await self.getinfoasync().asDictionary
         }
-        IPCBridge.shared.registerSendSyncHandler("register") { [weak self] event in
+        IPCBridge.shared.on("register") { [weak self] event in
             guard let self else {
                 event.returnValue = ["error": "not initialized"]
                 return
