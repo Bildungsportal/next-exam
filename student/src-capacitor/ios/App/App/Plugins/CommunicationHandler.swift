@@ -39,6 +39,10 @@ final class CommunicationHandler {
         )
         updateScheduler?.start()
     }
+    
+    deinit {
+        updateScheduler?.stop()
+    }
 
     // MARK: - Heartbeat Loop
 
@@ -132,6 +136,8 @@ final class CommunicationHandler {
                     mc.beaconsLost += 1
                     return
                 }
+                
+                IPCBridge.shared.send("updateReceived", updateDto.asDictionary)
 
                 let status = updateDto.status
 

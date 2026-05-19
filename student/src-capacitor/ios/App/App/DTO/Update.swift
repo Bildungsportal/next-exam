@@ -13,8 +13,8 @@ struct Update: Codable {
             "sender": sender,
             "message": message,
             "status": status,
-            "serverstatus": serverstatus,
-            "studentstatus": studentstatus,
+            "serverstatus": serverstatus.asDictionary,
+            "studentstatus": studentstatus.asDictionary,
         ]
     }
 }

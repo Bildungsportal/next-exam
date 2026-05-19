@@ -318,6 +318,7 @@ import { autoCleanupMixin } from "../mixins/autoCleanupMixin.js";
 
 import { StatusBar } from "@capacitor/status-bar";
 import {isElectronWindow, isIOS} from "../types/platform.js";
+import {router} from "../router/index.js";
 
 function unhandledRejectionFunction() {
   const reason = event?.reason;
@@ -1538,6 +1539,15 @@ this._enterKeyHandlerPasswordConfirm = handleEnterKey;
                         showCancelButton: false,
                     })
                 }
+
+            signalBridge.on('updateReceived', (update) => {
+                loggingBridge.info("updateReceived, examMode: ", update.serverstatus.exammode, router)
+                if (update.serverstatus.exammode) {
+                    router.push({
+                        path: '/math/csrf-cf20e998-3ba7-4867-bc3e-94609d665cd6'
+                    })
+                }
+            });
         },
         showCopyleft() {
             this.$swal.fire({

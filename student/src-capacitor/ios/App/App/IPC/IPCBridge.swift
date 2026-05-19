@@ -49,10 +49,14 @@ public final class IPCBridge {
         handleHandlers.removeAll()
         onSyncHandlers.removeAll()
     }
+    
+    deinit {
+        clearAll()
+    }
 
     // ── Public: Send (Native → Web) ──────────────────────────────────────────
 
-    public func send(_ channel: String, payload: Any? = nil) {
+    public func send(_ channel: String, _ payload: Any? = nil) {
         guard let plugin = IPCPlugin.shared else {
             print("[IPCBridge] send() called before plugin loaded")
             return

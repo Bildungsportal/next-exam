@@ -1,7 +1,13 @@
 /**
  * VUE.js Frontend - Routing
  */
-import {createRouter, createWebHashHistory, RouteLocationNormalized, RouteLocationNormalizedLoaded} from 'vue-router'
+import {
+    createRouter,
+    createWebHashHistory,
+    RouteLocationNormalized,
+    RouteLocationNormalizedLoaded,
+    Router
+} from 'vue-router'
 import {defineRouter} from '#q-app/wrappers';
 
 /**
@@ -108,9 +114,9 @@ async function fetchInfo(to: RouteLocationNormalized, from: RouteLocationNormali
   return true
 }
 
-let routerInstance = null;
+let routerInstance: Router | null  = null;
 
-export default defineRouter(function (/* { store, ssrContext } */) {
+export default defineRouter(function (/* { store, ssrContext } */): Router {
   const Router = createRouter({history: createWebHashHistory(), routes})   // use appropriate history implementation for server/client // import.meta.env.SSR is injected by Vite.
   routerInstance = Router
   return Router

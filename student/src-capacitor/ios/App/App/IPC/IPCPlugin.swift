@@ -49,7 +49,10 @@ public class IPCPlugin: CAPPlugin, CAPBridgedPlugin {
     // ── Emit (Native → Web) ───────────────────────────────────────────────────
 
     public func send(channel: String, payload: Any? = nil) {
-        notifyListeners(channel, data: ["payload": payload as Any])
+        let data = ["payload": payload ?? NSNull()]
+        DispatchQueue.main.async { [weak self] in               // ← must be on main thread
+            self?.notifyListeners(channel, data: data)
+        }
     }
     
     // MARK: - Send to renderer (for event.sender.send / event.reply)

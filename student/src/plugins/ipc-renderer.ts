@@ -65,13 +65,16 @@ class IpcRenderer {
      * dangerous Electron APIs to the renderer process. See the security guide for more
      * info. :::
      */
-    on(channel: string, callback: Callback): () => void {
-        const handle = IPC.addListener(channel, ({ payload }) => callback(payload));
+    async on(channel: string, callback: Callback): Promise<() => void> {
+        const handle = await IPC.addListener(
+            channel,
+            (data: { payload?: unknown }) => callback(data.payload)
+        );
 
         if (!this.handles.has(channel)) this.handles.set(channel, []);
-        this.handles.get(channel)!.push(handle as unknown as PluginListenerHandle);
+        this.handles.get(channel)!.push(handle);
 
-        return () => (handle as unknown as PluginListenerHandle).remove();
+        return () => handle.remove();
     }
 
     /**
