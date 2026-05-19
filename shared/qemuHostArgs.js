@@ -5,13 +5,13 @@ import path from 'path';
 const GIB = 1024 * 1024 * 1024;
 const VM_RAM_MB_HIGH = 8192;
 const VM_RAM_MB_LOW = 4096;
+const LOCALVM_QMP_PORT = 47043;
 
 const HV_GUEST = 'hv_relaxed,hv_spinlocks=0x1fff,hv_vapic,hv_time';
 
-/** WHPX UEFI ISO boot (verified on Win11 IoT); no hv_* / no max|host (VP exit 4 on APX hosts). */
+/** WHPX UEFI ISO boot; avoid host/max (VP exit 4 on APX hosts). */
 export const WIN32_CPU_UEFI_BOOT = 'Skylake-Client,vendor=GenuineIntel,+nx,+popcnt';
 
-/** Running Windows guest in VM after install. */
 const WIN32_CPU_RUNTIME_CANDIDATES = [
     `Skylake-Client-IBRS,vmx=off,${HV_GUEST}`,
     WIN32_CPU_UEFI_BOOT,
@@ -27,7 +27,7 @@ export function clearWin32WhpxCpuCache() {
     cachedMemoryMb = null;
 }
 
-/** Guest RAM (MiB): 8192 only if host has >8 GiB installed; else 4096; capped ~45% of host. */
+/** Guest RAM (MiB): 8192 if host >8 GiB else 4096; cap ~45% host RAM. */
 export function getQemuMemoryMb() {
     if (cachedMemoryMb !== null) return cachedMemoryMb;
     const totalMb = Math.floor(os.totalmem() / (1024 * 1024));
@@ -46,12 +46,10 @@ export function setCachedWin32RuntimeCpuArg(cpuArg) {
     cachedWin32RuntimeCpuArg = cpuArg;
 }
 
-/** linux kvm | win whpx | mac hvf; runtime adds kernel-irqchip=off on win when needed. */
 export function getQemuAccelArgs({ runtime = false } = {}) {
     if (process.platform === 'linux') return ['-enable-kvm'];
     if (process.platform === 'win32') {
-        if (runtime) return ['-accel', 'whpx,kernel-irqchip=off'];
-        return ['-accel', 'whpx'];
+        return runtime ? ['-accel', 'whpx,kernel-irqchip=off'] : ['-accel', 'whpx'];
     }
     if (process.platform === 'darwin') return ['-accel', 'hvf'];
     return [];
@@ -61,16 +59,49 @@ export function getQemuMachineArgs() {
     return ['-machine', 'q35'];
 }
 
-/** UEFI firmware for Win11 install/boot (OVMF next to system QEMU: <binDir>/../share). */
-export function resolveBundledUefiFirmwarePaths(binDir) {
+const OVMF_FIRMWARE_JSON = '60-edk2-ovmf-x86_64-4m.json';
+
+/** Resolve OVMF CODE + VARS template from distro layout (QEMU json descriptor or common paths). */
+export function resolveSystemQemuFirmwarePaths(binDir) {
+    const fromJson = _resolveOvmfFromQemuFirmwareJson(binDir);
+    if (fromJson) return fromJson;
+
     const share = path.join(binDir, '..', 'share');
-    return {
-        code: path.join(share, 'edk2-x86_64-code.fd'),
-        varsTemplate: path.join(share, 'edk2-i386-vars.fd'),
-    };
+    const pairs = [
+        [path.join(share, 'edk2-x86_64-code.fd'), path.join(share, 'edk2-x86_64-vars.fd')],
+        [path.join(share, 'edk2-x86_64-code.fd'), path.join(share, 'edk2-i386-vars.fd')],
+        ['/usr/share/edk2/x64/OVMF_CODE.4m.fd', '/usr/share/edk2/x64/OVMF_VARS.4m.fd'],
+        ['/usr/share/edk2/x64/OVMF_CODE.fd', '/usr/share/edk2/x64/OVMF_VARS.fd'],
+        ['/usr/share/OVMF/OVMF_CODE.fd', '/usr/share/OVMF/OVMF_VARS.fd'],
+    ];
+    for (const [code, varsTemplate] of pairs) {
+        if (fs.existsSync(code) && fs.existsSync(varsTemplate)) {
+            return { code, varsTemplate };
+        }
+    }
+    throw new Error(
+        'OVMF firmware not found (Linux: edk2-ovmf; Windows: QEMU installer share/). '
+        + 'UEFI Windows VMs need CODE+VARS pflash files.'
+    );
 }
 
-/** Writable NVRAM copy under workdir/QEMU (required; do not write into share/). */
+/** Read paths from /usr/share/qemu/firmware/*.json (Arch/Fedora/Debian). */
+function _resolveOvmfFromQemuFirmwareJson(binDir) {
+    const jsonPath = path.join(binDir, '..', 'share', 'qemu', 'firmware', OVMF_FIRMWARE_JSON);
+    if (!fs.existsSync(jsonPath)) return null;
+    try {
+        const j = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+        const code = j?.mapping?.executable?.filename;
+        const varsTemplate = j?.mapping?.['nvram-template']?.filename;
+        if (code && varsTemplate && fs.existsSync(code) && fs.existsSync(varsTemplate)) {
+            return { code, varsTemplate };
+        }
+    } catch (e) {
+        return null;
+    }
+    return null;
+}
+
 export async function ensureWritableNvramVars(qemuWorkDir, varsTemplatePath) {
     await fs.promises.mkdir(qemuWorkDir, { recursive: true });
     const dest = path.join(qemuWorkDir, 'nvram.vars');
@@ -95,9 +126,6 @@ export function getQemuInstallCdromArgs(isoPath, virtioPath, answerIsoPath) {
     ];
 }
 
-/**
- * @param {'uefi-install'|'runtime'} profile
- */
 export function getQemuCpuArg({ profile = 'runtime' } = {}) {
     if (process.platform === 'win32') {
         if (profile === 'uefi-install') return WIN32_CPU_UEFI_BOOT;
@@ -110,15 +138,11 @@ export function getQemuMemoryArg() {
     return ['-m', String(getQemuMemoryMb())];
 }
 
-/** WHPX: explicit topology; other platforms keep legacy -smp 4. */
 export function getQemuSmpArgs() {
-    if (process.platform === 'win32') {
-        return ['-smp', 'cores=4,threads=1'];
-    }
+    if (process.platform === 'win32') return ['-smp', 'cores=4,threads=1'];
     return ['-smp', '4'];
 }
 
-/** Guest RTC aligned with host (Windows exam VMs). */
 export function getQemuRtcArgs() {
     if (process.platform === 'win32') {
         return ['-rtc', 'base=localtime,clock=vm'];
@@ -126,50 +150,67 @@ export function getQemuRtcArgs() {
     return [];
 }
 
-/** Win32 UEFI: virtio-vga device; runtime/linux/mac: -vga virtio. */
-export function getQemuVgaDeviceArgs({ profile = 'runtime' } = {}) {
+export function getQemuVgaDeviceArgs() {
     if (process.platform === 'win32') {
         return ['-vga', 'none', '-device', 'virtio-vga'];
     }
     return ['-vga', 'virtio'];
 }
 
-export function getQemuUsbTabletArgs({ profile = 'runtime' } = {}) {
-    if (profile === 'runtime') {
-        return ['-device', 'qemu-xhci', '-device', 'usb-tablet'];
-    }
-    return ['-device', 'usb-ehci,id=usb', '-device', 'usb-tablet'];
+export function getQemuUsbTabletArgs() {
+    return ['-device', 'qemu-xhci', '-device', 'usb-tablet'];
 }
 
 export function getQemuTeacherDisplayArgs() {
     if (process.platform === 'darwin') return ['-display', 'cocoa'];
-    if (process.platform === 'win32') return ['-display', 'gtk'];
     return ['-display', 'gtk'];
 }
 
-export function getQemuVirtioDiskDriveArg(filePath) {
+export function getQemuVirtioDiskDriveArg(filePath, { boot = true } = {}) {
     if (process.platform === 'win32') {
-        return ['-drive', `file=${filePath},if=virtio,cache=writeback,aio=threads`];
+        const id = 'vmdisk0';
+        const dev = boot ? `virtio-blk-pci,drive=${id},bootindex=1` : `virtio-blk-pci,drive=${id}`;
+        return [
+            '-drive', `file=${filePath},format=qcow2,if=none,id=${id},cache=writeback,aio=threads`,
+            '-device', dev,
+        ];
     }
     return ['-drive', `file=${filePath},if=virtio`];
 }
 
-/** Win32 UEFI install: pflash + cdroms + boot once from DVD. */
-export async function getQemuWinUefiInstallExtras({ binDir, qemuWorkDir, isoPath, virtioPath, answerIsoPath }) {
-    if (process.platform !== 'win32') return [];
-    const { code, varsTemplate } = resolveBundledUefiFirmwarePaths(binDir);
-    const nvram = await ensureWritableNvramVars(qemuWorkDir, varsTemplate);
-    return [
-        ...getQemuUefiPflashArgs(code, nvram),
-        ...getQemuInstallCdromArgs(isoPath, virtioPath, answerIsoPath),
-        '-boot', 'once=d',
-    ];
+/** QMP for graceful shutdown: Windows only supports TCP here (no unix qmp.sock). */
+export function getQemuQmpChannel(qemuWorkDir) {
+    if (process.platform === 'win32') {
+        return { kind: 'tcp', host: '127.0.0.1', port: LOCALVM_QMP_PORT };
+    }
+    return { kind: 'unix', path: path.join(qemuWorkDir, 'qmp.sock') };
 }
 
-/** Win32 UEFI boot of installed qcow2. */
-export async function getQemuWinUefiRuntimeExtras({ binDir, qemuWorkDir }) {
-    if (process.platform !== 'win32') return [];
-    const { code, varsTemplate } = resolveBundledUefiFirmwarePaths(binDir);
+export function getQemuQmpArgs(qemuWorkDir) {
+    const ch = getQemuQmpChannel(qemuWorkDir);
+    if (ch.kind === 'tcp') {
+        return ['-qmp', `tcp:127.0.0.1:${ch.port},server=on,wait=off`];
+    }
+    return ['-qmp', `unix:${ch.path},server=on,wait=off`];
+}
+
+/** Win32: explicit OVMF pflash + nvram copy. Linux/mac: QEMU loads firmware for q35 automatically. */
+export async function getQemuUefiInstallExtras({ binDir, qemuWorkDir, isoPath, virtioPath, answerIsoPath }) {
+    const cdrom = [...getQemuInstallCdromArgs(isoPath, virtioPath, answerIsoPath), '-boot', 'once=d'];
+    if (process.platform !== 'win32') {
+        return cdrom;
+    }
+    const { code, varsTemplate } = resolveSystemQemuFirmwarePaths(binDir);
+    const nvram = await ensureWritableNvramVars(qemuWorkDir, varsTemplate);
+    return [...getQemuUefiPflashArgs(code, nvram), ...cdrom];
+}
+
+/** Win32 only: manual pflash. Linux/mac: auto OVMF for q35; boot via -boot order=c in qemuService. */
+export async function getQemuUefiRuntimeExtras({ binDir, qemuWorkDir }) {
+    if (process.platform !== 'win32') {
+        return [];
+    }
+    const { code, varsTemplate } = resolveSystemQemuFirmwarePaths(binDir);
     const nvram = await ensureWritableNvramVars(qemuWorkDir, varsTemplate);
     return getQemuUefiPflashArgs(code, nvram);
 }

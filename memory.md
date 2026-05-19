@@ -59,13 +59,13 @@ TECH^student^rdp^fetchInfo^applyRdpConfigFromSection; webview src only on url ch
 RULE^student^typingRhythm^editor.vue isTypingRhythmExemptKey clears deltas for Backspace Delete Space Enter NumpadEnter (OS key-repeat)^student/src/pages/editor.vue handleTypingRhythmKeydown
 RULE^ui^colors^shared^btn-cyan+swal confirm=$cyan-600^shared/css/nxe-theme.scss; app.scss imports nxe-bootstrap-config+nxe-theme
 RULE^ui^swal2^teacher+student layout+btn colors^shared/css/nxe-theme.scss
-TECH^localvm^qemuSystem^no bundle default; resolve system PATH+win ProgramFiles* scan+where.exe; NEXT_EXAM_USE_BUNDLED_QEMU=1→public/qemu/{win|lin|mac}; getQemuInstallInfo+qemu-open-install-page IPC; UEFI binDir/../share^shared/qemuAvailability.js+qemuInstallInfo.js
+TECH^localvm^qemuSystem^system PATH only; public/qemu=autounattend.iso; linux q35 auto-OVMF,-drive if=virtio,-boot order=c; win32 pflash+virtio-blk bootindex=1^shared/qemuHostArgs.js
 TECH^localvm^qemuDialogs^shared/qemuLocalVmDialogs.js teacher+student; missing→download; HypervisorPlatform→elevated enable IPC^qemuLocalVmDialogs.js
 RULE^localvm^display^teacher bootDisk/install=interactive display; student headless=-display none+-vnc; win WHPX use -vga virtio not std (boot spinner)^shared/qemuHostArgs.js
 RULE^localvm^teacherBoot^killExistingQemuInstances before teacher interactive spawn; stale -display none holds qcow2 lock^teacher qemuService.js
 TECH^localvm^isoDl^teacher downloadFile uses stream pipeline to .part then rename; skip if dest>=MIN_COMPLETE_BYTES; cleanup stale .part^teacher qemuService.js
 BUG^localvm^whpx^HypervisorPlatform required; win UEFI pflash+Skylake,+nx,+popcnt; smp cores=4,threads=1; rtc localtime; -vga none+virtio-vga; guest RAM getQemuMemoryMb host>8GiB→8192 else 4096 cap 45%^qemuHostArgs.js
-TECH^localvm^qemuAvail^fallback PATH+win ProgramFiles if bundled missing; renderer qemuMissingWarningHtml.js only^shared+ipchandler
+TECH^localvm^qmp^student graceful shutdown via QMP; win tcp:47043 linux unix sock^shared/qemuHostArgs.js+student qemuService.js
 TECH^student^localvmHash^sha256 base qcow2 before qemu start (runLocalVmPreStartVerify); avoids guest freeze from parallel full read^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js
 TECH^student^localvmStart^localVmStartState idle|starting|blocked; qemu-download/import must not set idle while starting (parallel startExam)^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js
 TECH^student^examWin^createExamWindow no-op if examwindow exists (orphan second BrowserWindow)^student/src-electron/main/scripts/windowhandler.js

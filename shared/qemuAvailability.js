@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
 import {
     clearWin32WhpxCpuCache,
@@ -17,12 +16,6 @@ const PROBE_TIMEOUT_MS = 8000;
 const VIRTIO_VGA_PROBE_MS = 1500;
 const WHPX_CPU_PROBE_MS = 2500;
 
-/** LocalVM: system QEMU only unless NEXT_EXAM_USE_BUNDLED_QEMU=1 (dev). */
-const USE_BUNDLED_QEMU = process.env.NEXT_EXAM_USE_BUNDLED_QEMU === '1';
-
-const SHARED_DIR = path.dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = path.join(SHARED_DIR, '..');
-
 const BINARIES = [
     { key: 'qemuSystem', base: 'qemu-system-x86_64' },
     { key: 'qemuImg', base: 'qemu-img' },
@@ -36,13 +29,6 @@ export function clearQemuBinaryCache() {
     clearWin32WhpxCpuCache();
 }
 
-export function getBundledQemuPlatformSlug() {
-    if (process.platform === 'win32') return 'win';
-    if (process.platform === 'darwin') return 'mac';
-    if (process.platform === 'linux') return 'lin';
-    return null;
-}
-
 export function getQemuRequiredCommands() {
     return BINARIES.map((b) => b.base);
 }
@@ -54,34 +40,6 @@ function executableCandidates(baseName) {
         if (!names.includes(exe)) names.push(exe);
     }
     return names;
-}
-
-function listBundledQemuDirCandidates() {
-    if (!USE_BUNDLED_QEMU) return [];
-    const slug = getBundledQemuPlatformSlug();
-    if (!slug) return [];
-    const rel = ['public', 'qemu', slug];
-    const dirs = new Set();
-    const add = (base) => {
-        if (!base) return;
-        dirs.add(path.join(path.resolve(base), ...rel));
-    };
-    add(path.join(REPO_ROOT, 'teacher'));
-    add(path.join(REPO_ROOT, 'student'));
-    add(process.cwd());
-    add(path.join(process.cwd(), 'teacher'));
-    add(path.join(process.cwd(), 'student'));
-    if (process.resourcesPath) {
-        add(path.join(process.resourcesPath, 'app.asar.unpacked'));
-        add(process.resourcesPath);
-    }
-    return [...dirs].filter((dir) => {
-        try {
-            return fs.existsSync(dir) && fs.statSync(dir).isDirectory();
-        } catch (e) {
-            return false;
-        }
-    });
 }
 
 /** Scan Program Files* for qemu/QEMU install folders (Windows installer default). */
@@ -190,11 +148,6 @@ function probePathsForBinary(baseName) {
     for (const name of executableCandidates(baseName)) {
         push(name);
     }
-    for (const dir of listBundledQemuDirCandidates()) {
-        for (const name of executableCandidates(baseName)) {
-            push(path.join(dir, name));
-        }
-    }
     return out;
 }
 
@@ -280,7 +233,7 @@ async function probeVirtioVgaAvailable(qemuSystem, binDir) {
             ...getQemuAccelArgs(),
             '-machine', 'q35',
             '-m', '64',
-            ...getQemuVgaDeviceArgs({ profile: 'runtime' }),
+            ...getQemuVgaDeviceArgs(),
             '-display', 'none',
         ], {
             cwd: binDir,

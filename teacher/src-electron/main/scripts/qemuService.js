@@ -25,8 +25,8 @@ import {
     getQemuUsbTabletArgs,
     getQemuVirtioDiskDriveArg,
     getQemuVgaDeviceArgs,
-    getQemuWinUefiInstallExtras,
-    getQemuWinUefiRuntimeExtras,
+    getQemuUefiInstallExtras,
+    getQemuUefiRuntimeExtras,
 } from '../../../../shared/qemuHostArgs.js';
 
 const DEFAULTS = {
@@ -424,7 +424,7 @@ async function installDefaultVm({ workdirectory, onProgress = null }) {
     log.info(`qemuService @ installDefaultVm: assets ready (iso=${isoPath}, virtio=${virtioPath}, answerIso=${answerIsoPath}, disk=${diskPath})`);
 
     const { qemuSystem, binDir } = await getResolvedQemu();
-    const uefiExtras = await getQemuWinUefiInstallExtras({
+    const uefiExtras = await getQemuUefiInstallExtras({
         binDir,
         qemuWorkDir: qemuDir,
         isoPath,
@@ -438,11 +438,11 @@ async function installDefaultVm({ workdirectory, onProgress = null }) {
         ...getQemuRtcArgs(),
         ...getQemuMachineArgs(),
         '-cpu', getQemuCpuArg({ profile: 'uefi-install' }),
-        ...getQemuVirtioDiskDriveArg(diskPath),
+        ...getQemuVirtioDiskDriveArg(diskPath, { boot: false }),
         ...uefiExtras,
-        ...getQemuVgaDeviceArgs({ profile: 'uefi-install' }),
+        ...getQemuVgaDeviceArgs(),
         ...getQemuTeacherDisplayArgs(),
-        ...getQemuUsbTabletArgs({ profile: 'uefi-install' }),
+        ...getQemuUsbTabletArgs(),
         '-device', 'virtio-net-pci,netdev=n0',
         '-netdev', 'user,id=n0',
     ];
@@ -467,7 +467,7 @@ async function bootDisk({ workdirectory, qcow2Name }) {
     await fs.promises.access(diskPath, fs.constants.R_OK);
 
     const { qemuSystem, binDir } = await getResolvedQemu();
-    const uefiExtras = await getQemuWinUefiRuntimeExtras({ binDir, qemuWorkDir: qemuDir });
+    const uefiExtras = await getQemuUefiRuntimeExtras({ binDir, qemuWorkDir: qemuDir });
     const args = [
         ...getQemuAccelArgs({ runtime: true }),
         ...getQemuMemoryArg(),
@@ -477,9 +477,9 @@ async function bootDisk({ workdirectory, qcow2Name }) {
         ...uefiExtras,
         '-cpu', getQemuCpuArg({ profile: 'runtime' }),
         ...getQemuVirtioDiskDriveArg(diskPath),
-        ...getQemuVgaDeviceArgs({ profile: 'runtime' }),
+        ...getQemuVgaDeviceArgs(),
         ...getQemuTeacherDisplayArgs(),
-        ...getQemuUsbTabletArgs({ profile: 'runtime' }),
+        ...getQemuUsbTabletArgs(),
         '-device', 'virtio-net-pci,netdev=n0',
         '-netdev', 'user,id=n0',
         '-boot', 'order=c',

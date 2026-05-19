@@ -19,17 +19,19 @@ import {
     getQemuMemoryArg,
     getQemuRtcArgs,
     getQemuSmpArgs,
+    getQemuQmpArgs,
+    getQemuQmpChannel,
     getQemuUsbTabletArgs,
     getQemuVirtioDiskDriveArg,
     getQemuVgaDeviceArgs,
-    getQemuWinUefiRuntimeExtras,
+    getQemuUefiRuntimeExtras,
 } from '../../../../shared/qemuHostArgs.js';
 
 let vmProc = null;
 let vmDisk = null;
 let vmVncDisplay = null;
 let vmOverlayPath = null;
-let vmQmpPath = null;
+let vmQmpChannel = null;
 
 function getQemuDir(workdirectory) {
     return path.join(workdirectory, 'QEMU');
@@ -160,13 +162,15 @@ function vncDisplayToPort(vncDisplay) {
     return 5900 + (Number.isFinite(displayNum) ? displayNum : 1);
 }
 
-async function qmpExecute(qmpPath, cmd) {
-    const socketPath = String(qmpPath || '');
-    if (!socketPath) {
-        throw new Error('missing qmp socket');
+async function qmpExecute(channel, cmd) {
+    if (!channel?.kind) {
+        throw new Error('missing qmp channel');
     }
+    const connectOpts = channel.kind === 'tcp'
+        ? { host: channel.host, port: channel.port }
+        : { path: channel.path };
     return await new Promise((resolve, reject) => {
-        const sock = net.createConnection({ path: socketPath });
+        const sock = net.createConnection(connectOpts);
         let buffer = '';
         let greeted = false;
         const done = (result) => {
@@ -205,9 +209,9 @@ async function shutdownVmGracefully({ timeoutMs = 8000 } = {}) {
     }
 
     try {
-        if (vmQmpPath && fs.existsSync(vmQmpPath)) {
+        if (vmQmpChannel) {
             log.info('qemuService @ shutdownVmGracefully: sending ACPI powerdown via QMP');
-            await qmpExecute(vmQmpPath, 'system_powerdown');
+            await qmpExecute(vmQmpChannel, 'system_powerdown');
         }
     } catch (e) {
         log.warn('qemuService: qmp system_powerdown failed', e);
@@ -229,11 +233,11 @@ async function resetVmHard() {
     if (!vmProc || vmProc.killed) {
         throw new Error('no running VM');
     }
-    if (!vmQmpPath || !fs.existsSync(vmQmpPath)) {
-        throw new Error('missing qmp socket');
+    if (!vmQmpChannel) {
+        throw new Error('missing qmp channel');
     }
     log.warn('qemuService @ resetVmHard: system_reset via QMP');
-    const res = await qmpExecute(vmQmpPath, 'system_reset');
+    const res = await qmpExecute(vmQmpChannel, 'system_reset');
     if (res?.error) {
         throw new Error(String(res.error?.desc || 'qmp system_reset failed'));
     }
@@ -285,14 +289,13 @@ async function stopVmAsync({ graceful = true, shutdownTimeoutMs = 8000, killTime
     stopExamWebdav();
     if (!vmProc || vmProc.killed) {
         const overlayToDelete = vmOverlayPath;
-        const qmpToDelete = vmQmpPath;
         vmProc = null;
         vmDisk = null;
         vmVncDisplay = null;
         const overlayDeleted = _unlinkIfExists(overlayToDelete);
-        const qmpDeleted = _unlinkIfExists(qmpToDelete);
+        if (vmQmpChannel?.kind === 'unix') _unlinkIfExists(vmQmpChannel.path);
+        vmQmpChannel = null;
         if (overlayDeleted) vmOverlayPath = null;
-        if (qmpDeleted) vmQmpPath = null;
         return { ok: true, alreadyStopped: true };
     }
 
@@ -317,16 +320,14 @@ async function stopVmAsync({ graceful = true, shutdownTimeoutMs = 8000, killTime
     }
 
     const overlayToDelete = vmOverlayPath;
-    const qmpToDelete = vmQmpPath;
     vmProc = null;
     vmDisk = null;
     vmVncDisplay = null;
 
-    // Delete overlay/socket only after process is gone to avoid file locks on qcow2/qmp.
     const overlayDeleted = _unlinkIfExists(overlayToDelete);
-    const qmpDeleted = _unlinkIfExists(qmpToDelete);
+    if (vmQmpChannel?.kind === 'unix') _unlinkIfExists(vmQmpChannel.path);
+    vmQmpChannel = null;
     if (overlayDeleted) vmOverlayPath = null;
-    if (qmpDeleted) vmQmpPath = null;
 
     return { ok: true, exited: !!exited, graceful: gracefulOk };
 }
@@ -388,7 +389,7 @@ async function startHeadless({ workdirectory, examdirectory, qcow2Name, vncDispl
         ? ['-netdev', `user,id=net0,restrict=on,${webdavGuestFwd}`, '-device', 'virtio-net-pci,netdev=net0']
         : ['-netdev', 'user,id=n0', '-device', 'virtio-net-pci,netdev=n0'];
 
-    const uefiExtras = await getQemuWinUefiRuntimeExtras({ binDir, qemuWorkDir: qemuDir });
+    const uefiExtras = await getQemuUefiRuntimeExtras({ binDir, qemuWorkDir: qemuDir });
     const args = [
         ...getQemuAccelArgs({ runtime: true }),
         ...getQemuMemoryArg(),
@@ -398,12 +399,12 @@ async function startHeadless({ workdirectory, examdirectory, qcow2Name, vncDispl
         ...uefiExtras,
         '-cpu', getQemuCpuArg({ profile: 'runtime' }),
         ...getQemuVirtioDiskDriveArg(overlayPath),
-        ...getQemuVgaDeviceArgs({ profile: 'runtime' }),
+        ...getQemuVgaDeviceArgs(),
         '-display', 'none',
         '-vnc', vncDisplay,
-        '-qmp', `unix:${path.join(qemuDir, 'qmp.sock')},server=on,wait=off`,
+        ...getQemuQmpArgs(qemuDir),
         ...netArgs,
-        ...getQemuUsbTabletArgs({ profile: 'runtime' }),
+        ...getQemuUsbTabletArgs(),
         '-boot', 'order=c',
     ];
 
@@ -431,7 +432,7 @@ async function startHeadless({ workdirectory, examdirectory, qcow2Name, vncDispl
     vmDisk = disk;
     vmVncDisplay = vncDisplay;
     vmOverlayPath = overlayPath;
-    vmQmpPath = path.join(qemuDir, 'qmp.sock');
+    vmQmpChannel = getQemuQmpChannel(qemuDir);
     return { ok: true, reused: false, disk: qcow2Name, vncDisplay };
 }
 

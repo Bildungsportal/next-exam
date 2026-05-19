@@ -345,7 +345,7 @@ export default defineConfig(( ctx: any ) => {
           icon: 'public/icons/icon.ico',
           target: [{ target: 'portable', arch: ['x64'] }, { target: 'msi', arch: ['x64'] }],
           artifactName: artifactNamePattern,
-          files: ['**/*', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**', '!public/minimal-jre-11-lin/**', '!public/qemu/**'],
+          files: ['**/*', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**', '!public/minimal-jre-11-lin/**', '!public/qemu/win/**', '!public/qemu/lin/**', '!public/qemu/mac/**'],
           ...(signEnabled && {
             sign: true,
             signtoolOptions: { certificateSubjectName: 'OSOS Austria', signingHashAlgorithms: ['sha256'] },
