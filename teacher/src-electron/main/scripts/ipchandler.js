@@ -37,6 +37,7 @@ import ip from 'ip'
 import dns from 'dns'
 import net from 'node:net'
 import qemuService from './qemuService.js'
+import { checkQemuAvailability } from '../../../../shared/qemuAvailability.js'
 import archiver from 'archiver'
 
 import server from "../../server/src/server.js"
@@ -459,6 +460,15 @@ class IpcHandler {
         /**
          * QEMU integration (LocalVM, qcow2 in workdir/QEMU)
          */
+        ipcMain.handle('qemu-check-available', async () => {
+            try {
+                return await checkQemuAvailability()
+            } catch (e) {
+                log.error('ipchandler @ qemu-check-available', e)
+                return { ok: false, missing: ['qemu-system-x86_64', 'qemu-img'] }
+            }
+        })
+
         ipcMain.handle('qemu-list-disks', async () => {
             try {
                 return await qemuService.listDisks({ workdirectory: config.workdirectory })
@@ -470,6 +480,11 @@ class IpcHandler {
 
         ipcMain.handle('qemu-install-default', async () => {
             try {
+                const avail = await checkQemuAvailability()
+                if (!avail.ok) {
+                    log.warn('ipchandler @ qemu-install-default: QEMU not available', avail.missing)
+                    return { ok: false, qemuMissing: true, missing: avail.missing }
+                }
                 log.info('ipchandler @ qemu-install-default: requested');
                 const sendProgress = (p) => {
                     try { this.WindowHandler?.mainwindow?.webContents?.send?.('qemu-install-progress', p); } catch (e) {}
@@ -508,6 +523,11 @@ class IpcHandler {
 
         ipcMain.handle('qemu-boot-disk', async (_event, payload = {}) => {
             try {
+                const avail = await checkQemuAvailability()
+                if (!avail.ok) {
+                    log.warn('ipchandler @ qemu-boot-disk: QEMU not available', avail.missing)
+                    return { ok: false, qemuMissing: true, missing: avail.missing }
+                }
                 const { qcow2Name } = payload || {}
                 return await qemuService.bootDisk({ workdirectory: config.workdirectory, qcow2Name })
             } catch (e) {

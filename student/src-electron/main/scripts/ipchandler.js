@@ -41,6 +41,7 @@ import { getWlanInfo } from './getwlaninfo.js';
 import { switchExamSection } from './switchExamSection.js';
 import { startProxy, stopProxy } from './vncproxy.js';
 import qemuService from './qemuService.js';
+import { checkQemuAvailability } from '../../../../shared/qemuAvailability.js';
 import { getVMFindings } from './vmDetection.js';
 import { decryptExamFileBytes, decryptExamFileAllLayers, encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
 import { examApiFetch } from '../../../../shared/examApiFetch.js';
@@ -276,8 +277,22 @@ class IpcHandler {
             }
         });
 
+        ipcMain.handle('qemu-check-available', async () => {
+            try {
+                return await checkQemuAvailability();
+            } catch (e) {
+                log.error('ipchandler @ qemu-check-available', e);
+                return { ok: false, missing: ['qemu-system-x86_64', 'qemu-img'] };
+            }
+        });
+
         ipcMain.handle('qemu-start-headless', async (_event, payload = {}) => {
             try {
+                const avail = await checkQemuAvailability();
+                if (!avail.ok) {
+                    log.warn('ipchandler @ qemu-start-headless: QEMU not available', avail.missing);
+                    return { ok: false, qemuMissing: true, missing: avail.missing };
+                }
                 const { qcow2Name, vncPort, overlayName, blockInternet, expectedSha256, expectedSizeBytes, forceFreshOverlay } = payload || {};
                 log.info(`ipchandler @ qemu-start-headless: start requested (disk=${qcow2Name}, port=${vncPort}, blockInternet=${!!blockInternet}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
                 const vncDisplay = Number(vncPort) === 5901 ? ':1' : ':1';

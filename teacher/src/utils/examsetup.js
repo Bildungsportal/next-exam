@@ -1,5 +1,6 @@
 
 import CryptoJS from 'crypto-js';
+import { buildQemuMissingWarningHtml } from 'next-exam-shared/qemuAvailability.js';
 
 function ensureGroupsAndExamConfig(section) {
     const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
@@ -801,6 +802,34 @@ async function configureRDP(presetGroup){
 }
 
 
+/** Swal when qemu-system-x86_64 / qemu-img are not on PATH (LocalVM). */
+async function showQemuMissingWarning(vm) {
+    await vm.$swal.fire({
+        icon: 'warning',
+        title: vm.$t('dashboard.qemuMissingTitle'),
+        html: buildQemuMissingWarningHtml(vm.$t('dashboard.qemuMissingText')),
+        confirmButtonText: vm.$t('dashboard.qemuMissingConfirm'),
+    });
+}
+
+/** IPC probe; false when QEMU missing (warning already shown). */
+async function ensureQemuAvailableForLocalVm(vm) {
+    const ipc = window.ipcRenderer;
+    if (!ipc) {
+        return false;
+    }
+    try {
+        const res = await ipc.invoke('qemu-check-available');
+        if (res?.ok) {
+            return true;
+        }
+    } catch (e) {
+        console.error('examsetup @ ensureQemuAvailableForLocalVm', e);
+    }
+    await showQemuMissingWarning(vm);
+    return false;
+}
+
 /**
  * LocalVM (QEMU qcow2 selection in workdir/EXAM-TEACHER/QEMU)
  */
@@ -812,6 +841,10 @@ async function configureLocalVM(presetGroup){
             title: 'LocalVM',
             text: 'Local QEMU integration is not available in this environment.'
         });
+        return;
+    }
+
+    if (!(await ensureQemuAvailableForLocalVm(this))) {
         return;
     }
 
@@ -923,6 +956,10 @@ async function configureLocalVM(presetGroup){
 
                     try {
                         const res = await ipc.invoke('qemu-install-default');
+                        if (res?.qemuMissing) {
+                            await showQemuMissingWarning(this);
+                            return;
+                        }
                         if (!res || res.ok !== true) {
                             await this.$swal.fire({
                                 icon: 'error',
@@ -1131,7 +1168,10 @@ async function configureLocalVM(presetGroup){
                 const diskName = enc ? decodeURIComponent(enc) : '';
                 if (!diskName) return;
                 try {
-                    await ipc.invoke('qemu-boot-disk', { qcow2Name: diskName });
+                    const bootRes = await ipc.invoke('qemu-boot-disk', { qcow2Name: diskName });
+                    if (bootRes?.qemuMissing) {
+                        await showQemuMissingWarning(this);
+                    }
                 } catch (e) {}
             });
             const browseBtn = document.getElementById('qemuBrowseBtn');
@@ -1223,6 +1263,10 @@ async function configureLocalVM(presetGroup){
                 } catch (e) {}
                 try {
                     const res = await ipc.invoke('qemu-install-default');
+                    if (res?.qemuMissing) {
+                        await showQemuMissingWarning(this);
+                        return;
+                    }
                     if (!res || res.ok !== true) {
                         await this.$swal.fire({
                             icon: 'error',

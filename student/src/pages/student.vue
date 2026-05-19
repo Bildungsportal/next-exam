@@ -301,6 +301,7 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
 } from '../utils/examFetchInfoSync.js'
+import { buildQemuMissingWarningHtml } from 'next-exam-shared/qemuAvailability.js'
 
 
 // Capture unhandled promise rejections
@@ -429,6 +430,15 @@ export default {
             if (normalized !== this.username) {
                 this.username = normalized;
             }
+        },
+
+        async showQemuMissingWarning() {
+            await this.$swal.fire({
+                icon: 'warning',
+                title: this.$t('student.qemuMissingTitle'),
+                html: buildQemuMissingWarningHtml(this.$t('student.qemuMissingText')),
+                confirmButtonText: this.$t('student.qemuMissingConfirm'),
+            });
         },
 
         async promptCageKioskSetup() {
@@ -1654,6 +1664,10 @@ export default {
             this.localVmDownloadPercent = pct;
         });
 
+        signalBridge.on('qemu-not-available', () => {
+            this.showQemuMissingWarning();
+        });
+
         // Screenshot scheduler only in main window (this page); exam window never loads student.vue
         initScreenshotScheduler(signalBridge);
 
@@ -1671,6 +1685,7 @@ export default {
         this.autoUpdateInterval.stop()
 
         signalBridge.removeAllListeners('qemu-download-progress');
+        signalBridge.removeAllListeners('qemu-not-available');
     }
 }
 </script>

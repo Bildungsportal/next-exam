@@ -38,6 +38,7 @@ import { setClientFocusLock, clearClientFocusLock } from './focusLockState.js';
 import { syncClientDisplayInfo } from './displayInfo.js';
 import { detectRunningInCage } from './cageDetect.js';
 import qemuService from './qemuService.js';
+import { checkQemuAvailability } from '../../../../shared/qemuAvailability.js';
 import { stopProxy } from './vncproxy.js';
 import { switchExamSection } from './switchExamSection.js';
 import {
@@ -135,6 +136,29 @@ import {
             } catch (e) {
                 try { await fs.promises.unlink(tmp); } catch {}
             }
+        }
+    }
+
+    // Notify renderer and block LocalVM exam start when qemu-system-x86_64 / qemu-img are missing.
+    async ensureQemuAvailableForLocalVm() {
+        try {
+            const check = await checkQemuAvailability();
+            if (check.ok) {
+                return true;
+            }
+            log.warn('communicationhandler @ ensureQemuAvailableForLocalVm: QEMU missing', check.missing);
+            try {
+                WindowHandler.mainwindow?.webContents?.send('qemu-not-available', { missing: check.missing });
+            } catch (e) {
+                log.debug('communicationhandler @ ensureQemuAvailableForLocalVm: send failed', e?.message);
+            }
+            return false;
+        } catch (e) {
+            log.error('communicationhandler @ ensureQemuAvailableForLocalVm', e);
+            try {
+                WindowHandler.mainwindow?.webContents?.send('qemu-not-available', { missing: [] });
+            } catch (err) {}
+            return false;
         }
     }
 
@@ -844,6 +868,10 @@ import {
             }
             if (this.localVmStartState !== 'idle') {
                 log.info(`communicationhandler @ startExam: localvm start suppressed (state=${this.localVmStartState})`);
+                return;
+            }
+            if (!(await this.ensureQemuAvailableForLocalVm())) {
+                this.multicastClient.clientinfo.exammode = false;
                 return;
             }
             this.localVmStartState = 'starting';
