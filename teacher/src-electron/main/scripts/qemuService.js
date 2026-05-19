@@ -11,11 +11,16 @@ import log from 'electron-log';
 import crypto from 'crypto';
 import {
     resolveQemuBinaries,
-    QEMU_GUEST_VGA,
     buildQemuSpawnEnv,
     resolveQemuModuleDir,
 } from '../../../../shared/qemuAvailability.js';
-import { getQemuAccelArgs, getQemuCpuArg } from '../../../../shared/qemuHostArgs.js';
+import {
+    getQemuAccelArgs,
+    getQemuCpuArg,
+    getQemuGuestVga,
+    getQemuTeacherDisplayArgs,
+    getQemuVirtioDiskDriveArg,
+} from '../../../../shared/qemuHostArgs.js';
 
 const DEFAULTS = {
     isoUrl: 'https://software-static.download.prss.microsoft.com/dbazure/888969d5-f34g-4e03-ac9d-1f9786c66749/26100.1.240331-1435.ge_release_CLIENT_IOT_LTSC_EVAL_x64FRE_en-us.iso',
@@ -390,12 +395,6 @@ async function ensureDisk(qemuDir) {
     return diskPath;
 }
 
-/** Bundled QEMU defaults to "none"; ui-gtk.so needs explicit -display gtk for a window. */
-function getTeacherInteractiveDisplayArgs() {
-    if (process.platform === 'darwin') return ['-display', 'cocoa'];
-    return ['-display', 'gtk'];
-}
-
 async function installDefaultVm({ workdirectory, onProgress = null }) {
     const qemuDir = getQemuDir(workdirectory);
     await ensureDir(qemuDir);
@@ -418,7 +417,7 @@ async function installDefaultVm({ workdirectory, onProgress = null }) {
         '-smp', '4',
         '-cpu', getQemuCpuArg(),
         '-machine', 'q35',
-        '-drive', `file=${diskPath},if=virtio,cache=none,aio=native`,
+        ...getQemuVirtioDiskDriveArg(diskPath),
         '-drive', `file=${isoPath},media=cdrom,if=none,id=winiso,readonly=on`,
         '-device', 'ide-cd,bus=ide.0,drive=winiso',
         '-drive', `file=${virtioPath},media=cdrom,if=none,id=virtiocd,readonly=on`,
@@ -426,7 +425,7 @@ async function installDefaultVm({ workdirectory, onProgress = null }) {
         '-drive', `file=${answerIsoPath},media=cdrom,if=none,id=answercd,readonly=on`,
         '-device', 'ide-cd,bus=ide.2,drive=answercd',
         '-vga', 'std',
-        ...getTeacherInteractiveDisplayArgs(),
+        ...getQemuTeacherDisplayArgs(),
         '-boot', 'once=d',
         '-device', 'usb-ehci',
         '-device', 'usb-tablet',
@@ -461,9 +460,9 @@ async function bootDisk({ workdirectory, qcow2Name }) {
         '-smp', '4',
         '-cpu', getQemuCpuArg(),
         '-machine', 'q35',
-        '-drive', `file=${diskPath},if=virtio`,
-        '-vga', QEMU_GUEST_VGA,
-        ...getTeacherInteractiveDisplayArgs(),
+        ...getQemuVirtioDiskDriveArg(diskPath),
+        '-vga', getQemuGuestVga(),
+        ...getQemuTeacherDisplayArgs(),
         '-device', 'qemu-xhci',
         '-device', 'usb-tablet',
         '-device', 'virtio-net-pci,netdev=n0',

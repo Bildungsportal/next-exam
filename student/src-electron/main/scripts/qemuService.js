@@ -9,11 +9,15 @@ import { startExamWebdav, stopExamWebdav, EXAM_WEBDAV_PORT, EXAM_WEBDAV_MOUNT_PA
 import { NEXT_EXAM_API_SECRET, NEXT_EXAM_API_SECRET_HEADER } from '../../../../shared/nextExamApiSecret.js';
 import {
     resolveQemuBinaries,
-    QEMU_GUEST_VGA,
     buildQemuSpawnEnv,
     resolveQemuModuleDir,
 } from '../../../../shared/qemuAvailability.js';
-import { getQemuAccelArgs, getQemuCpuArg } from '../../../../shared/qemuHostArgs.js';
+import {
+    getQemuAccelArgs,
+    getQemuCpuArg,
+    getQemuGuestVga,
+    getQemuVirtioDiskDriveArg,
+} from '../../../../shared/qemuHostArgs.js';
 
 let vmProc = null;
 let vmDisk = null;
@@ -384,8 +388,8 @@ async function startHeadless({ workdirectory, examdirectory, qcow2Name, vncDispl
         '-m', '8192',
         '-smp', '4',
         // writeback+threads avoids long stalls many hosts show with cache=none+aio=native on large Windows images
-        '-drive', `file=${overlayPath},if=virtio,cache=writeback,aio=threads`,
-        '-vga', QEMU_GUEST_VGA,
+        ...getQemuVirtioDiskDriveArg(overlayPath),
+        '-vga', getQemuGuestVga(),
         '-display', 'none',
         '-vnc', vncDisplay,
         '-qmp', `unix:${path.join(qemuDir, 'qmp.sock')},server=on,wait=off`,
