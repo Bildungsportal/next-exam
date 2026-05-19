@@ -465,9 +465,9 @@ class IpcHandler {
         /**
          * QEMU integration (LocalVM, qcow2 in workdir/QEMU)
          */
-        ipcMain.handle('qemu-check-available', async () => {
+        ipcMain.handle('qemu-check-available', async (_event, opts = {}) => {
             try {
-                return await checkQemuAvailability()
+                return await checkQemuAvailability(opts)
             } catch (e) {
                 log.error('ipchandler @ qemu-check-available', e)
                 const install = getQemuInstallInfo()

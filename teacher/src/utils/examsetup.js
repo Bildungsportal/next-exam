@@ -816,6 +816,70 @@ async function ensureQemuAvailableForLocalVm(vm) {
     });
 }
 
+function buildQemuDiskRowsHtml(disks, selectedDisk) {
+    return (disks || []).map((d) => {
+        const raw = String(d);
+        const safeLabel = raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        const encoded = encodeURIComponent(raw);
+        const isActive = raw === selectedDisk;
+        return `<div class="qemu-row" style="display:flex; align-items:center; gap:8px; margin:6px 0;">
+            <button
+                type="button"
+                class="btn btn-sm ${isActive ? 'btn-teal' : 'btn-outline-secondary'} qemu-select"
+                data-qemu-select="${encoded}"
+                title="${safeLabel}"
+                style="flex:1; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
+            >
+                ${safeLabel}
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-qemu-boot="${encoded}">Boot</button>
+        </div>`;
+    }).join('');
+}
+
+/** File picker + import IPC; refresh disk list in open LocalVM Swal. */
+async function pickImportAndRefreshQemuDiskList(ipc, { statusEl, listEl, labelEl, setSelectedDisk } = {}) {
+    const setStatus = (msg) => {
+        try {
+            if (statusEl) statusEl.textContent = msg ?? '';
+        } catch (e) {}
+    };
+    setStatus('Öffne Dateiauswahl…');
+    let importRes;
+    try {
+        importRes = await ipc.invoke('qemu-pick-import-disk');
+    } catch (e) {
+        setStatus(String(e?.message || e));
+        return null;
+    }
+    if (importRes?.cancelled) {
+        setStatus('');
+        return null;
+    }
+    if (!importRes?.ok || !importRes?.filename) {
+        setStatus(importRes?.error ? String(importRes.error) : 'Import fehlgeschlagen.');
+        return null;
+    }
+    let disks = [];
+    try {
+        disks = await ipc.invoke('qemu-list-disks');
+    } catch (e) {
+        disks = [];
+    }
+    if (!Array.isArray(disks) || disks.length === 0) {
+        setStatus('Keine qcow2 Disk gefunden.');
+        return null;
+    }
+    const selected = disks.includes(importRes.filename) ? importRes.filename : disks[0];
+    if (listEl) {
+        listEl.innerHTML = buildQemuDiskRowsHtml(disks, selected) || '<div class="text-muted">Keine Disks gefunden.</div>';
+    }
+    if (labelEl) labelEl.textContent = selected;
+    if (setSelectedDisk) setSelectedDisk(selected);
+    setStatus(importRes.skipped ? 'Bereits im QEMU-Ordner.' : '');
+    return { selected, disks };
+}
+
 /**
  * LocalVM (QEMU qcow2 selection in workdir/EXAM-TEACHER/QEMU)
  */
@@ -886,24 +950,9 @@ async function configureLocalVM(presetGroup){
                 const installBtn = document.getElementById('qemuInstallBtn');
 
                 browseBtn?.addEventListener('click', async () => {
-                    try {
-                        if (statusEl) statusEl.textContent = 'Öffne Dateiauswahl…';
-                    } catch (e) {}
-                    try {
-                        const importRes = await ipc.invoke('qemu-pick-import-disk');
-                        if (importRes && importRes.ok && importRes.filename) {
-                            preferredDisk = importRes.filename;
-                        }
-                    } catch (e) {}
-                    try {
-                        disks = await ipc.invoke('qemu-list-disks');
-                    } catch (e) {
-                        disks = [];
-                    }
-                    if (!Array.isArray(disks) || disks.length === 0) {
-                        if (statusEl) statusEl.textContent = 'Keine qcow2 Disk gefunden.';
-                        return;
-                    }
+                    const res = await pickImportAndRefreshQemuDiskList(ipc, { statusEl });
+                    if (!res) return;
+                    preferredDisk = res.selected;
                     try { this.$swal.close(); } catch (e) {}
                     setTimeout(() => { configureLocalVM.call(this, presetGroup); }, 50);
                 });
@@ -1008,24 +1057,7 @@ async function configureLocalVM(presetGroup){
             ? preferredDisk
             : (currentDisk && disks.includes(currentDisk) ? currentDisk : (disks[0] || ''));
 
-    const rowsHtml = disks.map((d) => {
-        const raw = String(d);
-        const safeLabel = raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-        const encoded = encodeURIComponent(raw);
-        const isActive = raw === selectedDisk;
-        return `<div class="qemu-row" style="display:flex; align-items:center; gap:8px; margin:6px 0;">
-            <button
-                type="button"
-                class="btn btn-sm ${isActive ? 'btn-teal' : 'btn-outline-secondary'} qemu-select"
-                data-qemu-select="${encoded}"
-                title="${safeLabel}"
-                style="flex:1; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
-            >
-                ${safeLabel}
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-qemu-boot="${encoded}">Boot</button>
-        </div>`;
-    }).join('');
+    const rowsHtml = buildQemuDiskRowsHtml(disks, selectedDisk);
 
     const html = `<div class="my-content" style="text-align:left; padding:0px!important;">
         <div style="padding:0px; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(255,255,255,0.03);">
@@ -1185,57 +1217,16 @@ async function configureLocalVM(presetGroup){
             });
             const browseBtn = document.getElementById('qemuBrowseBtn');
             browseBtn?.addEventListener('click', async () => {
-                let imported = null;
                 const statusEl = document.getElementById('qemuHashStatus');
-                if (statusEl) statusEl.textContent = 'Importiere qcow2…';
-                try {
-                    const importRes = await ipc.invoke('qemu-pick-import-disk');
-                    if (importRes && importRes.ok && importRes.filename) {
-                        imported = importRes.filename;
-                    }
-                } catch (e) {}
-                if (!imported) {
-                    if (statusEl) statusEl.textContent = '';
-                    return;
-                }
-                try {
-                    disks = await ipc.invoke('qemu-list-disks');
-                } catch (e) {
-                    disks = [];
-                }
-
-                if (!Array.isArray(disks) || disks.length === 0) {
-                    if (statusEl) statusEl.textContent = 'Import abgeschlossen, aber keine qcow2 Disk gefunden.';
-                    return;
-                }
-
-                selectedDisk = disks.includes(imported) ? imported : (disks[0] || imported);
-
                 const listEl = document.getElementById('qemuDiskList');
-                if (listEl) {
-                    const rows = disks.map((d) => {
-                        const raw = String(d);
-                        const safeLabel = raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-                        const encoded = encodeURIComponent(raw);
-                        const isActive = raw === selectedDisk;
-                        return `<div class="qemu-row" style="display:flex; align-items:center; gap:8px; margin:6px 0;">
-                            <button
-                                type="button"
-                                class="btn btn-sm ${isActive ? 'btn-teal' : 'btn-outline-secondary'} qemu-select"
-                                data-qemu-select="${encoded}"
-                                title="${safeLabel}"
-                                style="flex:1; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
-                            >
-                                ${safeLabel}
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-qemu-boot="${encoded}">Boot</button>
-                        </div>`;
-                    }).join('');
-                    listEl.innerHTML = rows || '<div class="text-muted">Keine Disks gefunden.</div>';
-                }
-                const label = document.getElementById('qemuSelectedLabel');
-                if (label) label.textContent = selectedDisk;
-                if (statusEl) statusEl.textContent = '';
+                const labelEl = document.getElementById('qemuSelectedLabel');
+                const res = await pickImportAndRefreshQemuDiskList(ipc, {
+                    statusEl,
+                    listEl,
+                    labelEl,
+                    setSelectedDisk: (name) => { selectedDisk = name; },
+                });
+                if (res?.disks) disks = res.disks;
             });
             const installBtn = document.getElementById('qemuInstallBtn');
             installBtn?.addEventListener('click', async () => {

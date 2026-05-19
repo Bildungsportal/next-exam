@@ -282,9 +282,9 @@ class IpcHandler {
             }
         });
 
-        ipcMain.handle('qemu-check-available', async () => {
+        ipcMain.handle('qemu-check-available', async (_event, opts = {}) => {
             try {
-                return await checkQemuAvailability();
+                return await checkQemuAvailability(opts);
             } catch (e) {
                 log.error('ipchandler @ qemu-check-available', e);
                 const install = getQemuInstallInfo();

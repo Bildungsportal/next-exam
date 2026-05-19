@@ -492,11 +492,14 @@ async function bootDisk({ workdirectory, qcow2Name }) {
 async function importDisk({ workdirectory, sourcePath }) {
     const qemuDir = getQemuDir(workdirectory);
     await ensureDir(qemuDir);
-    const src = String(sourcePath || '');
+    const src = path.resolve(String(sourcePath || ''));
     if (!src) throw new Error('invalid sourcePath');
     const filename = path.basename(src);
     if (!filename.toLowerCase().endsWith('.qcow2')) throw new Error('invalid file type');
-    const dest = path.join(qemuDir, filename);
+    const dest = path.resolve(path.join(qemuDir, filename));
+    if (src === dest) {
+        return { ok: true, filename, skipped: true };
+    }
     await fs.promises.copyFile(src, dest);
     return { ok: true, filename };
 }

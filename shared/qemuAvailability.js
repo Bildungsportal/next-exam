@@ -21,7 +21,7 @@ const BINARIES = [
     { key: 'qemuImg', base: 'qemu-img' },
 ];
 
-/** @type {{ qemuSystem: string, qemuImg: string, binDir: string } | null | undefined} */
+/** @type {{ qemuSystem: string, qemuImg: string, binDir: string, deep: boolean } | null | undefined} */
 let cachedResolved = undefined;
 
 export function clearQemuBinaryCache() {
@@ -151,6 +151,15 @@ function probePathsForBinary(baseName) {
     return out;
 }
 
+function isExistingExecutableFile(candidate) {
+    try {
+        const st = fs.statSync(candidate);
+        return st.isFile() && st.size > 0;
+    } catch (e) {
+        return false;
+    }
+}
+
 function probeCommandOnce(command) {
     return new Promise((resolve) => {
         let settled = false;
@@ -176,11 +185,15 @@ function probeCommandOnce(command) {
 async function resolveBinaryPath(baseName) {
     const candidates = [...probePathsForBinary(baseName)];
     for (const p of await whereWindowsExecutables(baseName)) {
-        if (!candidates.includes(path.normalize(p))) {
-            candidates.unshift(path.normalize(p));
+        const n = path.normalize(p);
+        if (!candidates.includes(n)) {
+            candidates.unshift(n);
         }
     }
     for (const candidate of candidates) {
+        if (!isExistingExecutableFile(candidate)) {
+            continue;
+        }
         if (await probeCommandOnce(candidate)) {
             return path.resolve(candidate);
         }
@@ -312,75 +325,119 @@ function buildUnavailableResult(missing, hypervisorPlatform, extra = {}) {
     };
 }
 
-/**
- * Resolve system qemu-system-x86_64 + qemu-img (not bundled by default).
- */
-export async function resolveQemuBinaries() {
-    const hypervisorPlatform = await getWindowsHypervisorPlatformState();
-    const install = getQemuInstallInfo();
+function deferredHypervisorPlatform() {
+    return {
+        supported: process.platform === 'win32',
+        enabled: true,
+        state: 'deferred',
+        source: 'quick',
+    };
+}
 
-    if (cachedResolved !== undefined) {
-        if (!cachedResolved) {
-            return buildUnavailableResult(getQemuRequiredCommands(), hypervisorPlatform);
-        }
-        return {
-            ok: true,
-            missing: [],
-            qemuSystem: cachedResolved.qemuSystem,
-            qemuImg: cachedResolved.qemuImg,
-            binDir: cachedResolved.binDir,
-            hypervisorPlatform,
-            downloadUrl: install.downloadUrl,
-            installHint: install.installHint,
-        };
-    }
+function buildOkResult(resolved, hypervisorPlatform, install, { quick = false } = {}) {
+    return {
+        ok: true,
+        missing: [],
+        qemuSystem: resolved.qemuSystem,
+        qemuImg: resolved.qemuImg,
+        binDir: resolved.binDir,
+        hypervisorPlatform,
+        downloadUrl: install.downloadUrl,
+        installHint: install.installHint,
+        quick,
+    };
+}
 
-    const qemuSystem = await resolveBinaryPath('qemu-system-x86_64');
-    const qemuImg = await resolveBinaryPath('qemu-img');
-    if (!qemuSystem || !qemuImg) {
-        cachedResolved = null;
-        const missing = [];
-        if (!qemuSystem) missing.push('qemu-system-x86_64');
-        if (!qemuImg) missing.push('qemu-img');
-        return buildUnavailableResult(missing, hypervisorPlatform);
-    }
-
+/** Win32 WHPX probes (virtio-vga + CPU); skipped for disk-picker quick check. */
+async function runDeepQemuProbes(qemuSystem, binDir, hypervisorPlatform) {
     if (process.platform === 'win32' && hypervisorPlatform.supported && !hypervisorPlatform.enabled) {
         cachedResolved = null;
         return buildUnavailableResult(['HypervisorPlatform'], hypervisorPlatform);
     }
 
-    const binDir = path.dirname(qemuSystem);
-    const qemuModuleDir = resolveQemuModuleDir(binDir);
-    const virtioVgaOk = await probeVirtioVgaAvailable(qemuSystem, binDir);
-    if (!virtioVgaOk) {
-        cachedResolved = null;
-        const missing = qemuModuleDir ? ['virtio-vga'] : ['qemu modules (lib/qemu)'];
-        return buildUnavailableResult(missing, hypervisorPlatform, {
-            virtioVgaUnavailable: true,
-            qemuModuleDir,
-        });
-    }
-
     if (process.platform === 'win32') {
+        const qemuModuleDir = resolveQemuModuleDir(binDir);
+        const virtioVgaOk = await probeVirtioVgaAvailable(qemuSystem, binDir);
+        if (!virtioVgaOk) {
+            cachedResolved = null;
+            const missing = qemuModuleDir ? ['virtio-vga'] : ['qemu modules (lib/qemu)'];
+            return buildUnavailableResult(missing, hypervisorPlatform, {
+                virtioVgaUnavailable: true,
+                qemuModuleDir,
+            });
+        }
         await resolveWin32RuntimeCpu(qemuSystem, binDir);
     }
 
-    cachedResolved = { qemuSystem, qemuImg, binDir };
-    return {
-        ok: true,
-        missing: [],
-        qemuSystem,
-        qemuImg,
-        binDir,
-        hypervisorPlatform,
-        downloadUrl: install.downloadUrl,
-        installHint: install.installHint,
-    };
+    return null;
 }
 
-export async function checkQemuAvailability() {
-    return await resolveQemuBinaries();
+/**
+ * Resolve system qemu-system-x86_64 + qemu-img (not bundled by default).
+ * @param {{ deep?: boolean }} opts deep=false: binaries only (disk dialog); deep=true: WHPX/virtio/cpu probes
+ */
+export async function resolveQemuBinaries({ deep = true } = {}) {
+    const install = getQemuInstallInfo();
+
+    if (cachedResolved && cachedResolved.deep && !deep) {
+        const hp = deferredHypervisorPlatform();
+        return buildOkResult(cachedResolved, hp, install, { quick: true });
+    }
+
+    if (cachedResolved === null) {
+        const hp = deep && process.platform === 'win32'
+            ? await getWindowsHypervisorPlatformState()
+            : deferredHypervisorPlatform();
+        return buildUnavailableResult(getQemuRequiredCommands(), hp);
+    }
+
+    if (!cachedResolved) {
+        const qemuSystem = await resolveBinaryPath('qemu-system-x86_64');
+        const qemuImg = await resolveBinaryPath('qemu-img');
+        if (!qemuSystem || !qemuImg) {
+            cachedResolved = null;
+            const missing = [];
+            if (!qemuSystem) missing.push('qemu-system-x86_64');
+            if (!qemuImg) missing.push('qemu-img');
+            const hp = deep && process.platform === 'win32'
+                ? await getWindowsHypervisorPlatformState()
+                : deferredHypervisorPlatform();
+            return buildUnavailableResult(missing, hp);
+        }
+        cachedResolved = {
+            qemuSystem,
+            qemuImg,
+            binDir: path.dirname(qemuSystem),
+            deep: false,
+        };
+    }
+
+    if (!deep) {
+        return buildOkResult(cachedResolved, deferredHypervisorPlatform(), install, { quick: true });
+    }
+
+    if (cachedResolved.deep) {
+        const hp = process.platform === 'win32'
+            ? await getWindowsHypervisorPlatformState()
+            : deferredHypervisorPlatform();
+        return buildOkResult(cachedResolved, hp, install);
+    }
+
+    const { qemuSystem, qemuImg, binDir } = cachedResolved;
+    const hypervisorPlatform = process.platform === 'win32'
+        ? await getWindowsHypervisorPlatformState()
+        : deferredHypervisorPlatform();
+    const probeFail = await runDeepQemuProbes(qemuSystem, binDir, hypervisorPlatform);
+    if (probeFail) {
+        return probeFail;
+    }
+
+    cachedResolved = { qemuSystem, qemuImg, binDir, deep: true };
+    return buildOkResult(cachedResolved, hypervisorPlatform, install);
+}
+
+export async function checkQemuAvailability(opts = {}) {
+    return await resolveQemuBinaries(opts);
 }
 
 export { getQemuInstallInfo } from './qemuInstallInfo.js';
