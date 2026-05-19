@@ -13,8 +13,8 @@ const HV_GUEST = 'hv_relaxed,hv_spinlocks=0x1fff,hv_vapic,hv_time';
 export const WIN32_CPU_UEFI_BOOT = 'Skylake-Client,vendor=GenuineIntel,+nx,+popcnt';
 
 const WIN32_CPU_RUNTIME_CANDIDATES = [
-    `Skylake-Client-IBRS,vmx=off,${HV_GUEST}`,
     WIN32_CPU_UEFI_BOOT,
+    `Skylake-Client-IBRS,vmx=off,${HV_GUEST}`,
     `Haswell-noTSX,${HV_GUEST}`,
     `qemu64,${HV_GUEST}`,
 ];
@@ -46,15 +46,14 @@ export function setCachedWin32RuntimeCpuArg(cpuArg) {
     cachedWin32RuntimeCpuArg = cpuArg;
 }
 
-export function getQemuAccelArgs({ runtime = false } = {}) {
+export function getQemuAccelArgs() {
     if (process.platform === 'linux') return ['-enable-kvm'];
-    if (process.platform === 'win32') {
-        return runtime ? ['-accel', 'whpx,kernel-irqchip=off'] : ['-accel', 'whpx'];
-    }
+    if (process.platform === 'win32') return ['-accel', 'whpx'];
     if (process.platform === 'darwin') return ['-accel', 'hvf'];
     return [];
 }
 
+/** q35 on all hosts (fewer WHPX IRQ issues on Windows than pc/i440fx). */
 export function getQemuMachineArgs() {
     return ['-machine', 'q35'];
 }
@@ -160,7 +159,8 @@ export function getQemuInstallCdromArgs(isoPath, virtioPath, answerIsoPath) {
 export function getQemuCpuArg({ profile = 'runtime' } = {}) {
     if (process.platform === 'win32') {
         if (profile === 'uefi-install') return WIN32_CPU_UEFI_BOOT;
-        return cachedWin32RuntimeCpuArg || WIN32_CPU_RUNTIME_CANDIDATES[0];
+        // Runtime always Skylake without hv_*; WHPX probe cache must not override (hangs Linux-built images).
+        return WIN32_CPU_UEFI_BOOT;
     }
     return `host,${HV_GUEST}`;
 }
@@ -169,22 +169,25 @@ export function getQemuMemoryArg() {
     return ['-m', String(getQemuMemoryMb())];
 }
 
+/** Teacher interactive boot on Win32: match manual line (-m 8192), not 45% cap. */
+export function getQemuTeacherBootMemoryArg() {
+    if (process.platform === 'win32') {
+        return ['-m', '8192'];
+    }
+    return getQemuMemoryArg();
+}
+
 export function getQemuSmpArgs() {
     if (process.platform === 'win32') return ['-smp', 'cores=4,threads=1'];
     return ['-smp', '4'];
 }
 
+/** RTC omitted on Win32 WHPX boot (matches working manual line). */
 export function getQemuRtcArgs() {
-    if (process.platform === 'win32') {
-        return ['-rtc', 'base=localtime,clock=vm'];
-    }
     return [];
 }
 
 export function getQemuVgaDeviceArgs() {
-    if (process.platform === 'win32') {
-        return ['-vga', 'none', '-device', 'virtio-vga'];
-    }
     return ['-vga', 'virtio'];
 }
 
@@ -200,12 +203,8 @@ export function getQemuTeacherDisplayArgs() {
 
 export function getQemuVirtioDiskDriveArg(filePath, { boot = true } = {}) {
     if (process.platform === 'win32') {
-        const id = 'vmdisk0';
-        const dev = boot ? `virtio-blk-pci,drive=${id},bootindex=1` : `virtio-blk-pci,drive=${id}`;
-        return [
-            '-drive', `file=${filePath},format=qcow2,if=none,id=${id},cache=writeback,aio=threads`,
-            '-device', dev,
-        ];
+        // if=virtio + -boot order=c on pc; avoid cache=none (QEMU 11 false "not qcow2" on WHPX).
+        return ['-drive', `file=${filePath},if=virtio,cache=writeback`];
     }
     return ['-drive', `file=${filePath},if=virtio`];
 }
@@ -226,33 +225,17 @@ export function getQemuQmpArgs(qemuWorkDir) {
     return ['-qmp', `unix:${ch.path},server=on,wait=off`];
 }
 
-/** Win32: explicit OVMF pflash + nvram copy. Linux/mac: QEMU loads firmware for q35 automatically. */
+/** ISO install: CD boot once; Win32 uses SeaBIOS pc like Linux (autounattend is MBR). */
 export async function getQemuUefiInstallExtras({ binDir, qemuWorkDir, isoPath, virtioPath, answerIsoPath, qcow2Name }) {
-    const cdrom = [...getQemuInstallCdromArgs(isoPath, virtioPath, answerIsoPath), '-boot', 'once=d'];
-    if (process.platform !== 'win32') {
-        return cdrom;
-    }
-    const { code, varsTemplate } = resolveSystemQemuFirmwarePaths(binDir);
-    const nvramName = getQemuNvramVarsFilename(qcow2Name || 'win11.qcow2');
-    const nvram = await ensureWritableNvramVars(qemuWorkDir, varsTemplate, nvramName);
-    return [...getQemuUefiPflashArgs(code, nvram), ...cdrom];
+    return [...getQemuInstallCdromArgs(isoPath, virtioPath, answerIsoPath), '-boot', 'once=d'];
 }
 
-/** Win32 only: manual pflash. Linux/mac: auto OVMF for q35; boot via -boot order=c in qemuService. */
-export async function getQemuUefiRuntimeExtras({ binDir, qemuWorkDir, qcow2Name }) {
-    if (process.platform !== 'win32') {
-        return [];
-    }
-    const { code, varsTemplate } = resolveSystemQemuFirmwarePaths(binDir);
-    const nvramName = getQemuNvramVarsFilename(qcow2Name);
-    const nvram = await ensureWritableNvramVars(qemuWorkDir, varsTemplate, nvramName);
-    return getQemuUefiPflashArgs(code, nvram);
+/** Runtime: no OVMF pflash on Win32 (Linux/mac use q35 auto-OVMF or empty). */
+export async function getQemuUefiRuntimeExtras() {
+    return [];
 }
 
-/** Legacy BIOS -boot order=c conflicts with UEFI bootindex on Win32. */
+/** Disk boot after install / imported qcow2 (pc + SeaBIOS on Win32). */
 export function getQemuLegacyBootOrderArgs() {
-    if (process.platform === 'win32') {
-        return [];
-    }
     return ['-boot', 'order=c'];
 }

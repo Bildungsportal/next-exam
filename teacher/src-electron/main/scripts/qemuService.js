@@ -18,7 +18,7 @@ import {
     getQemuAccelArgs,
     getQemuCpuArg,
     getQemuMachineArgs,
-    getQemuMemoryArg,
+    getQemuTeacherBootMemoryArg,
     getQemuRtcArgs,
     getQemuSmpArgs,
     getQemuTeacherDisplayArgs,
@@ -26,7 +26,6 @@ import {
     getQemuVirtioDiskDriveArg,
     getQemuVgaDeviceArgs,
     getQemuUefiInstallExtras,
-    getQemuUefiRuntimeExtras,
     getQemuLegacyBootOrderArgs,
 } from '../../../../shared/qemuHostArgs.js';
 
@@ -256,18 +255,38 @@ function sleepMs(ms) {
     return new Promise((r) => setTimeout(r, ms));
 }
 
-/** Stop stale headless QEMU (e.g. old -display none runs) so the disk lock and GTK window are free. */
+/** True when a qemu-system-x86_64 process is already running (avoid taskkill if guest was closed cleanly). */
+async function isQemuSystemProcessRunning() {
+    if (process.platform === 'win32') {
+        const r = await runToCompletion('tasklist', ['/FI', 'IMAGENAME eq qemu-system-x86_64.exe', '/NH']);
+        return /qemu-system-x86_64\.exe/i.test(r.stdout || '');
+    }
+    const r = await runToCompletion('pgrep', ['-x', 'qemu-system-x86_64']);
+    return r.exitCode === 0;
+}
+
+/** Stop stale QEMU so the qcow2 lock is free; skip kill when no process (clean shutdown). */
+/** @returns {Promise<boolean>} true when a running guest was force-stopped */
 async function killExistingQemuInstances() {
     if (process.platform === 'win32') {
+        if (!(await isQemuSystemProcessRunning())) {
+            log.info('qemuService @ killExistingQemuInstances: no qemu process, skip taskkill');
+            return false;
+        }
         const r = await runToCompletion('taskkill', ['/F', '/IM', 'qemu-system-x86_64.exe']);
         log.info(`qemuService @ killExistingQemuInstances: taskkill exit=${r.exitCode}`);
-        return;
+        return true;
+    }
+    if (!(await isQemuSystemProcessRunning())) {
+        log.info('qemuService @ killExistingQemuInstances: no qemu process, skip killall');
+        return false;
     }
     const term = await runToCompletion('killall', ['-TERM', 'qemu-system-x86_64']);
     log.info(`qemuService @ killExistingQemuInstances: killall -TERM exit=${term.exitCode}`);
     await sleepMs(600);
     const kill = await runToCompletion('killall', ['-KILL', 'qemu-system-x86_64']);
     log.info(`qemuService @ killExistingQemuInstances: killall -KILL exit=${kill.exitCode}`);
+    return true;
 }
 
 function spawnLogged(cmd, args, options = {}) {
@@ -277,23 +296,17 @@ function spawnLogged(cmd, args, options = {}) {
     return proc;
 }
 
-/** Teacher GTK window: kill stale VMs, spawn detached, fail fast when QEMU exits (e.g. disk lock). */
+/** Teacher SDL window: detached QEMU; stdio must be ignore (piped stderr fills and freezes the guest on Windows). */
 async function spawnTeacherInteractiveQemu(qemuSystem, args, binDir) {
-    await killExistingQemuInstances();
+    const killedStale = await killExistingQemuInstances();
+    await sleepMs(killedStale ? 800 : 200);
     return await new Promise((resolve, reject) => {
         log.info(`qemuService: spawn ${qemuSystem} ${args.join(' ')}`);
         const proc = spawn(qemuSystem, args, {
             cwd: binDir,
             env: buildQemuSpawnEnv(binDir),
             detached: true,
-            stdio: ['ignore', 'ignore', 'pipe'],
-        });
-        let stderr = '';
-        proc.stderr?.on('data', (d) => {
-            const chunk = String(d);
-            stderr += chunk;
-            const line = chunk.trim();
-            if (line) log.warn(`qemuService: qemu stderr: ${line}`);
+            stdio: 'ignore',
         });
         proc.on('error', reject);
         const timer = setTimeout(() => {
@@ -302,8 +315,7 @@ async function spawnTeacherInteractiveQemu(qemuSystem, args, binDir) {
         }, 1500);
         proc.on('exit', (code, signal) => {
             clearTimeout(timer);
-            const detail = stderr.trim() || `exit ${code}${signal ? ` signal ${signal}` : ''}`;
-            reject(new Error(detail));
+            reject(new Error(`exit ${code}${signal ? ` signal ${signal}` : ''}`));
         });
     });
 }
@@ -473,22 +485,17 @@ async function bootDisk({ workdirectory, qcow2Name }) {
     await fs.promises.access(diskPath, fs.constants.R_OK);
 
     const { qemuSystem, binDir } = await getResolvedQemu();
-    const uefiExtras = await getQemuUefiRuntimeExtras({ binDir, qemuWorkDir: qemuDir, qcow2Name: filename });
     const args = [
-        ...getQemuAccelArgs({ runtime: true }),
-        ...getQemuMemoryArg(),
+        ...getQemuAccelArgs(),
+        ...getQemuTeacherBootMemoryArg(),
         ...getQemuSmpArgs(),
-        ...getQemuRtcArgs(),
         ...getQemuMachineArgs(),
-        ...uefiExtras,
         '-cpu', getQemuCpuArg({ profile: 'runtime' }),
         ...getQemuVirtioDiskDriveArg(diskPath),
+        ...getQemuLegacyBootOrderArgs(),
         ...getQemuVgaDeviceArgs(),
         ...getQemuTeacherDisplayArgs(),
         ...getQemuUsbTabletArgs(),
-        '-device', 'virtio-net-pci,netdev=n0',
-        '-netdev', 'user,id=n0',
-        ...getQemuLegacyBootOrderArgs(),
     ];
     const { pid } = await spawnTeacherInteractiveQemu(qemuSystem, args, binDir);
     log.info(`qemuService @ bootDisk: qemu started pid=${pid || 'unknown'}`);
