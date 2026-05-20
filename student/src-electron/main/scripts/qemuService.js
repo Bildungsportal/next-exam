@@ -74,15 +74,19 @@ function spawnLogged(cmd, args, options = {}) {
 async function importDisk({ workdirectory, sourcePath }) {
     const qemuDir = getQemuDir(workdirectory);
     await ensureDir(qemuDir);
-    const src = String(sourcePath || '');
+    const src = path.resolve(String(sourcePath || ''));
     const filename = path.basename(src);
     if (!filename || !filename.toLowerCase().endsWith('.qcow2')) {
         throw new Error('invalid qcow2 source');
     }
-    const dest = path.join(qemuDir, filename);
-    if (fs.existsSync(dest)) {
-        log.info(`qemuService @ importDisk: already exists: ${filename}`);
+    const dest = path.resolve(path.join(qemuDir, filename));
+    if (src === dest) {
+        log.info(`qemuService @ importDisk: skipped (already in QEMU folder): ${filename}`);
         return { ok: true, skipped: true, filename };
+    }
+    if (fs.existsSync(dest)) {
+        log.info(`qemuService @ importDisk: removing existing ${dest}`);
+        await fs.promises.unlink(dest);
     }
     log.info(`qemuService @ importDisk: copying ${src} -> ${dest}`);
     await fs.promises.copyFile(src, dest);
