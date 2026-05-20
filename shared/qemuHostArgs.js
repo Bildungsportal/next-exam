@@ -191,6 +191,17 @@ export function getQemuVgaDeviceArgs() {
     return ['-vga', 'virtio'];
 }
 
+/** Headless VNC: EDID tells Windows a real desktop size (default -vga virtio ≈ 1024×768). */
+export function getQemuHeadlessVgaArgs({ width = 1920, height = 1080 } = {}) {
+    return ['-device', `virtio-vga,max_outputs=1,xres=${width},yres=${height}`];
+}
+
+/** Let noVNC resizeSession negotiate guest framebuffer size. */
+export function getQemuVncArgs(vncDisplay = ':1') {
+    const id = String(vncDisplay || ':1');
+    return ['-vnc', `${id},resize=remote`];
+}
+
 export function getQemuUsbTabletArgs() {
     return ['-device', 'qemu-xhci', '-device', 'usb-tablet'];
 }

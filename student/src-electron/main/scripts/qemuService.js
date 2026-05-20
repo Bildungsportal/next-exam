@@ -26,6 +26,8 @@ import {
     getQemuVirtioDiskDriveArg,
     getQemuVgaDeviceArgs,
     getQemuLegacyBootOrderArgs,
+    getQemuHeadlessVgaArgs,
+    getQemuVncArgs,
 } from '../../../../shared/qemuHostArgs.js';
 
 let vmProc = null;
@@ -428,9 +430,9 @@ async function startHeadless({ workdirectory, examdirectory, qcow2Name, vncDispl
         ...getQemuMachineArgs(),
         '-cpu', getQemuCpuArg({ profile: 'runtime' }),
         ...getQemuVirtioDiskDriveArg(overlayPath),
-        ...getQemuVgaDeviceArgs(),
+        ...getQemuHeadlessVgaArgs(),
         '-display', 'none',
-        '-vnc', vncDisplay,
+        ...getQemuVncArgs(vncDisplay),
         ...getQemuQmpArgs(qemuDir),
         ...netArgs,
         ...getQemuUsbTabletArgs(),
