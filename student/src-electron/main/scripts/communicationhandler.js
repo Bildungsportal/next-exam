@@ -929,6 +929,7 @@ import {
                         vncDisplay: ':1',
                         overlayName: preflight.overlayName,
                         blockInternet: preflight.blockInternet,
+                        forceFreshOverlay: true,
                         displayWidth: preflight.displayWidth,
                         displayHeight: preflight.displayHeight,
                     });

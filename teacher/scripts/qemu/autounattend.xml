@@ -210,8 +210,8 @@
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
                     <Order>2</Order>
-                    <CommandLine>powershell -NoProfile -ExecutionPolicy Bypass -Command "$src=$null; foreach($c in 68..90){$p=([char]$c)+':\nx-disable-animations.ps1'; if(Test-Path -LiteralPath $p){$src=$p; break}}; $destDir='C:\ProgramData\NextExam'; $script=Join-Path $destDir 'nx-disable-animations.ps1'; New-Item -ItemType Directory -Path $destDir -Force | Out-Null; if($src){Copy-Item -LiteralPath $src -Destination $script -Force}; if(Test-Path -LiteralPath $script){&amp; $script}; powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c | Out-Null"</CommandLine>
-                    <Description>Disable UI animations via nx-disable-animations.ps1 and high-performance power plan</Description>
+                    <CommandLine>powershell -NoProfile -ExecutionPolicy Bypass -Command "$v='HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects'; New-Item $v -Force|Out-Null; Set-ItemProperty $v VisualFXSetting 2 -Type DWord; Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize' EnableTransparency 0 -Type DWord -EA 0; Set-ItemProperty 'HKCU:\Control Panel\Desktop' DragFullWindows 0; Set-ItemProperty 'HKCU:\Control Panel\Desktop\WindowMetrics' MinAnimate 0; Set-ItemProperty 'HKCU:\Control Panel\Mouse' MouseTrails 0; Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Accessibility' AnimationEffects 0 -Type DWord -EA 0; @('ListviewAlphaSelect','TaskbarAnimations','TaskbarMn')|%{Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' $_ 0 -Type DWord -EA 0}; powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c | Out-Null"</CommandLine>
+                    <Description>Best-performance visuals and high-performance power plan</Description>
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
                     <Order>3</Order>

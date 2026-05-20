@@ -22,7 +22,6 @@ DISK="win11.qcow2"
 rm -rf ./autounattend-iso-root
 mkdir -p ./autounattend-iso-root
 cp ./autounattend.xml ./autounattend-iso-root/autounattend.xml
-cp ./nx-disable-animations.ps1 ./autounattend-iso-root/nx-disable-animations.ps1
 cp ./setup-rclone.cmd ./autounattend-iso-root/setup-rclone.cmd
 cp ./mount-rclone.cmd ./autounattend-iso-root/mount-rclone.cmd
 
