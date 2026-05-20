@@ -5,6 +5,7 @@ import log from 'electron-log';
 import {
     clearWin32WhpxCpuCache,
     getQemuAccelArgs,
+    probeQemuX86Accel,
     getQemuMachineArgs,
     getQemuVgaDeviceArgs,
     getWin32RuntimeCpuCandidates,
@@ -414,9 +415,17 @@ function buildOkResult(resolved, hypervisorPlatform, install, { quick = false } 
     };
 }
 
+/** Darwin: qemu-system-x86_64 on arm64 has tcg only (no hvf); probe before other checks. */
+async function ensureDarwinX86AccelProbed(qemuSystem, binDir) {
+    if (process.platform !== 'darwin') return;
+    const accel = await probeQemuX86Accel(qemuSystem, binDir, buildQemuSpawnEnv(binDir));
+    log.info(`qemuAvailability @ ensureDarwinX86AccelProbed: accel=${accel}`);
+}
+
 /** Win32 WHPX probes (virtio-vga + CPU); skipped for disk-picker quick check. */
 async function runDeepQemuProbes(qemuSystem, binDir, hypervisorPlatform) {
     log.info(`qemuAvailability @ runDeepQemuProbes: start binDir=${binDir}`);
+    await ensureDarwinX86AccelProbed(qemuSystem, binDir);
     if (process.platform === 'win32' && hypervisorPlatform.supported && !hypervisorPlatform.enabled) {
         cachedResolved = null;
         return buildUnavailableResult(['HypervisorPlatform'], hypervisorPlatform);
@@ -486,6 +495,7 @@ export async function resolveQemuBinaries({ deep = true } = {}) {
     }
 
     if (!deep) {
+        await ensureDarwinX86AccelProbed(cachedResolved.qemuSystem, cachedResolved.binDir);
         log.info(`qemuAvailability @ resolveQemuBinaries: quick ok binDir=${cachedResolved.binDir}`);
         return buildOkResult(cachedResolved, deferredHypervisorPlatform(), install, { quick: true });
     }

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { spawn } from 'child_process';
 
 const GIB = 1024 * 1024 * 1024;
 const VM_RAM_MB_HIGH = 8192;
@@ -21,10 +22,46 @@ const WIN32_CPU_RUNTIME_CANDIDATES = [
 
 let cachedWin32RuntimeCpuArg = null;
 let cachedMemoryMb = null;
+let cachedX86Accel = null;
 
 export function clearWin32WhpxCpuCache() {
     cachedWin32RuntimeCpuArg = null;
     cachedMemoryMb = null;
+    cachedX86Accel = null;
+}
+
+/** Cache accel from probeQemuX86Accel (hvf on Intel Mac, tcg on Apple Silicon x86_64). */
+export function setCachedQemuX86Accel(accel) {
+    cachedX86Accel = accel === 'tcg' ? 'tcg' : 'hvf';
+}
+
+/** Parse qemu-system-x86_64 -accel help; prefer hvf when listed else tcg. */
+export async function probeQemuX86Accel(qemuSystem, binDir, env = process.env) {
+    const text = await new Promise((resolve) => {
+        let settled = false;
+        const finish = (value) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            try { proc.kill(); } catch (e) {}
+            resolve(value);
+        };
+        const proc = spawn(qemuSystem, ['-accel', 'help'], {
+            cwd: binDir,
+            env,
+            stdio: ['ignore', 'pipe', 'pipe'],
+        });
+        let out = '';
+        const onData = (d) => { out += String(d); };
+        proc.stdout?.on('data', onData);
+        proc.stderr?.on('data', onData);
+        const timer = setTimeout(() => finish(out), 3000);
+        proc.on('error', () => finish(''));
+        proc.on('close', () => finish(out));
+    });
+    const accel = /\bhvf\b/i.test(text) ? 'hvf' : 'tcg';
+    setCachedQemuX86Accel(accel);
+    return accel;
 }
 
 /** Guest RAM (MiB): 8192 if host >8 GiB else 4096; cap ~45% host RAM. */
@@ -49,7 +86,10 @@ export function setCachedWin32RuntimeCpuArg(cpuArg) {
 export function getQemuAccelArgs() {
     if (process.platform === 'linux') return ['-enable-kvm'];
     if (process.platform === 'win32') return ['-accel', 'whpx'];
-    if (process.platform === 'darwin') return ['-accel', 'hvf'];
+    if (process.platform === 'darwin') {
+        if (cachedX86Accel === 'tcg') return ['-accel', 'tcg,thread=multi'];
+        return ['-accel', 'hvf'];
+    }
     return [];
 }
 
@@ -161,6 +201,10 @@ export function getQemuCpuArg({ profile = 'runtime' } = {}) {
         if (profile === 'uefi-install') return WIN32_CPU_UEFI_BOOT;
         // Runtime always Skylake without hv_*; WHPX probe cache must not override (hangs Linux-built images).
         return WIN32_CPU_UEFI_BOOT;
+    }
+    // Apple Silicon x86_64 QEMU has tcg only; -cpu host is invalid under tcg.
+    if (process.platform === 'darwin' && cachedX86Accel === 'tcg') {
+        return 'max';
     }
     return `host,${HV_GUEST}`;
 }

@@ -82,6 +82,7 @@ RULE^localvm^teacherBoot^killExistingQemuInstances+400ms before spawn; detached 
 TECH^localvm^isoDl^teacher downloadFile uses stream pipeline to .part then rename; skip if dest>=MIN_COMPLETE_BYTES; cleanup stale .part^teacher qemuService.js
 BUG^localvm^whpx^HypervisorPlatform required; win32 cpu Skylake,+nx,+popcnt no hv_* runtime; smp cores=4,threads=1; rtc localtime; disk cache=writeback not none on QEMU11^qemuHostArgs.js
 TECH^localvm^qmp^student graceful shutdown via QMP; win tcp:47043 linux unix sock^shared/qemuHostArgs.js+student qemuService.js
+TECH^localvm^darwinX86^arm64 qemu-system-x86_64: tcg only (no hvf); probeQemuX86Accel→tcg,thread=multi + -cpu max^shared/qemuHostArgs.js+qemuAvailability.js
 TECH^student^localvmHash^sha256 base qcow2 before qemu start (runLocalVmPreStartVerify); avoids guest freeze from parallel full read^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js
 TECH^student^localvmStart^localVmStartState idle|starting|blocked; qemu-download/import must not set idle while starting (parallel startExam)^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js
 TECH^student^examWin^createExamWindow no-op if examwindow exists (orphan second BrowserWindow)^student/src-electron/main/scripts/windowhandler.js
