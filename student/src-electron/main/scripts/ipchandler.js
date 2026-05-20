@@ -397,22 +397,35 @@ class IpcHandler {
             }
         });
 
-        ipcMain.handle('qemu-pick-import-disk', async () => {
+        ipcMain.handle('qemu-pick-disk-file', async () => {
             try {
-                log.info('ipchandler @ qemu-pick-import-disk: selecting qcow2 via filepicker');
                 const result = await dialog.showOpenDialog(this.WindowHandler.mainwindow, {
                     properties: ['openFile'],
                     filters: [{ name: 'QEMU Disk', extensions: ['qcow2'] }],
                 });
-                if (result.canceled || !result.filePaths || !result.filePaths[0]) {
-                    log.info('ipchandler @ qemu-pick-import-disk: cancelled');
+                if (result.canceled || !result.filePaths?.[0]) {
                     return { ok: false, cancelled: true };
                 }
-                log.info(`ipchandler @ qemu-pick-import-disk: selected ${result.filePaths[0]}`);
-                const importRes = await qemuService.importDisk({ workdirectory: this.config.workdirectory, sourcePath: result.filePaths[0] });
+                return { ok: true, sourcePath: result.filePaths[0] };
+            } catch (err) {
+                log.error('ipchandler @ qemu-pick-disk-file', err);
+                return { ok: false, error: String(err?.message || err) };
+            }
+        });
+
+        ipcMain.handle('qemu-import-disk', async (_event, payload = {}) => {
+            try {
+                const sourcePath = payload?.sourcePath;
+                if (!sourcePath) {
+                    return { ok: false, error: 'invalid sourcePath' };
+                }
+                const importRes = await qemuService.importDisk({
+                    workdirectory: this.config.workdirectory,
+                    sourcePath,
+                });
                 if (importRes?.ok && this.multicastClient?.serverstatus?.exammode) {
                     if (this.CommunicationHandler.localVmStartState === 'starting') {
-                        log.info('ipchandler @ qemu-pick-import-disk: localvm start already in progress, skip startExam');
+                        log.info('ipchandler @ qemu-import-disk: localvm start already in progress, skip startExam');
                     } else {
                         if (this.CommunicationHandler.localVmStartState === 'blocked') {
                             this.CommunicationHandler.localVmStartState = 'idle';
@@ -422,7 +435,7 @@ class IpcHandler {
                 }
                 return importRes;
             } catch (err) {
-                log.error('ipchandler @ qemu-pick-import-disk', err);
+                log.error('ipchandler @ qemu-import-disk', err);
                 return { ok: false, error: String(err?.message || err) };
             }
         });

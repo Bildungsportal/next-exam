@@ -68,7 +68,7 @@
                 <div v-if="localVmFixPhase && localVmCanFix && !localVmIsVerifying" class="localvm-preflight-verify" style="margin-top: 12px;">
                     <div class="localvm-preflight-spinner" aria-hidden="true"></div>
                     <div class="localvm-preflight-text">
-                        {{ localVmFixPhase === 'waiting_for_start' ? $t('student.localvmWaitingForStart') : $t('student.localvmDownloading') }}
+                        {{ localVmFixPhase === 'waiting_for_start' ? $t('student.localvmWaitingForStart') : (localVmFixPhase === 'importing' ? $t('student.localvmImporting') : $t('student.localvmDownloading')) }}
                     </div>
                     <div v-if="localVmFixPhase !== 'waiting_for_start' && localVmDownloadPercent != null" class="localvm-preflight-subtext">{{ localVmDownloadPercent }}%</div>
                 </div>
@@ -1416,12 +1416,17 @@ export default {
             if (this.localVmBusy) return;
             try {
                 this.localVmBusy = true;
+                const pick = await signalBridge.invoke('qemu-pick-disk-file');
+                if (!pick?.ok || pick.cancelled) {
+                    await this.status(this.$t('student.localvmImportCancelled'));
+                    this.localVmFixPhase = null;
+                    return;
+                }
                 this.localVmFixPhase = 'importing';
-                await this.status(this.$t('student.localvmImporting'));
-                const res = await signalBridge.invoke('qemu-pick-import-disk', {});
+                const res = await signalBridge.invoke('qemu-import-disk', { sourcePath: pick.sourcePath });
                 const filename = res && res.ok ? res.filename : null;
                 if (!filename) {
-                    await this.status(this.$t('student.localvmImportCancelled'));
+                    await this.status(this.$t('student.localvmImportFailed'));
                     this.localVmFixPhase = null;
                     return;
                 }
