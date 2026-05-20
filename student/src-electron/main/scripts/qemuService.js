@@ -12,6 +12,7 @@ import {
     buildQemuSpawnEnv,
     resolveQemuModuleDir,
 } from '../../../../shared/qemuAvailability.js';
+import { copyQcow2ToDest } from '../../../../shared/qemuQcow2Copy.js';
 import {
     getQemuAccelArgs,
     getQemuCpuArg,
@@ -71,25 +72,44 @@ function spawnLogged(cmd, args, options = {}) {
     return proc;
 }
 
-async function importDisk({ workdirectory, sourcePath }) {
+async function importDisk({ workdirectory, sourcePath, onProgress = null }) {
     const qemuDir = getQemuDir(workdirectory);
     await ensureDir(qemuDir);
     const src = path.resolve(String(sourcePath || ''));
+    if (!src) {
+        throw new Error('invalid qcow2 source');
+    }
     const filename = path.basename(src);
     if (!filename || !filename.toLowerCase().endsWith('.qcow2')) {
         throw new Error('invalid qcow2 source');
     }
     const dest = path.resolve(path.join(qemuDir, filename));
+    log.info(`qemuService @ importDisk: src=${src} dest=${dest}`);
     if (src === dest) {
         log.info(`qemuService @ importDisk: skipped (already in QEMU folder): ${filename}`);
+        try { onProgress?.({ phase: 'skip', percent: 100, copied: 0, total: 0 }); } catch (e) {}
         return { ok: true, skipped: true, filename };
     }
     if (fs.existsSync(dest)) {
         log.info(`qemuService @ importDisk: removing existing ${dest}`);
         await fs.promises.unlink(dest);
     }
+    try {
+        const srcStat = await fs.promises.stat(src);
+        const destDirStat = await fs.promises.stat(path.dirname(dest));
+        if (srcStat.dev === destDirStat.dev) {
+            log.info(`qemuService @ importDisk: hardlink (same volume, ${srcStat.size} bytes)`);
+            await fs.promises.link(src, dest);
+            try { onProgress?.({ phase: 'linked', percent: 100, copied: srcStat.size, total: srcStat.size }); } catch (e) {}
+            return { ok: true, skipped: false, filename, linked: true };
+        }
+    } catch (e) {
+        log.info(`qemuService @ importDisk: link failed, copying (${e?.message || e})`);
+    }
     log.info(`qemuService @ importDisk: copying ${src} -> ${dest}`);
-    await fs.promises.copyFile(src, dest);
+    await copyQcow2ToDest(src, dest, onProgress, {
+        onLog: (msg) => log.info(`qemuService @ importDisk: ${msg}`),
+    });
     log.info(`qemuService @ importDisk: copied: ${filename}`);
     return { ok: true, skipped: false, filename };
 }

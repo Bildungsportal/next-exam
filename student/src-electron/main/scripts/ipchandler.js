@@ -419,9 +419,13 @@ class IpcHandler {
                 if (!sourcePath) {
                     return { ok: false, error: 'invalid sourcePath' };
                 }
+                const sendProgress = (p) => {
+                    try { this.WindowHandler?.mainwindow?.webContents?.send?.('qemu-download-progress', p); } catch (e) {}
+                };
                 const importRes = await qemuService.importDisk({
                     workdirectory: this.config.workdirectory,
                     sourcePath,
+                    onProgress: sendProgress,
                 });
                 if (importRes?.ok && this.multicastClient?.serverstatus?.exammode) {
                     if (this.CommunicationHandler.localVmStartState === 'starting') {

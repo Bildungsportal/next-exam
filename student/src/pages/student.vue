@@ -1423,6 +1423,7 @@ export default {
                     return;
                 }
                 this.localVmFixPhase = 'importing';
+                this.localVmDownloadPercent = null;
                 const res = await signalBridge.invoke('qemu-import-disk', { sourcePath: pick.sourcePath });
                 const filename = res && res.ok ? res.filename : null;
                 if (!filename) {
@@ -1438,6 +1439,9 @@ export default {
                 this.localVmFixPhase = null;
             } finally {
                 this.localVmBusy = false;
+                if (this.localVmFixPhase !== 'waiting_for_start') {
+                    this.localVmDownloadPercent = null;
+                }
             }
         },
 
