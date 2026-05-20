@@ -196,8 +196,8 @@ export function getQemuTeacherVgaArgs() {
     return getQemuVgaDeviceArgs();
 }
 
-/** Student headless VNC: virtio-vga + EDID 1366×768 (-vga none avoids extra std VGA). */
-export function getQemuHeadlessVgaArgs({ width = 1366, height = 768 } = {}) {
+/** Student headless VNC: virtio-vga + EDID (-vga none avoids extra std VGA). */
+export function getQemuHeadlessVgaArgs({ width = 1920, height = 1080 } = {}) {
     return ['-vga', 'none', '-device', `virtio-vga,max_outputs=1,edid=on,xres=${width},yres=${height}`];
 }
 

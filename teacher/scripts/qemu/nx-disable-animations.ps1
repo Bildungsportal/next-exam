@@ -1,4 +1,6 @@
-# Apply Windows "best performance" visuals (minimize/move/menu fades off); safe every logon.
+param([switch]$InstallOnly)
+
+# Apply Windows "best performance" visuals (minimize/move/menu fades off); run after display is up.
 function Apply-NxDisableAnimations {
     $desk = 'HKCU:\Control Panel\Desktop'
     New-Item -Path $desk -Force | Out-Null
@@ -6,7 +8,11 @@ function Apply-NxDisableAnimations {
     Set-ItemProperty -Path $desk -Name MenuShowDelay -Value '0'
     Set-ItemProperty -Path $desk -Name DragFullWindows -Value '0'
     Set-ItemProperty -Path $desk -Name MinAnimate -Value '0'
+    Set-ItemProperty -Path $desk -Name Wallpaper -Value '' -ErrorAction SilentlyContinue
     Set-ItemProperty -Path 'HKCU:\Control Panel\Mouse' -Name MouseTrails -Value '0' -ErrorAction SilentlyContinue
+    $colors = 'HKCU:\Control Panel\Colors'
+    New-Item -Path $colors -Force | Out-Null
+    Set-ItemProperty -Path $colors -Name Background -Value '58 110 165' -ErrorAction SilentlyContinue
     $vf = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects'
     New-Item -Path $vf -Force | Out-Null
     Set-ItemProperty -Path $vf -Name VisualFXSetting -Value 2 -Type DWord
@@ -62,13 +68,15 @@ public static class NxSpi {
     }
 }
 
+# Register logon task; longer delay on golden-image install so viogpudo/EDID finish first.
 function Register-NxPerfLogonTask {
+    param([string]$LogonDelay = 'PT1M')
     $script = 'C:\ProgramData\NextExam\nx-disable-animations.ps1'
     if (-not (Test-Path -LiteralPath $script)) { return }
     $args = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script`""
     $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $args
     $trigger = New-ScheduledTaskTrigger -AtLogOn
-    $trigger.Delay = 'PT1M'
+    $trigger.Delay = $LogonDelay
     $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Limited
     Register-ScheduledTask -TaskName 'NextExamDisableAnimations' -Action $action -Trigger $trigger -Principal $principal -Force | Out-Null
 }
@@ -78,9 +86,11 @@ if ($MyInvocation.MyCommand.Path -and (Test-Path -LiteralPath $MyInvocation.MyCo
     New-Item -ItemType Directory -Path (Split-Path -Parent $installPath) -Force | Out-Null
     Copy-Item -LiteralPath $MyInvocation.MyCommand.Path -Destination $installPath -Force
 }
+
+if ($InstallOnly) {
+    Register-NxPerfLogonTask -LogonDelay 'PT5M'
+    exit 0
+}
+
 Apply-NxDisableAnimations
-Register-NxPerfLogonTask
-Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @(
-    '-NoProfile', '-ExecutionPolicy', 'Bypass',
-    '-Command', "Start-Sleep -Seconds 90; & '$installPath'"
-)
+Register-NxPerfLogonTask -LogonDelay 'PT1M'

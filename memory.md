@@ -69,12 +69,12 @@ IPC^localvm^importProgress^qemu-import-progress→#qemuHashStatus Kopiere qcow2 
 BUG^localvm^import^pick file already in QEMU dir→skip src===dest; win32 copyFile hangs post-copy→stream+size watchdog^qemuService copyQcow2ToDest
 BUG^localvm^hypervisorCheck^Get-WindowsOptionalFeature needs admin→false negative; fix Win32_ComputerSystem.HypervisorPresent fallback^shared/qemuWinPlatform.js
 BUG^localvm^ovmfPath^Windows binDir=<qemu>/ not /usr/bin; share=join(binDir,share) not ../share^shared/qemuHostArgs.js resolveQemuShareDir
-RULE^localvm^display^teacher gtk/sdl + getQemuTeacherVgaArgs=-vga virtio; student headless vnc + getQemuHeadlessVgaArgs virtio-vga edid from examConfig.localvm.displayResolution default 1366x768^shared/qemuHostArgs.js+localVmDisplayResolutions.js
+RULE^localvm^display^presets 1920x1080,1680x1050,1440x900,1280x700,1024x768; legacy 1600x900→1440x900; default 1920x1080^localVmDisplayResolutions.js
 IPC^localvm^displayResolution^examConfig.localvm.displayResolution id→pickLocalVmGroupConfig→qemuService EDID xres/yres; teacher must re-save LocalVM once^shared/localVmDisplayResolutions.js
 BUG^localvm^640x480^new qcow2 only; cause autounattend Order2 nx-disable-animations.ps1 SPI+UserPreferencesMask at FirstLogon after pnputil; old image=inline registry OK^autounattend.xml 9fe29867
 BUG^virtioWin^gpuPath^stable virtio-win.iso has viogpudo/w11/amd64 only; no viogpu/ folder^autounattend.xml
 RULE^localvm^gpu^standard viogpudo+virtio-vga; autounattend FirstLogon pnputil; do not diagnose choppy VNC as missing GPU^autounattend.xml+qemuHostArgs.js
-RULE^localvm^winPerf^FirstLogon Order2=inline registry only (like win11-adobe); nx-disable-animations.ps1 not on answer ISO—SPI at sysprep breaks EDID^autounattend.xml
+RULE^localvm^winPerf^Order2 inline registry; Order4 stages ps1 -InstallOnly; logon task PT5M then PT1M—no SPI during pnputil^nx-disable-animations.ps1+autounattend.xml
 TECH^localvm^vncCursor^localvmview alwaysUseDotCursor+showDotCursor; lag=FB cursor in VNC stream not missing viogpu^student/novnc-core/rfb.js
 IPC^qemu^bootDisk^qemu-boot-disk useOverlay=true → teacher-boot.overlay.qcow2 fresh each boot^teacher/qemuService.js
 TECH^localvm^nvram^legacy win32 no pflash runtime; *.nvram.vars unused; OVMF helpers kept for tools^shared/qemuHostArgs.js
