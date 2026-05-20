@@ -268,22 +268,31 @@ async function resetVmHard() {
     return { ok: true };
 }
 
-function _unlinkIfExists(p) {
+// Win: QEMU may keep overlay/qcow2 open briefly after kill → EBUSY; taskkill + short retries.
+async function _unlinkIfExists(p) {
     const filePath = String(p || '');
-    if (!filePath) {
-        return false;
-    }
-    try {
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
+    if (!filePath) return true;
+    let didTaskkill = false;
+    for (let i = 0; i < 10; i++) {
+        try {
+            if (!fs.existsSync(filePath)) return true;
+            await fs.promises.unlink(filePath);
             log.info(`qemuService: deleted ${filePath}`);
             return true;
+        } catch (e) {
+            const busy = e?.code === 'EBUSY' || e?.code === 'EPERM';
+            if (!busy || i === 9) {
+                log.error(`qemuService: failed to delete ${filePath}`, e);
+                return false;
+            }
+            if (process.platform === 'win32' && !didTaskkill) {
+                didTaskkill = true;
+                try { await runToCompletion('taskkill', ['/F', '/IM', 'qemu-system-x86_64.exe']); } catch (err) {}
+            }
+            await new Promise((r) => setTimeout(r, 150 + i * 100));
         }
-        return true;
-    } catch (e) {
-        log.error(`qemuService: failed to delete ${filePath}`, e);
-        return false;
     }
+    return false;
 }
 
 async function _waitForVmExit(timeoutMs = 8000) {
@@ -316,8 +325,8 @@ async function stopVmAsync({ graceful = true, shutdownTimeoutMs = 8000, killTime
         vmProc = null;
         vmDisk = null;
         vmVncDisplay = null;
-        const overlayDeleted = _unlinkIfExists(overlayToDelete);
-        if (vmQmpChannel?.kind === 'unix') _unlinkIfExists(vmQmpChannel.path);
+        const overlayDeleted = await _unlinkIfExists(overlayToDelete);
+        if (vmQmpChannel?.kind === 'unix') await _unlinkIfExists(vmQmpChannel.path);
         vmQmpChannel = null;
         if (overlayDeleted) vmOverlayPath = null;
         return { ok: true, alreadyStopped: true };
@@ -348,8 +357,8 @@ async function stopVmAsync({ graceful = true, shutdownTimeoutMs = 8000, killTime
     vmDisk = null;
     vmVncDisplay = null;
 
-    const overlayDeleted = _unlinkIfExists(overlayToDelete);
-    if (vmQmpChannel?.kind === 'unix') _unlinkIfExists(vmQmpChannel.path);
+    const overlayDeleted = await _unlinkIfExists(overlayToDelete);
+    if (vmQmpChannel?.kind === 'unix') await _unlinkIfExists(vmQmpChannel.path);
     vmQmpChannel = null;
     if (overlayDeleted) vmOverlayPath = null;
 
@@ -383,10 +392,8 @@ async function startHeadless({ workdirectory, examdirectory, qcow2Name, vncDispl
     const overlayFilename = overlayName && isSafeFilename(overlayName) ? overlayName : `${qcow2Name}.overlay.qcow2`;
     const overlayPath = path.join(qemuDir, overlayFilename);
     if (forceFreshOverlay && fs.existsSync(overlayPath)) {
-        try {
-            log.warn(`qemuService @ startHeadless: deleting existing overlay ${overlayFilename} (forceFreshOverlay)`);
-            await fs.promises.unlink(overlayPath);
-        } catch (e) {}
+        log.warn(`qemuService @ startHeadless: deleting existing overlay ${overlayFilename} (forceFreshOverlay)`);
+        await _unlinkIfExists(overlayPath);
     }
     const { qemuImg, qemuSystem, binDir } = await getResolvedQemu();
     if (!fs.existsSync(overlayPath)) {
