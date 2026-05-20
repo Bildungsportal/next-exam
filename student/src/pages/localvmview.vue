@@ -84,7 +84,7 @@
         <div class="vnc-overlay" v-if="showVmOverlay">
           <div class="status-text q-mb-sm">
             <div v-if="isMissingVm">VM-Disk nicht gefunden</div>
-            <div v-else-if="isHashMismatch">SHA-256 Hash Missmatch</div>
+            <div v-else-if="isHashMismatch">{{ $t('student.localvmDiskMismatch') }}</div>
             <div v-else-if="isVerifyingHash" class="localvm-hash-verify-layout">
               <div class="localvm-hash-spinner" aria-hidden="true"></div>
               <div class="text-subtitle1">{{ vmVerifyingText }}</div>

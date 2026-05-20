@@ -240,8 +240,7 @@ class WindowHandler {
 
 
     createWindow() {
-        const primaryDisplay = screen.getPrimaryDisplay()
-        const { width, height } = { width: 1280, height: 800 }
+        const { width, height } = { width: 1400, height: 800 }
         const currentDir = fileURLToPath(new URL('.', import.meta.url))
 
         this.mainwindow = new BrowserWindow({

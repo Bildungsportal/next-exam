@@ -295,6 +295,8 @@
         "localvmWaitingForStart": "Warte auf Start…",
         "localvmDownloadButton": "VM von Teacher holen",
         "localvmBrowseButton": "Dateisystem durchsuchen…",
+        "localvmCompatCheckText": "Es werden Tests an Ihrem System durchgeführt, die die Kompatibilität mit der virtuellen Prüfungsumgebung betreffen. Dies kann einige Minuten dauern.",
+        "localvmCompatCheckTitle": "Systemprüfung",
         "cancel": "Abbrechen",
         "qemuHypervisorEnable": "Als Administrator aktivieren",
         "qemuHypervisorText": "LocalVM auf Windows nutzt QEMU mit WHPX. Dafür muss das Windows-Feature „Hypervisor Platform“ aktiv sein.\n\nPowerShell (Admin):\nEnable-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -All\n\nDanach ggf. Neustart.",

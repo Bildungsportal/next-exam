@@ -370,6 +370,7 @@ export default {
             localVmBusy: false,
             localVmDownloadPercent: null,
             localVmFixPhase: null,
+            localVmCompatCheckSwalOpen: false,
 
         };
     },
@@ -413,6 +414,9 @@ export default {
     watch: {
         'clientinfo.localVMState'(nextState) {
             const st = String(nextState || '');
+            if (st !== 'checking_compat') {
+                this.closeLocalVmCompatCheckDialog();
+            }
             const inPreflightState = st === 'missing' || st === 'hash_mismatch' || st === 'verifying_hash' || st === 'error';
             if (!inPreflightState) {
                 this.localVmFixPhase = null;
@@ -433,6 +437,7 @@ export default {
         },
 
         async showQemuMissingWarning(payload = {}) {
+            this.closeLocalVmCompatCheckDialog();
             await showLocalVmQemuIssueDialog({
                 swal: this.$swal,
                 t: this.$t.bind(this),
@@ -441,6 +446,36 @@ export default {
                 check: payload || {},
                 cancelKey: 'cancel',
             });
+        },
+
+        // Swal while main runs QEMU / hypervisor compatibility probes before LocalVM exam start.
+        showLocalVmCompatCheckDialog() {
+            if (this.localVmCompatCheckSwalOpen) {
+                return;
+            }
+            this.localVmCompatCheckSwalOpen = true;
+            const text = String(this.$t('student.localvmCompatCheckText') || '');
+            void this.$swal.fire({
+                title: this.$t('student.localvmCompatCheckTitle'),
+                html: text.replace(/\n/g, '<br>'),
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    this.$swal.showLoading();
+                },
+            }).finally(() => {
+                this.localVmCompatCheckSwalOpen = false;
+            });
+        },
+
+        closeLocalVmCompatCheckDialog() {
+            try {
+                if (this.$swal.isVisible()) {
+                    this.$swal.close();
+                }
+            } catch (e) {}
+            this.localVmCompatCheckSwalOpen = false;
         },
 
         async promptCageKioskSetup() {
@@ -1666,6 +1701,22 @@ export default {
             this.localVmDownloadPercent = pct;
         });
 
+        signalBridge.on('localvm-compat-check-start', () => {
+            if (!this.clientinfo) {
+                this.clientinfo = {};
+            }
+            this.clientinfo.examtype = 'localvm';
+            this.clientinfo.localVMState = 'checking_compat';
+            this.showLocalVmCompatCheckDialog();
+        });
+
+        signalBridge.on('localvm-compat-check-end', () => {
+            if (this.clientinfo?.localVMState === 'checking_compat') {
+                this.clientinfo.localVMState = null;
+            }
+            this.closeLocalVmCompatCheckDialog();
+        });
+
         signalBridge.on('qemu-not-available', (_event, payload) => {
             this.showQemuMissingWarning(payload || {});
         });
@@ -1687,6 +1738,8 @@ export default {
         this.autoUpdateInterval.stop()
 
         signalBridge.removeAllListeners('qemu-download-progress');
+        signalBridge.removeAllListeners('localvm-compat-check-start');
+        signalBridge.removeAllListeners('localvm-compat-check-end');
         signalBridge.removeAllListeners('qemu-not-available');
     }
 }

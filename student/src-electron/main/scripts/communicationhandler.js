@@ -139,6 +139,29 @@ import {
         }
     }
 
+    // Tell student UI to show compat-check Swal before slow QEMU / disk probes.
+    notifyLocalVmCompatCheckStart() {
+        this.multicastClient.clientinfo.examtype = 'localvm';
+        this.multicastClient.clientinfo.localVMState = 'checking_compat';
+        try {
+            WindowHandler.mainwindow?.webContents?.send('localvm-compat-check-start');
+        } catch (e) {
+            log.debug('communicationhandler @ notifyLocalVmCompatCheckStart: send failed', e?.message);
+        }
+    }
+
+    // Dismiss compat-check Swal when leaving checking_compat (success, failure, or next preflight state).
+    notifyLocalVmCompatCheckEnd() {
+        if (this.multicastClient.clientinfo.localVMState === 'checking_compat') {
+            this.multicastClient.clientinfo.localVMState = null;
+        }
+        try {
+            WindowHandler.mainwindow?.webContents?.send('localvm-compat-check-end');
+        } catch (e) {
+            log.debug('communicationhandler @ notifyLocalVmCompatCheckEnd: send failed', e?.message);
+        }
+    }
+
     // Notify renderer and block LocalVM exam start when qemu-system-x86_64 / qemu-img are missing.
     async ensureQemuAvailableForLocalVm() {
         try {
@@ -244,6 +267,7 @@ import {
         this.multicastClient.clientinfo.examtype = 'localvm';
         this.multicastClient.clientinfo.localVMHost = null;
         this.multicastClient.clientinfo.localVMPort = vncPort;
+        this.notifyLocalVmCompatCheckEnd();
 
         log.info(`communicationhandler @ preflightLocalVm: cfg (disk=${qcow2Name || '-'}, port=${vncPort}, blockInternet=${blockInternet}, calcHash=${calculateSha256}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
 
@@ -646,11 +670,13 @@ import {
 
         if (!serverstatus.exammode && this.multicastClient.clientinfo.examtype === 'localvm') {
             const st = this.multicastClient.clientinfo.localVMState;
-            const inPreflightState = st === 'missing' || st === 'hash_mismatch' || st === 'verifying_hash' || st === 'error';
-            if (inPreflightState || this.localVmStartState !== 'idle') {
-                log.info('communicationhandler @ processUpdatedServerstatus: localvm exammode off -> clearing preflight state');
+            const keepFixUi = st === 'missing' || st === 'hash_mismatch' || st === 'error';
+            if (!keepFixUi && st) {
+                log.info(`communicationhandler @ processUpdatedServerstatus: localvm exammode off -> clearing transient vm state (${st})`);
                 this.multicastClient.clientinfo.localVMState = null;
                 this.multicastClient.clientinfo.localVMHost = null;
+            }
+            if (this.localVmStartState !== 'idle') {
                 this.localVmStartState = 'idle';
             }
         }
@@ -873,7 +899,16 @@ import {
                 log.info(`communicationhandler @ startExam: localvm start suppressed (state=${this.localVmStartState})`);
                 return;
             }
-            if (!(await this.ensureQemuAvailableForLocalVm())) {
+            this.notifyLocalVmCompatCheckStart();
+            let qemuOk = false;
+            try {
+                qemuOk = await this.ensureQemuAvailableForLocalVm();
+            } finally {
+                if (!qemuOk) {
+                    this.notifyLocalVmCompatCheckEnd();
+                }
+            }
+            if (!qemuOk) {
                 this.multicastClient.clientinfo.exammode = false;
                 return;
             }
