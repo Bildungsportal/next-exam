@@ -71,10 +71,10 @@ BUG^localvm^hypervisorCheck^Get-WindowsOptionalFeature needs admin→false negat
 BUG^localvm^ovmfPath^Windows binDir=<qemu>/ not /usr/bin; share=join(binDir,share) not ../share^shared/qemuHostArgs.js resolveQemuShareDir
 RULE^localvm^display^teacher gtk/sdl + getQemuTeacherVgaArgs=-vga virtio; student headless vnc + getQemuHeadlessVgaArgs virtio-vga edid from examConfig.localvm.displayResolution default 1366x768^shared/qemuHostArgs.js+localVmDisplayResolutions.js
 IPC^localvm^displayResolution^examConfig.localvm.displayResolution id→pickLocalVmGroupConfig→qemuService EDID xres/yres; teacher must re-save LocalVM once^shared/localVmDisplayResolutions.js
-BUG^localvm^1024x768^guest Basic Display or EDID ignored; code default 1366x768 not 1024—check spawn log xres/yres+viogpudo^qemuService startHeadless log
+BUG^localvm^640x480^new qcow2 only; cause autounattend Order2 nx-disable-animations.ps1 SPI+UserPreferencesMask at FirstLogon after pnputil; old image=inline registry OK^autounattend.xml 9fe29867
 BUG^virtioWin^gpuPath^stable virtio-win.iso has viogpudo/w11/amd64 only; no viogpu/ folder^autounattend.xml
 RULE^localvm^gpu^standard viogpudo+virtio-vga; autounattend FirstLogon pnputil; do not diagnose choppy VNC as missing GPU^autounattend.xml+qemuHostArgs.js
-RULE^localvm^winPerf^nx-disable-animations.ps1 SPI_SETANIMATION(0x49)+UserPreferencesMask+DWM; logon task +90s retry; ISO rebuild required^teacher/scripts/qemu/nx-disable-animations.ps1
+RULE^localvm^winPerf^FirstLogon Order2=inline registry only (like win11-adobe); nx-disable-animations.ps1 not on answer ISO—SPI at sysprep breaks EDID^autounattend.xml
 TECH^localvm^vncCursor^localvmview alwaysUseDotCursor+showDotCursor; lag=FB cursor in VNC stream not missing viogpu^student/novnc-core/rfb.js
 IPC^qemu^bootDisk^qemu-boot-disk useOverlay=true → teacher-boot.overlay.qcow2 fresh each boot^teacher/qemuService.js
 TECH^localvm^nvram^legacy win32 no pflash runtime; *.nvram.vars unused; OVMF helpers kept for tools^shared/qemuHostArgs.js

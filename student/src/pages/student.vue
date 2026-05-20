@@ -329,7 +329,7 @@ export default {
         return {
             version: this.$route.params.version,
             token: "",
-            username: this.$route.params.config.development ? "Thomas" : "" as string | boolean,
+            username: this.$route.params.config.development ? "thomas" : "" as string | boolean,
             pincode: this.$route.params.config.development ? "1111" : "" as string,
             clientinfo: {},
             serverstatus: null,
