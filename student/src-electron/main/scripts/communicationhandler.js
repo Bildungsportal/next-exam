@@ -72,6 +72,7 @@ import {
         this.config = config
         this.lastExamWriteSaveReason = 'n/a' // updated on successful examdir writes; sent with ZIP to teacher /receive
         this.localVmStartState = 'idle' // idle|starting|blocked
+        this._startExamRunning = false
         this.updateScheduler = new SchedulerService(this.requestUpdate.bind(this), 5000)
         this.updateScheduler.start()
     }
@@ -646,6 +647,10 @@ import {
         if (serverstatus.exammode && !this.multicastClient.clientinfo.exammode){
             const lockedSection = Number(serverstatus.lockedSection || 1);
             const examtype = serverstatus?.examSections?.[lockedSection]?.examtype;
+            if (this._startExamRunning) {
+                log.info('communicationhandler @ processUpdatedServerstatus: startExam already running, skip duplicate');
+                return;
+            }
             if (examtype === 'localvm' && this.localVmStartState !== 'idle') {
                 log.info(`communicationhandler @ processUpdatedServerstatus: localvm start suppressed (state=${this.localVmStartState})`);
                 return;
@@ -863,6 +868,12 @@ import {
      * @param serverstatus contains information about exammode, examtype, and other settings from the teacher instance
      */
     async startExam(serverstatus){
+        if (this._startExamRunning) {
+            log.info('communicationhandler @ startExam: already running, skip duplicate');
+            return;
+        }
+        this._startExamRunning = true;
+        try {
         // check if any dialog is open and log warning
         if (WindowHandler.exitWarningOpen || WindowHandler.exitQuestionOpen || WindowHandler.minimizeWarningOpen) {
             log.warn("communicationhandler @ startExam: Dialog is still open - exam will start anyway")
@@ -891,6 +902,7 @@ import {
                 log.info(`communicationhandler @ startExam: localvm start suppressed (state=${this.localVmStartState})`);
                 return;
             }
+            this.localVmStartState = 'starting';
             this.notifyLocalVmCompatCheckStart();
             let qemuOk = false;
             try {
@@ -902,9 +914,9 @@ import {
             }
             if (!qemuOk) {
                 this.multicastClient.clientinfo.exammode = false;
+                this.localVmStartState = 'idle';
                 return;
             }
-            this.localVmStartState = 'starting';
             try {                
                 let preflight = null;
                 try {
@@ -995,6 +1007,9 @@ import {
                 this.multicastClient.clientinfo.token = false
                 return  // in that case.. we are finished here !
             }
+        }
+        } finally {
+            this._startExamRunning = false;
         }
     }
 

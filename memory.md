@@ -74,7 +74,7 @@ IPC^localvm^displayResolution^examConfig.localvm.displayResolution id→pickLoca
 BUG^localvm^640x480^new qcow2 only; cause autounattend Order2 nx-disable-animations.ps1 SPI+UserPreferencesMask at FirstLogon after pnputil; old image=inline registry OK^autounattend.xml 9fe29867
 BUG^virtioWin^gpuPath^stable virtio-win.iso has viogpudo/w11/amd64 only; no viogpu/ folder^autounattend.xml
 RULE^localvm^gpu^standard viogpudo+virtio-vga; autounattend FirstLogon pnputil; do not diagnose choppy VNC as missing GPU^autounattend.xml+qemuHostArgs.js
-RULE^localvm^winPerf^EDID break=UserPreferencesMask+SPI in Apply-NxPerfSpi only; Order2 inline+Order4 -SetupGoldenImage registry+wallpaper; task -SpiOnly^nx-disable-animations.ps1
+RULE^localvm^rclone^setup-rclone runs at FirstLogon; failure is in mount-rclone autostart, not setup; ProgramData\NextExam files OK^teacher/scripts/qemu
 TECH^localvm^vncCursor^localvmview alwaysUseDotCursor+showDotCursor; lag=FB cursor in VNC stream not missing viogpu^student/novnc-core/rfb.js
 IPC^qemu^bootDisk^qemu-boot-disk useOverlay=true → teacher-boot.overlay.qcow2 fresh each boot^teacher/qemuService.js
 TECH^localvm^nvram^legacy win32 no pflash runtime; *.nvram.vars unused; OVMF helpers kept for tools^shared/qemuHostArgs.js
@@ -85,7 +85,7 @@ TECH^localvm^qmp^student graceful shutdown via QMP; win tcp:47043 linux unix soc
 TECH^localvm^darwinX86^arm64 qemu-system-x86_64: tcg only (no hvf); probeQemuX86Accel→tcg,thread=multi + -cpu max^shared/qemuHostArgs.js+qemuAvailability.js
 TECH^student^localvmHash^sha256 base qcow2 before qemu start (runLocalVmPreStartVerify); avoids guest freeze from parallel full read^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js
 TECH^student^localvmStart^localVmStartState idle|starting|blocked; qemu-download/import must not set idle while starting (parallel startExam)^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js
-TECH^student^examWin^createExamWindow no-op if examwindow exists (orphan second BrowserWindow)^student/src-electron/main/scripts/windowhandler.js
+TECH^student^examWin^dup startExam race: processUpdatedServerstatus+5s poll before clientinfo.exammode; fix _startExamRunning+localVmStartState early+_examWindowCreating^communicationhandler.js+windowhandler.js
 TECH^student^displayInfo^clientinfo.displayCount+multiMonitor via displayInfo.syncClientDisplayInfo; register blocked if multiMonitor&&!development^student displayInfo.js+ipchandler+student.vue; teacher /update persists on student
 TECH^teacher^localvmVerify^localvm calculateSha256(default false); when false, use qcow2SizeBytes stat.size verify; when true, use qcow2Sha256 verify^teacher/src/utils/examsetup.js+exammanagement.js;student/src-electron/main/scripts/communicationhandler.js
 TECH^student^localvmWebdav^WebDAV 0.0.0.0:1900 /share -> workdir; guest http://10.0.2.2:1900/share; blockInternet uses restrict=on+guestfwd tcp:10.0.2.2:1900-tcp:127.0.0.1:1900; start WebDAV before QEMU^student/src-electron/main/scripts/examWebdavServer.js+qemuService.js

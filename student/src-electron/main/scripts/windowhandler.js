@@ -316,7 +316,7 @@ class WindowHandler {
      * @param serverstatus the serverstatus object containing info about spellcheck language etc. 
      */
     async createExamWindow(examtype, token, serverstatus, primarydisplay) {
-        if (this.examwindow && !this.examwindow.isDestroyed?.()) {
+        if (this._examWindowCreating || (this.examwindow && !this.examwindow.isDestroyed?.())) {
             log.warn('windowhandler @ createExamWindow: examwindow already exists, skip duplicate create');
             try {
                 this.examwindow.show();
@@ -348,6 +348,8 @@ class WindowHandler {
             py = primarydisplay.bounds.y
         }
 
+        this._examWindowCreating = true;
+        try {
         this.examwindow = new BrowserWindow({
             x: px + 0,
             y: py + 0,
@@ -620,6 +622,9 @@ class WindowHandler {
                 this.multicastClient.clientinfo.focus = true
             }  
         });
+        } finally {
+            this._examWindowCreating = false;
+        }
     }
 
 

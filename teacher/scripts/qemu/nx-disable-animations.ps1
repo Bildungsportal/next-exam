@@ -11,7 +11,6 @@ function Apply-NxPerfRegistry {
     Set-ItemProperty -Path $desk -Name MenuShowDelay -Value '0'
     Set-ItemProperty -Path $desk -Name DragFullWindows -Value '0'
     Set-ItemProperty -Path $desk -Name MinAnimate -Value '0'
-    Set-ItemProperty -Path $desk -Name Wallpaper -Value '' -ErrorAction SilentlyContinue
     Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop\WindowMetrics' -Name MinAnimate -Value '0' -ErrorAction SilentlyContinue
     Set-ItemProperty -Path 'HKCU:\Control Panel\Mouse' -Name MouseTrails -Value '0' -ErrorAction SilentlyContinue
     $colors = 'HKCU:\Control Panel\Colors'
@@ -73,9 +72,7 @@ public static class NxSpi {
         foreach ($spi in @(0x0025, 0x1003, 0x1005, 0x1007, 0x1009, 0x101B, 0x101D, 0x1025, 0x1027, 0x201F)) {
             [void][NxSpi]::SystemParametersInfo($spi, 0, 0, $flags)
         }
-        $nullResult = [IntPtr]::Zero
-        [void][NxSpi]::SendMessageTimeout([IntPtr]0xffff, 0x001A, [IntPtr]::Zero, 'Environment', 2, 5000, [ref]$nullResult)
-        [void][NxSpi]::SendMessageTimeout([IntPtr]0xffff, 0x001A, [IntPtr]::Zero, 'VisualEffects', 2, 5000, [ref]$nullResult)
+        # Skip WM_SETTINGCHANGE broadcast — refreshes Explorer and drops WinFsp/rclone desktop mount.
     }
 }
 
@@ -102,7 +99,7 @@ if ($MyInvocation.MyCommand.Path -and (Test-Path -LiteralPath $MyInvocation.MyCo
 
 if ($SetupGoldenImage) {
     Apply-NxPerfRegistry
-    Register-NxPerfLogonTask -LogonDelay 'PT2M' -ExtraArgs '-SpiOnly'
+    Register-NxPerfLogonTask -LogonDelay 'PT5M' -ExtraArgs '-SpiOnly'
     exit 0
 }
 if ($RegistryOnly) {
