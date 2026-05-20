@@ -74,7 +74,7 @@ IPC^localvm^displayResolution^examConfig.localvm.displayResolution id→pickLoca
 BUG^localvm^640x480^new qcow2 only; cause autounattend Order2 nx-disable-animations.ps1 SPI+UserPreferencesMask at FirstLogon after pnputil; old image=inline registry OK^autounattend.xml 9fe29867
 BUG^virtioWin^gpuPath^stable virtio-win.iso has viogpudo/w11/amd64 only; no viogpu/ folder^autounattend.xml
 RULE^localvm^gpu^standard viogpudo+virtio-vga; autounattend FirstLogon pnputil; do not diagnose choppy VNC as missing GPU^autounattend.xml+qemuHostArgs.js
-RULE^localvm^winPerf^Order2 inline registry; Order4 stages ps1 -InstallOnly; logon task PT5M then PT1M—no SPI during pnputil^nx-disable-animations.ps1+autounattend.xml
+RULE^localvm^winPerf^EDID break=UserPreferencesMask+SPI in Apply-NxPerfSpi only; Order2 inline+Order4 -SetupGoldenImage registry+wallpaper; task -SpiOnly^nx-disable-animations.ps1
 TECH^localvm^vncCursor^localvmview alwaysUseDotCursor+showDotCursor; lag=FB cursor in VNC stream not missing viogpu^student/novnc-core/rfb.js
 IPC^qemu^bootDisk^qemu-boot-disk useOverlay=true → teacher-boot.overlay.qcow2 fresh each boot^teacher/qemuService.js
 TECH^localvm^nvram^legacy win32 no pflash runtime; *.nvram.vars unused; OVMF helpers kept for tools^shared/qemuHostArgs.js

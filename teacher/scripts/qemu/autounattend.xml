@@ -220,8 +220,8 @@
                 </SynchronousCommand>
                 <SynchronousCommand wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
                     <Order>4</Order>
-                    <CommandLine>powershell -NoProfile -ExecutionPolicy Bypass -Command "$src=$null; foreach($c in 68..90){$p=([char]$c)+':\nx-disable-animations.ps1'; if(Test-Path -LiteralPath $p){$src=$p; break}}; $destDir='C:\ProgramData\NextExam'; $script=Join-Path $destDir 'nx-disable-animations.ps1'; New-Item -ItemType Directory -Path $destDir -Force | Out-Null; if($src){Copy-Item -LiteralPath $src -Destination $script -Force}; if(Test-Path -LiteralPath $script){&amp; powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script -InstallOnly}"</CommandLine>
-                    <Description>Stage nx-disable-animations.ps1; apply on next logon after 5 min (not during GPU install)</Description>
+                    <CommandLine>powershell -NoProfile -ExecutionPolicy Bypass -Command "$src=$null; foreach($c in 68..90){$p=([char]$c)+':\nx-disable-animations.ps1'; if(Test-Path -LiteralPath $p){$src=$p; break}}; $destDir='C:\ProgramData\NextExam'; $script=Join-Path $destDir 'nx-disable-animations.ps1'; New-Item -ItemType Directory -Path $destDir -Force | Out-Null; if($src){Copy-Item -LiteralPath $src -Destination $script -Force}; if(Test-Path -LiteralPath $script){&amp; powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script -SetupGoldenImage}"</CommandLine>
+                    <Description>Perf registry + wallpaper now; UserPreferencesMask/SPI deferred via -SpiOnly logon task</Description>
                 </SynchronousCommand>
             </FirstLogonCommands>
 

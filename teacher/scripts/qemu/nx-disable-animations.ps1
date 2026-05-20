@@ -1,14 +1,18 @@
-param([switch]$InstallOnly)
+param(
+    [switch]$RegistryOnly,
+    [switch]$SpiOnly,
+    [switch]$SetupGoldenImage
+)
 
-# Apply Windows "best performance" visuals (minimize/move/menu fades off); run after display is up.
-function Apply-NxDisableAnimations {
+# Registry tweaks: safe during/after sysprep (same family as autounattend Order 2 inline).
+function Apply-NxPerfRegistry {
     $desk = 'HKCU:\Control Panel\Desktop'
     New-Item -Path $desk -Force | Out-Null
-    Set-ItemProperty -Path $desk -Name UserPreferencesMask -Value ([byte[]](0x90, 0x12, 0x03, 0x80, 0x10, 0x00, 0x00, 0x00)) -Type Binary
     Set-ItemProperty -Path $desk -Name MenuShowDelay -Value '0'
     Set-ItemProperty -Path $desk -Name DragFullWindows -Value '0'
     Set-ItemProperty -Path $desk -Name MinAnimate -Value '0'
     Set-ItemProperty -Path $desk -Name Wallpaper -Value '' -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop\WindowMetrics' -Name MinAnimate -Value '0' -ErrorAction SilentlyContinue
     Set-ItemProperty -Path 'HKCU:\Control Panel\Mouse' -Name MouseTrails -Value '0' -ErrorAction SilentlyContinue
     $colors = 'HKCU:\Control Panel\Colors'
     New-Item -Path $colors -Force | Out-Null
@@ -28,6 +32,13 @@ function Apply-NxDisableAnimations {
     foreach ($name in @('ListviewAlphaSelect', 'TaskbarAnimations', 'TaskbarMn')) {
         Set-ItemProperty -Path $adv -Name $name -Value 0 -Type DWord -ErrorAction SilentlyContinue
     }
+}
+
+# EDID-unsafe: UserPreferencesMask + SPI desktop broadcast — never run right after pnputil.
+function Apply-NxPerfSpi {
+    $desk = 'HKCU:\Control Panel\Desktop'
+    New-Item -Path $desk -Force | Out-Null
+    Set-ItemProperty -Path $desk -Name UserPreferencesMask -Value ([byte[]](0x90, 0x12, 0x03, 0x80, 0x10, 0x00, 0x00, 0x00)) -Type Binary
     $spiLoaded = $false
     try {
         Add-Type @'
@@ -68,12 +79,14 @@ public static class NxSpi {
     }
 }
 
-# Register logon task; longer delay on golden-image install so viogpudo/EDID finish first.
 function Register-NxPerfLogonTask {
-    param([string]$LogonDelay = 'PT1M')
+    param(
+        [string]$LogonDelay = 'PT1M',
+        [string]$ExtraArgs = ''
+    )
     $script = 'C:\ProgramData\NextExam\nx-disable-animations.ps1'
     if (-not (Test-Path -LiteralPath $script)) { return }
-    $args = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script`""
+    $args = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$script`" $ExtraArgs".Trim()
     $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $args
     $trigger = New-ScheduledTaskTrigger -AtLogOn
     $trigger.Delay = $LogonDelay
@@ -87,10 +100,20 @@ if ($MyInvocation.MyCommand.Path -and (Test-Path -LiteralPath $MyInvocation.MyCo
     Copy-Item -LiteralPath $MyInvocation.MyCommand.Path -Destination $installPath -Force
 }
 
-if ($InstallOnly) {
-    Register-NxPerfLogonTask -LogonDelay 'PT5M'
+if ($SetupGoldenImage) {
+    Apply-NxPerfRegistry
+    Register-NxPerfLogonTask -LogonDelay 'PT2M' -ExtraArgs '-SpiOnly'
+    exit 0
+}
+if ($RegistryOnly) {
+    Apply-NxPerfRegistry
+    exit 0
+}
+if ($SpiOnly) {
+    Apply-NxPerfSpi
     exit 0
 }
 
-Apply-NxDisableAnimations
-Register-NxPerfLogonTask -LogonDelay 'PT1M'
+Apply-NxPerfRegistry
+Apply-NxPerfSpi
+Register-NxPerfLogonTask -LogonDelay 'PT1M' -ExtraArgs '-SpiOnly'
