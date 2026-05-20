@@ -828,56 +828,126 @@ function showQemuMissingWarning(vm, check = {}) {
     });
 }
 
-/** Boot qcow2; Swal loader while main runs deep QEMU check + spawn (slow on Windows). */
-async function bootLocalVmDisk(vm, { ipc, diskName }) {
-    const statusEl = document.getElementById('qemuHashStatus');
-    const setStatus = (msg) => {
-        try {
-            if (statusEl) statusEl.textContent = msg ?? '';
-        } catch (e) {}
-    };
-    const setBootBusy = (busy) => {
-        try {
-            document.querySelectorAll('button[data-qemu-boot]').forEach((b) => {
-                b.disabled = busy;
-            });
-        } catch (e) {}
-    };
+/** Escape text for Swal HTML fragments built from i18n strings. */
+function escapeSwalHtmlText(text) {
+    return String(text ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/"/g, '&quot;');
+}
 
-    log.info(`examsetup @ bootLocalVmDisk: start disk=${diskName}`);
-    setBootBusy(true);
-    setStatus('Prüfe QEMU (WHPX, Module, CPU)…');
+/** Mutable base disk vs immutable overlay — null when cancelled. */
+async function promptLocalVmBootMode(vm, diskName) {
+    const vmName = String(diskName || '').trim() || 'VM';
+    const t = (key) => escapeSwalHtmlText(vm.$t(`dashboard.${key}`));
+    const html = `<div style="text-align:left; font-size:0.95em;">
+        <div style="padding:10px; border:1px solid rgba(32,201,151,0.55); border-radius:8px; margin-bottom:10px;">
+            <div style="font-weight:700; color:#20c997;">${t('localvmBootImmutableBtn')}</div>
+            <div style="color:#6c757d; margin-top:4px;">${t('localvmBootImmutableDesc')}</div>
+        </div>
+        <div style="padding:10px; border:1px solid rgba(255,193,7,0.35); border-radius:8px;">
+            <div style="font-weight:700; color:#ffc107;">${t('localvmBootMutableBtn')}</div>
+            <div style="color:#6c757d; margin-top:4px;">${t('localvmBootMutableDesc')}</div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:14px;">
+            <button type="button" class="btn btn-teal" id="qemuBootImmutableBtn" style="flex:1;">${t('localvmBootImmutableBtn')}</button>
+            <button type="button" class="btn btn-warning" id="qemuBootMutableBtn" style="flex:1;">${t('localvmBootMutableBtn')}</button>
+        </div>
+        <div style="margin-top:8px;">
+            <button type="button" class="btn btn-cyan" id="qemuBootCancelBtn" style="width:100%;">${t('cancel')}</button>
+        </div>
+    </div>`;
+    return await new Promise((resolve) => {
+        let settled = false;
+        const finish = (mode) => {
+            if (settled) return;
+            settled = true;
+            try { vm.$swal.close(); } catch (e) {}
+            resolve(mode);
+        };
+        vm.$swal.fire({
+            customClass: {
+                popup: 'my-popup',
+                title: 'my-title',
+                content: 'my-content',
+                actions: 'd-none',
+            },
+            title: vm.$t('dashboard.localvmBootTitle', { name: vmName }),
+            icon: 'question',
+            html,
+            showConfirmButton: false,
+            showCancelButton: false,
+            showDenyButton: false,
+            allowOutsideClick: false,
+            didOpen: () => {
+                document.getElementById('qemuBootImmutableBtn')?.addEventListener('click', () => finish('immutable'));
+                document.getElementById('qemuBootMutableBtn')?.addEventListener('click', () => finish('mutable'));
+                document.getElementById('qemuBootCancelBtn')?.addEventListener('click', () => finish(null));
+            },
+        }).then(() => {
+            if (!settled) finish(null);
+        });
+    });
+}
+
+/** Boot qcow2; mode dialog then loader (reopens disk picker when presetGroup set). */
+async function bootLocalVmDisk(vm, { ipc, diskName, presetGroup = null }) {
+    const mode = await promptLocalVmBootMode(vm, diskName);
+    if (!mode) {
+        if (presetGroup != null) {
+            setTimeout(() => { configureLocalVM.call(vm, presetGroup); }, 50);
+        }
+        return;
+    }
+
+    const useOverlay = mode === 'immutable';
+    log.info(`examsetup @ bootLocalVmDisk: start disk=${diskName} mode=${mode}`);
+
     try {
-        vm.$swal.showLoading();
+        vm.$swal.fire({
+            title: vm.$t('dashboard.localvmTitle'),
+            text: useOverlay ? vm.$t('dashboard.localvmBootStartingImmutable') : vm.$t('dashboard.localvmBootStartingMutable'),
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => { vm.$swal.showLoading(); },
+        });
     } catch (e) {}
 
     try {
-        const bootRes = await ipc.invoke('qemu-boot-disk', { qcow2Name: diskName });
+        const bootRes = await ipc.invoke('qemu-boot-disk', { qcow2Name: diskName, useOverlay });
+        try { vm.$swal.close(); } catch (e) {}
         if (bootRes?.qemuMissing) {
-            try { vm.$swal.hideLoading(); } catch (e) {}
             await showQemuMissingWarning(vm, bootRes);
             return;
         }
         if (!bootRes?.ok) {
             await vm.$swal.fire({
                 icon: 'error',
-                title: 'LocalVM',
-                text: bootRes?.error || 'QEMU konnte nicht gestartet werden.',
+                title: vm.$t('dashboard.localvmTitle'),
+                text: bootRes?.error || vm.$t('dashboard.localvmBootError'),
             });
             return;
         }
-        setStatus('VM gestartet.');
+        await vm.$swal.fire({
+            icon: 'success',
+            title: vm.$t('dashboard.localvmTitle'),
+            text: useOverlay ? vm.$t('dashboard.localvmBootSuccessImmutable') : vm.$t('dashboard.localvmBootSuccessMutable'),
+            timer: 2800,
+            showConfirmButton: false,
+        });
         log.info('examsetup @ bootLocalVmDisk: ok');
     } catch (e) {
+        try { vm.$swal.close(); } catch (err) {}
         log.error('examsetup @ bootLocalVmDisk', e);
         await vm.$swal.fire({
             icon: 'error',
-            title: 'LocalVM',
+            title: vm.$t('dashboard.localvmTitle'),
             text: String(e?.message || e),
         });
     } finally {
-        try { vm.$swal.hideLoading(); } catch (e) {}
-        setBootBusy(false);
+        if (presetGroup != null) {
+            setTimeout(() => { configureLocalVM.call(vm, presetGroup); }, 50);
+        }
     }
 }
 
@@ -1327,7 +1397,7 @@ async function configureLocalVM(presetGroup){
                 const enc = btn.getAttribute('data-qemu-boot');
                 const diskName = enc ? decodeURIComponent(enc) : '';
                 if (!diskName) return;
-                await bootLocalVmDisk(this, { ipc, diskName });
+                await bootLocalVmDisk(this, { ipc, diskName, presetGroup });
             });
             const browseBtn = document.getElementById('qemuBrowseBtn');
             browseBtn?.addEventListener('click', async () => {

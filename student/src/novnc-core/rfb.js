@@ -304,6 +304,8 @@ export default class RFB extends EventTargetMixin {
             Log.Warn("Specifying showDotCursor as a RFB constructor argument is deprecated");
             this._showDotCursor = options.showDotCursor;
         }
+        // Local dot at display refresh rate when remote cursor updates are slow (exam VNC).
+        this._alwaysUseDotCursor = !!options.alwaysUseDotCursor;
 
         this._qualityLevel = 6;
         this._compressionLevel = 2;
@@ -3027,6 +3029,9 @@ export default class RFB extends EventTargetMixin {
     }
 
     _updateCursor(rgba, hotx, hoty, w, h) {
+        if (this._alwaysUseDotCursor) {
+            return;
+        }
         this._cursorImage = {
             rgbaPixels: rgba,
             hotx: hotx, hoty: hoty, w: w, h: h,
@@ -3035,6 +3040,9 @@ export default class RFB extends EventTargetMixin {
     }
 
     _shouldShowDotCursor() {
+        if (this._alwaysUseDotCursor && this._showDotCursor) {
+            return true;
+        }
         // Called when this._cursorImage is updated
         if (!this._showDotCursor) {
             // User does not want to see the dot, so...

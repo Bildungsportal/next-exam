@@ -191,9 +191,14 @@ export function getQemuVgaDeviceArgs() {
     return ['-vga', 'virtio'];
 }
 
-/** Headless VNC: EDID tells Windows a real desktop size (default -vga virtio ≈ 1024×768). */
-export function getQemuHeadlessVgaArgs({ width = 1920, height = 1080 } = {}) {
-    return ['-device', `virtio-vga,max_outputs=1,xres=${width},yres=${height}`];
+/** Teacher GTK/SDL: -vga virtio (legacy startvm.sh); Full HD via viogpudo + guest display settings. */
+export function getQemuTeacherVgaArgs() {
+    return getQemuVgaDeviceArgs();
+}
+
+/** Student headless VNC: virtio-vga + EDID 1366×768 (-vga none avoids extra std VGA). */
+export function getQemuHeadlessVgaArgs({ width = 1366, height = 768 } = {}) {
+    return ['-vga', 'none', '-device', `virtio-vga,max_outputs=1,edid=on,xres=${width},yres=${height}`];
 }
 
 /** Headless VNC listen (no resize= — not supported on all QEMU builds, breaks with "invalid parameter resize"). */

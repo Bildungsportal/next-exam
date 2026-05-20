@@ -441,7 +441,9 @@ export default {
         credentials: { password: '1234' },
         // favour smoothness over bandwidth (lokale VM)
         qualityLevel: 8,
-        compressionLevel: 1,
+        compressionLevel: 0,
+        showDotCursor: true,
+        alwaysUseDotCursor: true,
         resizeSession: true,
         shared: true,
         viewport: true
@@ -661,6 +663,10 @@ export default {
   flex: 1;
   background: #000;
   overflow: hidden;
+}
+
+.vnc-container :deep(canvas) {
+  cursor: none;
 }
 
 .vnc-overlay {

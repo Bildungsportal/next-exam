@@ -19,13 +19,14 @@ import {
     getQemuAccelArgs,
     getQemuCpuArg,
     getQemuMachineArgs,
+    getQemuMemoryArg,
     getQemuTeacherBootMemoryArg,
     getQemuRtcArgs,
     getQemuSmpArgs,
     getQemuTeacherDisplayArgs,
+    getQemuTeacherVgaArgs,
     getQemuUsbTabletArgs,
     getQemuVirtioDiskDriveArg,
-    getQemuVgaDeviceArgs,
     getQemuUefiInstallExtras,
     getQemuLegacyBootOrderArgs,
 } from '../../../../shared/qemuHostArgs.js';
@@ -331,13 +332,38 @@ async function runToCompletion(cmd, args, options = {}) {
     return { exitCode, stdout, stderr };
 }
 
+/** Student/teacher overlay qcow2 — not selectable base disks. */
+function isQemuOverlayDiskName(name) {
+    return /\.(overlay|teacher-boot\.overlay)\.qcow2$/i.test(String(name || ''));
+}
+
+function teacherBootOverlayFilename(baseQcow2) {
+    return `${baseQcow2}.teacher-boot.overlay.qcow2`;
+}
+
+// Win: overlay delete may hit EBUSY until qemu exits; retry after killExistingQemuInstances.
+async function unlinkIfExists(filePath) {
+    const p = String(filePath || '');
+    if (!p) return true;
+    for (let i = 0; i < 8; i++) {
+        try {
+            if (!fs.existsSync(p)) return true;
+            await fs.promises.unlink(p);
+            return true;
+        } catch (e) {
+            if (i < 7) await sleepMs(400);
+        }
+    }
+    return false;
+}
+
 async function listDisks({ workdirectory }) {
     const dir = getQemuDir(workdirectory);
     await ensureDir(dir);
     log.info(`qemuService @ listDisks: scanning ${dir}`);
     const entries = await fs.promises.readdir(dir, { withFileTypes: true });
     const names = entries
-        .filter((e) => e.isFile() && e.name.toLowerCase().endsWith('.qcow2'))
+        .filter((e) => e.isFile() && e.name.toLowerCase().endsWith('.qcow2') && !isQemuOverlayDiskName(e.name))
         .map((e) => e.name)
         .sort((a, b) => a.localeCompare(b));
     log.info(`qemuService @ listDisks: found ${names.length} disk(s) [${names.join(', ')}]`);
@@ -458,7 +484,7 @@ async function installDefaultVm({ workdirectory, onProgress = null }) {
         '-cpu', getQemuCpuArg({ profile: 'uefi-install' }),
         ...getQemuVirtioDiskDriveArg(diskPath, { boot: false }),
         ...uefiExtras,
-        ...getQemuVgaDeviceArgs(),
+        ...getQemuTeacherVgaArgs(),
         ...getQemuTeacherDisplayArgs(),
         ...getQemuUsbTabletArgs(),
         '-device', 'virtio-net-pci,netdev=n0',
@@ -470,37 +496,53 @@ async function installDefaultVm({ workdirectory, onProgress = null }) {
     return { ok: true, qemuDir, diskName: DEFAULTS.diskName, vncDisplay: DEFAULTS.vncDisplay };
 }
 
-// Teacher boot: -display gtk window; student uses -display none + VNC only.
-async function bootDisk({ workdirectory, qcow2Name }) {
-    log.info(`qemuService @ bootDisk: qcow2=${qcow2Name} workdirectory=${workdirectory}`);
+// Teacher boot: optional overlay qcow2 (immutable preview, same idea as student exam VM).
+async function bootDisk({ workdirectory, qcow2Name, useOverlay = false }) {
+    log.info(`qemuService @ bootDisk: qcow2=${qcow2Name} useOverlay=${!!useOverlay} workdirectory=${workdirectory}`);
     const qemuDir = getQemuDir(workdirectory);
     await ensureDir(qemuDir);
     const filename = path.basename(String(qcow2Name || ''));
     if (!filename || filename !== String(qcow2Name || '')) {
         throw new Error('invalid qcow2Name');
     }
-    if (!filename.toLowerCase().endsWith('.qcow2')) {
+    if (!filename.toLowerCase().endsWith('.qcow2') || isQemuOverlayDiskName(filename)) {
         throw new Error('invalid qcow2Name');
     }
     const diskPath = path.join(qemuDir, filename);
     await fs.promises.access(diskPath, fs.constants.R_OK);
 
-    const { qemuSystem, binDir } = await getResolvedQemu();
+    const { qemuSystem, qemuImg, binDir } = await getResolvedQemu();
+    let drivePath = diskPath;
+    if (useOverlay) {
+        await killExistingQemuInstances();
+        await sleepMs(400);
+        const overlayPath = path.join(qemuDir, teacherBootOverlayFilename(filename));
+        await unlinkIfExists(overlayPath);
+        log.info(`qemuService @ bootDisk: creating overlay ${path.basename(overlayPath)}`);
+        const res = await runToCompletion(qemuImg, ['create', '-f', 'qcow2', '-F', 'qcow2', '-b', diskPath, overlayPath], {
+            cwd: binDir,
+            env: buildQemuSpawnEnv(binDir),
+        });
+        if (res.exitCode !== 0) {
+            throw new Error(`qemu-img overlay failed: ${res.stderr || res.stdout}`);
+        }
+        drivePath = overlayPath;
+    }
     const args = [
         ...getQemuAccelArgs(),
         ...getQemuTeacherBootMemoryArg(),
         ...getQemuSmpArgs(),
         ...getQemuMachineArgs(),
         '-cpu', getQemuCpuArg({ profile: 'runtime' }),
-        ...getQemuVirtioDiskDriveArg(diskPath),
+        ...getQemuVirtioDiskDriveArg(drivePath),
         ...getQemuLegacyBootOrderArgs(),
-        ...getQemuVgaDeviceArgs(),
+        ...getQemuTeacherVgaArgs(),
         ...getQemuTeacherDisplayArgs(),
         ...getQemuUsbTabletArgs(),
     ];
     const { pid } = await spawnTeacherInteractiveQemu(qemuSystem, args, binDir);
-    log.info(`qemuService @ bootDisk: qemu started pid=${pid || 'unknown'}`);
-    return { ok: true };
+    log.info(`qemuService @ bootDisk: qemu started pid=${pid || 'unknown'} overlay=${!!useOverlay}`);
+    return { ok: true, useOverlay: !!useOverlay };
 }
 
 async function importDisk({ workdirectory, sourcePath, onProgress = null }) {

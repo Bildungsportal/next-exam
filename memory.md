@@ -21,6 +21,7 @@ RULE^agent^gitSafety^never run git restore/reset/clean/rebase/stash/pop/checkout
 RULE^agent^utils^noSingleUseFiles^never new file for one function solvable in ~2 lines at caller; colocate; reuse module only if 2+ call sites; after each new fn check minimize/inline/delete
 PATH^linux^cageInstall^install-cage-kiosk.sh pkexec; needsCageKioskSetup=!(cage on PATH+AppImage+/opt/next-exam+desktop); UI if needsCageKioskSetup&&!runningInCage
 RULE^agent^userEdits^never revert intentional user manual edits (e.g. removed v-if) unless user asks
+RULE^agent^uxDeps^never change UX or add external deps (gtk→VNC viewer, shell.openExternal vnc://) without user agrees first; diagnose→options→wait
 PATH^print^pdf^teacher/src-electron/main/scripts/printjobhandler.js+teacher/src/pages/SystemPrintPdf.vue
 TECH^teacherCli^examModes^--exam-modes=csv overrides config.exammodes at runtime^teacher/src-electron/electron-main.js
 TECH^build^protectMain^electron-main.js in dist/electron/UnPackaged; protect via electron-builder beforePack^teacher+student scripts/protect-main.mjs+beforepack.js+quasar.config.ts
@@ -68,7 +69,12 @@ IPC^localvm^importProgress^qemu-import-progress→#qemuHashStatus Kopiere qcow2 
 BUG^localvm^import^pick file already in QEMU dir→skip src===dest; win32 copyFile hangs post-copy→stream+size watchdog^qemuService copyQcow2ToDest
 BUG^localvm^hypervisorCheck^Get-WindowsOptionalFeature needs admin→false negative; fix Win32_ComputerSystem.HypervisorPresent fallback^shared/qemuWinPlatform.js
 BUG^localvm^ovmfPath^Windows binDir=<qemu>/ not /usr/bin; share=join(binDir,share) not ../share^shared/qemuHostArgs.js resolveQemuShareDir
-RULE^localvm^display^teacher win32=-display sdl; linux gtk; student headless+vnc; all -vga virtio^shared/qemuHostArgs.js
+RULE^localvm^display^teacher gtk/sdl + getQemuTeacherVgaArgs=-vga virtio; student headless vnc + getQemuHeadlessVgaArgs virtio-vga edid 1366x768^shared/qemuHostArgs.js
+BUG^virtioWin^gpuPath^stable virtio-win.iso has viogpudo/w11/amd64 only; no viogpu/ folder^autounattend.xml
+RULE^localvm^gpu^standard viogpudo+virtio-vga; autounattend FirstLogon pnputil; do not diagnose choppy VNC as missing GPU^autounattend.xml+qemuHostArgs.js
+RULE^localvm^winPerf^autounattend FirstLogon Order2: VisualFXSetting=2, animations off, high-perf power^teacher/scripts/qemu/autounattend.xml
+TECH^localvm^vncCursor^localvmview alwaysUseDotCursor+showDotCursor; lag=FB cursor in VNC stream not missing viogpu^student/novnc-core/rfb.js
+IPC^qemu^bootDisk^qemu-boot-disk useOverlay=true → teacher-boot.overlay.qcow2 fresh each boot^teacher/qemuService.js
 TECH^localvm^nvram^legacy win32 no pflash runtime; *.nvram.vars unused; OVMF helpers kept for tools^shared/qemuHostArgs.js
 RULE^localvm^teacherBoot^killExistingQemuInstances+400ms before spawn; detached stdio=ignore (piped stderr freezes WHPX guest)^teacher qemuService.js
 TECH^localvm^isoDl^teacher downloadFile uses stream pipeline to .part then rename; skip if dest>=MIN_COMPLETE_BYTES; cleanup stale .part^teacher qemuService.js
