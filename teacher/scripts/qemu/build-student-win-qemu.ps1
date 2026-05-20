@@ -70,7 +70,7 @@ def run_smoke(dest: Path, work: Path) -> tuple[bool, str]:
         shutil.copy2(share / "edk2-i386-vars.fd", nvram)
     args = [
         str(exe),
-        "-accel", "whpx,kernel-irqchip=off",
+        "-accel", "whpx",
         "-m", "512",
         "-machine", "q35",
         "-cpu", "Skylake-Client,vendor=GenuineIntel,+nx,+popcnt",

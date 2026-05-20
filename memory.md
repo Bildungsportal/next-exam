@@ -59,7 +59,7 @@ TECH^student^rdp^fetchInfo^applyRdpConfigFromSection; webview src only on url ch
 RULE^student^typingRhythm^editor.vue isTypingRhythmExemptKey clears deltas for Backspace Delete Space Enter NumpadEnter (OS key-repeat)^student/src/pages/editor.vue handleTypingRhythmKeydown
 RULE^ui^colors^shared^btn-cyan+swal confirm=$cyan-600^shared/css/nxe-theme.scss; app.scss imports nxe-bootstrap-config+nxe-theme
 RULE^ui^swal2^teacher+student layout+btn colors^shared/css/nxe-theme.scss
-TECH^localvm^qemuSystem^system PATH only; public/qemu=autounattend.iso; linux q35 auto-OVMF,-drive if=virtio,-boot order=c; win32 pflash+virtio-blk bootindex=1^shared/qemuHostArgs.js
+TECH^localvm^qemuSystem^system PATH only; public/qemu=autounattend.iso; all platforms -machine q35; win32 boot=whpx,-m 8192,if=virtio,-boot order=c,no rtc^shared/qemuHostArgs.js
 TECH^localvm^qemuDialogs^shared/qemuLocalVmDialogs.js teacher+student; missing→download; HypervisorPlatform→elevated enable IPC^qemuLocalVmDialogs.js
 TECH^localvm^qemuCheck^quick=stat+1xwhere win no --version spawn; deep=probe+WHPX+virtio+cpu^shared/qemuAvailability.js
 TECH^localvm^diskDialog^no qemu-check on open; check only boot/install; pick+import split IPC^examsetup configureLocalVM
@@ -68,11 +68,11 @@ IPC^localvm^importProgress^qemu-import-progress→#qemuHashStatus Kopiere qcow2 
 BUG^localvm^import^pick file already in QEMU dir→skip src===dest; win32 copyFile hangs post-copy→stream+size watchdog^qemuService copyQcow2ToDest
 BUG^localvm^hypervisorCheck^Get-WindowsOptionalFeature needs admin→false negative; fix Win32_ComputerSystem.HypervisorPresent fallback^shared/qemuWinPlatform.js
 BUG^localvm^ovmfPath^Windows binDir=<qemu>/ not /usr/bin; share=join(binDir,share) not ../share^shared/qemuHostArgs.js resolveQemuShareDir
-RULE^localvm^display^teacher win32=-display sdl; linux gtk; student headless+vnc; win -vga none+virtio-vga^shared/qemuHostArgs.js
-TECH^localvm^nvram^win32 per qcow2→<name>.nvram.vars; no -boot order=c on win UEFI; bootindex on virtio-blk^shared/qemuHostArgs.js
-RULE^localvm^teacherBoot^killExistingQemuInstances before teacher interactive spawn; stale -display none holds qcow2 lock^teacher qemuService.js
+RULE^localvm^display^teacher win32=-display sdl; linux gtk; student headless+vnc; all -vga virtio^shared/qemuHostArgs.js
+TECH^localvm^nvram^legacy win32 no pflash runtime; *.nvram.vars unused; OVMF helpers kept for tools^shared/qemuHostArgs.js
+RULE^localvm^teacherBoot^killExistingQemuInstances+400ms before spawn; detached stdio=ignore (piped stderr freezes WHPX guest)^teacher qemuService.js
 TECH^localvm^isoDl^teacher downloadFile uses stream pipeline to .part then rename; skip if dest>=MIN_COMPLETE_BYTES; cleanup stale .part^teacher qemuService.js
-BUG^localvm^whpx^HypervisorPlatform required; win UEFI pflash+Skylake,+nx,+popcnt; smp cores=4,threads=1; rtc localtime; -vga none+virtio-vga; guest RAM getQemuMemoryMb host>8GiB→8192 else 4096 cap 45%^qemuHostArgs.js
+BUG^localvm^whpx^HypervisorPlatform required; win32 cpu Skylake,+nx,+popcnt no hv_* runtime; smp cores=4,threads=1; rtc localtime; disk cache=writeback not none on QEMU11^qemuHostArgs.js
 TECH^localvm^qmp^student graceful shutdown via QMP; win tcp:47043 linux unix sock^shared/qemuHostArgs.js+student qemuService.js
 TECH^student^localvmHash^sha256 base qcow2 before qemu start (runLocalVmPreStartVerify); avoids guest freeze from parallel full read^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js
 TECH^student^localvmStart^localVmStartState idle|starting|blocked; qemu-download/import must not set idle while starting (parallel startExam)^student/src-electron/main/scripts/communicationhandler.js+ipchandler.js

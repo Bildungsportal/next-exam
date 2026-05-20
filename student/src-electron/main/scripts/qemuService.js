@@ -24,7 +24,6 @@ import {
     getQemuUsbTabletArgs,
     getQemuVirtioDiskDriveArg,
     getQemuVgaDeviceArgs,
-    getQemuUefiRuntimeExtras,
     getQemuLegacyBootOrderArgs,
 } from '../../../../shared/qemuHostArgs.js';
 
@@ -390,15 +389,12 @@ async function startHeadless({ workdirectory, examdirectory, qcow2Name, vncDispl
         ? ['-netdev', `user,id=net0,restrict=on,${webdavGuestFwd}`, '-device', 'virtio-net-pci,netdev=net0']
         : ['-netdev', 'user,id=n0', '-device', 'virtio-net-pci,netdev=n0'];
 
-    const overlayBase = path.basename(overlayPath);
-    const uefiExtras = await getQemuUefiRuntimeExtras({ binDir, qemuWorkDir: qemuDir, qcow2Name: overlayBase });
     const args = [
-        ...getQemuAccelArgs({ runtime: true }),
+        ...getQemuAccelArgs(),
         ...getQemuMemoryArg(),
         ...getQemuSmpArgs(),
         ...getQemuRtcArgs(),
         ...getQemuMachineArgs(),
-        ...uefiExtras,
         '-cpu', getQemuCpuArg({ profile: 'runtime' }),
         ...getQemuVirtioDiskDriveArg(overlayPath),
         ...getQemuVgaDeviceArgs(),

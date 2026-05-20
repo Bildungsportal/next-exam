@@ -310,7 +310,7 @@ async function probeVirtioVgaAvailable(qemuSystem, binDir) {
         };
         const proc = spawn(qemuSystem, [
             ...getQemuAccelArgs(),
-            '-machine', 'q35',
+            ...getQemuMachineArgs(),
             '-m', '64',
             ...getQemuVgaDeviceArgs(),
             '-display', 'none',
@@ -346,7 +346,7 @@ async function probeWhpxCpuArg(qemuSystem, binDir, cpuArg) {
             resolve(ok);
         };
         const proc = spawn(qemuSystem, [
-            ...getQemuAccelArgs({ runtime: true }),
+            ...getQemuAccelArgs(),
             ...getQemuMachineArgs(),
             '-cpu', cpuArg,
             '-m', '128',
