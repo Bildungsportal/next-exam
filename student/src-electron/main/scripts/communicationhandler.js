@@ -39,7 +39,7 @@ import { syncClientDisplayInfo } from './displayInfo.js';
 import { detectRunningInCage } from './cageDetect.js';
 import qemuService from './qemuService.js';
 import { checkQemuAvailability } from '../../../../shared/qemuAvailability.js';
-import { resolveLocalVmDisplayResolution } from '../../../../shared/localVmDisplayResolutions.js';
+import { pickLocalVmGroupConfig } from '../../../../shared/localVmDisplayResolutions.js';
 import { stopProxy } from './vncproxy.js';
 import { switchExamSection } from './switchExamSection.js';
 import {
@@ -241,22 +241,11 @@ import {
 
     async preflightLocalVm(serverstatus, effectiveSection) {
         const examSection = serverstatus.examSections[effectiveSection];
-        const hasGroups = !!examSection?.groups;
-        let group = this.multicastClient.clientinfo.group || 'a';
-        if (hasGroups) {
-            const clientname = this.multicastClient.clientinfo.name;
-            const groupA = examSection.groupA?.users ?? [];
-            const groupB = examSection.groupB?.users ?? [];
-            if (groupB.includes(clientname)) group = 'b';
-            else if (groupA.includes(clientname)) group = 'a';
-            else group = 'a';
-        } else {
-            group = 'a';
-        }
-
-        const vmConfig = group === 'b'
-            ? (examSection?.groupB?.examConfig?.localvm || {})
-            : (examSection?.groupA?.examConfig?.localvm || {});
+        const { group, vmConfig, display } = pickLocalVmGroupConfig(
+            examSection,
+            this.multicastClient.clientinfo.name
+        );
+        this.multicastClient.clientinfo.group = group;
 
         const qcow2Name = vmConfig.qcow2Name;
         const vncPort = Number(vmConfig.vncPort || 5901);
@@ -264,7 +253,6 @@ import {
         const expectedSha256 = calculateSha256 ? vmConfig.qcow2Sha256 : null;
         const expectedSizeBytes = !calculateSha256 ? vmConfig.qcow2SizeBytes : null;
         const blockInternet = !!vmConfig.blockInternet;
-        const display = resolveLocalVmDisplayResolution(vmConfig.displayResolution);
 
         this.multicastClient.clientinfo.examtype = 'localvm';
         this.multicastClient.clientinfo.localVMHost = null;

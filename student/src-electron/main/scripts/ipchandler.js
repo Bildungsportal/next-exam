@@ -47,6 +47,7 @@ import {
     getWindowsHypervisorPlatformState,
     requestEnableWindowsHypervisorPlatform,
 } from '../../../../shared/qemuAvailability.js';
+import { pickLocalVmGroupConfig } from '../../../../shared/localVmDisplayResolutions.js';
 import { getVMFindings } from './vmDetection.js';
 import { decryptExamFileBytes, decryptExamFileAllLayers, encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
 import { examApiFetch } from '../../../../shared/examApiFetch.js';
@@ -334,7 +335,15 @@ class IpcHandler {
                     return { ok: false, qemuMissing: true, missing: avail.missing };
                 }
                 const { qcow2Name, vncPort, overlayName, blockInternet, expectedSha256, expectedSizeBytes, forceFreshOverlay } = payload || {};
-                log.info(`ipchandler @ qemu-start-headless: start requested (disk=${qcow2Name}, port=${vncPort}, blockInternet=${!!blockInternet}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
+                const effectiveSection = this.multicastClient?.clientinfo?.lockedSection
+                    || this.multicastClient?.serverstatus?.lockedSection
+                    || this.multicastClient?.serverstatus?.activeSection
+                    || 1;
+                const examSection = this.multicastClient?.serverstatus?.examSections?.[effectiveSection];
+                const { display } = pickLocalVmGroupConfig(examSection, this.multicastClient?.clientinfo?.name);
+                const displayWidth = Number(payload?.displayWidth) > 0 ? Number(payload.displayWidth) : display.width;
+                const displayHeight = Number(payload?.displayHeight) > 0 ? Number(payload.displayHeight) : display.height;
+                log.info(`ipchandler @ qemu-start-headless: start requested (disk=${qcow2Name}, port=${vncPort}, display=${displayWidth}x${displayHeight}, blockInternet=${!!blockInternet}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
                 const vncDisplay = Number(vncPort) === 5901 ? ':1' : ':1';
                 if (this.multicastClient?.clientinfo) {
                     this.multicastClient.clientinfo.localVMHost = null;
@@ -359,6 +368,8 @@ class IpcHandler {
                     overlayName,
                     blockInternet: !!blockInternet,
                     forceFreshOverlay: !!forceFreshOverlay,
+                    displayWidth,
+                    displayHeight,
                 });
                 if (this.multicastClient?.clientinfo) {
                     this.multicastClient.clientinfo.localVMHost = '127.0.0.1';

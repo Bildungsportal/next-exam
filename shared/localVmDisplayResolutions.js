@@ -9,6 +9,25 @@ export const LOCAL_VM_DISPLAY_RESOLUTIONS = [
     { id: '1920x1080', width: 1920, height: 1080 },
 ];
 
+/** Pick group A/B localvm config + resolved display for one student. */
+export function pickLocalVmGroupConfig(examSection, clientname) {
+    const hasGroups = !!examSection?.groups;
+    let group = 'a';
+    if (hasGroups) {
+        const groupA = examSection.groupA?.users ?? [];
+        const groupB = examSection.groupB?.users ?? [];
+        const name = String(clientname || '').trim().toLowerCase();
+        if (groupB.includes(name)) {
+            group = 'b';
+        }
+    }
+    const vmConfig = group === 'b'
+        ? (examSection?.groupB?.examConfig?.localvm || {})
+        : (examSection?.groupA?.examConfig?.localvm || {});
+    const display = resolveLocalVmDisplayResolution(vmConfig.displayResolution);
+    return { group, vmConfig, display };
+}
+
 /** Normalize config id and return { id, width, height } (default 1366×768). */
 export function resolveLocalVmDisplayResolution(id) {
     const raw = String(id || '').trim().toLowerCase().replace(/\s/g, '').replace(/×/g, 'x');
