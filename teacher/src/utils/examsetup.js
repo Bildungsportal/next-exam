@@ -956,7 +956,16 @@ async function pickImportAndRefreshQemuDiskList(ipc, { statusEl, listEl, labelEl
     let onImportProgress = null;
     try {
         onImportProgress = (_event, payload) => {
+            const phase = payload?.phase || '';
             const pct = typeof payload?.percent === 'number' ? payload.percent : null;
+            if (phase === 'skip') {
+                setStatus('Bereits im QEMU-Ordner.');
+                return;
+            }
+            if (phase === 'linked') {
+                setStatus('Verknüpft (kein Kopieren nötig).');
+                return;
+            }
             if (pct != null) {
                 setStatus(`Kopiere qcow2… ${pct}%`);
             }

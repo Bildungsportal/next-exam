@@ -235,7 +235,7 @@
         "qemuHypervisorTitle": "Hypervisor Platform fehlt",
         "qemuMissingConfirm": "Schließen",
         "qemuMissingOpenDownload": "Download-Seite öffnen",
-        "qemuMissingText": "LocalVM benötigt eine System-Installation von qemu-system-x86_64 und qemu-img (nicht im App-Paket). Auf diesem Rechner wurden sie nicht gefunden.",
+        "qemuMissingText": "LocalVM benötigt eine System-Installation von qemu. Auf diesem Rechner wurden sie nicht gefunden.",
         "qemuMissingTitle": "QEMU nicht gefunden",
         "rdp": "Web RDP",
         "rdpChooseUrl": "RDP URL wählen",

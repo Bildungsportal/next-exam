@@ -592,6 +592,7 @@ async function importDisk({ workdirectory, sourcePath, onProgress = null }) {
     log.info(`qemuService @ importDisk: src=${src} dest=${dest}`);
     if (src === dest) {
         log.info(`qemuService @ importDisk: skipped (already in QEMU folder)`);
+        try { onProgress?.({ phase: 'skip', percent: 100, copied: 0, total: 0 }); } catch (e) {}
         return { ok: true, filename, skipped: true };
     }
     if (fs.existsSync(dest)) {
@@ -604,6 +605,7 @@ async function importDisk({ workdirectory, sourcePath, onProgress = null }) {
         if (srcStat.dev === destDirStat.dev) {
             log.info(`qemuService @ importDisk: hardlink (same volume, ${srcStat.size} bytes)`);
             await fs.promises.link(src, dest);
+            try { onProgress?.({ phase: 'linked', percent: 100, copied: srcStat.size, total: srcStat.size }); } catch (e) {}
             return { ok: true, filename, linked: true };
         }
     } catch (e) {

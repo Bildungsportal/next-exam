@@ -8,7 +8,7 @@ export function getQemuInstallInfo(platform = process.platform) {
         return {
             downloadUrl: 'https://qemu.weilnetz.de/w64/',
             installHint:
-                'Windows-Installer (z. B. qemu-w64-setup). Standard: C:\\Program Files\\qemu — oft nicht im PATH; Next-Exam sucht dort automatisch.\n\nAlternativ: winget install SoftwareFreedomConservancy.QEMU',
+                'Windows-Installer (z. B. qemu-w64-setup).\n\nAlternativ: winget install SoftwareFreedomConservancy.QEMU',
             searchNote: 'Programme, PATH und typische Installationsordner',
         };
     }

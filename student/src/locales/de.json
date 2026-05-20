@@ -301,7 +301,7 @@
         "qemuHypervisorTitle": "Hypervisor Platform fehlt",
         "qemuMissingConfirm": "Schließen",
         "qemuMissingOpenDownload": "Download-Seite öffnen",
-        "qemuMissingText": "LocalVM benötigt eine System-Installation von qemu-system-x86_64 und qemu-img (nicht im App-Paket). Auf diesem Rechner wurden sie nicht gefunden.",
+        "qemuMissingText": "LocalVM benötigt eine System-Installation von qemu. Auf diesem Rechner wurden sie nicht gefunden.",
         "qemuMissingTitle": "QEMU nicht gefunden",
         "versionNewer": "Deine Version von Next-Exam ist neuer als die der Lehrperson!",
         "versionOld": "Deine Version von Next-Exam ist zu alt. Bitte lade eine aktuelle Version herunter!",
