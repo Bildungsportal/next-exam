@@ -442,9 +442,7 @@ export default {
         // favour smoothness over bandwidth (lokale VM)
         qualityLevel: 8,
         compressionLevel: 0,
-        showDotCursor: true,
         alwaysUseDotCursor: true,
-        resizeSession: true,
         shared: true,
         viewport: true
       };
@@ -467,8 +465,10 @@ export default {
         this.onConnectError();
         return;
       }
+      this.rfb.showDotCursor = true;
       this.rfb.scaleViewport = true;
-      this.rfb.resizeSession = true;
+      // QEMU VNC rejects SetDesktopSize; scale viewport locally instead of resizeSession.
+      this.rfb.resizeSession = false;
       this.rfb.clipViewport = false;
 
       this.rfb.addEventListener('connect', () => {
