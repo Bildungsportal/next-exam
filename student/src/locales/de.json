@@ -295,6 +295,7 @@
         "localvmWaitingForStart": "Warte auf Start…",
         "localvmDownloadButton": "VM von Teacher holen",
         "localvmBrowseButton": "Dateisystem durchsuchen…",
+        "localvmRetryStartButton": "Start erneut versuchen",
         "localvmCompatCheckText": "Es werden Tests an Ihrem System durchgeführt, die die Kompatibilität mit der virtuellen Prüfungsumgebung betreffen. Dies kann einige Minuten dauern.",
         "localvmCompatCheckTitle": "Systemprüfung",
         "cancel": "Abbrechen",

@@ -57,6 +57,9 @@
                 </div>
 
                 <div class="localvm-preflight-actions">
+                    <button v-if="localVmCanRetryStart && !localVmFixPhase" class="btn btn-success btn-sm" @click="retryLocalVmStart" :disabled="localVmBusy">
+                        {{ $t('student.localvmRetryStartButton') }}
+                    </button>
                     <button v-if="localVmCanFix && !localVmFixPhase" class="btn btn-primary btn-sm" @click="downloadVm" :disabled="localVmBusy">
                         {{ $t('student.localvmDownloadButton') }}
                     </button>
@@ -401,6 +404,9 @@ export default {
         },
         localVmCanFix() {
             return this.localVmIsMissing || this.localVmIsMismatch || this.clientinfo?.localVMState === 'error';
+        },
+        localVmCanRetryStart() {
+            return this.clientinfo?.localVMState === 'error' && !!this.serverstatus?.exammode;
         },
         localVmVerifyingText() {
             const cfg = this.getLocalVmConfig?.() || {};
@@ -1369,6 +1375,23 @@ export default {
             const group = this.clientinfo?.group === 'b' ? 'b' : 'a';
             const cfg = group === 'b' ? (section?.groupB?.examConfig?.localvm || {}) : (section?.groupA?.examConfig?.localvm || {});
             return cfg || {};
+        },
+
+        async retryLocalVmStart() {
+            if (this.localVmBusy) return;
+            try {
+                this.localVmBusy = true;
+                this.localVmFixPhase = null;
+                const res = await signalBridge.invoke('localvm-retry-start');
+                if (!res?.ok) {
+                    await this.status(this.$t('student.localvmStartError'));
+                }
+            } catch (e) {
+                log.error('student.vue @ retryLocalVmStart', e);
+                await this.status(this.$t('student.localvmStartError'));
+            } finally {
+                this.localVmBusy = false;
+            }
         },
 
         async downloadVm() {

@@ -444,6 +444,26 @@ class IpcHandler {
             }
         });
 
+        ipcMain.handle('localvm-retry-start', async () => {
+            try {
+                const serverstatus = this.multicastClient?.serverstatus;
+                if (!serverstatus?.exammode) {
+                    return { ok: false, error: 'exam not active' };
+                }
+                if (this.CommunicationHandler.localVmStartState === 'starting') {
+                    return { ok: false, error: 'start already in progress' };
+                }
+                this.CommunicationHandler.localVmStartState = 'idle';
+                this.multicastClient.clientinfo.localVMState = null;
+                this.multicastClient.clientinfo.localVMHost = null;
+                await this.CommunicationHandler.startExam(serverstatus);
+                return { ok: true };
+            } catch (err) {
+                log.error('ipchandler @ localvm-retry-start', err);
+                return { ok: false, error: String(err?.message || err) };
+            }
+        });
+
         ipcMain.handle('qemu-download-disk', async (_event, payload = {}) => {
             try {
                 const { serverip, serverApiPort, servername, studenttoken, filename, overwrite } = payload || {};

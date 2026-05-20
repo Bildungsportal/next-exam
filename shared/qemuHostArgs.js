@@ -196,10 +196,9 @@ export function getQemuHeadlessVgaArgs({ width = 1920, height = 1080 } = {}) {
     return ['-device', `virtio-vga,max_outputs=1,xres=${width},yres=${height}`];
 }
 
-/** Let noVNC resizeSession negotiate guest framebuffer size. */
+/** Headless VNC listen (no resize= — not supported on all QEMU builds, breaks with "invalid parameter resize"). */
 export function getQemuVncArgs(vncDisplay = ':1') {
-    const id = String(vncDisplay || ':1');
-    return ['-vnc', `${id},resize=remote`];
+    return ['-vnc', String(vncDisplay || ':1')];
 }
 
 export function getQemuUsbTabletArgs() {

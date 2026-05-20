@@ -295,6 +295,7 @@
         "localvmWaitingForStart": "Waiting for start…",
         "localvmDownloadButton": "Download from teacher",
         "localvmBrowseButton": "Browse filesystem…",
+        "localvmRetryStartButton": "Retry start",
         "localvmCompatCheckText": "Your system is being checked for compatibility with the exam virtual machine. This may take a few minutes.",
         "localvmCompatCheckTitle": "System check",
         "cancel": "Cancel",
