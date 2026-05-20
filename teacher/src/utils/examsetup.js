@@ -2,6 +2,11 @@
 import CryptoJS from 'crypto-js';
 import log from 'electron-log/renderer';
 import { ensureQemuAvailableForLocalVmUi, showLocalVmQemuIssueDialog } from 'next-exam-shared/qemuLocalVmDialogs.js';
+import {
+    DEFAULT_LOCAL_VM_DISPLAY_RESOLUTION,
+    LOCAL_VM_DISPLAY_RESOLUTIONS,
+    resolveLocalVmDisplayResolution,
+} from 'next-exam-shared/localVmDisplayResolutions.js';
 
 function ensureGroupsAndExamConfig(section) {
     const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
@@ -1255,6 +1260,16 @@ async function configureLocalVM(presetGroup){
         activeGroup === 'b'
             ? (groupB.examConfig.localvm.calculateSha256 === true)
             : (groupA.examConfig.localvm.calculateSha256 === true);
+    const currentDisplayResolution =
+        activeGroup === 'b'
+            ? (groupB.examConfig.localvm.displayResolution || DEFAULT_LOCAL_VM_DISPLAY_RESOLUTION)
+            : (groupA.examConfig.localvm.displayResolution || DEFAULT_LOCAL_VM_DISPLAY_RESOLUTION);
+    const resolvedDisplay = resolveLocalVmDisplayResolution(currentDisplayResolution);
+    const resolutionOptionsHtml = LOCAL_VM_DISPLAY_RESOLUTIONS.map((r) => {
+        const selected = r.id === resolvedDisplay.id ? ' selected' : '';
+        const label = this.$t(`dashboard.localvmRes${r.id}`);
+        return `<option value="${r.id}"${selected}>${label}</option>`;
+    }).join('');
 
     let selectedDisk =
         preferredDisk && disks.includes(preferredDisk)
@@ -1275,6 +1290,15 @@ async function configureLocalVM(presetGroup){
             <div style="margin-top:10px;" id="qemuDiskList">
                 ${rowsHtml || '<div class="text-muted">Keine Disks gefunden.</div>'}
             </div>
+        </div>
+
+        <div style="margin:4px 0; height:1px; background:rgba(255,255,255,0.08);"></div>
+
+        <div style="padding:0; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(255,255,255,0.03);">
+            <div style="font-weight:700; margin-bottom:8px;">${this.$t('dashboard.localvmDisplayResolutionLabel')}</div>
+            <select id="qemuDisplayResolution" class="form-select form-select-sm" style="max-width:320px;">
+                ${resolutionOptionsHtml}
+            </select>
         </div>
 
         <div style="margin:4px 0; height:1px; background:rgba(255,255,255,0.08);"></div>
@@ -1331,6 +1355,9 @@ async function configureLocalVM(presetGroup){
         preConfirm: async () => {
             const blockInternet = !!document.getElementById('qemuBlockInternet')?.checked;
             const calculateSha256 = !!document.getElementById('qemuCalculateSha256')?.checked;
+            const displayResolution = resolveLocalVmDisplayResolution(
+                document.getElementById('qemuDisplayResolution')?.value
+            ).id;
             try {
                 const statusEl = document.getElementById('qemuHashStatus');
                 if (statusEl) statusEl.textContent = calculateSha256 ? 'Berechne SHA-256…' : 'Prüfe Dateigröße…';
@@ -1358,7 +1385,7 @@ async function configureLocalVM(presetGroup){
                 return 'Konnte Dateigröße der qcow2 Disk nicht ermitteln.';
             }
             if (!calculateSha256) {
-                return { selectedDisk, sha256: null, sizeBytes, blockInternet, calculateSha256: false };
+                return { selectedDisk, sha256: null, sizeBytes, blockInternet, calculateSha256: false, displayResolution };
             }
             try {
                 const hashRes = await ipc.invoke('qemu-hash-disk', { qcow2Name: selectedDisk });
@@ -1366,7 +1393,7 @@ async function configureLocalVM(presetGroup){
                 if (!sha256) {
                     return 'Konnte SHA-256 Hash der qcow2 Disk nicht berechnen.';
                 }
-                return { selectedDisk, sha256, sizeBytes, blockInternet, calculateSha256: true };
+                return { selectedDisk, sha256, sizeBytes, blockInternet, calculateSha256: true, displayResolution };
             } catch (e) {
                 return 'Konnte SHA-256 Hash der qcow2 Disk nicht berechnen.';
             }
@@ -1505,7 +1532,16 @@ async function configureLocalVM(presetGroup){
         return;
     }
 
-    const nextCfg = { qcow2Name: finalDisk, vncPort: 5901, calculateSha256, qcow2Sha256: sha256, qcow2SizeBytes: sizeBytes, blockInternet };
+    const displayResolution = resolveLocalVmDisplayResolution(pick.value?.displayResolution).id;
+    const nextCfg = {
+        qcow2Name: finalDisk,
+        vncPort: 5901,
+        calculateSha256,
+        qcow2Sha256: sha256,
+        qcow2SizeBytes: sizeBytes,
+        blockInternet,
+        displayResolution,
+    };
     if (!hasGroups) {
         groupA.examConfig.localvm = nextCfg;
         groupB.examConfig.localvm = { ...nextCfg };

@@ -374,7 +374,17 @@ function stopVm() {
 }
 
 // Student exam VM: headless + VNC only (no GTK); teacher bootDisk uses interactive display instead.
-async function startHeadless({ workdirectory, examdirectory, qcow2Name, vncDisplay = ':1', overlayName = null, blockInternet = false, forceFreshOverlay = false }) {
+async function startHeadless({
+    workdirectory,
+    examdirectory,
+    qcow2Name,
+    vncDisplay = ':1',
+    overlayName = null,
+    blockInternet = false,
+    forceFreshOverlay = false,
+    displayWidth = null,
+    displayHeight = null,
+}) {
     const qemuDir = getQemuDir(workdirectory);
     await ensureDir(qemuDir);
 
@@ -387,7 +397,12 @@ async function startHeadless({ workdirectory, examdirectory, qcow2Name, vncDispl
         throw new Error('disk not found');
     }
 
-    log.info(`qemuService @ startHeadless: starting (disk=${qcow2Name}, vnc=${vncDisplay}, blockInternet=${blockInternet})`);
+    const w = Number(displayWidth);
+    const h = Number(displayHeight);
+    const vgaArgs = (Number.isFinite(w) && w > 0 && Number.isFinite(h) && h > 0)
+        ? getQemuHeadlessVgaArgs({ width: w, height: h })
+        : getQemuHeadlessVgaArgs();
+    log.info(`qemuService @ startHeadless: starting (disk=${qcow2Name}, vnc=${vncDisplay}, display=${vgaArgs.join(' ')}, blockInternet=${blockInternet})`);
     await killQemuProcessesUsingWorkdir(qemuDir);
     await stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
 
@@ -430,7 +445,7 @@ async function startHeadless({ workdirectory, examdirectory, qcow2Name, vncDispl
         ...getQemuMachineArgs(),
         '-cpu', getQemuCpuArg({ profile: 'runtime' }),
         ...getQemuVirtioDiskDriveArg(overlayPath),
-        ...getQemuHeadlessVgaArgs(),
+        ...vgaArgs,
         '-display', 'none',
         ...getQemuVncArgs(vncDisplay),
         ...getQemuQmpArgs(qemuDir),

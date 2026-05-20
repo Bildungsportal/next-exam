@@ -39,6 +39,7 @@ import { syncClientDisplayInfo } from './displayInfo.js';
 import { detectRunningInCage } from './cageDetect.js';
 import qemuService from './qemuService.js';
 import { checkQemuAvailability } from '../../../../shared/qemuAvailability.js';
+import { resolveLocalVmDisplayResolution } from '../../../../shared/localVmDisplayResolutions.js';
 import { stopProxy } from './vncproxy.js';
 import { switchExamSection } from './switchExamSection.js';
 import {
@@ -263,13 +264,14 @@ import {
         const expectedSha256 = calculateSha256 ? vmConfig.qcow2Sha256 : null;
         const expectedSizeBytes = !calculateSha256 ? vmConfig.qcow2SizeBytes : null;
         const blockInternet = !!vmConfig.blockInternet;
+        const display = resolveLocalVmDisplayResolution(vmConfig.displayResolution);
 
         this.multicastClient.clientinfo.examtype = 'localvm';
         this.multicastClient.clientinfo.localVMHost = null;
         this.multicastClient.clientinfo.localVMPort = vncPort;
         this.notifyLocalVmCompatCheckEnd();
 
-        log.info(`communicationhandler @ preflightLocalVm: cfg (disk=${qcow2Name || '-'}, port=${vncPort}, blockInternet=${blockInternet}, calcHash=${calculateSha256}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
+        log.info(`communicationhandler @ preflightLocalVm: cfg (disk=${qcow2Name || '-'}, port=${vncPort}, display=${display.id}, blockInternet=${blockInternet}, calcHash=${calculateSha256}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
 
         if (!qcow2Name) {
             this.multicastClient.clientinfo.localVMState = 'missing';
@@ -298,6 +300,8 @@ import {
             vncPort,
             overlayName: `${qcow2Name}.overlay.${this.multicastClient.clientinfo.servername || 'exam'}.${this.multicastClient.clientinfo.pin || '0'}.qcow2`,
             blockInternet,
+            displayWidth: display.width,
+            displayHeight: display.height,
         };
     }
 
@@ -937,6 +941,8 @@ import {
                         vncDisplay: ':1',
                         overlayName: preflight.overlayName,
                         blockInternet: preflight.blockInternet,
+                        displayWidth: preflight.displayWidth,
+                        displayHeight: preflight.displayHeight,
                     });
                     this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
                     this.multicastClient.clientinfo.localVMPort = Number(preflight.vncPort) || 5901;
