@@ -290,7 +290,6 @@ import validator from 'validator'
 import log from 'electron-log/renderer'
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {isElectronWindow} from "../types/platform.ts";
-import config from '../../src-electron/main/config.js'
 import {SignalBridge} from '../utils/signalBridge.js'
 import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync, setCageWindowCaptureFallback, setLinuxKioskRunningInCage } from '../utils/screenshotCapture.js'
 import { getLinuxKioskInfo } from '../utils/linuxCageKiosk.js'
@@ -302,18 +301,20 @@ import {
     applyServerstatusFromFetch,
 } from '../utils/examFetchInfoSync.js'
 import { buildQemuMissingWarningHtml } from 'next-exam-shared/qemuMissingWarningHtml.js'
+import { autoCleanupMixin } from "../mixins/autoCleanupMixin.ts";
 
-
-// Capture unhandled promise rejections
-window.addEventListener('unhandledrejection', event => {
+function unhandledRejectionFunction(event: PromiseRejectionEvent) {
   const reason = event?.reason;
   const msg = typeof reason === 'string' ? reason : reason && reason.message;
-  if (msg && ( msg.includes('GUEST_VIEW_MANAGER_CALL') || msg.includes('ERR_FAILED'))) {
+  if (msg && (msg.includes('GUEST_VIEW_MANAGER_CALL') || msg.includes('ERR_FAILED'))) {
     event.preventDefault(); // swallow guest view clone errors and ERR_FAILED
     return;
   }
-  log.error('Unhandled promise rejection:', reason); // log all other errors
-});
+}
+
+
+// Capture unhandled promise rejections
+window.addEventListener('unhandledrejection', event => unhandledRejectionFunction(event));
 
 Object.assign(console, log.functions);  // Replace all console logs with logger
 
@@ -322,6 +323,8 @@ const signalBridge = new SignalBridge(window);
 
 
 export default {
+    mixins: [autoCleanupMixin],
+
     data() {
         return {
             version: this.$route.params.version,
@@ -332,8 +335,8 @@ export default {
             serverstatus: null,
             serverlist: [],
             serverlistAdvanced: [],
-            fetchinterval: null,
-            autoUpdateInterval: null,
+            fetchinterval: null as SchedulerService,
+            autoUpdateInterval: null as SchedulerService,
             serverApiPort: this.$route.params.serverApiPort,
             clientApiPort: this.$route.params.clientApiPort,
             electron: this.$route.params.electron,
@@ -651,7 +654,7 @@ export default {
             
             const url = this.getBiPUrl() + '/webservice/rest/server.php?wstoken=' + token + '&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json';
            
-            await fetch(url, { method: "GET" })
+            await this.autoFetch(url, { method: "GET" })
             .then(response => {
                 return response.json();
             })
@@ -671,7 +674,7 @@ export default {
             console.log("token"+token);
             let url = this.getBiPUrl()+'/webservice/rest/server.php?wstoken='+token+'&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json';
 
-            fetch(url, {method: 'POST'})
+            this.autoFetch(url, {method: 'POST'})
                 .then(res => res.json())
                 .then(async (response) => {
                     if (response.fullname){
@@ -783,14 +786,14 @@ export default {
                     const localPasswordElement = document.getElementById("localpassword");
                     const localPasswordConfirmElement = document.getElementById("localpasswordconfirm");
 
-                    localUserElement.addEventListener('input', () => {
+                    this.autoEventListener(localUserElement,"input", () => {
                         const normalized = normalizeStudentClientName(localUserElement.value);
                         if (normalized !== localUserElement.value) {
                             localUserElement.value = normalized;
                         }
                     });
 
-                    localUserElement.addEventListener("keypress", function(e) {
+                  this.autoEventListener(localUserElement,"keypress", function(e) {
                          // var lettersOnly = /^[a-zA-Z ]+$/;
                         var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
                         var key = e.key || String.fromCharCode(e.which);
@@ -809,11 +812,11 @@ export default {
                     };
                     
                     // Add listener to document for general Enter key handling
-                    document.addEventListener('keydown', handleEnterKey);
+                    this.autoEventListener(document,"keydown", handleEnterKey);
                     // Add listener directly to input fields to catch Enter when focused
-                    localUserElement.addEventListener('keydown', handleEnterKey);
-                    localPasswordElement.addEventListener('keydown', handleEnterKey);
-                    localPasswordConfirmElement.addEventListener('keydown', handleEnterKey);
+                    this.autoEventListener(localUserElement,"keydown", handleEnterKey);
+                    this.autoEventListener(localPasswordElement,"keydown", handleEnterKey);
+                    this.autoEventListener(localPasswordConfirmElement,"keydown", handleEnterKey);
 
                     // Store handler reference for cleanup (will be cleaned up when dialog closes)
                     this._enterKeyHandler = handleEnterKey;
@@ -851,7 +854,7 @@ export default {
                     checkboxSuggestions.disabled = !checkboxLT.checked;
 
                     // Event listener for checkboxLT to adjust the state of checkboxsuggestions
-                    checkboxLT.addEventListener('change', () => {
+                  this.autoEventListener(checkboxLT,"change", () => {
                         checkboxSuggestions.disabled = !checkboxLT.checked;
                         // When checkboxLT is unchecked, suggestions should also be reset:
                         if (!checkboxLT.checked) {
@@ -860,8 +863,8 @@ export default {
                     });
 
                     // Event listener for radio buttons to show/hide the spellcheck section
-                    editorRadio.addEventListener('change', toggleSpellcheckSection);
-                    mathRadio.addEventListener('change', toggleSpellcheckSection);
+                    this.autoEventListener(editorRadio, "change", toggleSpellcheckSection);
+                    this.autoEventListener(mathRadio, "change", toggleSpellcheckSection);
 
                     // Initial visibility based on selected radio button
                     toggleSpellcheckSection();
@@ -1577,38 +1580,6 @@ export default {
     },
     async mounted() {
         document.querySelector("#statusdiv").style.visibility = "hidden";
-        
-
-
-// this.lastFrameTime = performance.now(); // Initialize timing
-
-// const checkFrameGap = () => {
-//   const currentTime = performance.now(); // Get high-res timestamp
-//   const delta = currentTime - this.lastFrameTime; // Calculate time since last frame
-
-
-
-//   if (delta > 200) { // Threshold for macOS occlusion/suspension
-   
-//     this.$swal({
-//       title: 'Breakout detected!',
-//       text: `The app was suspended for ${Math.round(delta)}ms.`,
-//       icon: 'warning',
-//       confirmButtonText: 'Understood'
-//     });
-//   }
-
-//   this.lastFrameTime = currentTime; // Update last frame reference
-//   requestAnimationFrame(checkFrameGap); // Schedule next frame check
-// };
-
-// requestAnimationFrame(checkFrameGap); // Start the loop
-
-
-
-
-
-
         this.isLoading = false;
 
         if (isElectronWindow(window)) {
@@ -1635,22 +1606,18 @@ export default {
         // Fetch info asynchronously without blocking
         this.fetchInfo();
 
-        this.fetchinterval = new SchedulerService(4000);
-        this.fetchinterval.addEventListener('action', this.fetchInfo);  // Add event listener that reacts to the 'action' event
-        this.fetchinterval.start();
+        this.fetchinterval = this.autoSchedulerService(this.fetchInfo, 4000)
 
-        this.autoUpdateInterval = new SchedulerService(10000);
-        this.autoUpdateInterval.addEventListener('action', this.bipAutoUpdate);  // Add event listener that reacts to the 'action' event
-        this.autoUpdateInterval.start();
+        this.autoUpdateInterval = this.autoSchedulerService(this.bipAutoUpdate, 10000)
 
-        // add event listener to user input field to supress all special chars 
-        document.getElementById("user").addEventListener("keypress", function (e) {
-            // var lettersOnly = /^[a-zA-Z ]+$/;
-            var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
-            var key = e.key || String.fromCharCode(e.which);
-            if (!lettersOnly.test(key)) {
-                e.preventDefault();
-            }
+        // add event listener to user input field to supress all special chars
+        this.autoEventListener(document.getElementById("user"), "keypress", function (e) {
+          // var lettersOnly = /^[a-zA-Z ]+$/;
+          var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
+          var key = e.key || String.fromCharCode(e.which);
+          if (!lettersOnly.test(key)) {
+            e.preventDefault();
+          }
         });
 
         signalBridge.on('bipToken', (event, token) => {
@@ -1678,11 +1645,8 @@ export default {
 
     },
     beforeUnmount() {
-        this.fetchinterval.removeEventListener('action', this.fetchInfo);
-        this.fetchinterval.stop()
 
-        this.autoUpdateInterval.removeEventListener('action', this.bipAutoUpdate);
-        this.autoUpdateInterval.stop()
+        window.removeEventListener('unhandledrejection', event => unhandledRejectionFunction(event));
 
         signalBridge.removeAllListeners('qemu-download-progress');
         signalBridge.removeAllListeners('qemu-not-available');
