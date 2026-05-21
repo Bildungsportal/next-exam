@@ -2,11 +2,11 @@
 import CryptoJS from 'crypto-js';
 import log from 'electron-log/renderer';
 import { ensureQemuAvailableForLocalVmUi, showLocalVmQemuIssueDialog } from 'next-exam-shared/qemuLocalVmDialogs.js';
-import {
-    DEFAULT_LOCAL_VM_DISPLAY_RESOLUTION,
+import { DEFAULT_LOCAL_VM_DISPLAY_RESOLUTION,
     LOCAL_VM_DISPLAY_RESOLUTIONS,
     resolveLocalVmDisplayResolution,
 } from 'next-exam-shared/localVmDisplayResolutions.js';
+import { DEFAULT_EDITOR_EXAM_CONFIG } from 'next-exam-shared/editorExamConfig.js';
 
 function ensureGroupsAndExamConfig(section) {
     const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
@@ -18,8 +18,12 @@ function ensureGroupsAndExamConfig(section) {
 
 function ensureEditorExamConfig(section) {
     const { groupA, groupB } = ensureGroupsAndExamConfig(section);
-    if (!groupA.examConfig.editor) groupA.examConfig.editor = {};
-    if (!groupB.examConfig.editor) groupB.examConfig.editor = {};
+    if (!groupA.examConfig.editor || !Object.keys(groupA.examConfig.editor).length) {
+        groupA.examConfig.editor = { ...DEFAULT_EDITOR_EXAM_CONFIG };
+    }
+    if (!groupB.examConfig.editor || !Object.keys(groupB.examConfig.editor).length) {
+        groupB.examConfig.editor = { ...DEFAULT_EDITOR_EXAM_CONFIG };
+    }
     return { groupA, groupB };
 }
 
@@ -174,7 +178,7 @@ async function configureEduvidual(presetGroup) {
 
 /**
  * Forms (Google or Microsoft): configure per group (A/B) or for all (AB when groups off).
- * Stores settings in group.examConfig.gforms and removes legacy section.formsUrl.
+ * Stores settings in group.examConfig.forms (Google + Microsoft Forms).
  * @param {'a'|'b'|'all'|undefined} presetGroup
  */
 async function configureForms(presetGroup){
@@ -188,7 +192,7 @@ async function configureForms(presetGroup){
     if (!groupA.examConfig) groupA.examConfig = {};
     if (!groupB.examConfig) groupB.examConfig = {};
 
-    const currentConfig = activeGroup === 'b' ? (groupB.examConfig.gforms || {}) : (groupA.examConfig.gforms || {});
+    const currentConfig = activeGroup === 'b' ? (groupB.examConfig.forms || {}) : (groupA.examConfig.forms || {});
 
     this.$swal.fire({
         customClass: {
@@ -226,7 +230,7 @@ async function configureForms(presetGroup){
         </div>`,
         didOpen: () => {
             const el = document.getElementsByClassName('my-custom-input')[0];
-            if (el) el.value = currentConfig.url || this.serverstatus.examSections[this.serverstatus.activeSection]?.formsUrl || '';
+            if (el) el.value = currentConfig.url || '';
         },
         inputValidator: (value) => {
             if (!value) {return this.$t("dashboard.moodleInvalidId")}
@@ -251,15 +255,13 @@ async function configureForms(presetGroup){
             const nextConfig = { url, provider };
 
             if (!hasGroups) {
-                groupA.examConfig.gforms = nextConfig;
-                groupB.examConfig.gforms = nextConfig;
+                groupA.examConfig.forms = nextConfig;
+                groupB.examConfig.forms = nextConfig;
             } else if (activeGroup === 'b') {
-                groupB.examConfig.gforms = nextConfig;
+                groupB.examConfig.forms = nextConfig;
             } else {
-                groupA.examConfig.gforms = nextConfig;
+                groupA.examConfig.forms = nextConfig;
             }
-
-            if (Object.prototype.hasOwnProperty.call(section, 'formsUrl')) delete section.formsUrl;
             this.backupinterval.stop();
             this.autobackup = false;
         }
@@ -507,7 +509,6 @@ async function configureMicrosoft365Template(presetGroup) {
         groupA.examConfig.microsoft365.template = template;
     }
 
-    if (Object.prototype.hasOwnProperty.call(section, 'msOfficeFile')) delete section.msOfficeFile;
     this.setServerStatus();
 }
 
@@ -656,7 +657,7 @@ function removeFormsUrl(group) {
     if (!section) return;
     const clearCfg = (g) => {
         if (!g || !g.examConfig) return;
-        g.examConfig.gforms = {};
+        g.examConfig.forms = {};
     };
     if (!section.groups || group === 'all') {
         clearCfg(section.groupA);
@@ -1554,414 +1555,6 @@ async function configureLocalVM(presetGroup){
 }
 
 
-/**
-* Text Editor
-*/
-async function configureEditor(){
-    const inputOptions = {
-        'de-DE': this.$t("dashboard.de"),
-        'en-GB': this.$t("dashboard.en"),
-        'en-US': this.$t("dashboard.en_us"),
-        'fr-FR': this.$t("dashboard.fr"),
-        'es-ES': this.$t("dashboard.es"),
-        'it-IT': this.$t("dashboard.it"),
-        'sl-SI': this.$t("dashboard.sl"),
-        'none':this.$t("dashboard.none"),
-    }
-
-    // holds resolved IPv4 for custom LanguageTool host while dialog is open
-    let resolvedLtIp = null;
-
-    const updateMarginValueDisplay = () => {
-        const marginValueInput = document.getElementById('marginValue');
-        const marginValueDisplay = document.getElementById('marginValueDisplay');
-        marginValueDisplay.textContent = marginValueInput.value;
-    };
-
-    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-    const { groupA } = ensureEditorExamConfig(section);
-    const cfg = groupA.examConfig.editor || {};
-
-    const { value: language } = await this.$swal.fire({
-        customClass: {
-            popup: 'my-popup-sprachen',
-            title: 'my-title',
-            content: 'my-content',
-            input: 'my-custom-input-select',
-            actions: 'my-swal2-actions',
-           
-        },
-        title: this.$t("dashboard.texteditor"),
-        html: `
-        <div class="my-content" style="font-size: 0.8em !important; text-align:left; margin:0 12px;">
-            <div>
-                <label >
-                    <h6>${this.$t("dashboard.cmargin-value")}</h6>
-                    <input style="width:100px" type="range" id="marginValue" name="margin_value" min="2" max="5" step="0.5" value="${cfg.cmargin?.size ?? 3}" />
-                    <div style="width:32px; display: inline-block"  id="marginValueDisplay">${cfg.cmargin?.size ?? 3}</div>(cm)
-                </label>
-                <br>
-                <label>
-                    <input type="radio" name="correction_margin" value="left"  />
-                    ${this.$t("dashboard.cmargin-left")}
-                </label>
-                <label>
-                    <input type="radio" name="correction_margin" value="right" checked/>
-                    ${this.$t("dashboard.cmargin-right")}
-                </label>
-            </div>
-            <div> 
-                <h6> ${this.$t("dashboard.linespacing")}</h6>
-                <label><input type="radio" name="linespacing" value="1"/> 1</label> &nbsp;
-                <label><input type="radio" name="linespacing" value="2" checked/> 2</label> &nbsp;
-                <label><input type="radio" name="linespacing" value="3"/> 3</label> &nbsp;
-            </div>
-            <div> 
-                <h6>${this.$t("dashboard.fontfamily")}</h6>
-                <label><input type="radio" name="fontfamily" value="serif"/> serif</label> &nbsp;
-                <label><input type="radio" name="fontfamily" value="sans-serif" checked/> sans-serif</label> &nbsp;
-            </div>
-
-            <div style="margin-top:8px;">
-                <h6>${this.$t("dashboard.fontsize")}</h6>
-                <select id="fontsize" class="my-select" value="12pt" style="width:100%;max-width:100%;">
-                    <option value="8pt">8 pt</option>
-                    <option value="10pt">10 pt</option>
-                    <option value="12pt">12 pt</option>
-                    <option value="14pt">14 pt</option>
-                    <option value="16pt">16 pt</option>
-                    <option value="18pt">18 pt</option>
-                    <option value="20pt">20 pt</option>
-                </select>
-            </div>
-
-            <hr>
-            <div style="margin-top:8px;">
-                <h6>${this.$t("dashboard.audiorepeattitle")}</h6>
-                <select id="audiorepeat" class="my-select" style="width:100%;max-width:100%;">
-                    <option value="0">${this.$t("dashboard.audioallow")}</option>
-                    <option value="1">1${this.$t("dashboard.audiorepeat1")}</option>
-                    <option value="2">2${this.$t("dashboard.audiorepeat2")}</option>
-                    <option value="3">3${this.$t("dashboard.audiorepeat2")}</option>
-                    <option value="4">4${this.$t("dashboard.audiorepeat2")}</option>
-                </select>
-            </div>
-
-            <hr>
-            <div>
-                <h6>${this.$t("dashboard.spellcheck")}</h6>
-               
-                <input class="form-check-input" type="checkbox" id="checkboxLT">
-                <label class="form-check-label" for="checkboxLT"> LanguageTool ${this.$t("dashboard.activate")} </label> <br>
-                <input class="form-check-input" type="checkbox" id="checkboxsuggestions">
-                <label class="form-check-label" for="checkboxsuggestions"> ${this.$t("dashboard.suggest")} </label><br>
-                <input class="form-check-input" type="checkbox" id="checkboxCustomHost">
-                <label class="form-check-label" for="checkboxCustomHost"> ${this.$t("dashboard.customhost")} </label><br>
-                
-                <div style="display:flex; gap:8px; margin-top:4px; width:99%; align-items:center;">
-                    <div style="position:relative; flex:1;">
-                        <input type="text" id="languagetoolhost" class="form-control" style="width:100%; padding-right:24px; color: #6c757d;" value="https://languagetool" disabled>
-                        <span id="languagetoolhostStatus" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-weight:bold; cursor:help; z-index:2;"></span>
-                    </div>
-                    <input type="text" id="languagetoolport" class="form-control" style="width:90px; color: #6c757d;" value="8088" disabled>
-                </div>
-                <br><br>
-                <h6 style="margin-bottom:0px;">${this.$t("dashboard.spellcheckchoose")}</h6>
-            </div>
-             
-        </div>`,
-        input: 'select',
-        inputOptions: inputOptions,
-        focusConfirm: false,
-        showCancelButton: true,
-        cancelButtonText: this.$t("dashboard.cancel"),
-        didOpen: () => {
-            const marginValueInput = document.getElementById('marginValue');
-            marginValueInput.addEventListener('input', updateMarginValueDisplay);
-            document.getElementById('checkboxLT').checked = !!cfg.languagetool
-            document.getElementById('checkboxsuggestions').checked = !!cfg.suggestions
-            document.getElementById('audiorepeat').value = String(cfg.audioRepeat ?? '0')
-            
-            // Set the radio button for linespacing
-            const linespacing = String(cfg.linespacing ?? '2');
-            const radioButton = document.querySelector(`input[name="linespacing"][value="${linespacing}"]`);
-            if (radioButton) {
-                radioButton.checked = true;
-            }
-
-            // Set the radio button for fontfamily
-            const fontfamily = String(cfg.fontfamily ?? 'sans-serif');
-            const fontfamilyRadioButton = document.querySelector(`input[name="fontfamily"][value="${fontfamily}"]`);
-            if (fontfamilyRadioButton) {
-                fontfamilyRadioButton.checked = true;
-            }
-
-            // Set the radio button for correction_margin
-            const correctionMargin = String(cfg.cmargin?.side ?? 'right');
-            const correctionMarginRadioButton = document.querySelector(`input[name="correction_margin"][value="${correctionMargin}"]`);
-            if (correctionMarginRadioButton) {
-                correctionMarginRadioButton.checked = true;
-            }
-
-            // Set the value for the language
-            const language = String(cfg.spellchecklang ?? 'de-DE');
-            const selectElement = document.querySelector('.swal2-select');
-            if (selectElement) {
-                // delay when setting the value
-                setTimeout(() => {
-                    selectElement.value = language;
-                }, 100);
-            }
-
-            const defaultFontSize = String(cfg.fontsize || '12pt');
-            // console.log("defaultFontSize:", defaultFontSize)
-            const selectElement2 = document.getElementById('fontsize');
-            if (selectElement2) {
-                setTimeout(() => {
-                    selectElement2.value = defaultFontSize;
-                }, 100);
-            }
-
-
-
-            const checkboxLT = document.getElementById('checkboxLT');
-            const checkboxSuggestions = document.getElementById('checkboxsuggestions');
-            const checkboxCustomHost = document.getElementById('checkboxCustomHost');
-            const languagetoolhostInput = document.getElementById('languagetoolhost');
-            const languagetoolportInput = document.getElementById('languagetoolport');
-            const hostStatus = document.getElementById('languagetoolhostStatus');
-            
-            // Initialize LanguageTool host and port fields
-            const savedHost = cfg.languagetoolhost;
-            const savedPort = cfg.languagetoolport;
-            
-            // Set default values or saved values
-            if (savedHost) {
-                languagetoolhostInput.value = savedHost;
-                checkboxCustomHost.checked = true;
-                languagetoolhostInput.disabled = false;
-                languagetoolhostInput.style.color = '#000000';
-                if (languagetoolportInput) {
-                    languagetoolportInput.value = savedPort || '8088';
-                    languagetoolportInput.disabled = false;
-                    languagetoolportInput.style.color = '#000000';
-                }
-            } else {
-                languagetoolhostInput.value = 'https://languagetool';
-                checkboxCustomHost.checked = false;
-                languagetoolhostInput.disabled = true;
-                languagetoolhostInput.style.color = '#6c757d';
-                if (languagetoolportInput) {
-                    languagetoolportInput.value = '8088';
-                    languagetoolportInput.disabled = true;
-                    languagetoolportInput.style.color = '#6c757d';
-                }
-            }
-
-            // Helper to update status icon
-            const setHostStatus = (state) => {
-                if (!hostStatus) { return; }
-                if (state === 'ok') {
-                    hostStatus.textContent = '✓';
-                    hostStatus.style.color = '#28a745';
-                    hostStatus.title = this.$t('dashboard.host_ok');
-                } else if (state === 'warn') {
-                    hostStatus.textContent = '▲';
-                    hostStatus.style.color = '#ffc107';
-                    hostStatus.title = this.$t('dashboard.host_warn');
-                } else {
-                    hostStatus.textContent = '';
-                    hostStatus.removeAttribute('title');
-                }
-            };
-            
-            // Initial: suggestions and custom host checkboxes deaktivieren, falls LT nicht gecheckt ist
-            checkboxSuggestions.disabled = !checkboxLT.checked;
-            checkboxCustomHost.disabled = !checkboxLT.checked;
-            // Also disable input field if LT is not checked
-            if (!checkboxLT.checked) {
-                languagetoolhostInput.disabled = true;
-                languagetoolhostInput.style.color = '#6c757d';
-                if (languagetoolportInput) {
-                    languagetoolportInput.disabled = true;
-                    languagetoolportInput.style.color = '#6c757d';
-                }
-            }
-            
-            // Event listener for checkboxLT to adjust the state of checkboxsuggestions and checkboxCustomHost
-            checkboxLT.addEventListener('change', () => {
-                checkboxSuggestions.disabled = !checkboxLT.checked;
-                checkboxCustomHost.disabled = !checkboxLT.checked;
-                // When checkboxLT is unchecked, suggestions and custom host should also be reset:
-                if (!checkboxLT.checked) {
-                    checkboxSuggestions.checked = false;
-                    checkboxCustomHost.checked = false;
-                    languagetoolhostInput.disabled = true;
-                    languagetoolhostInput.style.color = '#6c757d';
-                    if (languagetoolportInput) {
-                        languagetoolportInput.disabled = true;
-                        languagetoolportInput.style.color = '#6c757d';
-                    }
-                }
-            });
-            
-            // Event listener for checkboxCustomHost to enable/disable the text input
-            checkboxCustomHost.addEventListener('change', () => {
-                const enabled = checkboxCustomHost.checked;
-                languagetoolhostInput.disabled = !enabled;
-                languagetoolhostInput.style.color = enabled ? '#000000' : '#6c757d';
-                if (languagetoolportInput) {
-                    languagetoolportInput.disabled = !enabled;
-                    languagetoolportInput.style.color = enabled ? '#000000' : '#6c757d';
-                }
-                if (!enabled) {
-                    setHostStatus('none');
-                    resolvedLtIp = null;
-                }
-            });
-
-            // DNS check while the dialog is open (debounced)
-            let ltResolveTimeout = null;
-            const scheduleResolve = () => {
-                if (!checkboxCustomHost.checked || languagetoolhostInput.disabled) {
-                    setHostStatus('none');
-                    resolvedLtIp = null;
-                    return;
-                }
-                const raw = languagetoolhostInput.value || '';
-                if (!raw.trim()) {
-                    setHostStatus('none');
-                    resolvedLtIp = null;
-                    return;
-                }
-                if (ltResolveTimeout) {
-                    clearTimeout(ltResolveTimeout);
-                }
-                ltResolveTimeout = setTimeout(async () => {
-                    try {
-                        const hostOnly = raw.trim().replace(/^https?:\/\//i, '').split('/')[0];
-                        const result = await window.ipcRenderer?.invoke?.('resolveHostToIp', hostOnly);
-                        if (!result || !result.ok || !result.ip) {
-                            setHostStatus('warn');
-                            resolvedLtIp = null;
-                            return;
-                        }
-                        setHostStatus('ok');
-                        resolvedLtIp = result.ip;
-                    } catch (e) {
-                        setHostStatus('warn');
-                        resolvedLtIp = null;
-                    }
-                }, 600);
-            };
-
-            if (languagetoolhostInput) {
-                languagetoolhostInput.addEventListener('input', scheduleResolve);
-                // Initial check for default value only when custom host is active
-                if (checkboxCustomHost.checked) {
-                    scheduleResolve();
-                }
-            }
-
-            
-        },
-        willClose: () => {
-            const marginValueInput = document.getElementById('marginValue');
-            if (marginValueInput) {
-                marginValueInput.removeEventListener('input', updateMarginValueDisplay);
-            }
-        },
-        inputValidator: (value) => {
-            if (!value) {  return 'You need to choose a language!' }
-
-        },
-        preConfirm: () => {
-            // Save all values before dialog closes (Electron 39 compatibility)
-            const checkboxSuggestionsElement = document.getElementById('checkboxsuggestions');
-            const checkboxLTElement = document.getElementById('checkboxLT');
-            const checkboxCustomHostElement = document.getElementById('checkboxCustomHost');
-            const languagetoolhostElement = document.getElementById('languagetoolhost');
-            const languagetoolportElement = document.getElementById('languagetoolport');
-            const marginValueElement = document.getElementById('marginValue');
-            const audioRepeatElement = document.getElementById('audiorepeat');
-            const fontSizeElement = document.getElementById('fontsize');
-
-            const patch = {};
-            patch.suggestions = checkboxSuggestionsElement ? checkboxSuggestionsElement.checked : false;
-            patch.languagetool = checkboxLTElement ? checkboxLTElement.checked : false;
-            
-            // Save LanguageTool host (as resolved IP) and port values if custom host checkbox is checked
-            if (checkboxCustomHostElement && checkboxCustomHostElement.checked && languagetoolhostElement) {
-                const rawHost = languagetoolhostElement.value || 'http://127.0.0.1';
-                const protocolMatch = rawHost.match(/^(https?:\/\/)/i);
-                const protocol = protocolMatch ? protocolMatch[1] : 'http://';
-                const hostForConfig = resolvedLtIp ? `${protocol}${resolvedLtIp}` : rawHost;
-                patch.languagetoolhost = hostForConfig;
-                if (languagetoolportElement && languagetoolportElement.value) {
-                    patch.languagetoolport = languagetoolportElement.value;
-                } else {
-                    patch.languagetoolport = '8088';
-                }
-            } else {
-                patch.languagetoolhost = null;
-                patch.languagetoolport = null;
-            } 
-
-            const radioButtons = document.querySelectorAll('input[name="correction_margin"]');
-            const marginValue = marginValueElement ? marginValueElement.value : '';
-            const linespacingradioButtons = document.querySelectorAll('input[name="linespacing"]');
-            const fontfamilyradioButtons = document.querySelectorAll('input[name="fontfamily"]');
-            const audioRepeat = audioRepeatElement ? audioRepeatElement.value : '';
-            const fontSize = fontSizeElement ? fontSizeElement.value : '';
-
-            let selectedMargin = '';
-            radioButtons.forEach((radio) => {
-                if (radio.checked) {
-                    selectedMargin = radio.value;
-                }
-            });
-
-            let selectedSpacing = '';
-            linespacingradioButtons.forEach((radio) => {
-                if (radio.checked) {
-                    selectedSpacing = radio.value;
-                }
-            });
-
-            let selectedFont = '';
-            fontfamilyradioButtons.forEach((radio) => {
-                if (radio.checked) {
-                    selectedFont = radio.value;
-                }
-            });
-
-            if (marginValue && selectedMargin) {
-                patch.cmargin = {
-                    side: selectedMargin,
-                    size: parseFloat(marginValue)
-                }
-            }
-
-            patch.linespacing = selectedSpacing
-            patch.fontfamily = selectedFont
-            patch.fontsize = fontSize
-            patch.audioRepeat = audioRepeat
-
-            const selectEl = document.querySelector('.swal2-select');
-            const spellchecklang = selectEl ? String(selectEl.value || '') : '';
-            patch.spellchecklang = spellchecklang || 'de-DE';
-            if (patch.spellchecklang === 'none') {
-                patch.languagetool = false;
-                patch.suggestions = false;
-                patch.languagetoolhost = null;
-                patch.languagetoolport = null;
-            }
-
-            setEditorExamConfigPatch.call(this, patch);
-        }
-    })
-    if (!language) return;
-}   
 
 function setEditorExamConfigPatch(patch) {
     const section = this.serverstatus.examSections[this.serverstatus.activeSection];
@@ -2567,4 +2160,4 @@ function openAllowedUrl(allowedUrl){
 
 
 
-export { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, configureEditorTemplate, removeEditorTemplate, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, getFormsID, configureEditor, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }
+export { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, configureEditorTemplate, removeEditorTemplate, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, getFormsID, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }

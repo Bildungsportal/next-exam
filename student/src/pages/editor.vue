@@ -800,6 +800,7 @@ import {
     applyServerstatusFromFetch,
     resolveLockedSection,
 } from '../utils/examFetchInfoSync.js'
+import { resolveEditorExamConfig, DEFAULT_EDITOR_EXAM_CONFIG } from 'next-exam-shared/editorExamConfig.js'
 const lowlight = createLowlight(common)
 
 // signalBridge instance centralizes ipc calls with platform checks
@@ -830,7 +831,7 @@ export default {
                 activeSection = examSections[activeSectionIndex] || {};
             }
         }
-        const initialEditorCfg = activeSection?.groupA?.examConfig?.editor || {};
+        const initialEditorCfg = resolveEditorExamConfig(activeSection, 'groupA');
 
         return {
             index: 0,
@@ -871,7 +872,7 @@ export default {
             battery: null,
             proseMirrorMargin: '30mm',
             editorWidth: '210mm',
-            cmargin: this.$route.params.cmargin ? this.$route.params.cmargin : {side: 'right', size: 3},
+            cmargin: { ...(initialEditorCfg.cmargin || DEFAULT_EDITOR_EXAM_CONFIG.cmargin) },
             selectedWordCount: 0,
             selectedCharCount: 0,
             currentRange: 0,
@@ -879,9 +880,9 @@ export default {
             editorcontentcontainer: null,
             editorContent: null,
             serverstatus: status,
-            linespacing: activeSection.linespacing || '2',
-            fontfamily: activeSection.fontfamily || "sans",
-            fontsize: activeSection.fontsize || '12pt',
+            linespacing: String(initialEditorCfg.linespacing ?? DEFAULT_EDITOR_EXAM_CONFIG.linespacing),
+            fontfamily: initialEditorCfg.fontfamily || DEFAULT_EDITOR_EXAM_CONFIG.fontfamily,
+            fontsize: initialEditorCfg.fontsize || DEFAULT_EDITOR_EXAM_CONFIG.fontsize,
             privateSpellcheck: {activate: false, activated: false, suggestions: false}, // this is a per student override (for students with legasthenie)
             individualSpellcheckActivated: false,
             audioSource: null,
@@ -1022,8 +1023,8 @@ export default {
                         ? (this.clientinfo?.lockedSection ?? this.lockedSection ?? status.activeSection ?? 0)
                         : (status.lockedSection ?? status.activeSection ?? 0)));
             const section = status.examSections?.[sectionIndex] || status.examSections?.[1] || null;
-            const groupKey = section && section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA'
-            return section?.[groupKey]?.examConfig?.editor || {};
+            const groupKey = section && section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA';
+            return resolveEditorExamConfig(section, groupKey);
         },
 
         // Teacher-set ODT/DOCX template under examConfig.editor.editorTemplate (not materials).
@@ -1088,6 +1089,66 @@ export default {
             if (host !== this.LThost) this.LThost = host;
             if (port !== this.LTport) this.LTport = port;
             if (lang !== this.ltLanguage) this.ltLanguage = lang;
+        },
+
+        // Apply cmargin/fonts/linespacing from examConfig.editor to layout CSS variables.
+        applyEditorLayoutCss() {
+            switch (Number(this.cmargin?.size)) {
+                case 5:
+                    this.proseMirrorMargin = '50mm';
+                    this.editorWidth = '160mm';
+                    break;
+                case 4.5:
+                    this.proseMirrorMargin = '45mm';
+                    this.editorWidth = '165mm';
+                    break;
+                case 4:
+                    this.proseMirrorMargin = '40mm';
+                    this.editorWidth = '170mm';
+                    break;
+                case 3.5:
+                    this.proseMirrorMargin = '35mm';
+                    this.editorWidth = '175mm';
+                    break;
+                case 3:
+                    this.proseMirrorMargin = '30mm';
+                    this.editorWidth = '180mm';
+                    break;
+                case 2.5:
+                    this.proseMirrorMargin = '25mm';
+                    this.editorWidth = '185mm';
+                    break;
+                case 2:
+                    this.proseMirrorMargin = '20mm';
+                    this.editorWidth = '190mm';
+                    break;
+                default:
+                    this.proseMirrorMargin = '30mm';
+                    this.editorWidth = '180mm';
+            }
+            if (this.cmargin.side === 'right') {
+                this.setCSSVariable('--js-margin', `0 ${this.proseMirrorMargin} 0 0`);
+                this.setCSSVariable('--js-borderright', `1px solid #ccc`);
+                this.setCSSVariable('--js-borderleft', `0px solid #ccc`);
+            } else {
+                this.setCSSVariable('--js-margin', `0 0 0 ${this.proseMirrorMargin}`);
+                this.setCSSVariable('--js-borderright', `0px solid #ccc`);
+                this.setCSSVariable('--js-borderleft', `1px solid #ccc`);
+            }
+            this.setCSSVariable('--js-editorWidth', `${this.editorWidth}`);
+            this.setCSSVariable('--js-linespacing', `${this.linespacing}`);
+            this.setCSSVariable('--js-fontfamily', `${this.fontfamily}`);
+            this.setCSSVariable('--js-fontsize', `${this.fontsize}`);
+        },
+
+        syncEditorVisualSettings() {
+            const cfg = this.getEditorExamConfig(this.lockedSection);
+            const cm = cfg.cmargin || DEFAULT_EDITOR_EXAM_CONFIG.cmargin;
+            this.cmargin = { side: cm.side || 'right', size: cm.size ?? 3 };
+            this.linespacing = String(cfg.linespacing ?? DEFAULT_EDITOR_EXAM_CONFIG.linespacing);
+            this.fontfamily = cfg.fontfamily || DEFAULT_EDITOR_EXAM_CONFIG.fontfamily;
+            this.fontsize = cfg.fontsize || DEFAULT_EDITOR_EXAM_CONFIG.fontsize;
+            this.applyEditorLayoutCss();
         },
 
 
@@ -1265,8 +1326,10 @@ export default {
             if (sectionIndex !== this.lockedSection) {
                 this.lockedSection = sectionIndex;
                 this.syncEditorLanguageSettings();
+                this.syncEditorVisualSettings();
             } else if (serverstatusChanged) {
                 this.syncEditorLanguageSettings();
+                this.syncEditorVisualSettings();
             }
 
             // console.log(this.serverstatus)
@@ -1572,7 +1635,7 @@ export default {
                     if (!existingaudiofile) {
                         this.audiofiles.push({
                             name: file.name,
-                            playbacks: this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat
+                            playbacks: Number(this.getEditorExamConfig(this.lockedSection).audioRepeat) || 0
                         })
                     }
                 }
@@ -2401,57 +2464,7 @@ export default {
 
         // Detect platform using navigator.platform (available in renderer process)
         this.isMac = navigator.platform.toLowerCase().includes('mac');
-
-        switch (this.cmargin.size) {
-            case 5:
-                this.proseMirrorMargin = '50mm';
-                this.editorWidth = '160mm';
-                break;
-            case 4.5:
-                this.proseMirrorMargin = '45mm';
-                this.editorWidth = '165mm';
-                break;
-            case 4:
-                this.proseMirrorMargin = '40mm';
-                this.editorWidth = '170mm';
-                break;
-            case 3.5:
-                this.proseMirrorMargin = '35mm';
-                this.editorWidth = '175mm';
-                break;
-            case 3:
-                this.proseMirrorMargin = '30mm';
-                this.editorWidth = '180mm';
-                break;
-            case 2.5:
-                this.proseMirrorMargin = '25mm';
-                this.editorWidth = '185mm';
-                break;
-            case 2:
-                this.proseMirrorMargin = '20mm';
-                this.editorWidth = '190mm';
-                break;
-            default:
-                this.proseMirrorMargin = '30mm';
-                this.editorWidth = '180mm';
-        }
-        if (this.cmargin.side === "right") {
-            this.setCSSVariable('--js-margin', `0 ${this.proseMirrorMargin} 0 0`);
-            this.setCSSVariable('--js-borderright', `1px solid #ccc`);
-            this.setCSSVariable('--js-borderleft', `0px solid #ccc`);
-        } else {
-            this.setCSSVariable('--js-margin', `0 0 0 ${this.proseMirrorMargin}`);
-            this.setCSSVariable('--js-borderright', `0px solid #ccc`);
-            this.setCSSVariable('--js-borderleft', `1px solid #ccc`);
-        }
-
-        this.setCSSVariable('--js-editorWidth', `${this.editorWidth}`);
-        this.setCSSVariable('--js-linespacing', `${this.linespacing}`);
-        this.setCSSVariable('--js-fontfamily', `${this.fontfamily}`);
-        this.setCSSVariable('--js-fontsize', `${this.fontsize}`);
-
-
-        console.log(`editor @ mounted: Component mounted, initializing editor`)
+        this.applyEditorLayoutCss();
         this.createEditor(); // this initializes the editor
         this.getExamMaterials()
         setTimeout(() => {

@@ -959,9 +959,6 @@ import {
 
                 this.multicastClient.clientinfo.exammode = true
                 this.multicastClient.clientinfo.examtype = examtype
-                this.multicastClient.clientinfo.cmargin = serverstatus.examSections[effectiveSection].cmargin
-                this.multicastClient.clientinfo.linespacing = serverstatus.examSections[effectiveSection].linespacing
-                this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[effectiveSection].audioRepeat
                 log.info("communicationhandler @ startExam: creating exam window")
                 WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
                 this.localVmStartState = 'idle';
@@ -973,11 +970,8 @@ import {
         }
 
         this.multicastClient.clientinfo.exammode = true
-        this.multicastClient.clientinfo.cmargin = serverstatus.examSections[effectiveSection].cmargin  // this is used to configure margin settings for the editor
-        this.multicastClient.clientinfo.linespacing = serverstatus.examSections[effectiveSection].linespacing // we try to double linespacing on demand in pdf creation
-        this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[effectiveSection].audioRepeat // restrict repetition of audio files (for listening comprehension)
 
-        if (!WindowHandler.examwindow){  // why do we check? because exammode is left if the server connection gets lost but students could reconnect while the exam window is still open and we don't want to create a second one
+        if (!WindowHandler.examwindow){
             log.info("communicationhandler @ startExam: creating exam window")
             this.multicastClient.clientinfo.examtype = examtype
             WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
@@ -1117,6 +1111,8 @@ import {
     }
 
     async endExam(serverstatus){
+        const localVmExam = this.multicastClient.clientinfo.examtype === 'localvm'
+            || this.multicastClient.clientinfo.localVMState === 'running';
         this.clearBipSiteInfo()
         WindowHandler.removeBlurListener();
       
@@ -1162,19 +1158,21 @@ import {
         this.multicastClient.clientinfo.focus = true
         this.multicastClient.clientinfo.localLockdown = false;
 
-        // stop VNC proxy + shutdown VM after window teardown to avoid reconnect loops
-        stopProxy();
-        try {
-            log.info('communicationhandler @ endExam: requesting VM shutdown');
-            await qemuService.stopVmAsync({ graceful: true, shutdownTimeoutMs: 8000, killTimeoutMs: 8000 });
-        } catch (e) {
-            log.warn('communicationhandler @ endExam: shutdown failed, killing VM');
-            await qemuService.stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
-        }
-        try {
-            await qemuService.killAllLocalQemu(this.config.workdirectory);
-        } catch (e) {
-            log.warn('communicationhandler @ endExam: killAllLocalQemu sweep', e);
+        // stop VNC proxy + shutdown VM after window teardown (LocalVM only)
+        if (localVmExam) {
+            stopProxy();
+            try {
+                log.info('communicationhandler @ endExam: requesting VM shutdown');
+                await qemuService.stopVmAsync({ graceful: true, shutdownTimeoutMs: 8000, killTimeoutMs: 8000 });
+            } catch (e) {
+                log.warn('communicationhandler @ endExam: shutdown failed, killing VM');
+                await qemuService.stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
+            }
+            try {
+                await qemuService.killAllLocalQemu(this.config.workdirectory);
+            } catch (e) {
+                log.warn('communicationhandler @ endExam: killAllLocalQemu sweep', e);
+            }
         }
 
         if (languageToolServer.languageToolProcess){

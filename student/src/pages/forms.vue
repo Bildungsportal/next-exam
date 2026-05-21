@@ -500,10 +500,13 @@ export default {
             return date.toLocaleTimeString('en-US', {hour12: false}); // Adjust locale and options as needed
         },
 
-        // Apply section formsUrl; returns true if main webview URL changed.
-        applyFormsUrlFromSection(sectionIndex) {
-            const nextUrl = this.serverstatus?.examSections?.[sectionIndex]?.formsUrl;
-            if (!nextUrl) return false;
+        // Apply forms examConfig for locked section; returns true if main webview URL changed.
+        applyFormsConfigFromSection(sectionIndex) {
+            const section = this.serverstatus?.examSections?.[sectionIndex];
+            const groupKey = section?.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA';
+            const formsConfig = section?.[groupKey]?.examConfig?.forms || null;
+            if (!formsConfig || typeof formsConfig.url !== 'string') return false;
+            const nextUrl = formsConfig.url;
             const urlChanged = nextUrl !== this.formsUrl;
             if (urlChanged) this.formsUrl = nextUrl;
             return urlChanged;
@@ -521,7 +524,7 @@ export default {
             const sectionIndex = resolveLockedSection(this.serverstatus, this.clientinfo);
             if (sectionIndex !== this.lockedSection) this.lockedSection = sectionIndex;
 
-            const urlChanged = this.applyFormsUrlFromSection(sectionIndex);
+            const urlChanged = this.applyFormsConfigFromSection(sectionIndex);
             if (urlChanged && this.$refs.wvmain) {
                 this.$refs.wvmain.setAttribute('src', this.formsUrlComputed);
             }

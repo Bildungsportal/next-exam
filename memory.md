@@ -54,7 +54,8 @@ TECH^student^geogebra^fetchInfo^injectCSS only on exammode change
 TECH^student^eduvidual^fetchInfo^applyEduvidualConfigFromSection; webview src only on url change
 TECH^student^website^fetchInfo^applyWebsiteConfigFromSection; webview src only on url change
 TECH^student^localvm^fetchInfo^clientinfo localVM* in clientinfoUiChanged; VNC reset only on vm state transition
-TECH^student^forms^fetchInfo^applyFormsUrlFromSection; webview src only on url change
+TECH^exam^formsConfig^group.examConfig.forms{url,provider google|microsoft|unknown}; examtype forms
+TECH^student^forms^fetchInfo^applyFormsConfigFromSection reads group.examConfig.forms.url; webview src only on url change
 TECH^student^ms365^fetchInfo^msofficeshare in clientinfoUiChanged; collapse/restore browserview only on focus transition
 TECH^student^rdp^fetchInfo^applyRdpConfigFromSection; webview src only on url change
 RULE^student^typingRhythm^editor.vue isTypingRhythmExemptKey clears deltas for Backspace Delete Space Enter NumpadEnter (OS key-repeat)^student/src/pages/editor.vue handleTypingRhythmKeydown
@@ -115,3 +116,5 @@ BUG^submissionPdf^footerGrayBands^printBackground:true on submit painted #editor
 TECH^submissionPdf^visibleStamp^addSubmissionStampToPdf last page center; logo student/public/icons/icon.png; name+datetime+BiP signed; before plainAddPlaceholder^shared/submissionPdfSign.js+communicationhandler resolveSubmissionStampIconPath
 BUG^submissionPdf^sigWidgetLine^plainAddPlaceholder default widgetRect [0,0,0,0]; fix HIDDEN_SIG_WIDGET_RECT^shared/submissionPdfSign.js
 BUG^submissionPdf^bottomGrayLine^signed printToPDF bottom margin+footer band; fix isSigningExport bottom:0 empty footer printBackground:false; keep editor #statusbar border in print^communicationhandler
+RULE^exam^sectionSchema^mode config only group.examConfig.{editor|website|eduvidual|forms|rdp|localvm|activeSheets|microsoft365}; section has examtype+sectionname+timelimit+locked+startTs+groups only
+PATH^shared^editorExamConfig^shared/editorExamConfig.js DEFAULT_EDITOR_EXAM_CONFIG+resolveEditorExamConfig+resolveGroupKey^teacher+student

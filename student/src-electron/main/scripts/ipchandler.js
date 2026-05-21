@@ -53,6 +53,7 @@ import { decryptExamFileBytes, decryptExamFileAllLayers, encryptExamFileBytes, i
 import { examApiFetch } from '../../../../shared/examApiFetch.js';
 import { normalizeStudentClientName } from '../../../../shared/normalizeStudentClientName.js';
 import { buildNextExamMoodleProof } from '../../../../shared/buildNextExamMoodleProof.js';
+import { DEFAULT_EDITOR_EXAM_CONFIG } from '../../../../shared/editorExamConfig.js';
 import { NEXT_EXAM_MOODLE_PROOF_HEADER } from '../../../../shared/nextExamMoodleProofSecret.js';
 import { setClientFocusLock, clearClientFocusLock } from './focusLockState.js';
 import { syncClientDisplayInfo } from './displayInfo.js';
@@ -814,43 +815,57 @@ class IpcHandler {
             
             let serverstatus = {
                 exammode: true,
-               
                 delfolderonexit: false,
-                spellcheck: true,
-                spellchecklang: 'de-DE',
-                suggestions: false,
-                moodleTestType: '',
-                moodleDomain: '',
- 
                 screenshotinterval: 0,
-                msOfficeFile: false,
                 screenslocked: false,
                 pin: '0000',
-               
-                unlockonexit: false,
-                fontfamily: 'sans-serif',
-                moodleTestId: '',
-                languagetool: false,
                 password: args.password,
-         
-                useExamSections: false, //if false exam section 1 is used and no tabs are displayed
+                useExamSections: false,
                 activeSection: 1,
                 lockedSection: 1,
                 examSections: {
                     1: {
                         examtype: args.exammode,
-                        cmargin: { side: 'right', size: 3 },
-                        linespacing: '2',
-                        audioRepeat: 3,
+                        sectionname: 'Local',
+                        groups: false,
                         groupA: {
+                            users: [],
+                            examInstructionFiles: [],
+                            allowedUrls: [],
                             examConfig: {
                                 editor: {
+                                    ...DEFAULT_EDITOR_EXAM_CONFIG,
                                     languagetool: args.languagetool || false,
                                     spellchecklang: args.spellchecklang || 'de-DE',
                                     suggestions: args.suggestions || false,
-                                }
-                            }
-                        }
+                                    audioRepeat: '3',
+                                },
+                                activeSheets: {},
+                                eduvidual: {},
+                                forms: {},
+                                website: {},
+                                math: {},
+                                microsoft365: {},
+                                rdp: {},
+                                localvm: {},
+                            },
+                        },
+                        groupB: {
+                            users: [],
+                            examInstructionFiles: [],
+                            allowedUrls: [],
+                            examConfig: {
+                                editor: { ...DEFAULT_EDITOR_EXAM_CONFIG, audioRepeat: '3' },
+                                activeSheets: {},
+                                eduvidual: {},
+                                forms: {},
+                                website: {},
+                                math: {},
+                                microsoft365: {},
+                                rdp: {},
+                                localvm: {},
+                            },
+                        },
                     }
                 }
             }

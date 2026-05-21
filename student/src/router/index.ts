@@ -98,7 +98,6 @@ async function fetchInfo(to: RouteLocationNormalized, from: RouteLocationNormali
     to.params.servertoken = clientinfo.servertoken
     to.params.clientname = clientinfo.name
     to.params.pincode = clientinfo.pin
-    to.params.cmargin = clientinfo.cmargin
     to.params.localLockdown = clientinfo.localLockdown
   }
   return true

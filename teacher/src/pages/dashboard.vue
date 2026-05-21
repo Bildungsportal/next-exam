@@ -540,10 +540,10 @@
                     <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
                         <div class="basematerial-row">
                             <span class="basematerial-group-pill">A</span>
-                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.gforms?.url">
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.forms?.url">
                                 <div class="btn-group basematerial-filegroup" role="group">
-                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url, blockSubdomains: false, blockSubfolders: false })">
-                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url }}</span>
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.forms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.forms.url, blockSubdomains: false, blockSubfolders: false })">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.forms.url }}</span>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeFormsUrl('a')"><span class="remove-x">&times;</span></button>
                                 </div>
@@ -556,10 +556,10 @@
 
                         <div class="basematerial-row">
                             <span class="basematerial-group-pill basematerial-group-pill--b">B</span>
-                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.gforms?.url">
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.forms?.url">
                                 <div class="btn-group basematerial-filegroup" role="group">
-                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.gforms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.gforms.url, blockSubdomains: false, blockSubfolders: false })">
-                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.gforms.url }}</span>
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.forms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.forms.url, blockSubdomains: false, blockSubfolders: false })">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.forms.url }}</span>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeFormsUrl('b')"><span class="remove-x">&times;</span></button>
                                 </div>
@@ -574,10 +574,10 @@
                     <template v-else>
                         <div class="basematerial-row">
                             <span class="basematerial-group-pill basematerial-group-pill--ab" aria-label="A/B">AB</span>
-                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.gforms?.url">
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.forms?.url">
                                 <div class="btn-group basematerial-filegroup" role="group">
-                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url, blockSubdomains: false, blockSubfolders: false })">
-                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url }}</span>
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.forms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.forms.url, blockSubdomains: false, blockSubfolders: false })">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.forms.url }}</span>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeFormsUrl('all')"><span class="remove-x">&times;</span></button>
                                 </div>
@@ -1347,6 +1347,7 @@ import { Exam } from '../types/api'
 import { generateEncryptionPassword } from '../utils/encryptionPassword.js'
 import { openStudentEditorTimelineDiff } from '../utils/studentEditorTimeline.js'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
+import { DEFAULT_EDITOR_EXAM_CONFIG } from 'next-exam-shared/editorExamConfig.js'
 
 class EmptyWidget {
     constructor() {
@@ -1481,95 +1482,40 @@ export default {
                 lockedSection: 1,
                 examSections: {
                     1: {
-                        examtype: 'math',   
+                        examtype: 'math',
                         timelimit: 600,
-                        locked: false,  // if true, the current section is locked and no changes can be made - this means its currently active for students
+                        locked: false,
                         sectionname: "Abschnitt 1",
-                        spellchecklang: 'de-DE', 
-                        suggestions: false, 
-
-                        cmargin: { side: 'right', size: 3 }, 
-
-                        formsUrl: null,
-                        
-                        linespacing: 2, 
-                        languagetool: false,
-                        fontfamily: "sans-serif", 
-                        fontsize: '12pt',
-                        audioRepeat: 0,
-                        localVMConfig: null,
-
                         groups: false,
-                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
-                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
+                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor: { ...DEFAULT_EDITOR_EXAM_CONFIG }, eduvidual:{}, forms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
+                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor: { ...DEFAULT_EDITOR_EXAM_CONFIG }, eduvidual:{}, forms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
                     },
                     2: {
-                        examtype: 'math',   
+                        examtype: 'math',
                         timelimit: 600,
                         locked: false,
                         sectionname: "Abschnitt 2",
-                        spellchecklang: 'de-DE', 
-                        suggestions: false, 
-
-                        cmargin: { side: 'right', size: 3 }, 
-
-                        formsUrl: null,
-                        
-                        linespacing: 2, 
-                        languagetool: false,
-                        fontfamily: "sans-serif", 
-                        fontsize: '12pt',
-                        audioRepeat: 0,
-                        localVMConfig: null,
-
                         groups: false,
-                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
-                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
+                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor: { ...DEFAULT_EDITOR_EXAM_CONFIG }, eduvidual:{}, forms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
+                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor: { ...DEFAULT_EDITOR_EXAM_CONFIG }, eduvidual:{}, forms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
                     },
                     3: {
-                        examtype: 'math',   
+                        examtype: 'math',
                         timelimit: 600,
                         locked: false,
                         sectionname: "Abschnitt 3",
-                        spellchecklang: 'de-DE', 
-                        suggestions: false, 
-
-                        cmargin: { side: 'right', size: 3 }, 
-
-                        formsUrl: null,
-                        
-                        linespacing: 2, 
-                        languagetool: false,
-                        fontfamily: "sans-serif", 
-                        fontsize: '12pt',
-                        audioRepeat: 0,
-                        localVMConfig: null,
-
                         groups: false,
-                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
-                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
+                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor: { ...DEFAULT_EDITOR_EXAM_CONFIG }, eduvidual:{}, forms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
+                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor: { ...DEFAULT_EDITOR_EXAM_CONFIG }, eduvidual:{}, forms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
                     },
                     4: {
-                        examtype: 'math',   
+                        examtype: 'math',
                         timelimit: 600,
                         locked: false,
                         sectionname: "Abschnitt 4",
-                        spellchecklang: 'de-DE', 
-                        suggestions: false, 
-
-                        cmargin: { side: 'right', size: 3 }, 
-
-                        formsUrl: null,
-                        
-                        linespacing: 2, 
-                        languagetool: false,
-                        fontfamily: "sans-serif", 
-                        fontsize: '12pt',
-                        audioRepeat: 0,
-                        localVMConfig: null,
                         groups: false,
-                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
-                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
+                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor: { ...DEFAULT_EDITOR_EXAM_CONFIG }, eduvidual:{}, forms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
+                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor: { ...DEFAULT_EDITOR_EXAM_CONFIG }, eduvidual:{}, forms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
                     }
                 },                
             } as Exam
@@ -1626,8 +1572,8 @@ computed: {
             return section.groups ? (hasA && hasB) : hasA;
         }
         if (examType === 'forms') {
-            const hasA = !!section.groupA?.examConfig?.gforms?.url;
-            const hasB = !!section.groupB?.examConfig?.gforms?.url;
+            const hasA = !!section.groupA?.examConfig?.forms?.url;
+            const hasB = !!section.groupB?.examConfig?.forms?.url;
             return section.groups ? (hasA && hasB) : hasA;
         }
         if (examType === 'localvm') {

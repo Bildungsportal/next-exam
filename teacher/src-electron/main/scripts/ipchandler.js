@@ -134,7 +134,7 @@ class IpcHandler {
             }
         })
 
-        /** Applies payload.serverstatus to mcServer, validates optional 4-digit pin when present, clears active-section msOfficeFile, writes serverstatus.json under workdir and mirrors it to backupdirectory when configured. */
+        /** Applies payload.serverstatus to mcServer, validates optional 4-digit pin when present, writes serverstatus.json under workdir and mirrors it to backupdirectory when configured. */
         ipcMain.handle('setServerStatus', async (_event, payload) => {
             const { servername, serverstatus: incoming } = payload || {}
             const mcServer = this.config.examServerList[servername]
@@ -159,7 +159,6 @@ class IpcHandler {
                 return { sender: 'server', message: t('control.invalidpayload'), status: 'error' }
             }
             mcServer.serverstatus = incoming
-            mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].msOfficeFile = false
             if (normalizedPin !== null) {
                 mcServer.serverinfo.pin = normalizedPin
             }
