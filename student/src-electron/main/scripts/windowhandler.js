@@ -54,10 +54,8 @@ function getRendererIndexPath() {
 class WindowHandler {
     constructor () {
       this.screenlockwindows = []
-      this.screenlockWindow = null
       this.mainwindow = null
       this.examwindow = null
-      this.splashwin = null
       this.bipwindow = null
       this.config = null
       this.multicastClient = null
@@ -74,19 +72,6 @@ class WindowHandler {
         this.focusTargetAllowed = true
     }
 
-    // return electron window in focus or an other electron window depending on the hierachy
-    getCurrentFocusedWindow() {
-        const focusedWindow = BrowserWindow.getFocusedWindow();
-        if (focusedWindow) {
-          return focusedWindow
-        } else {
-            if (this.screenlockWindow){return this.screenlockWindow}
-            else if (this.examwindow){return this.examwindow}
-            else if (this.mainwindow){return this.mainwindow}
-            else { return false }
-        }
-    }
-    
     getBiPUrl(biptest) {
         if (this.config.bipDemo) {
             return this.config.bipApiUrl;
@@ -97,7 +82,7 @@ class WindowHandler {
         }
     }
 
-    installVueJsDevTools(win) {
+    installVueJsDevTools() {
         if (!app.isPackaged) {
             // Dev-only: keep optional dependency out of release builds.
             import('electron-devtools-installer')
@@ -487,7 +472,7 @@ class WindowHandler {
         // Webview/BrowserView blocking is handled separately via IPC in ipchandler.js or mode-specific handlers below
         const examTypesWithPdfInHeader = ["forms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math", "localvm"];
         if (examTypesWithPdfInHeader.includes(serverstatus.examSections[serverstatus.lockedSection].examtype)) {
-            this.examwindow.webContents.on('will-navigate', (event, url) => {
+            this.examwindow.webContents.on('will-navigate', (event, _) => {
                 event.preventDefault(); // Prevent navigation away from the Vue app (e.g. from PDF links in examheader)
             });
 
@@ -519,10 +504,10 @@ class WindowHandler {
             })
 
             // if a new window should open triggered by window.open()
-            browserView.webContents.on('new-window', (event, url) => { event.preventDefault();   }); // Prevent the new window from opening
+            browserView.webContents.on('new-window', (event, _) => { event.preventDefault();   }); // Prevent the new window from opening
      
             // if a new window should open triggered by target="_blank"
-            browserView.webContents.setWindowOpenHandler(({ url }) => { return { action: 'deny' };   }); // Prevent the new window from opening
+            browserView.webContents.setWindowOpenHandler(({ _ }) => { return { action: 'deny' };   }); // Prevent the new window from opening
 
             let executeCode =  `
                     function lock(){
@@ -688,7 +673,7 @@ class WindowHandler {
             }
         })
 
-        this.installVueJsDevTools(this.mainwindow);
+        this.installVueJsDevTools();
 
         // Register event handlers before loading
         this.mainwindow.on('close', async  (e) => {   // ask before closing
@@ -705,7 +690,6 @@ class WindowHandler {
                     await this.showMinimizeWarning()
                     log.warn(`windowhandler @ createMainWindow: Minimizing Next-Exam to Systemtray`)  
                     this.mainwindow.hide();
-                    return
                 }
             }
         });
@@ -738,27 +722,6 @@ class WindowHandler {
 
 
 
-
-
-
-
-    async showExitWarning(message){
-        this.exitWarningOpen = true
-        this.mainwindow.allowexit = true
-        try {
-            await dialog.showMessageBox(this.mainwindow, {
-                type: 'warning',
-                buttons: ['Ok'],
-                title: 'Programm Beenden',
-                message: message,
-                cancelId: 1
-            });
-            app.quit()
-        } finally {
-            this.exitWarningOpen = false
-        }
-    }
-
     async showExitQuestion(){
         if (this.exitQuestionOpen) {
             log.info("Windowhandler @ showExitQuestion: dialog already open, skipping")
@@ -773,7 +736,7 @@ class WindowHandler {
                 message: 'Wollen sie die Anwendung Next-Exam beenden?',
                 cancelId: 1
             });
-            if(choice.response == 1){
+            if(choice.response === 1){
                 log.info("Windowhandler @ showExitQuestion: do not close Next-Exam after finished Exam")
             }
             else {
@@ -805,10 +768,6 @@ class WindowHandler {
     /**
      * Additional Functions
      */
-
-    isWayland(){
-        return process.env.XDG_SESSION_TYPE === 'wayland'; 
-    }
 
     // this function uses active-win to receive name and url from active window - yet another way to figure out if the focus is still on nextexam
     // this is used to introduce exemptions for the blur listener

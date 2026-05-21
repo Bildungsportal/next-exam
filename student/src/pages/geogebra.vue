@@ -149,9 +149,9 @@
             :key="index"
             type="button"
             class="customClipboard__item"
-            @mousedown.prevent="insertFromClipboar(item)"
-            @keydown.enter.prevent="insertFromClipboar(item)"
-            @keydown.space.prevent="insertFromClipboar(item)"
+            @mousedown.prevent="insertFromClipboard(item)"
+            @keydown.enter.prevent="insertFromClipboard(item)"
+            @keydown.space.prevent="insertFromClipboard(item)"
           >
             <img
               src="/src/assets/img/svg/edit-paste-style.svg"
@@ -751,7 +751,7 @@ export default {
             api.setEditorState({ ...state, content: newContent, caret: newCaret })
         },
 
-        insertFromClipboar(value) {
+        insertFromClipboard(value) {
             const text = String(value ?? '')
             if (!text || !window.ggbApplet) {
                 return
