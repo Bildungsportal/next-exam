@@ -64,7 +64,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: next-exam-teacher-windows-x64-portable-exe
-          path: ./release/**/Next-Exam-Teacher*x64.exe
+          path: ./teacher/dist/electron/Packaged/Next-Exam-Teacher*x64.exe
           retention-days: 5
           
           
@@ -93,5 +93,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: next-exam-student-windows-x64-portable-exe
-          path: ./release/**/Next-Exam-Student*x64.exe
+          path: ./student/dist/electron/Packaged/Next-Exam-Student*x64.exe
           retention-days: 5

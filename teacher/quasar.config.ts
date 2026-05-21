@@ -324,7 +324,7 @@ export default defineConfig(( ctx: any ) => {
         ],
         beforePack: 'scripts/beforepack.js',
         afterPack: 'scripts/afterpack.js',
-        directories: { output: `../release/${version}.${buildNumber}_${artifactDate}` },
+        // directories.output is overridden by quasar to dist/electron/Packaged - cannot change here
         compression: 'normal',
         // include entire UnPackaged folder (electron-main.js at root, public/, preload/, etc.)
         files: ['**/*'],

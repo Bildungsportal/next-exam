@@ -339,7 +339,7 @@ export default defineConfig(( ctx: any ) => {
           { from: 'src-electron/resources/linux', to: 'linux' },
           { from: 'src-electron/resources/win32', to: 'win32' },
         ],
-        directories: { output: `../release/${version}.${buildNumber}_${artifactDate}` },
+        // directories.output is overridden by quasar to dist/electron/Packaged - cannot change here
         compression: 'normal',
         linux: {
           target: 'AppImage',

@@ -92,7 +92,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: next-exam-teacher-macos-x64-dmg
-          path: ./release/**/Next-Exam-Teacher*x64*.dmg
+          path: ./teacher/dist/electron/Packaged/Next-Exam-Teacher*x64*.dmg
           retention-days: 5
 
 
@@ -141,5 +141,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: next-exam-student-macos-x64-dmg
-          path: ./release/**/Next-Exam-Student*x64*.dmg
+          path: ./student/dist/electron/Packaged/Next-Exam-Student*x64*.dmg
           retention-days: 5

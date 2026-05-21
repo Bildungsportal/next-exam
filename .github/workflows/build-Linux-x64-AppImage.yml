@@ -60,7 +60,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: next-exam-teacher-linux-x64-appimage
-          path: ./release/**/Next-Exam-Teacher*x86_64.AppImage
+          path: ./teacher/dist/electron/Packaged/Next-Exam-Teacher*x86_64.AppImage
           retention-days: 5
           
           
@@ -92,5 +92,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: next-exam-student-linux-x64-appimage
-          path: ./release/**/Next-Exam-Student*x86_64.AppImage
+          path: ./student/dist/electron/Packaged/Next-Exam-Student*x86_64.AppImage
           retention-days: 5
