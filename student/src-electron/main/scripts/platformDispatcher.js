@@ -40,7 +40,7 @@ import {
 import {
     detectRunningInWindowsKiosk,
     detectWindowsKioskInstalled,
-    detectWindowsKioskUserExists,
+    detectWindowsKioskProvisionComplete,
     needsWindowsKioskSetup,
 } from './win/windowsKioskSetup.js';
 dotenv.config();
@@ -69,10 +69,10 @@ class PlatformDispatcher {
       this.cageKioskDesktopInstalled = detectCageKioskDesktopInstalled();
       this.needsCageKioskSetup = needsCageKioskSetup();
     } else if (this.platform === 'win32') {
-      this.cageInstalled = detectWindowsKioskUserExists(); // kiosk OS user provisioned
+      this.cageInstalled = detectWindowsKioskProvisionComplete();
       this.runningInCage = detectRunningInWindowsKiosk();
-      this.cageKioskAppImageInstalled = detectWindowsKioskInstalled(); // exe copied to C:\NextExam
-      this.cageKioskDesktopInstalled = detectWindowsKioskInstalled(); // assigned-access acts as desktop entry
+      this.cageKioskAppImageInstalled = detectWindowsKioskInstalled();
+      this.cageKioskDesktopInstalled = detectWindowsKioskProvisionComplete();
       this.needsCageKioskSetup = needsWindowsKioskSetup();
     } else {
       this.cageInstalled = false;

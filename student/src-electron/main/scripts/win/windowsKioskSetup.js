@@ -17,6 +17,8 @@ import log from 'electron-log';
 export const KIOSK_USERNAME = 'next-exam-kiosk';
 export const KIOSK_INSTALL_DIR = 'C:\\NextExam';
 export const KIOSK_INSTALL_EXE = 'C:\\NextExam\\next-exam.exe';
+// written only when install-windows-kiosk.ps1 finishes (incl. MDM); partial runs must not hide the UI button
+export const KIOSK_PROVISION_MARKER = 'C:\\NextExam\\.kiosk-provision-complete';
 
 // resolve packaged vs dev path to the PowerShell payload
 function resolveProvisioningScript() {
@@ -43,6 +45,12 @@ export function detectWindowsKioskInstalled() {
     return existsSync(KIOSK_INSTALL_EXE);
 }
 
+/** True when elevated provisioning completed end-to-end (not merely user+exe from a failed run). */
+export function detectWindowsKioskProvisionComplete() {
+    if (process.platform !== 'win32') return false;
+    return existsSync(KIOSK_PROVISION_MARKER);
+}
+
 /** True when the local kiosk OS user already exists (best-effort, swallow errors). */
 export function detectWindowsKioskUserExists() {
     if (process.platform !== 'win32') return false;
@@ -60,7 +68,7 @@ export function detectWindowsKioskUserExists() {
 export function needsWindowsKioskSetup() {
     if (process.platform !== 'win32') return false;
     if (detectRunningInWindowsKiosk()) return false;
-    return !(detectWindowsKioskInstalled() && detectWindowsKioskUserExists());
+    return !detectWindowsKioskProvisionComplete();
 }
 
 /** True when this process already runs with administrator token (avoids unneeded UAC prompt). */

@@ -12,8 +12,31 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const pdfjsLegacyPdf = path.resolve(__dirname, 'node_modules/pdfjs-dist/legacy/build/pdf.mjs');
-const pdfjsLegacyWorker = path.resolve(__dirname, 'node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs');
+
+/** First existing pdfjs-dist artifact (guards against incomplete node_modules installs). */
+function resolvePdfJsFile(...relPaths: string[]): string {
+  for (const rel of relPaths) {
+    const p = path.resolve(__dirname, 'node_modules/pdfjs-dist', rel);
+    if (fse.existsSync(p)) return p;
+  }
+  throw new Error(
+    `pdfjs-dist files missing under ${path.resolve(__dirname, 'node_modules/pdfjs-dist')}. ` +
+    'Remove node_modules/pdfjs-dist and run npm install.',
+  );
+}
+
+const pdfjsLegacyPdf = resolvePdfJsFile(
+  'legacy/build/pdf.mjs',
+  'legacy/build/pdf.min.mjs',
+  'build/pdf.mjs',
+  'build/pdf.min.mjs',
+);
+const pdfjsLegacyWorker = resolvePdfJsFile(
+  'legacy/build/pdf.worker.mjs',
+  'legacy/build/pdf.worker.min.mjs',
+  'build/pdf.worker.mjs',
+  'build/pdf.worker.min.mjs',
+);
 
 const buildDate = (() => {
   const now = new Date();

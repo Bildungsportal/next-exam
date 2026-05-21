@@ -1,7 +1,21 @@
 import fs from 'fs';
+import path from 'path';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
+// pdfjs-dist npm tarball includes legacy/build/*.mjs; incomplete installs leave only .map files and break Vite/Rolldown
+function assertPdfJsDist() {
+    const root = path.join(process.cwd(), 'node_modules', 'pdfjs-dist');
+    const required = ['legacy/build/pdf.mjs', 'legacy/build/pdf.worker.mjs'];
+    const missing = required.filter((rel) => !fs.existsSync(path.join(root, rel)));
+    if (missing.length) {
+        console.error('❌ pdfjs-dist incomplete. Missing:', missing.join(', '));
+        console.error('   Fix: remove node_modules/pdfjs-dist, then npm install (or npm ci)');
+        process.exit(1);
+    }
+}
+assertPdfJsDist();
 
 // Erstelle Datums-String
 const now = new Date();

@@ -68,6 +68,7 @@ import {
 import {
     detectRunningInWindowsKiosk,
     detectWindowsKioskInstalled,
+    detectWindowsKioskProvisionComplete,
     detectWindowsKioskUserExists,
     needsWindowsKioskSetup,
     initiateKioskSetup as initiateWindowsKioskSetup,
@@ -191,12 +192,12 @@ class IpcHandler {
         // on win32 the same fields are populated from windowsKioskSetup (runningInCage=kiosk OS user).
         ipcMain.handle('get-linux-kiosk-info', () => {
             if (process.platform === 'win32') {
-                const installed = detectWindowsKioskInstalled() && detectWindowsKioskUserExists();
+                const complete = detectWindowsKioskProvisionComplete();
                 return {
-                    cageInstalled: detectWindowsKioskUserExists(),
+                    cageInstalled: complete,
                     runningInCage: detectRunningInWindowsKiosk(),
                     cageKioskAppImageInstalled: detectWindowsKioskInstalled(),
-                    cageKioskDesktopInstalled: installed,
+                    cageKioskDesktopInstalled: complete,
                     needsCageKioskSetup: needsWindowsKioskSetup(),
                     displayServer: platformDispatcher.displayServer,
                 };

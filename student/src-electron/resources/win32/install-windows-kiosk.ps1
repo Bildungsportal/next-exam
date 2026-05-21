@@ -11,6 +11,59 @@ $ErrorActionPreference = 'Stop'
 
 function Write-Step($msg) { Write-Host "[next-exam-kiosk] $msg" }
 
+# MDM_AssignedAccess WMI lives in local-system partition; admin token cannot set Configuration (PropertyNotFound).
+function Apply-MdmAssignedAccessConfiguration([string]$ConfigXml) {
+    $stamp = [guid]::NewGuid().ToString('N')
+    $taskName = "NextExam-Kiosk-MDM-$stamp"
+    $configPath = Join-Path $env:TEMP "next-exam-kiosk-aa-$stamp.xml"
+    $helperPath = Join-Path $env:TEMP "next-exam-kiosk-mdm-$stamp.ps1"
+    $resultPath = Join-Path $env:TEMP "next-exam-kiosk-mdm-result-$stamp.txt"
+    Set-Content -LiteralPath $configPath -Value $ConfigXml -Encoding UTF8
+    $helper = @'
+param([string]$ConfigPath, [string]$ResultPath)
+$ErrorActionPreference = 'Stop'
+try {
+    Add-Type -AssemblyName System.Web
+    $encoded = [System.Web.HttpUtility]::HtmlEncode((Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8))
+    $ns = 'root\cimv2\mdm\dmmap'
+    $filter = "InstanceID='AssignedAccess' AND ParentID='./Vendor/MSFT/'"
+    $obj = Get-CimInstance -Namespace $ns -ClassName MDM_AssignedAccess -Filter $filter
+    if (-not $obj) {
+        $all = @(Get-CimInstance -Namespace $ns -ClassName MDM_AssignedAccess)
+        if ($all.Count -gt 0) { $obj = $all[0] }
+    }
+    if (-not $obj) { throw 'MDM_AssignedAccess instance not found' }
+    Set-CimInstance -InputObject $obj -Property @{ Configuration = $encoded } -ErrorAction Stop
+    Set-Content -LiteralPath $ResultPath -Value '0' -Encoding ASCII -NoNewline
+} catch {
+    Set-Content -LiteralPath $ResultPath -Value ("1`n$($_.Exception.Message)") -Encoding UTF8
+    exit 1
+}
+'@
+    Set-Content -LiteralPath $helperPath -Value $helper -Encoding UTF8
+    try {
+        Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
+        $action = New-ScheduledTaskAction -Execute 'powershell.exe' `
+            -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$helperPath`" -ConfigPath `"$configPath`" -ResultPath `"$resultPath`""
+        $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+        Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Force | Out-Null
+        Start-ScheduledTask -TaskName $taskName
+        $deadline = (Get-Date).AddSeconds(120)
+        do {
+            Start-Sleep -Milliseconds 500
+            if (Test-Path -LiteralPath $resultPath) {
+                $result = (Get-Content -LiteralPath $resultPath -Raw).Trim()
+                if ($result -eq '0') { return }
+                throw "SYSTEM MDM apply failed: $result"
+            }
+        } while ((Get-Date) -lt $deadline)
+        throw 'SYSTEM MDM apply timed out'
+    } finally {
+        Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $configPath, $helperPath, $resultPath -Force -ErrorAction SilentlyContinue
+    }
+}
+
 # 0) edition check: Multi-App Assigned Access (MDM_AssignedAccess CSP) is unsupported on Home/Core
 $edition = (Get-WindowsEdition -Online).Edition
 Write-Step "Windows edition: $edition"
@@ -27,10 +80,11 @@ $TargetExe = Join-Path $InstallDir 'next-exam.exe'
 Copy-Item -LiteralPath $AppPath -Destination $TargetExe -Force
 Write-Step "copied app -> $TargetExe"
 
-# grant Users group read+execute so the kiosk profile can launch it
+# grant Users group read+execute so the kiosk profile can launch it (SID: locale-independent; "Users"/"Benutzer" names fail on non-EN Windows)
+$usersSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-545')
 $acl = Get-Acl $InstallDir
 $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-    'BUILTIN\Users','ReadAndExecute,ListDirectory','ContainerInherit,ObjectInherit','None','Allow')
+    $usersSid,'ReadAndExecute,ListDirectory','ContainerInherit,ObjectInherit','None','Allow')
 $acl.AddAccessRule($rule)
 Set-Acl -Path $InstallDir -AclObject $acl
 
@@ -43,11 +97,11 @@ if (-not $existing) {
 } else {
     Write-Step "local user $KioskUser already exists"
 }
-# ensure member of Users, remove from Administrators if accidentally there
-Add-LocalGroupMember -Group 'Users' -Member $KioskUser -ErrorAction SilentlyContinue
-Remove-LocalGroupMember -Group 'Administrators' -Member $KioskUser -ErrorAction SilentlyContinue
+# ensure member of Users, remove from Administrators if accidentally there (SIDs avoid localized group names)
+Add-LocalGroupMember -Group 'S-1-5-32-545' -Member $KioskUser -ErrorAction SilentlyContinue
+Remove-LocalGroupMember -Group 'S-1-5-32-544' -Member $KioskUser -ErrorAction SilentlyContinue
 
-$sid = (New-Object System.Security.Principal.NTAccount($KioskUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+$sid = (New-Object System.Security.Principal.NTAccount("$env:COMPUTERNAME\$KioskUser")).Translate([System.Security.Principal.SecurityIdentifier]).Value
 
 # 2a) materialize profile directory + NTUSER.DAT WITHOUT requiring an interactive logon (userenv!CreateProfile)
 $ProfilePath = "C:\Users\$KioskUser"
@@ -202,13 +256,10 @@ $appsXml
 </AssignedAccessConfiguration>
 "@
 
-# Apply via MDM_AssignedAccess WMI bridge (CSP path used by Intune/SCM)
-$namespace = 'root\cimv2\mdm\dmmap'
-$class = 'MDM_AssignedAccess'
-$obj = Get-CimInstance -Namespace $namespace -ClassName $class
-# encode XML as the CSP expects (entities-escaped string in Configuration property)
-$obj.Configuration = [System.Security.SecurityElement]::Escape($config)
-Set-CimInstance -CimInstance $obj
+# Apply via MDM_AssignedAccess WMI bridge (CSP); must run as SYSTEM (see Apply-MdmAssignedAccessConfiguration)
+Apply-MdmAssignedAccessConfiguration -ConfigXml $config
 Write-Step "applied MDM_AssignedAccess Multi-App configuration (single app: next-exam.exe)"
 
+# marker: renderer treats provisioning as complete only after this file exists (partial runs keep install button visible)
+Set-Content -LiteralPath (Join-Path $InstallDir '.kiosk-provision-complete') -Value (Get-Date -Format 'o') -Encoding UTF8
 Write-Step "DONE. Reboot recommended. Logon screen will list '$KioskUser' (no password)."
