@@ -914,7 +914,8 @@ import {
             }
             if (!qemuOk) {
                 this.multicastClient.clientinfo.exammode = false;
-                this.localVmStartState = 'idle';
+                // 'blocked' (not 'idle') so next 5s server poll does not re-trigger startExam -> re-spawn qemu-not-available dialog every cycle; reset to 'idle' happens when teacher turns exammode off (see processUpdatedServerstatus)
+                this.localVmStartState = 'blocked';
                 return;
             }
             try {                
