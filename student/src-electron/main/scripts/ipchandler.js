@@ -68,7 +68,6 @@ import {
 import {
     detectRunningInWindowsKiosk,
     detectWindowsKioskInstalled,
-    detectWindowsKioskProvisionComplete,
     detectWindowsKioskUserExists,
     needsWindowsKioskSetup,
     initiateKioskSetup as initiateWindowsKioskSetup,
@@ -192,12 +191,12 @@ class IpcHandler {
         // on win32 the same fields are populated from windowsKioskSetup (runningInCage=kiosk OS user).
         ipcMain.handle('get-linux-kiosk-info', () => {
             if (process.platform === 'win32') {
-                const complete = detectWindowsKioskProvisionComplete();
+                const installed = detectWindowsKioskInstalled() && detectWindowsKioskUserExists();
                 return {
-                    cageInstalled: complete,
+                    cageInstalled: detectWindowsKioskUserExists(),
                     runningInCage: detectRunningInWindowsKiosk(),
                     cageKioskAppImageInstalled: detectWindowsKioskInstalled(),
-                    cageKioskDesktopInstalled: complete,
+                    cageKioskDesktopInstalled: installed,
                     needsCageKioskSetup: needsWindowsKioskSetup(),
                     displayServer: platformDispatcher.displayServer,
                 };
@@ -225,7 +224,9 @@ class IpcHandler {
         // channel name kept for renderer compatibility; win32 routes to UAC + PowerShell payload.
         ipcMain.handle('install-linux-cage-kiosk', () => {
             if (process.platform === 'win32') {
-                return initiateWindowsKioskSetup(process.execPath);
+                // optional extra apps list under EXAM-STUDENT workdir; passed through to PS only if file exists
+                const extraAppsFile = path.join(this.config.workdirectory, 'kiosk-allowed-apps.txt');
+                return initiateWindowsKioskSetup(process.execPath, extraAppsFile);
             }
             const source = process.env.APPIMAGE || process.execPath;
             const script = app.isPackaged

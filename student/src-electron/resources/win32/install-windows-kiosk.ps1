@@ -1,10 +1,49 @@
 # Provisions next-exam-kiosk standard user + Multi-App Assigned Access (Windows Kiosk).
 # Runs elevated. Inputs: -AppPath <portable exe> [-KioskUser next-exam-kiosk]
+#
+# STANDALONE USAGE EXAMPLES (run from elevated PowerShell):
+#   .\install-windows-kiosk.ps1 -AppPath "C:\path\to\next-exam.exe"
+#   .\install-windows-kiosk.ps1 -AppPath "C:\path\to\next-exam.exe" -ExtraAppsFile "C:\path\to\meine-apps.txt"
+#   .\install-windows-kiosk.ps1 -AppPath "C:\path\to\next-exam.exe" -KioskUser "exam" -InstallDir "C:\Kiosk"
+#
+# When invoked by next-exam itself (via the in-app UAC prompt), all parameters are
+# supplied automatically by the renderer/node module (process.execPath as -AppPath,
+# EXAM-STUDENT/kiosk-allowed-apps.txt as -ExtraAppsFile).
+#
+# OPTIONAL APP WHITELIST (-ExtraAppsFile):
+#   Plaintext file, one absolute path per line. Each path = additional desktop app the
+#   kiosk user may launch beside next-exam.exe. next-exam itself is always allowed and
+#   auto-launches; entries here do NOT auto-launch.
+#
+#   File location used by next-exam (passed in by the renderer):
+#     %USERPROFILE%\EXAM-STUDENT\kiosk-allowed-apps.txt
+#   When -ExtraAppsFile is omitted (e.g. running this script directly), the same path is
+#   auto-detected via the owner of the running explorer.exe (interactive user, not the admin).
+#   File is OPTIONAL. If absent, only next-exam.exe is whitelisted.
+#
+#   Rules:
+#     - one absolute path per line (spaces ok, no quotes)
+#     - blank lines ignored
+#     - lines starting with '#' are comments
+#     - paths that do not exist abort setup with exit code 11 (renderer shows hint)
+#
+#   Example kiosk-allowed-apps.txt:
+#     # extra apps for next-exam kiosk
+#     C:\Program Files\Bentley\MicroStation\MicroStation.exe
+#     C:\Windows\System32\calc.exe
+#
+# EXIT CODES (consumed by windowsKioskSetup.js):
+#     0   success
+#     10  EDITION_UNSUPPORTED (Home/Core; needs Pro/Edu/Enterprise)
+#     11  MISSING_APP_PATH (entry in ExtraAppsFile does not exist)
+#     9999 unexpected exception (transcript in temp log)
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)][string]$AppPath,
     [string]$KioskUser = 'next-exam-kiosk',
-    [string]$InstallDir = 'C:\NextExam'
+    [string]$InstallDir = 'C:\NextExam',
+    # optional plaintext file with one absolute exe path per line; blank/# lines ignored
+    [string]$ExtraAppsFile = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -196,11 +235,48 @@ foreach ($g in $classes) {
 }
 Write-Step "removable storage denied for $KioskUser"
 
-# 4) Multi-App Assigned Access (single app now; AllowedApps[] is the only place to extend later)
+# 4) Multi-App Assigned Access — next-exam first (AutoLaunch), then optional extras from ExtraAppsFile
 $AllowedApps = @(
     @{ Path = $TargetExe; AutoLaunch = $true }
-    # @{ Path = 'C:\Program Files\Bentley\MicroStation\MicroStation.exe'; AutoLaunch = $false }
 )
+
+# fallback: when -ExtraAppsFile not passed in, try the interactive user's EXAM-STUDENT folder.
+# elevated $env:USERPROFILE points at the admin, not the teacher who launched next-exam, so we
+# look up the owner of explorer.exe (= the active interactive user) and probe their profile path.
+if (-not $ExtraAppsFile) {
+    try {
+        $explorer = Get-CimInstance Win32_Process -Filter "Name='explorer.exe'" | Select-Object -First 1
+        if ($explorer) {
+            $ownerInfo = Invoke-CimMethod -InputObject $explorer -MethodName GetOwner
+            if ($ownerInfo.ReturnValue -eq 0 -and $ownerInfo.User) {
+                $candidate = Join-Path "C:\Users\$($ownerInfo.User)" 'EXAM-STUDENT\kiosk-allowed-apps.txt'
+                if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+                    $ExtraAppsFile = $candidate
+                    Write-Step "auto-detected extra apps file: $ExtraAppsFile"
+                }
+            }
+        }
+    } catch {
+        Write-Step "WARNING: could not auto-detect EXAM-STUDENT folder: $($_.Exception.Message)"
+    }
+}
+
+if ($ExtraAppsFile -and (Test-Path $ExtraAppsFile)) {
+    Write-Step "reading extra apps from $ExtraAppsFile"
+    $lines = Get-Content -LiteralPath $ExtraAppsFile -Encoding UTF8
+    foreach ($raw in $lines) {
+        $line = $raw.Trim()
+        if (-not $line) { continue }
+        if ($line.StartsWith('#')) { continue }
+        if (-not (Test-Path -LiteralPath $line -PathType Leaf)) {
+            # exit 11 = renderer maps to friendly "missing path" dialog with the offending path in the transcript
+            Write-Host "ERROR_MISSING_APP_PATH: $line"
+            exit 11
+        }
+        $AllowedApps += @{ Path = $line; AutoLaunch = $false }
+        Write-Step "  + extra app: $line"
+    }
+}
 
 function New-AllowedAppXml($apps) {
     $sb = New-Object System.Text.StringBuilder

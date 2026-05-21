@@ -85,9 +85,10 @@ function isProcessElevated() {
 /**
  * Main entry. Linux path is handled elsewhere (pkexec install-cage-kiosk.sh).
  * On Windows: relaunches the PowerShell payload via `Start-Process -Verb RunAs` (UAC).
- * Returns Promise<{ok:boolean,error?:string,skipped?:boolean}>.
+ * extraAppsFile (optional) = absolute path to a plaintext file with one extra exe path per line.
+ * Returns Promise<{ok:boolean,error?:string,code?:string,skipped?:boolean}>.
  */
-export async function initiateKioskSetup(appPath) {
+export async function initiateKioskSetup(appPath, extraAppsFile = '') {
     if (process.platform !== 'win32') {
         // Linux/macOS callers should use their own setup path; signal no-op here
         return { ok: false, skipped: true, error: 'initiateKioskSetup: non-win32 handled elsewhere' };
@@ -101,11 +102,13 @@ export async function initiateKioskSetup(appPath) {
     if (!existsSync(script)) {
         return { ok: false, error: `provisioning script not found: ${script}` };
     }
+    // optional: only pass ExtraAppsFile if it actually exists (avoid PS errors on stale paths)
+    const extraFile = extraAppsFile && existsSync(extraAppsFile) ? extraAppsFile : '';
 
     // when already elevated (rare for a portable app) skip Start-Process and run inline
     if (isProcessElevated()) {
         log.info('windowsKioskSetup: already elevated, running provisioning inline');
-        return runPowerShellInline(script, exe);
+        return runPowerShellInline(script, exe, extraFile);
     }
 
     // Start-Process -Verb RunAs returns a Process handle without PROCESS_QUERY_INFORMATION rights when
@@ -117,9 +120,10 @@ export async function initiateKioskSetup(appPath) {
 
     // child PS command: run provisioning script, transcript stdout/stderr to logFile, persist $LASTEXITCODE
     const psEscape = (s) => String(s).replace(/'/g, "''");
+    const extraArg = extraFile ? ` -ExtraAppsFile '${psEscape(extraFile)}'` : '';
     const childCommand =
         `try { ` +
-        `& '${psEscape(script)}' -AppPath '${psEscape(exe)}' *>&1 | Tee-Object -FilePath '${psEscape(logFile)}'; ` +
+        `& '${psEscape(script)}' -AppPath '${psEscape(exe)}'${extraArg} *>&1 | Tee-Object -FilePath '${psEscape(logFile)}'; ` +
         `Set-Content -Path '${psEscape(exitFile)}' -Value $LASTEXITCODE -Encoding ASCII ` +
         `} catch { ` +
         `($_ | Out-String) | Tee-Object -FilePath '${psEscape(logFile)}' -Append; ` +
@@ -159,6 +163,9 @@ export async function initiateKioskSetup(appPath) {
             } else if (childExit === 10) {
                 // distinct code so renderer shows the friendly edition-unsupported dialog
                 resolve({ ok: false, code: 'EDITION_UNSUPPORTED', error: transcript.trim() });
+            } else if (childExit === 11) {
+                // missing extra-app path -> renderer shows friendly hint with the offending line from transcript
+                resolve({ ok: false, code: 'MISSING_APP_PATH', error: transcript.trim() });
             } else {
                 resolve({
                     ok: false,
@@ -170,11 +177,11 @@ export async function initiateKioskSetup(appPath) {
 }
 
 // fallback path when host is already admin (e.g. dev box with elevated electron)
-function runPowerShellInline(script, exe) {
+function runPowerShellInline(script, exe, extraFile = '') {
+    const args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script, '-AppPath', exe];
+    if (extraFile) { args.push('-ExtraAppsFile', extraFile); }
     return new Promise((resolve) => {
-        const child = spawn('powershell.exe',
-            ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script, '-AppPath', exe],
-            { windowsHide: true });
+        const child = spawn('powershell.exe', args, { windowsHide: true });
         let stdout = '';
         let stderr = '';
         child.stdout?.on('data', (c) => { stdout += String(c); });

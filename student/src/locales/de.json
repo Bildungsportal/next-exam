@@ -315,6 +315,8 @@
         "winKioskSetupEditionFailed": "Windows Edition wird nicht unterstützt",
         "winKioskSetupEditionHint": "Multi-App Assigned Access benötigt Windows Pro, Education oder Enterprise. Auf Windows Home ist diese Kiosk-Variante nicht verfügbar.",
         "winKioskSetupFailed": "Einrichtung fehlgeschlagen",
+        "winKioskSetupMissingPathTitle": "App-Pfad in kiosk-allowed-apps.txt nicht gefunden",
+        "winKioskSetupMissingPathHint": "Mindestens eine in EXAM-STUDENT/kiosk-allowed-apps.txt aufgelistete Anwendung existiert nicht auf diesem PC. Bitte korrigieren oder Zeile entfernen, dann erneut versuchen.",
         "winKioskSetupInstall": "Einrichten",
         "winKioskSetupLater": "Später",
         "winKioskSetupRoot": "Dafür sind Administrator-Rechte erforderlich (UAC-Abfrage).",
