@@ -358,9 +358,9 @@ export default defineConfig(( ctx: any ) => {
           target: [{ target: 'portable', arch: ['x64'] }, { target: 'msi', arch: ['x64'] }],
           artifactName: artifactNamePattern,
           files: ['**/*', '!public/qemu/win/**', '!public/qemu/lin/**', '!public/qemu/mac/**'],
-          // electron-builder 26: use signtoolOptions to enable signing (no win.sign boolean)
+          // electron-builder 26: signtoolOptions enables signing; certificate is provided via CSC_LINK/CSC_KEY_PASSWORD (.p12 from CI secret)
           ...(signEnabled && {
-            signtoolOptions: { certificateSubjectName: 'OSOS Austria', signingHashAlgorithms: ['sha256'] },
+            signtoolOptions: { signingHashAlgorithms: ['sha256'] },
           }),
         },
         ...(signEnabled && { afterSign: 'scripts/notarize.cjs' }),
