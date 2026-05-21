@@ -2,7 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 
-dotenv.config();
+// load .env when present (local dev); otherwise fall back to committed .env.production (CI)
+const envFile = fs.existsSync('./.env') ? './.env' : './.env.production';
+dotenv.config({ path: envFile });
+console.log(`📦 prebuild loaded env from ${envFile}`);
 
 // pdfjs-dist npm tarball includes legacy/build/*.mjs; incomplete installs leave only .map files and break Vite/Rolldown
 function assertPdfJsDist() {
@@ -79,9 +82,9 @@ const filename = `${process.env.PRODUCT_NAME || 'Next-Exam-Student'}_${process.e
 const packageJsonPath = './package.json';
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 
-// Setze die Werte in package.json
-packageJson.version = process.env.VERSION;
-packageJson.buildNumber = process.env.BUILD_NUMBER;
+// fallback to existing package.json values when env is missing (e.g. CI without .env) - undefined would drop the key on stringify
+packageJson.version = process.env.VERSION || packageJson.version;
+packageJson.buildNumber = process.env.BUILD_NUMBER || '1';
 packageJson.buildVersion = buildVersion;
 // Schreibe die aktualisierte package.json
 fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n');

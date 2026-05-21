@@ -8,8 +8,10 @@ import { builtinModules } from 'module';
 import fse from 'fs-extra';
 import pkg from './package.json';
 import dotenv from 'dotenv';
+import fs from 'fs';
 
-dotenv.config();
+// load .env when present (local dev); otherwise fall back to committed .env.production (CI)
+dotenv.config({ path: fs.existsSync('./.env') ? './.env' : './.env.production' });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

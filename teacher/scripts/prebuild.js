@@ -1,8 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
-// load .env (same as student / quasar way)
-dotenv.config();
+
+// load .env when present (local dev); otherwise fall back to committed .env.production (CI)
+const envFile = fs.existsSync('./.env') ? './.env' : './.env.production';
+dotenv.config({ path: envFile });
+console.log(`📦 prebuild loaded env from ${envFile}`);
 
 const now = new Date();
 const buildDate = now.getFullYear() +
