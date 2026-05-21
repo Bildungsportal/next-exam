@@ -90,7 +90,7 @@ export default defineConfig(( ctx: any ) => {
     build: {
       target: {
         browser: [ 'es2022', 'firefox115', 'chrome115', 'safari14' ],
-        node: 'node20'
+        node: 'node24'
       },
 
       typescript: {
@@ -314,6 +314,8 @@ export default defineConfig(( ctx: any ) => {
         appId: 'com.nextexam.teacher',
         productName,
         buildVersion: `${version}.${buildNumber}`,
+        // disable implicit CI publishing (removed in electron-builder v27)
+        publish: null,
         asar: true,
         asarUnpack: [
           'public',

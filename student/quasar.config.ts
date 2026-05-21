@@ -89,8 +89,8 @@ export default defineConfig(( ctx: any ) => {
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#build
     build: {
       target: {
-        browser: [ 'es2022', 'firefox115', 'chrome115', 'safari14' ],
-        node: 'node20'
+        browser: [ 'es2022', 'firefox115', 'chrome115' ],
+        node: 'node24'
       },
 
       typescript: {
@@ -141,7 +141,7 @@ export default defineConfig(( ctx: any ) => {
         viteConf.optimizeDeps.include = viteConf.optimizeDeps.include || [];
         viteConf.optimizeDeps.include.push('pdfjs-dist');
         viteConf.build = viteConf.build || {};
-        viteConf.build.chunkSizeWarningLimit = 1500;
+        viteConf.build.chunkSizeWarningLimit = 8000;
         // Electron: build renderer into public/ so one copy – no duplication; base ./ so relative paths work from public/index.html
         if (ctx.mode.electron && ctx.prod) {
           const baseOut = viteConf.build?.outDir ?? path.join(__dirname, 'dist', 'electron', 'UnPackaged');
@@ -324,6 +324,8 @@ export default defineConfig(( ctx: any ) => {
         appId: 'com.nextexam.student',
         productName,
         buildVersion: `${version}.${buildNumber}`,
+        // disable implicit CI publishing (removed in electron-builder v27)
+        publish: null,
         asar: { smartUnpack: true },
         beforePack: 'scripts/beforepack.js',
         afterPack: 'scripts/afterpack.js',
@@ -370,8 +372,8 @@ export default defineConfig(( ctx: any ) => {
           target: [{ target: 'portable', arch: ['x64'] }, { target: 'msi', arch: ['x64'] }],
           artifactName: artifactNamePattern,
           files: ['**/*', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**', '!public/minimal-jre-11-lin/**', '!public/qemu/win/**', '!public/qemu/lin/**', '!public/qemu/mac/**'],
+          // electron-builder 26: use signtoolOptions to enable signing (no win.sign boolean)
           ...(signEnabled && {
-            sign: true,
             signtoolOptions: { certificateSubjectName: 'OSOS Austria', signingHashAlgorithms: ['sha256'] },
           }),
         },
