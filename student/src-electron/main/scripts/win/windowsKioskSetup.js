@@ -8,7 +8,7 @@
  * Shares public field names with cage (runningInCage etc.) so renderer logic is unchanged.
  */
 import { execSync, spawn } from 'child_process';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync, unlinkSync } from 'fs';
 import path from 'path';
 import os from 'os';
 import { app } from 'electron';
@@ -94,57 +94,84 @@ export async function initiateKioskSetup(appPath) {
         return { ok: false, error: `provisioning script not found: ${script}` };
     }
 
-    // single-quote-escape paths for PowerShell literal strings
-    const psEscape = (s) => String(s).replace(/'/g, "''");
-    const scriptArg = `'${psEscape(script)}'`;
-    const appArg = `'${psEscape(exe)}'`;
-
-    // inner command run elevated; -ExecutionPolicy Bypass needed because file is unsigned
-    const inner = `& powershell -NoProfile -ExecutionPolicy Bypass -File ${scriptArg} -AppPath ${appArg}`;
-
     // when already elevated (rare for a portable app) skip Start-Process and run inline
     if (isProcessElevated()) {
         log.info('windowsKioskSetup: already elevated, running provisioning inline');
-        return runPowerShellInline(inner);
+        return runPowerShellInline(script, exe);
     }
 
-    // outer powershell uses Start-Process -Verb RunAs to trigger UAC; -Wait so we can capture exit code
-    const launcher = `Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-Command',"${inner.replace(/"/g, '\\"')}" -Verb RunAs -Wait -PassThru | Select-Object -ExpandProperty ExitCode`;
+    // Start-Process -Verb RunAs returns a Process handle without PROCESS_QUERY_INFORMATION rights when
+    // crossing the elevation boundary -> .ExitCode throws "Access denied". Workaround: elevated child
+    // writes its exit code into a temp file, parent reads it back after -Wait.
+    const exitFile = path.join(os.tmpdir(), `next-exam-kiosk-exit-${Date.now()}-${process.pid}.txt`);
+    const logFile = path.join(os.tmpdir(), `next-exam-kiosk-log-${Date.now()}-${process.pid}.txt`);
+    try { if (existsSync(exitFile)) unlinkSync(exitFile); } catch {}
+
+    // child PS command: run provisioning script, transcript stdout/stderr to logFile, persist $LASTEXITCODE
+    const psEscape = (s) => String(s).replace(/'/g, "''");
+    const childCommand =
+        `try { ` +
+        `& '${psEscape(script)}' -AppPath '${psEscape(exe)}' *>&1 | Tee-Object -FilePath '${psEscape(logFile)}'; ` +
+        `Set-Content -Path '${psEscape(exitFile)}' -Value $LASTEXITCODE -Encoding ASCII ` +
+        `} catch { ` +
+        `($_ | Out-String) | Tee-Object -FilePath '${psEscape(logFile)}' -Append; ` +
+        `Set-Content -Path '${psEscape(exitFile)}' -Value 9999 -Encoding ASCII ` +
+        `}`;
+
+    // PowerShell -EncodedCommand expects UTF-16 LE base64 -> no quoting issues at all
+    const encoded = Buffer.from(childCommand, 'utf16le').toString('base64');
+
+    // launcher: spawn elevated child, wait for it, then exit with code 0 (we read exitFile ourselves)
+    const launcher =
+        `$p = Start-Process -FilePath 'powershell.exe' ` +
+        `-ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-EncodedCommand','${encoded}' ` +
+        `-Verb RunAs -Wait -PassThru; ` +
+        `exit 0`;
 
     return new Promise((resolve) => {
         const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', launcher], { windowsHide: true });
-        let stdout = '';
-        let stderr = '';
-        child.stdout?.on('data', (c) => { stdout += String(c); });
-        child.stderr?.on('data', (c) => { stderr += String(c); });
+        let launcherStderr = '';
+        child.stderr?.on('data', (c) => { launcherStderr += String(c); });
         child.on('error', (err) => resolve({ ok: false, error: err.message }));
-        child.on('close', (code) => {
-            // exit code 0 here means the LAUNCHER ran; UAC denial returns non-zero from Start-Process
-            if (code !== 0) {
-                resolve({ ok: false, error: `UAC launcher failed: ${stderr.trim() || `exit ${code}`}` });
+        child.on('close', () => {
+            // exit code of the LAUNCHER tells us only whether the UAC prompt itself succeeded;
+            // the actual provisioning exit code comes from the temp file written by the elevated child
+            if (!existsSync(exitFile)) {
+                // UAC denied or elevated process never wrote the file
+                resolve({ ok: false, error: `UAC denied or elevated process aborted before completion. ${launcherStderr.trim()}` });
                 return;
             }
-            // parse trailing ExitCode of the elevated child
-            const childExit = parseInt(String(stdout).trim().split(/\s+/).pop(), 10);
+            let childExit = NaN;
+            try { childExit = parseInt(readFileSync(exitFile, 'utf8').trim(), 10); } catch {}
+            const transcript = (() => { try { return readFileSync(logFile, 'utf8'); } catch { return ''; } })();
+            try { unlinkSync(exitFile); } catch {}
+            try { unlinkSync(logFile); } catch {}
             if (Number.isFinite(childExit) && childExit === 0) {
                 resolve({ ok: true });
             } else {
-                resolve({ ok: false, error: `elevated provisioning exited ${Number.isFinite(childExit) ? childExit : 'unknown'}: ${stderr.trim()}` });
+                resolve({
+                    ok: false,
+                    error: `elevated provisioning exited ${Number.isFinite(childExit) ? childExit : 'unknown'}\n${transcript.trim()}`,
+                });
             }
         });
     });
 }
 
 // fallback path when host is already admin (e.g. dev box with elevated electron)
-function runPowerShellInline(inner) {
+function runPowerShellInline(script, exe) {
     return new Promise((resolve) => {
-        const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', inner], { windowsHide: true });
+        const child = spawn('powershell.exe',
+            ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script, '-AppPath', exe],
+            { windowsHide: true });
+        let stdout = '';
         let stderr = '';
+        child.stdout?.on('data', (c) => { stdout += String(c); });
         child.stderr?.on('data', (c) => { stderr += String(c); });
         child.on('error', (err) => resolve({ ok: false, error: err.message }));
         child.on('close', (code) => {
             if (code === 0) resolve({ ok: true });
-            else resolve({ ok: false, error: stderr.trim() || `exit ${code}` });
+            else resolve({ ok: false, error: `exit ${code}\n${stderr.trim()}\n${stdout.trim()}` });
         });
     });
 }
