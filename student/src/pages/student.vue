@@ -414,6 +414,7 @@ export default {
         },
         showCageKioskInstallBtn() {
             const k = this.platformKiosk;
+            // displayServer set to 'windows' on win32 by ipchandler so the same gate works for both OSes
             return isElectronWindow(window) && k.displayServer !== 'n/a' && !k.runningInCage && k.needsCageKioskSetup;
         },
     },

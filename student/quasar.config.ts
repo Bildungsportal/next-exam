@@ -310,6 +310,7 @@ export default defineConfig(( ctx: any ) => {
         ],
         extraResources: [
           { from: 'src-electron/resources/linux', to: 'linux' },
+          { from: 'src-electron/resources/win32', to: 'win32' },
         ],
         directories: { output: `../release/${version}.${buildNumber}_${artifactDate}` },
         compression: 'normal',

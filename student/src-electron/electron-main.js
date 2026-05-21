@@ -27,6 +27,7 @@ import config from './main/config.js';
 import multicastClient from './main/scripts/multicastclient.js'
 import path from 'path'
 import fs from 'fs'
+import { spawn } from 'child_process'
 import * as fsExtra from 'fs-extra';
 import ip from 'ip'
 import { gateway4sync } from 'default-gateway';
@@ -198,6 +199,15 @@ app.on('window-all-closed', async () => {  // last window closed – clear stora
 
 app.on('will-quit', () => {  // if window is closed
     toggleMacOSLockdown(false)
+    // win32 kiosk: when running as the dedicated kiosk OS user, log the session off so the next student starts fresh (State=128 wipes the profile)
+    if (process.platform === 'win32' && platformDispatcher.runningInCage) {
+        try {
+            log.info('main @ will-quit: kiosk session detected, triggering logoff.exe')
+            spawn('logoff.exe', [], { detached: true, stdio: 'ignore' }).unref()
+        } catch (err) {
+            log.error('main @ will-quit: logoff failed', err)
+        }
+    }
 })
 
 app.on('activate', () => {

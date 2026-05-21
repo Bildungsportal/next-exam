@@ -37,6 +37,12 @@ import {
     detectRunningInCage,
     needsCageKioskSetup,
 } from './cageDetect.js';
+import {
+    detectRunningInWindowsKiosk,
+    detectWindowsKioskInstalled,
+    detectWindowsKioskUserExists,
+    needsWindowsKioskSetup,
+} from './win/windowsKioskSetup.js';
 dotenv.config();
 const __dirname = import.meta.dirname;
 
@@ -54,12 +60,28 @@ class PlatformDispatcher {
     this.isGNOME = this._isGNOME();
     this.isUnity = this._isUNITY();
     this.isWayland = this._isWayland();
-    this.cageInstalled = this.platform === 'linux' ? detectCageInstalled() : false;
-    this.runningInCage = this.platform === 'linux' ? detectRunningInCage() : false;
+    // Linux + Windows share the same field names so the renderer/IPC layer is one code path.
+    // runningInCage on win32 = process runs as the dedicated kiosk OS user.
+    if (this.platform === 'linux') {
+      this.cageInstalled = detectCageInstalled();
+      this.runningInCage = detectRunningInCage();
+      this.cageKioskAppImageInstalled = detectCageKioskAppImageInstalled();
+      this.cageKioskDesktopInstalled = detectCageKioskDesktopInstalled();
+      this.needsCageKioskSetup = needsCageKioskSetup();
+    } else if (this.platform === 'win32') {
+      this.cageInstalled = detectWindowsKioskUserExists(); // kiosk OS user provisioned
+      this.runningInCage = detectRunningInWindowsKiosk();
+      this.cageKioskAppImageInstalled = detectWindowsKioskInstalled(); // exe copied to C:\NextExam
+      this.cageKioskDesktopInstalled = detectWindowsKioskInstalled(); // assigned-access acts as desktop entry
+      this.needsCageKioskSetup = needsWindowsKioskSetup();
+    } else {
+      this.cageInstalled = false;
+      this.runningInCage = false;
+      this.cageKioskAppImageInstalled = false;
+      this.cageKioskDesktopInstalled = false;
+      this.needsCageKioskSetup = false;
+    }
     this.isCageSession = this.runningInCage;
-    this.cageKioskAppImageInstalled = this.platform === 'linux' ? detectCageKioskAppImageInstalled() : false;
-    this.cageKioskDesktopInstalled = this.platform === 'linux' ? detectCageKioskDesktopInstalled() : false;
-    this.needsCageKioskSetup = this.platform === 'linux' ? needsCageKioskSetup() : false;
     this.jre = this._detectJREId();
     this.publicBase = this._getPublicBase();
     this.jreDir = this._resolveJREDir();
@@ -242,6 +264,7 @@ class PlatformDispatcher {
   }
 
   _getDisplayServer() {
+    if (this.platform === 'win32') return 'windows';
     if (this.platform !== 'linux') return 'n/a';
     if (this._env.XDG_SESSION_TYPE === 'wayland') return 'wayland';
     if (this._env.XDG_SESSION_TYPE === 'x11' || this._env.DISPLAY) return 'x11';

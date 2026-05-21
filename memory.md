@@ -20,6 +20,10 @@ RULE^agent^assumeUserEditsIntentional^never revert incidental diffs; assume user
 RULE^agent^gitSafety^never run git restore/reset/clean/rebase/stash/pop/checkout/switch unless user explicitly asks
 RULE^agent^utils^noSingleUseFiles^never new file for one function solvable in ~2 lines at caller; colocate; reuse module only if 2+ call sites; after each new fn check minimize/inline/delete
 PATH^linux^cageInstall^install-cage-kiosk.sh pkexec; needsCageKioskSetup=!(cage on PATH+AppImage+/opt/next-exam+desktop); UI if needsCageKioskSetup&&!runningInCage
+PATH^win32^kioskInstall^src-electron/resources/win32/install-windows-kiosk.ps1 (extraResources→win32/) + src-electron/main/scripts/win/windowsKioskSetup.js; UAC Start-Process -Verb RunAs; edition gate Pro|Edu|Ent; copy exe→C:\NextExam\next-exam.exe; user next-exam-kiosk; userenv!CreateProfile materializes NTUSER.DAT pre-logon; offline hive patch DisableTaskMgr+NoWinKeys+NoRun+sticky/filter/toggle keys Flags (5xShift backdoor); HKLM ProfileList State=128 wipe-on-logout; RemovableStorageDevices\<SID> Deny_All; MDM_AssignedAccess Multi-App XML (AllowedApps[] extendable)
+RULE^win32^kioskAutoLogoff^electron-main will-quit: if platformDispatcher.runningInCage spawn logoff.exe (win32 only); fresh profile next student via State=128
+RULE^kiosk^sharedFields^platformDispatcher win32 reuses linux cage field names (runningInCage,cageInstalled,cageKioskAppImageInstalled,cageKioskDesktopInstalled,needsCageKioskSetup); runningInCage on win32 = os.userInfo().username===next-exam-kiosk; renderer linuxCageKiosk.js+student.vue unchanged
+IPC^student^kioskShared^get-linux-kiosk-info + install-linux-cage-kiosk channel names kept; win32 routes to windowsKioskSetup; displayServer='windows' on win32 so showCageKioskInstallBtn gate works^student ipchandler.js
 RULE^agent^userEdits^never revert intentional user manual edits (e.g. removed v-if) unless user asks
 RULE^agent^uxDeps^never change UX or add external deps (gtk→VNC viewer, shell.openExternal vnc://) without user agrees first; diagnose→options→wait
 PATH^print^pdf^teacher/src-electron/main/scripts/printjobhandler.js+teacher/src/pages/SystemPrintPdf.vue

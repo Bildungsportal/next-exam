@@ -65,6 +65,13 @@ import {
     detectRunningInCage,
     needsCageKioskSetup,
 } from './cageDetect.js';
+import {
+    detectRunningInWindowsKiosk,
+    detectWindowsKioskInstalled,
+    detectWindowsKioskUserExists,
+    needsWindowsKioskSetup,
+    initiateKioskSetup as initiateWindowsKioskSetup,
+} from './win/windowsKioskSetup.js';
 
 // Skip info-level file-save log noise when the renderer marks the write as periodic auto-save.
 const logSaveInfoUnlessAuto = (saveReason, message) => {
@@ -180,14 +187,29 @@ class IpcHandler {
         this.CommunicationHandler = ch
         
 
-        ipcMain.handle('get-linux-kiosk-info', () => ({
-            cageInstalled: detectCageInstalled(),
-            runningInCage: detectRunningInCage(),
-            cageKioskAppImageInstalled: detectCageKioskAppImageInstalled(),
-            cageKioskDesktopInstalled: detectCageKioskDesktopInstalled(),
-            needsCageKioskSetup: needsCageKioskSetup(),
-            displayServer: platformDispatcher.displayServer,
-        }));
+        // kept channel name 'get-linux-kiosk-info' so renderer code stays untouched;
+        // on win32 the same fields are populated from windowsKioskSetup (runningInCage=kiosk OS user).
+        ipcMain.handle('get-linux-kiosk-info', () => {
+            if (process.platform === 'win32') {
+                const installed = detectWindowsKioskInstalled() && detectWindowsKioskUserExists();
+                return {
+                    cageInstalled: detectWindowsKioskUserExists(),
+                    runningInCage: detectRunningInWindowsKiosk(),
+                    cageKioskAppImageInstalled: detectWindowsKioskInstalled(),
+                    cageKioskDesktopInstalled: installed,
+                    needsCageKioskSetup: needsWindowsKioskSetup(),
+                    displayServer: platformDispatcher.displayServer,
+                };
+            }
+            return {
+                cageInstalled: detectCageInstalled(),
+                runningInCage: detectRunningInCage(),
+                cageKioskAppImageInstalled: detectCageKioskAppImageInstalled(),
+                cageKioskDesktopInstalled: detectCageKioskDesktopInstalled(),
+                needsCageKioskSetup: needsCageKioskSetup(),
+                displayServer: platformDispatcher.displayServer,
+            };
+        });
 
         ipcMain.handle('get-mac-arch-info', () => platformDispatcher.macRosettaEmulation);
 
@@ -199,7 +221,11 @@ class IpcHandler {
             return captureActiveWindowScreenshot(this.WindowHandler, this.multicastClient);
         });
 
+        // channel name kept for renderer compatibility; win32 routes to UAC + PowerShell payload.
         ipcMain.handle('install-linux-cage-kiosk', () => {
+            if (process.platform === 'win32') {
+                return initiateWindowsKioskSetup(process.execPath);
+            }
             const source = process.env.APPIMAGE || process.execPath;
             const script = app.isPackaged
                 ? path.join(process.resourcesPath, 'linux', 'install-cage-kiosk.sh')
