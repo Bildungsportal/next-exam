@@ -126,9 +126,9 @@
                     :class="(token) ? 'disabledexam' : ''"
                     :disabled="!!token"
                     style="font-size:0.9em"
-                    :title="$t('student.cageSetupText')"
+                    :title="$t(kioskI18n('Text'))"
                     @click="promptCageKioskSetup">
-                {{ $t('student.cageSetupButton') }}
+                {{ $t(kioskI18n('Button')) }}
             </button>
 
             <div><br>
@@ -417,6 +417,10 @@ export default {
             // displayServer set to 'windows' on win32 by ipchandler so the same gate works for both OSes
             return isElectronWindow(window) && k.displayServer !== 'n/a' && !k.runningInCage && k.needsCageKioskSetup;
         },
+        kioskI18nPrefix() {
+            // win32 uses winKioskSetup* keys, linux keeps the legacy cageSetup* keys
+            return this.platformKiosk?.displayServer === 'windows' ? 'winKioskSetup' : 'cageSetup';
+        },
     },
     watch: {
         'clientinfo.localVMState'(nextState) {
@@ -485,15 +489,27 @@ export default {
             this.localVmCompatCheckSwalOpen = false;
         },
 
+        kioskI18n(suffix) {
+            // helper: prefix=cageSetup on linux, winKioskSetup on windows; falls back to cage key for shared suffixes
+            const key = `student.${this.kioskI18nPrefix}${suffix}`;
+            // i18n returns the key itself when missing -> fallback to cage variant
+            const t = this.$t(key);
+            return t === key ? `student.cageSetup${suffix}` : key;
+        },
+
         async promptCageKioskSetup() {
+            // linux uses cageSetupTextRoot, win32 uses winKioskSetupRoot; pick whichever exists
+            const rootHintKey = this.platformKiosk?.displayServer === 'windows'
+                ? 'student.winKioskSetupRoot'
+                : 'student.cageSetupTextRoot';
             const result = await this.$swal.fire({
-                title: this.$t('student.cageSetupTitle'),
-                html: `${this.$t('student.cageSetupText')}<br><br>${this.$t('student.cageSetupTextRoot')}<br><br>
-                    <label><input type="checkbox" id="cage-setup-dismiss"> ${this.$t('student.cageSetupDontShow')}</label>`,
+                title: this.$t(this.kioskI18n('Title')),
+                html: `${this.$t(this.kioskI18n('Text'))}<br><br>${this.$t(rootHintKey)}<br><br>
+                    <label><input type="checkbox" id="cage-setup-dismiss"> ${this.$t(this.kioskI18n('DontShow'))}</label>`,
                 icon: 'info',
                 showCancelButton: true,
-                confirmButtonText: this.$t('student.cageSetupInstall'),
-                cancelButtonText: this.$t('student.cageSetupLater'),
+                confirmButtonText: this.$t(this.kioskI18n('Install')),
+                cancelButtonText: this.$t(this.kioskI18n('Later')),
                 willClose: (popup) => {
                     if (popup.querySelector('#cage-setup-dismiss')?.checked) {
                         localStorage.setItem('next-exam-cage-kiosk-setup-dismissed', '1');
@@ -505,16 +521,37 @@ export default {
             if (install?.ok) {
                 this.platformKiosk = await signalBridge.invoke('get-linux-kiosk-info');
                 await this.$swal.fire({
-                    html: `${this.$t('student.cageSetupSuccess')}<br><br>${this.$t('student.cageSetupSuccessHint')}`,
+                    html: `${this.$t(this.kioskI18n('Success'))}<br><br>${this.$t(this.kioskI18n('SuccessHint'))}`,
                     icon: 'success',
                 });
             } else {
-                await this.$swal.fire({
-                    title: this.$t('student.cageSetupFailed'),
-                    text: install?.error || '',
-                    icon: 'error',
-                });
+                await this.showKioskSetupErrorDialog(install);
             }
+        },
+
+        // Pretty error: structured code from main triggers friendly hint; otherwise mono-font scrollable transcript
+        async showKioskSetupErrorDialog(install) {
+            const raw = String(install?.error || '');
+            if (install?.code === 'EDITION_UNSUPPORTED') {
+                await this.$swal.fire({
+                    icon: 'warning',
+                    title: this.$t('student.winKioskSetupEditionFailed'),
+                    html: this.$t('student.winKioskSetupEditionHint'),
+                    confirmButtonText: 'OK',
+                });
+                return;
+            }
+            const escaped = raw
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            await this.$swal.fire({
+                icon: 'error',
+                title: this.$t(this.kioskI18n('Failed')),
+                html: `<pre style="text-align:left;max-height:50vh;overflow:auto;font-size:0.8em;white-space:pre-wrap;word-break:break-word;background:#f7f7f7;padding:0.5rem;border-radius:4px;">${escaped}</pre>`,
+                confirmButtonText: 'OK',
+                width: '46rem',
+            });
         },
 
         async maybeOfferCageKioskSetup() {

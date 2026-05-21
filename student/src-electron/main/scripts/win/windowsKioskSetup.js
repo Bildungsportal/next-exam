@@ -148,6 +148,9 @@ export async function initiateKioskSetup(appPath) {
             try { unlinkSync(logFile); } catch {}
             if (Number.isFinite(childExit) && childExit === 0) {
                 resolve({ ok: true });
+            } else if (childExit === 10) {
+                // distinct code so renderer shows the friendly edition-unsupported dialog
+                resolve({ ok: false, code: 'EDITION_UNSUPPORTED', error: transcript.trim() });
             } else {
                 resolve({
                     ok: false,

@@ -15,7 +15,9 @@ function Write-Step($msg) { Write-Host "[next-exam-kiosk] $msg" }
 $edition = (Get-WindowsEdition -Online).Edition
 Write-Step "Windows edition: $edition"
 if ($edition -notmatch 'Professional|Enterprise|Education|IoTEnterprise|Pro') {
-    throw "Multi-App Assigned Access requires Windows Pro/Edu/Enterprise. Detected: $edition"
+    # exit 10 = renderer maps to friendly edition-unsupported dialog
+    Write-Host "ERROR_EDITION_UNSUPPORTED: $edition"
+    exit 10
 }
 
 # 1) copy portable exe to public location accessible by separate kiosk user
