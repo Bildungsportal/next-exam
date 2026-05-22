@@ -534,61 +534,33 @@ function New-AllowedAppXml($apps) {
 
 $appsXml = New-AllowedAppXml $AllowedApps
 
-# Win11 pins: ProgramData .lnk + desktopAppId (Get-StartApps) or %ALLUSERSPROFILE% link; ConfigureStartPins replaces OEM tiles (e.g. Lenovo Vantage).
-$skipPin = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe')
-$commonProg = Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs\Next-Exam'
-New-Item -ItemType Directory -Path $commonProg -Force | Out-Null
-$startApps = @(Get-StartApps)
+# Desktop .lnk launchers (AllAppsList still whitelists; java/javaw/disable-shortcuts are not shown).
+$deskDir = Join-Path $ProfilePath 'Desktop'
+New-Item -ItemType Directory -Path $deskDir -Force | Out-Null
+$skipDesktop = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe')
 $launcherApps = [System.Collections.ArrayList]::new()
-$pinParts = foreach ($app in $AllowedApps) {
-    if ($skipPin -contains ([IO.Path]::GetFileName($app.Path)).ToLower()) { continue }
-    $lnkName = "$([IO.Path]::GetFileNameWithoutExtension($app.Path)).lnk"
-    $lnkPath = Join-Path $commonProg $lnkName
+foreach ($app in $AllowedApps) {
+    if ($skipDesktop -contains ([IO.Path]::GetFileName($app.Path)).ToLower()) { continue }
+    $lnk = Join-Path $deskDir "$([IO.Path]::GetFileNameWithoutExtension($app.Path)).lnk"
     $w = New-Object -ComObject WScript.Shell
-    $s = $w.CreateShortcut($lnkPath)
+    $s = $w.CreateShortcut($lnk)
     $s.TargetPath = $app.Path
     $s.WorkingDirectory = [IO.Path]::GetDirectoryName($app.Path)
     $s.Save()
     [void][Runtime.InteropServices.Marshal]::ReleaseComObject($w)
     [void]$launcherApps.Add([pscustomobject]@{ name = [IO.Path]::GetFileNameWithoutExtension($app.Path); path = $app.Path })
-    $hit = $startApps | Where-Object { $_.AppID -ceq $app.Path -or $_.AppID -like "*$([IO.Path]::GetFileName($app.Path))" } | Select-Object -First 1
-    if ($hit -and $hit.AppID -match '!') {
-        Write-Step "start pin packagedAppId: $($hit.AppID)"
-        "{`"packagedAppId`":`"$($hit.AppID)`"}"
-    } elseif ($hit) {
-        Write-Step "start pin desktopAppId: $($hit.AppID)"
-        "{`"desktopAppId`":`"$($hit.AppID.Replace('\', '\\'))`"}"
-    } else {
-        $link = '%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Next-Exam\\' + $lnkName
-        Write-Step "start pin desktopAppLink: $link"
-        "{`"desktopAppLink`":`"$link`"}"
-    }
+    Write-Step "desktop launcher: $lnk"
 }
-$startPinsJson = '{"applyOnce":true,"pinnedList":[' + ($pinParts -join ',') + ']}'
-Set-Content -LiteralPath (Join-Path $InstallDir 'kiosk-start-pins.json') -Value $startPinsJson -Encoding UTF8
+# Next-Exam in-app launcher bar (student.vue) reads this; independent of Desktop .lnk above
 ($launcherApps | ConvertTo-Json -Compress) | Set-Content -LiteralPath (Join-Path $InstallDir 'kiosk-launcher-apps.json') -Encoding UTF8
-Write-Step "StartPins JSON: $startPinsJson"
-if (Test-Path -LiteralPath $hivePath) {
-    $hiveKey = 'HKU\NEXTEXAM_KIOSK_HIVE'
-    $hiveLoad = (& reg.exe load $hiveKey $hivePath 2>&1 | Out-String).Trim()
-    if ($LASTEXITCODE -eq 0) {
-        $polExplorer = 'Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\Software\Policies\Microsoft\Windows\Explorer'
-        New-Item -Path $polExplorer -Force | Out-Null
-        Set-ItemProperty -Path $polExplorer -Name 'ConfigureStartPins' -Value $startPinsJson -Type String
-        $null = cmd.exe /c "reg unload $hiveKey 2>nul"
-        Write-Step 'NTUSER ConfigureStartPins written (replaces default pinned apps)'
-    } else {
-        Write-Step "WARNING: skip ConfigureStartPins in hive: $hiveLoad"
-    }
-}
+Write-Step "kiosk-launcher-apps.json written ($($launcherApps.Count) apps)"
 
 # Multi-App Assigned Access XML (rs5 namespace = Win10 1809+; supported on Win10/11 Pro/Edu/Ent)
 $config = @"
 <?xml version="1.0" encoding="utf-8" ?>
 <AssignedAccessConfiguration
     xmlns="http://schemas.microsoft.com/AssignedAccess/2017/config"
-    xmlns:rs5="http://schemas.microsoft.com/AssignedAccess/201810/config"
-    xmlns:v5="http://schemas.microsoft.com/AssignedAccess/2022/config">
+    xmlns:rs5="http://schemas.microsoft.com/AssignedAccess/201810/config">
   <Profiles>
     <Profile Id="{9A2A490F-10F6-4764-974A-43B19E722C23}">
       <AllAppsList>
@@ -599,9 +571,17 @@ $appsXml
       <rs5:FileExplorerNamespaceRestrictions>
         <rs5:AllowedNamespace Name="Downloads"/>
       </rs5:FileExplorerNamespaceRestrictions>
-      <v5:StartPins>
-        <![CDATA[$startPinsJson]]>
-      </v5:StartPins>
+      <StartLayout>
+        <![CDATA[<LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
+  <LayoutOptions StartTileGroupCellWidth="6" />
+  <DefaultLayoutOverride>
+    <StartLayoutCollection>
+      <defaultlayout:StartLayout GroupCellWidth="6" />
+    </StartLayoutCollection>
+  </DefaultLayoutOverride>
+</LayoutModificationTemplate>
+]]>
+      </StartLayout>
       <Taskbar ShowTaskbar="false"/>
     </Profile>
   </Profiles>
@@ -623,9 +603,6 @@ try {
     exit 13
 }
 
-# debug: last applied Assigned Access XML (verify StartPins .lnk paths)
-Set-Content -LiteralPath (Join-Path $InstallDir 'kiosk-assigned-access.xml') -Value $config -Encoding UTF8
-
 # marker: renderer treats provisioning as complete only after this file exists (partial runs keep install button visible)
 Set-Content -LiteralPath (Join-Path $InstallDir '.kiosk-provision-complete') -Value (Get-Date -Format 'o') -Encoding UTF8
-Write-Step "DONE. Reboot, then sign in as '$KioskUser' (sign-out first if already logged in). Pins need a fresh logon."
+Write-Step "DONE. Reboot recommended. Logon screen will list '$KioskUser' (no password)."
