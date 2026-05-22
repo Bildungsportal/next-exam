@@ -836,9 +836,8 @@ class WindowHandler {
         return process.env.XDG_SESSION_TYPE === 'wayland'; 
     }
 
-    // this function uses active-win to receive name and url from active window - yet another way to figure out if the focus is still on nextexam
+    // this function uses get-windows to receive name and url from active window - yet another way to figure out if the focus is still on nextexam
     // this is used to introduce exemptions for the blur listener
-    // (downgraded from get-windows because of napi v9 issue) https://github.com/sindresorhus/get-windows/issues/186
     async windowTracker(){
         try{
             // const getwin = await this.getActiveWindow();

@@ -42,7 +42,35 @@ export const fontAdjustments = {
         scale: 1,
     },
     LiberationSans: {
-        family: 'sans-serif',
+        family: 'liberation-sans-regular, sans-serif',
+        scale: 1,
+    },
+    'LiberationSans-Bold': {
+        family: 'liberation-sans-bold, sans-serif',
+        scale: 1,
+    },
+    'LiberationSans-Italic': {
+        family: 'liberation-sans-italic, sans-serif',
+        scale: 1,
+    },
+    'LiberationSans-BoldItalic': {
+        family: 'liberation-sans-bold-italic, sans-serif',
+        scale: 1,
+    },
+    LiberationSerif: {
+        family: 'liberation-serif-regular, serif',
+        scale: 1,
+    },
+    'LiberationSerif-Bold': {
+        family: 'liberation-serif-bold, serif',
+        scale: 1,
+    },
+    'LiberationSerif-Italic': {
+        family: 'liberation-serif-italic, serif',
+        scale: 1,
+    },
+    'LiberationSerif-BoldItalic': {
+        family: 'liberation-serif-bold-italic, serif',
         scale: 1,
     },
     'HelveticaNeueLTPro-Lt': {
@@ -50,11 +78,11 @@ export const fontAdjustments = {
         scale: 1,
     },
     ArialMT: {
-        family: 'Arial, Helvetica, sans-serif',
+        family: 'liberation-sans-regular, Arial, Helvetica, sans-serif',
         scale: 1,
     },
     TimesNewRomanPSMT: {
-        family: 'Times New Roman, Times, serif',
+        family: 'liberation-serif-regular, Times New Roman, Times, serif',
         scale: 1,
     },
     'MS-Mincho': {

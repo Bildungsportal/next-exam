@@ -163,7 +163,7 @@
 </template>
 
 <script>
-import { parsePdfToPages } from 'next-exam-shared/pdfparser/index.js';
+import { parsePdfToPages, ensurePdfOverlayFontsReady } from 'next-exam-shared/pdfparser/index.js';
 import Swal from 'sweetalert2';
 
 export default {
@@ -225,27 +225,6 @@ export default {
         }
     },
     methods: {
-        async ensurePdfOverlayFontsReady() {
-            // Ensure webfonts are loaded before canvas.measureText drives cloze positioning.
-            if (!document?.fonts) return;
-            try {
-                await Promise.all([
-                    document.fonts.load('16px hv'),
-                    document.fonts.load('16px carlito-regular'),
-                    document.fonts.load('16px carlito-bold'),
-                    document.fonts.load('16px carlito-italic'),
-                    document.fonts.load('16px carlito-bold-italic'),
-                    document.fonts.load('16px Latin-Modern-Math'),
-                    document.fonts.load('16px caladea'),
-                    document.fonts.load('16px dejavuserif'),
-                    document.fonts.load('16px notosanssymbols'),
-                    document.fonts.ready,
-                ]);
-            } catch (e) {
-                // If fonts fail to load, parsing still proceeds (fallback metrics may drift).
-                console.warn('PdfOverlay: font loading skipped', e?.message || e);
-            }
-        },
         async processPdf(base64Data) {
             if (!base64Data) {
                 this.parsedPages = [];
@@ -255,7 +234,7 @@ export default {
             this.isParsing = true;
             this.warningShown = false; // Reset warning flag for new PDF
             try {
-                await this.ensurePdfOverlayFontsReady();
+                await ensurePdfOverlayFontsReady();
                 const uint8 = this.base64ToUint8Array(base64Data);
                 this.parsedPages = await parsePdfToPages(uint8);
             } catch (error) {
@@ -314,74 +293,6 @@ export default {
     }
 };
 </script>
-
-<style>
-/* Fonts made from <a href="http://www.webfontfree.com">Web Font Free</a> is licensed by CC BY 4.0 */
-@font-face {
-    font-family: 'hv';
-    src: url('/src/assets/fonts/HelveticaNeueLTPro-Lt.woff2') format('woff2');
-    font-weight: 300;
-    font-style: normal;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'carlito-bold';
-    src: url('/src/assets/fonts/Carlito-Bold.ttf') format('truetype');
-    font-weight: 700;
-    font-style: normal;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'carlito-regular';
-    src: url('/src/assets/fonts/Carlito-Regular.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'carlito-italic';
-    src: url('/src/assets/fonts/Carlito-Italic.ttf') format('truetype');
-    font-weight: normal;
-    font-style: italic;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'carlito-bold-italic';
-    src: url('/src/assets/fonts/Carlito-BoldItalic.ttf') format('truetype');
-    font-weight: bold;
-    font-style: italic;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'Latin-Modern-Math';
-    src: url('/src/assets/fonts/LatinmodernmathRegular.otf') format('opentype');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'caladea';
-    src: url('/src/assets/fonts/Caladea-Regular.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'dejavuserif';
-    src: url('/src/assets/fonts/DejaVuSerif.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-} 
-@font-face {
-    font-family: 'notosanssymbols';
-    src: url('/src/assets/fonts/NotoSansSymbols-VariableFont_wght.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
-</style>
 
 <style scoped>
 .pdf-overlay-root {

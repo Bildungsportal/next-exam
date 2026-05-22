@@ -35,6 +35,7 @@ RULE^student^devtoolsInstaller^electron-devtools-installer devDep only; dynamic 
 TECH^build^electronAssets^prod electron: copy src/assets→public/src/assets; rewrite `/src/assets`→`./src/assets` incl. Vue backtick literals in generateBundle; CSS url() often Vite-inlined^teacher+student quasar.config.ts
 PATH^platform^dispatcher^teacher/src-electron/main/scripts/platformDispatcher.js used by teacher main startup logs^teacher/src-electron/electron-main.js
 PATH^pdfparser^root^shared/pdfparser/ (v5+shared); renderer import next-exam-shared/pdfparser/index.js (quasar alias next-exam-shared->shared/)
+PATH^pdfparser^fonts^shared/pdfparser/fonts/; pdfOverlayFonts.css+pdfOverlayFonts.js; LiberationSans|Serif+* variants; ArialMT→liberation-sans; TimesNewRomanPSMT→liberation-serif
 IPC^teacher^getServerInfoForDashboard^invoke(servername)→{status,data:{pin,servertoken,serverip,id}}|error; dashboard beforeEnter (replaces GET /control/getserverinfo)^teacher ipchandler.js+router/index.js
 IPC^teacher^startExamServer^invoke({servername,passwd,bip,bipId})→{status,message,sender}; replaces POST /control/start^teacher ipchandler.js+startserver.vue
 IPC^teacher^getServerStatusFromDisk^invoke(servername)→{status,serverstatus}|serverstatus:false; resume read serverstatus.json; replaces POST /control/getserverstatus^teacher ipchandler.js+dashboard.vue
