@@ -43,7 +43,9 @@ jobs:
           node-version: '24.14.0'
           
           
+      # TEMP: teacher portable build disabled — remove `if: false` to re-enable
       - name: Teacher cache dependencies
+        if: false
         uses: actions/cache@v4
         with:
           path: |
@@ -52,12 +54,14 @@ jobs:
           key: ${{ runner.os }}-node-t-${{ hashFiles('./teacher/**/package-lock.json') }}
           
       - name: Teacher install dependencies
+        if: false
         working-directory: ./teacher
         run: |
           npm install
           mkdir dist
           
       - name: Teacher build
+        if: false
         working-directory: ./teacher
         env:
           CSC_LINK: "file://../certificate.p12"
@@ -65,6 +69,7 @@ jobs:
         run: npm run build:win:portable
         
       - name: Upload Teacher Windows x64 Portable EXE
+        if: false
         uses: actions/upload-artifact@v4
         with:
           name: next-exam-teacher-windows-x64-portable-exe
