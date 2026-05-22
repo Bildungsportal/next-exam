@@ -39,8 +39,8 @@ const localvmview = () => import('/src/pages/localvmview.vue')
 
 
 import config from '../../src-electron/main/config.js';
-import {isElectronWindow} from '../types/platform.js';
 import {SignalBridge} from '../utils/signalBridge.js';
+import { useConfigStore } from "../stores/configStore.js";
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -58,7 +58,7 @@ if (userAgent.indexOf(' electron/') > -1) {
 
 const routes = [ // to load a specific view just replace the component at path: /
     { path: '/',                    name:"index",        component: student,      beforeEnter: [addParams]            },    // default component "student"
-    { path: '/student',             name:"student",      component: student,      beforeEnter: [addParams]            },
+    { path: '/student',             name:"student",      component: student,      beforeEnter: []            },
     { path: '/editor/:token',       name:"editor",       component: editor,       beforeEnter: [addParams, fetchInfo] },  
     { path: '/math/:token',         name:"math",         component: geogebra,     beforeEnter: [addParams, fetchInfo] },
     { path: '/forms/:token',        name:"forms",        component: forms,       beforeEnter: [addParams, fetchInfo] },
@@ -105,6 +105,14 @@ async function fetchInfo(to: RouteLocationNormalized, from: RouteLocationNormali
 }
 
 
-export default defineRouter(function (/* { store, ssrContext } */) {
-  return createRouter({history: createWebHashHistory(), routes})   // use appropriate history implementation for server/client // import.meta.env.SSR is injected by Vite.
+export default defineRouter(function ( { store }) {
+
+// check if we run this app in electron (host is always "localhost" then)
+    let configStore = useConfigStore(store);
+    const userAgent = navigator.userAgent.toLowerCase();
+    if (userAgent.indexOf(' electron/') > -1) {
+        configStore.electron = true;
+    }
+
+    return createRouter({history: createWebHashHistory(), routes});   // use appropriate history implementation for server/client // import.meta.env.SSR is injected by Vite.
 });

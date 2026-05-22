@@ -91,7 +91,7 @@
 
 
             <!-- BIP Section START -->
-            <div v-if="config.bipIntegration" class="mt-4">
+            <div v-if="bipIntegration" class="mt-4">
                 <span class="small m-1 me-0">{{ $t("student.bildungsportal") }}</span> <span v-if="bipToken"
                                                                                              class="small m-1 me-0 text-secondary">(verbunden)</span>
                 <div v-if="bipToken" title="logout" id="biploginbutton" @click="logoutBiP()"
@@ -284,9 +284,8 @@
 
 </template>
 
-
 <script lang="ts">
-import validator from 'validator'
+import validator, {isEmpty} from 'validator'
 import log from 'electron-log/renderer'
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {isElectronWindow} from "../types/platform.ts";
@@ -302,6 +301,8 @@ import {
 } from '../utils/examFetchInfoSync.js'
 import { buildQemuMissingWarningHtml } from 'next-exam-shared/qemuMissingWarningHtml.js'
 import { autoCleanupMixin } from "../mixins/autoCleanupMixin.ts";
+import { useConfigStore } from "stores/configStore.js";
+import { ref } from 'vue';
 
 function unhandledRejectionFunction(event: PromiseRejectionEvent) {
   const reason = event?.reason;
@@ -321,33 +322,43 @@ Object.assign(console, log.functions);  // Replace all console logs with logger
 // signalBridge instance centralizes ipc send calls with platform checks
 const signalBridge = new SignalBridge(window);
 
-
 export default {
     mixins: [autoCleanupMixin],
 
+    setup() {
+      const configStore = useConfigStore();
+      let username = "";
+      let pincode = "";
+      if(configStore.development) {
+        username = "Thomas";
+        pincode = "1111";
+      }
+      let development = ref(configStore.development);
+      let version = ref(configStore.version);
+      let serverApiPort = ref(configStore.serverApiPort);
+      let electron = ref(configStore.electron);
+      let info = ref(configStore.info);
+      let buildDate = ref(configStore.buildDate);
+      let hostIp = ref(configStore.hostip);
+      let bipIntegration = ""
+      let bipApiUrl = ""
+      let bipDemo = ""
+      return { username, pincode, development, version, serverApiPort, electron, info, buildDate, hostIp, bipIntegration, bipApiUrl, bipDemo }
+    },
+
     data() {
         return {
-            version: this.$route.params.version,
             token: "",
-            username: this.$route.params.config.development ? "Thomas" : "" as string | boolean,
-            pincode: this.$route.params.config.development ? "1111" : "" as string,
             clientinfo: {},
             serverstatus: null,
             serverlist: [],
             serverlistAdvanced: [],
             fetchinterval: null as SchedulerService,
             autoUpdateInterval: null as SchedulerService,
-            serverApiPort: this.$route.params.serverApiPort,
-            clientApiPort: this.$route.params.clientApiPort,
-            electron: this.$route.params.electron,
-            config: this.$route.params.config,
-            info: this.$route.params.config.info,
-            buildDate: this.$route.params.config.buildDate,
             startExamEvent: null,
             advanced: false,
             serverip: "" as string,
             servername: "",
-            hostip: this.$route.params.config.hostip,
             clickCount: 0,
             networkerror: false,
             localLockdown: false,
@@ -478,7 +489,7 @@ export default {
 
         async maybeOfferCageKioskSetup() {
             const k = this.platformKiosk;
-            if (!isElectronWindow(window) || this.config.development) return;
+            if (!isElectronWindow(window) || this.development) return;
             if (k.runningInCage || !k.needsCageKioskSetup) return;
             if (localStorage.getItem('next-exam-cage-kiosk-setup-dismissed') === '1') return;
             await this.promptCageKioskSetup();
@@ -557,16 +568,7 @@ export default {
         },
 
         async loginBiP() {
-            /*if (this.config.bipDemo) {   // skip bip logon and fake bip info
-                this.bipUsername = "Marie Curie"
-                this.bipuserID = 8
-                this.bipToken = btoa("Token:4fce5b97fe36cb42313621ebf3ff2a1a")
-                this.username = this.bipUsername
 
-                await this.fetchBipExams()
-                this.bipAutoconnect()
-                return  //skip real login
-            }*/
             let IPCresponse = signalBridge.sendSync('loginBiP', this.biptest)
             if (IPCresponse && IPCresponse.status === "success") {
                 
@@ -633,8 +635,8 @@ export default {
         },
 
         getBiPUrl(): string {
-            if (this.config.bipDemo) {
-                return this.config.bipApiUrl;
+            if (this.bipDemo) {
+                return this.bipApiUrl;
             } else if (this.biptest) {
                 return `https://q.bildung.gv.at`;
             } else {
@@ -1449,7 +1451,7 @@ export default {
                         return;
                     }
                 }
-                if (!isFullDesktopCaptureLikely() && !this.$route.params.config.development) {
+                if (!isFullDesktopCaptureLikely() && !this.development) {
                     this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
                     return;
                 }
@@ -1457,7 +1459,7 @@ export default {
                 setCageWindowCaptureFallback(true);
             }
             const displayInfo = await signalBridge.invoke('getinfoasync');
-            if (displayInfo?.clientinfo?.multiMonitor && !this.$route.params.config.development) {
+            if (displayInfo?.clientinfo?.multiMonitor && !this.development) {
                 this.$swal.fire({ title: "Error", text: this.$t("student.multimonitor"), icon: 'error', showCancelButton: false });
                 return;
             }
@@ -1583,7 +1585,7 @@ export default {
         this.isLoading = false;
 
         if (isElectronWindow(window)) {
-            if (!this.config.development) {
+            if (!this.development) {
                 const macArch = await signalBridge.invoke('get-mac-arch-info');
                 if (macArch?.runningUnderRosetta) {
                     await this.warnMacRosettaArch();

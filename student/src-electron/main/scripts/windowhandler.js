@@ -332,13 +332,39 @@ class WindowHandler {
             py = primarydisplay.bounds.y
         }
 
-        this.examwindow = this.mainwindow
 
-        // Reconfigure the existing window for exam mode
-        this.examwindow.setMinimizable(false)
-        this.examwindow.setSkipTaskbar(true)
-        this.examwindow.setTitle('Exam')
-        this.examwindow.setBounds({ x: px, y: py, width: 1440, height: 768 })
+        if (examtype === "microsoft365"  ) { //external page
+
+            this.examwindow = new BrowserWindow({
+                x: px + 0,
+                y: py + 0,
+                title: 'Exam',
+                width: 1440,
+                height: 768,
+                // parent: win,  //this doesnt work together with kiosk on ubuntu gnome ?? wtf
+                // modal: true,  // this blocks the main window on windows while the exam window is open
+                // closable: false,  // if we can't define 'parent' this window has to be closable - why?
+                //alwaysOnTop: true,
+                opacity: 1,
+                skipTaskbar: true,
+                autoHideMenuBar: true,
+                minimizable: false,
+                visibleOnAllWorkspaces: true,
+                // kiosk: this.config.development ? false : true,  // prevents kiosk mode on ubuntu gnome (Unity)
+                show: true,
+                transparent: false,
+                icon: join(platformDispatcher.publicBase, 'icons', 'icon.png'),
+                webPreferences: {
+                    preload: join(__dirname, './preload/electron-preload.cjs'),
+                    spellcheck: false,
+                    contextIsolation: true,
+                    webviewTag: true,
+                    webSecurity: false
+                }
+            });
+        } else {
+            this.examwindow = this.mainwindow
+        }
 
 
         // Electron 39: ready-to-show fires AFTER show() is called, so use did-finish-load instead

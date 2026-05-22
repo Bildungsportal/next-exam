@@ -119,7 +119,7 @@ function logGsettingsValue(schema, key, phase) {
 
 /**
  * Enable Linux-specific restrictions (KDE/GNOME, close apps, clipboard).
- * @param {object} configStore - shared store (configStore.linux.numberOfDesktops)
+ * @param {object} configStore - shared store (configStore.ts.linux.numberOfDesktops)
  * @param {string[]} appsToClose - app names to kill
  */
 export function enableLinuxRestrictions(configStore, appsToClose) {
@@ -287,7 +287,7 @@ export function enableLinuxRestrictions(configStore, appsToClose) {
 
 /**
  * Disable Linux-specific restrictions and restore KDE/GNOME settings.
- * @param {object} configStore - shared store (configStore.linux.numberOfDesktops)
+ * @param {object} configStore - shared store (configStore.ts.linux.numberOfDesktops)
  */
 export function disableLinuxRestrictions(configStore) {
     childProcess.execFile('wl-copy', ['-c']);

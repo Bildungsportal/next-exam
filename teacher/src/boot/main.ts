@@ -1,4 +1,4 @@
-import { defineBoot } from '#q-app/wrappers'
+import { defineBoot } from "#q-app/wrappers";
 import i18n from "../locales/locales.js";
 import VueSweetalert2 from "vue-sweetalert2";
 import 'bootstrap/dist/js/bootstrap.bundle.min';
@@ -10,7 +10,6 @@ export default defineBoot(async ( { app } ) => {
         confirmButtonColor: '#0aa2c0',
         cancelButtonColor: '#6c757d',
     };
-
-    app.use(i18n)
-    app.use(VueSweetalert2, options)
+    app.use(i18n);
+    app.use(VueSweetalert2, options);
 })
