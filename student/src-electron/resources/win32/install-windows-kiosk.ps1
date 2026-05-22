@@ -534,12 +534,10 @@ function New-AllowedAppXml($apps) {
 
 $appsXml = New-AllowedAppXml $AllowedApps
 
-# Win11 kiosk pins: physical .lnk in C:\ProgramData (kiosk user has read+execute via Users group),
-# referenced from v5:StartPins by ABSOLUTE path. %USERPROFILE%/%ALLUSERSPROFILE% are NOT expanded
-# by Win11 in desktopAppLink. Get-StartApps cannot resolve fresh .lnk during provisioning, so we
-# always write desktopAppLink + absolute path (skip the packaged/desktopAppId guesswork).
+# Win11 kiosk pins: .lnk under %ALLUSERSPROFILE%\NextExamPins (env-var prefix - StartPins CSP
+# expects %APPDATA% or %ALLUSERSPROFILE% prefix per MS docs; no spaces in subdir = safer parse).
 $skipPin = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe')
-$commonProg = Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs\Next-Exam'
+$commonProg = Join-Path $env:ALLUSERSPROFILE 'NextExamPins'
 New-Item -ItemType Directory -Path $commonProg -Force | Out-Null
 $launcherApps = [System.Collections.ArrayList]::new()
 $pinParts = foreach ($app in $AllowedApps) {
@@ -553,9 +551,10 @@ $pinParts = foreach ($app in $AllowedApps) {
     $s.Save()
     [void][Runtime.InteropServices.Marshal]::ReleaseComObject($w)
     [void]$launcherApps.Add([pscustomobject]@{ name = [IO.Path]::GetFileNameWithoutExtension($app.Path); path = $app.Path })
-    # JSON needs single backslash in source -> '\\' becomes '\\' in JSON string -> parser yields single '\'
-    $linkJson = $lnkPath -replace '\\', '\\'
-    Write-Step "start pin desktopAppLink: $lnkPath"
+    # path then double-escape every backslash for JSON ('\\' source -> single '\' after JSON parse)
+    $rawPath = '%ALLUSERSPROFILE%\NextExamPins\' + $lnkName
+    $linkJson = $rawPath -replace '\\', '\\'
+    Write-Step "start pin desktopAppLink: $rawPath (file at $lnkPath)"
     "{`"desktopAppLink`":`"$linkJson`"}"
 }
 # applyOnce=true: same as previously-accepted shape; CSP rejects {} without applyOnce on some builds
