@@ -534,24 +534,28 @@ function New-AllowedAppXml($apps) {
 
 $appsXml = New-AllowedAppXml $AllowedApps
 
-# Win11 kiosk UI = Start menu "Angeheftete Kacheln" (v5:StartPins), not classic desktop icons.
+# MS Win11 multi-app kiosk: v5:StartPins desktopAppLink must point at real .lnk under the kiosk user's Start Menu (not .exe).
+# https://learn.microsoft.com/en-us/windows/configuration/assigned-access/quickstart-restricted-user-experience
 $skipPin = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe')
-$startApps = @(Get-StartApps)
+$progDir = Join-Path $ProfilePath 'AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Next-Exam'
+New-Item -ItemType Directory -Path $progDir -Force | Out-Null
 $pinParts = foreach ($app in $AllowedApps) {
     if ($skipPin -contains ([IO.Path]::GetFileName($app.Path)).ToLower()) { continue }
-    $leaf = [IO.Path]::GetFileName($app.Path)
-    $id = ($startApps | Where-Object { $_.AppID -like "*$leaf" } | Select-Object -First 1).AppID
-    if ($id) {
-        $e = $id -replace '\\', '\\\\'
-        Write-Step "start pin (desktopAppId): $id"
-        "{`"desktopAppId`":`"$e`"}"
-    } else {
-        $e = $app.Path -replace '\\', '\\\\'
-        Write-Step "start pin (desktopAppLink): $($app.Path)"
-        "{`"desktopAppLink`":`"$e`"}"
-    }
+    $lnkName = "$([IO.Path]::GetFileNameWithoutExtension($app.Path)).lnk"
+    $lnkPath = Join-Path $progDir $lnkName
+    $w = New-Object -ComObject WScript.Shell
+    $s = $w.CreateShortcut($lnkPath)
+    $s.TargetPath = $app.Path
+    $s.WorkingDirectory = [IO.Path]::GetDirectoryName($app.Path)
+    $s.Save()
+    [void][Runtime.InteropServices.Marshal]::ReleaseComObject($w)
+    $rel = "AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Next-Exam\$lnkName"
+    $linkJson = '%USERPROFILE%\' + ($rel -replace '\\', '\\\\')
+    Write-Step "start pin .lnk: $lnkPath -> $linkJson"
+    "{`"desktopAppLink`":`"$linkJson`"}"
 }
 $startPinsJson = "{`"pinnedList`":[$($pinParts -join ',')]}"
+Write-Step "StartPins JSON: $startPinsJson"
 
 # Multi-App Assigned Access XML (rs5 namespace = Win10 1809+; supported on Win10/11 Pro/Edu/Ent)
 $config = @"
@@ -570,17 +574,6 @@ $appsXml
       <rs5:FileExplorerNamespaceRestrictions>
         <rs5:AllowedNamespace Name="Downloads"/>
       </rs5:FileExplorerNamespaceRestrictions>
-      <StartLayout>
-        <![CDATA[<LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
-  <LayoutOptions StartTileGroupCellWidth="6" />
-  <DefaultLayoutOverride>
-    <StartLayoutCollection>
-      <defaultlayout:StartLayout GroupCellWidth="6" />
-    </StartLayoutCollection>
-  </DefaultLayoutOverride>
-</LayoutModificationTemplate>
-]]>
-      </StartLayout>
       <v5:StartPins>
         <![CDATA[$startPinsJson]]>
       </v5:StartPins>
@@ -605,6 +598,9 @@ try {
     exit 13
 }
 
+# debug: last applied Assigned Access XML (verify StartPins .lnk paths)
+Set-Content -LiteralPath (Join-Path $InstallDir 'kiosk-assigned-access.xml') -Value $config -Encoding UTF8
+
 # marker: renderer treats provisioning as complete only after this file exists (partial runs keep install button visible)
 Set-Content -LiteralPath (Join-Path $InstallDir '.kiosk-provision-complete') -Value (Get-Date -Format 'o') -Encoding UTF8
-Write-Step "DONE. Reboot recommended. Logon screen will list '$KioskUser' (no password)."
+Write-Step "DONE. Reboot, then sign in as '$KioskUser' (sign-out first if already logged in). Pins need a fresh logon."
