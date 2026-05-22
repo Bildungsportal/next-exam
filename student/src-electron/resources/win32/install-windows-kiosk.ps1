@@ -534,11 +534,11 @@ function New-AllowedAppXml($apps) {
 
 $appsXml = New-AllowedAppXml $AllowedApps
 
-# Win11 kiosk pins: .lnk under %ALLUSERSPROFILE%\NextExamPins (env-var prefix - StartPins CSP
-# expects %APPDATA% or %ALLUSERSPROFILE% prefix per MS docs; no spaces in subdir = safer parse).
+# Win11 pins: ProgramData .lnk + desktopAppId (Get-StartApps) or %ALLUSERSPROFILE% link; ConfigureStartPins replaces OEM tiles (e.g. Lenovo Vantage).
 $skipPin = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe')
-$commonProg = Join-Path $env:ALLUSERSPROFILE 'NextExamPins'
+$commonProg = Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs\Next-Exam'
 New-Item -ItemType Directory -Path $commonProg -Force | Out-Null
+$startApps = @(Get-StartApps)
 $launcherApps = [System.Collections.ArrayList]::new()
 $pinParts = foreach ($app in $AllowedApps) {
     if ($skipPin -contains ([IO.Path]::GetFileName($app.Path)).ToLower()) { continue }
@@ -551,18 +551,36 @@ $pinParts = foreach ($app in $AllowedApps) {
     $s.Save()
     [void][Runtime.InteropServices.Marshal]::ReleaseComObject($w)
     [void]$launcherApps.Add([pscustomobject]@{ name = [IO.Path]::GetFileNameWithoutExtension($app.Path); path = $app.Path })
-    # path then double-escape every backslash for JSON ('\\' source -> single '\' after JSON parse)
-    $rawPath = '%ALLUSERSPROFILE%\NextExamPins\' + $lnkName
-    $linkJson = $rawPath -replace '\\', '\\'
-    Write-Step "start pin desktopAppLink: $rawPath (file at $lnkPath)"
-    "{`"desktopAppLink`":`"$linkJson`"}"
+    $hit = $startApps | Where-Object { $_.AppID -ceq $app.Path -or $_.AppID -like "*$([IO.Path]::GetFileName($app.Path))" } | Select-Object -First 1
+    if ($hit -and $hit.AppID -match '!') {
+        Write-Step "start pin packagedAppId: $($hit.AppID)"
+        "{`"packagedAppId`":`"$($hit.AppID)`"}"
+    } elseif ($hit) {
+        Write-Step "start pin desktopAppId: $($hit.AppID)"
+        "{`"desktopAppId`":`"$($hit.AppID.Replace('\', '\\'))`"}"
+    } else {
+        $link = '%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Next-Exam\\' + $lnkName
+        Write-Step "start pin desktopAppLink: $link"
+        "{`"desktopAppLink`":`"$link`"}"
+    }
 }
-# applyOnce=true: same as previously-accepted shape; CSP rejects {} without applyOnce on some builds
 $startPinsJson = '{"applyOnce":true,"pinnedList":[' + ($pinParts -join ',') + ']}'
 Set-Content -LiteralPath (Join-Path $InstallDir 'kiosk-start-pins.json') -Value $startPinsJson -Encoding UTF8
-# Next-Exam UI reads this to render its own launcher buttons (independent of Windows StartPins)
 ($launcherApps | ConvertTo-Json -Compress) | Set-Content -LiteralPath (Join-Path $InstallDir 'kiosk-launcher-apps.json') -Encoding UTF8
 Write-Step "StartPins JSON: $startPinsJson"
+if (Test-Path -LiteralPath $hivePath) {
+    $hiveKey = 'HKU\NEXTEXAM_KIOSK_HIVE'
+    $hiveLoad = (& reg.exe load $hiveKey $hivePath 2>&1 | Out-String).Trim()
+    if ($LASTEXITCODE -eq 0) {
+        $polExplorer = 'Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\Software\Policies\Microsoft\Windows\Explorer'
+        New-Item -Path $polExplorer -Force | Out-Null
+        Set-ItemProperty -Path $polExplorer -Name 'ConfigureStartPins' -Value $startPinsJson -Type String
+        $null = cmd.exe /c "reg unload $hiveKey 2>nul"
+        Write-Step 'NTUSER ConfigureStartPins written (replaces default pinned apps)'
+    } else {
+        Write-Step "WARNING: skip ConfigureStartPins in hive: $hiveLoad"
+    }
+}
 
 # Multi-App Assigned Access XML (rs5 namespace = Win10 1809+; supported on Win10/11 Pro/Edu/Ent)
 $config = @"
