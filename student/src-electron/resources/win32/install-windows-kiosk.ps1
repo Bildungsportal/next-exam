@@ -63,6 +63,73 @@ $ErrorActionPreference = 'Stop'
 
 function Write-Step($msg) { Write-Host "[next-exam-kiosk] $msg" }
 
+# NTUSER hive hardening applied to Default User so every new/temporary kiosk profile inherits it.
+function Add-NextExamKioskNtuserHardening([string]$HiveRoot) {
+    $polSystem   = "$HiveRoot\Software\Microsoft\Windows\CurrentVersion\Policies\System"
+    $polExplorer = "$HiveRoot\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer"
+    $polEdgeUI   = "$HiveRoot\Software\Policies\Microsoft\Windows\EdgeUI"
+    New-Item -Path $polSystem -Force | Out-Null
+    New-Item -Path $polExplorer -Force | Out-Null
+    New-Item -Path $polEdgeUI -Force | Out-Null
+    Set-ItemProperty -Path $polSystem   -Name 'DisableTaskMgr'         -Value 1 -Type DWord
+    Set-ItemProperty -Path $polSystem   -Name 'DisableLockWorkstation' -Value 1 -Type DWord
+    Set-ItemProperty -Path $polSystem   -Name 'DisableChangePassword'  -Value 1 -Type DWord
+    Set-ItemProperty -Path $polSystem   -Name 'HideFastUserSwitching'  -Value 1 -Type DWord
+    Set-ItemProperty -Path $polExplorer -Name 'NoWinKeys'              -Value 1 -Type DWord
+    Set-ItemProperty -Path $polExplorer -Name 'NoRun'                  -Value 1 -Type DWord
+    Set-ItemProperty -Path $polExplorer -Name 'HideRecommendedSection' -Value 1 -Type DWord
+    Set-ItemProperty -Path $polExplorer -Name 'NoStartMenuMorePrograms'  -Value 1 -Type DWord
+    Set-ItemProperty -Path $polEdgeUI   -Name 'AllowEdgeSwipe'         -Value 0 -Type DWord
+    Set-ItemProperty -Path $polEdgeUI   -Name 'DisableCharmsHint'      -Value 1 -Type DWord
+    Set-ItemProperty -Path $polEdgeUI   -Name 'DisableTLcorner'        -Value 1 -Type DWord
+    $accSticky = "$HiveRoot\Control Panel\Accessibility\StickyKeys"
+    $accFilter = "$HiveRoot\Control Panel\Accessibility\Keyboard Response"
+    $accToggle = "$HiveRoot\Control Panel\Accessibility\ToggleKeys"
+    New-Item -Path $accSticky -Force | Out-Null
+    New-Item -Path $accFilter -Force | Out-Null
+    New-Item -Path $accToggle -Force | Out-Null
+    Set-ItemProperty -Path $accSticky -Name 'Flags' -Value '506' -Type String
+    Set-ItemProperty -Path $accFilter -Name 'Flags' -Value '122' -Type String
+    Set-ItemProperty -Path $accToggle -Name 'Flags' -Value '58'  -Type String
+    foreach ($rel in @(
+        'Software\Microsoft\Windows\CurrentVersion\Run',
+        'Software\Microsoft\Windows\CurrentVersion\RunOnce'
+    )) {
+        $rk = "$HiveRoot\$rel"
+        if (-not (Test-Path -LiteralPath $rk)) { continue }
+        $props = Get-ItemProperty -LiteralPath $rk -ErrorAction SilentlyContinue
+        if (-not $props) { continue }
+        foreach ($p in $props.PSObject.Properties) {
+            if ($p.Name -match '^PS') { continue }
+            $val = [string]$p.Value
+            if ($p.Name -match 'Wacom|Tablet|PenTablet|PenAttention' -or $val -match 'Wacom|Tablet|PenTablet') {
+                Remove-ItemProperty -LiteralPath $rk -Name $p.Name -Force -ErrorAction SilentlyContinue
+                Write-Step "removed Default User startup entry: $($p.Name)"
+            }
+        }
+    }
+}
+
+# Load an offline NTUSER.DAT, run Add-NextExamKioskNtuserHardening, unload.
+function Invoke-OfflineNtuserHardening([string]$NtuserPath, [string]$HiveAlias) {
+    if (-not (Test-Path -LiteralPath $NtuserPath)) { return $false }
+    $hiveKey = "HKU\$HiveAlias"
+    $loadOut = (& reg.exe load $hiveKey $NtuserPath 2>&1 | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0) {
+        Write-Step "WARNING: skip NTUSER hardening for $NtuserPath : $loadOut"
+        return $false
+    }
+    try {
+        Add-NextExamKioskNtuserHardening -HiveRoot "Registry::HKEY_USERS\$HiveAlias"
+        [gc]::Collect()
+        Start-Sleep -Milliseconds 500
+        Write-Step "patched NTUSER.DAT hardening: $NtuserPath"
+        return $true
+    } finally {
+        $null = cmd.exe /c "reg unload $hiveKey 2>nul"
+    }
+}
+
 # True when MemberName is already in the builtin group identified by well-known SID.
 function Test-LocalGroupHasMember([string]$GroupSidString, [string]$MemberName) {
     $groupSid = New-Object System.Security.Principal.SecurityIdentifier($GroupSidString)
@@ -362,81 +429,24 @@ public static extern int CreateProfile(
     Start-Sleep -Seconds 1
 }
 
-# 2b) per-user hardening via offline NTUSER.DAT hive load (closes sticky-keys backdoor before first logon)
-$hivePath = Join-Path $ProfilePath 'NTUSER.DAT'
-if (Test-Path $hivePath) {
-    $hiveKey = 'HKU\NEXTEXAM_KIOSK_HIVE'
-    $hiveLoaded = $false
-    $loadOut = (& reg.exe load $hiveKey $hivePath 2>&1 | Out-String).Trim()
-    if ($LASTEXITCODE -ne 0) {
-        Write-Step "WARNING: skip NTUSER.DAT patch (profile locked? log off $KioskUser first): $loadOut"
-    } else {
-    $hiveLoaded = $true
-    $polSystem   = "Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\Software\Microsoft\Windows\CurrentVersion\Policies\System"
-    $polExplorer = "Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer"
-    $polEdgeUI   = "Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\Software\Policies\Microsoft\Windows\EdgeUI"
-    New-Item -Path $polSystem -Force | Out-Null
-    New-Item -Path $polExplorer -Force | Out-Null
-    New-Item -Path $polEdgeUI -Force | Out-Null
+# 2b) Harden C:\Users\Default\NTUSER.DAT — temp profiles copy from Default User on each logon.
+$defaultNtuser = Join-Path $env:SystemDrive 'Users\Default\NTUSER.DAT'
+Invoke-OfflineNtuserHardening -NtuserPath $defaultNtuser -HiveAlias 'NEXTEXAM_DEFAULT_HIVE' | Out-Null
 
-    Set-ItemProperty -Path $polSystem   -Name 'DisableTaskMgr'         -Value 1 -Type DWord
-    Set-ItemProperty -Path $polSystem   -Name 'DisableLockWorkstation' -Value 1 -Type DWord
-    Set-ItemProperty -Path $polSystem   -Name 'DisableChangePassword'  -Value 1 -Type DWord
-    Set-ItemProperty -Path $polSystem   -Name 'HideFastUserSwitching'  -Value 1 -Type DWord
-    Set-ItemProperty -Path $polExplorer -Name 'NoWinKeys'              -Value 1 -Type DWord
-    Set-ItemProperty -Path $polExplorer -Name 'NoRun'                  -Value 1 -Type DWord
-    Set-ItemProperty -Path $polExplorer -Name 'HideRecommendedSection' -Value 1 -Type DWord
-    Set-ItemProperty -Path $polExplorer -Name 'NoStartMenuMorePrograms'  -Value 1 -Type DWord
-    Set-ItemProperty -Path $polEdgeUI   -Name 'AllowEdgeSwipe'         -Value 0 -Type DWord
-    Set-ItemProperty -Path $polEdgeUI   -Name 'DisableCharmsHint'      -Value 1 -Type DWord
-    Set-ItemProperty -Path $polEdgeUI   -Name 'DisableTLcorner'        -Value 1 -Type DWord
-
-    # Accessibility backdoors: 5x Shift / hold Shift / NumLock+Shift launch a SYSTEM cmd from logon screen
-    $accSticky = "Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\Control Panel\Accessibility\StickyKeys"
-    $accFilter = "Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\Control Panel\Accessibility\Keyboard Response"
-    $accToggle = "Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\Control Panel\Accessibility\ToggleKeys"
-    New-Item -Path $accSticky -Force | Out-Null
-    New-Item -Path $accFilter -Force | Out-Null
-    New-Item -Path $accToggle -Force | Out-Null
-    Set-ItemProperty -Path $accSticky -Name 'Flags' -Value '506' -Type String
-    Set-ItemProperty -Path $accFilter -Name 'Flags' -Value '122' -Type String
-    Set-ItemProperty -Path $accToggle -Name 'Flags' -Value '58'  -Type String
-
-    # Drop tablet/vendor first-logon junk (e.g. Wacom setup) from kiosk user Run/RunOnce
-    foreach ($rel in @(
-        'Software\Microsoft\Windows\CurrentVersion\Run',
-        'Software\Microsoft\Windows\CurrentVersion\RunOnce'
-    )) {
-        $rk = "Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\$rel"
-        if (-not (Test-Path -LiteralPath $rk)) { continue }
-        $props = Get-ItemProperty -LiteralPath $rk -ErrorAction SilentlyContinue
-        if (-not $props) { continue }
-        foreach ($p in $props.PSObject.Properties) {
-            if ($p.Name -match '^PS') { continue }
-            $val = [string]$p.Value
-            if ($p.Name -match 'Wacom|Tablet|PenTablet|PenAttention' -or $val -match 'Wacom|Tablet|PenTablet') {
-                Remove-ItemProperty -LiteralPath $rk -Name $p.Name -Force -ErrorAction SilentlyContinue
-                Write-Step "removed kiosk startup entry: $($p.Name)"
-            }
-        }
-    }
-
-    [gc]::Collect()
-    Start-Sleep -Milliseconds 500
-    if ($hiveLoaded) {
-        $null = cmd.exe /c "reg unload $hiveKey 2>nul"
-        Write-Step "patched NTUSER.DAT (taskmgr/winkeys/sticky-keys hardening for $KioskUser)"
-    }
-    }
-} else {
-    Write-Step "WARNING: NTUSER.DAT still missing - per-user hardening skipped"
-}
-
-# 2c) mandatory profile flag: State=128 makes Windows discard the profile on logout
+# 2c) Windows-native temp profile: ProfileList entry stays, profile folder removed -> TEMP profile, deleted on logoff.
 $profileKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$sid"
 if (-not (Test-Path $profileKey)) { New-Item -Path $profileKey -Force | Out-Null }
-Set-ItemProperty -Path $profileKey -Name 'State' -Value 128 -Type DWord
-Write-Step "marked $KioskUser profile State=128 (wipe-on-logout)"
+Set-ItemProperty -Path $profileKey -Name 'ProfileImagePath' -Value $ProfilePath -Type ExpandString
+Remove-ItemProperty -Path $profileKey -Name 'State' -ErrorAction SilentlyContinue
+Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList' -ErrorAction SilentlyContinue |
+    Where-Object { $_.PSChildName -like "$sid*" -and $_.PSChildName -ne $sid } |
+    ForEach-Object { Remove-Item -LiteralPath $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue }
+if (Test-Path -LiteralPath $ProfilePath) {
+    Remove-Item -LiteralPath $ProfilePath -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Step "removed $ProfilePath (ProfileList kept) -> temporary profile each logon, deleted on logoff"
+} else {
+    Write-Step "profile folder absent; ProfileList points at $ProfilePath -> temporary profile on logon"
+}
 
 # 3) Removable storage lockdown for this user (per-user policy under SID)
 $rsRoot = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\RemovableStorageDevices\$sid"
