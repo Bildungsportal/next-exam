@@ -385,6 +385,8 @@ if (Test-Path $hivePath) {
     Set-ItemProperty -Path $polSystem   -Name 'HideFastUserSwitching'  -Value 1 -Type DWord
     Set-ItemProperty -Path $polExplorer -Name 'NoWinKeys'              -Value 1 -Type DWord
     Set-ItemProperty -Path $polExplorer -Name 'NoRun'                  -Value 1 -Type DWord
+    Set-ItemProperty -Path $polExplorer -Name 'HideRecommendedSection' -Value 1 -Type DWord
+    Set-ItemProperty -Path $polExplorer -Name 'NoStartMenuMorePrograms'  -Value 1 -Type DWord
     Set-ItemProperty -Path $polEdgeUI   -Name 'AllowEdgeSwipe'         -Value 0 -Type DWord
     Set-ItemProperty -Path $polEdgeUI   -Name 'DisableCharmsHint'      -Value 1 -Type DWord
     Set-ItemProperty -Path $polEdgeUI   -Name 'DisableTLcorner'        -Value 1 -Type DWord
@@ -530,31 +532,23 @@ function New-AllowedAppXml($apps) {
     return $sb.ToString()
 }
 
-# AllAppsList only permits execution; Start menu tiles must be pinned explicitly in StartLayout.
-function New-KioskStartLayoutInnerXml([System.Collections.ArrayList]$apps) {
-    $sb = New-Object System.Text.StringBuilder
-    [void]$sb.AppendLine('<LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">')
-    [void]$sb.AppendLine('  <LayoutOptions StartTileGroupCellWidth="6" />')
-    [void]$sb.AppendLine('  <DefaultLayoutOverride>')
-    [void]$sb.AppendLine('    <StartLayoutCollection>')
-    [void]$sb.AppendLine('      <start:Group Name="Next-Exam Kiosk">')
-    $col = 0
-    $row = 0
-    foreach ($app in @($apps)) {
-        $p = [System.Security.SecurityElement]::Escape([string]$app.Path)
-        [void]$sb.AppendLine("        <start:DesktopApplicationLink Path=`"$p`" Size=`"2x2`" Column=`"$col`" Row=`"$row`" />")
-        $col++
-        if ($col -ge 6) { $col = 0; $row++ }
-    }
-    [void]$sb.AppendLine('      </start:Group>')
-    [void]$sb.AppendLine('    </StartLayoutCollection>')
-    [void]$sb.AppendLine('  </DefaultLayoutOverride>')
-    [void]$sb.AppendLine('</LayoutModificationTemplate>')
-    return $sb.ToString()
-}
-
 $appsXml = New-AllowedAppXml $AllowedApps
-$startLayoutInner = New-KioskStartLayoutInnerXml -Apps $AllowedApps
+
+# Desktop .lnk launchers (AllAppsList still whitelists; java/javaw/disable-shortcuts are not shown).
+$deskDir = Join-Path $ProfilePath 'Desktop'
+New-Item -ItemType Directory -Path $deskDir -Force | Out-Null
+$skipDesktop = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe')
+foreach ($app in $AllowedApps) {
+    if ($skipDesktop -contains ([IO.Path]::GetFileName($app.Path)).ToLower()) { continue }
+    $lnk = Join-Path $deskDir "$([IO.Path]::GetFileNameWithoutExtension($app.Path)).lnk"
+    $w = New-Object -ComObject WScript.Shell
+    $s = $w.CreateShortcut($lnk)
+    $s.TargetPath = $app.Path
+    $s.WorkingDirectory = [IO.Path]::GetDirectoryName($app.Path)
+    $s.Save()
+    [void][Runtime.InteropServices.Marshal]::ReleaseComObject($w)
+    Write-Step "desktop launcher: $lnk"
+}
 
 # Multi-App Assigned Access XML (rs5 namespace = Win10 1809+; supported on Win10/11 Pro/Edu/Ent)
 $config = @"
@@ -573,9 +567,17 @@ $appsXml
         <rs5:AllowedNamespace Name="Downloads"/>
       </rs5:FileExplorerNamespaceRestrictions>
       <StartLayout>
-        <![CDATA[$startLayoutInner]]>
+        <![CDATA[<LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
+  <LayoutOptions StartTileGroupCellWidth="6" />
+  <DefaultLayoutOverride>
+    <StartLayoutCollection>
+      <defaultlayout:StartLayout GroupCellWidth="6" />
+    </StartLayoutCollection>
+  </DefaultLayoutOverride>
+</LayoutModificationTemplate>
+]]>
       </StartLayout>
-      <Taskbar ShowTaskbar="true"/>
+      <Taskbar ShowTaskbar="false"/>
     </Profile>
   </Profiles>
   <Configs>
