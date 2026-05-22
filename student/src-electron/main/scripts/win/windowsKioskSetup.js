@@ -191,10 +191,16 @@ function parseLauncherJsonText(text) {
 function normalizeLauncherAppsRaw(raw) {
     if (!raw) return [];
     let items = raw;
-    if (Array.isArray(raw.apps)) items = raw.apps;
-    else if (!Array.isArray(raw)) {
-        if (Array.isArray(raw.value)) items = raw.value;
-        else items = [raw];
+    const appsNode = raw.apps ?? raw.Apps;
+    if (appsNode != null) {
+        items = Array.isArray(appsNode) ? appsNode : [appsNode];
+    } else if (Array.isArray(raw)) {
+        items = raw;
+    } else if (Array.isArray(raw.value)) {
+        items = raw.value;
+    } else if (raw && typeof raw === 'object') {
+        if (raw.path || raw.Path) items = [raw];
+        else return [];
     }
     const out = [];
     for (const entry of items) {

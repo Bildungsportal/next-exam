@@ -428,7 +428,11 @@ export default {
             return this.platformKiosk?.displayServer === 'windows' ? 'winKioskSetup' : 'cageSetup';
         },
         cageLauncherButtons() {
-            return this.cageLauncherApps.filter((a) => !/next-exam-student/i.test(a.name || '') && !/next-exam-student\.exe$/i.test(a.path || ''));
+            return this.cageLauncherApps.filter((a) => {
+                const p = String(a?.path || '').trim();
+                if (!p || !/\.exe$/i.test(p)) return false;
+                return !/next-exam-student/i.test(a.name || '') && !/next-exam-student\.exe$/i.test(p);
+            });
         },
     },
     watch: {
@@ -580,7 +584,9 @@ export default {
         },
 
         async launchCageApp(exePath) {
-            const res = await signalBridge.invoke('launch-kiosk-allowed-app', exePath);
+            const p = String(exePath || '').trim();
+            if (!p) return;
+            const res = await signalBridge.invoke('launch-kiosk-allowed-app', p);
             if (res?.ok) return;
             this.$swal.fire({ title: 'Error', text: res?.error || 'launch failed', icon: 'error', showCancelButton: false });
         },
