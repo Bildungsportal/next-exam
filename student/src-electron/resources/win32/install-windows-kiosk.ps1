@@ -63,7 +63,7 @@ $ErrorActionPreference = 'Stop'
 
 function Write-Step($msg) { Write-Host "[next-exam-kiosk] $msg" }
 
-# Add/remove group membership by well-known SID (-Group 'S-1-5-…' is wrong; use -SID or net localgroup).
+# Add/remove group membership by well-known SID (never -Group with a SID string; use -SID).
 function Set-LocalGroupMemberByWellKnownSid([string]$MemberName, [string]$GroupSidString, [switch]$Remove) {
     $groupSid = New-Object System.Security.Principal.SecurityIdentifier($GroupSidString)
     $groupLabel = $groupSid.Translate([System.Security.Principal.NTAccount]).Value
@@ -93,11 +93,10 @@ function Set-LocalGroupMemberByWellKnownSid([string]$MemberName, [string]$GroupS
 
 # New-LocalUser -NoPassword still leaves "change password at next logon"; normalize via net+WinNT flags.
 function Set-LocalUserPasswordlessLogon([string]$UserName) {
-    $netOut = (& net.exe user $UserName '/passwordreq:no' '/passwordchg:no' 2>&1 | Out-String).Trim()
-    if ($LASTEXITCODE -ne 0) { throw "net user password flags failed: $netOut" }
-    $emptyPw = [string]::Empty
-    $clearOut = (& net.exe user $UserName $emptyPw 2>&1 | Out-String).Trim()
-    if ($LASTEXITCODE -ne 0) { throw "net user clear password failed: $clearOut" }
+    $null = cmd.exe /c ('net user "' + $UserName + '" /passwordreq:no /passwordchg:no')
+    if ($LASTEXITCODE -ne 0) { throw "net user password flags failed (exit $LASTEXITCODE)" }
+    $null = cmd.exe /c ('net user "' + $UserName + '" ""')
+    if ($LASTEXITCODE -ne 0) { throw "net user clear password failed (exit $LASTEXITCODE)" }
     $adsPath = "WinNT://$env:COMPUTERNAME/$UserName,user"
     $locUser = [ADSI]$adsPath
     $locUser.PasswordExpired = 0
@@ -157,32 +156,32 @@ function Apply-MdmAssignedAccessAsSystem([string]$ConfigXml, [string]$StagingDir
     $logPath = Join-Path $StagingDir "mdm-helper-$stamp.log"
     foreach ($p in @($resultPath, $logPath)) { if (Test-Path $p) { Remove-Item -LiteralPath $p -Force } }
     Set-Content -LiteralPath $configPath -Value $ConfigXml -Encoding UTF8
-    $helper = @"
-param([string]`$ConfigPath, [string]`$ResultPath, [string]`$LogPath)
-`$ErrorActionPreference = 'Stop'
-function Log([string]`$m) { Add-Content -LiteralPath `$LogPath -Value `$m -Encoding UTF8 }
+    $helper = @'
+param([string]$ConfigPath, [string]$ResultPath, [string]$LogPath)
+$ErrorActionPreference = 'Stop'
+function Log([string]$m) { Add-Content -LiteralPath $LogPath -Value $m -Encoding UTF8 }
 try {
     Log 'mdm helper start'
     Add-Type -AssemblyName System.Web
-    `$encoded = [System.Web.HttpUtility]::HtmlEncode((Get-Content -LiteralPath `$ConfigPath -Raw -Encoding UTF8))
-    `$ns = 'root\cimv2\mdm\dmmap'
-    `$filter = "InstanceID='AssignedAccess' AND ParentID='./Vendor/MSFT/'"
-    `$obj = Get-CimInstance -Namespace `$ns -ClassName MDM_AssignedAccess -Filter `$filter -ErrorAction SilentlyContinue
-    if (-not `$obj) {
-        `$all = @(Get-CimInstance -Namespace `$ns -ClassName MDM_AssignedAccess -ErrorAction SilentlyContinue)
-        if (`$all.Count -gt 0) { `$obj = `$all[0] }
+    $encoded = [System.Web.HttpUtility]::HtmlEncode((Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8))
+    $ns = 'root\cimv2\mdm\dmmap'
+    $filter = "InstanceID='AssignedAccess' AND ParentID='./Vendor/MSFT/'"
+    $obj = Get-CimInstance -Namespace $ns -ClassName MDM_AssignedAccess -Filter $filter -ErrorAction SilentlyContinue
+    if (-not $obj) {
+        $all = @(Get-CimInstance -Namespace $ns -ClassName MDM_AssignedAccess -ErrorAction SilentlyContinue)
+        if ($all.Count -gt 0) { $obj = $all[0] }
     }
-    if (-not `$obj) { throw 'MDM_AssignedAccess instance not found' }
+    if (-not $obj) { throw 'MDM_AssignedAccess instance not found' }
     Log 'mdm Set-CimInstance begin'
-    Set-CimInstance -InputObject `$obj -Property @{ Configuration = `$encoded } -ErrorAction Stop
+    Set-CimInstance -InputObject $obj -Property @{ Configuration = $encoded } -ErrorAction Stop
     Log 'mdm Set-CimInstance ok'
-    Set-Content -LiteralPath `$ResultPath -Value '0' -Encoding ASCII -NoNewline
+    Set-Content -LiteralPath $ResultPath -Value '0' -Encoding ASCII -NoNewline
 } catch {
-    Log "mdm error: `$(`$_.Exception.Message)"
-    Set-Content -LiteralPath `$ResultPath -Value ("1`n`$(`$_.Exception.Message)") -Encoding UTF8
+    Log ('mdm error: ' + $_.Exception.Message)
+    Set-Content -LiteralPath $ResultPath -Value ("1`n" + $_.Exception.Message) -Encoding UTF8
     exit 1
 }
-"@
+'@
     Set-Content -LiteralPath $helperPath -Value $helper -Encoding UTF8
     try {
         Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
@@ -218,7 +217,7 @@ function Apply-MdmAssignedAccessConfiguration([string]$ConfigXml, [string]$Insta
         Write-Step 'MDM apply succeeded (admin token)'
         return 'admin'
     } catch {
-        # On many client SKUs the MDM Bridge instance is only reachable as SYSTEM — not a fatal error.
+        # On many client SKUs the MDM Bridge instance is only reachable as SYSTEM - not a fatal error.
         Write-Step "MDM via admin not available ($($_.Exception.Message)); using SYSTEM task (expected on some builds)"
     }
     Write-Step "applying MDM Assigned Access via SYSTEM scheduled task (staging: $staging)..."
@@ -227,7 +226,7 @@ function Apply-MdmAssignedAccessConfiguration([string]$ConfigXml, [string]$Insta
         Sort-Object LastWriteTime -Descending | Select-Object -First 1
     if ($logFile) {
         $tail = (Get-Content -LiteralPath $logFile.FullName -ErrorAction SilentlyContinue | Select-Object -Last 3) -join ' | '
-        Write-Step "MDM apply succeeded (SYSTEM task). Log: $($logFile.FullName) — $tail"
+        Write-Step "MDM apply succeeded (SYSTEM task). Log: $($logFile.FullName): $tail"
     } else {
         Write-Step 'MDM apply succeeded (SYSTEM task)'
     }
