@@ -882,12 +882,15 @@ export const detectorMethods = {
           const prefixWidth = measureSubstringWidth(prefixText);
           const sliceW = measureSliceWidthAt(startIndex, underscoreStr.length);
           const underscoreWidth = sliceW !== null ? sliceW : measureSubstringWidth(underscoreStr);
-          if (underscoreWidth < 12) continue;
+          // Underscore is a deliberate fill-in marker even when narrow
+          // (e.g. "__10__" in math worksheets uses two underscores per side).
+          if (underscoreWidth < 6) continue;
           const finalX = itemX + prefixWidth;
 
           clozeFields.push({
             id: this.generateElementId('cloze'),
             type: 'text',
+            isClozeField: true,
             style: {
               position: 'absolute',
               left: `${finalX}px`,
@@ -954,6 +957,7 @@ export const detectorMethods = {
           clozeFields.push({
             id: this.generateElementId('cloze'),
             type: 'text',
+            isClozeField: true,
             style: {
               position: 'absolute',
               left: `${finalX}px`,
@@ -977,6 +981,7 @@ export const detectorMethods = {
             clozeFields.push({
               id: this.generateElementId('cloze'),
               type: 'checkbox',
+              isClozeField: true,
               checked: text[i] === '☑' || text[i] === '☒',
               style: {
                 position: 'absolute',
@@ -1200,6 +1205,7 @@ export const detectorMethods = {
       clozeFields.push({
         id: this.generateElementId('cloze'),
         type: 'text',
+        isClozeField: true,
         style: {
           position: 'absolute',
           left: `${line.x1}px`,
@@ -1328,6 +1334,7 @@ export const detectorMethods = {
         deselectFields.push({
           id: this.generateElementId('deselect'),
           type: 'deselect',
+          isClozeField: true,
           style: {
             position: 'absolute',
             left: `${checkboxLeft}px`,
