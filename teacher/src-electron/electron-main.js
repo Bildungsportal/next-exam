@@ -210,7 +210,6 @@ app.on('web-contents-created', (event, webContents) => {
 
 app.on('window-all-closed', () => {
     WindowHandler.mainwindow = null
-    //if (process.platform !== 'darwin') app.quit()
     app.quit()
 })
 

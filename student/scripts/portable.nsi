@@ -90,13 +90,14 @@ Section
   System::Call 'Kernel32::SetEnvironmentVariable(t, t)i ("PORTABLE_EXECUTABLE_DIR", "$EXEDIR").r0'
   System::Call 'Kernel32::SetEnvironmentVariable(t, t)i ("PORTABLE_EXECUTABLE_FILE", "$EXEPATH").r0'
   System::Call 'Kernel32::SetEnvironmentVariable(t, t)i ("PORTABLE_EXECUTABLE_APP_FILENAME", "${APP_FILENAME}").r0'
-  ${StdUtils.GetAllParameters} $R0 0
+  ; StdUtils DLL extract to $PLUGINSDIR fails on some runners/AV — no CLI args needed for portable start
+  StrCpy $R0 ""
 
   !ifdef SPLASH_IMAGE
     BgImage::Destroy
   !endif
 
-  ExecWait "$INSTDIR\${APP_EXECUTABLE_FILENAME} $R0" $0
+  ExecWait '"$INSTDIR\${APP_EXECUTABLE_FILENAME}"' $0
   SetErrorLevel $0
 
   SetOutPath $EXEDIR
