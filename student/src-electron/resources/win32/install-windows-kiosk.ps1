@@ -1,25 +1,28 @@
 # Provisions next-exam-kiosk standard user + Multi-App Assigned Access (Windows Kiosk).
-# Runs elevated. Inputs: -AppPath <portable exe> [-KioskUser next-exam-kiosk]
+# Runs elevated. Copies the FULL unpacked Electron app folder (not the NSIS portable launcher alone).
 #
 # STANDALONE USAGE EXAMPLES (run from elevated PowerShell):
-#   .\install-windows-kiosk.ps1 -AppPath "C:\path\to\next-exam.exe"
-#   .\install-windows-kiosk.ps1 -AppPath "C:\path\to\next-exam.exe" -ExtraAppsFile "C:\path\to\meine-apps.txt"
-#   .\install-windows-kiosk.ps1 -AppPath "C:\path\to\next-exam.exe" -KioskUser "exam" -InstallDir "C:\Kiosk"
+#   .\install-windows-kiosk.ps1 -AppDir "$env:TEMP\next-exam-student" -LaunchExe "Next-Exam-Student.exe"
+#   .\install-windows-kiosk.ps1 -AppPath "$env:TEMP\next-exam-student\Next-Exam-Student.exe"
+#   .\install-windows-kiosk.ps1 -AppDir "C:\path\to\unpacked-app" -LaunchExe "Next-Exam-Student.exe" -ExtraAppsFile "C:\path\to\meine-apps.txt"
 #
-# When invoked by next-exam itself (via the in-app UAC prompt), all parameters are
-# supplied automatically by the renderer/node module (process.execPath as -AppPath,
-# EXAM-STUDENT/kiosk-allowed-apps.txt as -ExtraAppsFile).
+# Portable build: while Next-Exam is running, the live tree is usually
+#   %TEMP%\next-exam-student\  (see quasar unpackDirName) with Next-Exam-Student.exe inside.
+# The download .exe in Downloads is only a launcher — do NOT pass that file alone.
+#
+# When invoked by next-exam (in-app UAC), -AppDir/-LaunchExe are resolved from the running
+# process (dirname of process.execPath + basename), EXAM-STUDENT/kiosk-allowed-apps.txt optional.
 #
 # OPTIONAL APP WHITELIST (-ExtraAppsFile):
 #   Plaintext file, one absolute path per line. Each path = additional desktop app the
-#   kiosk user may launch beside next-exam.exe. next-exam itself is always allowed and
+#   kiosk user may launch beside the main Next-Exam exe. Next-Exam itself is always allowed and
 #   auto-launches; entries here do NOT auto-launch.
 #
 #   File location used by next-exam (passed in by the renderer):
 #     %USERPROFILE%\EXAM-STUDENT\kiosk-allowed-apps.txt
 #   When -ExtraAppsFile is omitted (e.g. running this script directly), the same path is
 #   auto-detected via the owner of the running explorer.exe (interactive user, not the admin).
-#   File is OPTIONAL. If absent, only next-exam.exe is whitelisted.
+#   File is OPTIONAL. If absent, only the main Next-Exam exe is whitelisted.
 #
 #   Rules:
 #     - one absolute path per line (spaces ok, no quotes)
@@ -36,10 +39,13 @@
 #     0   success
 #     10  EDITION_UNSUPPORTED (Home/Core; needs Pro/Edu/Enterprise)
 #     11  MISSING_APP_PATH (entry in ExtraAppsFile does not exist)
+#     12  INVALID_APP_BUNDLE (AppDir is not an unpacked Electron tree)
 #     9999 unexpected exception (transcript in temp log)
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory=$true)][string]$AppPath,
+    [string]$AppPath = '',
+    [string]$AppDir = '',
+    [string]$LaunchExe = '',
     [string]$KioskUser = 'next-exam-kiosk',
     [string]$InstallDir = 'C:\NextExam',
     # optional plaintext file with one absolute exe path per line; blank/# lines ignored
@@ -112,12 +118,31 @@ if ($edition -notmatch 'Professional|Enterprise|Education|IoTEnterprise|Pro') {
     exit 10
 }
 
-# 1) copy portable exe to public location accessible by separate kiosk user
-if (-not (Test-Path $AppPath)) { throw "AppPath not found: $AppPath" }
+# 1) resolve app bundle (full unpack folder + launch exe name)
+if ($AppPath -and -not $AppDir) {
+    $AppDir = Split-Path -Parent $AppPath
+    if (-not $LaunchExe) { $LaunchExe = Split-Path -Leaf $AppPath }
+}
+if (-not $AppDir -or -not $LaunchExe) {
+    throw 'Provide -AppDir and -LaunchExe, or -AppPath pointing at the running Next-Exam-Student.exe inside the unpack folder.'
+}
+if (-not (Test-Path -LiteralPath $AppDir -PathType Container)) { throw "AppDir not found: $AppDir" }
+$sourceLaunch = Join-Path $AppDir $LaunchExe
+if (-not (Test-Path -LiteralPath $sourceLaunch -PathType Leaf)) { throw "Launch exe not found: $sourceLaunch" }
+$hasResources = (Test-Path -LiteralPath (Join-Path $AppDir 'resources') -PathType Container)
+if (-not $hasResources) {
+    Write-Host 'ERROR_INVALID_APP_BUNDLE: AppDir must be the unpacked Next-Exam folder (contains resources\), not the portable launcher in Downloads.'
+    exit 12
+}
+
 if (-not (Test-Path $InstallDir)) { New-Item -ItemType Directory -Path $InstallDir | Out-Null }
-$TargetExe = Join-Path $InstallDir 'next-exam.exe'
-Copy-Item -LiteralPath $AppPath -Destination $TargetExe -Force
-Write-Step "copied app -> $TargetExe"
+# replace prior partial copy so whitelist paths stay valid
+Get-ChildItem -LiteralPath $InstallDir -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+Copy-Item -Path (Join-Path $AppDir '*') -Destination $InstallDir -Recurse -Force
+$TargetExe = Join-Path $InstallDir $LaunchExe
+if (-not (Test-Path -LiteralPath $TargetExe)) { throw "Copy failed, launch exe missing: $TargetExe" }
+Set-Content -LiteralPath (Join-Path $InstallDir '.kiosk-launch-exe.txt') -Value $LaunchExe -Encoding UTF8 -NoNewline
+Write-Step "copied app bundle $AppDir -> $InstallDir (launch $LaunchExe)"
 
 # grant Users group read+execute so the kiosk profile can launch it (SID: locale-independent; "Users"/"Benutzer" names fail on non-EN Windows)
 $usersSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-545')
@@ -334,7 +359,7 @@ $appsXml
 
 # Apply via MDM_AssignedAccess WMI bridge (CSP); must run as SYSTEM (see Apply-MdmAssignedAccessConfiguration)
 Apply-MdmAssignedAccessConfiguration -ConfigXml $config
-Write-Step "applied MDM_AssignedAccess Multi-App configuration (single app: next-exam.exe)"
+Write-Step "applied MDM_AssignedAccess Multi-App configuration (launch: $LaunchExe)"
 
 # marker: renderer treats provisioning as complete only after this file exists (partial runs keep install button visible)
 Set-Content -LiteralPath (Join-Path $InstallDir '.kiosk-provision-complete') -Value (Get-Date -Format 'o') -Encoding UTF8

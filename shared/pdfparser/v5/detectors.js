@@ -777,6 +777,32 @@ export const detectorMethods = {
         return itemWidthPdf * (measuredSub / measuredTotal);
       };
 
+      // DIAGNOSE: log per-item context only when item has cloze candidates
+      if (text.includes('_') || text.includes('.') || text.includes('…')) {
+        console.log('[CLOZE-ITEM]', {
+          text: text.slice(0, 80),
+          itemX: itemX.toFixed(2),
+          itemY: itemY.toFixed(2),
+          fontSize: fontSize.toFixed(2),
+          horizScale: Math.hypot(tx[0], tx[1]).toFixed(3),
+          pdfItemWidth: item.width,
+          actualFullWidthRaw: typeof actualFullWidthRaw === 'number' ? actualFullWidthRaw.toFixed(2) : actualFullWidthRaw,
+          measuredFullWidth: typeof measuredFullWidth === 'number' ? measuredFullWidth.toFixed(2) : measuredFullWidth,
+          widthScale: widthScale.toFixed(3),
+          useScale,
+          knownFont,
+          itemWidthPdf: typeof itemWidthPdf === 'number' ? itemWidthPdf.toFixed(2) : itemWidthPdf,
+          fontName,
+          baseFont: fontInfo && fontInfo.baseFont,
+          fontInfoFontName: fontInfo && fontInfo.fontName,
+          family: fontInfo && fontInfo.family,
+          effectiveFontFamily,
+          fontScale,
+          hasGlyphWidthsArr: !!(customAdjust && customAdjust.glyphWidths && customAdjust.glyphWidths.widths),
+          customAdjustHit: !!customAdjust,
+        });
+      }
+
       if (this.detectUnderscores) {
         const regex = /(_+)/g;
         let match;
@@ -789,6 +815,26 @@ export const detectorMethods = {
           const underscoreWidth = measureSubstringWidth(underscoreStr);
           if (underscoreWidth < 12) continue;
           const finalX = itemX + prefixWidth;
+          // proportional alternative for comparison
+          const __mt = measureCtx.measureText(text).width || 1;
+          const __mp = measureCtx.measureText(prefixText).width || 0;
+          const __mu = measureCtx.measureText(underscoreStr).width || 0;
+          const propPrefix = itemWidthPdf ? itemWidthPdf * (__mp / __mt) : null;
+          const propUnderW = itemWidthPdf ? itemWidthPdf * (__mu / __mt) : null;
+          const propFinalX = propPrefix !== null ? itemX + propPrefix : null;
+          console.log('[CLOZE-UND]', {
+            prefixText: prefixText.slice(0, 60),
+            startIndex,
+            prefixWidth: prefixWidth.toFixed(2),
+            underscoreStr,
+            underscoreWidth: underscoreWidth.toFixed(2),
+            itemX: itemX.toFixed(2),
+            finalX: finalX.toFixed(2),
+            propPrefix: propPrefix !== null ? propPrefix.toFixed(2) : null,
+            propUnderW: propUnderW !== null ? propUnderW.toFixed(2) : null,
+            propFinalX: propFinalX !== null ? propFinalX.toFixed(2) : null,
+            top: (itemY - fontSize).toFixed(2),
+          });
 
           clozeFields.push({
             id: this.generateElementId('cloze'),
@@ -854,6 +900,26 @@ export const detectorMethods = {
             continue;
           }
           const finalX = itemX + prefixWidth;
+          // hypothesis: `…` (U+2026) is measured wrong by canvas vs embedded subset.
+          // Try expanding `…` -> `...` for canvas measurement and rescale.
+          const textExp = text.replace(/…/g, '...');
+          const prefixExp = prefixText.replace(/…/g, '...');
+          const __mtExp = measureCtx.measureText(textExp).width || 1;
+          const __mpExp = measureCtx.measureText(prefixExp).width || 0;
+          const expPrefix = itemWidthPdf ? itemWidthPdf * (__mpExp / __mtExp) : null;
+          const expFinalX = expPrefix !== null ? itemX + expPrefix : null;
+          console.log('[CLOZE-DOT]', {
+            prefixText: prefixText.slice(0, 60),
+            startIndex,
+            prefixWidth: prefixWidth.toFixed(2),
+            dotStr,
+            dotWidth: dotWidth.toFixed(2),
+            itemX: itemX.toFixed(2),
+            finalX: finalX.toFixed(2),
+            expPrefix: expPrefix !== null ? expPrefix.toFixed(2) : null,
+            expFinalX: expFinalX !== null ? expFinalX.toFixed(2) : null,
+            top: (itemY - fontSize).toFixed(2),
+          });
 
           clozeFields.push({
             id: this.generateElementId('cloze'),

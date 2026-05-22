@@ -520,8 +520,16 @@ export default {
             const install = await signalBridge.invoke('install-linux-cage-kiosk');
             if (install?.ok) {
                 this.platformKiosk = await signalBridge.invoke('get-linux-kiosk-info');
+                let successHtml = `${this.$t(this.kioskI18n('Success'))}<br><br>${this.$t(this.kioskI18n('SuccessHint'))}`;
+                if (install.kioskSourceDir && this.platformKiosk?.displayServer === 'windows') {
+                    const src = this.$t('student.winKioskSetupSuccessSource', {
+                        appDir: install.kioskSourceDir,
+                        launchExe: install.kioskLaunchExe || '',
+                    });
+                    successHtml += `<br><br><small style="font-family:monospace;word-break:break-all;">${src}</small>`;
+                }
                 await this.$swal.fire({
-                    html: `${this.$t(this.kioskI18n('Success'))}<br><br>${this.$t(this.kioskI18n('SuccessHint'))}`,
+                    html: successHtml,
                     icon: 'success',
                 });
             } else {

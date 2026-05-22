@@ -127,6 +127,14 @@ export default defineConfig(( ctx: any ) => {
         viteConf.css.preprocessorOptions.scss.silenceDeprecations = ['color-functions', 'if-function'];
         // Resolve pdfjs-dist legacy build (package has no exports for legacy subpath)
         const sharedDir = path.resolve(__dirname, '..', 'shared');
+        const repoRoot = path.resolve(__dirname, '..');
+        viteConf.server.fs = viteConf.server.fs || {};
+        const fsAllow = new Set([
+          ...(Array.isArray(viteConf.server.fs.allow) ? viteConf.server.fs.allow : []),
+          repoRoot,
+          sharedDir,
+        ]);
+        viteConf.server.fs.allow = [...fsAllow];
         viteConf.resolve = viteConf.resolve || {};
         viteConf.resolve.alias = {
           ...viteConf.resolve.alias,

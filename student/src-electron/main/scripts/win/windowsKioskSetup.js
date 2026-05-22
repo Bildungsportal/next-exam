@@ -16,9 +16,65 @@ import log from 'electron-log';
 
 export const KIOSK_USERNAME = 'next-exam-kiosk';
 export const KIOSK_INSTALL_DIR = 'C:\\NextExam';
-export const KIOSK_INSTALL_EXE = 'C:\\NextExam\\next-exam.exe';
 // written only when install-windows-kiosk.ps1 finishes (incl. MDM); partial runs must not hide the UI button
 export const KIOSK_PROVISION_MARKER = 'C:\\NextExam\\.kiosk-provision-complete';
+const KIOSK_LAUNCH_EXE_MARKER = 'C:\\NextExam\\.kiosk-launch-exe.txt';
+
+/** True when dir looks like a packaged Electron app (portable unpack or MSI install folder). */
+function isElectronAppBundleDir(dir) {
+    if (!dir || !existsSync(dir)) return false;
+    return existsSync(path.join(dir, 'resources', 'app.asar'))
+        || existsSync(path.join(dir, 'resources', 'app'))
+        || existsSync(path.join(dir, 'locales'));
+}
+
+/** Resolves the full app tree to copy (not the NSIS portable launcher in Downloads). */
+export function resolveWindowsKioskAppBundle() {
+    if (!app.isPackaged) {
+        return { ok: false, error: 'Kiosk setup requires a packaged Next-Exam build (not dev/quasar).' };
+    }
+    const launchExe = path.basename(process.execPath);
+    let appDir = path.dirname(process.execPath);
+    // PORTABLE_EXECUTABLE_DIR often points at Downloads (launcher), not %TEMP%\next-exam-student — validate
+    const portableDir = process.env.PORTABLE_EXECUTABLE_DIR?.trim();
+    if (portableDir && isElectronAppBundleDir(portableDir)) {
+        appDir = portableDir;
+    }
+    if (!isElectronAppBundleDir(appDir)) {
+        return {
+            ok: false,
+            error: `Could not locate Next-Exam app folder (expected resources\\app.asar). Got: ${appDir}`,
+        };
+    }
+    if (!existsSync(path.join(appDir, launchExe))) {
+        return { ok: false, error: `Launch exe missing in app folder: ${path.join(appDir, launchExe)}` };
+    }
+    log.info(`windowsKioskSetup: detected source bundle=${appDir} launch=${launchExe}`);
+    return { ok: true, appDir, launchExe };
+}
+
+/** IPC success payload including paths copied from (for log + optional UI). */
+function kioskSetupSuccessResult(bundle) {
+    log.info(`windowsKioskSetup: provisioning from ${bundle.appDir} (${bundle.launchExe}) → ${KIOSK_INSTALL_DIR}`);
+    return { ok: true, kioskSourceDir: bundle.appDir, kioskLaunchExe: bundle.launchExe };
+}
+
+/** Absolute path to the kiosk-installed launch exe, if provisioned. */
+export function resolveKioskInstalledLaunchExe() {
+    if (process.platform !== 'win32') return null;
+    if (existsSync(KIOSK_LAUNCH_EXE_MARKER)) {
+        try {
+            const name = readFileSync(KIOSK_LAUNCH_EXE_MARKER, 'utf8').trim();
+            const p = path.join(KIOSK_INSTALL_DIR, name);
+            if (name && existsSync(p)) return p;
+        } catch { /* fall through */ }
+    }
+    for (const name of ['Next-Exam-Student.exe', 'next-exam.exe']) {
+        const p = path.join(KIOSK_INSTALL_DIR, name);
+        if (existsSync(p)) return p;
+    }
+    return null;
+}
 
 // resolve packaged vs dev path to the PowerShell payload
 function resolveProvisioningScript() {
@@ -39,10 +95,10 @@ export function detectRunningInWindowsKiosk() {
     }
 }
 
-/** True when the portable exe has been copied to the public install location. */
+/** True when the full app bundle was copied to C:\NextExam (launch exe present). */
 export function detectWindowsKioskInstalled() {
     if (process.platform !== 'win32') return false;
-    return existsSync(KIOSK_INSTALL_EXE);
+    return !!resolveKioskInstalledLaunchExe();
 }
 
 /** True when elevated provisioning completed end-to-end (not merely user+exe from a failed run). */
@@ -88,15 +144,15 @@ function isProcessElevated() {
  * extraAppsFile (optional) = absolute path to a plaintext file with one extra exe path per line.
  * Returns Promise<{ok:boolean,error?:string,code?:string,skipped?:boolean}>.
  */
-export async function initiateKioskSetup(appPath, extraAppsFile = '') {
+export async function initiateKioskSetup(_appPathIgnored, extraAppsFile = '') {
     if (process.platform !== 'win32') {
         // Linux/macOS callers should use their own setup path; signal no-op here
         return { ok: false, skipped: true, error: 'initiateKioskSetup: non-win32 handled elsewhere' };
     }
 
-    const exe = appPath || process.execPath;
-    if (!existsSync(exe)) {
-        return { ok: false, error: `appPath does not exist: ${exe}` };
+    const bundle = resolveWindowsKioskAppBundle();
+    if (!bundle.ok) {
+        return { ok: false, error: bundle.error };
     }
     const script = resolveProvisioningScript();
     if (!existsSync(script)) {
@@ -108,7 +164,8 @@ export async function initiateKioskSetup(appPath, extraAppsFile = '') {
     // when already elevated (rare for a portable app) skip Start-Process and run inline
     if (isProcessElevated()) {
         log.info('windowsKioskSetup: already elevated, running provisioning inline');
-        return runPowerShellInline(script, exe, extraFile);
+        const inline = await runPowerShellInline(script, bundle.appDir, bundle.launchExe, extraFile);
+        return inline.ok ? kioskSetupSuccessResult(bundle) : inline;
     }
 
     // Start-Process -Verb RunAs returns a Process handle without PROCESS_QUERY_INFORMATION rights when
@@ -123,7 +180,7 @@ export async function initiateKioskSetup(appPath, extraAppsFile = '') {
     const extraArg = extraFile ? ` -ExtraAppsFile '${psEscape(extraFile)}'` : '';
     const childCommand =
         `try { ` +
-        `& '${psEscape(script)}' -AppPath '${psEscape(exe)}'${extraArg} *>&1 | Tee-Object -FilePath '${psEscape(logFile)}'; ` +
+        `& '${psEscape(script)}' -AppDir '${psEscape(bundle.appDir)}' -LaunchExe '${psEscape(bundle.launchExe)}'${extraArg} *>&1 | Tee-Object -FilePath '${psEscape(logFile)}'; ` +
         `Set-Content -Path '${psEscape(exitFile)}' -Value $LASTEXITCODE -Encoding ASCII ` +
         `} catch { ` +
         `($_ | Out-String) | Tee-Object -FilePath '${psEscape(logFile)}' -Append; ` +
@@ -159,13 +216,15 @@ export async function initiateKioskSetup(appPath, extraAppsFile = '') {
             try { unlinkSync(exitFile); } catch {}
             try { unlinkSync(logFile); } catch {}
             if (Number.isFinite(childExit) && childExit === 0) {
-                resolve({ ok: true });
+                resolve(kioskSetupSuccessResult(bundle));
             } else if (childExit === 10) {
                 // distinct code so renderer shows the friendly edition-unsupported dialog
                 resolve({ ok: false, code: 'EDITION_UNSUPPORTED', error: transcript.trim() });
             } else if (childExit === 11) {
                 // missing extra-app path -> renderer shows friendly hint with the offending line from transcript
                 resolve({ ok: false, code: 'MISSING_APP_PATH', error: transcript.trim() });
+            } else if (childExit === 12) {
+                resolve({ ok: false, code: 'INVALID_APP_BUNDLE', error: transcript.trim() });
             } else {
                 resolve({
                     ok: false,
@@ -177,8 +236,9 @@ export async function initiateKioskSetup(appPath, extraAppsFile = '') {
 }
 
 // fallback path when host is already admin (e.g. dev box with elevated electron)
-function runPowerShellInline(script, exe, extraFile = '') {
-    const args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script, '-AppPath', exe];
+function runPowerShellInline(script, appDir, launchExe, extraFile = '') {
+    const args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script,
+        '-AppDir', appDir, '-LaunchExe', launchExe];
     if (extraFile) { args.push('-ExtraAppsFile', extraFile); }
     return new Promise((resolve) => {
         const child = spawn('powershell.exe', args, { windowsHide: true });

@@ -320,6 +320,7 @@
         "winKioskSetupRoot": "Administrator rights are required (UAC prompt).",
         "winKioskSetupSuccess": "Windows kiosk mode installed!",
         "winKioskSetupSuccessHint": "Sign out and pick user “next-exam-kiosk” on the login screen to start the locked-down exam environment.",
+        "winKioskSetupSuccessSource": "Copied from: {appDir} ({launchExe}) → C:\\NextExam\\",
         "winKioskSetupText": "Next-Exam can be set up as a locked-down kiosk on this Windows PC (separate user, USB drives blocked, profile wiped after each exam).",
         "winKioskSetupTitle": "Windows kiosk mode",
         "wlanNopermissionsText": "Windows requires location permissions to retrieve WLAN information. Please enable location services in Privacy & Security settings.",
