@@ -534,11 +534,11 @@ function New-AllowedAppXml($apps) {
 
 $appsXml = New-AllowedAppXml $AllowedApps
 
-# MS Win11 multi-app kiosk: v5:StartPins desktopAppLink must point at real .lnk under the kiosk user's Start Menu (not .exe).
-# https://learn.microsoft.com/en-us/windows/configuration/assigned-access/quickstart-restricted-user-experience
+# Win11 StartPins: real .lnk + absolute path in JSON (MS quickstart uses %APPDATA% for .lnk; not %USERPROFILE% — unexpanded literals drop pins).
 $skipPin = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe')
 $progDir = Join-Path $ProfilePath 'AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Next-Exam'
-New-Item -ItemType Directory -Path $progDir -Force | Out-Null
+$stagingDir = Join-Path $InstallDir 'kiosk-start-lnks'
+New-Item -ItemType Directory -Path $progDir, $stagingDir -Force | Out-Null
 $pinParts = foreach ($app in $AllowedApps) {
     if ($skipPin -contains ([IO.Path]::GetFileName($app.Path)).ToLower()) { continue }
     $lnkName = "$([IO.Path]::GetFileNameWithoutExtension($app.Path)).lnk"
@@ -549,13 +549,32 @@ $pinParts = foreach ($app in $AllowedApps) {
     $s.WorkingDirectory = [IO.Path]::GetDirectoryName($app.Path)
     $s.Save()
     [void][Runtime.InteropServices.Marshal]::ReleaseComObject($w)
-    $rel = "AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Next-Exam\$lnkName"
-    $linkJson = '%USERPROFILE%\' + ($rel -replace '\\', '\\\\')
-    Write-Step "start pin .lnk: $lnkPath -> $linkJson"
+    Copy-Item -LiteralPath $lnkPath -Destination (Join-Path $stagingDir $lnkName) -Force
+    $absLnk = (Resolve-Path -LiteralPath $lnkPath).Path
+    $linkJson = $absLnk.Replace('\', '\\')
+    Write-Step "start pin .lnk: $absLnk"
     "{`"desktopAppLink`":`"$linkJson`"}"
 }
 $startPinsJson = "{`"pinnedList`":[$($pinParts -join ',')]}"
 Write-Step "StartPins JSON: $startPinsJson"
+$syncPs1 = Join-Path $InstallDir 'sync-kiosk-start-lnks.ps1'
+Set-Content -LiteralPath $syncPs1 -Encoding UTF8 -Value @"
+`$d = Join-Path `$env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Next-Exam'
+New-Item -ItemType Directory -Path `$d -Force | Out-Null
+Copy-Item -LiteralPath '$stagingDir\*' -Destination `$d -Force
+"@
+if (Test-Path -LiteralPath $hivePath) {
+    $roLoad = (& reg.exe load HKU\NEXTEXAM_KIOSK_HIVE $hivePath 2>&1 | Out-String).Trim()
+    if ($LASTEXITCODE -eq 0) {
+        $roKey = 'Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\Software\Microsoft\Windows\CurrentVersion\RunOnce'
+        New-Item -Path $roKey -Force | Out-Null
+        Set-ItemProperty -Path $roKey -Name 'NextExamSyncStartLnks' -Value "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$syncPs1`"" -Type String
+        $null = cmd.exe /c 'reg unload HKU\NEXTEXAM_KIOSK_HIVE 2>nul'
+        Write-Step "RunOnce: sync start .lnk on first kiosk logon ($syncPs1)"
+    } else {
+        Write-Step "WARNING: skip RunOnce start-lnk sync (hive locked): $roLoad"
+    }
+}
 
 # Multi-App Assigned Access XML (rs5 namespace = Win10 1809+; supported on Win10/11 Pro/Edu/Ent)
 $config = @"
