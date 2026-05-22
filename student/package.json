@@ -94,7 +94,6 @@
     "find-process": "^1.4.10",
     "fs": "^0.0.2",
     "fs-extra": "^11.3.0",
-    "get-windows": "^9.3.0",
     "html2pdf-jspdf2": "^0.1.2",
     "ip": "^2.0.1",
     "jimp": "^1.6.0",

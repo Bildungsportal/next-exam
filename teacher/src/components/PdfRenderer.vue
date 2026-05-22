@@ -847,7 +847,7 @@ background-color: transparent;
 }
 
 .interactive-input.cloze {
-    border-bottom: 0;
+    border: 1px solid rgba(0, 0, 0, 0.12);
     background-color: rgba(0, 255, 0, 0.1);
     font-size: 14px;
 }

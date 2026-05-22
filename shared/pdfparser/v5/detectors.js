@@ -760,7 +760,10 @@ export const detectorMethods = {
         }
       }
     } catch (e) {
-      // silently fall back to canvas-only measurement
+      // Operator-list scan failed — fall back to canvas-only substring
+      // measurement.  Existing PDFs keep working; only the whitespace-
+      // collapse fix gets disabled.
+      if (this.enableLogging) console.warn('pdfparser @ glyph-run scan failed', e?.message);
     }
 
     textContent.items.forEach((item) => {

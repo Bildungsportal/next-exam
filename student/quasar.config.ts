@@ -341,7 +341,6 @@ export default defineConfig(( ctx: any ) => {
         afterPack: 'scripts/afterpack.js',
         asarUnpack: [
           'public/**/*',
-          'node_modules/get-windows/**/*',
         ],
         extraResources: [
           { from: 'src-electron/resources/linux', to: 'linux' },

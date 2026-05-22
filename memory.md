@@ -36,6 +36,7 @@ TECH^build^electronAssets^prod electron: copy src/assets→public/src/assets; re
 PATH^platform^dispatcher^teacher/src-electron/main/scripts/platformDispatcher.js used by teacher main startup logs^teacher/src-electron/electron-main.js
 PATH^pdfparser^root^shared/pdfparser/ (v5+shared); renderer import next-exam-shared/pdfparser/index.js (quasar alias next-exam-shared->shared/)
 PATH^pdfparser^fonts^shared/pdfparser/fonts/; pdfOverlayFonts.css+pdfOverlayFonts.js; LiberationSans|Serif+* variants; ArialMT→liberation-sans; TimesNewRomanPSMT→liberation-serif
+TECH^pdfparser^clozeWidth^extractClozeFields scans showText ops→glyphRunsByY map per item (x0,y0); when glyphRun.str.length>item.str.length pdfjs collapsed whitespace (e.g. "…….  test."→"…….  test.")→switch text+measureSubstringWidth to advances*fontSize/1000; measureSliceWidthAt(start,len) for accurate dot/underscore box width^shared/pdfparser/v5/detectors.js
 TECH^vite^fsAllowShared^student+teacher extendViteConf server.fs.allow repoRoot+sharedDir; dev must serve shared/pdfparser/fonts or @font-face fails+measureText drifts
 IPC^teacher^getServerInfoForDashboard^invoke(servername)→{status,data:{pin,servertoken,serverip,id}}|error; dashboard beforeEnter (replaces GET /control/getserverinfo)^teacher ipchandler.js+router/index.js
 IPC^teacher^startExamServer^invoke({servername,passwd,bip,bipId})→{status,message,sender}; replaces POST /control/start^teacher ipchandler.js+startserver.vue
