@@ -63,32 +63,64 @@ $ErrorActionPreference = 'Stop'
 
 function Write-Step($msg) { Write-Host "[next-exam-kiosk] $msg" }
 
+# True when MemberName is already in the builtin group identified by well-known SID.
+function Test-LocalGroupHasMember([string]$GroupSidString, [string]$MemberName) {
+    $groupSid = New-Object System.Security.Principal.SecurityIdentifier($GroupSidString)
+    $groupName = ($groupSid.Translate([System.Security.Principal.NTAccount]).Value).Split('\')[1]
+    $want = "$env:COMPUTERNAME\$MemberName"
+    $members = @(Get-LocalGroupMember -Group $groupName -ErrorAction SilentlyContinue)
+    foreach ($m in $members) {
+        if ($m.Name -eq $want -or $m.Name -eq $MemberName) { return $true }
+    }
+    return $false
+}
+
+# Win32 1378 / MemberExists = already in group; must be idempotent for re-runs.
+function Add-LocalGroupMemberIdempotent([System.Security.Principal.SecurityIdentifier]$GroupSid, [string]$MemberName, [string]$GroupLabel) {
+    if (Test-LocalGroupHasMember -GroupSidString $GroupSid.Value -MemberName $MemberName) {
+        Write-Step "group: $MemberName already in $GroupLabel (ok)"
+        return
+    }
+    try {
+        Add-LocalGroupMember -SID $GroupSid -Member $MemberName -ErrorAction Stop
+        Write-Step "group: $MemberName -> $GroupLabel (Add-LocalGroupMember -SID)"
+    } catch [Microsoft.PowerShell.Commands.MemberExistsException] {
+        Write-Step "group: $MemberName already in $GroupLabel (ok)"
+    } catch {
+        $errText = $_.Exception.Message
+        if ($errText -match '1378|already a member|bereits') {
+            Write-Step "group: $MemberName already in $GroupLabel (ok)"
+            return
+        }
+        $groupName = $GroupLabel.Split('\')[1]
+        $prevPref = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        $null = & net.exe localgroup $groupName $MemberName /add 2>&1
+        $exit = $LASTEXITCODE
+        $ErrorActionPreference = $prevPref
+        if ($exit -eq 0 -or $exit -eq 1378) {
+            Write-Step "group: $MemberName -> $groupName (net localgroup, exit $exit)"
+            return
+        }
+        throw "failed to add $MemberName to $groupName (exit $exit): $errText"
+    }
+}
+
 # Add/remove group membership by well-known SID (never -Group with a SID string; use -SID).
 function Set-LocalGroupMemberByWellKnownSid([string]$MemberName, [string]$GroupSidString, [switch]$Remove) {
     $groupSid = New-Object System.Security.Principal.SecurityIdentifier($GroupSidString)
     $groupLabel = $groupSid.Translate([System.Security.Principal.NTAccount]).Value
     if ($Remove) {
+        if (-not (Test-LocalGroupHasMember -GroupSidString $GroupSidString -MemberName $MemberName)) { return }
         try {
             Remove-LocalGroupMember -SID $groupSid -Member $MemberName -ErrorAction Stop
-            return
         } catch {
             $groupName = $groupLabel.Split('\')[1]
-            & net.exe localgroup $groupName $MemberName /delete 2>$null | Out-Null
-            return
+            $null = & net.exe localgroup $groupName $MemberName /delete 2>&1
         }
-    }
-    try {
-        Add-LocalGroupMember -SID $groupSid -Member $MemberName -ErrorAction Stop
-        Write-Step "group: $MemberName -> $groupLabel (Add-LocalGroupMember -SID)"
         return
-    } catch {
-        $groupName = $groupLabel.Split('\')[1]
-        $out = (& net.exe localgroup $groupName $MemberName /add 2>&1 | Out-String).Trim()
-        if ($LASTEXITCODE -ne 0 -and $out -notmatch 'already|bereits|1378') {
-            throw "failed to add $MemberName to $groupName (exit $LASTEXITCODE): $out"
-        }
-        Write-Step "group: $MemberName -> $groupName (net localgroup)"
     }
+    Add-LocalGroupMemberIdempotent -GroupSid $groupSid -MemberName $MemberName -GroupLabel $groupLabel
 }
 
 # New-LocalUser -NoPassword still leaves "change password at next logon"; normalize via net+WinNT flags.
