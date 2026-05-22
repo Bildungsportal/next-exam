@@ -71,6 +71,8 @@ import {
     detectWindowsKioskUserExists,
     needsWindowsKioskSetup,
     initiateKioskSetup as initiateWindowsKioskSetup,
+    readKioskLauncherApps,
+    launchKioskAllowedApp,
 } from './win/windowsKioskSetup.js';
 
 // Skip info-level file-save log noise when the renderer marks the write as periodic auto-save.
@@ -222,6 +224,10 @@ class IpcHandler {
         });
 
         // channel name kept for renderer compatibility; win32 routes to UAC + PowerShell payload.
+        ipcMain.handle('get-kiosk-launcher-apps', () => readKioskLauncherApps());
+
+        ipcMain.handle('launch-kiosk-allowed-app', (_event, exePath) => launchKioskAllowedApp(exePath));
+
         ipcMain.handle('install-linux-cage-kiosk', () => {
             if (process.platform === 'win32') {
                 // optional extra apps list under EXAM-STUDENT workdir; passed through to PS only if file exists

@@ -28,6 +28,13 @@
     </div>
     <!-- Header END -->
 
+    <div v-if="showWinKioskLauncher" v-show="!isLoading" class="w-100 px-3 py-2 bg-secondary text-white d-flex flex-wrap align-items-center gap-2" style="z-index: 999;">
+        <span class="small me-2">{{ $t('student.winKioskLauncherLabel') }}</span>
+        <button v-for="app in winKioskLauncherApps" :key="app.path" type="button" class="btn btn-light btn-sm" @click="launchWinKioskApp(app.path)">
+            {{ app.name }}
+        </button>
+    </div>
+
     <div v-show="!isLoading" id="wrapper" class="w-100 h-100 d-flex">
         <!-- LocalVM preflight overlay (must stay in student.vue; exam window opens only after checks pass) -->
         <div v-if="showLocalVmPreflightOverlay" class="localvm-preflight-backdrop">
@@ -359,6 +366,7 @@ export default {
                 cageKioskDesktopInstalled: false,
                 needsCageKioskSetup: false,
             },
+            winKioskLauncherApps: [],
 
             biptest: true,
             bipToken: false,
@@ -420,6 +428,11 @@ export default {
         kioskI18nPrefix() {
             // win32 uses winKioskSetup* keys, linux keeps the legacy cageSetup* keys
             return this.platformKiosk?.displayServer === 'windows' ? 'winKioskSetup' : 'cageSetup';
+        },
+        showWinKioskLauncher() {
+            return this.platformKiosk?.displayServer === 'windows'
+                && this.platformKiosk?.runningInCage
+                && this.winKioskLauncherApps.length > 0;
         },
     },
     watch: {
@@ -568,6 +581,12 @@ export default {
             if (k.runningInCage || !k.needsCageKioskSetup) return;
             if (localStorage.getItem('next-exam-cage-kiosk-setup-dismissed') === '1') return;
             await this.promptCageKioskSetup();
+        },
+
+        async launchWinKioskApp(exePath) {
+            const res = await signalBridge.invoke('launch-kiosk-allowed-app', exePath);
+            if (res?.ok) return;
+            this.$swal.fire({ title: 'Error', text: res?.error || 'launch failed', icon: 'error', showCancelButton: false });
         },
 
         async warnMacRosettaArch() {
@@ -1736,6 +1755,9 @@ export default {
             this.platformKiosk = await getLinuxKioskInfo(signalBridge);
             setLinuxKioskRunningInCage(this.platformKiosk.runningInCage);
             setCageWindowCaptureFallback(!!this.platformKiosk.runningInCage);
+            if (this.platformKiosk.runningInCage && this.platformKiosk.displayServer === 'windows') {
+                this.winKioskLauncherApps = await signalBridge.invoke('get-kiosk-launcher-apps') || [];
+            }
             await this.maybeOfferCageKioskSetup();
         }
 

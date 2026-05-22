@@ -19,6 +19,8 @@ export const KIOSK_INSTALL_DIR = 'C:\\NextExam';
 // written only when install-windows-kiosk.ps1 finishes (incl. MDM); partial runs must not hide the UI button
 export const KIOSK_PROVISION_MARKER = 'C:\\NextExam\\.kiosk-provision-complete';
 const KIOSK_LAUNCH_EXE_MARKER = 'C:\\NextExam\\.kiosk-launch-exe.txt';
+const KIOSK_START_PINS_JSON = path.join(KIOSK_INSTALL_DIR, 'kiosk-start-pins.json');
+const KIOSK_LAUNCHER_APPS_JSON = path.join(KIOSK_INSTALL_DIR, 'kiosk-launcher-apps.json');
 
 /** True when dir looks like a packaged Electron app (portable unpack or MSI install folder). */
 function isElectronAppBundleDir(dir) {
@@ -117,6 +119,49 @@ export function detectWindowsKioskUserExists() {
         return true;
     } catch {
         return false;
+    }
+}
+
+/** Apply ConfigureStartPins in the kiosk user's HKCU (Assigned Access XML alone often leaves only OEM tiles). */
+export function applyWindowsKioskStartPinsAtLogon() {
+    if (process.platform !== 'win32' || !detectRunningInWindowsKiosk()) return;
+    if (!existsSync(KIOSK_START_PINS_JSON)) return;
+    try {
+        const json = readFileSync(KIOSK_START_PINS_JSON, 'utf8').trim().replace(/'/g, "''");
+        const cmd =
+            "New-Item -Path 'HKCU:\\Software\\Policies\\Microsoft\\Windows\\Explorer' -Force | Out-Null; " +
+            `Set-ItemProperty -LiteralPath 'HKCU:\\Software\\Policies\\Microsoft\\Windows\\Explorer' -Name ConfigureStartPins -Value '${json}' -Type String`;
+        execSync(`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "${cmd}"`, { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+        log.info('windowsKioskSetup: ConfigureStartPins applied at kiosk logon');
+    } catch (err) {
+        log.warn('windowsKioskSetup: ConfigureStartPins at logon failed', err);
+    }
+}
+
+/** Apps listed in kiosk-launcher-apps.json (written during provisioning). */
+export function readKioskLauncherApps() {
+    if (process.platform !== 'win32' || !existsSync(KIOSK_LAUNCHER_APPS_JSON)) return [];
+    try {
+        const raw = JSON.parse(readFileSync(KIOSK_LAUNCHER_APPS_JSON, 'utf8'));
+        return Array.isArray(raw) ? raw : [raw];
+    } catch (err) {
+        log.warn('windowsKioskSetup: readKioskLauncherApps failed', err);
+        return [];
+    }
+}
+
+/** Spawn a whitelisted exe from kiosk-launcher-apps.json. */
+export function launchKioskAllowedApp(exePath) {
+    const target = path.resolve(String(exePath || ''));
+    const allowed = readKioskLauncherApps().some((a) => path.resolve(a.path) === target);
+    if (!allowed || !existsSync(target)) {
+        return { ok: false, error: 'not allowed or missing' };
+    }
+    try {
+        spawn(target, [], { detached: true, stdio: 'ignore', cwd: path.dirname(target), windowsHide: false }).unref();
+        return { ok: true };
+    } catch (err) {
+        return { ok: false, error: err.message };
     }
 }
 

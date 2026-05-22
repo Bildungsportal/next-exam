@@ -310,6 +310,7 @@
         "versionOld": "Your version of Next-Exam is too old. Please download a current version!",
         "versionUnknown": "Unknown error during connection.",
         "networkError": "There is a problem with the network, firewall rules, or network permissions! Please resolve this issue and restart Next-Exam!",
+        "winKioskLauncherLabel": "Allowed programs",
         "winKioskSetupButton": "Set up kiosk",
         "winKioskSetupDontShow": "Don't show again for now",
         "winKioskSetupEditionFailed": "Windows edition not supported",

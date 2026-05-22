@@ -534,45 +534,51 @@ function New-AllowedAppXml($apps) {
 
 $appsXml = New-AllowedAppXml $AllowedApps
 
-# Win11 StartPins: real .lnk + absolute path in JSON (MS quickstart uses %APPDATA% for .lnk; not %USERPROFILE% — unexpanded literals drop pins).
+# Win11 pins: ProgramData .lnk + desktopAppId (Get-StartApps) or %ALLUSERSPROFILE% link; ConfigureStartPins replaces OEM tiles (e.g. Lenovo Vantage).
 $skipPin = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe')
-$progDir = Join-Path $ProfilePath 'AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Next-Exam'
-$stagingDir = Join-Path $InstallDir 'kiosk-start-lnks'
-New-Item -ItemType Directory -Path $progDir, $stagingDir -Force | Out-Null
+$commonProg = Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs\Next-Exam'
+New-Item -ItemType Directory -Path $commonProg -Force | Out-Null
+$startApps = @(Get-StartApps)
+$launcherApps = [System.Collections.ArrayList]::new()
 $pinParts = foreach ($app in $AllowedApps) {
     if ($skipPin -contains ([IO.Path]::GetFileName($app.Path)).ToLower()) { continue }
     $lnkName = "$([IO.Path]::GetFileNameWithoutExtension($app.Path)).lnk"
-    $lnkPath = Join-Path $progDir $lnkName
+    $lnkPath = Join-Path $commonProg $lnkName
     $w = New-Object -ComObject WScript.Shell
     $s = $w.CreateShortcut($lnkPath)
     $s.TargetPath = $app.Path
     $s.WorkingDirectory = [IO.Path]::GetDirectoryName($app.Path)
     $s.Save()
     [void][Runtime.InteropServices.Marshal]::ReleaseComObject($w)
-    Copy-Item -LiteralPath $lnkPath -Destination (Join-Path $stagingDir $lnkName) -Force
-    $absLnk = (Resolve-Path -LiteralPath $lnkPath).Path
-    $linkJson = $absLnk.Replace('\', '\\')
-    Write-Step "start pin .lnk: $absLnk"
-    "{`"desktopAppLink`":`"$linkJson`"}"
-}
-$startPinsJson = "{`"pinnedList`":[$($pinParts -join ',')]}"
-Write-Step "StartPins JSON: $startPinsJson"
-$syncPs1 = Join-Path $InstallDir 'sync-kiosk-start-lnks.ps1'
-Set-Content -LiteralPath $syncPs1 -Encoding UTF8 -Value @"
-`$d = Join-Path `$env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Next-Exam'
-New-Item -ItemType Directory -Path `$d -Force | Out-Null
-Copy-Item -LiteralPath '$stagingDir\*' -Destination `$d -Force
-"@
-if (Test-Path -LiteralPath $hivePath) {
-    $roLoad = (& reg.exe load HKU\NEXTEXAM_KIOSK_HIVE $hivePath 2>&1 | Out-String).Trim()
-    if ($LASTEXITCODE -eq 0) {
-        $roKey = 'Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\Software\Microsoft\Windows\CurrentVersion\RunOnce'
-        New-Item -Path $roKey -Force | Out-Null
-        Set-ItemProperty -Path $roKey -Name 'NextExamSyncStartLnks' -Value "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$syncPs1`"" -Type String
-        $null = cmd.exe /c 'reg unload HKU\NEXTEXAM_KIOSK_HIVE 2>nul'
-        Write-Step "RunOnce: sync start .lnk on first kiosk logon ($syncPs1)"
+    [void]$launcherApps.Add([pscustomobject]@{ name = [IO.Path]::GetFileNameWithoutExtension($app.Path); path = $app.Path })
+    $hit = $startApps | Where-Object { $_.AppID -ceq $app.Path -or $_.AppID -like "*$([IO.Path]::GetFileName($app.Path))" } | Select-Object -First 1
+    if ($hit -and $hit.AppID -match '!') {
+        Write-Step "start pin packagedAppId: $($hit.AppID)"
+        "{`"packagedAppId`":`"$($hit.AppID)`"}"
+    } elseif ($hit) {
+        Write-Step "start pin desktopAppId: $($hit.AppID)"
+        "{`"desktopAppId`":`"$($hit.AppID.Replace('\', '\\'))`"}"
     } else {
-        Write-Step "WARNING: skip RunOnce start-lnk sync (hive locked): $roLoad"
+        $link = '%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Next-Exam\\' + $lnkName
+        Write-Step "start pin desktopAppLink: $link"
+        "{`"desktopAppLink`":`"$link`"}"
+    }
+}
+$startPinsJson = '{"applyOnce":true,"pinnedList":[' + ($pinParts -join ',') + ']}'
+Set-Content -LiteralPath (Join-Path $InstallDir 'kiosk-start-pins.json') -Value $startPinsJson -Encoding UTF8
+($launcherApps | ConvertTo-Json -Compress) | Set-Content -LiteralPath (Join-Path $InstallDir 'kiosk-launcher-apps.json') -Encoding UTF8
+Write-Step "StartPins JSON: $startPinsJson"
+if (Test-Path -LiteralPath $hivePath) {
+    $hiveKey = 'HKU\NEXTEXAM_KIOSK_HIVE'
+    $hiveLoad = (& reg.exe load $hiveKey $hivePath 2>&1 | Out-String).Trim()
+    if ($LASTEXITCODE -eq 0) {
+        $polExplorer = 'Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\Software\Policies\Microsoft\Windows\Explorer'
+        New-Item -Path $polExplorer -Force | Out-Null
+        Set-ItemProperty -Path $polExplorer -Name 'ConfigureStartPins' -Value $startPinsJson -Type String
+        $null = cmd.exe /c "reg unload $hiveKey 2>nul"
+        Write-Step 'NTUSER ConfigureStartPins written (replaces default pinned apps)'
+    } else {
+        Write-Step "WARNING: skip ConfigureStartPins in hive: $hiveLoad"
     }
 }
 
