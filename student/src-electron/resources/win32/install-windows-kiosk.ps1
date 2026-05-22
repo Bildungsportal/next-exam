@@ -1,4 +1,4 @@
-# Provisions next-exam-kiosk standard user + Multi-App Assigned Access (Windows Kiosk).
+﻿# Provisions next-exam-kiosk standard user + Multi-App Assigned Access (Windows Kiosk).
 # Runs elevated. Copies the FULL unpacked Electron app folder to C:\NextExam (not a single .exe).
 #
 # REQUIRED INPUT (pick one style):
@@ -185,8 +185,8 @@ try {
     Set-Content -LiteralPath $helperPath -Value $helper -Encoding UTF8
     try {
         Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
-        $action = New-ScheduledTaskAction -Execute 'powershell.exe' `
-            -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$helperPath`" -ConfigPath `"$configPath`" -ResultPath `"$resultPath`" -LogPath `"$logPath`""
+        $taskArgs = '-NoProfile -ExecutionPolicy Bypass -File "{0}" -ConfigPath "{1}" -ResultPath "{2}" -LogPath "{3}"' -f $helperPath, $configPath, $resultPath, $logPath
+        $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $taskArgs
         $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
         $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 5)
         Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Settings $settings -Force | Out-Null
@@ -209,6 +209,14 @@ try {
     }
 }
 
+function Get-LatestMdmHelperLogTail([string]$StagingDir) {
+    $files = @(Get-ChildItem -LiteralPath $StagingDir -Filter 'mdm-helper-*.log' -ErrorAction SilentlyContinue)
+    if ($files.Count -eq 0) { return $null, $null }
+    $latest = $files | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    $lines = @(Get-Content -LiteralPath $latest.FullName -ErrorAction SilentlyContinue | Select-Object -Last 3)
+    return $latest.FullName, ($lines -join '; ')
+}
+
 function Apply-MdmAssignedAccessConfiguration([string]$ConfigXml, [string]$InstallDir) {
     $staging = Initialize-MdmStagingDir -InstallDir $InstallDir
     try {
@@ -217,16 +225,14 @@ function Apply-MdmAssignedAccessConfiguration([string]$ConfigXml, [string]$Insta
         Write-Step 'MDM apply succeeded (admin token)'
         return 'admin'
     } catch {
-        # On many client SKUs the MDM Bridge instance is only reachable as SYSTEM - not a fatal error.
-        Write-Step "MDM via admin not available ($($_.Exception.Message)); using SYSTEM task (expected on some builds)"
+        $adminErr = $_.Exception.Message
+        Write-Step ('MDM via admin not available (' + $adminErr + '); using SYSTEM task (expected on some builds)')
     }
-    Write-Step "applying MDM Assigned Access via SYSTEM scheduled task (staging: $staging)..."
+    Write-Step ('applying MDM Assigned Access via SYSTEM scheduled task (staging: ' + $staging + ')...')
     Apply-MdmAssignedAccessAsSystem -ConfigXml $ConfigXml -StagingDir $staging
-    $logFile = Get-ChildItem -LiteralPath $staging -Filter 'mdm-helper-*.log' -ErrorAction SilentlyContinue |
-        Sort-Object LastWriteTime -Descending | Select-Object -First 1
-    if ($logFile) {
-        $tail = (Get-Content -LiteralPath $logFile.FullName -ErrorAction SilentlyContinue | Select-Object -Last 3) -join ' | '
-        Write-Step "MDM apply succeeded (SYSTEM task). Log: $($logFile.FullName): $tail"
+    $logPath, $logTail = Get-LatestMdmHelperLogTail -StagingDir $staging
+    if ($null -ne $logPath) {
+        Write-Step ('MDM apply succeeded (SYSTEM task). Log: ' + $logPath + ': ' + $logTail)
     } else {
         Write-Step 'MDM apply succeeded (SYSTEM task)'
     }
@@ -390,7 +396,7 @@ foreach ($g in $classes) {
 }
 Write-Step "removable storage denied for $KioskUser"
 
-# 4) Multi-App Assigned Access — next-exam first (AutoLaunch), then optional extras from ExtraAppsFile
+# 4) Multi-App Assigned Access - next-exam first (AutoLaunch), then optional extras from ExtraAppsFile
 $AllowedApps = @(
     @{ Path = $TargetExe; AutoLaunch = $true }
 )
