@@ -26,6 +26,12 @@ import platformDispatcher from './platformDispatcher.js';
 
 const __dirname = import.meta.dirname;
 
+function spawnJava(javapath, args) {
+    const binDir = path.dirname(javapath);
+    const env = { ...process.env, PATH: `${binDir}${path.delimiter}${process.env.PATH || ''}` };
+    return spawn(javapath, args, { shell: false, windowsHide: true, cwd: binDir, env });
+}
+
  // every platform needs it's own jre (linux, win32, darwin) //fixme: use GraalVM to precompile languagetool in order to save space and get rid of jre?
 class JreHandler {
     constructor () { }
@@ -42,7 +48,7 @@ class JreHandler {
             return;
         }
         try {
-            const proc = spawn(javapath, ['-version'], { windowsHide: true });
+            const proc = spawnJava(javapath, ['-version']);
             proc.on('error', (err) => {
                 log.warn(`jre-handler @ jTest: spawn failed (${javapath}): ${err.message}`);
             });
@@ -76,7 +82,7 @@ class JreHandler {
         args = (args || []).slice();
         classpath = classpath || [];
         args.unshift(classname);
-        args.unshift(classpath.join(this._platform === 'win32' ? ';' : ':'));
+        args.unshift(classpath.join(process.platform === 'win32' ? ';' : ':'));
         args.unshift('-cp');
         return args;
     }
@@ -90,7 +96,7 @@ class JreHandler {
         }
         log.info(`jre-handler @ jSpawn: '${platformDispatcher.jre}' selected`);
         log.info(`jre-handler @ jSpawn: spawning java process: ${javacmdline}`);
-        return spawn(javapath, javaargs, { shell: false, windowsHide: true });
+        return spawnJava(javapath, javaargs);
     }
 }
 

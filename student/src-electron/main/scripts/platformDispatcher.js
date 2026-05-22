@@ -257,7 +257,7 @@ class PlatformDispatcher {
   _resolveJavaBin() {
     switch (this.platform) {
       case 'darwin': return ['bin', 'java'];
-      case 'win32': return ['bin', 'javaw.exe'];
+      case 'win32': return ['bin', 'java.exe'];
       case 'linux': return ['bin', 'java'];
       default: this._fail(`unsupported platform: ${this.platform}`);
     }

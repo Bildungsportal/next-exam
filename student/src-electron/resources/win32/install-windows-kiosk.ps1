@@ -303,9 +303,9 @@ Get-ChildItem -LiteralPath $InstallDir -Force -ErrorAction SilentlyContinue | Re
 Copy-Item -Path (Join-Path $AppDir '*') -Destination $InstallDir -Recurse -Force
 $TargetExe = Join-Path $InstallDir $LaunchExe
 if (-not (Test-Path -LiteralPath $TargetExe)) { throw "Copy failed, launch exe missing: $TargetExe" }
-$bundledJre = Join-Path $InstallDir 'resources\app.asar.unpacked\public\minimal-jre-11-win\bin\javaw.exe'
+$bundledJre = Join-Path $InstallDir 'resources\app.asar.unpacked\public\minimal-jre-11-win\bin\java.exe'
 if (-not (Test-Path -LiteralPath $bundledJre)) {
-    Write-Host 'ERROR_INVALID_APP_BUNDLE: missing bundled JRE at resources\app.asar.unpacked\public\minimal-jre-11-win\bin\javaw.exe'
+    Write-Host 'ERROR_INVALID_APP_BUNDLE: missing bundled JRE at resources\app.asar.unpacked\public\minimal-jre-11-win\bin\java.exe'
     exit 12
 }
 Set-Content -LiteralPath (Join-Path $InstallDir '.kiosk-launch-exe.txt') -Value $LaunchExe -Encoding UTF8 -NoNewline
@@ -452,10 +452,26 @@ foreach ($g in $classes) {
 }
 Write-Step "removable storage denied for $KioskUser"
 
+# Child exes Next-Exam spawns must be on the Assigned Access allow list (else spawn fails with UNKNOWN in kiosk only).
+function Add-KioskAllowedAppPath([System.Collections.ArrayList]$List, [string]$ExePath, [switch]$AutoLaunch) {
+    if (-not (Test-Path -LiteralPath $ExePath -PathType Leaf)) { return }
+    $resolved = (Resolve-Path -LiteralPath $ExePath).Path
+    foreach ($existing in $List) {
+        if ($existing.Path -eq $resolved) { return }
+    }
+    [void]$List.Add([pscustomobject]@{ Path = $resolved; AutoLaunch = [bool]$AutoLaunch })
+    Write-Step ('  + kiosk allow' + $(if ($AutoLaunch) { ' (autolaunch)' }) + ": $resolved")
+}
+
 # 4) Multi-App Assigned Access - next-exam first (AutoLaunch), then optional extras from ExtraAppsFile
-$AllowedApps = @(
-    @{ Path = $TargetExe; AutoLaunch = $true }
-)
+$AllowedApps = [System.Collections.ArrayList]::new()
+Add-KioskAllowedAppPath -List $AllowedApps -ExePath $TargetExe -AutoLaunch
+$jreBin = Join-Path $InstallDir 'resources\app.asar.unpacked\public\minimal-jre-11-win\bin'
+foreach ($jreName in @('java.exe', 'javaw.exe')) {
+    Add-KioskAllowedAppPath -List $AllowedApps -ExePath (Join-Path $jreBin $jreName)
+}
+$disableShortcuts = Join-Path $InstallDir 'resources\app.asar.unpacked\public\disable-shortcuts.exe'
+Add-KioskAllowedAppPath -List $AllowedApps -ExePath $disableShortcuts
 
 # fallback: when -ExtraAppsFile not passed in, try the interactive user's EXAM-STUDENT folder.
 # elevated $env:USERPROFILE points at the admin, not the teacher who launched next-exam, so we
@@ -490,15 +506,14 @@ if ($ExtraAppsFile -and (Test-Path $ExtraAppsFile)) {
             Write-Host "ERROR_MISSING_APP_PATH: $line"
             exit 11
         }
-        $AllowedApps += @{ Path = $line; AutoLaunch = $false }
-        Write-Step "  + extra app: $line"
+        Add-KioskAllowedAppPath -List $AllowedApps -ExePath $line
     }
 }
 
 function New-AllowedAppXml($apps) {
     $sb = New-Object System.Text.StringBuilder
-    foreach ($app in $apps) {
-        $p = [System.Security.SecurityElement]::Escape($app.Path)
+    foreach ($app in @($apps)) {
+        $p = [System.Security.SecurityElement]::Escape([string]$app.Path)
         if ($app.AutoLaunch) {
             [void]$sb.AppendLine("        <App DesktopAppPath=`"$p`" rs5:AutoLaunch=`"true`" rs5:AutoLaunchArguments=`"`" />")
         } else {
