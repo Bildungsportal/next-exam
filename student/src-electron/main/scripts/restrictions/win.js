@@ -24,6 +24,11 @@ export async function enableWindowsRestrictions(winhandler, appsToClose) {
         log.info("platformrestrictions @ enableRestrictions: windows shortcuts disabled");
     } catch (err) { log.error(`platformrestrictions @ enableRestrictions (win shortcuts): ${err}`); }
 
+    if (platformDispatcher.skipElectronKiosk) {
+        log.info("platformrestrictions @ enableRestrictions: skip explorer kill / powershell (Win Assigned Access kiosk)");
+        return;
+    }
+
     try {
         for (const app of appsToClose) {
             const escapedApp = app.replace(/'/g, "''");

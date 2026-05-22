@@ -82,6 +82,8 @@ class PlatformDispatcher {
       this.needsCageKioskSetup = false;
     }
     this.isCageSession = this.runningInCage;
+    // Win Assigned Access already shells the session; Electron setKiosk(true) + taskkill explorer breaks it.
+    this.skipElectronKiosk = (this.platform === 'win32' && this.runningInCage);
     this.jre = this._detectJREId();
     this.publicBase = this._getPublicBase();
     this.jreDir = this._resolveJREDir();
@@ -130,6 +132,13 @@ class PlatformDispatcher {
 
   _isIOS() {
     return process.ios === true || process.env.IOS === 'true';
+  }
+
+  /** Electron kiosk flag only when OS is not already in Assigned Access / cage shell. */
+  applyElectronKioskMode(win) {
+    if (!win || win.isDestroyed?.()) return;
+    if (this.skipElectronKiosk) return;
+    win.setKiosk(true);
   }
 
   _whichDesktopName() {

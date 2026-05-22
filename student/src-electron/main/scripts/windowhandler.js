@@ -271,7 +271,7 @@ class WindowHandler {
             
             screenlockWindow.removeMenu() 
             screenlockWindow.setMinimizable(false)
-            screenlockWindow.setKiosk(true)
+            platformDispatcher.applyElectronKioskMode(screenlockWindow)
             screenlockWindow.setAlwaysOnTop(true, "pop-up-menu", 1)   //above exam window (pop-up-menu, 0)
             screenlockWindow.show()
             screenlockWindow.moveTop();
@@ -389,7 +389,7 @@ class WindowHandler {
                 try {
                     this.examwindow.removeMenu()                 
                     this.examwindow.setAlwaysOnTop(true, "screen-saver", 1) 
-                    this.examwindow.setKiosk(true);
+                    platformDispatcher.applyElectronKioskMode(this.examwindow);
                 
                     await this.sleep(500)
                     this.examwindow.moveTop()
@@ -919,7 +919,7 @@ class WindowHandler {
         winhandler.multicastClient.clientinfo.focus = false   //inform the teacher
         
         winhandler.examwindow.moveTop();
-        winhandler.examwindow.setKiosk(true);
+        platformDispatcher.applyElectronKioskMode(winhandler.examwindow);
         winhandler.examwindow.show();  
         winhandler.examwindow.focus();    // we keep focus on the window.. no matter what
 

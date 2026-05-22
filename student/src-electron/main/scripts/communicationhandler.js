@@ -88,7 +88,7 @@ import {
         const examWin = WindowHandler?.examwindow;
         if (examWin && !this.config?.development) {
             examWin.moveTop();
-            examWin.setKiosk(true);
+            platformDispatcher.applyElectronKioskMode(examWin);
             examWin.show();
             examWin.focus();
         }
@@ -541,7 +541,7 @@ import {
             clearClientFocusLock(this.multicastClient.clientinfo);
             this.multicastClient.clientinfo.focus = true;
             if (WindowHandler.examwindow && !this.config.development){ 
-                WindowHandler.examwindow.setKiosk(true);
+                platformDispatcher.applyElectronKioskMode(WindowHandler.examwindow);
                 WindowHandler.examwindow.focus();
             }
         }
