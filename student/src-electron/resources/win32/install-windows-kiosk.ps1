@@ -366,7 +366,11 @@ public static extern int CreateProfile(
 $hivePath = Join-Path $ProfilePath 'NTUSER.DAT'
 if (Test-Path $hivePath) {
     $tempKey = 'HKU\NEXTEXAM_KIOSK_HIVE'
-    & reg.exe load $tempKey $hivePath | Out-Null
+    & reg.exe unload $tempKey 2>$null | Out-Null
+    $loadOut = (& reg.exe load $tempKey $hivePath 2>&1 | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0) {
+        Write-Step "WARNING: skip NTUSER.DAT patch (profile locked? log off $KioskUser first): $loadOut"
+    } else {
 
     $polSystem   = "Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\Software\Microsoft\Windows\CurrentVersion\Policies\System"
     $polExplorer = "Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer"
@@ -419,6 +423,7 @@ if (Test-Path $hivePath) {
     Start-Sleep -Milliseconds 500
     & reg.exe unload $tempKey | Out-Null
     Write-Step "patched NTUSER.DAT (taskmgr/winkeys/sticky-keys hardening for $KioskUser)"
+    }
 } else {
     Write-Step "WARNING: NTUSER.DAT still missing - per-user hardening skipped"
 }
