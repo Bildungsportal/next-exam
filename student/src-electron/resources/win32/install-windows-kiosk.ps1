@@ -1,4 +1,4 @@
-﻿# Provisions next-exam-kiosk standard user + Multi-App Assigned Access (Windows Kiosk).
+# Provisions next-exam-kiosk standard user + Multi-App Assigned Access (Windows Kiosk).
 # Runs elevated. Copies the FULL unpacked Electron app folder to C:\NextExam (not a single .exe).
 #
 # REQUIRED INPUT (pick one style):
@@ -303,6 +303,11 @@ Get-ChildItem -LiteralPath $InstallDir -Force -ErrorAction SilentlyContinue | Re
 Copy-Item -Path (Join-Path $AppDir '*') -Destination $InstallDir -Recurse -Force
 $TargetExe = Join-Path $InstallDir $LaunchExe
 if (-not (Test-Path -LiteralPath $TargetExe)) { throw "Copy failed, launch exe missing: $TargetExe" }
+$bundledJre = Join-Path $InstallDir 'resources\app.asar.unpacked\public\minimal-jre-11-win\bin\javaw.exe'
+if (-not (Test-Path -LiteralPath $bundledJre)) {
+    Write-Host 'ERROR_INVALID_APP_BUNDLE: missing bundled JRE at resources\app.asar.unpacked\public\minimal-jre-11-win\bin\javaw.exe'
+    exit 12
+}
 Set-Content -LiteralPath (Join-Path $InstallDir '.kiosk-launch-exe.txt') -Value $LaunchExe -Encoding UTF8 -NoNewline
 Write-Step "copied app bundle $AppDir -> $InstallDir (launch $LaunchExe)"
 
@@ -390,6 +395,25 @@ if (Test-Path $hivePath) {
     Set-ItemProperty -Path $accSticky -Name 'Flags' -Value '506' -Type String
     Set-ItemProperty -Path $accFilter -Name 'Flags' -Value '122' -Type String
     Set-ItemProperty -Path $accToggle -Name 'Flags' -Value '58'  -Type String
+
+    # Drop tablet/vendor first-logon junk (e.g. Wacom setup) from kiosk user Run/RunOnce
+    foreach ($rel in @(
+        'Software\Microsoft\Windows\CurrentVersion\Run',
+        'Software\Microsoft\Windows\CurrentVersion\RunOnce'
+    )) {
+        $rk = "Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\$rel"
+        if (-not (Test-Path -LiteralPath $rk)) { continue }
+        $props = Get-ItemProperty -LiteralPath $rk -ErrorAction SilentlyContinue
+        if (-not $props) { continue }
+        foreach ($p in $props.PSObject.Properties) {
+            if ($p.Name -match '^PS') { continue }
+            $val = [string]$p.Value
+            if ($p.Name -match 'Wacom|Tablet|PenTablet|PenAttention' -or $val -match 'Wacom|Tablet|PenTablet') {
+                Remove-ItemProperty -LiteralPath $rk -Name $p.Name -Force -ErrorAction SilentlyContinue
+                Write-Step "removed kiosk startup entry: $($p.Name)"
+            }
+        }
+    }
 
     [gc]::Collect()
     Start-Sleep -Milliseconds 500

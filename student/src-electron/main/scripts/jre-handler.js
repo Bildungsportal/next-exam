@@ -35,14 +35,24 @@ class JreHandler {
     }
 
 
-    jTest(){
-        let javapath = this.driver(); // '/pfad/zur/java'
-        const proc = spawn(javapath, ['-version']);
-    
-        proc.stderr.on('data', data => {
-            const lines = data.toString().split('\n'); // in Zeilen splitten
-            log.debug(`jre-handler @ jTest: ${lines[0]}`); // nur die erste Zeile loggen
-        });
+    jTest() {
+        const javapath = this.driver();
+        if (!fs.existsSync(javapath)) {
+            log.warn(`jre-handler @ jTest: bundled java missing (${javapath}); LanguageTool may fail until JRE is present`);
+            return;
+        }
+        try {
+            const proc = spawn(javapath, ['-version'], { windowsHide: true });
+            proc.on('error', (err) => {
+                log.warn(`jre-handler @ jTest: spawn failed (${javapath}): ${err.message}`);
+            });
+            proc.stderr?.on('data', (data) => {
+                const lines = data.toString().split('\n');
+                log.debug(`jre-handler @ jTest: ${lines[0]}`);
+            });
+        } catch (err) {
+            log.warn(`jre-handler @ jTest: ${err.message}`);
+        }
     }
     fail(reason) {
         log.error(reason);
@@ -72,15 +82,15 @@ class JreHandler {
     }
 
     jSpawn(classpath, classname, args) {
-        
-        let javapath = this.driver()
-        let javaargs = this.getArgs(classpath, classname, args)
-        let javacmdline =  `${javapath} ${javaargs.join(' ')} `
-
-        log.info(`jre-handler @ jSpawn: '${platformDispatcher.jre}' selected`)
-        log.info(`jre-handler @ jSpawn: spawning java process: ${javacmdline}`)
-        return spawn(javapath, javaargs, {shell:false});
-       // return spawn(javacmdline);
+        const javapath = this.driver();
+        const javaargs = this.getArgs(classpath, classname, args);
+        const javacmdline = `${javapath} ${javaargs.join(' ')} `;
+        if (!fs.existsSync(javapath)) {
+            throw new Error(`jre-handler @ jSpawn: java not found at ${javapath}`);
+        }
+        log.info(`jre-handler @ jSpawn: '${platformDispatcher.jre}' selected`);
+        log.info(`jre-handler @ jSpawn: spawning java process: ${javacmdline}`);
+        return spawn(javapath, javaargs, { shell: false, windowsHide: true });
     }
 }
 

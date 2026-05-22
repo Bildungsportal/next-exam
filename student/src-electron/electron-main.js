@@ -42,7 +42,6 @@ import { toggleMacOSLockdown } from './main/scripts/platformrestrictions.js';
 import { stopProxy } from './main/scripts/vncproxy.js';
 import { initErrorHandling } from './main/scripts/errorHandling.js';
 import { syncClientDisplayInfo } from './main/scripts/displayInfo.js';
-JreHandler.init()
 
 if (!config.development && process.argv.some(arg => arg.startsWith('--inspect') || arg.startsWith('--remote-debugging'))) {  // disable options to read v8 heap on production builds
     log.info('main @ electron-main: Inspect mode detected, quitting...');
@@ -111,6 +110,7 @@ WindowHandler.init(multicastClient, config)  // mainwindow, examwindow
 CommHandler.init(multicastClient, config)    // starts "beacon" intervall and fetches information from the teacher - acts on it (startexam, stopexam, sendfile, getfile)
 IpcHandler.init(multicastClient, config, WindowHandler, CommHandler)  //controll all Inter Process Communication
 initErrorHandling(log, WindowHandler);
+JreHandler.init();
 
 // Prevents Electron from creating the default menu
 Menu.setApplicationMenu(null);
@@ -202,10 +202,15 @@ app.on('will-quit', () => {  // if window is closed
     // win32 kiosk: when running as the dedicated kiosk OS user, log the session off so the next student starts fresh (State=128 wipes the profile)
     if (process.platform === 'win32' && platformDispatcher.runningInCage) {
         try {
-            log.info('main @ will-quit: kiosk session detected, triggering logoff.exe')
-            spawn('logoff.exe', [], { detached: true, stdio: 'ignore' }).unref()
+            const logoffExe = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'logoff.exe');
+            log.info('main @ will-quit: kiosk session detected, triggering logoff.exe');
+            if (fs.existsSync(logoffExe)) {
+                spawn(logoffExe, [], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+            } else {
+                log.warn('main @ will-quit: logoff.exe not found');
+            }
         } catch (err) {
-            log.error('main @ will-quit: logoff failed', err)
+            log.error('main @ will-quit: logoff failed', err);
         }
     }
 })
