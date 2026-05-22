@@ -1,17 +1,23 @@
 # Provisions next-exam-kiosk standard user + Multi-App Assigned Access (Windows Kiosk).
-# Runs elevated. Copies the FULL unpacked Electron app folder (not the NSIS portable launcher alone).
+# Runs elevated. Copies the FULL unpacked Electron app folder to C:\NextExam (not a single .exe).
 #
-# STANDALONE USAGE EXAMPLES (run from elevated PowerShell):
+# REQUIRED INPUT (pick one style):
+#   -AppDir  = folder that contains resources\ + the launch .exe (recommended)
+#   -LaunchExe = file name inside that folder only (e.g. Next-Exam-Student.exe)
+#   OR shorthand -AppPath = full path to that launch .exe (parent folder is copied)
+#
+# STANDALONE USAGE EXAMPLES (elevated PowerShell):
 #   .\install-windows-kiosk.ps1 -AppDir "$env:TEMP\next-exam-student" -LaunchExe "Next-Exam-Student.exe"
+#   .\install-windows-kiosk.ps1 -AppDir "C:\Program Files\Next-Exam-Student" -LaunchExe "Next-Exam-Student.exe"
 #   .\install-windows-kiosk.ps1 -AppPath "$env:TEMP\next-exam-student\Next-Exam-Student.exe"
 #   .\install-windows-kiosk.ps1 -AppDir "C:\path\to\unpacked-app" -LaunchExe "Next-Exam-Student.exe" -ExtraAppsFile "C:\path\to\meine-apps.txt"
 #
-# Portable build: while Next-Exam is running, the live tree is usually
-#   %TEMP%\next-exam-student\  (see quasar unpackDirName) with Next-Exam-Student.exe inside.
-# The download .exe in Downloads is only a launcher — do NOT pass that file alone.
+# Where to find AppDir:
+#   Portable (while app runs): %TEMP%\next-exam-student\  (quasar unpackDirName)
+#   MSI install:               C:\Program Files\Next-Exam-Student\
+#   NOT valid:                 Downloads\Next-Exam-Student_*.exe  (NSIS launcher only, no resources\)
 #
-# When invoked by next-exam (in-app UAC), -AppDir/-LaunchExe are resolved from the running
-# process (dirname of process.execPath + basename), EXAM-STUDENT/kiosk-allowed-apps.txt optional.
+# next-exam in-app setup passes -AppDir/-LaunchExe automatically from process.execPath.
 #
 # OPTIONAL APP WHITELIST (-ExtraAppsFile):
 #   Plaintext file, one absolute path per line. Each path = additional desktop app the
@@ -40,6 +46,7 @@
 #     10  EDITION_UNSUPPORTED (Home/Core; needs Pro/Edu/Enterprise)
 #     11  MISSING_APP_PATH (entry in ExtraAppsFile does not exist)
 #     12  INVALID_APP_BUNDLE (AppDir is not an unpacked Electron tree)
+#     13  MDM_APPLY_FAILED (Assigned Access CSP apply failed or timed out; see C:\NextExam\mdm-staging\*.log)
 #     9999 unexpected exception (transcript in temp log)
 [CmdletBinding()]
 param(
@@ -56,57 +63,119 @@ $ErrorActionPreference = 'Stop'
 
 function Write-Step($msg) { Write-Host "[next-exam-kiosk] $msg" }
 
-# MDM_AssignedAccess WMI lives in local-system partition; admin token cannot set Configuration (PropertyNotFound).
-function Apply-MdmAssignedAccessConfiguration([string]$ConfigXml) {
-    $stamp = [guid]::NewGuid().ToString('N')
-    $taskName = "NextExam-Kiosk-MDM-$stamp"
-    $configPath = Join-Path $env:TEMP "next-exam-kiosk-aa-$stamp.xml"
-    $helperPath = Join-Path $env:TEMP "next-exam-kiosk-mdm-$stamp.ps1"
-    $resultPath = Join-Path $env:TEMP "next-exam-kiosk-mdm-result-$stamp.txt"
-    Set-Content -LiteralPath $configPath -Value $ConfigXml -Encoding UTF8
-    $helper = @'
-param([string]$ConfigPath, [string]$ResultPath)
-$ErrorActionPreference = 'Stop'
-try {
+# Encode Assigned Access XML the way the MDM Bridge CSP expects (HtmlEncode per Microsoft docs).
+function Get-MdmAssignedAccessEncodedConfig([string]$ConfigXml) {
     Add-Type -AssemblyName System.Web
-    $encoded = [System.Web.HttpUtility]::HtmlEncode((Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8))
+    return [System.Web.HttpUtility]::HtmlEncode($ConfigXml)
+}
+
+# Resolve MDM_AssignedAccess instance (filter first, else first instance in namespace).
+function Get-MdmAssignedAccessInstance() {
     $ns = 'root\cimv2\mdm\dmmap'
     $filter = "InstanceID='AssignedAccess' AND ParentID='./Vendor/MSFT/'"
-    $obj = Get-CimInstance -Namespace $ns -ClassName MDM_AssignedAccess -Filter $filter
+    $obj = Get-CimInstance -Namespace $ns -ClassName MDM_AssignedAccess -Filter $filter -ErrorAction SilentlyContinue
     if (-not $obj) {
-        $all = @(Get-CimInstance -Namespace $ns -ClassName MDM_AssignedAccess)
+        $all = @(Get-CimInstance -Namespace $ns -ClassName MDM_AssignedAccess -ErrorAction SilentlyContinue)
         if ($all.Count -gt 0) { $obj = $all[0] }
     }
-    if (-not $obj) { throw 'MDM_AssignedAccess instance not found' }
+    if (-not $obj) { throw 'MDM_AssignedAccess instance not found (MDM Bridge / Assigned Access CSP unavailable)' }
+    return $obj
+}
+
+# Staging under C:\NextExam so SYSTEM scheduled task can read/write (admin %TEMP% is not writable by SYSTEM).
+function Initialize-MdmStagingDir([string]$InstallDir) {
+    $staging = Join-Path $InstallDir 'mdm-staging'
+    if (-not (Test-Path $staging)) { New-Item -ItemType Directory -Path $staging -Force | Out-Null }
+    $systemSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-18')
+    $acl = Get-Acl $staging
+    $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule(
+        $systemSid,'Modify','ContainerInherit,ObjectInherit','None','Allow')))
+    Set-Acl -Path $staging -AclObject $acl
+    return $staging
+}
+
+# Apply MDM config as current elevated admin (this script already runs via UAC).
+function Apply-MdmAssignedAccessAsAdmin([string]$ConfigXml) {
+    $encoded = Get-MdmAssignedAccessEncodedConfig -ConfigXml $ConfigXml
+    $obj = Get-MdmAssignedAccessInstance
     Set-CimInstance -InputObject $obj -Property @{ Configuration = $encoded } -ErrorAction Stop
-    Set-Content -LiteralPath $ResultPath -Value '0' -Encoding ASCII -NoNewline
+}
+
+# Fallback: MDM CSP is owned by SYSTEM; run helper task with files in InstallDir\mdm-staging.
+function Apply-MdmAssignedAccessAsSystem([string]$ConfigXml, [string]$StagingDir) {
+    $stamp = [guid]::NewGuid().ToString('N')
+    $taskName = "NextExam-Kiosk-MDM-$stamp"
+    $configPath = Join-Path $StagingDir "assigned-access-$stamp.xml"
+    $helperPath = Join-Path $StagingDir "mdm-helper-$stamp.ps1"
+    $resultPath = Join-Path $StagingDir "mdm-result-$stamp.txt"
+    $logPath = Join-Path $StagingDir "mdm-helper-$stamp.log"
+    foreach ($p in @($resultPath, $logPath)) { if (Test-Path $p) { Remove-Item -LiteralPath $p -Force } }
+    Set-Content -LiteralPath $configPath -Value $ConfigXml -Encoding UTF8
+    $helper = @"
+param([string]`$ConfigPath, [string]`$ResultPath, [string]`$LogPath)
+`$ErrorActionPreference = 'Stop'
+function Log([string]`$m) { Add-Content -LiteralPath `$LogPath -Value `$m -Encoding UTF8 }
+try {
+    Log 'mdm helper start'
+    Add-Type -AssemblyName System.Web
+    `$encoded = [System.Web.HttpUtility]::HtmlEncode((Get-Content -LiteralPath `$ConfigPath -Raw -Encoding UTF8))
+    `$ns = 'root\cimv2\mdm\dmmap'
+    `$filter = "InstanceID='AssignedAccess' AND ParentID='./Vendor/MSFT/'"
+    `$obj = Get-CimInstance -Namespace `$ns -ClassName MDM_AssignedAccess -Filter `$filter -ErrorAction SilentlyContinue
+    if (-not `$obj) {
+        `$all = @(Get-CimInstance -Namespace `$ns -ClassName MDM_AssignedAccess -ErrorAction SilentlyContinue)
+        if (`$all.Count -gt 0) { `$obj = `$all[0] }
+    }
+    if (-not `$obj) { throw 'MDM_AssignedAccess instance not found' }
+    Log 'mdm Set-CimInstance begin'
+    Set-CimInstance -InputObject `$obj -Property @{ Configuration = `$encoded } -ErrorAction Stop
+    Log 'mdm Set-CimInstance ok'
+    Set-Content -LiteralPath `$ResultPath -Value '0' -Encoding ASCII -NoNewline
 } catch {
-    Set-Content -LiteralPath $ResultPath -Value ("1`n$($_.Exception.Message)") -Encoding UTF8
+    Log "mdm error: `$(`$_.Exception.Message)"
+    Set-Content -LiteralPath `$ResultPath -Value ("1`n`$(`$_.Exception.Message)") -Encoding UTF8
     exit 1
 }
-'@
+"@
     Set-Content -LiteralPath $helperPath -Value $helper -Encoding UTF8
     try {
         Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
         $action = New-ScheduledTaskAction -Execute 'powershell.exe' `
-            -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$helperPath`" -ConfigPath `"$configPath`" -ResultPath `"$resultPath`""
+            -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$helperPath`" -ConfigPath `"$configPath`" -ResultPath `"$resultPath`" -LogPath `"$logPath`""
         $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
-        Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Force | Out-Null
+        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 5)
+        Register-ScheduledTask -TaskName $taskName -Action $action -Principal $principal -Settings $settings -Force | Out-Null
         Start-ScheduledTask -TaskName $taskName
-        $deadline = (Get-Date).AddSeconds(120)
+        $deadline = (Get-Date).AddSeconds(90)
         do {
-            Start-Sleep -Milliseconds 500
+            Start-Sleep -Milliseconds 400
             if (Test-Path -LiteralPath $resultPath) {
                 $result = (Get-Content -LiteralPath $resultPath -Raw).Trim()
                 if ($result -eq '0') { return }
-                throw "SYSTEM MDM apply failed: $result"
+                $detail = $result
+                if (Test-Path -LiteralPath $logPath) { $detail += "`n" + (Get-Content -LiteralPath $logPath -Raw) }
+                throw "SYSTEM MDM apply failed: $detail"
             }
         } while ((Get-Date) -lt $deadline)
-        throw 'SYSTEM MDM apply timed out'
+        $tail = if (Test-Path -LiteralPath $logPath) { Get-Content -LiteralPath $logPath -Raw } else { '(no helper log)' }
+        throw "SYSTEM MDM apply timed out. Helper log:`n$tail"
     } finally {
         Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
-        Remove-Item -LiteralPath $configPath, $helperPath, $resultPath -Force -ErrorAction SilentlyContinue
     }
+}
+
+function Apply-MdmAssignedAccessConfiguration([string]$ConfigXml, [string]$InstallDir) {
+    $staging = Initialize-MdmStagingDir -InstallDir $InstallDir
+    try {
+        Write-Step 'applying MDM Assigned Access (elevated admin)...'
+        Apply-MdmAssignedAccessAsAdmin -ConfigXml $ConfigXml
+        Write-Step 'MDM apply succeeded (admin)'
+        return
+    } catch {
+        Write-Step "MDM admin apply failed, trying SYSTEM task: $($_.Exception.Message)"
+    }
+    Write-Step "applying MDM Assigned Access via SYSTEM scheduled task (staging: $staging)..."
+    Apply-MdmAssignedAccessAsSystem -ConfigXml $ConfigXml -StagingDir $staging
 }
 
 # 0) edition check: Multi-App Assigned Access (MDM_AssignedAccess CSP) is unsupported on Home/Core
@@ -357,8 +426,13 @@ $appsXml
 </AssignedAccessConfiguration>
 "@
 
-# Apply via MDM_AssignedAccess WMI bridge (CSP); must run as SYSTEM (see Apply-MdmAssignedAccessConfiguration)
-Apply-MdmAssignedAccessConfiguration -ConfigXml $config
+# Apply via MDM_AssignedAccess WMI bridge (CSP); admin first, SYSTEM+staging fallback
+try {
+    Apply-MdmAssignedAccessConfiguration -ConfigXml $config -InstallDir $InstallDir
+} catch {
+    Write-Host "ERROR_MDM_APPLY_FAILED: $($_.Exception.Message)"
+    exit 13
+}
 Write-Step "applied MDM_AssignedAccess Multi-App configuration (launch: $LaunchExe)"
 
 # marker: renderer treats provisioning as complete only after this file exists (partial runs keep install button visible)

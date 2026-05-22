@@ -225,6 +225,8 @@ export async function initiateKioskSetup(_appPathIgnored, extraAppsFile = '') {
                 resolve({ ok: false, code: 'MISSING_APP_PATH', error: transcript.trim() });
             } else if (childExit === 12) {
                 resolve({ ok: false, code: 'INVALID_APP_BUNDLE', error: transcript.trim() });
+            } else if (childExit === 13) {
+                resolve({ ok: false, code: 'MDM_APPLY_FAILED', error: transcript.trim() });
             } else {
                 resolve({
                     ok: false,
