@@ -95,11 +95,9 @@ function Set-LocalGroupMemberByWellKnownSid([string]$MemberName, [string]$GroupS
 function Set-LocalUserPasswordlessLogon([string]$UserName) {
     $netOut = (& net.exe user $UserName '/passwordreq:no' '/passwordchg:no' 2>&1 | Out-String).Trim()
     if ($LASTEXITCODE -ne 0) { throw "net user password flags failed: $netOut" }
-    $clearOut = (& net.exe user $UserName '""' 2>&1 | Out-String).Trim()
-    if ($LASTEXITCODE -ne 0) {
-        $clearOut = (& net.exe user $UserName '' 2>&1 | Out-String).Trim()
-        if ($LASTEXITCODE -ne 0) { throw "net user clear password failed: $clearOut" }
-    }
+    $emptyPw = [string]::Empty
+    $clearOut = (& net.exe user $UserName $emptyPw 2>&1 | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0) { throw "net user clear password failed: $clearOut" }
     $adsPath = "WinNT://$env:COMPUTERNAME/$UserName,user"
     $locUser = [ADSI]$adsPath
     $locUser.PasswordExpired = 0
@@ -294,7 +292,7 @@ if ((Get-ItemProperty -Path $lsaPath -Name 'LimitBlankPasswordUse' -ErrorAction 
     Write-Step 'LSA LimitBlankPasswordUse=1 (blank password allowed for console logon)'
 }
 Set-LocalUserPasswordlessLogon -UserName $KioskUser
-# Users (S-1-5-32-545) = "Benutzer" on DE Windows — must use -SID, not -Group with SID string
+# Builtin Users group S-1-5-32-545 (DE: Benutzer); membership via Add-LocalGroupMember -SID
 Set-LocalGroupMemberByWellKnownSid -MemberName $KioskUser -GroupSidString 'S-1-5-32-545'
 Set-LocalGroupMemberByWellKnownSid -MemberName $KioskUser -GroupSidString 'S-1-5-32-544' -Remove
 
