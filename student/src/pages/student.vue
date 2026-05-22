@@ -28,11 +28,16 @@
     </div>
     <!-- Header END -->
 
-    <div v-if="showWinKioskLauncher" v-show="!isLoading" class="w-100 px-3 py-2 bg-secondary text-white d-flex flex-wrap align-items-center gap-2" style="z-index: 999;">
-        <span class="small me-2">{{ $t('student.winKioskLauncherLabel') }}</span>
-        <button v-for="app in winKioskLauncherApps" :key="app.path" type="button" class="btn btn-light btn-sm" @click="launchWinKioskApp(app.path)">
-            {{ app.name }}
-        </button>
+    <div v-if="showCageLauncher" v-show="!isLoading" class="cage-launcher-panel w-100 px-4 py-3 text-white border-bottom border-primary" style="z-index: 999; background: linear-gradient(180deg, #1a3a5c 0%, #0d2137 100%);">
+        <div class="fw-semibold fs-5 mb-1">{{ $t('student.cageLauncherTitle') }}</div>
+        <p class="small mb-3 opacity-75" style="max-width: 52rem;">{{ cageLauncherHint }}</p>
+        <div class="d-flex flex-wrap gap-2">
+            <button v-for="app in cageLauncherApps" :key="app.path" type="button"
+                    class="btn btn-outline-light btn-sm px-3 py-2"
+                    @click="launchCageApp(app.path)">
+                <span class="fw-semibold">{{ app.name }}</span>
+            </button>
+        </div>
     </div>
 
     <div v-show="!isLoading" id="wrapper" class="w-100 h-100 d-flex">
@@ -366,7 +371,7 @@ export default {
                 cageKioskDesktopInstalled: false,
                 needsCageKioskSetup: false,
             },
-            winKioskLauncherApps: [],
+            cageLauncherApps: [],
 
             biptest: true,
             bipToken: false,
@@ -429,10 +434,13 @@ export default {
             // win32 uses winKioskSetup* keys, linux keeps the legacy cageSetup* keys
             return this.platformKiosk?.displayServer === 'windows' ? 'winKioskSetup' : 'cageSetup';
         },
-        showWinKioskLauncher() {
+        showCageLauncher() {
+            return !!this.platformKiosk?.runningInCage && this.cageLauncherApps.length > 0;
+        },
+        cageLauncherHint() {
             return this.platformKiosk?.displayServer === 'windows'
-                && this.platformKiosk?.runningInCage
-                && this.winKioskLauncherApps.length > 0;
+                ? this.$t('student.cageLauncherHintWindows')
+                : this.$t('student.cageLauncherHintLinux');
         },
     },
     watch: {
@@ -583,7 +591,7 @@ export default {
             await this.promptCageKioskSetup();
         },
 
-        async launchWinKioskApp(exePath) {
+        async launchCageApp(exePath) {
             const res = await signalBridge.invoke('launch-kiosk-allowed-app', exePath);
             if (res?.ok) return;
             this.$swal.fire({ title: 'Error', text: res?.error || 'launch failed', icon: 'error', showCancelButton: false });
@@ -600,13 +608,20 @@ export default {
 
         quitNextExam() {
             if (this.token) return;
+            const inCage = !!this.platformKiosk?.runningInCage;
+            const warnText = inCage
+                ? (this.platformKiosk?.displayServer === 'windows'
+                    ? this.$t('student.cageExitWarnWindows')
+                    : this.$t('student.cageExitWarnLinux'))
+                : this.$t('student.cageExitConfirm');
             this.$swal.fire({
-                title: this.$t('student.cageExit'),
-                text: this.$t('student.cageExitConfirm'),
-                icon: 'question',
+                title: inCage ? this.$t('student.cageExitWarnTitle') : this.$t('student.cageExit'),
+                html: warnText,
+                icon: inCage ? 'warning' : 'question',
                 showCancelButton: true,
                 confirmButtonText: this.$t('student.cageExit'),
                 cancelButtonText: this.$t('dashboard.cancel'),
+                focusCancel: inCage,
             }).then((result) => {
                 if (result.isConfirmed) signalBridge.invoke('quit-app');
             });
@@ -1755,8 +1770,8 @@ export default {
             this.platformKiosk = await getLinuxKioskInfo(signalBridge);
             setLinuxKioskRunningInCage(this.platformKiosk.runningInCage);
             setCageWindowCaptureFallback(!!this.platformKiosk.runningInCage);
-            if (this.platformKiosk.runningInCage && this.platformKiosk.displayServer === 'windows') {
-                this.winKioskLauncherApps = await signalBridge.invoke('get-kiosk-launcher-apps') || [];
+            if (this.platformKiosk.runningInCage) {
+                this.cageLauncherApps = await signalBridge.invoke('get-kiosk-launcher-apps') || [];
             }
             await this.maybeOfferCageKioskSetup();
         }

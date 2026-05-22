@@ -224,7 +224,7 @@ class IpcHandler {
         });
 
         // channel name kept for renderer compatibility; win32 routes to UAC + PowerShell payload.
-        ipcMain.handle('get-kiosk-launcher-apps', () => readKioskLauncherApps());
+        ipcMain.handle('get-kiosk-launcher-apps', () => readKioskLauncherApps(this.config.workdirectory));
 
         ipcMain.handle('launch-kiosk-allowed-app', (_event, exePath) => launchKioskAllowedApp(exePath));
 

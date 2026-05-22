@@ -42,7 +42,6 @@ import { toggleMacOSLockdown } from './main/scripts/platformrestrictions.js';
 import { stopProxy } from './main/scripts/vncproxy.js';
 import { initErrorHandling } from './main/scripts/errorHandling.js';
 import { syncClientDisplayInfo } from './main/scripts/displayInfo.js';
-import { applyWindowsKioskStartPinsAtLogon } from './main/scripts/win/windowsKioskSetup.js';
 
 if (!config.development && process.argv.some(arg => arg.startsWith('--inspect') || arg.startsWith('--remote-debugging'))) {  // disable options to read v8 heap on production builds
     log.info('main @ electron-main: Inspect mode detected, quitting...');
@@ -106,6 +105,10 @@ log.debug(`main: Display server: ${platformDispatcher.displayServer}`)
 if (platformDispatcher.runningUnderMacRosetta) {
     log.warn('main: Intel (x64) build running under Rosetta on Apple Silicon — install the arm64 build');
 }
+
+
+
+
 
 WindowHandler.init(multicastClient, config)  // mainwindow, examwindow
 CommHandler.init(multicastClient, config)    // starts "beacon" intervall and fetches information from the teacher - acts on it (startexam, stopexam, sendfile, getfile)
@@ -260,9 +263,6 @@ app.whenReady()
     session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
     if (platformDispatcher.runningInCage) {
-        if (process.platform === 'win32') {
-            applyWindowsKioskStartPinsAtLogon();
-        }
         session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
             desktopCapturer.getSources({ types: ['window'] }).then((sources) => {
                 try {

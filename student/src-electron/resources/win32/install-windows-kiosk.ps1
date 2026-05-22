@@ -534,24 +534,13 @@ function New-AllowedAppXml($apps) {
 
 $appsXml = New-AllowedAppXml $AllowedApps
 
-# Desktop .lnk launchers (AllAppsList still whitelists; java/javaw/disable-shortcuts are not shown).
-$deskDir = Join-Path $ProfilePath 'Desktop'
-New-Item -ItemType Directory -Path $deskDir -Force | Out-Null
-$skipDesktop = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe')
+# In-app launcher list for student.vue (no desktop .lnk — not shown under Assigned Access).
+$skipLauncherUi = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe')
 $launcherApps = [System.Collections.ArrayList]::new()
 foreach ($app in $AllowedApps) {
-    if ($skipDesktop -contains ([IO.Path]::GetFileName($app.Path)).ToLower()) { continue }
-    $lnk = Join-Path $deskDir "$([IO.Path]::GetFileNameWithoutExtension($app.Path)).lnk"
-    $w = New-Object -ComObject WScript.Shell
-    $s = $w.CreateShortcut($lnk)
-    $s.TargetPath = $app.Path
-    $s.WorkingDirectory = [IO.Path]::GetDirectoryName($app.Path)
-    $s.Save()
-    [void][Runtime.InteropServices.Marshal]::ReleaseComObject($w)
+    if ($skipLauncherUi -contains ([IO.Path]::GetFileName($app.Path)).ToLower()) { continue }
     [void]$launcherApps.Add([pscustomobject]@{ name = [IO.Path]::GetFileNameWithoutExtension($app.Path); path = $app.Path })
-    Write-Step "desktop launcher: $lnk"
 }
-# Next-Exam in-app launcher bar (student.vue) reads this; independent of Desktop .lnk above
 ($launcherApps | ConvertTo-Json -Compress) | Set-Content -LiteralPath (Join-Path $InstallDir 'kiosk-launcher-apps.json') -Encoding UTF8
 Write-Step "kiosk-launcher-apps.json written ($($launcherApps.Count) apps)"
 

@@ -60,9 +60,12 @@ export const updateSystemTray = (locale) => {
           CommHandler.resetConnection(); 
         } 
       }, // disconnect
-      { label: t('main.tray.exit'), click: () => { 
+      { label: t('main.tray.exit'), click: async () => { 
           log.warn("main @ systemtray: Closing Next-Exam"); 
-          log.warn("main @ systemtray: ----------------------------------------"); 
+          if (platformDispatcher.runningInCage) {
+            await WindowHandler.showCageExitWarning();
+            return;
+          }
           WindowHandler.mainwindow.allowexit = true; 
           app.quit(); 
         } 

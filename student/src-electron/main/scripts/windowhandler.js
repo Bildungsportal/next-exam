@@ -23,6 +23,7 @@ import log from 'electron-log'
 import {SchedulerService} from './schedulerservice.ts'
 //import { activeWindow } from 'get-windows';
 import platformDispatcher from './platformDispatcher.js';
+import i18n from '../../../src/locales/locales.js';
 import {fileURLToPath} from "node:url";
 import path from 'path';
 
@@ -64,6 +65,7 @@ class WindowHandler {
     
       this.exitWarningOpen = false  // track if exit warning dialog is open
       this.exitQuestionOpen = false  // track if exit question dialog is open
+      this.cageExitWarningOpen = false
       this.minimizeWarningOpen = false  // track if minimize warning dialog is open
     }
 
@@ -719,6 +721,11 @@ class WindowHandler {
         // Register event handlers before loading
         this.mainwindow.on('close', async  (e) => {   // ask before closing
             if (!this.config.development && !this.mainwindow.allowexit) {  // allowexit ist ein override vom context menu oder screenshot test. dieser kann die app schliessen
+                if (platformDispatcher.runningInCage) {
+                    e.preventDefault();
+                    await this.showCageExitWarning();
+                    return;
+                }
                 if (this.multicastClient.clientinfo.token){
                     const allowTray = !platformDispatcher._isGNOME(); // GNOME has no legacy tray
                     if (!allowTray) { 
@@ -782,6 +789,31 @@ class WindowHandler {
             app.quit()
         } finally {
             this.exitWarningOpen = false
+        }
+    }
+
+    // Block window close in cage/kiosk until user confirms they cannot continue without re-login.
+    async showCageExitWarning() {
+        if (this.cageExitWarningOpen) return;
+        this.cageExitWarningOpen = true;
+        const t = (k) => i18n.global.t(k);
+        const isWin = platformDispatcher.platform === 'win32';
+        try {
+            const choice = await dialog.showMessageBox(this.mainwindow, {
+                type: 'warning',
+                buttons: [t('student.cageExit'), t('dashboard.cancel')],
+                defaultId: 1,
+                cancelId: 1,
+                title: t('student.cageExitWarnTitle'),
+                message: t('student.cageExitWarnTitle'),
+                detail: t(isWin ? 'student.cageExitWarnWindows' : 'student.cageExitWarnLinux').replace(/<[^>]+>/g, ''),
+            });
+            if (choice.response === 0) {
+                this.mainwindow.allowexit = true;
+                app.quit();
+            }
+        } finally {
+            this.cageExitWarningOpen = false;
         }
     }
 

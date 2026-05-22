@@ -19,7 +19,6 @@ export const KIOSK_INSTALL_DIR = 'C:\\NextExam';
 // written only when install-windows-kiosk.ps1 finishes (incl. MDM); partial runs must not hide the UI button
 export const KIOSK_PROVISION_MARKER = 'C:\\NextExam\\.kiosk-provision-complete';
 const KIOSK_LAUNCH_EXE_MARKER = 'C:\\NextExam\\.kiosk-launch-exe.txt';
-const KIOSK_START_PINS_JSON = path.join(KIOSK_INSTALL_DIR, 'kiosk-start-pins.json');
 const KIOSK_LAUNCHER_APPS_JSON = path.join(KIOSK_INSTALL_DIR, 'kiosk-launcher-apps.json');
 
 /** True when dir looks like a packaged Electron app (portable unpack or MSI install folder). */
@@ -122,38 +121,46 @@ export function detectWindowsKioskUserExists() {
     }
 }
 
-/** Apply ConfigureStartPins in the kiosk user's HKCU (Assigned Access XML alone often leaves only OEM tiles). */
-export function applyWindowsKioskStartPinsAtLogon() {
-    if (process.platform !== 'win32' || !detectRunningInWindowsKiosk()) return;
-    if (!existsSync(KIOSK_START_PINS_JSON)) return;
-    try {
-        const json = readFileSync(KIOSK_START_PINS_JSON, 'utf8').trim().replace(/'/g, "''");
-        const cmd =
-            "New-Item -Path 'HKCU:\\Software\\Policies\\Microsoft\\Windows\\Explorer' -Force | Out-Null; " +
-            `Set-ItemProperty -LiteralPath 'HKCU:\\Software\\Policies\\Microsoft\\Windows\\Explorer' -Name ConfigureStartPins -Value '${json}' -Type String`;
-        execSync(`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "${cmd}"`, { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
-        log.info('windowsKioskSetup: ConfigureStartPins applied at kiosk logon');
-    } catch (err) {
-        log.warn('windowsKioskSetup: ConfigureStartPins at logon failed', err);
+/** Parse kiosk-allowed-apps.txt + main exam exe into launcher entries for the in-app bar. */
+function readCageLauncherAppsFromWorkdir(workDir) {
+    const apps = [];
+    const mainExe = process.platform === 'win32' ? resolveKioskInstalledLaunchExe() : process.execPath;
+    if (mainExe && existsSync(mainExe)) {
+        apps.push({ name: path.basename(mainExe, path.extname(mainExe)), path: mainExe });
     }
+    const txt = workDir ? path.join(workDir, 'kiosk-allowed-apps.txt') : '';
+    if (!txt || !existsSync(txt)) return apps;
+    const skip = new Set(['java.exe', 'javaw.exe', 'disable-shortcuts.exe']);
+    for (const raw of readFileSync(txt, 'utf8').split(/\r?\n/)) {
+        const line = raw.trim();
+        if (!line || line.startsWith('#')) continue;
+        if (!existsSync(line)) continue;
+        if (skip.has(path.basename(line).toLowerCase())) continue;
+        const resolved = path.resolve(line);
+        if (apps.some((a) => path.resolve(a.path) === resolved)) continue;
+        apps.push({ name: path.basename(line, path.extname(line)), path: resolved });
+    }
+    return apps;
 }
 
-/** Apps listed in kiosk-launcher-apps.json (written during provisioning). */
-export function readKioskLauncherApps() {
-    if (process.platform !== 'win32' || !existsSync(KIOSK_LAUNCHER_APPS_JSON)) return [];
-    try {
-        const raw = JSON.parse(readFileSync(KIOSK_LAUNCHER_APPS_JSON, 'utf8'));
-        return Array.isArray(raw) ? raw : [raw];
-    } catch (err) {
-        log.warn('windowsKioskSetup: readKioskLauncherApps failed', err);
-        return [];
+/** Apps for the cage launcher bar (provisioned JSON on win32, else workdir txt). */
+export function readKioskLauncherApps(workDir = '') {
+    if (process.platform === 'win32' && existsSync(KIOSK_LAUNCHER_APPS_JSON)) {
+        try {
+            const raw = JSON.parse(readFileSync(KIOSK_LAUNCHER_APPS_JSON, 'utf8'));
+            const list = Array.isArray(raw) ? raw : [raw];
+            if (list.length) return list;
+        } catch (err) {
+            log.warn('windowsKioskSetup: readKioskLauncherApps json failed', err);
+        }
     }
+    return readCageLauncherAppsFromWorkdir(workDir);
 }
 
 /** Spawn a whitelisted exe from kiosk-launcher-apps.json. */
 export function launchKioskAllowedApp(exePath) {
     const target = path.resolve(String(exePath || ''));
-    const allowed = readKioskLauncherApps().some((a) => path.resolve(a.path) === target);
+    const allowed = readKioskLauncherApps('').some((a) => path.resolve(a.path) === target);
     if (!allowed || !existsSync(target)) {
         return { ok: false, error: 'not allowed or missing' };
     }
