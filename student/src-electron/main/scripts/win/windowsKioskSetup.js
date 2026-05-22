@@ -121,13 +121,14 @@ export function detectWindowsKioskUserExists() {
     }
 }
 
-/** Parse kiosk-allowed-apps.txt + main exam exe into launcher entries for the in-app bar. */
+/** Drop main exam exe from launcher bar entries (autolaunch only, no button). */
+function withoutMainExamLauncherApps(list) {
+    return list.filter((a) => !/next-exam-student/i.test(a.name || '') && !/next-exam-student\.exe$/i.test(a.path || ''));
+}
+
+/** Parse kiosk-allowed-apps.txt into launcher entries for the in-app bar (extras only). */
 function readCageLauncherAppsFromWorkdir(workDir) {
     const apps = [];
-    const mainExe = process.platform === 'win32' ? resolveKioskInstalledLaunchExe() : process.execPath;
-    if (mainExe && existsSync(mainExe)) {
-        apps.push({ name: path.basename(mainExe, path.extname(mainExe)), path: mainExe });
-    }
     const txt = workDir ? path.join(workDir, 'kiosk-allowed-apps.txt') : '';
     if (!txt || !existsSync(txt)) return apps;
     const skip = new Set(['java.exe', 'javaw.exe', 'disable-shortcuts.exe']);
@@ -136,6 +137,7 @@ function readCageLauncherAppsFromWorkdir(workDir) {
         if (!line || line.startsWith('#')) continue;
         if (!existsSync(line)) continue;
         if (skip.has(path.basename(line).toLowerCase())) continue;
+        if (/next-exam-student\.exe$/i.test(line)) continue;
         const resolved = path.resolve(line);
         if (apps.some((a) => path.resolve(a.path) === resolved)) continue;
         apps.push({ name: path.basename(line, path.extname(line)), path: resolved });
@@ -149,7 +151,7 @@ export function readKioskLauncherApps(workDir = '') {
         try {
             const raw = JSON.parse(readFileSync(KIOSK_LAUNCHER_APPS_JSON, 'utf8'));
             const list = Array.isArray(raw) ? raw : [raw];
-            if (list.length) return list;
+            if (list.length) return withoutMainExamLauncherApps(list);
         } catch (err) {
             log.warn('windowsKioskSetup: readKioskLauncherApps json failed', err);
         }

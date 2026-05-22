@@ -25,8 +25,8 @@
     "build:linux": "npm run prebuild && npm run clean && quasar build --verbose -m electron -l",
     "build:mac:x64": "npm run prebuild && npm run clean && quasar build --verbose -m electron -m --arch x64",
     "build:mac:arm64": "npm run prebuild && npm run clean && quasar build --verbose -m electron -m --arch arm64",
-    "build:win:portable": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -w portable:x64",
-    "build:win:msi": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -w msi:x64"
+    "build:win:portable": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -T win -A x64",
+    "build:win:msi": "npm run prebuild && npm run cleanwin && cross-env NXE_EB_WIN_TARGET=msi quasar build --verbose -m electron -T win -A x64"
   },
   "engines": {
     "node": "^28 || ^26 || ^24 || ^22 || ^20 || ^18",

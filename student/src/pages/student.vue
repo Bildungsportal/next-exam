@@ -3,12 +3,17 @@
 
     <!-- Header START -->
     <div v-show="!isLoading" class="w-100 p-3 text-white bg-dark text-left" style="height: 66px; z-index: 1000;">
-    <span class="text-white m-1">
-        <img src='/src/assets/img/svg/speedometer.svg' class="white me-2  " width="32" height="32">
-        <span class="fs-4 align-middle me-4" @click="handleClick">Next-Exam</span>
+    <span class="text-white m-1 d-inline-flex align-items-center flex-wrap ms-1">
+        <img src='/src/assets/img/svg/speedometer.svg' class="white me-2" width="32" height="32">
+        <span class="fs-4 align-middle me-2" @click="handleClick">Next-Exam</span>
+        <span v-if="cageLauncherButtons.length" class="d-inline-flex align-items-center flex-wrap gap-2 cage-launcher-group">
+            <button v-for="app in cageLauncherButtons" :key="app.path" type="button"
+                    class="btn btn-outline-cyan btn-sm mt-1"
+                    @click="launchCageApp(app.path)">{{ app.name }}</button>
+        </span>
     </span>
 
-        <span class="fs-4 align-middle  ms-3" style="float: right">Student</span>
+        <span class="fs-4 align-middle ms-3" style="float: right">Student</span>
         <div v-if="token && !localLockdown" id="adv" class="btn btn-success btn-sm m-0  mt-1 "
              style="cursor: unset; float: right">{{ $t("student.connected") }}
         </div>
@@ -27,18 +32,6 @@
         </div>
     </div>
     <!-- Header END -->
-
-    <div v-if="showCageLauncher" v-show="!isLoading" class="cage-launcher-panel w-100 px-4 py-3 text-white border-bottom border-primary" style="z-index: 999; background: linear-gradient(180deg, #1a3a5c 0%, #0d2137 100%);">
-        <div class="fw-semibold fs-5 mb-1">{{ $t('student.cageLauncherTitle') }}</div>
-        <p class="small mb-3 opacity-75" style="max-width: 52rem;">{{ cageLauncherHint }}</p>
-        <div class="d-flex flex-wrap gap-2">
-            <button v-for="app in cageLauncherApps" :key="app.path" type="button"
-                    class="btn btn-outline-light btn-sm px-3 py-2"
-                    @click="launchCageApp(app.path)">
-                <span class="fw-semibold">{{ app.name }}</span>
-            </button>
-        </div>
-    </div>
 
     <div v-show="!isLoading" id="wrapper" class="w-100 h-100 d-flex">
         <!-- LocalVM preflight overlay (must stay in student.vue; exam window opens only after checks pass) -->
@@ -434,13 +427,8 @@ export default {
             // win32 uses winKioskSetup* keys, linux keeps the legacy cageSetup* keys
             return this.platformKiosk?.displayServer === 'windows' ? 'winKioskSetup' : 'cageSetup';
         },
-        showCageLauncher() {
-            return !!this.platformKiosk?.runningInCage && this.cageLauncherApps.length > 0;
-        },
-        cageLauncherHint() {
-            return this.platformKiosk?.displayServer === 'windows'
-                ? this.$t('student.cageLauncherHintWindows')
-                : this.$t('student.cageLauncherHintLinux');
+        cageLauncherButtons() {
+            return this.cageLauncherApps.filter((a) => !/next-exam-student/i.test(a.name || '') && !/next-exam-student\.exe$/i.test(a.path || ''));
         },
     },
     watch: {
@@ -1773,6 +1761,14 @@ export default {
             if (this.platformKiosk.runningInCage) {
                 this.cageLauncherApps = await signalBridge.invoke('get-kiosk-launcher-apps') || [];
             }
+            // Dev-only: preview cage launcher UI without kiosk user / provisioning
+            // if (this.config.development) {
+            //     this.platformKiosk.runningInCage = true;
+            //     this.cageLauncherApps = [
+            //         { name: 'calc', path: 'C:\\Windows\\System32\\calc.exe' },
+            //         { name: 'Archicad', path: 'C:\\Program Files\\Graphisoft\\Archicad\\Archicad.exe' },
+            //     ];
+            // }
             await this.maybeOfferCageKioskSetup();
         }
 
@@ -2000,6 +1996,14 @@ body {
 #statusdiv {
     display: block !important;
     width: 200px;
+}
+
+.cage-launcher-group {
+    margin-left: 4.4rem;
+}
+
+.bg-dark .btn-outline-cyan {
+    color: #fff;
 }
 
 .student-sidebar {

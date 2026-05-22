@@ -53,6 +53,9 @@ const buildNumber = process.env.BUILD_NUMBER || '1';
 const artifactDate = buildDate;
 const artifactNamePattern = `${productName}_${version}.${buildNumber}_${artifactDate}_\${arch}.\${ext}`;
 const signEnabled = process.env.SIGN !== 'false';
+const winEbTarget = process.env.NXE_EB_WIN_TARGET === 'msi'
+  ? [{ target: 'msi', arch: ['x64'] as const }]
+  : [{ target: 'portable', arch: ['x64'] as const }];
 
 export default defineConfig(( ctx: any ) => {
   return {
@@ -365,7 +368,7 @@ export default defineConfig(( ctx: any ) => {
         },
         win: {
           icon: 'public/icons/icon.ico',
-          target: [{ target: 'portable', arch: ['x64'] }, { target: 'msi', arch: ['x64'] }],
+          target: winEbTarget,
           artifactName: artifactNamePattern,
           files: ['**/*', '!public/qemu/win/**', '!public/qemu/lin/**', '!public/qemu/mac/**'],
           // electron-builder 26: signtoolOptions enables signing; certificate is provided via CSC_LINK/CSC_KEY_PASSWORD (.p12 from CI secret)

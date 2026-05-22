@@ -539,6 +539,7 @@ $skipLauncherUi = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe')
 $launcherApps = [System.Collections.ArrayList]::new()
 foreach ($app in $AllowedApps) {
     if ($skipLauncherUi -contains ([IO.Path]::GetFileName($app.Path)).ToLower()) { continue }
+    if ($app.Path -eq $TargetExe) { continue }
     [void]$launcherApps.Add([pscustomobject]@{ name = [IO.Path]::GetFileNameWithoutExtension($app.Path); path = $app.Path })
 }
 ($launcherApps | ConvertTo-Json -Compress) | Set-Content -LiteralPath (Join-Path $InstallDir 'kiosk-launcher-apps.json') -Encoding UTF8
