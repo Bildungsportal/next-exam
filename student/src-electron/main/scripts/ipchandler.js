@@ -73,6 +73,7 @@ import {
     initiateKioskSetup as initiateWindowsKioskSetup,
     readKioskLauncherApps,
     launchKioskAllowedApp,
+    triggerWindowsKioskLogoff,
 } from './win/windowsKioskSetup.js';
 
 // Skip info-level file-save log noise when the renderer marks the write as periodic auto-save.
@@ -216,6 +217,7 @@ class IpcHandler {
         ipcMain.handle('get-mac-arch-info', () => platformDispatcher.macRosettaEmulation);
 
         ipcMain.handle('quit-app', () => {
+            if (process.platform === 'win32' && platformDispatcher.runningInCage && triggerWindowsKioskLogoff()) return;
             app.quit();
         });
 

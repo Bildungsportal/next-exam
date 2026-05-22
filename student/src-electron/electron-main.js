@@ -27,7 +27,7 @@ import config from './main/config.js';
 import multicastClient from './main/scripts/multicastclient.js'
 import path from 'path'
 import fs from 'fs'
-import { spawn } from 'child_process'
+import { triggerWindowsKioskLogoff } from './main/scripts/win/windowsKioskSetup.js'
 import * as fsExtra from 'fs-extra';
 import ip from 'ip'
 import { gateway4sync } from 'default-gateway';
@@ -205,17 +205,8 @@ app.on('will-quit', () => {  // if window is closed
     toggleMacOSLockdown(false)
     // win32 kiosk: when running as the dedicated kiosk OS user, log the session off so the next student starts fresh (State=128 wipes the profile)
     if (process.platform === 'win32' && platformDispatcher.runningInCage) {
-        try {
-            const logoffExe = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'logoff.exe');
-            log.info('main @ will-quit: kiosk session detected, triggering logoff.exe');
-            if (fs.existsSync(logoffExe)) {
-                spawn(logoffExe, [], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
-            } else {
-                log.warn('main @ will-quit: logoff.exe not found');
-            }
-        } catch (err) {
-            log.error('main @ will-quit: logoff failed', err);
-        }
+        log.info('main @ will-quit: kiosk session fallback logoff');
+        triggerWindowsKioskLogoff();
     }
 })
 

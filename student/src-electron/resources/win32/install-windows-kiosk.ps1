@@ -536,14 +536,27 @@ $appsXml = New-AllowedAppXml $AllowedApps
 
 # In-app launcher list for student.vue (no desktop .lnk — not shown under Assigned Access).
 $skipLauncherUi = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe')
-$launcherApps = [System.Collections.ArrayList]::new()
-foreach ($app in $AllowedApps) {
-    if ($skipLauncherUi -contains ([IO.Path]::GetFileName($app.Path)).ToLower()) { continue }
-    if ($app.Path -eq $TargetExe) { continue }
-    [void]$launcherApps.Add([pscustomobject]@{ name = [IO.Path]::GetFileNameWithoutExtension($app.Path); path = $app.Path })
+# Must be a PS array for ConvertTo-Json — piping ArrayList yields invalid "{...},{...}" without "[" wrapper.
+$launcherList = @(
+    foreach ($app in $AllowedApps) {
+        if ($skipLauncherUi -contains ([IO.Path]::GetFileName($app.Path)).ToLower()) { continue }
+        if ($app.Path -eq $TargetExe) { continue }
+        [pscustomobject]@{ name = [IO.Path]::GetFileNameWithoutExtension($app.Path); path = $app.Path }
+    }
+)
+$launcherJsonPath = Join-Path $InstallDir 'kiosk-launcher-apps.json'
+$launcherJson = if (@($launcherList).Count -eq 0) {
+    '{"apps":[]}'
+} else {
+    ConvertTo-Json -InputObject @{ apps = @($launcherList) } -Compress -Depth 5
 }
-($launcherApps | ConvertTo-Json -Compress) | Set-Content -LiteralPath (Join-Path $InstallDir 'kiosk-launcher-apps.json') -Encoding UTF8
-Write-Step "kiosk-launcher-apps.json written ($($launcherApps.Count) apps)"
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText($launcherJsonPath, $launcherJson, $utf8NoBom)
+Write-Step "kiosk-launcher-apps.json written ($(@($launcherList).Count) apps)"
+$kioskWorkDir = Join-Path $ProfilePath 'EXAM-STUDENT'
+if (-not (Test-Path -LiteralPath $kioskWorkDir)) { New-Item -ItemType Directory -Path $kioskWorkDir -Force | Out-Null }
+Copy-Item -LiteralPath $launcherJsonPath -Destination (Join-Path $kioskWorkDir 'kiosk-launcher-apps.json') -Force
+Write-Step "kiosk-launcher-apps.json copied to $kioskWorkDir"
 
 # Multi-App Assigned Access XML (rs5 namespace = Win10 1809+; supported on Win10/11 Pro/Edu/Ent)
 $config = @"

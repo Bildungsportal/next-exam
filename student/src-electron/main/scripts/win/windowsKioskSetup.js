@@ -20,6 +20,47 @@ export const KIOSK_INSTALL_DIR = 'C:\\NextExam';
 export const KIOSK_PROVISION_MARKER = 'C:\\NextExam\\.kiosk-provision-complete';
 const KIOSK_LAUNCH_EXE_MARKER = 'C:\\NextExam\\.kiosk-launch-exe.txt';
 const KIOSK_LAUNCHER_APPS_JSON = path.join(KIOSK_INSTALL_DIR, 'kiosk-launcher-apps.json');
+let kioskLogoffTriggered = false;
+
+/** System32 (Sysnative when x86 Node runs on x64 Windows). */
+function resolveWindowsSystem32Dir() {
+    const winRoot = process.env.SystemRoot || process.env.windir || 'C:\\Windows';
+    if (process.arch === 'ia32') {
+        const native = path.join(winRoot, 'Sysnative');
+        if (existsSync(path.join(native, 'cmd.exe'))) return native;
+    }
+    return path.join(winRoot, 'System32');
+}
+
+/** Start session logoff for win32 kiosk user (call before app.quit — will-quit spawn often fails UNKNOWN). */
+export function triggerWindowsKioskLogoff() {
+    if (process.platform !== 'win32' || kioskLogoffTriggered) return kioskLogoffTriggered;
+    const system32 = resolveWindowsSystem32Dir();
+    const tryStart = (file, args, label) => {
+        if (!existsSync(file)) return false;
+        try {
+            const child = spawn(file, args, {
+                detached: true,
+                stdio: 'ignore',
+                windowsHide: true,
+                windowsVerbatimArguments: true,
+            });
+            child.on('error', (err) => log.warn(`windowsKioskLogoff: ${label} error`, err));
+            child.unref();
+            log.info(`windowsKioskLogoff: ${label} (${file} ${args.join(' ')})`);
+            kioskLogoffTriggered = true;
+            return true;
+        } catch (err) {
+            log.warn(`windowsKioskLogoff: ${label} spawn failed`, err);
+            return false;
+        }
+    };
+    if (tryStart(path.join(system32, 'shutdown.exe'), ['/l', '/f'], 'shutdown /l /f')) return true;
+    if (tryStart(path.join(system32, 'cmd.exe'), ['/d', '/s', '/c', 'logoff'], 'cmd /c logoff')) return true;
+    if (tryStart(path.join(system32, 'logoff.exe'), [], 'logoff.exe')) return true;
+    log.error('windowsKioskLogoff: all logoff attempts failed');
+    return false;
+}
 
 /** True when dir looks like a packaged Electron app (portable unpack or MSI install folder). */
 function isElectronAppBundleDir(dir) {
@@ -126,6 +167,73 @@ function withoutMainExamLauncherApps(list) {
     return list.filter((a) => !/next-exam-student/i.test(a.name || '') && !/next-exam-student\.exe$/i.test(a.path || ''));
 }
 
+/** Strip UTF-8 BOM (PowerShell Set-Content -Encoding UTF8) so JSON.parse does not fail. */
+function stripUtf8Bom(text) {
+    return text?.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
+}
+
+/** Parse launcher JSON; repair legacy PS output "{...},{...}" (missing array brackets). */
+function parseLauncherJsonText(text) {
+    const stripped = stripUtf8Bom(text).trim();
+    if (!stripped) return null;
+    try {
+        return JSON.parse(stripped);
+    } catch (firstErr) {
+        if (stripped.startsWith('[')) throw firstErr;
+        if (stripped.startsWith('{') && stripped.includes('},{')) {
+            return JSON.parse(`[${stripped}]`);
+        }
+        throw firstErr;
+    }
+}
+
+/** Normalize launcher JSON ({apps:[...]}, root array, or legacy PS shapes). */
+function normalizeLauncherAppsRaw(raw) {
+    if (!raw) return [];
+    let items = raw;
+    if (Array.isArray(raw.apps)) items = raw.apps;
+    else if (!Array.isArray(raw)) {
+        if (Array.isArray(raw.value)) items = raw.value;
+        else items = [raw];
+    }
+    const out = [];
+    for (const entry of items) {
+        if (!entry || typeof entry !== 'object') continue;
+        const appPath = entry.path || entry.Path || entry.desktopAppPath || entry.DesktopAppPath;
+        if (!appPath) continue;
+        const name = entry.name || entry.Name || path.basename(appPath, path.extname(appPath));
+        out.push({ name: String(name), path: String(appPath) });
+    }
+    return withoutMainExamLauncherApps(out);
+}
+
+/** Read and parse one kiosk-launcher-apps.json file. */
+function readLauncherAppsJsonFile(filePath) {
+    try {
+        const raw = parseLauncherJsonText(readFileSync(filePath, 'utf8'));
+        const list = normalizeLauncherAppsRaw(raw);
+        if (list.length) {
+            log.info(`windowsKioskSetup: ${list.length} launcher app(s) from ${filePath}`);
+            return list;
+        }
+    } catch (err) {
+        log.warn(`windowsKioskSetup: launcher json unreadable: ${filePath}`, err);
+    }
+    return null;
+}
+
+/** Candidate JSON paths (install dir, workdir, app dir). */
+function kioskLauncherJsonCandidates(workDir = '') {
+    const candidates = [];
+    if (process.platform !== 'win32') return candidates;
+    candidates.push(KIOSK_LAUNCHER_APPS_JSON);
+    if (workDir) candidates.push(path.join(workDir, 'kiosk-launcher-apps.json'));
+    try {
+        candidates.push(path.join(path.dirname(process.execPath), 'kiosk-launcher-apps.json'));
+    } catch { /* ignore */ }
+    return [...new Set(candidates)];
+}
+
 /** Parse kiosk-allowed-apps.txt into launcher entries for the in-app bar (extras only). */
 function readCageLauncherAppsFromWorkdir(workDir) {
     const apps = [];
@@ -147,14 +255,10 @@ function readCageLauncherAppsFromWorkdir(workDir) {
 
 /** Apps for the cage launcher bar (provisioned JSON on win32, else workdir txt). */
 export function readKioskLauncherApps(workDir = '') {
-    if (process.platform === 'win32' && existsSync(KIOSK_LAUNCHER_APPS_JSON)) {
-        try {
-            const raw = JSON.parse(readFileSync(KIOSK_LAUNCHER_APPS_JSON, 'utf8'));
-            const list = Array.isArray(raw) ? raw : [raw];
-            if (list.length) return withoutMainExamLauncherApps(list);
-        } catch (err) {
-            log.warn('windowsKioskSetup: readKioskLauncherApps json failed', err);
-        }
+    for (const filePath of kioskLauncherJsonCandidates(workDir)) {
+        if (!existsSync(filePath)) continue;
+        const list = readLauncherAppsJsonFile(filePath);
+        if (list?.length) return list;
     }
     return readCageLauncherAppsFromWorkdir(workDir);
 }
