@@ -56,6 +56,9 @@ const signEnabled = process.env.SIGN !== 'false';
 const winEbTarget = process.env.NXE_EB_WIN_TARGET === 'msi'
   ? [{ target: 'msi', arch: ['x64'] as const }]
   : [{ target: 'portable', arch: ['x64'] as const }];
+const macEbArch = process.env.NXE_EB_MAC_ARCH === 'arm64'
+  ? (['arm64'] as const)
+  : (['x64'] as const);
 
 export default defineConfig(( ctx: any ) => {
   return {
@@ -354,7 +357,7 @@ export default defineConfig(( ctx: any ) => {
           entitlements: 'scripts/entitlements.mac.plist',
           entitlementsInherit: 'scripts/entitlements.mac.plist',
           category: 'public.app-category.utilities',
-          target: { target: 'dmg', arch: ['x64', 'arm64'] },
+          target: { target: 'dmg', arch: macEbArch },
           files: ['**/*', '!public/qemu/win/**', '!public/qemu/lin/**'],
         },
         dmg: { sign: false },
