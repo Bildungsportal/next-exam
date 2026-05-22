@@ -530,7 +530,31 @@ function New-AllowedAppXml($apps) {
     return $sb.ToString()
 }
 
+# AllAppsList only permits execution; Start menu tiles must be pinned explicitly in StartLayout.
+function New-KioskStartLayoutInnerXml([System.Collections.ArrayList]$apps) {
+    $sb = New-Object System.Text.StringBuilder
+    [void]$sb.AppendLine('<LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">')
+    [void]$sb.AppendLine('  <LayoutOptions StartTileGroupCellWidth="6" />')
+    [void]$sb.AppendLine('  <DefaultLayoutOverride>')
+    [void]$sb.AppendLine('    <StartLayoutCollection>')
+    [void]$sb.AppendLine('      <start:Group Name="Next-Exam Kiosk">')
+    $col = 0
+    $row = 0
+    foreach ($app in @($apps)) {
+        $p = [System.Security.SecurityElement]::Escape([string]$app.Path)
+        [void]$sb.AppendLine("        <start:DesktopApplicationLink Path=`"$p`" Size=`"2x2`" Column=`"$col`" Row=`"$row`" />")
+        $col++
+        if ($col -ge 6) { $col = 0; $row++ }
+    }
+    [void]$sb.AppendLine('      </start:Group>')
+    [void]$sb.AppendLine('    </StartLayoutCollection>')
+    [void]$sb.AppendLine('  </DefaultLayoutOverride>')
+    [void]$sb.AppendLine('</LayoutModificationTemplate>')
+    return $sb.ToString()
+}
+
 $appsXml = New-AllowedAppXml $AllowedApps
+$startLayoutInner = New-KioskStartLayoutInnerXml -Apps $AllowedApps
 
 # Multi-App Assigned Access XML (rs5 namespace = Win10 1809+; supported on Win10/11 Pro/Edu/Ent)
 $config = @"
@@ -549,17 +573,9 @@ $appsXml
         <rs5:AllowedNamespace Name="Downloads"/>
       </rs5:FileExplorerNamespaceRestrictions>
       <StartLayout>
-        <![CDATA[<LayoutModificationTemplate xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" Version="1" xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification">
-  <LayoutOptions StartTileGroupCellWidth="6" />
-  <DefaultLayoutOverride>
-    <StartLayoutCollection>
-      <defaultlayout:StartLayout GroupCellWidth="6" />
-    </StartLayoutCollection>
-  </DefaultLayoutOverride>
-</LayoutModificationTemplate>
-]]>
+        <![CDATA[$startLayoutInner]]>
       </StartLayout>
-      <Taskbar ShowTaskbar="false"/>
+      <Taskbar ShowTaskbar="true"/>
     </Profile>
   </Profiles>
   <Configs>
