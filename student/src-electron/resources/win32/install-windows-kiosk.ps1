@@ -365,13 +365,13 @@ public static extern int CreateProfile(
 # 2b) per-user hardening via offline NTUSER.DAT hive load (closes sticky-keys backdoor before first logon)
 $hivePath = Join-Path $ProfilePath 'NTUSER.DAT'
 if (Test-Path $hivePath) {
-    $tempKey = 'HKU\NEXTEXAM_KIOSK_HIVE'
-    & reg.exe unload $tempKey 2>$null | Out-Null
-    $loadOut = (& reg.exe load $tempKey $hivePath 2>&1 | Out-String).Trim()
+    $hiveKey = 'HKU\NEXTEXAM_KIOSK_HIVE'
+    $hiveLoaded = $false
+    $loadOut = (& reg.exe load $hiveKey $hivePath 2>&1 | Out-String).Trim()
     if ($LASTEXITCODE -ne 0) {
         Write-Step "WARNING: skip NTUSER.DAT patch (profile locked? log off $KioskUser first): $loadOut"
     } else {
-
+    $hiveLoaded = $true
     $polSystem   = "Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\Software\Microsoft\Windows\CurrentVersion\Policies\System"
     $polExplorer = "Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer"
     $polEdgeUI   = "Registry::HKEY_USERS\NEXTEXAM_KIOSK_HIVE\Software\Policies\Microsoft\Windows\EdgeUI"
@@ -421,8 +421,10 @@ if (Test-Path $hivePath) {
 
     [gc]::Collect()
     Start-Sleep -Milliseconds 500
-    & reg.exe unload $tempKey | Out-Null
-    Write-Step "patched NTUSER.DAT (taskmgr/winkeys/sticky-keys hardening for $KioskUser)"
+    if ($hiveLoaded) {
+        $null = cmd.exe /c "reg unload $hiveKey 2>nul"
+        Write-Step "patched NTUSER.DAT (taskmgr/winkeys/sticky-keys hardening for $KioskUser)"
+    }
     }
 } else {
     Write-Step "WARNING: NTUSER.DAT still missing - per-user hardening skipped"
