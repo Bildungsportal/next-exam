@@ -9,7 +9,8 @@
       "Read(//home/valueerror/Desktop/**)",
       "Bash(node glyph-dump.mjs /home/valueerror/Nextcloud/SEMINARE/LiFE-EXAM/demo.pdf)",
       "Bash(node /tmp/glyph-dump.mjs /home/valueerror/Nextcloud/SEMINARE/LiFE-EXAM/demo.pdf)",
-      "Bash(node /tmp/glyph-dump.mjs /home/valueerror/Nextcloud/SEMINARE/LiFE-EXAM/demo.pdf 2)"
+      "Bash(node /tmp/glyph-dump.mjs /home/valueerror/Nextcloud/SEMINARE/LiFE-EXAM/demo.pdf 2)",
+      "Bash(pwsh -NoProfile -File /tmp/test-kiosk-xml.ps1)"
     ]
   }
 }

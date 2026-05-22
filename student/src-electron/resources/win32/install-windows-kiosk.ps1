@@ -558,19 +558,12 @@ $pinParts = foreach ($app in $AllowedApps) {
     Write-Step "start pin desktopAppLink: $lnkPath"
     "{`"desktopAppLink`":`"$linkJson`"}"
 }
-# applyOnce=false: re-provision overwrites; OEM tiles (e.g. Lenovo Vantage) get replaced each apply
-$startPinsJson = '{"pinnedList":[' + ($pinParts -join ',') + ']}'
+# applyOnce=true: same as previously-accepted shape; CSP rejects {} without applyOnce on some builds
+$startPinsJson = '{"applyOnce":true,"pinnedList":[' + ($pinParts -join ',') + ']}'
 Set-Content -LiteralPath (Join-Path $InstallDir 'kiosk-start-pins.json') -Value $startPinsJson -Encoding UTF8
 # Next-Exam UI reads this to render its own launcher buttons (independent of Windows StartPins)
 ($launcherApps | ConvertTo-Json -Compress) | Set-Content -LiteralPath (Join-Path $InstallDir 'kiosk-launcher-apps.json') -Encoding UTF8
 Write-Step "StartPins JSON: $startPinsJson"
-
-# Machine-wide ConfigureStartPins policy: applies to every user (incl. kiosk) without reloading
-# NTUSER hive a second time. Replaces OEM start tiles (Lenovo Vantage etc.) at next logon.
-$hklmExplorer = 'HKLM:\Software\Policies\Microsoft\Windows\Explorer'
-if (-not (Test-Path $hklmExplorer)) { New-Item -Path $hklmExplorer -Force | Out-Null }
-Set-ItemProperty -Path $hklmExplorer -Name 'ConfigureStartPins' -Value $startPinsJson -Type String
-Write-Step "HKLM ConfigureStartPins written (machine policy, replaces default OEM pins)"
 
 # Multi-App Assigned Access XML (rs5 namespace = Win10 1809+; supported on Win10/11 Pro/Edu/Ent)
 $config = @"
