@@ -712,14 +712,85 @@ export const detectorMethods = {
     const measureCanvas = document.createElement('canvas');
     const measureCtx = measureCanvas.getContext('2d');
 
+    // Build a glyph-position index from the page operator list.  pdf.js'
+    // getTextContent normaliser sometimes collapses runs of whitespace
+    // (typically a double space after a sentence "." or "…") so that
+    // item.str is *shorter* than the actually drawn text.  In that case
+    // canvas substring measurement of item.str drifts to the left because
+    // the missing chars carry real glyph width in the rendered page.
+    // We index each showText run by its starting text-space (x0, y0) so we
+    // can recover the original glyph sequence + per-glyph cumulative
+    // advance (in font units / 1000) for any text item.
+    const glyphRunsByY = new Map();
+    try {
+      const opList = await page.getOperatorList();
+      const OPS = pdfjsLib.OPS;
+      let curX = 0;
+      let curY = 0;
+      let curRun = null;
+      for (let i = 0; i < opList.fnArray.length; i += 1) {
+        const fn = opList.fnArray[i];
+        const args = opList.argsArray[i];
+        if (fn === OPS.beginText) {
+          curX = 0; curY = 0; curRun = null;
+        } else if (fn === OPS.moveText) {
+          curX += args[0];
+          curY += args[1];
+          curRun = { x0: curX, y0: curY, str: '', advances: [0] };
+        } else if (fn === OPS.showText) {
+          if (!curRun) curRun = { x0: curX, y0: curY, str: '', advances: [0] };
+          const glyphs = args[0] || [];
+          let advance = curRun.advances[curRun.advances.length - 1];
+          for (const g of glyphs) {
+            if (typeof g === 'number') {
+              // TJ horizontal offset: subtracted from current x (1/1000 em).
+              advance += -g;
+            } else if (g && typeof g === 'object') {
+              advance += (g.width || 0);
+              curRun.str += (g.unicode || '');
+              curRun.advances.push(advance);
+            }
+          }
+          const key = curRun.y0.toFixed(2);
+          if (!glyphRunsByY.has(key)) glyphRunsByY.set(key, []);
+          // de-duplicate same run pushed multiple times (showText after
+          // moveText keeps the same curRun reference).
+          const bucket = glyphRunsByY.get(key);
+          if (bucket[bucket.length - 1] !== curRun) bucket.push(curRun);
+        }
+      }
+    } catch (e) {
+      // silently fall back to canvas-only measurement
+    }
+
     textContent.items.forEach((item) => {
-      const text = item.str;
+      let text = item.str;
       if (!text) return;
 
       const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
       const fontSize = Math.sqrt(tx[0] * tx[0] + tx[1] * tx[1]);
       const itemX = tx[4];
       const itemY = tx[5];
+
+      // Recover the rendered glyph sequence when pdf.js' getTextContent
+      // collapsed whitespace inside this item.  Use it ONLY when the glyph
+      // run str is longer than item.str — otherwise the canvas-based path
+      // already handles the item correctly and overriding would change
+      // calibrated behaviour for other PDFs.
+      let glyphRun = null;
+      if (item.transform) {
+        const yKey = item.transform[5].toFixed(2);
+        const bucket = glyphRunsByY.get(yKey);
+        if (bucket) {
+          for (const r of bucket) {
+            if (Math.abs(r.x0 - item.transform[4]) < 0.5) { glyphRun = r; break; }
+          }
+        }
+      }
+      const useGlyphRun = glyphRun && glyphRun.str.length > text.length;
+      if (useGlyphRun) {
+        text = glyphRun.str;
+      }
 
       const fontName = item.fontName;
       const fontStyle = textContent.styles[fontName];
@@ -765,7 +836,17 @@ export const detectorMethods = {
       const knownFont = !!customAdjust;
       const itemWidthPdf = typeof item.width === 'number' ? actualFullWidthRaw : null;
 
+      // Conversion factor from raw glyph advances (1/1000 em, accumulated
+      // with TJ adjustments) to viewport px.
+      const glyphAdvanceToPx = useGlyphRun ? (fontSize / 1000) : 0;
+
       const measureSubstringWidth = (subText) => {
+        // Glyph-run path: substring length maps directly to glyph index;
+        // advances[i] gives the pre-CTM x-offset of the i-th glyph; scale
+        // to viewport px via fontSize/1000.
+        if (useGlyphRun && subText.length <= glyphRun.advances.length - 1) {
+          return glyphRun.advances[subText.length] * glyphAdvanceToPx;
+        }
         if (knownFont || !itemWidthPdf || !text.length) {
           return this.measureTextWidthWithMetrics(subText, measureCtx, fontSize, useScale, widthScale, fontScale, customAdjust);
         }
@@ -777,31 +858,15 @@ export const detectorMethods = {
         return itemWidthPdf * (measuredSub / measuredTotal);
       };
 
-      // DIAGNOSE: log per-item context only when item has cloze candidates
-      if (text.includes('_') || text.includes('.') || text.includes('…')) {
-        console.log('[CLOZE-ITEM]', {
-          text: text.slice(0, 80),
-          itemX: itemX.toFixed(2),
-          itemY: itemY.toFixed(2),
-          fontSize: fontSize.toFixed(2),
-          horizScale: Math.hypot(tx[0], tx[1]).toFixed(3),
-          pdfItemWidth: item.width,
-          actualFullWidthRaw: typeof actualFullWidthRaw === 'number' ? actualFullWidthRaw.toFixed(2) : actualFullWidthRaw,
-          measuredFullWidth: typeof measuredFullWidth === 'number' ? measuredFullWidth.toFixed(2) : measuredFullWidth,
-          widthScale: widthScale.toFixed(3),
-          useScale,
-          knownFont,
-          itemWidthPdf: typeof itemWidthPdf === 'number' ? itemWidthPdf.toFixed(2) : itemWidthPdf,
-          fontName,
-          baseFont: fontInfo && fontInfo.baseFont,
-          fontInfoFontName: fontInfo && fontInfo.fontName,
-          family: fontInfo && fontInfo.family,
-          effectiveFontFamily,
-          fontScale,
-          hasGlyphWidthsArr: !!(customAdjust && customAdjust.glyphWidths && customAdjust.glyphWidths.widths),
-          customAdjustHit: !!customAdjust,
-        });
-      }
+      // Glyph-accurate width of a slice [start, start+len) within the run.
+      // For matches found via regex on `text` (= glyphRun.str when useGlyphRun),
+      // the indices already line up.
+      const measureSliceWidthAt = (startIdx, len) => {
+        if (useGlyphRun && startIdx + len <= glyphRun.advances.length - 1) {
+          return (glyphRun.advances[startIdx + len] - glyphRun.advances[startIdx]) * glyphAdvanceToPx;
+        }
+        return null;
+      };
 
       if (this.detectUnderscores) {
         const regex = /(_+)/g;
@@ -812,29 +877,10 @@ export const detectorMethods = {
           const startIndex = match.index;
           const prefixText = text.substring(0, startIndex);
           const prefixWidth = measureSubstringWidth(prefixText);
-          const underscoreWidth = measureSubstringWidth(underscoreStr);
+          const sliceW = measureSliceWidthAt(startIndex, underscoreStr.length);
+          const underscoreWidth = sliceW !== null ? sliceW : measureSubstringWidth(underscoreStr);
           if (underscoreWidth < 12) continue;
           const finalX = itemX + prefixWidth;
-          // proportional alternative for comparison
-          const __mt = measureCtx.measureText(text).width || 1;
-          const __mp = measureCtx.measureText(prefixText).width || 0;
-          const __mu = measureCtx.measureText(underscoreStr).width || 0;
-          const propPrefix = itemWidthPdf ? itemWidthPdf * (__mp / __mt) : null;
-          const propUnderW = itemWidthPdf ? itemWidthPdf * (__mu / __mt) : null;
-          const propFinalX = propPrefix !== null ? itemX + propPrefix : null;
-          console.log('[CLOZE-UND]', {
-            prefixText: prefixText.slice(0, 60),
-            startIndex,
-            prefixWidth: prefixWidth.toFixed(2),
-            underscoreStr,
-            underscoreWidth: underscoreWidth.toFixed(2),
-            itemX: itemX.toFixed(2),
-            finalX: finalX.toFixed(2),
-            propPrefix: propPrefix !== null ? propPrefix.toFixed(2) : null,
-            propUnderW: propUnderW !== null ? propUnderW.toFixed(2) : null,
-            propFinalX: propFinalX !== null ? propFinalX.toFixed(2) : null,
-            top: (itemY - fontSize).toFixed(2),
-          });
 
           clozeFields.push({
             id: this.generateElementId('cloze'),
@@ -894,32 +940,13 @@ export const detectorMethods = {
 
           const prefixText = text.substring(0, startIndex);
           const prefixWidth = measureSubstringWidth(prefixText);
-          const dotWidth = measureSubstringWidth(dotStr);
+          const dotSliceW = measureSliceWidthAt(startIndex, dotStr.length);
+          const dotWidth = dotSliceW !== null ? dotSliceW : measureSubstringWidth(dotStr);
           if (dotWidth < 12) {
             lastIndex = startIndex + dotStr.length;
             continue;
           }
           const finalX = itemX + prefixWidth;
-          // hypothesis: `…` (U+2026) is measured wrong by canvas vs embedded subset.
-          // Try expanding `…` -> `...` for canvas measurement and rescale.
-          const textExp = text.replace(/…/g, '...');
-          const prefixExp = prefixText.replace(/…/g, '...');
-          const __mtExp = measureCtx.measureText(textExp).width || 1;
-          const __mpExp = measureCtx.measureText(prefixExp).width || 0;
-          const expPrefix = itemWidthPdf ? itemWidthPdf * (__mpExp / __mtExp) : null;
-          const expFinalX = expPrefix !== null ? itemX + expPrefix : null;
-          console.log('[CLOZE-DOT]', {
-            prefixText: prefixText.slice(0, 60),
-            startIndex,
-            prefixWidth: prefixWidth.toFixed(2),
-            dotStr,
-            dotWidth: dotWidth.toFixed(2),
-            itemX: itemX.toFixed(2),
-            finalX: finalX.toFixed(2),
-            expPrefix: expPrefix !== null ? expPrefix.toFixed(2) : null,
-            expFinalX: expFinalX !== null ? expFinalX.toFixed(2) : null,
-            top: (itemY - fontSize).toFixed(2),
-          });
 
           clozeFields.push({
             id: this.generateElementId('cloze'),
@@ -972,6 +999,7 @@ export const detectorMethods = {
       clozeFields.push(...isolatedLineFields);
     }
 
+    console.log('[CLOZE-ALL]', clozeFields.map(f => ({ type: f.type, left: f.style.left, top: f.style.top, w: f.style.width })));
     return clozeFields;
   },
 

@@ -21,7 +21,7 @@ import { join } from 'path'
 import {disableRestrictions, enableRestrictions} from './platformrestrictions.js';
 import log from 'electron-log'
 import {SchedulerService} from './schedulerservice.ts'
-import { activeWindow } from 'get-windows';
+//import { activeWindow } from 'get-windows';
 import platformDispatcher from './platformDispatcher.js';
 import {fileURLToPath} from "node:url";
 import path from 'path';
@@ -70,8 +70,8 @@ class WindowHandler {
     init (mc, config) {
         this.multicastClient = mc
         this.config = config
-        this.checkWindowInterval = new SchedulerService(this.windowTracker.bind(this), 1000)
-        this.focusTargetAllowed = true
+       // this.checkWindowInterval = new SchedulerService(this.windowTracker.bind(this), 1000)
+        // this.focusTargetAllowed = true
     }
 
     // return electron window in focus or an other electron window depending on the hierachy
@@ -838,34 +838,34 @@ class WindowHandler {
 
     // this function uses get-windows to receive name and url from active window - yet another way to figure out if the focus is still on nextexam
     // this is used to introduce exemptions for the blur listener
-    async windowTracker(){
-        try{
-            // const getwin = await this.getActiveWindow();
-            const activeWin = await activeWindow()
+    // async windowTracker(){
+    //     try{
+    //         // const getwin = await this.getActiveWindow();
+    //         const activeWin = await activeWindow()
          
-            if (activeWin && activeWin.owner && activeWin.owner.name) {
-                let name = activeWin.owner.name
-                let wpath = activeWin.owner.path
-                let nameLower = name.toLowerCase()
-                let wpathLower = wpath.toLowerCase()
+    //         if (activeWin && activeWin.owner && activeWin.owner.name) {
+    //             let name = activeWin.owner.name
+    //             let wpath = activeWin.owner.path
+    //             let nameLower = name.toLowerCase()
+    //             let wpathLower = wpath.toLowerCase()
 
-                if (nameLower.includes("exam") || nameLower.includes("next")  || nameLower.includes("electron") ||  wpathLower.includes("easeofaccessdialog") ||  wpathLower.includes("disable-shortcuts") ){  
-                    // fokus is on allowed window instance
-                    this.focusTargetAllowed = true
-                }
-                else { //focus is not on next-exam or any other allowed window
-                    if (this.focusTargetAllowed){  //log just once
-                        log.warn(`windowhandler @ windowTracker: focus lost event was triggered. app: ${wpath} - ${name} `)
-                    }
-                    this.multicastClient.clientinfo.focus = false
-                    this.focusTargetAllowed = false
-                }
-            }
-        }
-        catch(err){
-            log.error(`windowhandler @ windowTracker: ${err}`) 
-        }
-    }
+    //             if (nameLower.includes("exam") || nameLower.includes("next")  || nameLower.includes("electron") ||  wpathLower.includes("easeofaccessdialog") ||  wpathLower.includes("disable-shortcuts") ){  
+    //                 // fokus is on allowed window instance
+    //                 this.focusTargetAllowed = true
+    //             }
+    //             else { //focus is not on next-exam or any other allowed window
+    //                 if (this.focusTargetAllowed){  //log just once
+    //                     log.warn(`windowhandler @ windowTracker: focus lost event was triggered. app: ${wpath} - ${name} `)
+    //                 }
+    //                 this.multicastClient.clientinfo.focus = false
+    //                 this.focusTargetAllowed = false
+    //             }
+    //         }
+    //     }
+    //     catch(err){
+    //         log.error(`windowhandler @ windowTracker: ${err}`) 
+    //     }
+    // }
 
     //adds blur listener when entering exammode   // blur event isnt fired on macos MISSIONCONTROL (which cant be deactivated anymore) - damn you apple!
     addBlurListener(window = "examwindow"){
@@ -899,22 +899,22 @@ class WindowHandler {
 
         log.info("windowhandler @ blurevent: student tried to leave exam window")
 
-        if (process.platform !== 'linux'){
-            await this.windowTracker()  //checks if new focus window is allowed
-            log.info("windowtracker check done...")
-        }
+        // if (process.platform !== 'linux'){
+        //     await this.windowTracker()  //checks if new focus window is allowed
+        //     log.info("windowtracker check done...")
+        // }
         // Clean up destroyed screenlock windows from array and check if any still exist
         winhandler.screenlockwindows = winhandler.screenlockwindows.filter(win => win && !win.isDestroyed())
         const hasActiveScreenlock = winhandler.screenlockwindows.some(win => win && !win.isDestroyed() && win.isVisible())
         // Also check clientinfo.screenlock flag as fallback in case array was cleared but windows still exist
         if (hasActiveScreenlock || winhandler.multicastClient?.clientinfo?.screenlock) { return }// do nothing if screenlockwindow stole focus // do not trigger an infinite loop between exam window and screenlock window (stealing each others focus because screenlockwindow appears above exam window and will capture a klick and therefore steal focus)
-        if (!winhandler.focusTargetAllowed){ 
-            winhandler.examwindow.moveTop();
-            winhandler.examwindow.show(); 
-            winhandler.examwindow.focus(); // still return focus to the app
-            log.warn(`windowhandler @ blurevent: blurevent was triggered but target is allowed`)
-            return
-        } 
+        // if (!winhandler.focusTargetAllowed){ 
+        //     winhandler.examwindow.moveTop();
+        //     winhandler.examwindow.show(); 
+        //     winhandler.examwindow.focus(); // still return focus to the app
+        //     log.warn(`windowhandler @ blurevent: blurevent was triggered but target is allowed`)
+        //     return
+        // } 
         
         winhandler.multicastClient.clientinfo.focus = false   //inform the teacher
         
