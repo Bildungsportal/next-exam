@@ -7,7 +7,11 @@ on:
         type: boolean
         required: false
         default: false
-  workflow_dispatch: {} 
+  workflow_dispatch: {}
+
+# opt in to Node 24 runtime for js actions (default from 2026-06-16); pre-validate
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   build:
