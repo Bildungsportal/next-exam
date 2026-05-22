@@ -534,28 +534,32 @@ function New-AllowedAppXml($apps) {
 
 $appsXml = New-AllowedAppXml $AllowedApps
 
-# Desktop .lnk launchers (AllAppsList still whitelists; java/javaw/disable-shortcuts are not shown).
-$deskDir = Join-Path $ProfilePath 'Desktop'
-New-Item -ItemType Directory -Path $deskDir -Force | Out-Null
-$skipDesktop = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe')
-foreach ($app in $AllowedApps) {
-    if ($skipDesktop -contains ([IO.Path]::GetFileName($app.Path)).ToLower()) { continue }
-    $lnk = Join-Path $deskDir "$([IO.Path]::GetFileNameWithoutExtension($app.Path)).lnk"
-    $w = New-Object -ComObject WScript.Shell
-    $s = $w.CreateShortcut($lnk)
-    $s.TargetPath = $app.Path
-    $s.WorkingDirectory = [IO.Path]::GetDirectoryName($app.Path)
-    $s.Save()
-    [void][Runtime.InteropServices.Marshal]::ReleaseComObject($w)
-    Write-Step "desktop launcher: $lnk"
+# Win11 kiosk UI = Start menu "Angeheftete Kacheln" (v5:StartPins), not classic desktop icons.
+$skipPin = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe')
+$startApps = @(Get-StartApps)
+$pinParts = foreach ($app in $AllowedApps) {
+    if ($skipPin -contains ([IO.Path]::GetFileName($app.Path)).ToLower()) { continue }
+    $leaf = [IO.Path]::GetFileName($app.Path)
+    $id = ($startApps | Where-Object { $_.AppID -like "*$leaf" } | Select-Object -First 1).AppID
+    if ($id) {
+        $e = $id -replace '\\', '\\\\'
+        Write-Step "start pin (desktopAppId): $id"
+        "{`"desktopAppId`":`"$e`"}"
+    } else {
+        $e = $app.Path -replace '\\', '\\\\'
+        Write-Step "start pin (desktopAppLink): $($app.Path)"
+        "{`"desktopAppLink`":`"$e`"}"
+    }
 }
+$startPinsJson = "{`"pinnedList`":[$($pinParts -join ',')]}"
 
 # Multi-App Assigned Access XML (rs5 namespace = Win10 1809+; supported on Win10/11 Pro/Edu/Ent)
 $config = @"
 <?xml version="1.0" encoding="utf-8" ?>
 <AssignedAccessConfiguration
     xmlns="http://schemas.microsoft.com/AssignedAccess/2017/config"
-    xmlns:rs5="http://schemas.microsoft.com/AssignedAccess/201810/config">
+    xmlns:rs5="http://schemas.microsoft.com/AssignedAccess/201810/config"
+    xmlns:v5="http://schemas.microsoft.com/AssignedAccess/2022/config">
   <Profiles>
     <Profile Id="{9A2A490F-10F6-4764-974A-43B19E722C23}">
       <AllAppsList>
@@ -577,6 +581,9 @@ $appsXml
 </LayoutModificationTemplate>
 ]]>
       </StartLayout>
+      <v5:StartPins>
+        <![CDATA[$startPinsJson]]>
+      </v5:StartPins>
       <Taskbar ShowTaskbar="false"/>
     </Profile>
   </Profiles>
