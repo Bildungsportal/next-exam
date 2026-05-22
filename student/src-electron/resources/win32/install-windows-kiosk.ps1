@@ -63,6 +63,54 @@ $ErrorActionPreference = 'Stop'
 
 function Write-Step($msg) { Write-Host "[next-exam-kiosk] $msg" }
 
+# Add/remove group membership by well-known SID (-Group 'S-1-5-…' is wrong; use -SID or net localgroup).
+function Set-LocalGroupMemberByWellKnownSid([string]$MemberName, [string]$GroupSidString, [switch]$Remove) {
+    $groupSid = New-Object System.Security.Principal.SecurityIdentifier($GroupSidString)
+    $groupLabel = $groupSid.Translate([System.Security.Principal.NTAccount]).Value
+    if ($Remove) {
+        try {
+            Remove-LocalGroupMember -SID $groupSid -Member $MemberName -ErrorAction Stop
+            return
+        } catch {
+            $groupName = $groupLabel.Split('\')[1]
+            & net.exe localgroup $groupName $MemberName /delete 2>$null | Out-Null
+            return
+        }
+    }
+    try {
+        Add-LocalGroupMember -SID $groupSid -Member $MemberName -ErrorAction Stop
+        Write-Step "group: $MemberName -> $groupLabel (Add-LocalGroupMember -SID)"
+        return
+    } catch {
+        $groupName = $groupLabel.Split('\')[1]
+        $out = (& net.exe localgroup $groupName $MemberName /add 2>&1 | Out-String).Trim()
+        if ($LASTEXITCODE -ne 0 -and $out -notmatch 'already|bereits|1378') {
+            throw "failed to add $MemberName to $groupName (exit $LASTEXITCODE): $out"
+        }
+        Write-Step "group: $MemberName -> $groupName (net localgroup)"
+    }
+}
+
+# New-LocalUser -NoPassword still leaves "change password at next logon"; normalize via net+WinNT flags.
+function Set-LocalUserPasswordlessLogon([string]$UserName) {
+    $netOut = (& net.exe user $UserName '/passwordreq:no' '/passwordchg:no' 2>&1 | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0) { throw "net user password flags failed: $netOut" }
+    $clearOut = (& net.exe user $UserName '""' 2>&1 | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0) {
+        $clearOut = (& net.exe user $UserName '' 2>&1 | Out-String).Trim()
+        if ($LASTEXITCODE -ne 0) { throw "net user clear password failed: $clearOut" }
+    }
+    $adsPath = "WinNT://$env:COMPUTERNAME/$UserName,user"
+    $locUser = [ADSI]$adsPath
+    $locUser.PasswordExpired = 0
+    $flags = [int]$locUser.UserFlags.Value
+    $locUser.UserFlags.Value = ($flags -bor 0x20)
+    $locUser.SetInfo()
+    Set-LocalUser -Name $UserName -PasswordNeverExpires $true -ErrorAction SilentlyContinue
+    $lu = Get-LocalUser -Name $UserName -ErrorAction Stop
+    Write-Step "passwordless logon ok (PasswordRequired=$($lu.PasswordRequired))"
+}
+
 # Encode Assigned Access XML the way the MDM Bridge CSP expects (HtmlEncode per Microsoft docs).
 function Get-MdmAssignedAccessEncodedConfig([string]$ConfigXml) {
     Add-Type -AssemblyName System.Web
@@ -169,13 +217,23 @@ function Apply-MdmAssignedAccessConfiguration([string]$ConfigXml, [string]$Insta
     try {
         Write-Step 'applying MDM Assigned Access (elevated admin)...'
         Apply-MdmAssignedAccessAsAdmin -ConfigXml $ConfigXml
-        Write-Step 'MDM apply succeeded (admin)'
-        return
+        Write-Step 'MDM apply succeeded (admin token)'
+        return 'admin'
     } catch {
-        Write-Step "MDM admin apply failed, trying SYSTEM task: $($_.Exception.Message)"
+        # On many client SKUs the MDM Bridge instance is only reachable as SYSTEM — not a fatal error.
+        Write-Step "MDM via admin not available ($($_.Exception.Message)); using SYSTEM task (expected on some builds)"
     }
     Write-Step "applying MDM Assigned Access via SYSTEM scheduled task (staging: $staging)..."
     Apply-MdmAssignedAccessAsSystem -ConfigXml $ConfigXml -StagingDir $staging
+    $logFile = Get-ChildItem -LiteralPath $staging -Filter 'mdm-helper-*.log' -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if ($logFile) {
+        $tail = (Get-Content -LiteralPath $logFile.FullName -ErrorAction SilentlyContinue | Select-Object -Last 3) -join ' | '
+        Write-Step "MDM apply succeeded (SYSTEM task). Log: $($logFile.FullName) — $tail"
+    } else {
+        Write-Step 'MDM apply succeeded (SYSTEM task)'
+    }
+    return 'system'
 }
 
 # 0) edition check: Multi-App Assigned Access (MDM_AssignedAccess CSP) is unsupported on Home/Core
@@ -230,9 +288,15 @@ if (-not $existing) {
 } else {
     Write-Step "local user $KioskUser already exists"
 }
-# ensure member of Users, remove from Administrators if accidentally there (SIDs avoid localized group names)
-Add-LocalGroupMember -Group 'S-1-5-32-545' -Member $KioskUser -ErrorAction SilentlyContinue
-Remove-LocalGroupMember -Group 'S-1-5-32-544' -Member $KioskUser -ErrorAction SilentlyContinue
+$lsaPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa'
+if ((Get-ItemProperty -Path $lsaPath -Name 'LimitBlankPasswordUse' -ErrorAction SilentlyContinue).LimitBlankPasswordUse -ne 1) {
+    Set-ItemProperty -Path $lsaPath -Name 'LimitBlankPasswordUse' -Value 1 -Type DWord -Force
+    Write-Step 'LSA LimitBlankPasswordUse=1 (blank password allowed for console logon)'
+}
+Set-LocalUserPasswordlessLogon -UserName $KioskUser
+# Users (S-1-5-32-545) = "Benutzer" on DE Windows — must use -SID, not -Group with SID string
+Set-LocalGroupMemberByWellKnownSid -MemberName $KioskUser -GroupSidString 'S-1-5-32-545'
+Set-LocalGroupMemberByWellKnownSid -MemberName $KioskUser -GroupSidString 'S-1-5-32-544' -Remove
 
 $sid = (New-Object System.Security.Principal.NTAccount("$env:COMPUTERNAME\$KioskUser")).Translate([System.Security.Principal.SecurityIdentifier]).Value
 
@@ -428,12 +492,12 @@ $appsXml
 
 # Apply via MDM_AssignedAccess WMI bridge (CSP); admin first, SYSTEM+staging fallback
 try {
-    Apply-MdmAssignedAccessConfiguration -ConfigXml $config -InstallDir $InstallDir
+    $mdmVia = Apply-MdmAssignedAccessConfiguration -ConfigXml $config -InstallDir $InstallDir
+    Write-Step "Assigned Access policy written (via $mdmVia). Kiosk launch: $TargetExe"
 } catch {
     Write-Host "ERROR_MDM_APPLY_FAILED: $($_.Exception.Message)"
     exit 13
 }
-Write-Step "applied MDM_AssignedAccess Multi-App configuration (launch: $LaunchExe)"
 
 # marker: renderer treats provisioning as complete only after this file exists (partial runs keep install button visible)
 Set-Content -LiteralPath (Join-Path $InstallDir '.kiosk-provision-complete') -Value (Get-Date -Format 'o') -Encoding UTF8
