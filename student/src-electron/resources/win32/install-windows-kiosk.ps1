@@ -63,7 +63,7 @@ $ErrorActionPreference = 'Stop'
 
 function Write-Step($msg) { Write-Host "[next-exam-kiosk] $msg" }
 
-# NTUSER hive hardening applied to Default User so every new/temporary kiosk profile inherits it.
+# NTUSER hive hardening (taskmgr/winkeys/sticky-keys) for offline profile hives.
 function Add-NextExamKioskNtuserHardening([string]$HiveRoot) {
     $polSystem   = "$HiveRoot\Software\Microsoft\Windows\CurrentVersion\Policies\System"
     $polExplorer = "$HiveRoot\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer"
@@ -128,6 +128,42 @@ function Invoke-OfflineNtuserHardening([string]$NtuserPath, [string]$HiveAlias) 
     } finally {
         $null = cmd.exe /c "reg unload $hiveKey 2>nul"
     }
+}
+
+# Scheduled task: after kiosk logoff, delete user files inside profile dir (keep NTUSER + ProfileList).
+function Register-KioskUserHomeWipeOnLogoff([string]$InstallDir, [string]$KioskUser, [string]$ProfilePath) {
+    $taskName = 'NextExam-KioskWipeUserHome'
+    $scriptPath = Join-Path $InstallDir 'kiosk-wipe-user-home.ps1'
+    $profileEsc = $ProfilePath -replace "'", "''"
+    $content = @"
+# Wipe next-exam-kiosk home contents after logoff; profile shell stays (no temp profile).
+param([string]`$ProfilePath = '$ProfilePath')
+`$ErrorActionPreference = 'SilentlyContinue'
+`$keep = @('NTUSER.DAT','ntuser.dat.LOG1','ntuser.dat.LOG2','ntuser.ini','desktop.ini','ntuser.pol')
+`$deadline = (Get-Date).AddMinutes(3)
+do {
+    Start-Sleep -Seconds 2
+    `$p = Get-CimInstance Win32_UserProfile -Filter "LocalPath='$profileEsc'" -ErrorAction SilentlyContinue
+    if (-not `$p) { break }
+    if (-not `$p.Loaded) { break }
+} while ((Get-Date) -lt `$deadline)
+if (-not (Test-Path -LiteralPath `$ProfilePath)) { exit 0 }
+Get-ChildItem -LiteralPath `$ProfilePath -Force | ForEach-Object {
+    if (`$keep -contains `$_.Name) { return }
+    Remove-Item -LiteralPath `$_.FullName -Recurse -Force
+}
+"@
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($scriptPath, $content, $utf8NoBom)
+    Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
+    $action = New-ScheduledTaskAction -Execute (Join-Path $env:windir 'System32\WindowsPowerShell\v1.0\powershell.exe') `
+        -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$scriptPath`""
+    $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
+    $trigger = New-ScheduledTaskTrigger -AtLogOff
+    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+        -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 10)
+    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings | Out-Null
+    Write-Step "logoff task $taskName -> wipe user data under $ProfilePath (profile kept)"
 }
 
 # True when MemberName is already in the builtin group identified by well-known SID.
@@ -429,24 +465,19 @@ public static extern int CreateProfile(
     Start-Sleep -Seconds 1
 }
 
-# 2b) Harden C:\Users\Default\NTUSER.DAT — temp profiles copy from Default User on each logon.
-$defaultNtuser = Join-Path $env:SystemDrive 'Users\Default\NTUSER.DAT'
-Invoke-OfflineNtuserHardening -NtuserPath $defaultNtuser -HiveAlias 'NEXTEXAM_DEFAULT_HIVE' | Out-Null
+# 2b) Harden kiosk profile NTUSER (persistent profile — avoids temp-profile + "setting up" on every logon).
+$kioskNtuser = Join-Path $ProfilePath 'NTUSER.DAT'
+Invoke-OfflineNtuserHardening -NtuserPath $kioskNtuser -HiveAlias 'NEXTEXAM_KIOSK_HIVE' | Out-Null
 
-# 2c) Windows-native temp profile: ProfileList entry stays, profile folder removed -> TEMP profile, deleted on logoff.
+# 2c) Keep normal profile dir + ProfileList; user files wiped on logoff via Register-KioskUserHomeWipeOnLogoff.
 $profileKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$sid"
 if (-not (Test-Path $profileKey)) { New-Item -Path $profileKey -Force | Out-Null }
 Set-ItemProperty -Path $profileKey -Name 'ProfileImagePath' -Value $ProfilePath -Type ExpandString
-Remove-ItemProperty -Path $profileKey -Name 'State' -ErrorAction SilentlyContinue
+Set-ItemProperty -Path $profileKey -Name 'State' -Value 128 -Type DWord
 Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList' -ErrorAction SilentlyContinue |
     Where-Object { $_.PSChildName -like "$sid*" -and $_.PSChildName -ne $sid } |
     ForEach-Object { Remove-Item -LiteralPath $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue }
-if (Test-Path -LiteralPath $ProfilePath) {
-    Remove-Item -LiteralPath $ProfilePath -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Step "removed $ProfilePath (ProfileList kept) -> temporary profile each logon, deleted on logoff"
-} else {
-    Write-Step "profile folder absent; ProfileList points at $ProfilePath -> temporary profile on logon"
-}
+Write-Step "persistent profile $ProfilePath State=128; user files wiped on logoff (NextExam-KioskWipeUserHome)"
 
 # 3) Removable storage lockdown for this user (per-user policy under SID)
 $rsRoot = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\RemovableStorageDevices\$sid"
@@ -476,10 +507,39 @@ function Add-KioskAllowedAppPath([System.Collections.ArrayList]$List, [string]$E
     if (-not (Test-Path -LiteralPath $ExePath -PathType Leaf)) { return }
     $resolved = (Resolve-Path -LiteralPath $ExePath).Path
     foreach ($existing in $List) {
-        if ($existing.Path -eq $resolved) { return }
+        if ($existing.Path -and $existing.Path -eq $resolved) { return }
     }
-    [void]$List.Add([pscustomobject]@{ Path = $resolved; AutoLaunch = [bool]$AutoLaunch })
+    [void]$List.Add([pscustomobject]@{ Path = $resolved; AppUserModelId = ''; AutoLaunch = [bool]$AutoLaunch })
     Write-Step ('  + kiosk allow' + $(if ($AutoLaunch) { ' (autolaunch)' }) + ": $resolved")
+}
+
+function Add-KioskAllowedAppUserModelId([System.Collections.ArrayList]$List, [string]$AppUserModelId) {
+    if (-not $AppUserModelId) { return }
+    foreach ($existing in $List) {
+        if ($existing.AppUserModelId -eq $AppUserModelId) { return }
+    }
+    [void]$List.Add([pscustomobject]@{ Path = ''; AppUserModelId = $AppUserModelId; AutoLaunch = $false })
+    Write-Step "  + kiosk allow (aumid): $AppUserModelId"
+}
+
+# Win11 System32\calc.exe is a stub; allow the real UWP Calculator for Assigned Access + launcher.
+function Add-KioskCalculatorApps([System.Collections.ArrayList]$List) {
+    $calcPkg = Get-ChildItem -Path (Join-Path $env:ProgramFiles 'WindowsApps') -Filter 'Calculator.exe' -Recurse -ErrorAction SilentlyContinue |
+        Where-Object { $_.FullName -match 'Microsoft\.WindowsCalculator' } | Select-Object -First 1
+    if ($calcPkg) {
+        Add-KioskAllowedAppPath -List $List -ExePath $calcPkg.FullName
+    } else {
+        Write-Step 'WARNING: Windows Calculator package not found — calc may not launch in kiosk'
+    }
+    Add-KioskAllowedAppUserModelId -List $List -AppUserModelId 'Microsoft.WindowsCalculator_8wekyb3d8bbwe!App'
+}
+
+function Add-KioskAllowedAppFromLine([System.Collections.ArrayList]$List, [string]$Line) {
+    if ([IO.Path]::GetFileName($Line).Equals('calc.exe', [StringComparison]::OrdinalIgnoreCase)) {
+        Add-KioskCalculatorApps -List $List
+        return
+    }
+    Add-KioskAllowedAppPath -List $List -ExePath $Line
 }
 
 # 4) Multi-App Assigned Access - next-exam first (AutoLaunch), then optional extras from ExtraAppsFile
@@ -491,6 +551,8 @@ foreach ($jreName in @('java.exe', 'javaw.exe')) {
 }
 $disableShortcuts = Join-Path $InstallDir 'resources\app.asar.unpacked\public\disable-shortcuts.exe'
 Add-KioskAllowedAppPath -List $AllowedApps -ExePath $disableShortcuts
+Add-KioskAllowedAppPath -List $AllowedApps -ExePath (Join-Path $env:windir 'System32\netsh.exe')
+Add-KioskAllowedAppPath -List $AllowedApps -ExePath (Join-Path $env:windir 'System32\WindowsPowerShell\v1.0\powershell.exe')
 
 # fallback: when -ExtraAppsFile not passed in, try the interactive user's EXAM-STUDENT folder.
 # elevated $env:USERPROFILE points at the admin, not the teacher who launched next-exam, so we
@@ -520,18 +582,28 @@ if ($ExtraAppsFile -and (Test-Path $ExtraAppsFile)) {
         $line = $raw.Trim()
         if (-not $line) { continue }
         if ($line.StartsWith('#')) { continue }
+        if ([IO.Path]::GetFileName($line).Equals('calc.exe', [StringComparison]::OrdinalIgnoreCase)) {
+            Add-KioskCalculatorApps -List $AllowedApps
+            continue
+        }
         if (-not (Test-Path -LiteralPath $line -PathType Leaf)) {
             # exit 11 = renderer maps to friendly "missing path" dialog with the offending path in the transcript
             Write-Host "ERROR_MISSING_APP_PATH: $line"
             exit 11
         }
-        Add-KioskAllowedAppPath -List $AllowedApps -ExePath $line
+        Add-KioskAllowedAppFromLine -List $AllowedApps -Line $line
     }
 }
 
 function New-AllowedAppXml($apps) {
     $sb = New-Object System.Text.StringBuilder
     foreach ($app in @($apps)) {
+        if ($app.AppUserModelId) {
+            $id = [System.Security.SecurityElement]::Escape([string]$app.AppUserModelId)
+            [void]$sb.AppendLine("        <App AppUserModelId=`"$id`" />")
+            continue
+        }
+        if (-not $app.Path) { continue }
         $p = [System.Security.SecurityElement]::Escape([string]$app.Path)
         if ($app.AutoLaunch) {
             [void]$sb.AppendLine("        <App DesktopAppPath=`"$p`" rs5:AutoLaunch=`"true`" rs5:AutoLaunchArguments=`"`" />")
@@ -551,7 +623,7 @@ $launcherList = @(
     foreach ($app in $AllowedApps) {
         if ($skipLauncherUi -contains ([IO.Path]::GetFileName($app.Path)).ToLower()) { continue }
         if ($app.Path -eq $TargetExe) { continue }
-        [pscustomobject]@{ name = [IO.Path]::GetFileNameWithoutExtension($app.Path); path = $app.Path }
+        [pscustomobject]@{ name = [IO.Path]::GetFileNameWithoutExtension($app.Path); path = $app.Path }  # skips aumid-only rows (empty Path)
     }
 )
 $launcherJsonPath = Join-Path $InstallDir 'kiosk-launcher-apps.json'
@@ -615,6 +687,8 @@ try {
     Write-Host "ERROR_MDM_APPLY_FAILED: $($_.Exception.Message)"
     exit 13
 }
+
+Register-KioskUserHomeWipeOnLogoff -InstallDir $InstallDir -KioskUser $KioskUser -ProfilePath $ProfilePath
 
 # marker: renderer treats provisioning as complete only after this file exists (partial runs keep install button visible)
 Set-Content -LiteralPath (Join-Path $InstallDir '.kiosk-provision-complete') -Value (Get-Date -Format 'o') -Encoding UTF8

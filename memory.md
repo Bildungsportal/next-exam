@@ -20,10 +20,10 @@ RULE^agent^assumeUserEditsIntentional^never revert incidental diffs; assume user
 RULE^agent^gitSafety^never run git restore/reset/clean/rebase/stash/pop/checkout/switch unless user explicitly asks
 RULE^agent^utils^noSingleUseFiles^never new file for one function solvable in ~2 lines at caller; colocate; reuse module only if 2+ call sites; after each new fn check minimize/inline/delete
 PATH^linux^cageInstall^install-cage-kiosk.sh pkexec; needsCageKioskSetup=!(cage on PATH+AppImage+/opt/next-exam+desktop); UI if needsCageKioskSetup&&!runningInCage
-PATH^win32^kioskInstall^install-windows-kiosk.ps1+windowsKioskSetup.js; copy→C:\NextExam; next-exam-kiosk; Default User NTUSER hardening; ProfileList kept+delete C:\Users\next-exam-kiosk folder→Windows TEMP profile (0x800) wiped on logoff; not State=128; RemovableStorageDevices\<SID>; MDM allow list incl java+disable-shortcuts
+PATH^win32^kioskInstall^profile C:\Users\next-exam-kiosk State=128+ProfileList; logoff NextExam-KioskWipeUserHome wipes home not delete profile dir
 RULE^win32^kioskStartUi^kiosk-launcher-apps.json {"apps":[{name,path}]} PS; read also root []+legacy; UTF8 no BOM; student.vue cageLauncherButtons
 RULE^win32^kioskExam^skipElectronKiosk+no taskkill explorer/powershell when runningInCage; platformDispatcher.applyElectronKioskMode skips setKiosk(true); optional EXAM-STUDENT/kiosk-allowed-apps.txt
-RULE^win32^kioskAutoLogoff^triggerWindowsKioskLogoff before app.quit (shutdown /l /f); temp profile cycle via missing profile folder not State=128
+RULE^win32^kioskAutoLogoff^triggerWindowsKioskLogoff shutdown /l /f; C:\NextExam\kiosk-wipe-user-home.ps1 via scheduled task AtLogOff
 TECH^win32^kioskI18n^student.vue kioskI18nPrefix=winKioskSetup on platformKiosk.displayServer==='windows', else cageSetup; kioskI18n(suffix) helper with fallback to cage key^student/src/pages/student.vue+locales
 IPC^win32^kioskExitCodes^ps1 exit 10/11/12/13; UAC -EncodedCommand+exitFile; MDM admin Set-CimInstance first else SYSTEM task files in C:\NextExam\mdm-staging not admin %TEMP% (SYSTEM no result write→timeout); mdm-helper-*.log
 RULE^kiosk^sharedFields^platformDispatcher win32 reuses linux cage field names (runningInCage,cageInstalled,cageKioskAppImageInstalled,cageKioskDesktopInstalled,needsCageKioskSetup); runningInCage on win32 = os.userInfo().username===next-exam-kiosk; renderer linuxCageKiosk.js+student.vue unchanged
