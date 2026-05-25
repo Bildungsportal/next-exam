@@ -6,8 +6,8 @@
     <span class="text-white m-1 d-inline-flex align-items-center flex-wrap ms-1">
         <img src='/src/assets/img/svg/speedometer.svg' class="white me-2" width="32" height="32">
         <span class="fs-4 align-middle me-2" @click="handleClick">Next-Exam</span>
-        <span v-if="cageLauncherButtons.length" class="d-inline-flex align-items-center flex-wrap gap-2 cage-launcher-group">
-            <button v-for="app in cageLauncherButtons" :key="app.path" type="button"
+        <span v-if="cageLauncherApps.length" class="d-inline-flex align-items-center flex-wrap gap-2 cage-launcher-group">
+            <button v-for="app in cageLauncherApps" :key="app.path" type="button"
                     class="btn btn-outline-cyan btn-sm mt-1"
                     @click="launchCageApp(app.path)">{{ app.name }}</button>
         </span>
@@ -302,6 +302,7 @@ import config from '../../src-electron/main/config.js'
 import {SignalBridge} from '../utils/signalBridge.js'
 import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync, setCageWindowCaptureFallback, setLinuxKioskRunningInCage } from '../utils/screenshotCapture.js'
 import { getLinuxKioskInfo } from '../utils/linuxCageKiosk.js'
+import { loadWinKioskLauncherApps } from '../utils/kioskLauncher.js'
 import { Exam } from '../types/api'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
 import { normalizeStudentClientName } from 'next-exam-shared/normalizeStudentClientName.js'
@@ -426,13 +427,6 @@ export default {
         kioskI18nPrefix() {
             // win32 uses winKioskSetup* keys, linux keeps the legacy cageSetup* keys
             return this.platformKiosk?.displayServer === 'windows' ? 'winKioskSetup' : 'cageSetup';
-        },
-        cageLauncherButtons() {
-            return this.cageLauncherApps.filter((a) => {
-                const p = String(a?.path || '').trim();
-                if (!p || !/\.exe$/i.test(p)) return false;
-                return !/next-exam-student/i.test(a.name || '') && !/next-exam-student\.exe$/i.test(p);
-            });
         },
     },
     watch: {
@@ -1764,9 +1758,7 @@ export default {
             this.platformKiosk = await getLinuxKioskInfo(signalBridge);
             setLinuxKioskRunningInCage(this.platformKiosk.runningInCage);
             setCageWindowCaptureFallback(!!this.platformKiosk.runningInCage);
-            if (this.platformKiosk.runningInCage) {
-                this.cageLauncherApps = await signalBridge.invoke('get-kiosk-launcher-apps') || [];
-            }
+            this.cageLauncherApps = await loadWinKioskLauncherApps(signalBridge);
             // Dev-only: preview cage launcher UI without kiosk user / provisioning
             // if (this.config.development) {
             //     this.platformKiosk.runningInCage = true;

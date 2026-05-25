@@ -8,6 +8,11 @@
                 <button v-if="clientinfo && clientinfo.groups  && clientinfo.group == 'b'" type="button" class="header-item btn btn-warning btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> B  </button>
                 <span class="fs-5 align-middle me-1" style="float: left;">{{clientname}} @ {{servername}} | {{pincode}}</span>
                 <span class="fs-5 align-middle me-4 teal" style="float: left;" >| {{$t('student.connected')}}</span>
+                <span v-if="kioskLauncherApps.length" class="kiosk-launcher-bar ms-1">
+                    <button v-for="app in kioskLauncherApps" :key="app.path" type="button"
+                            class="btn btn-outline-cyan btn-sm py-0 px-1 ms-1 kiosk-launcher-btn"
+                            :title="app.path" @click="launchKioskApp(app.path)">{{ app.name }}</button>
+                </span>
             </div>
             <div v-if="!online && !localLockdown" class="header-item">
                 <img src="/src/assets/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style=" float: left;" />
@@ -109,6 +114,7 @@
   import moment from 'moment-timezone';
   import {SignalBridge} from '../utils/signalBridge.js'
   import {SchedulerService} from '../utils/schedulerservice.js'
+  import { loadWinKioskLauncherApps } from '../utils/kioskLauncher.js'
 
   // signalBridge instance centralizes ipc calls with platform checks
   const signalBridge = new SignalBridge(window);
@@ -123,6 +129,7 @@
         _nxHeaderResizeObs: null,
         _clockInterval: null,
         _entrytimeMs: 0,
+        kioskLauncherApps: [],
       };
     },
     computed: {
@@ -145,6 +152,7 @@
       }
       window.addEventListener('resize', this._nxSetHeaderHeightVar);
       this.$nextTick(() => this.tickHeaderClock());
+      loadWinKioskLauncherApps(signalBridge).then((apps) => { this.kioskLauncherApps = apps; });
     },
     beforeUnmount() {
       if (this._clockInterval) {
@@ -195,6 +203,13 @@
       gracefullyExit() {
         // Clean exit from safe exam mode
         this.$emit('gracefullyExit');
+      },
+      async launchKioskApp(exePath) {
+        const p = String(exePath || '').trim();
+        if (!p) return;
+        const res = await signalBridge.invoke('launch-kiosk-allowed-app', p);
+        if (res?.ok) return;
+        this.$swal.fire({ title: 'Error', text: res?.error || 'launch failed', icon: 'error', showCancelButton: false });
       },
       async switchExamSection(sectionNumber) {
         if (!this.serverstatus?.allowSectionSwitch || this.clientinfo?.lockedSection === sectionNumber) return;
@@ -266,6 +281,24 @@
     pointer-events: none;
 }
 
+.kiosk-launcher-bar {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px;
+    max-width: min(42vw, 280px);
+    vertical-align: middle;
+}
+
+.kiosk-launcher-btn {
+    max-width: 4.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.68rem;
+    line-height: 1.15;
+    color: #fff;
+}
 
 </style>
   

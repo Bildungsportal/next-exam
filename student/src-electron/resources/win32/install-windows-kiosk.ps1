@@ -635,10 +635,6 @@ $launcherJson = if (@($launcherList).Count -eq 0) {
 $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 [System.IO.File]::WriteAllText($launcherJsonPath, $launcherJson, $utf8NoBom)
 Write-Step "kiosk-launcher-apps.json written ($(@($launcherList).Count) apps)"
-$kioskWorkDir = Join-Path $ProfilePath 'EXAM-STUDENT'
-if (-not (Test-Path -LiteralPath $kioskWorkDir)) { New-Item -ItemType Directory -Path $kioskWorkDir -Force | Out-Null }
-Copy-Item -LiteralPath $launcherJsonPath -Destination (Join-Path $kioskWorkDir 'kiosk-launcher-apps.json') -Force
-Write-Step "kiosk-launcher-apps.json copied to $kioskWorkDir"
 
 # Multi-App Assigned Access XML (rs5 namespace = Win10 1809+; supported on Win10/11 Pro/Edu/Ent)
 $config = @"

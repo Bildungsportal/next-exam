@@ -167,112 +167,30 @@ function withoutMainExamLauncherApps(list) {
     return list.filter((a) => !/next-exam-student/i.test(a.name || '') && !/next-exam-student\.exe$/i.test(a.path || ''));
 }
 
-/** Strip UTF-8 BOM (PowerShell Set-Content -Encoding UTF8) so JSON.parse does not fail. */
-function stripUtf8Bom(text) {
-    return text?.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
-}
-
-/** Parse launcher JSON; repair legacy PS output "{...},{...}" (missing array brackets). */
-function parseLauncherJsonText(text) {
-    const stripped = stripUtf8Bom(text).trim();
-    if (!stripped) return null;
+/** Win Assigned Access only: strict {"apps":[{"name","path"},...]} from install-windows-kiosk.ps1. */
+export function readKioskLauncherApps() {
+    if (process.platform !== 'win32' || !existsSync(KIOSK_LAUNCHER_APPS_JSON)) return [];
     try {
-        return JSON.parse(stripped);
-    } catch (firstErr) {
-        if (stripped.startsWith('[')) throw firstErr;
-        if (stripped.startsWith('{') && stripped.includes('},{')) {
-            return JSON.parse(`[${stripped}]`);
-        }
-        throw firstErr;
-    }
-}
-
-/** Normalize launcher JSON ({apps:[...]}, root array, or legacy PS shapes). */
-function normalizeLauncherAppsRaw(raw) {
-    if (!raw) return [];
-    let items = raw;
-    const appsNode = raw.apps ?? raw.Apps;
-    if (appsNode != null) {
-        items = Array.isArray(appsNode) ? appsNode : [appsNode];
-    } else if (Array.isArray(raw)) {
-        items = raw;
-    } else if (Array.isArray(raw.value)) {
-        items = raw.value;
-    } else if (raw && typeof raw === 'object') {
-        if (raw.path || raw.Path) items = [raw];
-        else return [];
-    }
-    const out = [];
-    for (const entry of items) {
-        if (!entry || typeof entry !== 'object') continue;
-        const appPath = entry.path || entry.Path || entry.desktopAppPath || entry.DesktopAppPath;
-        if (!appPath) continue;
-        const name = entry.name || entry.Name || path.basename(appPath, path.extname(appPath));
-        out.push({ name: String(name), path: String(appPath) });
-    }
-    return withoutMainExamLauncherApps(out);
-}
-
-/** Read and parse one kiosk-launcher-apps.json file. */
-function readLauncherAppsJsonFile(filePath) {
-    try {
-        const raw = parseLauncherJsonText(readFileSync(filePath, 'utf8'));
-        const list = normalizeLauncherAppsRaw(raw);
-        if (list.length) {
-            log.info(`windowsKioskSetup: ${list.length} launcher app(s) from ${filePath}`);
-            return list;
-        }
+        const { apps } = JSON.parse(readFileSync(KIOSK_LAUNCHER_APPS_JSON, 'utf8'));
+        if (!Array.isArray(apps)) return [];
+        const list = withoutMainExamLauncherApps(apps
+            .filter((e) => e?.path)
+            .map((e) => ({
+                name: String(e.name || path.basename(e.path, path.extname(e.path))),
+                path: String(e.path),
+            })));
+        if (list.length) log.info(`windowsKioskSetup: ${list.length} launcher app(s) from ${KIOSK_LAUNCHER_APPS_JSON}`);
+        return list;
     } catch (err) {
-        log.warn(`windowsKioskSetup: launcher json unreadable: ${filePath}`, err);
+        log.warn(`windowsKioskSetup: launcher json unreadable: ${KIOSK_LAUNCHER_APPS_JSON}`, err);
+        return [];
     }
-    return null;
-}
-
-/** Candidate JSON paths (install dir, workdir, app dir). */
-function kioskLauncherJsonCandidates(workDir = '') {
-    const candidates = [];
-    if (process.platform !== 'win32') return candidates;
-    candidates.push(KIOSK_LAUNCHER_APPS_JSON);
-    if (workDir) candidates.push(path.join(workDir, 'kiosk-launcher-apps.json'));
-    try {
-        candidates.push(path.join(path.dirname(process.execPath), 'kiosk-launcher-apps.json'));
-    } catch { /* ignore */ }
-    return [...new Set(candidates)];
-}
-
-/** Parse kiosk-allowed-apps.txt into launcher entries for the in-app bar (extras only). */
-function readCageLauncherAppsFromWorkdir(workDir) {
-    const apps = [];
-    const txt = workDir ? path.join(workDir, 'kiosk-allowed-apps.txt') : '';
-    if (!txt || !existsSync(txt)) return apps;
-    const skip = new Set(['java.exe', 'javaw.exe', 'disable-shortcuts.exe']);
-    for (const raw of readFileSync(txt, 'utf8').split(/\r?\n/)) {
-        const line = raw.trim();
-        if (!line || line.startsWith('#')) continue;
-        if (!existsSync(line)) continue;
-        if (skip.has(path.basename(line).toLowerCase())) continue;
-        if (/next-exam-student\.exe$/i.test(line)) continue;
-        const resolved = path.resolve(line);
-        if (apps.some((a) => path.resolve(a.path) === resolved)) continue;
-        apps.push({ name: path.basename(line, path.extname(line)), path: resolved });
-    }
-    return apps;
-}
-
-/** Apps for the cage launcher bar (provisioned JSON on win32, else workdir txt). */
-export function readKioskLauncherApps(workDir = '') {
-    for (const filePath of kioskLauncherJsonCandidates(workDir)) {
-        if (!existsSync(filePath)) continue;
-        const list = readLauncherAppsJsonFile(filePath);
-        if (list?.length) return list;
-    }
-    return readCageLauncherAppsFromWorkdir(workDir);
 }
 
 /** Spawn a whitelisted exe from kiosk-launcher-apps.json. */
 export function launchKioskAllowedApp(exePath) {
     const target = path.resolve(String(exePath || ''));
-    const allowed = readKioskLauncherApps('').some((a) => path.resolve(a.path) === target);
+    const allowed = readKioskLauncherApps().some((a) => path.resolve(a.path) === target);
     if (!allowed || !existsSync(target)) {
         return { ok: false, error: 'not allowed or missing' };
     }

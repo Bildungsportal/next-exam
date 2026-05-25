@@ -981,16 +981,18 @@ import {
             log.error("communicationhandler @ startExam: found existing Examwindow..")
             try {  // switch existing window back to exam mode
                 WindowHandler.examwindow.show() 
-                if (!this.config.development) { 
-                    WindowHandler.examwindow.setFullScreen(true)  //go fullscreen again
-                    WindowHandler.examwindow.setAlwaysOnTop(true, "screen-saver", 1)  //make sure the window is 1 level above everything
-                    await enableRestrictions(WindowHandler)
-                    await this.sleep(2000) // wait an additional 2 sec for windows restrictions to kick in (they steal focus)
-                    WindowHandler.addBlurListener();
-                    await this.sleep(500)
+                if (!this.config.development) {
+                    if (!platformDispatcher.skipElectronKiosk) {
+                        WindowHandler.examwindow.setFullScreen(true)
+                        WindowHandler.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
+                        await enableRestrictions(WindowHandler)
+                        await this.sleep(2000)
+                        WindowHandler.addBlurListener()
+                        await this.sleep(500)
+                    }
                     WindowHandler.examwindow.moveTop()
                     WindowHandler.examwindow.focus()
-                }   
+                }
             }
             catch (e) { //examwindow variable is still set but the window is not managable anymore (manually closed in dev mode?)
                 log.error("communicationhandler @ startExam: no functional examwindow found.. resetting")

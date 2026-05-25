@@ -17,17 +17,13 @@ const __dirname = import.meta.dirname;
  * @param {string[]} appsToClose - app names to kill
  */
 export async function enableWindowsRestrictions(winhandler, appsToClose) {
+    if (platformDispatcher.skipElectronKiosk) return;
     try {
         const publicBase = platformDispatcher.publicBase;
         const executable1 = join(publicBase, 'disable-shortcuts.exe');
         childProcess.execFile(executable1, [], { detached: true, stdio: 'ignore', shell: false, windowsHide: true });
         log.info("platformrestrictions @ enableRestrictions: windows shortcuts disabled");
     } catch (err) { log.error(`platformrestrictions @ enableRestrictions (win shortcuts): ${err}`); }
-
-    if (platformDispatcher.skipElectronKiosk) {
-        log.info("platformrestrictions @ enableRestrictions: skip explorer kill / powershell (Win Assigned Access kiosk)");
-        return;
-    }
 
     try {
         for (const app of appsToClose) {
@@ -75,6 +71,7 @@ export async function enableWindowsRestrictions(winhandler, appsToClose) {
  * Disable Windows-specific restrictions (unblock shortcuts, restart explorer).
  */
 export function disableWindowsRestrictions() {
+    if (platformDispatcher.skipElectronKiosk) return;
     log.info("platformrestrictions @ disableRestrictions (win): unblocking shortcuts...");
     try {
         childProcess.exec(`taskkill  /IM "disable-shortcuts.exe" /T /F`, (error, stdout, stderr) => {

@@ -226,9 +226,11 @@ class IpcHandler {
         });
 
         // channel name kept for renderer compatibility; win32 routes to UAC + PowerShell payload.
-        ipcMain.handle('get-kiosk-launcher-apps', () => readKioskLauncherApps(this.config.workdirectory));
+        ipcMain.handle('get-kiosk-launcher-apps', () => (process.platform === 'win32' ? readKioskLauncherApps() : []));
 
-        ipcMain.handle('launch-kiosk-allowed-app', (_event, exePath) => launchKioskAllowedApp(exePath));
+        ipcMain.handle('launch-kiosk-allowed-app', (_event, exePath) => (
+            process.platform === 'win32' ? launchKioskAllowedApp(exePath) : { ok: false, error: 'win32 only' }
+        ));
 
         ipcMain.handle('install-linux-cage-kiosk', () => {
             if (process.platform === 'win32') {

@@ -73,8 +73,6 @@ class WindowHandler {
     init (mc, config) {
         this.multicastClient = mc
         this.config = config
-       // this.checkWindowInterval = new SchedulerService(this.windowTracker.bind(this), 1000)
-        // this.focusTargetAllowed = true
     }
 
     // return electron window in focus or an other electron window depending on the hierachy
@@ -401,11 +399,12 @@ class WindowHandler {
                     // probably not needed because we disable missioncontrol anyways - seems to interfere with kiosk mode on macos (again)
                     // this.examwindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
-                    if (!platformDispatcher.isWayland){ this.checkWindowInterval.start() } // constantly check if the active window is the examwindow - if not, bring it to front
-                    await enableRestrictions(this)  // disable keyboard shortcuts etc.
-                    
-                    await this.sleep(1000)  // do not set blur listener too early
-                    this.addBlurListener()  // add blur listener to the examwindow
+                   
+                    if (!platformDispatcher.skipElectronKiosk) {
+                        await enableRestrictions(this)
+                        await this.sleep(1000)
+                        this.addBlurListener()
+                    }
                 }
                 catch(e){ log.error("windowhandler @ did-finish-load: error in examwindow setup", e)}
             }
@@ -619,7 +618,6 @@ class WindowHandler {
             else {              
                 this.examwindow.destroy(); 
                 this.examwindow = null;
-                this.checkWindowInterval.stop()
                 //disableRestrictions(this.examwindow)  //do not disable twice
                 this.multicastClient.clientinfo.exammode = false
                 this.multicastClient.clientinfo.focus = true
