@@ -467,17 +467,17 @@ public static extern int CreateProfile(
 $kioskNtuser = Join-Path $ProfilePath 'NTUSER.DAT'
 Invoke-OfflineNtuserHardening -NtuserPath $kioskNtuser -HiveAlias 'NEXTEXAM_KIOSK_HIVE' | Out-Null
 
-# 2c) Persistent profile + clean ProfileList entry. State=0 (normal); State=128 triggers the blue
-# "Sie wurden mit einem temporären Profil angemeldet" warning at every logon. User-file wiping
-# happens via (a) next-exam will-quit fs.rmSync, (b) Register-KioskUserHomeWipeAtStartup backup task.
+# 2c) Persistent profile + ProfileList entry. State=128 is REQUIRED for Multi-App AssignedAccess
+# kiosk - without it Windows treats the account as a regular user (OOBE, normal desktop, no kiosk shell).
+# User-file wiping happens via (a) next-exam will-quit fs.rmSync, (b) Register-KioskUserHomeWipeAtStartup backup task.
 $profileKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$sid"
 if (-not (Test-Path $profileKey)) { New-Item -Path $profileKey -Force | Out-Null }
 Set-ItemProperty -Path $profileKey -Name 'ProfileImagePath' -Value $ProfilePath -Type ExpandString
-Set-ItemProperty -Path $profileKey -Name 'State' -Value 0 -Type DWord
+Set-ItemProperty -Path $profileKey -Name 'State' -Value 128 -Type DWord
 Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList' -ErrorAction SilentlyContinue |
     Where-Object { $_.PSChildName -like "$sid*" -and $_.PSChildName -ne $sid } |
     ForEach-Object { Remove-Item -LiteralPath $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue }
-Write-Step "persistent profile $ProfilePath State=0; user files wiped by next-exam (will-quit) + NextExam-KioskWipeUserHome backup"
+Write-Step "persistent profile $ProfilePath State=128 (required for AssignedAccess kiosk shell); user files wiped by next-exam (will-quit) + NextExam-KioskWipeUserHome backup"
 
 # 3) Removable storage lockdown for this user (per-user policy under SID)
 $rsRoot = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\RemovableStorageDevices\$sid"
