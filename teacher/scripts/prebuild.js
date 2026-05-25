@@ -54,11 +54,15 @@ const config = {
         localvm: ${process.env.EXAMMODE_LOCALVM === 'true'}
     },
 
+    exposeStudents: false,
+
     version: '${process.env.VERSION}.${process.env.BUILD_NUMBER}',
     buildDate: '${buildDate}',
     buildNumber: '${process.env.BUILD_NUMBER}',
     info: '${process.env.INFO}'
 }
+import { applyCliOverrides } from './applyCliOverrides.js';
+applyCliOverrides(config, process.argv);
 export default config;
 `;
 

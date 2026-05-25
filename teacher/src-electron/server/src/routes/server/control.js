@@ -150,7 +150,7 @@ router.get('/msauth', async (req, res) => {
 
 /**
  * STUDENT-ORIENTED ROUTES (Bearer student token required except: oauth, msauth, registerclient=PIN,
- * serverlist+pong+connectedstudentips=open LAN discovery).
+ * serverlist+pong=open LAN discovery; connectedstudentips only if config.exposeStudents).
  */
 
 
@@ -193,25 +193,26 @@ router.get('/serverlist', function (req, res, next) {
 
 
 
-/**
- * Returns reachable student IPs only while serverstatus.exammode is true; otherwise ips: [] (open LAN).
- */
-router.get('/connectedstudentips', function (req, res) {
-    const servers = Object.values(config.examServerList)
-    if (servers.length === 0) {
-        return res.status(404).json({ sender: 'server', status: 'error', message: t('control.notfound') })
-    }
-    const mcServer = servers[0]
-    if (!mcServer.serverstatus?.exammode) {
-        return res.json({ sender: 'server', status: 'success', ips: [] })
-    }
-    const now = Date.now()
-    const ips = (mcServer.studentList || [])
-        .filter((student) => isStudentReachable(student, now))
-        .map((student) => student.clientip)
-        .filter((ip) => typeof ip === 'string' && ip.length > 0)
-    return res.json({ sender: 'server', status: 'success', ips })
-})
+if (config.exposeStudents) {
+    /** Plain text allowlist: one reachable student IP per line (text/plain; empty body outside exammode). */
+    router.get('/connectedstudentips', function (req, res) {
+        const servers = Object.values(config.examServerList)
+        if (servers.length === 0) {
+            return res.status(404).type('text/plain').send('')
+        }
+        const mcServer = servers[0]
+        if (!mcServer.serverstatus?.exammode) {
+            return res.type('text/plain').send('')
+        }
+        const now = Date.now()
+        const ips = [...new Set((mcServer.studentList || [])
+            .filter((student) => isStudentReachable(student, now))
+            .map((student) => student.clientip)
+            .filter((ip) => typeof ip === 'string' && ip.length > 0))]
+        const body = ips.length ? `${ips.join('\n')}\n` : ''
+        return res.type('text/plain').send(body)
+    })
+}
 
  /** OPEN ROUTES END*/
 /////////////////////

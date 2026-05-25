@@ -31,7 +31,8 @@ IPC^student^kioskShared^get-linux-kiosk-info + install-linux-cage-kiosk channel 
 RULE^agent^userEdits^never revert intentional user manual edits (e.g. removed v-if) unless user asks
 RULE^agent^uxDeps^never change UX or add external deps (gtk→VNC viewer, shell.openExternal vnc://) without user agrees first; diagnose→options→wait
 PATH^print^pdf^teacher/src-electron/main/scripts/printjobhandler.js+teacher/src/pages/SystemPrintPdf.vue
-TECH^teacherCli^examModes^--exam-modes=csv overrides config.exammodes at runtime^teacher/src-electron/electron-main.js
+TECH^teacherCli^examModes^--exam-modes=csv overrides config.exammodes at runtime^teacher/src-electron/main/applyCliOverrides.js via config.js
+TECH^teacherCli^exposeStudents^--expose-students or =true|false; GET connectedstudentips→text/plain reachable student clientip/line; needs running examServerList[0]^applyCliOverrides.js+control.js
 TECH^build^protectMain^electron-main.js in dist/electron/UnPackaged; protect via electron-builder beforePack^teacher+student scripts/protect-main.mjs+beforepack.js+quasar.config.ts
 RULE^student^devtoolsInstaller^electron-devtools-installer devDep only; dynamic import in windowhandler installVueJsDevTools when !app.isPackaged—no top-level require^student/src-electron/main/scripts/windowhandler.js
 TECH^build^electronAssets^prod electron: copy src/assets→public/src/assets; rewrite `/src/assets`→`./src/assets` incl. Vue backtick literals in generateBundle; CSS url() often Vite-inlined^teacher+student quasar.config.ts
@@ -108,7 +109,7 @@ IPC^student^focusLock^main sets clientinfo.focusLockReason+focusLockMessage; exa
 IPC^student^stopProxy^ipcMain.handle('stop-proxy') -> vncproxy.stopProxy(); called by localvmview.vue beforeUnmount + electron-main.js window-all-closed^student/src-electron/main/scripts/ipchandler.js+vncproxy.js
 RULE^student^vncproxyHelper^spawn vncproxy-helper.cjs with ELECTRON_RUN_AS_NODE=1 (packaged electron binary else hits requestSingleInstanceLock and exits 0 without listening)^student/src-electron/main/scripts/vncproxy.js
 RULE^student^appsToClose^single source of truth in student/src-electron/main/scripts/platformrestrictions.js (exported); consumed by restrictions/{lin,win,mac}.js (kill) + remotecheck/remote{Lin,Win,Mac}.js (detect+report via clientinfo.remoteassistant); macOS TitleCase duplicates intentional (pkill -f case-sensitive); never add bare 'vnc' (would kill vncproxy-helper)
-RULE^student^screenshotStream^resetConnection must not stop getDisplayMedia stream; capture persists until app quit so kiosk reconnect avoids OS picker^student communicationhandler resetConnection; resetDisplayStream not on disconnect
+RULE^student^screenshotStream^resetConnection must not stop getDisplayMedia stream; upload-fail pause must not stopSharedStream; stopSharedStream clears initAttempted; ensureDisplayStreamAsync re-acquires on Connect after track loss^communicationhandler resetConnection; screenshotCapture.js
 TECH^linux^cage^platformDispatcher.runningInCage; lin.js appsToClose then skip gsettings; renderer linuxCageKiosk.js; quit-app; exit sidebar student.vue
 IPC^student^cageHeartbeat^requestUpdate sets clientinfo.isRunningInCage (linux detectRunningInCage); teacher /update→student.isRunningInCage; dashboard shield-lock-fill before name^communicationhandler.js+control.js+dashboard.vue
 TECH^linux^cageScreenshot^registerClient skip stream+fullDesktop in Cage; capturePage IPC; desktop path unchanged vs pre-cage (screen handler useSystemPicker true initDisplayStreamOnce at scheduler)

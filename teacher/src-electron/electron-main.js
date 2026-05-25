@@ -30,45 +30,6 @@ import multicastClient from './main/scripts/multicastclient.js';
 import WindowHandler from './main/scripts/windowhandler.js';
 import IpcHandler from './main/scripts/ipchandler.js';
 
-function getArgValue(argv, name) {
-    const prefix = `--${name}=`
-    for (let i = 0; i < argv.length; i++) {
-        const a = argv[i]
-        if (typeof a !== 'string') continue
-        if (a.startsWith(prefix)) return a.slice(prefix.length)
-        if (a === `--${name}`) return argv[i + 1]
-    }
-    return null
-}
-
-function applyExamModesOverrideFromArg(argv) {
-    const raw = getArgValue(argv, 'exam-modes')
-    if (!raw) return false
-
-    const allowed = Object.keys(config.exammodes || {})
-    const selected = String(raw)
-        .split(',')
-        .map((s) => s.trim().toLowerCase())
-        .filter(Boolean)
-
-    const next = {}
-    for (const k of allowed) next[k] = false
-
-    for (const mode of selected) {
-        if (mode === 'all') {
-            for (const k of allowed) next[k] = true
-            continue
-        }
-        if (allowed.includes(mode)) next[mode] = true
-    }
-
-    config.exammodes = next
-    log.info(`main @ init: --exam-modes applied: ${Object.entries(next).filter(([, v]) => v).map(([k]) => k).join(',') || '(none)'}`)
-    return true
-}
-
-applyExamModesOverrideFromArg(process.argv)
-
 // So Electron single-instance lock uses a different userData than student (lock key = userData + execPath)
 app.setName('next-exam-teacher');
 
