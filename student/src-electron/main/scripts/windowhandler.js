@@ -388,19 +388,19 @@ class WindowHandler {
             
             if (!this.config.development) {
                 try {
-                    this.examwindow.removeMenu()                 
-                    this.examwindow.setAlwaysOnTop(true, "screen-saver", 1) 
+                    this.examwindow.removeMenu()
                     platformDispatcher.applyElectronKioskMode(this.examwindow);
-                
+
                     await this.sleep(500)
                     this.examwindow.moveTop()
                     this.examwindow.focus()
-                    
+
                     // probably not needed because we disable missioncontrol anyways - seems to interfere with kiosk mode on macos (again)
                     // this.examwindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
-                   
+
                     if (!platformDispatcher.skipElectronKiosk) {
+                        this.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
                         await enableRestrictions(this)
                         await this.sleep(1000)
                         this.addBlurListener()
