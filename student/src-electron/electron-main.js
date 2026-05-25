@@ -253,29 +253,26 @@ app.whenReady()
     nativeTheme.themeSource = 'light'  // prevent theme settings from being adopted from windows
     session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
-    // Linux cage only: window-only capture (no system picker, no full desktop).
-    // Win32 AssignedAccess kiosk uses the regular full-screen path below.
-    if (platformDispatcher.runningInCage && process.platform === 'linux') {
+    // Kiosk (Linux cage OR Win32 AssignedAccess): no system picker available; auto-grant the
+    // first source. Linux cage limits to windows (cage shows one window). Win32 grants screen.
+    // Non-kiosk: useSystemPicker:true so the OS dialog appears as usual.
+    if (platformDispatcher.runningInCage) {
+        const types = process.platform === 'linux' ? ['window'] : ['screen'];
         session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
-            desktopCapturer.getSources({ types: ['window'] }).then((sources) => {
-                try {
-                    let picked = sources[0];
-                    if (sources.length) {
-                        const nextExam = sources.find((s) => /next-exam|next exam/i.test(s.name));
-                        if (nextExam) picked = nextExam;
-                    }
-                    if (picked) {
-                        callback({ video: picked });
-                    } else {
-                        log.warn('main @ setDisplayMediaRequestHandler (cage): no window sources');
-                        callback(null);
-                    }
-                } catch (e) {
-                    log.warn('main @ setDisplayMediaRequestHandler (cage):', e?.message || e);
+            desktopCapturer.getSources({ types }).then((sources) => {
+                if (!sources.length) {
+                    log.warn(`main @ setDisplayMediaRequestHandler (kiosk ${types[0]}): no sources`);
                     callback(null);
+                    return;
                 }
+                let picked = sources[0];
+                if (process.platform === 'linux') {
+                    const nextExam = sources.find((s) => /next-exam|next exam/i.test(s.name));
+                    if (nextExam) picked = nextExam;
+                }
+                callback({ video: picked });
             }).catch((err) => {
-                log.warn('main @ setDisplayMediaRequestHandler (cage):', err?.message || err);
+                log.warn('main @ setDisplayMediaRequestHandler (kiosk):', err?.message || err);
                 callback(null);
             });
         }, { useSystemPicker: false });
@@ -315,7 +312,12 @@ app.whenReady()
         powerSaveBlocker.start('prevent-display-sleep')   // prevent the device from going to sleep
         if (allowTray) { updateSystemTray('de'); }        // skip tray on GNOME
         else { log.info('main @ tray: GNOME detected, skipping system tray'); }
-        runParentProcessCheck();  // this checks if the app was started from within a browser (directly after download)
+        // Skip in Win/Linux kiosk: spawning powershell.exe trips Multi-App AssignedAccess AppLocker
+        // ("diese app wurde vom systemadministrator gesperrt"), and the browser-launch attack vector
+        // is already blocked by the kiosk AllowedApps whitelist.
+        if (!platformDispatcher.runningInCage) {
+            runParentProcessCheck();
+        }
     }
     if (config.development){
         globalShortcut.register('CommandOrControl+Shift+G', () => {  if (global && global.gc){ global.gc({type:'mayor',execution: 'async'}); global.gc({type:'minor',execution: 'async'});  }});

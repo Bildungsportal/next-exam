@@ -229,10 +229,10 @@ class PlatformDispatcher {
     // use bundled jre because its smaller and provides only the needed java modules
     if (config.useBundledJRE) {
       if (app.isPackaged) {
-        this.messages.push("platformDispatcher @ _resolveJREDir: app.isPackaged: " + join(this.publicBase, this.jre));
+        //this.messages.push("platformDispatcher @ _resolveJREDir: app.isPackaged: " + join(this.publicBase, this.jre));
         return join(this.publicBase, this.jre);
       } else {
-        this.messages.push("platformDispatcher @ _resolveJREDir: !app.isPackaged: " + join(__dirname, '../../public', this.jre));
+        //this.messages.push("platformDispatcher @ _resolveJREDir: !app.isPackaged: " + join(__dirname, '../../public', this.jre));
         return join(__dirname, '../../public', this.jre);
       }
     } 
@@ -310,7 +310,7 @@ class PlatformDispatcher {
       const out = execSync('echo $XDG_CURRENT_DESKTOP', { shell: '/bin/bash', encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
       return out === 'KDE';
     } catch {
-      this.messages.push("platformDispatcher @ _isKDE: no data");
+      //this.messages.push("platformDispatcher @ _isKDE: no data");
       return false;
     }
   }
@@ -320,7 +320,7 @@ class PlatformDispatcher {
       const out = execSync('echo $XDG_CURRENT_DESKTOP', { shell: '/bin/bash', encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim().toLowerCase();
       return out.includes('gnome');
     } catch (err) {
-      this.messages.push("platformDispatcher @ _isGNOME: no data");
+      //this.messages.push("platformDispatcher @ _isGNOME: no data");
       return false;
     }
   }
@@ -330,7 +330,7 @@ class PlatformDispatcher {
       const out = execSync('echo $XDG_CURRENT_DESKTOP', { shell: '/bin/bash', encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim().toLowerCase();
       return out.includes('unity');
     } catch (err) {
-      this.messages.push("platformDispatcher @ _isUNITY: no data");
+      //this.messages.push("platformDispatcher @ _isUNITY: no data");
       return false;
     }
   }

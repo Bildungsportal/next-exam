@@ -151,6 +151,10 @@ export function detectWindowsKioskProvisionComplete() {
 /** True when the local kiosk OS user already exists (best-effort, swallow errors). */
 export function detectWindowsKioskUserExists() {
     if (process.platform !== 'win32') return false;
+    // If we're already running as the kiosk user, the account exists by definition.
+    // Skip the powershell.exe spawn (AppLocker blocks it under AssignedAccess and triggers
+    // the "diese app wurde vom systemadministrator gesperrt" warning).
+    if (detectRunningInWindowsKiosk()) return true;
     try {
         // Get-LocalUser exits non-zero when missing; swallow stderr to avoid noise
         execSync(`powershell.exe -NoProfile -NonInteractive -Command "Get-LocalUser -Name '${KIOSK_USERNAME}' | Out-Null"`,
