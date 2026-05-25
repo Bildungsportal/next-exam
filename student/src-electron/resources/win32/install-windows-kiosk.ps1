@@ -130,37 +130,18 @@ function Invoke-OfflineNtuserHardening([string]$NtuserPath, [string]$HiveAlias) 
     }
 }
 
-# Logoff trigger: New-ScheduledTaskTrigger has no -AtLogOff on Windows client — use Security event 4634 for kiosk user.
-function New-KioskUserLogoffTaskTrigger([string]$KioskUser) {
-    $userEsc = [System.Security.SecurityElement]::Escape($KioskUser)
-    $subscription = @"
-<QueryList>
-  <Query Id='0' Path='Security'>
-    <Select Path='Security'>*[System[EventID=4634]] and *[EventData[Data[@Name='TargetUserName'] and Data='$userEsc']]</Select>
-  </Query>
-</QueryList>
-"@
-    $cimClass = Get-CimClass -ClassName MSFT_TaskEventTrigger -Namespace Root/Microsoft/Windows/TaskScheduler
-    New-CimInstance -CimClass $cimClass -ClientOnly -Property @{ Subscription = $subscription; Enabled = $true; Delay = 'PT30S' }
-}
-
-# Scheduled task: after kiosk logoff, delete user files inside profile dir (keep NTUSER + ProfileList).
-function Register-KioskUserHomeWipeOnLogoff([string]$InstallDir, [string]$KioskUser, [string]$ProfilePath) {
+# Scheduled task: at boot, wipe leftover kiosk user files (profile shell+NTUSER kept).
+# Primary wipe path is next-exam itself in will-quit (electron-main.js). This task is a backup
+# for crash/kill cases. -AtStartup is rock-solid: no audit policy / event subscription needed,
+# and at boot no one is logged in so files are never locked.
+function Register-KioskUserHomeWipeAtStartup([string]$InstallDir, [string]$KioskUser, [string]$ProfilePath) {
     $taskName = 'NextExam-KioskWipeUserHome'
     $scriptPath = Join-Path $InstallDir 'kiosk-wipe-user-home.ps1'
-    $profileEsc = $ProfilePath -replace "'", "''"
     $content = @"
-# Wipe next-exam-kiosk home contents after logoff; profile shell stays (no temp profile).
+# Backup wipe: next-exam-kiosk home contents (NTUSER kept so profile shell survives).
 param([string]`$ProfilePath = '$ProfilePath')
 `$ErrorActionPreference = 'SilentlyContinue'
 `$keep = @('NTUSER.DAT','ntuser.dat.LOG1','ntuser.dat.LOG2','ntuser.ini','desktop.ini','ntuser.pol')
-`$deadline = (Get-Date).AddMinutes(3)
-do {
-    Start-Sleep -Seconds 2
-    `$p = Get-CimInstance Win32_UserProfile -Filter "LocalPath='$profileEsc'" -ErrorAction SilentlyContinue
-    if (-not `$p) { break }
-    if (-not `$p.Loaded) { break }
-} while ((Get-Date) -lt `$deadline)
 if (-not (Test-Path -LiteralPath `$ProfilePath)) { exit 0 }
 Get-ChildItem -LiteralPath `$ProfilePath -Force | ForEach-Object {
     if (`$keep -contains `$_.Name) { return }
@@ -173,11 +154,11 @@ Get-ChildItem -LiteralPath `$ProfilePath -Force | ForEach-Object {
     $action = New-ScheduledTaskAction -Execute (Join-Path $env:windir 'System32\WindowsPowerShell\v1.0\powershell.exe') `
         -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$scriptPath`""
     $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
-    $trigger = New-KioskUserLogoffTaskTrigger -KioskUser $KioskUser
+    $trigger = New-ScheduledTaskTrigger -AtStartup
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
         -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 10)
     Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings | Out-Null
-    Write-Step "logoff task $taskName -> wipe user data under $ProfilePath (profile kept)"
+    Write-Step "startup wipe task $taskName -> backup cleanup of $ProfilePath (profile shell kept)"
 }
 
 # True when MemberName is already in the builtin group identified by well-known SID.
@@ -447,8 +428,11 @@ if (-not $existing) {
 }
 $lsaPath = 'HKLM:\SYSTEM\CurrentControlSet\Control\Lsa'
 if ((Get-ItemProperty -Path $lsaPath -Name 'LimitBlankPasswordUse' -ErrorAction SilentlyContinue).LimitBlankPasswordUse -ne 1) {
+    # LimitBlankPasswordUse=1 is the SECURE default: blank-password accounts may sign in at the
+    # console only; network/RDP/SMB logons with blank password are blocked. Required so the kiosk
+    # user can auto-logon locally without exposing the box over the network.
     Set-ItemProperty -Path $lsaPath -Name 'LimitBlankPasswordUse' -Value 1 -Type DWord -Force
-    Write-Step 'LSA LimitBlankPasswordUse=1 (blank password allowed for console logon)'
+    Write-Step 'LSA LimitBlankPasswordUse=1 (console logon only; blocks network blank-password logon)'
 }
 Set-LocalUserPasswordlessLogon -UserName $KioskUser
 # Builtin Users group S-1-5-32-545 (DE: Benutzer); membership via Add-LocalGroupMember -SID
@@ -483,7 +467,7 @@ public static extern int CreateProfile(
 $kioskNtuser = Join-Path $ProfilePath 'NTUSER.DAT'
 Invoke-OfflineNtuserHardening -NtuserPath $kioskNtuser -HiveAlias 'NEXTEXAM_KIOSK_HIVE' | Out-Null
 
-# 2c) Keep normal profile dir + ProfileList; user files wiped on logoff via Register-KioskUserHomeWipeOnLogoff.
+# 2c) Keep normal profile dir + ProfileList; user files wiped (a) by next-exam will-quit primary, (b) by Register-KioskUserHomeWipeAtStartup backup.
 $profileKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$sid"
 if (-not (Test-Path $profileKey)) { New-Item -Path $profileKey -Force | Out-Null }
 Set-ItemProperty -Path $profileKey -Name 'ProfileImagePath' -Value $ProfilePath -Type ExpandString
@@ -631,7 +615,8 @@ function New-AllowedAppXml($apps) {
 $appsXml = New-AllowedAppXml $AllowedApps
 
 # In-app launcher list for student.vue (no desktop .lnk — not shown under Assigned Access).
-$skipLauncherUi = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe')
+# netsh/powershell are AllowedApps for next-exam internals only, never as student-facing buttons.
+$skipLauncherUi = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe', 'netsh.exe', 'powershell.exe')
 # Must be a PS array for ConvertTo-Json — piping ArrayList yields invalid "{...},{...}" without "[" wrapper.
 $launcherList = @(
     foreach ($app in $AllowedApps) {
@@ -699,7 +684,7 @@ try {
 }
 
 try {
-    Register-KioskUserHomeWipeOnLogoff -InstallDir $InstallDir -KioskUser $KioskUser -ProfilePath $ProfilePath
+    Register-KioskUserHomeWipeAtStartup -InstallDir $InstallDir -KioskUser $KioskUser -ProfilePath $ProfilePath
 } catch {
     Write-Step "WARNING: logoff wipe task not registered (kiosk login/AA still OK): $($_.Exception.Message)"
 }

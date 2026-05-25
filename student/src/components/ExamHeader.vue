@@ -10,7 +10,7 @@
                 <span class="fs-5 align-middle me-4 teal" style="float: left;" >| {{$t('student.connected')}}</span>
                 <span v-if="kioskLauncherApps.length" class="kiosk-launcher-bar ms-1">
                     <button v-for="app in kioskLauncherApps" :key="app.path" type="button"
-                            class="btn btn-outline-cyan btn-sm py-0 px-1 ms-1 kiosk-launcher-btn"
+                            class="btn btn-outline-cyan btn-sm py-1 px-3 ms-2 kiosk-launcher-btn"
                             :title="app.path" @click="launchKioskApp(app.path)">{{ app.name }}</button>
                 </span>
             </div>
