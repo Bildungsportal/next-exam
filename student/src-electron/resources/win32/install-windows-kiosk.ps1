@@ -98,6 +98,11 @@ function Add-NextExamKioskNtuserHardening([string]$HiveRoot) {
     Set-ItemProperty -Path $desktop -Name 'Win8DpiScaling' -Value 1         -Type DWord
     Set-ItemProperty -Path $desktop -Name 'DpiScalingVer'  -Value 0x00001018 -Type DWord
     Remove-ItemProperty -Path $desktop -Name 'DesktopDPIOverride' -ErrorAction SilentlyContinue
+    Set-ItemProperty -Path $desktop -Name 'FontSmoothing'             -Value '2'    -Type String
+    Set-ItemProperty -Path $desktop -Name 'FontSmoothingType'         -Value 2      -Type DWord
+    Set-ItemProperty -Path $desktop -Name 'FontSmoothingGamma'          -Value 1500   -Type DWord
+    Set-ItemProperty -Path $desktop -Name 'FontSmoothingOrientation'    -Value 1      -Type DWord
+    Set-ItemProperty -Path $desktop -Name 'FontSmoothingContrast'       -Value 2200   -Type DWord
     foreach ($rel in @(
         'Software\Microsoft\Windows\CurrentVersion\Run',
         'Software\Microsoft\Windows\CurrentVersion\RunOnce'
@@ -114,6 +119,22 @@ function Add-NextExamKioskNtuserHardening([string]$HiveRoot) {
                 Write-Step "removed Default User startup entry: $($p.Name)"
             }
         }
+    }
+}
+
+# Purge DirectWrite font caches after offline DPI/ClearType hive edits (stale 125% metrics).
+function Clear-NextExamFontCaches([string]$KioskProfilePath) {
+    $targets = @(
+        (Join-Path $env:WINDIR 'ServiceProfiles\LocalService\AppData\Local\FontCache*')
+    )
+    if ($env:LOCALAPPDATA) {
+        $targets += (Join-Path $env:LOCALAPPDATA 'FontCache*')
+    }
+    if ($KioskProfilePath) {
+        $targets += (Join-Path $KioskProfilePath 'AppData\Local\FontCache*')
+    }
+    foreach ($t in $targets) {
+        Remove-Item -LiteralPath $t -Force -Recurse -ErrorAction SilentlyContinue
     }
 }
 
@@ -473,6 +494,8 @@ public static extern int CreateProfile(
 # 2b) Harden kiosk profile NTUSER (persistent profile — avoids temp-profile + "setting up" on every logon).
 $kioskNtuser = Join-Path $ProfilePath 'NTUSER.DAT'
 Invoke-OfflineNtuserHardening -NtuserPath $kioskNtuser -HiveAlias 'NEXTEXAM_KIOSK_HIVE' | Out-Null
+Clear-NextExamFontCaches -KioskProfilePath $ProfilePath
+Write-Step 'cleared FontCache (LocalService, installer, kiosk profile)'
 
 # 2c) Persistent profile + ProfileList entry. State=128 is REQUIRED for Multi-App AssignedAccess
 # kiosk - without it Windows treats the account as a regular user (OOBE, normal desktop, no kiosk shell).
