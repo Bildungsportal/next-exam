@@ -20,7 +20,7 @@ RULE^agent^assumeUserEditsIntentional^never revert incidental diffs; assume user
 RULE^agent^gitSafety^never run git restore/reset/clean/rebase/stash/pop/checkout/switch unless user explicitly asks
 RULE^agent^utils^noSingleUseFiles^never new file for one function solvable in ~2 lines at caller; colocate; reuse module only if 2+ call sites; after each new fn check minimize/inline/delete
 PATH^linux^cageInstall^install-cage-kiosk.sh pkexec; needsCageKioskSetup=!(cage on PATH+AppImage+/opt/next-exam+desktop); UI if needsCageKioskSetup&&!runningInCage
-PATH^win32^kioskInstall^profile C:\Users\next-exam-kiosk State=128+ProfileList; no temp-profile folder delete (afbb1dc1 reverted); logoff wipe task non-fatal if register fails
+PATH^win32^kioskInstall^profile C:\Users\next-exam-kiosk ProfileList State=0 (NOT 128 - 128 triggers blue "temp profile" warning at every logon even though logon succeeds); persistent profile; wipe via next-exam will-quit + NextExam-KioskWipeUserHome -AtStartup backup task
 RULE^win32^kioskStartUi^win32 only; strict JSON {"apps":[{name,path}]} at C:\NextExam\kiosk-launcher-apps.json; no legacy parse; Linux no launcher
 RULE^win32^kioskAssignedAccessXml^do NOT add <v5:StartPins> nor xmlns:v5 (2022/config) to AssignedAccess XML; MDM CSP returns 0x80004005 "Allgemeiner Fehler" on lenovo-class hardware (tried desktopAppLink/desktopAppId/packagedAppId, applyOnce true/false, abs+%ALLUSERSPROFILE% paths, ConfigureStartPins HKLM/HKU - all rejected); keep rs5 namespace+<StartLayout> only; launchers=Desktop .lnk in kiosk profile + kiosk-launcher-apps.json for in-app bar
 RULE^win32^kioskExam^skipElectronKiosk=win32&&runningInCage; no setKiosk/win enable|disable restrictions/fullscreen/reconnect restrictions+blur; Linux cage unchanged
