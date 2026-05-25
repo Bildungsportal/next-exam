@@ -73,7 +73,6 @@ import {
     initiateKioskSetup as initiateWindowsKioskSetup,
     readKioskLauncherApps,
     launchKioskAllowedApp,
-    triggerWindowsKioskLogoff,
 } from './win/windowsKioskSetup.js';
 
 // Skip info-level file-save log noise when the renderer marks the write as periodic auto-save.
@@ -217,8 +216,9 @@ class IpcHandler {
         ipcMain.handle('get-mac-arch-info', () => platformDispatcher.macRosettaEmulation);
 
         ipcMain.handle('quit-app', () => {
-            if (process.platform === 'win32' && platformDispatcher.runningInCage && triggerWindowsKioskLogoff()) return;
-            app.quit();
+            // Route through mainwindow.close so the cage exit warning in windowhandler.on('close') is the single source of truth.
+            if (this.WindowHandler?.mainwindow) this.WindowHandler.mainwindow.close();
+            else app.quit();
         });
 
         ipcMain.handle('capture-screenshot-frame', async () => {

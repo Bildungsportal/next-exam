@@ -8,7 +8,7 @@
  * Shares public field names with cage (runningInCage etc.) so renderer logic is unchanged.
  */
 import { execSync, spawn } from 'child_process';
-import { existsSync, readFileSync, unlinkSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, rmSync, unlinkSync } from 'fs';
 import path from 'path';
 import os from 'os';
 import { app } from 'electron';
@@ -20,46 +20,45 @@ export const KIOSK_INSTALL_DIR = 'C:\\NextExam';
 export const KIOSK_PROVISION_MARKER = 'C:\\NextExam\\.kiosk-provision-complete';
 const KIOSK_LAUNCH_EXE_MARKER = 'C:\\NextExam\\.kiosk-launch-exe.txt';
 const KIOSK_LAUNCHER_APPS_JSON = path.join(KIOSK_INSTALL_DIR, 'kiosk-launcher-apps.json');
-let kioskLogoffTriggered = false;
 
-/** System32 (Sysnative when x86 Node runs on x64 Windows). */
-function resolveWindowsSystem32Dir() {
-    const winRoot = process.env.SystemRoot || process.env.windir || 'C:\\Windows';
-    if (process.arch === 'ia32') {
-        const native = path.join(winRoot, 'Sysnative');
-        if (existsSync(path.join(native, 'cmd.exe'))) return native;
-    }
-    return path.join(winRoot, 'System32');
-}
-
-/** Start session logoff for win32 kiosk user (call before app.quit — will-quit spawn often fails UNKNOWN). */
-export function triggerWindowsKioskLogoff() {
-    if (process.platform !== 'win32' || kioskLogoffTriggered) return kioskLogoffTriggered;
-    const system32 = resolveWindowsSystem32Dir();
-    const tryStart = (file, args, label) => {
-        if (!existsSync(file)) return false;
-        try {
-            const child = spawn(file, args, {
-                detached: true,
-                stdio: 'ignore',
-                windowsHide: true,
-                windowsVerbatimArguments: true,
-            });
-            child.on('error', (err) => log.warn(`windowsKioskLogoff: ${label} error`, err));
-            child.unref();
-            log.info(`windowsKioskLogoff: ${label} (${file} ${args.join(' ')})`);
-            kioskLogoffTriggered = true;
-            return true;
-        } catch (err) {
-            log.warn(`windowsKioskLogoff: ${label} spawn failed`, err);
-            return false;
+/**
+ * Wipe leftover student data on kiosk app quit so the next student starts fresh.
+ * - wipes contents of workdirectory (EXAM-STUDENT) entry-by-entry; active logfile is skipped
+ *   because electron-log keeps it open and rmSync(recursive) would fail EPERM/EBUSY otherwise.
+ * - empties common user folders (Desktop, Documents, Downloads, Pictures, Videos, Music) so
+ *   nothing dropped via the Downloads namespace survives the session.
+ * Locked files are logged and skipped, not raised. Caller may skip the workdir wipe via
+ * { skipWorkdir: true } to keep behaviour focused on one or the other.
+ */
+export function wipeKioskUserFiles({ workdirectory, activeLogFile = 'next-exam-student.log', skipWorkdir = false } = {}) {
+    if (process.platform !== 'win32') return;
+    const removeEntries = (dir, skipName = '') => {
+        if (!existsSync(dir)) return { removed: 0, skipped: 0 };
+        let removed = 0, skipped = 0;
+        for (const entry of readdirSync(dir)) {
+            if (skipName && entry === skipName) { skipped++; continue; }
+            try {
+                rmSync(path.join(dir, entry), { recursive: true, force: true });
+                removed++;
+            } catch (err) {
+                skipped++;
+                log.warn(`wipeKioskUserFiles: skip ${path.join(dir, entry)}: ${err.code || err.message}`);
+            }
         }
+        return { removed, skipped };
     };
-    if (tryStart(path.join(system32, 'shutdown.exe'), ['/l', '/f'], 'shutdown /l /f')) return true;
-    if (tryStart(path.join(system32, 'cmd.exe'), ['/d', '/s', '/c', 'logoff'], 'cmd /c logoff')) return true;
-    if (tryStart(path.join(system32, 'logoff.exe'), [], 'logoff.exe')) return true;
-    log.error('windowsKioskLogoff: all logoff attempts failed');
-    return false;
+    if (!skipWorkdir && workdirectory) {
+        const r = removeEntries(workdirectory, path.basename(activeLogFile));
+        log.info(`wipeKioskUserFiles: workdirectory ${workdirectory} (${r.removed} removed, ${r.skipped} skipped)`);
+    }
+    const home = os.homedir();
+    for (const folder of ['Desktop', 'Documents', 'Downloads', 'Pictures', 'Videos', 'Music']) {
+        const dir = path.join(home, folder);
+        const r = removeEntries(dir);
+        if (r.removed || r.skipped) {
+            log.info(`wipeKioskUserFiles: ${folder} (${r.removed} removed, ${r.skipped} skipped)`);
+        }
+    }
 }
 
 /** True when dir looks like a packaged Electron app (portable unpack or MSI install folder). */

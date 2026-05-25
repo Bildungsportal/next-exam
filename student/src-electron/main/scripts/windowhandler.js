@@ -23,7 +23,6 @@ import log from 'electron-log'
 import {SchedulerService} from './schedulerservice.ts'
 //import { activeWindow } from 'get-windows';
 import platformDispatcher from './platformDispatcher.js';
-import { triggerWindowsKioskLogoff } from './win/windowsKioskSetup.js';
 import i18n from '../../../src/locales/locales.js';
 import {fileURLToPath} from "node:url";
 import path from 'path';
@@ -809,7 +808,6 @@ class WindowHandler {
             });
             if (choice.response === 0) {
                 this.mainwindow.allowexit = true;
-                if (isWin && platformDispatcher.runningInCage && triggerWindowsKioskLogoff()) return;
                 app.quit();
             }
         } finally {

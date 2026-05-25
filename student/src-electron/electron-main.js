@@ -27,7 +27,7 @@ import config from './main/config.js';
 import multicastClient from './main/scripts/multicastclient.js'
 import path from 'path'
 import fs from 'fs'
-import { triggerWindowsKioskLogoff } from './main/scripts/win/windowsKioskSetup.js'
+import { wipeKioskUserFiles } from './main/scripts/win/windowsKioskSetup.js'
 import * as fsExtra from 'fs-extra';
 import ip from 'ip'
 import { gateway4sync } from 'default-gateway';
@@ -203,19 +203,10 @@ app.on('window-all-closed', async () => {  // last window closed – clear stora
 
 app.on('will-quit', () => {  // if window is closed
     toggleMacOSLockdown(false)
-    // win32 kiosk: synchronously wipe workdirectory before logoff — Scheduled Task (Security 4634)
-    // depends on audit policy and may never fire; doing it here guarantees a fresh state for the next student.
+    // win32 kiosk: wipe workdir + standard user folders before quit so the next student starts fresh.
+    // No auto-logoff: logoff.exe/cmd.exe/shutdown.exe are blocked by AllowedApps; user logs off manually.
     if (process.platform === 'win32' && platformDispatcher.runningInCage) {
-        try {
-            if (config.workdirectory && fs.existsSync(config.workdirectory)) {
-                fs.rmSync(config.workdirectory, { recursive: true, force: true });
-                log.info(`main @ will-quit: wiped workdirectory ${config.workdirectory}`);
-            }
-        } catch (err) {
-            log.warn('main @ will-quit: workdirectory wipe failed', err);
-        }
-        log.info('main @ will-quit: kiosk session fallback logoff');
-        triggerWindowsKioskLogoff();
+        wipeKioskUserFiles({ workdirectory: config.workdirectory });
     }
 })
 

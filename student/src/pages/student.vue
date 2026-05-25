@@ -596,20 +596,19 @@ export default {
 
         quitNextExam() {
             if (this.token) return;
-            const inCage = !!this.platformKiosk?.runningInCage;
-            const warnText = inCage
-                ? (this.platformKiosk?.displayServer === 'windows'
-                    ? this.$t('student.cageExitWarnWindows')
-                    : this.$t('student.cageExitWarnLinux'))
-                : this.$t('student.cageExitConfirm');
+            // Kiosk: main-process close handler shows the native cage exit warning (single source of truth).
+            // Non-kiosk: simple inline confirm.
+            if (this.platformKiosk?.runningInCage) {
+                signalBridge.invoke('quit-app');
+                return;
+            }
             this.$swal.fire({
-                title: inCage ? this.$t('student.cageExitWarnTitle') : this.$t('student.cageExit'),
-                html: warnText,
-                icon: inCage ? 'warning' : 'question',
+                title: this.$t('student.cageExit'),
+                html: this.$t('student.cageExitConfirm'),
+                icon: 'question',
                 showCancelButton: true,
                 confirmButtonText: this.$t('student.cageExit'),
                 cancelButtonText: this.$t('dashboard.cancel'),
-                focusCancel: inCage,
             }).then((result) => {
                 if (result.isConfirmed) signalBridge.invoke('quit-app');
             });
