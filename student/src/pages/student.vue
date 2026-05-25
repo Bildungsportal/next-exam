@@ -1575,7 +1575,9 @@ export default {
                 this.$swal.fire({ title: "Error", text: this.$t("student.nopin"), icon: 'error', showCancelButton: false });
                 return;
             }
-            if (!this.platformKiosk.runningInCage) {
+            // Win32 AssignedAccess kiosk uses standard getDisplayMedia (full desktop); only Linux cage needs the window-capture fallback.
+            const linuxCage = this.platformKiosk.runningInCage && this.platformKiosk.displayServer !== 'windows';
+            if (!linuxCage) {
                 if (!hasActiveScreenshotStream()) {
                     const ok = await ensureDisplayStreamAsync();
                     if (!ok) {
@@ -1757,7 +1759,8 @@ export default {
             }
             this.platformKiosk = await getLinuxKioskInfo(signalBridge);
             setLinuxKioskRunningInCage(this.platformKiosk.runningInCage);
-            setCageWindowCaptureFallback(!!this.platformKiosk.runningInCage);
+            // Win32 kiosk uses normal getDisplayMedia full-desktop path; cage fallback only for Linux cage.
+            setCageWindowCaptureFallback(this.platformKiosk.runningInCage && this.platformKiosk.displayServer !== 'windows');
             this.cageLauncherApps = await loadWinKioskLauncherApps(signalBridge);
             // Dev-only: preview cage launcher UI without kiosk user / provisioning
             // if (this.config.development) {

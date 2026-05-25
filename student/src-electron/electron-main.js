@@ -262,7 +262,9 @@ app.whenReady()
     nativeTheme.themeSource = 'light'  // prevent theme settings from being adopted from windows
     session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
-    if (platformDispatcher.runningInCage) {
+    // Linux cage only: window-only capture (no system picker, no full desktop).
+    // Win32 AssignedAccess kiosk uses the regular full-screen path below.
+    if (platformDispatcher.runningInCage && process.platform === 'linux') {
         session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
             desktopCapturer.getSources({ types: ['window'] }).then((sources) => {
                 try {
