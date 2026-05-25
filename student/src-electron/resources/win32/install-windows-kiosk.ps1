@@ -130,6 +130,20 @@ function Invoke-OfflineNtuserHardening([string]$NtuserPath, [string]$HiveAlias) 
     }
 }
 
+# Logoff trigger: New-ScheduledTaskTrigger has no -AtLogOff on Windows client — use Security event 4634 for kiosk user.
+function New-KioskUserLogoffTaskTrigger([string]$KioskUser) {
+    $userEsc = [System.Security.SecurityElement]::Escape($KioskUser)
+    $subscription = @"
+<QueryList>
+  <Query Id='0' Path='Security'>
+    <Select Path='Security'>*[System[EventID=4634]] and *[EventData[Data[@Name='TargetUserName'] and Data='$userEsc']]</Select>
+  </Query>
+</QueryList>
+"@
+    $cimClass = Get-CimClass -ClassName MSFT_TaskEventTrigger -Namespace Root/Microsoft/Windows/TaskScheduler
+    New-CimInstance -CimClass $cimClass -ClientOnly -Property @{ Subscription = $subscription; Enabled = $true; Delay = 'PT30S' }
+}
+
 # Scheduled task: after kiosk logoff, delete user files inside profile dir (keep NTUSER + ProfileList).
 function Register-KioskUserHomeWipeOnLogoff([string]$InstallDir, [string]$KioskUser, [string]$ProfilePath) {
     $taskName = 'NextExam-KioskWipeUserHome'
@@ -159,7 +173,7 @@ Get-ChildItem -LiteralPath `$ProfilePath -Force | ForEach-Object {
     $action = New-ScheduledTaskAction -Execute (Join-Path $env:windir 'System32\WindowsPowerShell\v1.0\powershell.exe') `
         -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$scriptPath`""
     $principal = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -LogonType ServiceAccount -RunLevel Highest
-    $trigger = New-ScheduledTaskTrigger -AtLogOff
+    $trigger = New-KioskUserLogoffTaskTrigger -KioskUser $KioskUser
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
         -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 10)
     Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings | Out-Null
@@ -684,7 +698,11 @@ try {
     exit 13
 }
 
-Register-KioskUserHomeWipeOnLogoff -InstallDir $InstallDir -KioskUser $KioskUser -ProfilePath $ProfilePath
+try {
+    Register-KioskUserHomeWipeOnLogoff -InstallDir $InstallDir -KioskUser $KioskUser -ProfilePath $ProfilePath
+} catch {
+    Write-Step "WARNING: logoff wipe task not registered (kiosk login/AA still OK): $($_.Exception.Message)"
+}
 
 # marker: renderer treats provisioning as complete only after this file exists (partial runs keep install button visible)
 Set-Content -LiteralPath (Join-Path $InstallDir '.kiosk-provision-complete') -Value (Get-Date -Format 'o') -Encoding UTF8

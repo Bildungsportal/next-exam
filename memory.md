@@ -20,10 +20,10 @@ RULE^agent^assumeUserEditsIntentional^never revert incidental diffs; assume user
 RULE^agent^gitSafety^never run git restore/reset/clean/rebase/stash/pop/checkout/switch unless user explicitly asks
 RULE^agent^utils^noSingleUseFiles^never new file for one function solvable in ~2 lines at caller; colocate; reuse module only if 2+ call sites; after each new fn check minimize/inline/delete
 PATH^linux^cageInstall^install-cage-kiosk.sh pkexec; needsCageKioskSetup=!(cage on PATH+AppImage+/opt/next-exam+desktop); UI if needsCageKioskSetup&&!runningInCage
-PATH^win32^kioskInstall^profile C:\Users\next-exam-kiosk State=128+ProfileList; logoff NextExam-KioskWipeUserHome wipes home not delete profile dir
+PATH^win32^kioskInstall^profile C:\Users\next-exam-kiosk State=128+ProfileList; no temp-profile folder delete (afbb1dc1 reverted); logoff wipe task non-fatal if register fails
 RULE^win32^kioskStartUi^win32 only; strict JSON {"apps":[{name,path}]} at C:\NextExam\kiosk-launcher-apps.json; no legacy parse; Linux no launcher
 RULE^win32^kioskExam^skipElectronKiosk=win32&&runningInCage; no setKiosk/win enable|disable restrictions/fullscreen/reconnect restrictions+blur; Linux cage unchanged
-RULE^win32^kioskAutoLogoff^triggerWindowsKioskLogoff shutdown /l /f; C:\NextExam\kiosk-wipe-user-home.ps1 via scheduled task AtLogOff
+RULE^win32^kioskAutoLogoff^triggerWindowsKioskLogoff shutdown /l /f; kiosk-wipe via task trigger Security 4634 TargetUserName=next-exam-kiosk (no -AtLogOff)
 TECH^win32^kioskI18n^student.vue kioskI18nPrefix=winKioskSetup on platformKiosk.displayServer==='windows', else cageSetup; kioskI18n(suffix) helper with fallback to cage key^student/src/pages/student.vue+locales
 IPC^win32^kioskExitCodes^ps1 exit 10/11/12/13; UAC -EncodedCommand+exitFile; MDM admin Set-CimInstance first else SYSTEM task files in C:\NextExam\mdm-staging not admin %TEMP% (SYSTEM no result write→timeout); mdm-helper-*.log
 RULE^kiosk^sharedFields^platformDispatcher win32 reuses linux cage field names (runningInCage,cageInstalled,cageKioskAppImageInstalled,cageKioskDesktopInstalled,needsCageKioskSetup); runningInCage on win32 = os.userInfo().username===next-exam-kiosk; renderer linuxCageKiosk.js+student.vue unchanged
