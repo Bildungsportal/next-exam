@@ -205,7 +205,7 @@
         "cageExitConfirm": "Next-Exam wirklich beenden?",
         "cageExitWarnLinux": "Sie verlassen die abgesicherte Prüfungsumgebung. Die Linux-Kiosk-Sitzung wird beendet (Abmeldung). Ein erneuter Start ist nur über den Login-Manager („Next Exam Kiosk“) möglich — ohne Neuanmeldung können Sie <strong>nicht</strong> weiterarbeiten.",
         "cageExitWarnTitle": "Abgesicherten Modus verlassen?",
-        "cageExitWarnWindows": "Sie beenden Next-Exam in der Kiosk-Sitzung. Danach gibt es <strong>keinen Neustart</strong> der Prüfungsumgebung aus der App — nur erneute Anmeldung als Prüfungsbenutzer. Ohne das können Sie <strong>nicht</strong> weiterarbeiten.",
+        "cageExitWarnWindows": "Sie beenden Next-Exam in der Kiosk-Sitzung. Danach können sie weder erlaubte Apps öffnen noch Next-Exam neu starten. Die Prüfung wird dadurch beendet bis sie sich erneut einloggen.",
         "cageSetupButton": "Cage einrichten",
         "cageSetupDontShow": "Vorerst nicht mehr anzeigen",
         "cageSetupFailed": "Einrichtung fehlgeschlagen",
