@@ -180,10 +180,13 @@ async function acquireDisplayStream() {
       video.onloadedmetadata = () => video.play().then(() => {
         log.info('screenshotCapture @ acquireDisplayStream: video resolution', video.videoWidth + 'x' + video.videoHeight);
         try {
-          const screenWidth = window.screen?.width;
-          const screenHeight = window.screen?.height;
+          // window.screen.width is CSS pixels, video.videoWidth is hardware pixels.
+          // On HiDPI displays (Win11 default 125-200% scaling, common on Lenovo) those differ by devicePixelRatio.
+          const dpr = window.devicePixelRatio || 1;
+          const screenWidth = (window.screen?.width || 0) * dpr;
+          const screenHeight = (window.screen?.height || 0) * dpr;
           if (screenWidth && screenHeight) {
-            log.info('screenshotCapture @ acquireDisplayStream: primary screen resolution', screenWidth + 'x' + screenHeight);
+            log.info('screenshotCapture @ acquireDisplayStream: primary screen resolution (hw)', screenWidth + 'x' + screenHeight, 'dpr', dpr);
             const widthDiff = Math.abs(video.videoWidth - screenWidth);
             const heightDiff = Math.abs(video.videoHeight - screenHeight);
             const widthRel = widthDiff / screenWidth;

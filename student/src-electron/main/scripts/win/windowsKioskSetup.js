@@ -152,8 +152,6 @@ export function detectWindowsKioskProvisionComplete() {
 export function detectWindowsKioskUserExists() {
     if (process.platform !== 'win32') return false;
     // If we're already running as the kiosk user, the account exists by definition.
-    // Skip the powershell.exe spawn (AppLocker blocks it under AssignedAccess and triggers
-    // the "diese app wurde vom systemadministrator gesperrt" warning).
     if (detectRunningInWindowsKiosk()) return true;
     try {
         // Get-LocalUser exits non-zero when missing; swallow stderr to avoid noise
@@ -224,8 +222,7 @@ function isProcessElevated() {
 }
 
 /**
- * Main entry. Linux path is handled elsewhere (pkexec install-cage-kiosk.sh).
- * On Windows: relaunches the PowerShell payload via `Start-Process -Verb RunAs` (UAC).
+ * relaunches the PowerShell payload via `Start-Process -Verb RunAs` (UAC).
  * extraAppsFile (optional) = absolute path to a plaintext file with one extra exe path per line.
  * Returns Promise<{ok:boolean,error?:string,code?:string,skipped?:boolean}>.
  */

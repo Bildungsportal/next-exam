@@ -202,11 +202,10 @@ app.on('window-all-closed', async () => {  // last window closed – clear stora
 });
 
 app.on('will-quit', () => {  // if window is closed
-    toggleMacOSLockdown(false)
-    // win32 kiosk: wipe workdir + standard user folders before quit so the next student starts fresh.
-    // No auto-logoff: logoff.exe/cmd.exe/shutdown.exe are blocked by AllowedApps; user logs off manually.
+    toggleMacOSLockdown(false)   // could be deleted if assesment mode is enabled
+    
     if (process.platform === 'win32' && platformDispatcher.runningInCage) {
-        wipeKioskUserFiles({ workdirectory: config.workdirectory });
+        wipeKioskUserFiles({ workdirectory: config.workdirectory }); // win32 kiosk: wipe workdir + standard user folders before quit so the next student starts fresh.
     }
 })
 
@@ -253,6 +252,7 @@ app.whenReady()
     nativeTheme.themeSource = 'light'  // prevent theme settings from being adopted from windows
     session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
+   
     // Kiosk (Linux cage OR Win32 AssignedAccess): no system picker available; auto-grant the
     // first source. Linux cage limits to windows (cage shows one window). Win32 grants screen.
     // Non-kiosk: useSystemPicker:true so the OS dialog appears as usual.
@@ -312,11 +312,9 @@ app.whenReady()
         powerSaveBlocker.start('prevent-display-sleep')   // prevent the device from going to sleep
         if (allowTray) { updateSystemTray('de'); }        // skip tray on GNOME
         else { log.info('main @ tray: GNOME detected, skipping system tray'); }
-        // Skip in Win/Linux kiosk: spawning powershell.exe trips Multi-App AssignedAccess AppLocker
-        // ("diese app wurde vom systemadministrator gesperrt"), and the browser-launch attack vector
-        // is already blocked by the kiosk AllowedApps whitelist.
-        if (!platformDispatcher.runningInCage) {
-            runParentProcessCheck();
+        
+        if (!platformDispatcher.runningInCage) {  // Skip in Win/Linux kiosk
+            runParentProcessCheck();  // check if the app was started from within a browser and quit if detected
         }
     }
     if (config.development){

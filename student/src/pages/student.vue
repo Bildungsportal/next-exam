@@ -1584,7 +1584,10 @@ export default {
                         return;
                     }
                 }
-                if (!isFullDesktopCaptureLikely() && !this.$route.params.config.development) {
+                // Win AA kiosk auto-grants sources[0]=screen via main-process handler, so the picker-misclick
+                // heuristic does not apply; skip the check there.
+                const winKiosk = this.platformKiosk.runningInCage && this.platformKiosk.displayServer === 'windows';
+                if (!winKiosk && !isFullDesktopCaptureLikely() && !this.$route.params.config.development) {
                     this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
                     return;
                 }

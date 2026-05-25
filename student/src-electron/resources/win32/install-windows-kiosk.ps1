@@ -91,6 +91,11 @@ function Add-NextExamKioskNtuserHardening([string]$HiveRoot) {
     Set-ItemProperty -Path $accSticky -Name 'Flags' -Value '506' -Type String
     Set-ItemProperty -Path $accFilter -Name 'Flags' -Value '122' -Type String
     Set-ItemProperty -Path $accToggle -Name 'Flags' -Value '58'  -Type String
+    # Force 100% display scaling for kiosk user (Lenovo defaults to 150% which mismatches getDisplayMedia hw resolution)
+    $desktop = "$HiveRoot\Control Panel\Desktop"
+    New-Item -Path $desktop -Force | Out-Null
+    Set-ItemProperty -Path $desktop -Name 'LogPixels'      -Value 96 -Type DWord
+    Set-ItemProperty -Path $desktop -Name 'Win8DpiScaling' -Value 0  -Type DWord
     foreach ($rel in @(
         'Software\Microsoft\Windows\CurrentVersion\Run',
         'Software\Microsoft\Windows\CurrentVersion\RunOnce'
