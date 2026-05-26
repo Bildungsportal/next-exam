@@ -4,8 +4,8 @@
         <div class="header-left">
             <div v-if="online && !localLockdown" class="header-item">
                 <img src="/src/assets/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style="float: left;" />
-                <button v-if="clientinfo && clientinfo.groups  && clientinfo.group == 'a'" type="button" class="header-item btn btn-info btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> A  </button>
-                <button v-if="clientinfo && clientinfo.groups  && clientinfo.group == 'b'" type="button" class="header-item btn btn-warning btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> B  </button>
+                <button v-if="groups  && group === 'a'" type="button" class="header-item btn btn-info btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> A  </button>
+                <button v-if="groups  && group === 'b'" type="button" class="header-item btn btn-warning btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> B  </button>
                 <span class="fs-5 align-middle me-1" style="float: left;">{{clientname}} @ {{servername}} | {{pincode}}</span>
                 <span class="fs-5 align-middle me-4 teal" style="float: left;" >| {{$t('student.connected')}}</span>
             </div>
@@ -109,6 +109,10 @@
   import moment from 'moment-timezone';
   import {SignalBridge} from '../utils/signalBridge.js'
   import {SchedulerService} from '../utils/schedulerservice.js'
+  import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
+  import {ref} from "vue";
+  import {useInfoStore} from "../stores/infoStore.ts";
+  import {useConfigStore} from "../stores/configStore.ts";
 
   // signalBridge instance centralizes ipc calls with platform checks
   const signalBridge = new SignalBridge(window);
@@ -116,7 +120,31 @@
 
   export default {
     name: 'ExamHeader',
-    props: ['serverstatus','clientinfo','online', 'clientname', 'exammode', 'servername', 'pincode', 'battery', 'entrytime', 'componentName','localLockdown','wlanInfo','hostip'],
+    mixins: [autoCleanupMixin],
+
+    setup() {
+      const configStore = useConfigStore();
+      let hostip = configStore.hostIp;
+
+      const infoStore = useInfoStore();
+
+      let groups = ref(infoStore.groups);
+      let group = ref(infoStore.group);
+      let examtype = ref(infoStore.examtype);
+      let servername = ref(infoStore.servername);
+      let clientname = ref(infoStore.clientname);
+      let serverstatus = ref(infoStore.serverstatus);
+      let pincode = ref(infoStore.pincode);
+      let localLockdown = ref(infoStore.localLockdown);
+      let online = ref(infoStore.online);
+      let battery = ref(infoStore.battery);
+      let entryTime = ref(infoStore.entryTime);
+      let componentName = ref(infoStore.componentName);
+      let wlanInfo = ref(infoStore.wlanInfo);
+
+      return { hostip,
+        groups, group, examtype, servername, clientname, serverstatus, pincode, localLockdown, online, battery, entryTime, componentName, wlanInfo};
+    },
     data() {
       return {
         lastShownMessage: null,

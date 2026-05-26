@@ -16,19 +16,6 @@
 
     <!-- HEADER START -->
     <exam-header
-    :serverstatus="serverstatus"
-      :clientinfo="clientinfo"
-      :online="online"
-      :clientname="clientname"
-      :exammode="exammode"
-      :servername="servername"
-      :pincode="pincode"
-      :battery="battery"
-      :entrytime="entrytime"
-      :componentName="componentName"
-      :localLockdown="localLockdown"
-      :wlanInfo="wlanInfo"
-      :hostip="hostip"
       @reconnect="reconnect"
       @gracefullyExit="gracefullyExit"
     ></exam-header>
@@ -190,6 +177,10 @@ import {
     applyServerstatusFromFetch,
     resolveLockedSection,
 } from '../utils/examFetchInfoSync.js'
+import {ref} from "vue";
+import { useConfigStore } from "stores/configStore.ts";
+import {useInfoStore} from "../stores/infoStore.ts";
+import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -223,40 +214,54 @@ function ggbHtml5CodebaseUrl() {
 
 
 export default {
+    mixins: [autoCleanupMixin],
+
+    setup() {
+      const configStore = useConfigStore();
+      let development = ref(configStore.development);
+      let serverApiPort = ref(configStore.serverApiPort);
+      let electron = ref(configStore.electron);
+      let hostip = ref(configStore.hostip);
+
+      const infoStore = useInfoStore();
+      infoStore.online = true;
+      infoStore.componentName = "GeoGebra";
+
+      let examtype = ref(infoStore.examtype);
+      let servername = ref(infoStore.servername);
+      let servertoken = ref(infoStore.servertoken);
+      let serverip = ref(infoStore.serverip);
+      let token = ref(infoStore.token);
+      let clientname = ref(infoStore.clientname);
+      let serverstatus = ref(infoStore.serverstatus);
+      let clientApiPort = ref(infoStore.clientApiPort);
+      let pincode = ref(infoStore.pincode);
+      let localLockdown = ref(infoStore.localLockdown);
+      let online = ref(infoStore.online);
+      let battery = ref(infoStore.battery);
+      let wlanInfo = ref(infoStore.wlanInfo);
+      let entryTime = ref(infoStore.entryTime);
+      let componentName = ref(infoStore.componentName);
+
+      return { infoStore,
+        development, serverApiPort, electron, hostip,
+        examtype, servername, servertoken, serverip, token, clientname, serverstatus, clientApiPort, pincode, localLockdown, online, battery, wlanInfo, entryTime, componentName};
+    },
+
     data() {
         return {
-            componentName: 'GeoGebra',
-            online: true,
             focus: true,
             exammode: false,
-            examtype: this.$route.params.examtype,
             currentFile:null,
             saveinterval: null,
             fetchinfointerval: null,
-            loadfilelistinterval: null,
-            servername: this.$route.params.servername,
-            servertoken: this.$route.params.servertoken,
-            serverip: this.$route.params.serverip,
-            token: this.$route.params.token,
-            clientname: this.$route.params.clientname,
-            serverApiPort: this.$route.params.serverApiPort,
-            serverstatus: this.$route.params.serverstatus,
-            clientApiPort: this.$route.params.clientApiPort,
-            config: this.$route.params.config,
-            electron: this.$route.params.electron,
-            pincode : this.$route.params.pincode,
-            localLockdown: this.$route.params.localLockdown,
             lockedSection: null,
             clientinfo: null,
-            entrytime: 0,
             now : new Date().getTime(),
             localfiles: null,
-            battery: null,
             customClipboard: [],
             isClipboardVisible: false,
             currentpreview: null,
-            wlanInfo: null,
-            hostip: null,
             examMaterials: [],
             allowedUrls: [],
             webviewVisible: false,
@@ -311,9 +316,8 @@ export default {
 
     },
     async mounted() {
-
         this.currentFile = `${this.clientname}.ggb`
-        this.entrytime = new Date().getTime()  
+        this.entrytime = new Date().getTime()
          
         this._onUnhandledRejection = (event) => {
             const reason = event?.reason;
@@ -323,7 +327,7 @@ export default {
                 return;
             }
         };
-        window.addEventListener('unhandledrejection', this._onUnhandledRejection);
+        this.autoEventListener(window,'unhandledrejection', this._onUnhandledRejection);
 
 
         signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
@@ -356,6 +360,7 @@ export default {
 
         this.$nextTick(async function () { // Code that will run only after the entire view has been rendered
 
+
             // do not use setInterval() for intervals as it keeps all objects of the callbacks including fetch() responses in memory until the interval is stopped
             this.fetchinfointerval = new SchedulerService(5000);
             this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
@@ -384,7 +389,7 @@ export default {
                 }
                 URL.revokeObjectURL(this.currentpreview)
             }
-            document.querySelector("#preview").addEventListener("click", this._onPreviewClick);
+            this.autoEventListener(document.querySelector("#preview"),"click", this._onPreviewClick);
 
             await this.$nextTick()
             try {
@@ -394,9 +399,10 @@ export default {
                 console.error('geogebra @ mounted: GeoGebra bootstrap failed', e)
             }
 
-            this.loadfilelistinterval = setInterval(() => { this.loadFilelist() }, 10000)
+            this.autoSchedulerService(this.loadFilelist, 10000)
 
             this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+            console.log(this.wlanInfo);
             this.hostip = await signalBridge.invoke('checkhostip')
         });
     },
@@ -478,9 +484,9 @@ export default {
 
         
         async sendFocuslost(ctrlalt = false){
-            if (await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
+            if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             let response = await signalBridge.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
-            if (response && !this.config.development && !response.focus) {  //immediately block frontend
+            if (response && !this.development && !response.focus) {  //immediately block frontend
                 this.focus = false
             }
         },
@@ -616,7 +622,7 @@ export default {
                             window.ggbApplet?.setSize(s.w, s.h)
                         }, 150)
                     }
-                    window.addEventListener('resize', this._resizeHandler)
+                  this.autoEventListener(window,'resize', this._resizeHandler)
 
                     const surface = this.$refs.ggbSurface
                     if (surface && typeof ResizeObserver !== 'undefined') {
@@ -690,7 +696,6 @@ export default {
             if (!this.focus) this.entrytime = new Date().getTime();
 
             if (this.exammode !== prevExammode) this.injectCSS();
-
             this.battery = await navigator.getBattery().then(battery => battery)
                 .catch(error => { console.error('Error accessing the Battery API:', error); });
 
@@ -873,8 +878,6 @@ export default {
         if (typeof this._stopExammodeWatch === 'function') {
             this._stopExammodeWatch()
         }
-        clearInterval(this.loadfilelistinterval)
-        this.loadfilelistinterval = null
 
         this.saveinterval.removeEventListener('action', this.saveContentGgbAuto);
         this.saveinterval.stop() 
@@ -883,10 +886,6 @@ export default {
         this.fetchinfointerval.stop() 
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
-        if (this._resizeHandler) {
-            window.removeEventListener('resize', this._resizeHandler)
-            this._resizeHandler = null
-        }
         if (this._ggbResizeObs) {
             this._ggbResizeObs.disconnect()
             this._ggbResizeObs = null
@@ -903,10 +902,6 @@ export default {
         if (window.__ggbMenuObserver__) {
             window.__ggbMenuObserver__.disconnect()
             window.__ggbMenuObserver__ = null
-        }
-
-        if (this._onUnhandledRejection) {
-            window.removeEventListener('unhandledrejection', this._onUnhandledRejection);
         }
 
         signalBridge.removeAllListeners('getmaterials')

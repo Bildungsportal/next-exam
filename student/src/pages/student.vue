@@ -301,7 +301,7 @@ import {
 } from '../utils/examFetchInfoSync.js'
 import { buildQemuMissingWarningHtml } from 'next-exam-shared/qemuMissingWarningHtml.js'
 import { autoCleanupMixin } from "../mixins/autoCleanupMixin.ts";
-import { useConfigStore } from "stores/configStore.js";
+import { useConfigStore } from "stores/configStore.ts";
 import { ref } from 'vue';
 
 function unhandledRejectionFunction(event: PromiseRejectionEvent) {
@@ -339,11 +339,11 @@ export default {
       let electron = ref(configStore.electron);
       let info = ref(configStore.info);
       let buildDate = ref(configStore.buildDate);
-      let hostIp = ref(configStore.hostip);
-      let bipIntegration = ""
-      let bipApiUrl = ""
-      let bipDemo = ""
-      return { username, pincode, development, version, serverApiPort, electron, info, buildDate, hostIp, bipIntegration, bipApiUrl, bipDemo }
+      let hostip = ref(configStore.hostIp);
+      let bipIntegration = ref(configStore.bipIntegration);
+      let bipApiUrl = ref(configStore.bipApiUrl);
+      let bipDemo = ref(configStore.bipDemo);
+      return { username, pincode, development, version, serverApiPort, electron, info, buildDate, hostip, bipIntegration, bipApiUrl, bipDemo };
     },
 
     data() {
