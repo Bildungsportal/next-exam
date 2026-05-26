@@ -1,6 +1,6 @@
 /**
  * Windows counterpart to Linux Cage kiosk setup.
- * - detectRunningInWindowsKiosk(): true when current OS user === kiosk username
+ * - detectRunningInWindowsKiosk(): kiosk OS user + provisioned SID + active Assigned Access session
  * - detectWindowsKioskInstalled(): true when provisioning artifacts exist
  * - needsWindowsKioskSetup(): inverse, used by UI install button
  * - initiateKioskSetup(appPath): platform switch + UAC elevation + PowerShell payload
@@ -18,6 +18,7 @@ export const KIOSK_USERNAME = 'next-exam-kiosk';
 export const KIOSK_INSTALL_DIR = 'C:\\NextExam';
 // written only when install-windows-kiosk.ps1 finishes (incl. MDM); partial runs must not hide the UI button
 export const KIOSK_PROVISION_MARKER = 'C:\\NextExam\\.kiosk-provision-complete';
+const KIOSK_ACCOUNT_SID_MARKER = path.join(KIOSK_INSTALL_DIR, '.kiosk-account-sid');
 const KIOSK_LAUNCH_EXE_MARKER = 'C:\\NextExam\\.kiosk-launch-exe.txt';
 const KIOSK_LAUNCHER_APPS_JSON = path.join(KIOSK_INSTALL_DIR, 'kiosk-launcher-apps.json');
 
@@ -125,8 +126,8 @@ function resolveProvisioningScript() {
     return path.join(process.cwd(), 'src-electron', 'resources', 'win32', 'install-windows-kiosk.ps1');
 }
 
-/** True when this process runs as the dedicated kiosk OS user. */
-export function detectRunningInWindowsKiosk() {
+/** True when the interactive account name matches the provisioned kiosk user (not sufficient alone). */
+export function isWindowsKioskOsUser() {
     if (process.platform !== 'win32') return false;
     try {
         const u = (os.userInfo().username || '').toLowerCase();
@@ -134,6 +135,66 @@ export function detectRunningInWindowsKiosk() {
     } catch {
         return false;
     }
+}
+
+/** Current Windows user SID (S-1-5-21-…), or empty on failure. */
+function getCurrentUserSid() {
+    try {
+        return execSync(
+            'powershell.exe -NoProfile -NonInteractive -Command "[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value"',
+            { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 8000 }
+        ).trim();
+    } catch {
+        return '';
+    }
+}
+
+/** SID written at provisioning; blocks renaming another account to next-exam-kiosk. */
+function isProvisionedKioskAccountSid() {
+    const current = getCurrentUserSid();
+    if (!current || !existsSync(KIOSK_ACCOUNT_SID_MARKER)) return false;
+    try {
+        return readFileSync(KIOSK_ACCOUNT_SID_MARKER, 'utf8').trim() === current;
+    } catch {
+        return false;
+    }
+}
+
+/** Multi-app AA applies RestrictRun + AssignedAccess_* allow-list entries at kiosk logon. */
+function hasAssignedAccessRestrictRunSession() {
+    try {
+        execSync(
+            'powershell.exe -NoProfile -NonInteractive -Command "& { $e=\'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\'; if ((Get-ItemProperty -LiteralPath $e -Name RestrictRun -ErrorAction SilentlyContinue).RestrictRun -ne 1) { exit 1 }; $sub=Join-Path $e \'RestrictRun\'; if (-not (Test-Path -LiteralPath $sub)) { exit 1 }; if (-not @(Get-ChildItem -LiteralPath $sub | Where-Object { $_.PSChildName -like \'AssignedAccess_*\'}).Count) { exit 1 } }"',
+            { stdio: ['ignore', 'ignore', 'ignore'], timeout: 8000 }
+        );
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/** ProfileList State=128 is set by install-windows-kiosk.ps1 for the real kiosk profile only. */
+function isKioskProfileState128() {
+    const sid = getCurrentUserSid();
+    if (!sid) return false;
+    try {
+        execSync(
+            `powershell.exe -NoProfile -NonInteractive -Command "if ((Get-ItemProperty -LiteralPath 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\${sid}' -Name State -ErrorAction SilentlyContinue).State -ne 128) { exit 1 }"`,
+            { stdio: ['ignore', 'ignore', 'ignore'], timeout: 8000 }
+        );
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/** True only in an active Assigned Access session for the provisioned kiosk account. */
+export function detectRunningInWindowsKiosk() {
+    if (!isWindowsKioskOsUser()) return false;
+    if (!isProvisionedKioskAccountSid()) return false;
+    if (!hasAssignedAccessRestrictRunSession()) return false;
+    if (!isKioskProfileState128()) return false;
+    return true;
 }
 
 /** True when the full app bundle was copied to C:\NextExam (launch exe present). */
@@ -152,7 +213,7 @@ export function detectWindowsKioskProvisionComplete() {
 export function detectWindowsKioskUserExists() {
     if (process.platform !== 'win32') return false;
     // If we're already running as the kiosk user, the account exists by definition.
-    if (detectRunningInWindowsKiosk()) return true;
+    if (isWindowsKioskOsUser()) return true;
     try {
         // Get-LocalUser exits non-zero when missing; swallow stderr to avoid noise
         execSync(`powershell.exe -NoProfile -NonInteractive -Command "Get-LocalUser -Name '${KIOSK_USERNAME}' | Out-Null"`,

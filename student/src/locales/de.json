@@ -313,6 +313,8 @@
         "versionOld": "Deine Version von Next-Exam ist zu alt. Bitte lade eine aktuelle Version herunter!",
         "versionUnknown": "Unbekannter Fehler beim Verbinden.",
         "networkError": "Es gibt ein Problem mit dem Netzwerk, der Firewall oder den Netzwerkberechtigungen! Bitte behebe das Problem und starte Next-Exam neu!",
+        "winKioskSessionInfoText": "Sie befinden sich in der abgesicherten Prüfungsumgebung (Windows Assigned Access). Mit <strong>Alt+Tab</strong> wechseln Sie zwischen Next-Exam und den anderen erlaubten Anwendungen.",
+        "winKioskSessionInfoTitle": "Kiosk-Modus aktiv",
         "winKioskSetupButton": "Kiosk einrichten",
         "winKioskSetupDontShow": "Vorerst nicht mehr anzeigen",
         "winKioskSetupEditionFailed": "Windows Edition wird nicht unterstützt",

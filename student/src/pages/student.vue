@@ -577,6 +577,21 @@ export default {
             await this.promptCageKioskSetup();
         },
 
+        async maybeShowWinKioskSessionInfo() {
+            const k = this.platformKiosk;
+            if (!isElectronWindow(window) || this.config.development) return;
+            if (!k.runningInCage || k.displayServer !== 'windows') return;
+            if (sessionStorage.getItem('next-exam-win-kiosk-session-info') === '1') return;
+            sessionStorage.setItem('next-exam-win-kiosk-session-info', '1');
+            await this.$swal.fire({
+                title: this.$t('student.winKioskSessionInfoTitle'),
+                html: this.$t('student.winKioskSessionInfoText'),
+                icon: 'info',
+                confirmButtonText: this.$t('student.ok'),
+                showCancelButton: false,
+            });
+        },
+
         async launchCageApp(exePath) {
             const p = String(exePath || '').trim();
             if (!p) return;
@@ -1773,6 +1788,7 @@ export default {
             //     ];
             // }
             await this.maybeOfferCageKioskSetup();
+            await this.maybeShowWinKioskSessionInfo();
         }
 
         // Focus username input field when component is mounted

@@ -723,4 +723,5 @@ try {
 
 # marker: renderer treats provisioning as complete only after this file exists (partial runs keep install button visible)
 Set-Content -LiteralPath (Join-Path $InstallDir '.kiosk-provision-complete') -Value (Get-Date -Format 'o') -Encoding UTF8
+Set-Content -LiteralPath (Join-Path $InstallDir '.kiosk-account-sid') -Value $sid -Encoding UTF8 -NoNewline
 Write-Step "DONE. Reboot recommended. Logon screen will list '$KioskUser' (no password)."
