@@ -406,26 +406,20 @@ function isKioskProfileState128() {
 
 /** Win AA kiosk session: correct OS user + live AA session + provisioned SID (username alone is never enough). */
 export function detectRunningInWindowsKiosk() {
-    // DIAGNOSE: detection temporarily disabled to isolate Windows renderer launch-failed crash.
-    // If app starts with this no-op, the kiosk detection code path is the culprit; if it still
-    // crashes, the cause is elsewhere. Re-enable by restoring the body below.
     if (process.platform !== 'win32') return false;
-    return false;
-    // return evaluateWindowsKioskDetection().runningInCage;
+    return evaluateWindowsKioskDetection().runningInCage;
 }
 
 /** Startup log lines for Win Assigned Access detection (electron-main platform block). */
 export function getWindowsKioskDetectionLogLines() {
-    // DIAGNOSE: detection temporarily disabled — see detectRunningInWindowsKiosk above.
     if (process.platform !== 'win32') return [];
-    return ['main: Win AA detection DISABLED (diagnose: renderer launch-failed)'];
-    // const d = evaluateWindowsKioskDetection();
-    // logWindowsKioskDetection('startup', d);
-    // return [
-    //     `main: Win Assigned Access kiosk: runningInCage=${d.runningInCage} skipElectronKiosk=${d.runningInCage}`,
-    //     `main: Win AA check: kioskOsUser=${d.kioskOsUser} sid=${d.sid || 'empty'} aaProof=${d.aaProof} (rrActive=${d.assignedAccessActive} mdmConfigured=${d.mdm.configured} shellMatch=${d.winlogonShellMatch}) provisionedSid=${d.provisionedSid} profileState128=${d.profileState128} profileStateDword=${d.profileStateDword ?? 'n/a'}`,
-    //     `main: Win AA setup: provisionComplete=${detectWindowsKioskProvisionComplete()} bundleInstalled=${detectWindowsKioskInstalled()} needsSetup=${needsWindowsKioskSetup()}`,
-    // ];
+    const d = evaluateWindowsKioskDetection();
+    logWindowsKioskDetection('startup', d);
+    return [
+        `main: Win Assigned Access kiosk: runningInCage=${d.runningInCage} skipElectronKiosk=${d.runningInCage}`,
+        `main: Win AA check: kioskOsUser=${d.kioskOsUser} sid=${d.sid || 'empty'} aaProof=${d.aaProof} (rrActive=${d.assignedAccessActive} mdmConfigured=${d.mdm.configured} shellMatch=${d.winlogonShellMatch}) provisionedSid=${d.provisionedSid} profileState128=${d.profileState128} profileStateDword=${d.profileStateDword ?? 'n/a'}`,
+        `main: Win AA setup: provisionComplete=${detectWindowsKioskProvisionComplete()} bundleInstalled=${detectWindowsKioskInstalled()} needsSetup=${needsWindowsKioskSetup()}`,
+    ];
 }
 
 /** True when the full app bundle was copied to C:\NextExam (launch exe present). */
@@ -570,11 +564,6 @@ let allowedKioskAppsCachedAt = 0;
 /** Attach live OS allow-list to clientinfo for teacher /update (Win AA session only). */
 export function syncAllowedKioskAppsClientinfo(clientinfo) {
     if (!clientinfo || process.platform !== 'win32') return;
-    // DIAGNOSE: detection no-op (see detectRunningInWindowsKiosk above) → skip the expensive
-    // reg.exe + PowerShell spawns that run per UDP heartbeat and block the main thread.
-    delete clientinfo.allowedKioskApps;
-    return;
-    /* eslint-disable no-unreachable */
     const det = evaluateWindowsKioskDetection();
     if (!det.runningInCage) {
         log.info('windowsKioskSetup @ syncAllowedKioskApps: skip — runningInCage=false');
@@ -617,7 +606,6 @@ export function syncAllowedKioskAppsClientinfo(clientinfo) {
         log.info(`windowsKioskSetup @ syncAllowedKioskApps: clientinfo payload — mdmPolicyReadable=${a.mdmPolicyReadable} notInLauncherJson (${(a.notInLauncherJson || []).length}): ${(a.notInLauncherJson || []).join(' | ') || '(none)'}`);
     }
     log.info('windowsKioskSetup @ syncAllowedKioskApps: attached allowedKioskApps to clientinfo for teacher update');
-    /* eslint-enable no-unreachable */
 }
 
 /** Win Assigned Access only: strict {"apps":[{"name","path"},...]} from install-windows-kiosk.ps1. */
