@@ -8,7 +8,7 @@
         <span class="fs-4 align-middle me-2" @click="handleClick">Next-Exam</span>
         <span v-if="cageLauncherApps.length" class="d-inline-flex align-items-center flex-wrap gap-2 cage-launcher-group">
             <button v-for="app in cageLauncherApps" :key="app.path" type="button"
-                    class="btn btn-outline-cyan btn-sm mt-1 px-3"
+                    class="btn btn-outline-cyan btn-sm mt-0 px-3"
                     @click="launchCageApp(app.path)">{{ app.name }}</button>
         </span>
     </span>
