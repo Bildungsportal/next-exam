@@ -152,7 +152,10 @@ function getCurrentUserSid() {
 /** SID written at provisioning; blocks renaming another account to next-exam-kiosk. */
 function isProvisionedKioskAccountSid() {
     const current = getCurrentUserSid();
-    if (!current || !existsSync(KIOSK_ACCOUNT_SID_MARKER)) return false;
+    if (!current) return false;
+    if (!existsSync(KIOSK_ACCOUNT_SID_MARKER)) {
+        return existsSync(KIOSK_PROVISION_MARKER);
+    }
     try {
         return readFileSync(KIOSK_ACCOUNT_SID_MARKER, 'utf8').trim() === current;
     } catch {
@@ -160,11 +163,11 @@ function isProvisionedKioskAccountSid() {
     }
 }
 
-/** Multi-app AA applies RestrictRun + AssignedAccess_* allow-list entries at kiosk logon. */
+/** Multi-app AA creates Explorer\RestrictRun\AssignedAccess_* allow-list values at logon. */
 function hasAssignedAccessRestrictRunSession() {
     try {
         execSync(
-            'powershell.exe -NoProfile -NonInteractive -Command "& { $e=\'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\'; if ((Get-ItemProperty -LiteralPath $e -Name RestrictRun -ErrorAction SilentlyContinue).RestrictRun -ne 1) { exit 1 }; $sub=Join-Path $e \'RestrictRun\'; if (-not (Test-Path -LiteralPath $sub)) { exit 1 }; if (-not @(Get-ChildItem -LiteralPath $sub | Where-Object { $_.PSChildName -like \'AssignedAccess_*\'}).Count) { exit 1 } }"',
+            'powershell.exe -NoProfile -NonInteractive -Command "& { $sub=\'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\RestrictRun\'; if (-not (Test-Path -LiteralPath $sub)) { exit 1 }; if (-not @(Get-ChildItem -LiteralPath $sub -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -like \'AssignedAccess_*\' }).Count) { exit 1 } }"',
             { stdio: ['ignore', 'ignore', 'ignore'], timeout: 8000 }
         );
         return true;

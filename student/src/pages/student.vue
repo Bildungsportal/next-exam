@@ -361,6 +361,7 @@ export default {
             platformKiosk: {
                 cageInstalled: false,
                 runningInCage: false,
+                isWindowsKioskUser: false,
                 cageKioskAppImageInstalled: false,
                 cageKioskDesktopInstalled: false,
                 needsCageKioskSetup: false,
@@ -580,9 +581,11 @@ export default {
         async maybeShowWinKioskSessionInfo() {
             const k = this.platformKiosk;
             if (!isElectronWindow(window) || this.config.development) return;
-            if (!k.runningInCage || k.displayServer !== 'windows') return;
+            const winKioskHint = k.displayServer === 'windows' && (k.runningInCage || k.isWindowsKioskUser);
+            if (!winKioskHint) return;
+            if (this.activeDialog) return;
             if (sessionStorage.getItem('next-exam-win-kiosk-session-info') === '1') return;
-            sessionStorage.setItem('next-exam-win-kiosk-session-info', '1');
+            if (this.hostip?.availableInterfaces?.length > 1 && !this.hostip?.preferredInterface) return;
             await this.$swal.fire({
                 title: this.$t('student.winKioskSessionInfoTitle'),
                 html: this.$t('student.winKioskSessionInfoText'),
@@ -590,6 +593,7 @@ export default {
                 confirmButtonText: this.$t('student.ok'),
                 showCancelButton: false,
             });
+            sessionStorage.setItem('next-exam-win-kiosk-session-info', '1');
         },
 
         async launchCageApp(exePath) {
@@ -669,6 +673,7 @@ export default {
                     this.safeAssign('hostip', updated);
                 }
                 this.activeDialog = false;
+                void this.maybeShowWinKioskSessionInfo();
             });
         },
 
@@ -1392,6 +1397,8 @@ export default {
             if (!hasIp) return;
             if (this.hostip?.availableInterfaces?.length > 1 && !this.hostip?.preferredInterface) {
                 this.selectPreferredInterface();
+            } else {
+                void this.maybeShowWinKioskSessionInfo();
             }
             if (this.clientinfo.token) return;   // stop spamming the api if already connected
 
@@ -1788,7 +1795,6 @@ export default {
             //     ];
             // }
             await this.maybeOfferCageKioskSetup();
-            await this.maybeShowWinKioskSessionInfo();
         }
 
         // Focus username input field when component is mounted

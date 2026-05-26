@@ -67,6 +67,7 @@ import {
 } from './cageDetect.js';
 import {
     detectRunningInWindowsKiosk,
+    isWindowsKioskOsUser,
     detectWindowsKioskInstalled,
     detectWindowsKioskUserExists,
     needsWindowsKioskSetup,
@@ -197,6 +198,7 @@ class IpcHandler {
                 return {
                     cageInstalled: detectWindowsKioskUserExists(),
                     runningInCage: detectRunningInWindowsKiosk(),
+                    isWindowsKioskUser: isWindowsKioskOsUser(),
                     cageKioskAppImageInstalled: detectWindowsKioskInstalled(),
                     cageKioskDesktopInstalled: installed,
                     needsCageKioskSetup: needsWindowsKioskSetup(),
