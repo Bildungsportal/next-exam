@@ -406,20 +406,26 @@ function isKioskProfileState128() {
 
 /** Win AA kiosk session: correct OS user + live AA session + provisioned SID (username alone is never enough). */
 export function detectRunningInWindowsKiosk() {
+    // DIAGNOSE: detection temporarily disabled to isolate Windows renderer launch-failed crash.
+    // If app starts with this no-op, the kiosk detection code path is the culprit; if it still
+    // crashes, the cause is elsewhere. Re-enable by restoring the body below.
     if (process.platform !== 'win32') return false;
-    return evaluateWindowsKioskDetection().runningInCage;
+    return false;
+    // return evaluateWindowsKioskDetection().runningInCage;
 }
 
 /** Startup log lines for Win Assigned Access detection (electron-main platform block). */
 export function getWindowsKioskDetectionLogLines() {
+    // DIAGNOSE: detection temporarily disabled — see detectRunningInWindowsKiosk above.
     if (process.platform !== 'win32') return [];
-    const d = evaluateWindowsKioskDetection();
-    logWindowsKioskDetection('startup', d);
-    return [
-        `main: Win Assigned Access kiosk: runningInCage=${d.runningInCage} skipElectronKiosk=${d.runningInCage}`,
-        `main: Win AA check: kioskOsUser=${d.kioskOsUser} sid=${d.sid || 'empty'} aaProof=${d.aaProof} (rrActive=${d.assignedAccessActive} mdmConfigured=${d.mdm.configured} shellMatch=${d.winlogonShellMatch}) provisionedSid=${d.provisionedSid} profileState128=${d.profileState128} profileStateDword=${d.profileStateDword ?? 'n/a'}`,
-        `main: Win AA setup: provisionComplete=${detectWindowsKioskProvisionComplete()} bundleInstalled=${detectWindowsKioskInstalled()} needsSetup=${needsWindowsKioskSetup()}`,
-    ];
+    return ['main: Win AA detection DISABLED (diagnose: renderer launch-failed)'];
+    // const d = evaluateWindowsKioskDetection();
+    // logWindowsKioskDetection('startup', d);
+    // return [
+    //     `main: Win Assigned Access kiosk: runningInCage=${d.runningInCage} skipElectronKiosk=${d.runningInCage}`,
+    //     `main: Win AA check: kioskOsUser=${d.kioskOsUser} sid=${d.sid || 'empty'} aaProof=${d.aaProof} (rrActive=${d.assignedAccessActive} mdmConfigured=${d.mdm.configured} shellMatch=${d.winlogonShellMatch}) provisionedSid=${d.provisionedSid} profileState128=${d.profileState128} profileStateDword=${d.profileStateDword ?? 'n/a'}`,
+    //     `main: Win AA setup: provisionComplete=${detectWindowsKioskProvisionComplete()} bundleInstalled=${detectWindowsKioskInstalled()} needsSetup=${needsWindowsKioskSetup()}`,
+    // ];
 }
 
 /** True when the full app bundle was copied to C:\NextExam (launch exe present). */
