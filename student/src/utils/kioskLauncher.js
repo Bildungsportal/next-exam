@@ -30,7 +30,7 @@ export function filterKioskLauncherButtons(apps) {
     });
 }
 
-/** Win Assigned Access session only — reads C:\\NextExam\\kiosk-launcher-apps.json via IPC. */
+/** Win Assigned Access session — reads C:\\NextExam\\kiosk-launcher-apps.json via IPC. */
 export async function loadWinKioskLauncherApps(signalBridge) {
     if (!isElectronWindow(window)) return [];
     const k = await getLinuxKioskInfo(signalBridge);

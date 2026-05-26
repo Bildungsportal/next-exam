@@ -68,11 +68,14 @@ import {
 import {
     detectRunningInWindowsKiosk,
     isWindowsKioskOsUser,
+    isWindowsAssignedAccessSessionActive,
     detectWindowsKioskInstalled,
     detectWindowsKioskUserExists,
     needsWindowsKioskSetup,
     initiateKioskSetup as initiateWindowsKioskSetup,
     readKioskLauncherApps,
+    readKioskSystemAllowedApps,
+    syncAllowedKioskAppsClientinfo,
     launchKioskAllowedApp,
 } from './win/windowsKioskSetup.js';
 
@@ -199,6 +202,7 @@ class IpcHandler {
                     cageInstalled: detectWindowsKioskUserExists(),
                     runningInCage: detectRunningInWindowsKiosk(),
                     isWindowsKioskUser: isWindowsKioskOsUser(),
+                    assignedAccessActive: isWindowsAssignedAccessSessionActive(),
                     cageKioskAppImageInstalled: detectWindowsKioskInstalled(),
                     cageKioskDesktopInstalled: installed,
                     needsCageKioskSetup: needsWindowsKioskSetup(),
@@ -229,6 +233,10 @@ class IpcHandler {
 
         // channel name kept for renderer compatibility; win32 routes to UAC + PowerShell payload.
         ipcMain.handle('get-kiosk-launcher-apps', () => (process.platform === 'win32' ? readKioskLauncherApps() : []));
+
+        ipcMain.handle('get-kiosk-system-allowed-apps', () => (
+            process.platform === 'win32' ? readKioskSystemAllowedApps() : { ok: false, error: 'win32 only' }
+        ));
 
         ipcMain.handle('launch-kiosk-allowed-app', (_event, exePath) => (
             process.platform === 'win32' ? launchKioskAllowedApp(exePath) : { ok: false, error: 'win32 only' }
@@ -1443,6 +1451,7 @@ class IpcHandler {
          */ 
         ipcMain.handle('getinfoasync', async (event) => {   
             syncClientDisplayInfo(this.multicastClient.clientinfo);
+            syncAllowedKioskAppsClientinfo(this.multicastClient.clientinfo);
             let serverstatus = false   
             // serverstatus object is only passed to the exam window at the start of the exam for base settings
             // all further updates via the serverstatus object are read in the communication handler and applied to the clientinfo object as needed

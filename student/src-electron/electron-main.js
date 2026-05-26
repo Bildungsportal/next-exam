@@ -20,6 +20,8 @@
  * This is the ELECTRON main file that actually opens the electron window
  */
 import platformDispatcher from './main/scripts/platformDispatcher.js';
+import { getLinuxCageDetectionLogLines } from './main/scripts/cageDetect.js';
+import { getWindowsKioskDetectionLogLines } from './main/scripts/win/windowsKioskSetup.js';
 import chalk from 'chalk';
 import log from 'electron-log';
 import { app, BrowserWindow, powerSaveBlocker, nativeTheme, globalShortcut, Menu, dialog, session, desktopCapturer } from 'electron'
@@ -102,6 +104,8 @@ log.debug(`main: OS: ${process.platform} ${process.arch}`)
 log.debug(`main: Arch: ${process.arch}`)
 log.debug(`main: Desktop: ${platformDispatcher.desktopName}`)
 log.debug(`main: Display server: ${platformDispatcher.displayServer}`)
+for (const line of getLinuxCageDetectionLogLines()) log.debug(line);
+for (const line of getWindowsKioskDetectionLogLines()) log.debug(line);
 if (platformDispatcher.runningUnderMacRosetta) {
     log.warn('main: Intel (x64) build running under Rosetta on Apple Silicon — install the arm64 build');
 }

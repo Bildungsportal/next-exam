@@ -36,7 +36,7 @@ import { examApiFetch } from '../../../../shared/examApiFetch.js'
 import languageToolServer from './lt-server.js';
 import { setClientFocusLock, clearClientFocusLock } from './focusLockState.js';
 import { syncClientDisplayInfo } from './displayInfo.js';
-import { detectRunningInCage } from './cageDetect.js';
+import { syncAllowedKioskAppsClientinfo } from './win/windowsKioskSetup.js';
 import qemuService from './qemuService.js';
 import { checkQemuAvailability } from '../../../../shared/qemuAvailability.js';
 import { pickLocalVmGroupConfig } from '../../../../shared/localVmDisplayResolutions.js';
@@ -300,8 +300,8 @@ import {
 
     async requestUpdate(){
         syncClientDisplayInfo(this.multicastClient.clientinfo);
-        this.multicastClient.clientinfo.isRunningInCage =
-            process.platform === 'linux' ? detectRunningInCage() : false;
+        this.multicastClient.clientinfo.isRunningInCage = platformDispatcher.runningInCage;
+        syncAllowedKioskAppsClientinfo(this.multicastClient.clientinfo);
 
         this.timer++   // we use timer to time loops with different intervals without introducing new unneccesary schedulers
         if (this.timer % 20 === 0 ){  // run every 20*5 (updateloop) seconds

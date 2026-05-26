@@ -163,11 +163,12 @@ function isProvisionedKioskAccountSid() {
     }
 }
 
-/** Multi-app AA creates Explorer\RestrictRun\AssignedAccess_* allow-list values at logon. */
-function hasAssignedAccessRestrictRunSession() {
+/** True when AA applied RestrictRun allow-list values to this session (AA actually running). */
+export function isWindowsAssignedAccessSessionActive() {
+    if (process.platform !== 'win32') return false;
     try {
         execSync(
-            'powershell.exe -NoProfile -NonInteractive -Command "& { $sub=\'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\RestrictRun\'; if (-not (Test-Path -LiteralPath $sub)) { exit 1 }; if (-not @(Get-ChildItem -LiteralPath $sub -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -like \'AssignedAccess_*\' }).Count) { exit 1 } }"',
+            'powershell.exe -NoProfile -NonInteractive -Command "& { $rk=\'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\RestrictRun\'; if (-not (Test-Path -LiteralPath $rk)) { exit 1 }; $props = Get-ItemProperty -LiteralPath $rk; if (-not @(($props.PSObject.Properties | Where-Object { $_.Name -like \'AssignedAccess_*\' })).Count) { exit 1 } }"',
             { stdio: ['ignore', 'ignore', 'ignore'], timeout: 8000 }
         );
         return true;
@@ -191,13 +192,26 @@ function isKioskProfileState128() {
     }
 }
 
-/** True only in an active Assigned Access session for the provisioned kiosk account. */
+/** Win AA kiosk session: correct OS user + live AA session + provisioned SID (username alone is never enough). */
 export function detectRunningInWindowsKiosk() {
     if (!isWindowsKioskOsUser()) return false;
+    if (!isWindowsAssignedAccessSessionActive()) return false;
     if (!isProvisionedKioskAccountSid()) return false;
-    if (!hasAssignedAccessRestrictRunSession()) return false;
     if (!isKioskProfileState128()) return false;
     return true;
+}
+
+/** Startup log lines for Win Assigned Access detection (electron-main platform block). */
+export function getWindowsKioskDetectionLogLines() {
+    if (process.platform !== 'win32') return [];
+    const osUser = isWindowsKioskOsUser();
+    const aaActive = isWindowsAssignedAccessSessionActive();
+    const inCage = detectRunningInWindowsKiosk();
+    return [
+        `main: Win Assigned Access kiosk: runningInCage=${inCage} skipElectronKiosk=${inCage}`,
+        `main: Win AA check: kioskOsUser=${osUser} assignedAccessActive=${aaActive} provisionedSid=${isProvisionedKioskAccountSid()} profileState128=${isKioskProfileState128()}`,
+        `main: Win AA setup: provisionComplete=${detectWindowsKioskProvisionComplete()} bundleInstalled=${detectWindowsKioskInstalled()} needsSetup=${needsWindowsKioskSetup()}`,
+    ];
 }
 
 /** True when the full app bundle was copied to C:\NextExam (launch exe present). */
@@ -230,6 +244,126 @@ export function detectWindowsKioskUserExists() {
 /** Drop main exam exe from launcher bar entries (autolaunch only, no button). */
 function withoutMainExamLauncherApps(list) {
     return list.filter((a) => !/next-exam-student/i.test(a.name || '') && !/next-exam-student\.exe$/i.test(a.path || ''));
+}
+
+/** Run a PowerShell script and parse its JSON stdout (UTF-16LE -EncodedCommand). */
+function runPowerShellJson(script, timeoutMs = 15000) {
+    const b64 = Buffer.from(script, 'utf16le').toString('base64');
+    const out = execSync(`powershell.exe -NoProfile -NonInteractive -EncodedCommand ${b64}`, {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+        timeout: timeoutMs,
+    });
+    return JSON.parse(out.trim());
+}
+
+/** Paths from kiosk-launcher-apps.json (install-time UI list), unfiltered. */
+function readKioskLauncherJsonPathsRaw() {
+    if (!existsSync(KIOSK_LAUNCHER_APPS_JSON)) return [];
+    try {
+        const { apps } = JSON.parse(readFileSync(KIOSK_LAUNCHER_APPS_JSON, 'utf8'));
+        if (!Array.isArray(apps)) return [];
+        return apps.filter((e) => e?.path).map((e) => path.resolve(String(e.path)));
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * Live Assigned Access allow-list from the OS (kiosk user, no admin): RestrictRun + MDM XML when readable.
+ * Use to detect apps an admin added to policy but not in kiosk-launcher-apps.json (e.g. Start pins).
+ */
+export function readKioskSystemAllowedApps() {
+    if (process.platform !== 'win32' || !isWindowsKioskOsUser()) {
+        return { ok: false, error: 'win32 kiosk user only' };
+    }
+    const ps = `
+$ErrorActionPreference = 'SilentlyContinue'
+$restrictRun = @()
+$sub = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\RestrictRun'
+if (Test-Path -LiteralPath $sub) {
+  $props = Get-ItemProperty -LiteralPath $sub
+  $restrictRun = @($props.PSObject.Properties | Where-Object { $_.Name -like 'AssignedAccess_*' } | ForEach-Object { [string]$_.Value })
+}
+$mdmOk = $false
+$desktopPaths = [System.Collections.ArrayList]@()
+$aumids = [System.Collections.ArrayList]@()
+try {
+  Add-Type -AssemblyName System.Web
+  $obj = Get-CimInstance -Namespace 'root\\cimv2\\mdm\\dmmap' -ClassName 'MDM_AssignedAccess' -ErrorAction Stop | Select-Object -First 1
+  if ($obj -and $obj.Configuration) {
+    $mdmOk = $true
+    $xml = [System.Web.HttpUtility]::HtmlDecode([string]$obj.Configuration)
+    foreach ($m in [regex]::Matches($xml, 'DesktopAppPath="([^"]+)"')) {
+      [void]$desktopPaths.Add([Environment]::ExpandEnvironmentVariables($m.Groups[1].Value))
+    }
+    foreach ($m in [regex]::Matches($xml, 'AppUserModelId="([^"]+)"')) {
+      [void]$aumids.Add($m.Groups[1].Value)
+    }
+  }
+} catch {}
+@{
+  ok = $true
+  restrictRunExeNames = @($restrictRun | Sort-Object -Unique)
+  mdmOk = $mdmOk
+  mdmDesktopPaths = @($desktopPaths | Sort-Object -Unique)
+  mdmAppUserModelIds = @($aumids | Sort-Object -Unique)
+} | ConvertTo-Json -Compress -Depth 6
+`;
+    try {
+        const data = runPowerShellJson(ps);
+        const launcherJsonPaths = readKioskLauncherJsonPathsRaw();
+        const jsonNorm = new Set(launcherJsonPaths.map((p) => p.toLowerCase()));
+        const mdmDesktopPaths = (data.mdmDesktopPaths || []).map((p) => String(p));
+        const mdmPathsNotInLauncherJson = mdmDesktopPaths.filter((p) => !jsonNorm.has(path.resolve(p).toLowerCase()));
+        if (mdmPathsNotInLauncherJson.length) {
+            log.warn(`windowsKioskSetup: ${mdmPathsNotInLauncherJson.length} MDM AllowedApp path(s) not in kiosk-launcher-apps.json`);
+        }
+        return {
+            ok: true,
+            restrictRunExeNames: data.restrictRunExeNames || [],
+            mdmOk: !!data.mdmOk,
+            mdmDesktopPaths,
+            mdmAppUserModelIds: data.mdmAppUserModelIds || [],
+            launcherJsonPaths,
+            mdmPathsNotInLauncherJson,
+        };
+    } catch (err) {
+        log.warn('windowsKioskSetup: readKioskSystemAllowedApps failed', err);
+        return { ok: false, error: err.message || String(err) };
+    }
+}
+
+const ALLOWED_KIOSK_APPS_REFRESH_MS = 60_000;
+let allowedKioskAppsCache = null;
+let allowedKioskAppsCachedAt = 0;
+
+/** Attach live OS allow-list to clientinfo for teacher /update (Win AA session only). */
+export function syncAllowedKioskAppsClientinfo(clientinfo) {
+    if (!clientinfo || process.platform !== 'win32') return;
+    if (!detectRunningInWindowsKiosk()) {
+        delete clientinfo.allowedKioskApps;
+        allowedKioskAppsCache = null;
+        allowedKioskAppsCachedAt = 0;
+        return;
+    }
+    const now = Date.now();
+    if (!allowedKioskAppsCache || now - allowedKioskAppsCachedAt >= ALLOWED_KIOSK_APPS_REFRESH_MS) {
+        const data = readKioskSystemAllowedApps();
+        if (data.ok) {
+            allowedKioskAppsCache = {
+                restrictRunExeNames: data.restrictRunExeNames,
+                desktopPaths: data.mdmDesktopPaths,
+                appUserModelIds: data.mdmAppUserModelIds,
+                mdmPolicyReadable: data.mdmOk,
+                notInLauncherJson: data.mdmPathsNotInLauncherJson,
+            };
+        } else {
+            allowedKioskAppsCache = { error: data.error || 'read failed' };
+        }
+        allowedKioskAppsCachedAt = now;
+    }
+    clientinfo.allowedKioskApps = { ...allowedKioskAppsCache, collectedAt: allowedKioskAppsCachedAt };
 }
 
 /** Win Assigned Access only: strict {"apps":[{"name","path"},...]} from install-windows-kiosk.ps1. */

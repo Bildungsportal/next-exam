@@ -362,6 +362,7 @@ export default {
                 cageInstalled: false,
                 runningInCage: false,
                 isWindowsKioskUser: false,
+                assignedAccessActive: false,
                 cageKioskAppImageInstalled: false,
                 cageKioskDesktopInstalled: false,
                 needsCageKioskSetup: false,
@@ -581,19 +582,18 @@ export default {
         async maybeShowWinKioskSessionInfo() {
             const k = this.platformKiosk;
             if (!isElectronWindow(window) || this.config.development) return;
-            const winKioskHint = k.displayServer === 'windows' && (k.runningInCage || k.isWindowsKioskUser);
-            if (!winKioskHint) return;
+            if (!k.runningInCage || k.displayServer !== 'windows') return;
             if (this.activeDialog) return;
             if (sessionStorage.getItem('next-exam-win-kiosk-session-info') === '1') return;
             if (this.hostip?.availableInterfaces?.length > 1 && !this.hostip?.preferredInterface) return;
+            sessionStorage.setItem('next-exam-win-kiosk-session-info', '1');
             await this.$swal.fire({
                 title: this.$t('student.winKioskSessionInfoTitle'),
                 html: this.$t('student.winKioskSessionInfoText'),
                 icon: 'info',
-                confirmButtonText: this.$t('student.ok'),
+                confirmButtonText: this.$t('general.ok'),
                 showCancelButton: false,
             });
-            sessionStorage.setItem('next-exam-win-kiosk-session-info', '1');
         },
 
         async launchCageApp(exePath) {
