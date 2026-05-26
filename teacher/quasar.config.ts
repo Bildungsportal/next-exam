@@ -374,7 +374,8 @@ export default defineConfig(( ctx: any ) => {
           target: winEbTarget,
           artifactName: artifactNamePattern,
           files: ['**/*', '!public/qemu/win/**', '!public/qemu/lin/**', '!public/qemu/mac/**'],
-          // electron-builder 26: signtoolOptions enables signing; certificate is provided via CSC_LINK/CSC_KEY_PASSWORD (.p12 from CI secret)
+          // SIGN env (SIGN !== 'false'): signExecutable gates signtool; CSC_LINK/CSC_KEY_PASSWORD supply the cert when enabled
+          signExecutable: signEnabled,
           ...(signEnabled && {
             signtoolOptions: { signingHashAlgorithms: ['sha256'] },
           }),

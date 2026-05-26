@@ -83,13 +83,11 @@ jobs:
           npm install
           mkdir dist
 
-      # Signatur aus: SIGN=false (quasar.config.ts). Release: Zeile entfernen oder SIGN=true.
       - name: Student build
         working-directory: ./student
         env:
           CSC_LINK: "file://../certificate.p12"
           CSC_KEY_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          SIGN: "false"
         run: npm run build:win:portable
 
       - name: Upload Student Windows x64 Portable EXE
