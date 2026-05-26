@@ -570,6 +570,11 @@ let allowedKioskAppsCachedAt = 0;
 /** Attach live OS allow-list to clientinfo for teacher /update (Win AA session only). */
 export function syncAllowedKioskAppsClientinfo(clientinfo) {
     if (!clientinfo || process.platform !== 'win32') return;
+    // DIAGNOSE: detection no-op (see detectRunningInWindowsKiosk above) → skip the expensive
+    // reg.exe + PowerShell spawns that run per UDP heartbeat and block the main thread.
+    delete clientinfo.allowedKioskApps;
+    return;
+    /* eslint-disable no-unreachable */
     const det = evaluateWindowsKioskDetection();
     if (!det.runningInCage) {
         log.info('windowsKioskSetup @ syncAllowedKioskApps: skip — runningInCage=false');
@@ -612,6 +617,7 @@ export function syncAllowedKioskAppsClientinfo(clientinfo) {
         log.info(`windowsKioskSetup @ syncAllowedKioskApps: clientinfo payload — mdmPolicyReadable=${a.mdmPolicyReadable} notInLauncherJson (${(a.notInLauncherJson || []).length}): ${(a.notInLauncherJson || []).join(' | ') || '(none)'}`);
     }
     log.info('windowsKioskSetup @ syncAllowedKioskApps: attached allowedKioskApps to clientinfo for teacher update');
+    /* eslint-enable no-unreachable */
 }
 
 /** Win Assigned Access only: strict {"apps":[{"name","path"},...]} from install-windows-kiosk.ps1. */
