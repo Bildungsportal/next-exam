@@ -146,13 +146,13 @@ function getCurrentUserSid() {
     if (process.platform !== 'win32') return '';
     const userProfile = (process.env.USERPROFILE || '').trim().toLowerCase();
     if (userProfile) {
-        const listOut = runRegQuery('HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList');
+        const listOut = String(runRegQuery('HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList') || '');
         const sids = [...listOut.matchAll(/(S-1-5-21-[0-9-]+)/g)].map((m) => m[1]);
         const seen = new Set();
         for (const sid of sids) {
             if (seen.has(sid)) continue;
             seen.add(sid);
-            const pathOut = runRegQuery(`HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\${sid}`, 'ProfileImagePath');
+            const pathOut = String(runRegQuery(`HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\${sid}`, 'ProfileImagePath') || '');
             // reg.exe output: "    ProfileImagePath    REG_EXPAND_SZ    C:\Users\next-exam-kiosk"
             const m = pathOut.match(/REG_(?:EXPAND_)?SZ\s+(.+?)\s*$/im);
             const profilePath = m ? m[1].trim().toLowerCase() : '';
@@ -161,22 +161,23 @@ function getCurrentUserSid() {
     }
     try {
         const out = execSync('whoami /user', { encoding: 'utf8', stdio: ['pipe', 'ignore', 'ignore'], timeout: 8000 });
-        const m = out.match(/S-1-\d+(-\d+)+/);
+        const m = String(out || '').match(/S-1-\d+(-\d+)+/);
         return m ? m[0].trim() : '';
     } catch {
         return '';
     }
 }
 
-/** reg.exe query; returns stdout (empty if key/value missing). */
+/** reg.exe query; returns stdout string ('' if key/value missing or stdout is empty/null). */
 function runRegQuery(keyPath, valueName = '') {
     const args = valueName
         ? `query "${keyPath}" /v ${valueName}`
         : `query "${keyPath}"`;
     try {
-        return execSync(`reg.exe ${args}`, { encoding: 'utf8', stdio: ['pipe', 'ignore', 'ignore'], timeout: 8000 });
+        const out = execSync(`reg.exe ${args}`, { encoding: 'utf8', stdio: ['pipe', 'ignore', 'ignore'], timeout: 8000 });
+        return typeof out === 'string' ? out : (out == null ? '' : String(out));
     } catch (err) {
-        return String(err.stdout || err.message || '');
+        return err && err.stdout != null ? String(err.stdout) : '';
     }
 }
 
