@@ -1,6 +1,6 @@
 /**
  * Windows counterpart to Linux Cage kiosk setup.
- * - detectRunningInWindowsKiosk(): kiosk OS user + provisioned SID + active Assigned Access session
+ * - detectRunningInWindowsKiosk(): kiosk OS user + provisioned account + (AA signal or profile-128)
  * - detectWindowsKioskInstalled(): true when provisioning artifacts exist
  * - needsWindowsKioskSetup(): inverse, used by UI install button
  * - initiateKioskSetup(appPath): platform switch + UAC elevation + PowerShell payload
@@ -315,17 +315,23 @@ function evaluateWindowsKioskDetectionUncached() {
             : `sid mismatch file=${sidMarkerValue || '(empty)'} current=${sid}`;
     }
 
-    const profileKey = sid ? `HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\${sid}` : '';
+    // When live SID lookup fails (reg/whoami blocked), use install-time marker for ProfileList reads.
+    const sidForProfile = sid || sidMarkerValue;
+    const profileKey = sidForProfile ? `HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\${sidForProfile}` : '';
     const profileStateOut = profileKey ? runRegQuery(profileKey, 'State') : '';
     const profileStateDword = parseRegDword(profileStateOut);
     const profilePathOut = profileKey ? runRegQuery(profileKey, 'ProfileImagePath') : '';
     const profilePathMatch = /\\next-exam-kiosk\b/i.test(profilePathOut);
-    const profileState128 = profileStateDword === 128 || profilePathMatch;
+    const profileEnvMatch = /\\next-exam-kiosk$/i.test(
+        (process.env.USERPROFILE || os.homedir() || '').replace(/\//g, '\\'),
+    );
+    const profileState128 = profileStateDword === 128 || profilePathMatch || profileEnvMatch;
 
     // AA-presence proof: any of (live RestrictRun, MDM policy lists this user, Winlogon shell hijacked).
     // Two of three independent sources rule out forgery: MDM is admin-only, Winlogon Shell is AA-managed.
     const aaProof = assignedAccessActive || mdm.configured || winlogonShellMatch;
-    const runningInCage = kioskOsUser && profileState128 && provisionedSid && aaProof;
+    // Kiosk user + provisioned account + at least one live AA/profile signal (not all four mandatory).
+    const runningInCage = kioskOsUser && provisionedSid && (aaProof || profileState128);
 
     return {
         runningInCage,
@@ -352,6 +358,7 @@ function evaluateWindowsKioskDetectionUncached() {
         sidMarkerValue,
         profileStateDword: Number.isFinite(profileStateDword) ? profileStateDword : null,
         profilePathMatch,
+        profileEnvMatch,
         profileState128,
     };
 }
@@ -369,7 +376,7 @@ function logWindowsKioskDetection(label, d) {
     log.info(`windowsKioskSetup @ ${label}:   Winlogon Shell match → ${d.winlogonShellMatch} | reg: ${d.regSnippets.winlogonShellOut}`);
     log.info(`windowsKioskSetup @ ${label}: [provisionedSid] ${d.provisionedSid} — ${d.provisionedSidReason}`);
     log.info(`windowsKioskSetup @ ${label}:   markers provisionComplete=${d.provisionMarkerExists} sidFile=${d.sidMarkerExists} sidFileValue=${d.sidMarkerValue || 'n/a'}`);
-    log.info(`windowsKioskSetup @ ${label}: [profileState128] ${d.profileState128} stateDword=${d.profileStateDword ?? 'n/a'} profilePathMatch=${d.profilePathMatch}`);
+    log.info(`windowsKioskSetup @ ${label}: [profileState128] ${d.profileState128} stateDword=${d.profileStateDword ?? 'n/a'} profilePathMatch=${d.profilePathMatch} profileEnvMatch=${d.profileEnvMatch}`);
     log.info(`windowsKioskSetup @ ${label}:   reg State: ${d.regSnippets.profileStateOut}`);
     log.info(`windowsKioskSetup @ ${label}:   reg ProfileImagePath: ${d.regSnippets.profilePathOut}`);
 }
@@ -404,7 +411,7 @@ function isKioskProfileState128() {
     return evaluateWindowsKioskDetection().profileState128;
 }
 
-/** Win AA kiosk session: correct OS user + live AA session + provisioned SID (username alone is never enough). */
+/** Win AA kiosk session: kiosk OS user + provisioned account + AA signal or profile-128 (username alone never enough). */
 export function detectRunningInWindowsKiosk() {
     if (process.platform !== 'win32') return false;
     return evaluateWindowsKioskDetection().runningInCage;
