@@ -211,22 +211,53 @@ try {
 } catch {}
 @{ ok = [bool]$cfg; configuration = $cfg } | ConvertTo-Json -Compress -Depth 4
 `;
-    try {
-        const data = runPowerShellJson(ps, 8000);
-        const xml = String(data.configuration || '');
-        // <Account>COMPUTER\next-exam-kiosk</Account> — locale-independent, case-insensitive
-        const re = new RegExp(`<Account>[^<]*\\\\${KIOSK_USERNAME}<\\/Account>`, 'i');
-        const configured = !!xml && re.test(xml);
-        mdmAssignedAccessCache = { ok: !!data.ok, configured, reason: configured ? 'MDM AA policy lists kiosk user' : (data.ok ? 'MDM AA policy present but does not target kiosk user' : 'MDM_AssignedAccess CSP unreadable') };
-        return mdmAssignedAccessCache;
-    } catch (err) {
-        mdmAssignedAccessCache = { ok: false, configured: false, reason: `mdm read failed: ${err.message || err}` };
+    const data = runPowerShellJson(ps, 6000);
+    if (!data) {
+        mdmAssignedAccessCache = { ok: false, configured: false, reason: 'MDM_AssignedAccess CSP read failed or returned no data' };
         return mdmAssignedAccessCache;
     }
+    const xml = String(data.configuration || '');
+    // <Account>COMPUTER\next-exam-kiosk</Account> — locale-independent, case-insensitive
+    const re = new RegExp(`<Account>[^<]*\\\\${KIOSK_USERNAME}<\\/Account>`, 'i');
+    const configured = !!xml && re.test(xml);
+    mdmAssignedAccessCache = {
+        ok: !!data.ok,
+        configured,
+        reason: configured
+            ? 'MDM AA policy lists kiosk user'
+            : (data.ok ? 'MDM AA policy present but does not target kiosk user' : 'MDM_AssignedAccess CSP unreadable'),
+    };
+    return mdmAssignedAccessCache;
 }
 
-/** Full Win AA / kiosk detection snapshot (single reg/whoami pass). */
-function evaluateWindowsKioskDetection() {
+// Detection snapshot is expensive (multiple sync reg.exe spawns + one PowerShell spawn for MDM).
+// State=128, SID, MDM config, Winlogon Shell, username don't change within a session, and RestrictRun
+// is set at logon and stays — so cache aggressively. Called from per-tick syncAllowedKioskAppsClientinfo,
+// blocking the main thread on every UDP heartbeat → renderer can be killed for unresponsiveness.
+const DETECTION_CACHE_TTL_MS = 60_000;
+let detectionCache = null;
+let detectionCachedAt = 0;
+
+/** Full Win AA / kiosk detection snapshot (single reg/whoami pass, cached for DETECTION_CACHE_TTL_MS). */
+function evaluateWindowsKioskDetection({ force = false } = {}) {
+    if (process.platform !== 'win32') {
+        return { runningInCage: false, kioskOsUser: false, username: '', sid: '', assignedAccessActive: false,
+            aaCheck: {}, aaProof: false, mdm: { ok: false, configured: false, reason: 'non-win32' },
+            winlogonShellMatch: false, regSnippets: {}, provisionedSid: false, provisionedSidReason: 'non-win32',
+            provisionMarkerExists: false, sidMarkerExists: false, sidMarkerValue: '',
+            profileStateDword: null, profilePathMatch: false, profileState128: false };
+    }
+    const now = Date.now();
+    if (!force && detectionCache && now - detectionCachedAt < DETECTION_CACHE_TTL_MS) {
+        return detectionCache;
+    }
+    const snapshot = evaluateWindowsKioskDetectionUncached();
+    detectionCache = snapshot;
+    detectionCachedAt = now;
+    return snapshot;
+}
+
+function evaluateWindowsKioskDetectionUncached() {
     const username = (() => {
         try { return os.userInfo().username || ''; } catch { return ''; }
     })();
@@ -423,15 +454,28 @@ function withoutMainExamLauncherApps(list) {
     return list.filter((a) => !/next-exam-student/i.test(a.name || '') && !/next-exam-student\.exe$/i.test(a.path || ''));
 }
 
-/** Run a PowerShell script and parse its JSON stdout (UTF-16LE -EncodedCommand). */
+/**
+ * Run a PowerShell script and parse its JSON stdout (UTF-16LE -EncodedCommand).
+ * Caller-safe: returns null on any spawn/JSON failure instead of throwing — every call site
+ * lives in detection paths that run on the main thread and an uncaught throw kills the renderer.
+ */
 function runPowerShellJson(script, timeoutMs = 15000) {
-    const b64 = Buffer.from(script, 'utf16le').toString('base64');
-    const out = execSync(`powershell.exe -NoProfile -NonInteractive -EncodedCommand ${b64}`, {
-        encoding: 'utf8',
-        stdio: ['ignore', 'pipe', 'ignore'],
-        timeout: timeoutMs,
-    });
-    return JSON.parse(out.trim());
+    if (process.platform !== 'win32') return null;
+    try {
+        const b64 = Buffer.from(String(script), 'utf16le').toString('base64');
+        const out = execSync(`powershell.exe -NoProfile -NonInteractive -EncodedCommand ${b64}`, {
+            encoding: 'utf8',
+            stdio: ['ignore', 'pipe', 'ignore'],
+            timeout: timeoutMs,
+            maxBuffer: 8 * 1024 * 1024,
+        });
+        const text = String(out || '').trim();
+        if (!text) return null;
+        return JSON.parse(text);
+    } catch (err) {
+        log.warn(`runPowerShellJson: ${err && err.message ? err.message : err}`);
+        return null;
+    }
 }
 
 /** Paths from kiosk-launcher-apps.json (install-time UI list), unfiltered. */
@@ -491,7 +535,7 @@ try {
 } | ConvertTo-Json -Compress -Depth 6
 `;
     try {
-        const data = runPowerShellJson(ps);
+        const data = runPowerShellJson(ps) || {};
         const launcherJsonPaths = readKioskLauncherJsonPathsRaw();
         const jsonNorm = new Set(launcherJsonPaths.map((p) => p.toLowerCase()));
         const mdmDesktopPaths = (data.mdmDesktopPaths || []).map((p) => String(p));
