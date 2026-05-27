@@ -7,7 +7,7 @@
  *
  * Shares public field names with cage (runningInCage etc.) so renderer logic is unchanged.
  */
-import { execSync, spawn } from 'child_process';
+import { execFileSync, execSync, spawn } from 'child_process';
 import { existsSync, readFileSync, readdirSync, rmSync, unlinkSync } from 'fs';
 import path from 'path';
 import os from 'os';
@@ -137,44 +137,65 @@ export function isWindowsKioskOsUser() {
     }
 }
 
+/** Spawn a System32 exe directly (no cmd.exe wrapper — AA blocks cmd even when powershell is allowed). */
+function winSystem32ExecFile(exeName, args, timeoutMs = 8000) {
+    const exePath = path.join(process.env.windir || 'C:\\Windows', 'System32', exeName);
+    return execFileSync(exePath, args, {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+        timeout: timeoutMs,
+        windowsHide: true,
+    });
+}
+
+/** PowerShell from its real path (same as install-windows-kiosk.ps1 AllowedApps entry). */
+function winPowerShellExecFile(args, timeoutMs = 15000) {
+    const exePath = path.join(
+        process.env.windir || 'C:\\Windows',
+        'System32',
+        'WindowsPowerShell',
+        'v1.0',
+        'powershell.exe',
+    );
+    return execFileSync(exePath, args, {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+        timeout: timeoutMs,
+        windowsHide: true,
+    });
+}
+
 /**
- * Current user SID. Primary: reverse-lookup USERPROFILE in HKLM ProfileList (works under AA — whoami.exe
- * may be blocked by the AA allow-list, which silently returned '' and triggered the softer fallbacks).
- * Fallback: whoami /user (kept for diagnostics + non-AA sessions).
+ * Live session SID: whoami /user (token) first, then ProfileList+USERPROFILE via reg.exe (both must be AllowedApps under AA).
  */
 function getCurrentUserSid() {
     if (process.platform !== 'win32') return '';
-    const userProfile = (process.env.USERPROFILE || '').trim().toLowerCase();
-    if (userProfile) {
-        const listOut = String(runRegQuery('HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList') || '');
-        const sids = [...listOut.matchAll(/(S-1-5-21-[0-9-]+)/g)].map((m) => m[1]);
-        const seen = new Set();
-        for (const sid of sids) {
-            if (seen.has(sid)) continue;
-            seen.add(sid);
-            const pathOut = String(runRegQuery(`HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\${sid}`, 'ProfileImagePath') || '');
-            // reg.exe output: "    ProfileImagePath    REG_EXPAND_SZ    C:\Users\next-exam-kiosk"
-            const m = pathOut.match(/REG_(?:EXPAND_)?SZ\s+(.+?)\s*$/im);
-            const profilePath = m ? m[1].trim().toLowerCase() : '';
-            if (profilePath && profilePath === userProfile) return sid;
-        }
-    }
     try {
-        const out = execSync('whoami /user', { encoding: 'utf8', stdio: ['pipe', 'ignore', 'ignore'], timeout: 8000 });
+        const out = winSystem32ExecFile('whoami.exe', ['/user']);
         const m = String(out || '').match(/S-1-\d+(-\d+)+/);
-        return m ? m[0].trim() : '';
-    } catch {
-        return '';
+        if (m) return m[0].trim();
+    } catch { /* fall through to reg */ }
+    const userProfile = (process.env.USERPROFILE || '').trim().toLowerCase();
+    if (!userProfile) return '';
+    const listOut = String(runRegQuery('HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList') || '');
+    const sids = [...listOut.matchAll(/(S-1-5-21-[0-9-]+)/g)].map((m) => m[1]);
+    const seen = new Set();
+    for (const sid of sids) {
+        if (seen.has(sid)) continue;
+        seen.add(sid);
+        const pathOut = String(runRegQuery(`HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList\\${sid}`, 'ProfileImagePath') || '');
+        const pm = pathOut.match(/REG_(?:EXPAND_)?SZ\s+(.+?)\s*$/im);
+        const profilePath = pm ? pm[1].trim().toLowerCase() : '';
+        if (profilePath && profilePath === userProfile) return sid;
     }
+    return '';
 }
 
 /** reg.exe query; returns stdout string ('' if key/value missing or stdout is empty/null). */
 function runRegQuery(keyPath, valueName = '') {
-    const args = valueName
-        ? `query "${keyPath}" /v ${valueName}`
-        : `query "${keyPath}"`;
+    const args = valueName ? ['query', keyPath, '/v', valueName] : ['query', keyPath];
     try {
-        const out = execSync(`reg.exe ${args}`, { encoding: 'utf8', stdio: ['pipe', 'ignore', 'ignore'], timeout: 8000 });
+        const out = winSystem32ExecFile('reg.exe', args);
         return typeof out === 'string' ? out : (out == null ? '' : String(out));
     } catch (err) {
         return err && err.stdout != null ? String(err.stdout) : '';
@@ -194,40 +215,89 @@ function regSnippet(regOutput, maxLen = 280) {
     return String(regOutput || '').replace(/\r?\n/g, ' | ').replace(/\s+/g, ' ').trim().slice(0, maxLen) || '(empty)';
 }
 
-// MDM_AssignedAccess CSP read is the only forge-proof source of "AA is policy-configured for THIS user"
-// (set by elevated install-windows-kiosk.ps1; non-admin students can't write it). Costs one powershell.exe
-// spawn (~500ms), so cache per-process — config doesn't change at runtime without a reboot.
-let mdmAssignedAccessCache = null;
-function readMdmAssignedAccessForCurrentUser() {
-    if (process.platform !== 'win32') return { ok: false, configured: false, reason: 'non-win32' };
-    if (mdmAssignedAccessCache) return mdmAssignedAccessCache;
+// Live AA session: HKCU RestrictRun via Get-ItemProperty (reg.exe misses subkey values) + MDM CSP (install filter).
+let aaSessionSignalsCache = null;
+function readWindowsAaSessionSignals() {
+    if (process.platform !== 'win32') {
+        return {
+            restrictRunKeyHasAssignedAccess: false, explorerRestrictRunDwordIs1: false,
+            explorerKeyHasAssignedAccess: false, mdmOk: false, configuration: '', psFailed: true,
+        };
+    }
+    if (aaSessionSignalsCache) return aaSessionSignalsCache;
     const ps = `
 $ErrorActionPreference = 'SilentlyContinue'
+$rrSub = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\RestrictRun'
+$expKey = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer'
+$restrictRunHasAA = $false
+$explorerHasAA = $false
+$explorerRestrictRunDword = 0
+if (Test-Path -LiteralPath $rrSub) {
+  $props = Get-ItemProperty -LiteralPath $rrSub
+  $restrictRunHasAA = @($props.PSObject.Properties | Where-Object { $_.Name -like 'AssignedAccess_*' }).Count -gt 0
+}
+if (Test-Path -LiteralPath $expKey) {
+  $exp = Get-ItemProperty -LiteralPath $expKey
+  if ($null -ne $exp.RestrictRun) { $explorerRestrictRunDword = [int]$exp.RestrictRun }
+  $explorerHasAA = @($exp.PSObject.Properties | Where-Object { $_.Name -like 'AssignedAccess_*' }).Count -gt 0
+}
 $cfg = ''
+$mdmOk = $false
 try {
   Add-Type -AssemblyName System.Web | Out-Null
-  $obj = Get-CimInstance -Namespace 'root\\cimv2\\mdm\\dmmap' -ClassName 'MDM_AssignedAccess' -ErrorAction Stop | Select-Object -First 1
-  if ($obj -and $obj.Configuration) { $cfg = [System.Web.HttpUtility]::HtmlDecode([string]$obj.Configuration) }
+  $filter = "InstanceID='AssignedAccess' AND ParentID='./Vendor/MSFT/'"
+  $obj = Get-CimInstance -Namespace 'root\\cimv2\\mdm\\dmmap' -ClassName 'MDM_AssignedAccess' -Filter $filter -ErrorAction SilentlyContinue
+  if (-not $obj) {
+    $obj = Get-CimInstance -Namespace 'root\\cimv2\\mdm\\dmmap' -ClassName 'MDM_AssignedAccess' -ErrorAction SilentlyContinue | Select-Object -First 1
+  }
+  if ($obj -and $obj.Configuration) {
+    $mdmOk = $true
+    $cfg = [System.Web.HttpUtility]::HtmlDecode([string]$obj.Configuration)
+  }
 } catch {}
-@{ ok = [bool]$cfg; configuration = $cfg } | ConvertTo-Json -Compress -Depth 4
+@{
+  restrictRunHasAssignedAccess = $restrictRunHasAA
+  explorerRestrictRunDword = $explorerRestrictRunDword
+  explorerHasAssignedAccess = $explorerHasAA
+  mdmOk = $mdmOk
+  configuration = $cfg
+} | ConvertTo-Json -Compress
 `;
-    const data = runPowerShellJson(ps, 6000);
+    const data = runPowerShellJson(ps, 8000);
     if (!data) {
-        mdmAssignedAccessCache = { ok: false, configured: false, reason: 'MDM_AssignedAccess CSP read failed or returned no data' };
-        return mdmAssignedAccessCache;
+        aaSessionSignalsCache = {
+            restrictRunKeyHasAssignedAccess: false, explorerRestrictRunDwordIs1: false,
+            explorerKeyHasAssignedAccess: false, mdmOk: false, configuration: '', psFailed: true,
+        };
+        return aaSessionSignalsCache;
     }
-    const xml = String(data.configuration || '');
-    // <Account>COMPUTER\next-exam-kiosk</Account> — locale-independent, case-insensitive
+    aaSessionSignalsCache = {
+        restrictRunKeyHasAssignedAccess: !!data.restrictRunHasAssignedAccess,
+        explorerRestrictRunDwordIs1: data.explorerRestrictRunDword === 1,
+        explorerKeyHasAssignedAccess: !!data.explorerHasAssignedAccess,
+        mdmOk: !!data.mdmOk,
+        configuration: String(data.configuration || ''),
+        psFailed: false,
+    };
+    return aaSessionSignalsCache;
+}
+
+function readMdmAssignedAccessForCurrentUser() {
+    if (process.platform !== 'win32') return { ok: false, configured: false, reason: 'non-win32' };
+    const s = readWindowsAaSessionSignals();
+    if (s.psFailed) {
+        return { ok: false, configured: false, reason: 'AA session PS probe failed' };
+    }
+    const xml = s.configuration;
     const re = new RegExp(`<Account>[^<]*\\\\${KIOSK_USERNAME}<\\/Account>`, 'i');
     const configured = !!xml && re.test(xml);
-    mdmAssignedAccessCache = {
-        ok: !!data.ok,
+    return {
+        ok: s.mdmOk,
         configured,
         reason: configured
             ? 'MDM AA policy lists kiosk user'
-            : (data.ok ? 'MDM AA policy present but does not target kiosk user' : 'MDM_AssignedAccess CSP unreadable'),
+            : (s.mdmOk ? 'MDM AA policy present but does not target kiosk user' : 'MDM_AssignedAccess CSP unreadable'),
     };
-    return mdmAssignedAccessCache;
 }
 
 // Detection snapshot is expensive (multiple sync reg.exe spawns + one PowerShell spawn for MDM).
@@ -264,26 +334,18 @@ function evaluateWindowsKioskDetectionUncached() {
     const kioskOsUser = process.platform === 'win32' && username.toLowerCase() === KIOSK_USERNAME.toLowerCase();
     const sid = getCurrentUserSid();
 
-    const restrictRunKey = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\RestrictRun';
-    const explorerKey = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer';
-    const restrictRunOut = runRegQuery(restrictRunKey);
-    const explorerRestrictRunValueOut = runRegQuery(explorerKey, 'RestrictRun');
-    const explorerRestrictRunDword = parseRegDword(explorerRestrictRunValueOut);
-    const explorerOut = runRegQuery(explorerKey);
-
-    // Tightened: dropped the loose "any REG_SZ under RestrictRun" heuristic — it was too easy to satisfy
-    // (a single AssignedAccess_NN value name match is the actual signal AA writes at logon).
+    const aaSig = readWindowsAaSessionSignals();
     const aaCheck = {
-        restrictRunKeyHasAssignedAccess: /AssignedAccess_/i.test(restrictRunOut),
-        explorerRestrictRunDwordIs1: explorerRestrictRunDword === 1,
-        explorerKeyHasAssignedAccess: /AssignedAccess_/i.test(explorerOut),
+        restrictRunKeyHasAssignedAccess: aaSig.restrictRunKeyHasAssignedAccess,
+        explorerRestrictRunDwordIs1: aaSig.explorerRestrictRunDwordIs1,
+        explorerKeyHasAssignedAccess: aaSig.explorerKeyHasAssignedAccess,
     };
-    // Live-session signal: AA actually applied policies for this logon (RestrictRun is set by AA shell init).
-    const assignedAccessActive = aaCheck.restrictRunKeyHasAssignedAccess
-        || (aaCheck.explorerRestrictRunDwordIs1 && aaCheck.explorerKeyHasAssignedAccess);
-
-    // Authoritative MDM CSP check: AA is policy-configured for THIS user (forge-proof — admin-only write).
+    const assignedAccessActive = aaSig.restrictRunKeyHasAssignedAccess
+        || (aaSig.explorerRestrictRunDwordIs1 && aaSig.explorerKeyHasAssignedAccess);
     const mdm = readMdmAssignedAccessForCurrentUser();
+    const restrictRunOut = aaSig.psFailed ? '(ps failed)' : `AssignedAccess_*=${aaSig.restrictRunKeyHasAssignedAccess}`;
+    const explorerRestrictRunValueOut = aaSig.psFailed ? '(ps failed)' : `RestrictRun DWORD=${aaSig.explorerRestrictRunDwordIs1 ? 1 : 0}`;
+    const explorerOut = aaSig.psFailed ? '(ps failed)' : `Explorer AssignedAccess_*=${aaSig.explorerKeyHasAssignedAccess}`;
 
     // Winlogon Shell override: AA sets the kiosk app as the user's shell. Secondary confirmation that
     // the session is currently under AA control rather than a fake account that just happens to match.
@@ -298,21 +360,21 @@ function evaluateWindowsKioskDetectionUncached() {
     }
     let provisionedSid = false;
     let provisionedSidReason = '';
-    if (!sid) {
-        provisionedSid = kioskOsUser && provisionMarkerExists;
-        provisionedSidReason = provisionedSid
-            ? 'sid lookup (ProfileList + whoami) failed; fallback kiosk user + provision marker'
-            : 'sid lookup (ProfileList + whoami) failed';
-    } else if (!sidMarkerExists) {
-        provisionedSid = provisionMarkerExists;
-        provisionedSidReason = provisionedSid
-            ? 'no .kiosk-account-sid file; fallback provision marker'
-            : 'no .kiosk-account-sid and no provision marker';
-    } else {
+    if (sid && sidMarkerExists) {
         provisionedSid = sidMarkerValue === sid;
         provisionedSidReason = provisionedSid
-            ? 'current sid matches .kiosk-account-sid'
-            : `sid mismatch file=${sidMarkerValue || '(empty)'} current=${sid}`;
+            ? 'live sid matches .kiosk-account-sid'
+            : `live sid mismatch file=${sidMarkerValue || '(empty)'} current=${sid}`;
+    } else if (sid && !sidMarkerExists) {
+        provisionedSid = provisionMarkerExists;
+        provisionedSidReason = provisionedSid
+            ? 'live sid ok but no .kiosk-account-sid; fallback provision marker'
+            : 'live sid but no .kiosk-account-sid and no provision marker';
+    } else if (!sid) {
+        provisionedSid = kioskOsUser && provisionMarkerExists;
+        provisionedSidReason = provisionedSid
+            ? 'sid lookup (whoami + ProfileList) failed; fallback kiosk user + provision marker'
+            : 'sid lookup (whoami + ProfileList) failed';
     }
 
     // When live SID lookup fails (reg/whoami blocked), use install-time marker for ProfileList reads.
@@ -470,12 +532,7 @@ function runPowerShellJson(script, timeoutMs = 15000) {
     if (process.platform !== 'win32') return null;
     try {
         const b64 = Buffer.from(String(script), 'utf16le').toString('base64');
-        const out = execSync(`powershell.exe -NoProfile -NonInteractive -EncodedCommand ${b64}`, {
-            encoding: 'utf8',
-            stdio: ['ignore', 'pipe', 'ignore'],
-            timeout: timeoutMs,
-            maxBuffer: 8 * 1024 * 1024,
-        });
+        const out = winPowerShellExecFile(['-NoProfile', '-NonInteractive', '-EncodedCommand', b64], timeoutMs);
         const text = String(out || '').trim();
         if (!text) return null;
         return JSON.parse(text);
@@ -521,7 +578,11 @@ $desktopPaths = [System.Collections.ArrayList]@()
 $aumids = [System.Collections.ArrayList]@()
 try {
   Add-Type -AssemblyName System.Web
-  $obj = Get-CimInstance -Namespace 'root\\cimv2\\mdm\\dmmap' -ClassName 'MDM_AssignedAccess' -ErrorAction Stop | Select-Object -First 1
+  $filter = "InstanceID='AssignedAccess' AND ParentID='./Vendor/MSFT/'"
+  $obj = Get-CimInstance -Namespace 'root\\cimv2\\mdm\\dmmap' -ClassName 'MDM_AssignedAccess' -Filter $filter -ErrorAction SilentlyContinue
+  if (-not $obj) {
+    $obj = Get-CimInstance -Namespace 'root\\cimv2\\mdm\\dmmap' -ClassName 'MDM_AssignedAccess' -ErrorAction SilentlyContinue | Select-Object -First 1
+  }
   if ($obj -and $obj.Configuration) {
     $mdmOk = $true
     $xml = [System.Web.HttpUtility]::HtmlDecode([string]$obj.Configuration)
@@ -542,7 +603,11 @@ try {
 } | ConvertTo-Json -Compress -Depth 6
 `;
     try {
-        const data = runPowerShellJson(ps) || {};
+        const data = runPowerShellJson(ps);
+        if (!data) {
+            log.warn('windowsKioskSetup @ readKioskSystemAllowedApps: PowerShell probe failed (see runPowerShellJson)');
+            return { ok: false, error: 'PowerShell allow-list probe failed' };
+        }
         const launcherJsonPaths = readKioskLauncherJsonPathsRaw();
         const jsonNorm = new Set(launcherJsonPaths.map((p) => p.toLowerCase()));
         const mdmDesktopPaths = (data.mdmDesktopPaths || []).map((p) => String(p));
