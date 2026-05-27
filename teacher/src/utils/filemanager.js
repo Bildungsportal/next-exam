@@ -572,5 +572,36 @@ async function loadFilelist(directory){
         log.error(err)
     }
 }
+
+// Persist activesheets correction template JSON (.htm) under workdir/<server>/activesheets/.
+async function saveActivesheetsCorrectionTemplate(formData) {
+    const pdfName = this.activesheetsPreviewFilename || formData?.filename || 'unknown.pdf';
+    try {
+        const res = await window.ipcRenderer.invoke('saveActivesheetsCorrectionTemplate', {
+            servername: this.servername,
+            servertoken: this.servertoken,
+            sourcePdfFilename: pdfName,
+            formData,
+        });
+        if (res?.status === 'success') {
+            await this.$swal.fire({
+                icon: 'success',
+                title: this.$t('pdf.correctionTemplateSavedTitle'),
+                text: `activesheets/${res.filename}`,
+                timer: 3500,
+                timerProgressBar: true,
+            });
+            return;
+        }
+        await this.$swal.fire({
+            icon: 'error',
+            title: this.$t('pdf.correctionTemplateSavedTitle'),
+            text: res?.message || 'Save failed',
+        });
+    } catch (err) {
+        log.error('filemanager @ saveActivesheetsCorrectionTemplate:', err);
+        await this.$swal.fire({ icon: 'error', text: String(err?.message || err) });
+    }
+}
  
-export {loadFilelist, getLatest, processPrintrequest, loadImage, loadPDF, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer}
+export {loadFilelist, getLatest, processPrintrequest, loadImage, loadPDF, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate}

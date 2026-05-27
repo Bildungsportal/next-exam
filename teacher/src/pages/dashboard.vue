@@ -158,11 +158,13 @@
         <PdfRenderer
             v-if="activesheetsPreviewPdf"
             :pdfBase64="activesheetsPreviewPdf"
+            :sourcePdfFilename="activesheetsPreviewFilename"
             :loading="false"
             :customFields="activesheetsPreviewCustomFields"
             :blacklist="activesheetsPreviewBlacklist"
             @close="discardActivesheetsPdf"
             @save-custom-fields="saveCustomFields"
+            @save-correction-template="saveActivesheetsCorrectionTemplate"
         />
     </div>
     <!-- pdf preview end -->
@@ -1339,7 +1341,7 @@ import { isStudentReachable, countReachableStudents } from '../utils/studentPres
 
 import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile, createSharingLink, fileExistsInAppFolder, downloadFilesFromOneDrive} from '../msalutils/onedrive'
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
-import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer } from '../utils/filemanager'
+import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate } from '../utils/filemanager'
 import { swalQueued } from '../utils/swalQueue.js'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, lockSectionForAll, endExam, kick, restore } from '../utils/exammanagement.js'
 import { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, configureEditorTemplate, removeEditorTemplate, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
@@ -1831,6 +1833,7 @@ computed: {
         showBase64FilePreview:showBase64FilePreview,                // displays a base64 encoded pdf in the preview panel
         showBase64ImagePreview:showBase64ImagePreview,              // displays a base64 encoded image in the preview panel
         showBase64PdfInRenderer:showBase64PdfInRenderer,            // displays a base64 encoded pdf in PdfRenderer component
+        saveActivesheetsCorrectionTemplate: saveActivesheetsCorrectionTemplate,
 
         /**
          * Exam Managment functions

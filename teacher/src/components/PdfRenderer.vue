@@ -21,6 +21,14 @@
                 >
                     ↶
                 </button>
+                <button
+                    type="button"
+                    class="btn btn-sm btn-primary"
+                    @click.stop="saveCorrectionTemplate"
+                    style="margin-left: 5px;"
+                >
+                    {{ $t('pdf.saveCorrectionTemplate') }}
+                </button>
             </li>
             <li class="nav-item position-absolute" style="right: 0;">  
                 <div type="button" id="closePDF" class="nav-link btn btn-light btn-sm" :title="$t('dashboard.close')" @click.stop="closePane" style="width:40px; height:45px !important;text-align:center; font-weight:bold;">&times;</div> 
@@ -267,6 +275,10 @@ export default {
         blacklist: {
             type: Array,
             default: () => []
+        },
+        sourcePdfFilename: {
+            type: String,
+            default: null
         }
     },
     data() {
@@ -398,6 +410,25 @@ export default {
         },
         closePane() {
             this.$emit('close');
+        },
+        // Same field map as student activesheets .htm backup (filename + input id → value).
+        collectActivesheetsFormData() {
+            const formData = { filename: this.sourcePdfFilename || 'unknown.pdf' };
+            const root = document.getElementById('pdfrenderer');
+            if (!root) return formData;
+            root.querySelectorAll('.interactive-input.text, .interactive-input.cloze, .interactive-input.table-cell').forEach((input) => {
+                if (input.id) formData[input.id] = input.value || '';
+            });
+            root.querySelectorAll('.interactive-input.textarea').forEach((textarea) => {
+                if (textarea.id) formData[textarea.id] = textarea.value || '';
+            });
+            root.querySelectorAll('.interactive-input.checkbox').forEach((checkbox) => {
+                if (checkbox.id) formData[checkbox.id] = checkbox.checked || false;
+            });
+            return formData;
+        },
+        saveCorrectionTemplate() {
+            this.$emit('save-correction-template', this.collectActivesheetsFormData());
         },
         toggleEditMode() {
             if (this.editMode) {

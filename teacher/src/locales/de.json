@@ -429,10 +429,12 @@
     },
     "pdf": {
         "activesheets": "Bitte überprüfen Sie die Darstellung und Positionierung der aktiven Formularfelder vor dem Start der Prüfung!",
+        "correctionTemplateSavedTitle": "Korrekturvorlage gespeichert",
         "edit": "Bearbeiten",
         "page": "Seite",
         "pages": "Seiten",
         "save": "Speichern",
+        "saveCorrectionTemplate": "Als Korrekturvorlage speichern",
         "understood": "Verstanden",
         "warningMessage": "wurden weniger als 2 interaktive Formularfelder gefunden.",
         "warningMessage2": "Dies deutet darauf hin, dass es sich um ein gescanntes PDF handelt, das keine aktiven Formularfelder oder Tabellen enthält.",

@@ -1151,6 +1151,54 @@ class IpcHandler {
             }
         })
 
+        /** Active Sheets correction template: JSON in .htm under workdir/<server>/activesheets/<pdfStem>_korrekturvorlage.htm */
+        ipcMain.handle('saveActivesheetsCorrectionTemplate', async (_event, payload = {}) => {
+            const servername = payload?.servername
+            const servertoken = payload?.servertoken
+            const sourcePdfFilename = payload?.sourcePdfFilename
+            const formData = payload?.formData
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer || servertoken !== mcServer.serverinfo?.servertoken) {
+                return { status: 'error', sender: 'server', message: t('data.tokennotvalid') }
+            }
+            if (!formData || typeof formData !== 'object') {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            const pdfBase = path.basename(String(sourcePdfFilename || formData.filename || 'unknown.pdf').trim()) || 'unknown.pdf'
+            const stem = path.basename(pdfBase, path.extname(pdfBase)) || 'unknown'
+            const safeStem = stem.replace(/[^A-Za-z0-9._-]/g, '_').replace(/_+/g, '_').slice(0, 120) || 'unknown'
+            const htmName = `${safeStem}_korrekturvorlage.htm`
+            if (!isSafePathSegment(htmName)) {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            const absTarget = resolvePathUnderRoot(this.config.workdirectory, [
+                mcServer.serverinfo.servername,
+                'activesheets',
+                htmName,
+            ])
+            if (!absTarget) {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            try {
+                await fs.promises.mkdir(path.dirname(absTarget), { recursive: true })
+                const jsonData = JSON.stringify(formData, null, 2)
+                await fs.promises.writeFile(absTarget, jsonData, 'utf8')
+                const examRoot = path.resolve(path.join(this.config.workdirectory, mcServer.serverinfo.servername))
+                const relativePath = path.relative(examRoot, absTarget)
+                log.info(`ipchandler @ saveActivesheetsCorrectionTemplate: wrote ${relativePath}`)
+                return {
+                    status: 'success',
+                    sender: 'server',
+                    filename: htmName,
+                    relativePath: relativePath.split(path.sep).join('/'),
+                    filepath: absTarget,
+                }
+            } catch (err) {
+                log.error('ipchandler @ saveActivesheetsCorrectionTemplate:', err)
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+        })
+
         /** Writes UTF-8 JSON from trusted teacher renderer; basename must end with _editor_timeline.json. */
         ipcMain.handle('writeTeacherWorkdirUtf8File', async (_event, payload = {}) => {
             const servername = payload?.servername

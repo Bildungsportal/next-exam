@@ -429,10 +429,12 @@
     },
     "pdf": {
         "activesheets": "Please double check the rendering of the active sheets form fields before starting the exam!",
+        "correctionTemplateSavedTitle": "Correction template saved",
         "edit": "Edit",
         "page": "Page",
         "pages": "Pages",
         "save": "Save",
+        "saveCorrectionTemplate": "Save as correction template",
         "understood": "Understood",
         "warningMessage": "less than 2 interactive form fields were found.",
         "warningMessage2": "This indicates that this is a scanned PDF that does not contain active form fields or tables.",
