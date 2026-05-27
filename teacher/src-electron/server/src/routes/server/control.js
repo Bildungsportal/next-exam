@@ -420,6 +420,14 @@ if (config.exposeStudents) {
     if (typeof clientinfo.displayCount === 'number') student.displayCount = clientinfo.displayCount
     if (typeof clientinfo.multiMonitor === 'boolean') student.multiMonitor = clientinfo.multiMonitor
     if (typeof clientinfo.isRunningInCage === 'boolean') student.isRunningInCage = clientinfo.isRunningInCage
+    if (clientinfo.isRunningInCage && clientinfo.allowedKioskApps) {
+        student.allowedKioskApps = {
+            startLayoutReadable: !!clientinfo.allowedKioskApps.startLayoutReadable,
+            appNames: Array.isArray(clientinfo.allowedKioskApps.appNames) ? clientinfo.allowedKioskApps.appNames : [],
+        }
+    } else {
+        delete student.allowedKioskApps
+    }
 
 
     if (clientinfo.focus) { student.status.restorefocusstate = false }  // remove task because its obviously done

@@ -512,26 +512,12 @@ function formatKioskAaDetectionLine(d) {
     return `windowsKioskSetup: Win AA kiosk=NO — ${why.join('; ') || 'unknown'}`;
 }
 
-/** One-line summary of apps/pins not from our launcher.json (Start pins + AllowedApps drift). */
+/** Warn line for external Start pins only; null when none. */
 function formatExtraKioskAppsLine(data) {
-    if (!data) {
-        return 'windowsKioskSetup: extra kiosk apps=skipped — not in AA kiosk session';
-    }
-    if (!data.ok) {
-        return `windowsKioskSetup: extra kiosk apps=unknown — ${data.error || 'read failed'}`;
-    }
-    const parts = [];
-    for (const p of data.notInLauncherJson || []) {
-        parts.push(`path:${pathDriftDisplayName(p)}`);
-    }
-    const pins = data.notInLauncherJsonPins?.length
-        ? data.notInLauncherJsonPins
-        : (data.notInLauncherJsonAumids || []).map((aumid) => ({ aumid, name: aumid }));
-    for (const pin of pins) parts.push(`pin:${pin.name}`);
-    if (!parts.length) {
-        return 'windowsKioskSetup: extra kiosk apps=0 — none beyond launcher.json';
-    }
-    return `windowsKioskSetup: extra kiosk apps=${parts.length} — ${parts.join('; ')}`;
+    if (!data?.ok) return null;
+    const pinNames = (data.notInLauncherJsonPins || []).map((p) => p.name).filter(Boolean);
+    if (!pinNames.length) return null;
+    return `windowsKioskSetup: extra kiosk apps=${pinNames.length} — ${pinNames.join('; ')}`;
 }
 
 /** SID written at provisioning; blocks renaming another account to next-exam-kiosk. */
@@ -567,26 +553,15 @@ function initAllowedKioskAppsAtSessionStart(runningInCage) {
         if (allowedKioskAppsCache.error) return { ok: false, error: allowedKioskAppsCache.error };
         return {
             ok: true,
-            notInLauncherJson: allowedKioskAppsCache.notInLauncherJson,
-            notInLauncherJsonAumids: allowedKioskAppsCache.notInLauncherJsonAumids,
-            notInLauncherJsonPins: allowedKioskAppsCache.notInLauncherJsonPins,
+            notInLauncherJsonPins: (allowedKioskAppsCache.pinDriftNames || []).map((name) => ({ name })),
         };
     }
     const data = readKioskSystemAllowedApps();
     if (data.ok) {
         allowedKioskAppsCache = {
-            restrictRunExeNames: data.restrictRunExeNames,
-            desktopPaths: [...new Set([
-                ...(data.startPinDesktopPaths || []),
-                ...(data.policyAllowedDesktopPaths || []),
-            ])],
-            appUserModelIds: data.startPinAppUserModelIds,
             startLayoutReadable: data.startLayoutReadable,
-            startPinDesktopPaths: data.startPinDesktopPaths,
-            policyAllowedDesktopPaths: data.policyAllowedDesktopPaths,
-            notInLauncherJson: data.notInLauncherJson,
-            notInLauncherJsonAumids: data.notInLauncherJsonAumids,
-            notInLauncherJsonPins: data.notInLauncherJsonPins,
+            appNames: buildKioskHumanAppNames(data.notInLauncherJsonPins),
+            pinDriftNames: (data.notInLauncherJsonPins || []).map((p) => p.name).filter(Boolean),
         };
     } else {
         allowedKioskAppsCache = { error: data.error || 'read failed' };
@@ -595,13 +570,14 @@ function initAllowedKioskAppsAtSessionStart(runningInCage) {
     return data;
 }
 
-/** Startup: two log lines (AA verdict + extra apps), once per session. */
+/** Startup: AA verdict (info) + extra pins drift (warn, only when found). */
 export function getWindowsKioskDetectionLogLines() {
     if (process.platform !== 'win32') return [];
     const d = evaluateWindowsKioskDetection();
     log.info(formatKioskAaDetectionLine(d));
     const appsData = initAllowedKioskAppsAtSessionStart(d.runningInCage);
-    log.info(formatExtraKioskAppsLine(appsData));
+    const extraAppsLine = formatExtraKioskAppsLine(appsData);
+    if (extraAppsLine) log.warn(extraAppsLine);
     return [];
 }
 
@@ -866,11 +842,25 @@ let allowedKioskAppsCachedAt = 0;
 /** Attach session-cached allow-list to clientinfo (read once at startup via getWindowsKioskDetectionLogLines). */
 export function syncAllowedKioskAppsClientinfo(clientinfo) {
     if (!clientinfo || process.platform !== 'win32') return;
-    if (!allowedKioskAppsCache) {
+    if (!allowedKioskAppsCache || allowedKioskAppsCache.error) {
         delete clientinfo.allowedKioskApps;
         return;
     }
-    clientinfo.allowedKioskApps = { ...allowedKioskAppsCache, collectedAt: allowedKioskAppsCachedAt };
+    clientinfo.allowedKioskApps = {
+        startLayoutReadable: !!allowedKioskAppsCache.startLayoutReadable,
+        appNames: allowedKioskAppsCache.appNames || [],
+        collectedAt: allowedKioskAppsCachedAt,
+    };
+}
+
+/** Human-readable names: kiosk-launcher-apps.json buttons + external Start pins (no internals). */
+function buildKioskHumanAppNames(notInLauncherJsonPins) {
+    const names = readKioskLauncherApps().map((a) => String(a.name || '').trim()).filter(Boolean);
+    for (const p of notInLauncherJsonPins || []) {
+        const n = String(p.name || '').trim();
+        if (n) names.push(n);
+    }
+    return [...new Set(names)];
 }
 
 /** Win Assigned Access only: strict {"apps":[{"name","path"},...]} from install-windows-kiosk.ps1. */
