@@ -18,6 +18,7 @@
 #   NOT valid:                 Downloads\Next-Exam-Student_*.exe  (NSIS launcher only, no resources\)
 #
 # next-exam in-app setup passes -AppDir/-LaunchExe automatically from process.execPath.
+# Headless (no -AppDir): auto-fallback %TEMP%\\next-exam-student, then C:\\Program Files\\Next-Exam-Student (MSI).
 #
 # OPTIONAL APP WHITELIST (-ExtraAppsFile):
 #   Plaintext file, one absolute path per line. Each path = additional desktop app the
@@ -397,6 +398,45 @@ function Apply-MdmAssignedAccessConfiguration([string]$ConfigXml, [string]$Insta
     return 'system'
 }
 
+function Test-NextExamElectronBundleDir([string]$Dir) {
+    if (-not $Dir -or -not (Test-Path -LiteralPath $Dir -PathType Container)) { return $false }
+    return Test-Path -LiteralPath (Join-Path $Dir 'resources') -PathType Container
+}
+
+function Find-NextExamLaunchExeInDir([string]$Dir) {
+    foreach ($name in @('Next-Exam-Student.exe', 'next-exam.exe')) {
+        if (Test-Path -LiteralPath (Join-Path $Dir $name) -PathType Leaf) { return $name }
+    }
+    return $null
+}
+
+# Resolve copy source: explicit params first, then portable unpack, then MSI Program Files.
+function Resolve-NextExamAppBundleSource([string]$AppDirIn, [string]$LaunchExeIn, [string]$AppPathIn) {
+    $resolvedDir = $AppDirIn
+    $resolvedExe = $LaunchExeIn
+    if ($AppPathIn -and -not $resolvedDir) {
+        $resolvedDir = Split-Path -Parent $AppPathIn
+        if (-not $resolvedExe) { $resolvedExe = Split-Path -Leaf $AppPathIn }
+    }
+    $candidates = [System.Collections.ArrayList]::new()
+    if ($resolvedDir) {
+        [void]$candidates.Add(@{ Dir = $resolvedDir; Exe = $resolvedExe; Label = 'param' })
+    }
+    [void]$candidates.Add(@{ Dir = (Join-Path $env:TEMP 'next-exam-student'); Exe = 'Next-Exam-Student.exe'; Label = 'portable-temp' })
+    [void]$candidates.Add(@{ Dir = 'C:\Program Files\Next-Exam-Student'; Exe = 'Next-Exam-Student.exe'; Label = 'msi-program-files' })
+    foreach ($c in $candidates) {
+        if (-not (Test-NextExamElectronBundleDir $c.Dir)) { continue }
+        $exe = $c.Exe
+        if (-not $exe -or -not (Test-Path -LiteralPath (Join-Path $c.Dir $exe) -PathType Leaf)) {
+            $exe = Find-NextExamLaunchExeInDir $c.Dir
+            if (-not $exe) { continue }
+        }
+        Write-Step "app bundle source ($($c.Label)): $($c.Dir) ($exe)"
+        return @{ AppDir = $c.Dir; LaunchExe = $exe }
+    }
+    return $null
+}
+
 # 0) edition check: Multi-App Assigned Access (MDM_AssignedAccess CSP) is unsupported on Home/Core
 $edition = (Get-WindowsEdition -Online).Edition
 Write-Step "Windows edition: $edition"
@@ -407,18 +447,16 @@ if ($edition -notmatch 'Professional|Enterprise|Education|IoTEnterprise|Pro') {
 }
 
 # 1) resolve app bundle (full unpack folder + launch exe name)
-if ($AppPath -and -not $AppDir) {
-    $AppDir = Split-Path -Parent $AppPath
-    if (-not $LaunchExe) { $LaunchExe = Split-Path -Leaf $AppPath }
+$bundle = Resolve-NextExamAppBundleSource -AppDirIn $AppDir -LaunchExeIn $LaunchExe -AppPathIn $AppPath
+if (-not $bundle) {
+    Write-Host 'ERROR_INVALID_APP_BUNDLE: no Next-Exam bundle found (pass -AppDir/-LaunchExe, or install MSI / run portable once).'
+    exit 12
 }
-if (-not $AppDir -or -not $LaunchExe) {
-    throw 'Provide -AppDir and -LaunchExe, or -AppPath pointing at the running Next-Exam-Student.exe inside the unpack folder.'
-}
-if (-not (Test-Path -LiteralPath $AppDir -PathType Container)) { throw "AppDir not found: $AppDir" }
+$AppDir = $bundle.AppDir
+$LaunchExe = $bundle.LaunchExe
 $sourceLaunch = Join-Path $AppDir $LaunchExe
 if (-not (Test-Path -LiteralPath $sourceLaunch -PathType Leaf)) { throw "Launch exe not found: $sourceLaunch" }
-$hasResources = (Test-Path -LiteralPath (Join-Path $AppDir 'resources') -PathType Container)
-if (-not $hasResources) {
+if (-not (Test-NextExamElectronBundleDir $AppDir)) {
     Write-Host 'ERROR_INVALID_APP_BUNDLE: AppDir must be the unpacked Next-Exam folder (contains resources\), not the portable launcher in Downloads.'
     exit 12
 }
@@ -584,6 +622,7 @@ Add-KioskAllowedAppPath -List $AllowedApps -ExePath $disableShortcuts
 Add-KioskAllowedAppPath -List $AllowedApps -ExePath (Join-Path $env:windir 'System32\netsh.exe')
 Add-KioskAllowedAppPath -List $AllowedApps -ExePath (Join-Path $env:windir 'System32\WindowsPowerShell\v1.0\powershell.exe')
 Add-KioskAllowedAppPath -List $AllowedApps -ExePath (Join-Path $env:windir 'System32\reg.exe')
+Add-KioskAllowedAppPath -List $AllowedApps -ExePath (Join-Path $env:windir 'System32\whoami.exe')
 
 # fallback: when -ExtraAppsFile not passed in, try the interactive user's EXAM-STUDENT folder.
 # elevated $env:USERPROFILE points at the admin, not the teacher who launched next-exam, so we
@@ -649,7 +688,7 @@ $appsXml = New-AllowedAppXml $AllowedApps
 
 # In-app launcher list for student.vue (no desktop .lnk — not shown under Assigned Access).
 # netsh/powershell are AllowedApps for next-exam internals only, never as student-facing buttons.
-$skipLauncherUi = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe', 'netsh.exe', 'powershell.exe', 'reg.exe')
+$skipLauncherUi = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe', 'netsh.exe', 'powershell.exe', 'reg.exe', 'whoami.exe')
 # Must be a PS array for ConvertTo-Json — piping ArrayList yields invalid "{...},{...}" without "[" wrapper.
 $launcherList = @(
     foreach ($app in $AllowedApps) {
