@@ -583,6 +583,7 @@ $disableShortcuts = Join-Path $InstallDir 'resources\app.asar.unpacked\public\di
 Add-KioskAllowedAppPath -List $AllowedApps -ExePath $disableShortcuts
 Add-KioskAllowedAppPath -List $AllowedApps -ExePath (Join-Path $env:windir 'System32\netsh.exe')
 Add-KioskAllowedAppPath -List $AllowedApps -ExePath (Join-Path $env:windir 'System32\WindowsPowerShell\v1.0\powershell.exe')
+Add-KioskAllowedAppPath -List $AllowedApps -ExePath (Join-Path $env:windir 'System32\reg.exe')
 
 # fallback: when -ExtraAppsFile not passed in, try the interactive user's EXAM-STUDENT folder.
 # elevated $env:USERPROFILE points at the admin, not the teacher who launched next-exam, so we
@@ -648,7 +649,7 @@ $appsXml = New-AllowedAppXml $AllowedApps
 
 # In-app launcher list for student.vue (no desktop .lnk — not shown under Assigned Access).
 # netsh/powershell are AllowedApps for next-exam internals only, never as student-facing buttons.
-$skipLauncherUi = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe', 'netsh.exe', 'powershell.exe')
+$skipLauncherUi = @('java.exe', 'javaw.exe', 'disable-shortcuts.exe', 'netsh.exe', 'powershell.exe', 'reg.exe')
 # Must be a PS array for ConvertTo-Json — piping ArrayList yields invalid "{...},{...}" without "[" wrapper.
 $launcherList = @(
     foreach ($app in $AllowedApps) {
