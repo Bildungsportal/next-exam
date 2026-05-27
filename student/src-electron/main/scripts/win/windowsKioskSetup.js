@@ -1,6 +1,6 @@
 /**
  * Windows counterpart to Linux Cage kiosk setup.
- * - detectRunningInWindowsKiosk(): kiosk OS user + provisioned account + (AA signal or profile-128)
+ * - detectRunningInWindowsKiosk(): kiosk OS user + provisioned SID + live AA (cmd spawn blocked and/or RestrictRun reg / MDM)
  * - detectWindowsKioskInstalled(): true when provisioning artifacts exist
  * - needsWindowsKioskSetup(): inverse, used by UI install button
  * - initiateKioskSetup(appPath): platform switch + UAC elevation + PowerShell payload
@@ -21,6 +21,12 @@ export const KIOSK_PROVISION_MARKER = 'C:\\NextExam\\.kiosk-provision-complete';
 const KIOSK_ACCOUNT_SID_MARKER = path.join(KIOSK_INSTALL_DIR, '.kiosk-account-sid');
 const KIOSK_LAUNCH_EXE_MARKER = 'C:\\NextExam\\.kiosk-launch-exe.txt';
 const KIOSK_LAUNCHER_APPS_JSON = path.join(KIOSK_INSTALL_DIR, 'kiosk-launcher-apps.json');
+// Must match install-windows-kiosk.ps1 AssignedAccess Profile Id
+export const KIOSK_AA_PROFILE_ID = '{9A2A490F-10F6-4764-974A-43B19E722C23}';
+const INTERNAL_KIOSK_ALLOWED_EXE_NAMES = new Set([
+    'java.exe', 'javaw.exe', 'disable-shortcuts.exe', 'netsh.exe',
+    'powershell.exe', 'reg.exe', 'whoami.exe', 'next-exam-student.exe',
+]);
 
 /**
  * Wipe leftover student data on kiosk app quit so the next student starts fresh.
@@ -215,34 +221,55 @@ function regSnippet(regOutput, maxLen = 280) {
     return String(regOutput || '').replace(/\r?\n/g, ' | ').replace(/\s+/g, ' ').trim().slice(0, maxLen) || '(empty)';
 }
 
-// Live AA session: HKCU RestrictRun via Get-ItemProperty (reg.exe misses subkey values) + MDM CSP (install filter).
-let aaSessionSignalsCache = null;
-function readWindowsAaSessionSignals() {
-    if (process.platform !== 'win32') {
-        return {
-            restrictRunKeyHasAssignedAccess: false, explorerRestrictRunDwordIs1: false,
-            explorerKeyHasAssignedAccess: false, mdmOk: false, configuration: '', psFailed: true,
-        };
+// HKCU RestrictRun AssignedAccess_* — reg.exe (same execFileSync path as ProfileList; key missing = not AA RestrictRun).
+function readRestrictRunAaFromReg() {
+    const restrictRunKey = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\RestrictRun';
+    const explorerKey = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer';
+    const restrictRunOut = runRegQuery(restrictRunKey);
+    const explorerRestrictRunValueOut = runRegQuery(explorerKey, 'RestrictRun');
+    const explorerOut = runRegQuery(explorerKey);
+    return {
+        restrictRunKeyHasAssignedAccess: /AssignedAccess_/i.test(restrictRunOut),
+        explorerRestrictRunDwordIs1: parseRegDword(explorerRestrictRunValueOut) === 1,
+        explorerKeyHasAssignedAccess: /AssignedAccess_/i.test(explorerOut),
+        restrictRunOut,
+        explorerRestrictRunValueOut,
+        explorerOut,
+    };
+}
+
+// cmd.exe is intentionally not on the AA allow list — spawn failure (UNKNOWN) indicates live allow-list enforcement.
+let aaCmdSpawnProbeCache = null;
+function probeCmdSpawnBlockedByAssignedAccess() {
+    if (process.platform !== 'win32') return { blocked: false, reason: 'non-win32' };
+    if (aaCmdSpawnProbeCache) return aaCmdSpawnProbeCache;
+    try {
+        winSystem32ExecFile('cmd.exe', ['/c', 'exit', '0'], 2500);
+        aaCmdSpawnProbeCache = { blocked: false, reason: 'cmd.exe ran (AA allow-list not blocking)' };
+    } catch (err) {
+        const reason = String(err && err.message ? err.message : err);
+        aaCmdSpawnProbeCache = { blocked: true, reason };
     }
-    if (aaSessionSignalsCache) return aaSessionSignalsCache;
+    return aaCmdSpawnProbeCache;
+}
+
+/** Parse AssignedAccess_* value names from reg.exe query output. */
+function parseAssignedAccessExeNamesFromReg(regOut) {
+    const names = [];
+    for (const line of String(regOut || '').split(/\r?\n/)) {
+        const m = line.match(/AssignedAccess_\S+\s+REG_\w+\s+(.+?)\s*$/i);
+        if (m) names.push(m[1].trim());
+    }
+    return [...new Set(names)];
+}
+
+// MDM_AssignedAccess CSP only (needs System.Web + CIM; separate from RestrictRun reg reads).
+function readMdmConfigurationFromPs() {
     const ps = `
 $ErrorActionPreference = 'SilentlyContinue'
-$rrSub = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\RestrictRun'
-$expKey = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer'
-$restrictRunHasAA = $false
-$explorerHasAA = $false
-$explorerRestrictRunDword = 0
-if (Test-Path -LiteralPath $rrSub) {
-  $props = Get-ItemProperty -LiteralPath $rrSub
-  $restrictRunHasAA = @($props.PSObject.Properties | Where-Object { $_.Name -like 'AssignedAccess_*' }).Count -gt 0
-}
-if (Test-Path -LiteralPath $expKey) {
-  $exp = Get-ItemProperty -LiteralPath $expKey
-  if ($null -ne $exp.RestrictRun) { $explorerRestrictRunDword = [int]$exp.RestrictRun }
-  $explorerHasAA = @($exp.PSObject.Properties | Where-Object { $_.Name -like 'AssignedAccess_*' }).Count -gt 0
-}
 $cfg = ''
 $mdmOk = $false
+$err = ''
 try {
   Add-Type -AssemblyName System.Web | Out-Null
   $filter = "InstanceID='AssignedAccess' AND ParentID='./Vendor/MSFT/'"
@@ -254,30 +281,52 @@ try {
     $mdmOk = $true
     $cfg = [System.Web.HttpUtility]::HtmlDecode([string]$obj.Configuration)
   }
-} catch {}
-@{
-  restrictRunHasAssignedAccess = $restrictRunHasAA
-  explorerRestrictRunDword = $explorerRestrictRunDword
-  explorerHasAssignedAccess = $explorerHasAA
-  mdmOk = $mdmOk
-  configuration = $cfg
-} | ConvertTo-Json -Compress
+} catch { $err = $_.Exception.Message }
+@{ mdmOk = $mdmOk; configuration = $cfg; error = $err } | ConvertTo-Json -Compress
+exit 0
 `;
     const data = runPowerShellJson(ps, 8000);
     if (!data) {
-        aaSessionSignalsCache = {
-            restrictRunKeyHasAssignedAccess: false, explorerRestrictRunDwordIs1: false,
-            explorerKeyHasAssignedAccess: false, mdmOk: false, configuration: '', psFailed: true,
-        };
-        return aaSessionSignalsCache;
+        return { mdmOk: false, configuration: '', psError: 'powershell spawn or JSON parse failed (see runPowerShellJson)' };
     }
-    aaSessionSignalsCache = {
-        restrictRunKeyHasAssignedAccess: !!data.restrictRunHasAssignedAccess,
-        explorerRestrictRunDwordIs1: data.explorerRestrictRunDword === 1,
-        explorerKeyHasAssignedAccess: !!data.explorerHasAssignedAccess,
+    const psError = String(data.error || '').trim();
+    if (psError) {
+        log.warn(`windowsKioskSetup: MDM PS inner error: ${psError}`);
+    }
+    return {
         mdmOk: !!data.mdmOk,
         configuration: String(data.configuration || ''),
-        psFailed: false,
+        psError,
+    };
+}
+
+let aaSessionSignalsCache = null;
+function readWindowsAaSessionSignals() {
+    if (process.platform !== 'win32') {
+        return {
+            restrictRunKeyHasAssignedAccess: false, explorerRestrictRunDwordIs1: false,
+            explorerKeyHasAssignedAccess: false, mdmOk: false, configuration: '', mdmPsError: 'non-win32',
+            regSnippets: { restrictRunOut: '', explorerRestrictRunValueOut: '', explorerOut: '' },
+        };
+    }
+    if (aaSessionSignalsCache) return aaSessionSignalsCache;
+    const regAa = readRestrictRunAaFromReg();
+    const mdm = readMdmConfigurationFromPs();
+    if (mdm.psError && !mdm.mdmOk) {
+        log.warn(`windowsKioskSetup: MDM CSP unreadable: ${mdm.psError}`);
+    }
+    aaSessionSignalsCache = {
+        restrictRunKeyHasAssignedAccess: regAa.restrictRunKeyHasAssignedAccess,
+        explorerRestrictRunDwordIs1: regAa.explorerRestrictRunDwordIs1,
+        explorerKeyHasAssignedAccess: regAa.explorerKeyHasAssignedAccess,
+        mdmOk: mdm.mdmOk,
+        configuration: mdm.configuration,
+        mdmPsError: mdm.psError,
+        regSnippets: {
+            restrictRunOut: regSnippet(regAa.restrictRunOut),
+            explorerRestrictRunValueOut: regSnippet(regAa.explorerRestrictRunValueOut),
+            explorerOut: regSnippet(regAa.explorerOut),
+        },
     };
     return aaSessionSignalsCache;
 }
@@ -285,9 +334,6 @@ try {
 function readMdmAssignedAccessForCurrentUser() {
     if (process.platform !== 'win32') return { ok: false, configured: false, reason: 'non-win32' };
     const s = readWindowsAaSessionSignals();
-    if (s.psFailed) {
-        return { ok: false, configured: false, reason: 'AA session PS probe failed' };
-    }
     const xml = s.configuration;
     const re = new RegExp(`<Account>[^<]*\\\\${KIOSK_USERNAME}<\\/Account>`, 'i');
     const configured = !!xml && re.test(xml);
@@ -296,11 +342,12 @@ function readMdmAssignedAccessForCurrentUser() {
         configured,
         reason: configured
             ? 'MDM AA policy lists kiosk user'
-            : (s.mdmOk ? 'MDM AA policy present but does not target kiosk user' : 'MDM_AssignedAccess CSP unreadable'),
+            : (s.mdmOk ? 'MDM AA policy present but does not target kiosk user'
+                : (s.mdmPsError || 'MDM_AssignedAccess CSP unreadable')),
     };
 }
 
-// Detection snapshot is expensive (multiple sync reg.exe spawns + one PowerShell spawn for MDM).
+// Detection snapshot: reg.exe RestrictRun + optional MDM PS (cached per session).
 // State=128, SID, MDM config, Winlogon Shell, username don't change within a session, and RestrictRun
 // is set at logon and stays — so cache aggressively. Called from per-tick syncAllowedKioskAppsClientinfo,
 // blocking the main thread on every UDP heartbeat → renderer can be killed for unresponsiveness.
@@ -340,12 +387,14 @@ function evaluateWindowsKioskDetectionUncached() {
         explorerRestrictRunDwordIs1: aaSig.explorerRestrictRunDwordIs1,
         explorerKeyHasAssignedAccess: aaSig.explorerKeyHasAssignedAccess,
     };
+    const cmdProbe = probeCmdSpawnBlockedByAssignedAccess();
     const assignedAccessActive = aaSig.restrictRunKeyHasAssignedAccess
-        || (aaSig.explorerRestrictRunDwordIs1 && aaSig.explorerKeyHasAssignedAccess);
+        || (aaSig.explorerRestrictRunDwordIs1 && aaSig.explorerKeyHasAssignedAccess)
+        || cmdProbe.blocked;
     const mdm = readMdmAssignedAccessForCurrentUser();
-    const restrictRunOut = aaSig.psFailed ? '(ps failed)' : `AssignedAccess_*=${aaSig.restrictRunKeyHasAssignedAccess}`;
-    const explorerRestrictRunValueOut = aaSig.psFailed ? '(ps failed)' : `RestrictRun DWORD=${aaSig.explorerRestrictRunDwordIs1 ? 1 : 0}`;
-    const explorerOut = aaSig.psFailed ? '(ps failed)' : `Explorer AssignedAccess_*=${aaSig.explorerKeyHasAssignedAccess}`;
+    const restrictRunOut = aaSig.regSnippets.restrictRunOut;
+    const explorerRestrictRunValueOut = aaSig.regSnippets.explorerRestrictRunValueOut;
+    const explorerOut = aaSig.regSnippets.explorerOut;
 
     // Winlogon Shell override: AA sets the kiosk app as the user's shell. Secondary confirmation that
     // the session is currently under AA control rather than a fake account that just happens to match.
@@ -389,11 +438,10 @@ function evaluateWindowsKioskDetectionUncached() {
     );
     const profileState128 = profileStateDword === 128 || profilePathMatch || profileEnvMatch;
 
-    // AA-presence proof: any of (live RestrictRun, MDM policy lists this user, Winlogon shell hijacked).
-    // Two of three independent sources rule out forgery: MDM is admin-only, Winlogon Shell is AA-managed.
+    // Live AA: RestrictRun reg and/or cmd blocked (not on allow list). MDM/shell are optional extras.
     const aaProof = assignedAccessActive || mdm.configured || winlogonShellMatch;
-    // Kiosk user + provisioned account + at least one live AA/profile signal (not all four mandatory).
-    const runningInCage = kioskOsUser && provisionedSid && (aaProof || profileState128);
+    // Kiosk session: correct account + provisioned SID + live AA (cmd probe alone is never sufficient).
+    const runningInCage = kioskOsUser && provisionedSid && aaProof;
 
     return {
         runningInCage,
@@ -401,7 +449,10 @@ function evaluateWindowsKioskDetectionUncached() {
         username,
         sid,
         assignedAccessActive,
+        cmdSpawnBlocked: cmdProbe.blocked,
+        cmdSpawnProbeReason: cmdProbe.reason,
         aaCheck,
+        aaSig,
         aaProof,
         mdm,
         winlogonShellMatch,
@@ -431,7 +482,11 @@ function logWindowsKioskDetection(label, d) {
     log.info(`windowsKioskSetup @ ${label}: [kioskOsUser] ${d.kioskOsUser} (username=${d.username || '?'})`);
     log.info(`windowsKioskSetup @ ${label}: [sid] ${d.sid || 'EMPTY — ProfileList lookup + whoami both failed'}`);
     log.info(`windowsKioskSetup @ ${label}: [aaProof] ${d.aaProof} = assignedAccessActive(${d.assignedAccessActive}) || mdmConfigured(${d.mdm.configured}) || winlogonShellMatch(${d.winlogonShellMatch})`);
+    log.info(`windowsKioskSetup @ ${label}:   aa.cmdSpawnBlocked → ${d.cmdSpawnBlocked} (${d.cmdSpawnProbeReason || 'n/a'})`);
     log.info(`windowsKioskSetup @ ${label}:   aa.restrictRunKey AssignedAccess_* → ${d.aaCheck.restrictRunKeyHasAssignedAccess} | reg: ${d.regSnippets.restrictRunOut}`);
+    if (d.aaSig?.mdmPsError) {
+        log.info(`windowsKioskSetup @ ${label}:   mdm PS error: ${d.aaSig.mdmPsError}`);
+    }
     log.info(`windowsKioskSetup @ ${label}:   aa.Explorer RestrictRun DWORD=1 → ${d.aaCheck.explorerRestrictRunDwordIs1} | reg: ${d.regSnippets.explorerRestrictRunValueOut}`);
     log.info(`windowsKioskSetup @ ${label}:   aa.Explorer AssignedAccess_* → ${d.aaCheck.explorerKeyHasAssignedAccess} | reg: ${d.regSnippets.explorerOut}`);
     log.info(`windowsKioskSetup @ ${label}:   mdm AA CSP: ok=${d.mdm.ok} configured=${d.mdm.configured} — ${d.mdm.reason}`);
@@ -451,11 +506,13 @@ function logKioskSystemAllowedAppsRead(label, data) {
     }
     log.info(`windowsKioskSetup @ ${label}: allowed-apps read OK`);
     log.info(`windowsKioskSetup @ ${label}:   restrictRunExeNames (${(data.restrictRunExeNames || []).length}): ${(data.restrictRunExeNames || []).join(', ') || '(none)'}`);
-    log.info(`windowsKioskSetup @ ${label}:   mdmPolicyReadable=${data.mdmOk}`);
-    log.info(`windowsKioskSetup @ ${label}:   mdmDesktopPaths (${(data.mdmDesktopPaths || []).length}): ${(data.mdmDesktopPaths || []).join(' | ') || '(none)'}`);
-    log.info(`windowsKioskSetup @ ${label}:   mdmAppUserModelIds (${(data.mdmAppUserModelIds || []).length}): ${(data.mdmAppUserModelIds || []).join(', ') || '(none)'}`);
+    log.info(`windowsKioskSetup @ ${label}:   startLayoutReadable=${data.startLayoutReadable} path=${data.startLayoutPath || '(none)'}`);
+    log.info(`windowsKioskSetup @ ${label}:   startPinDesktopPaths (${(data.startPinDesktopPaths || []).length}): ${(data.startPinDesktopPaths || []).join(' | ') || '(none)'}`);
+    log.info(`windowsKioskSetup @ ${label}:   startPinAppUserModelIds (${(data.startPinAppUserModelIds || []).length}): ${(data.startPinAppUserModelIds || []).join(', ') || '(none)'}`);
+    log.info(`windowsKioskSetup @ ${label}:   policyAllowedDesktopPaths (${(data.policyAllowedDesktopPaths || []).length}): ${(data.policyAllowedDesktopPaths || []).join(' | ') || '(none)'}`);
     log.info(`windowsKioskSetup @ ${label}:   launcherJsonPaths (${(data.launcherJsonPaths || []).length}): ${(data.launcherJsonPaths || []).join(' | ') || '(none)'}`);
-    log.info(`windowsKioskSetup @ ${label}:   mdmNotInLauncherJson (${(data.mdmPathsNotInLauncherJson || []).length}): ${(data.mdmPathsNotInLauncherJson || []).join(' | ') || '(none)'}`);
+    log.info(`windowsKioskSetup @ ${label}:   notInLauncherJson (${(data.notInLauncherJson || []).length}): ${(data.notInLauncherJson || []).join(' | ') || '(none)'}`);
+    log.info(`windowsKioskSetup @ ${label}:   notInLauncherJsonAumids (${(data.notInLauncherJsonAumids || []).length}): ${(data.notInLauncherJsonAumids || []).join(', ') || '(none)'}`);
 }
 
 /** SID written at provisioning; blocks renaming another account to next-exam-kiosk. */
@@ -486,7 +543,7 @@ export function getWindowsKioskDetectionLogLines() {
     logWindowsKioskDetection('startup', d);
     return [
         `main: Win Assigned Access kiosk: runningInCage=${d.runningInCage} skipElectronKiosk=${d.runningInCage}`,
-        `main: Win AA check: kioskOsUser=${d.kioskOsUser} sid=${d.sid || 'empty'} aaProof=${d.aaProof} (rrActive=${d.assignedAccessActive} mdmConfigured=${d.mdm.configured} shellMatch=${d.winlogonShellMatch}) provisionedSid=${d.provisionedSid} profileState128=${d.profileState128} profileStateDword=${d.profileStateDword ?? 'n/a'}`,
+        `main: Win AA check: kioskOsUser=${d.kioskOsUser} sid=${d.sid || 'empty'} aaProof=${d.aaProof} (cmdBlocked=${d.cmdSpawnBlocked} rrActive=${d.assignedAccessActive} mdmConfigured=${d.mdm.configured}) provisionedSid=${d.provisionedSid} runningInCage=${d.runningInCage}`,
         `main: Win AA setup: provisionComplete=${detectWindowsKioskProvisionComplete()} bundleInstalled=${detectWindowsKioskInstalled()} needsSetup=${needsWindowsKioskSetup()}`,
     ];
 }
@@ -532,14 +589,115 @@ function runPowerShellJson(script, timeoutMs = 15000) {
     if (process.platform !== 'win32') return null;
     try {
         const b64 = Buffer.from(String(script), 'utf16le').toString('base64');
-        const out = winPowerShellExecFile(['-NoProfile', '-NonInteractive', '-EncodedCommand', b64], timeoutMs);
+        const out = winPowerShellExecFile([
+            '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', b64,
+        ], timeoutMs);
         const text = String(out || '').trim();
         if (!text) return null;
         return JSON.parse(text);
     } catch (err) {
-        log.warn(`runPowerShellJson: ${err && err.message ? err.message : err}`);
+        const stdout = err && err.stdout != null ? String(err.stdout).trim() : '';
+        if (stdout) {
+            try { return JSON.parse(stdout); } catch { /* fall through */ }
+        }
+        const detail = [err && err.message, err && err.stderr != null ? String(err.stderr).trim() : '']
+            .filter(Boolean).join(' | ');
+        log.warn(`runPowerShellJson: ${detail || err}`);
         return null;
     }
+}
+
+/** Expand %VAR% segments using the current process environment. */
+function expandWinEnvPath(raw) {
+    return String(raw).replace(/%([^%]+)%/g, (_, n) => process.env[n] || `%${n}%`);
+}
+
+/** True for install-time internal AllowedApps (never student-facing launcher buttons). */
+function isInternalKioskAllowedPath(p) {
+    return INTERNAL_KIOSK_ALLOWED_EXE_NAMES.has(path.basename(String(p)).toLowerCase());
+}
+
+/** Live AA Start pins: %LOCALAPPDATA%\\Microsoft\\Windows\\Shell\\LayoutModification.xml */
+function liveShellLayoutModificationPath() {
+    return path.join(os.homedir(), 'AppData', 'Local', 'Microsoft', 'Windows', 'Shell', 'LayoutModification.xml');
+}
+
+/** Extract Start/taskbar pin paths and AUMIDs from LayoutModification.xml. */
+function parseStartLayoutPinsFromXml(xml) {
+    const desktopPaths = [];
+    const appUserModelIds = [];
+    const s = String(xml || '');
+    for (const m of s.matchAll(/DesktopApplicationLinkPath="([^"]+)"/gi)) {
+        desktopPaths.push(path.resolve(expandWinEnvPath(m[1])));
+    }
+    for (const m of s.matchAll(/DesktopApplicationLink="([^"]+)"/gi)) {
+        desktopPaths.push(path.resolve(expandWinEnvPath(m[1])));
+    }
+    for (const m of s.matchAll(/AppUserModelID="([^"]+)"/gi)) {
+        appUserModelIds.push(m[1]);
+    }
+    return {
+        desktopPaths: [...new Set(desktopPaths)],
+        appUserModelIds: [...new Set(appUserModelIds)],
+    };
+}
+
+/** Read live Start pins from the kiosk user shell layout file (no MDM/CIM). */
+function readLiveStartLayoutPins() {
+    const layoutPath = liveShellLayoutModificationPath();
+    if (!existsSync(layoutPath)) {
+        return { ok: false, layoutPath, desktopPaths: [], appUserModelIds: [], error: 'LayoutModification.xml missing' };
+    }
+    try {
+        const xml = readFileSync(layoutPath, 'utf8');
+        const parsed = parseStartLayoutPinsFromXml(xml);
+        return { ok: true, layoutPath, ...parsed, error: '' };
+    } catch (err) {
+        return { ok: false, layoutPath, desktopPaths: [], appUserModelIds: [], error: err.message || String(err) };
+    }
+}
+
+/** Parse AppId REG_SZ paths from reg.exe query /s on AssignedAccess AllowedApps. */
+function parseAssignedAccessAppIdsFromReg(regOut) {
+    const paths = [];
+    for (const line of String(regOut || '').split(/\r?\n/)) {
+        const m = line.match(/^\s*AppId\s+REG_(?:EXPAND_)?SZ\s+(.+?)\s*$/i);
+        if (m) paths.push(path.resolve(expandWinEnvPath(m[1].trim())));
+    }
+    return [...new Set(paths)];
+}
+
+/** HKLM AssignedAccess AllowedApps for the provisioned profile (reg.exe /s, no MDM). */
+function readAssignedAccessAllowedAppsFromReg() {
+    const key = `HKLM\\SOFTWARE\\Microsoft\\Windows\\AssignedAccessConfiguration\\Profiles\\${KIOSK_AA_PROFILE_ID}\\AllowedApps`;
+    try {
+        const out = winSystem32ExecFile('reg.exe', ['query', key, '/s']);
+        const desktopPaths = parseAssignedAccessAppIdsFromReg(out);
+        return { ok: desktopPaths.length > 0, desktopPaths, regSnippet: regSnippet(out) };
+    } catch (err) {
+        const partial = parseAssignedAccessAppIdsFromReg(err && err.stdout != null ? String(err.stdout) : '');
+        return {
+            ok: partial.length > 0,
+            desktopPaths: partial,
+            regSnippet: regSnippet(err && err.stdout != null ? String(err.stdout) : ''),
+            error: err.message || String(err),
+        };
+    }
+}
+
+/** OS paths not in kiosk-launcher-apps.json, excluding internal AllowedApps. */
+function pathsNotInLauncherJson(paths, launcherJsonPaths) {
+    const jsonNorm = new Set(launcherJsonPaths.map((p) => path.resolve(p).toLowerCase()));
+    return paths.filter((p) => {
+        const resolved = path.resolve(p);
+        if (isInternalKioskAllowedPath(resolved)) return false;
+        return !jsonNorm.has(resolved.toLowerCase());
+    });
+}
+
+/** AUMID pins are always drift (we never write Start pins). */
+function aumidsNotInLauncherJson(appUserModelIds) {
+    return [...new Set((appUserModelIds || []).map((x) => String(x).trim()).filter(Boolean))];
 }
 
 /** Paths from kiosk-launcher-apps.json (install-time UI list), unfiltered. */
@@ -555,7 +713,7 @@ function readKioskLauncherJsonPathsRaw() {
 }
 
 /**
- * Live Assigned Access allow-list from the OS (kiosk user, no admin): RestrictRun + MDM XML when readable.
+ * Live Assigned Access allow-list from the OS (kiosk user, no admin): RestrictRun + Start pins + HKLM AllowedApps.
  * Use to detect apps an admin added to policy but not in kiosk-launcher-apps.json (e.g. Start pins).
  */
 export function readKioskSystemAllowedApps() {
@@ -563,63 +721,31 @@ export function readKioskSystemAllowedApps() {
         log.warn(`windowsKioskSetup @ readKioskSystemAllowedApps: skip (win32=${process.platform === 'win32'} kioskUser=${isWindowsKioskOsUser()})`);
         return { ok: false, error: 'win32 kiosk user only' };
     }
-    const restrictRunKey = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\RestrictRun';
-    log.info(`windowsKioskSetup @ readKioskSystemAllowedApps: reg RestrictRun → ${regSnippet(runRegQuery(restrictRunKey))}`);
-    const ps = `
-$ErrorActionPreference = 'SilentlyContinue'
-$restrictRun = @()
-$sub = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\RestrictRun'
-if (Test-Path -LiteralPath $sub) {
-  $props = Get-ItemProperty -LiteralPath $sub
-  $restrictRun = @($props.PSObject.Properties | Where-Object { $_.Name -like 'AssignedAccess_*' } | ForEach-Object { [string]$_.Value })
-}
-$mdmOk = $false
-$desktopPaths = [System.Collections.ArrayList]@()
-$aumids = [System.Collections.ArrayList]@()
-try {
-  Add-Type -AssemblyName System.Web
-  $filter = "InstanceID='AssignedAccess' AND ParentID='./Vendor/MSFT/'"
-  $obj = Get-CimInstance -Namespace 'root\\cimv2\\mdm\\dmmap' -ClassName 'MDM_AssignedAccess' -Filter $filter -ErrorAction SilentlyContinue
-  if (-not $obj) {
-    $obj = Get-CimInstance -Namespace 'root\\cimv2\\mdm\\dmmap' -ClassName 'MDM_AssignedAccess' -ErrorAction SilentlyContinue | Select-Object -First 1
-  }
-  if ($obj -and $obj.Configuration) {
-    $mdmOk = $true
-    $xml = [System.Web.HttpUtility]::HtmlDecode([string]$obj.Configuration)
-    foreach ($m in [regex]::Matches($xml, 'DesktopAppPath="([^"]+)"')) {
-      [void]$desktopPaths.Add([Environment]::ExpandEnvironmentVariables($m.Groups[1].Value))
-    }
-    foreach ($m in [regex]::Matches($xml, 'AppUserModelId="([^"]+)"')) {
-      [void]$aumids.Add($m.Groups[1].Value)
-    }
-  }
-} catch {}
-@{
-  ok = $true
-  restrictRunExeNames = @($restrictRun | Sort-Object -Unique)
-  mdmOk = $mdmOk
-  mdmDesktopPaths = @($desktopPaths | Sort-Object -Unique)
-  mdmAppUserModelIds = @($aumids | Sort-Object -Unique)
-} | ConvertTo-Json -Compress -Depth 6
-`;
+    const regAa = readRestrictRunAaFromReg();
+    const restrictRunExeNames = parseAssignedAccessExeNamesFromReg(regAa.restrictRunOut);
+    log.info(`windowsKioskSetup @ readKioskSystemAllowedApps: reg RestrictRun → ${regSnippet(regAa.restrictRunOut)}`);
     try {
-        const data = runPowerShellJson(ps);
-        if (!data) {
-            log.warn('windowsKioskSetup @ readKioskSystemAllowedApps: PowerShell probe failed (see runPowerShellJson)');
-            return { ok: false, error: 'PowerShell allow-list probe failed' };
-        }
+        const startPins = readLiveStartLayoutPins();
+        const aaPolicy = readAssignedAccessAllowedAppsFromReg();
+        log.info(`windowsKioskSetup @ readKioskSystemAllowedApps: startLayout → ${startPins.ok ? 'ok' : startPins.error} ${startPins.layoutPath}`);
+        log.info(`windowsKioskSetup @ readKioskSystemAllowedApps: aa AllowedApps reg → ${aaPolicy.regSnippet || '(empty)'}`);
         const launcherJsonPaths = readKioskLauncherJsonPathsRaw();
-        const jsonNorm = new Set(launcherJsonPaths.map((p) => p.toLowerCase()));
-        const mdmDesktopPaths = (data.mdmDesktopPaths || []).map((p) => String(p));
-        const mdmPathsNotInLauncherJson = mdmDesktopPaths.filter((p) => !jsonNorm.has(path.resolve(p).toLowerCase()));
+        const mergedPaths = [...new Set([...startPins.desktopPaths, ...aaPolicy.desktopPaths])];
+        const notInLauncherJson = [...new Set(pathsNotInLauncherJson(mergedPaths, launcherJsonPaths))];
+        const notInLauncherJsonAumids = aumidsNotInLauncherJson(startPins.appUserModelIds);
         const result = {
             ok: true,
-            restrictRunExeNames: data.restrictRunExeNames || [],
-            mdmOk: !!data.mdmOk,
-            mdmDesktopPaths,
-            mdmAppUserModelIds: data.mdmAppUserModelIds || [],
+            restrictRunExeNames,
+            startLayoutPath: startPins.layoutPath,
+            startLayoutReadable: startPins.ok,
+            startPinDesktopPaths: startPins.desktopPaths,
+            startPinAppUserModelIds: startPins.appUserModelIds,
+            policyAllowedDesktopPaths: aaPolicy.desktopPaths,
             launcherJsonPaths,
-            mdmPathsNotInLauncherJson,
+            notInLauncherJson,
+            notInLauncherJsonAumids,
+            startLayoutError: startPins.error || '',
+            aaPolicyRegSnippet: aaPolicy.regSnippet || '',
         };
         logKioskSystemAllowedAppsRead('readKioskSystemAllowedApps', result);
         return result;
@@ -654,10 +780,16 @@ export function syncAllowedKioskAppsClientinfo(clientinfo) {
         if (data.ok) {
             allowedKioskAppsCache = {
                 restrictRunExeNames: data.restrictRunExeNames,
-                desktopPaths: data.mdmDesktopPaths,
-                appUserModelIds: data.mdmAppUserModelIds,
-                mdmPolicyReadable: data.mdmOk,
-                notInLauncherJson: data.mdmPathsNotInLauncherJson,
+                desktopPaths: [...new Set([
+                    ...(data.startPinDesktopPaths || []),
+                    ...(data.policyAllowedDesktopPaths || []),
+                ])],
+                appUserModelIds: data.startPinAppUserModelIds,
+                startLayoutReadable: data.startLayoutReadable,
+                startPinDesktopPaths: data.startPinDesktopPaths,
+                policyAllowedDesktopPaths: data.policyAllowedDesktopPaths,
+                notInLauncherJson: data.notInLauncherJson,
+                notInLauncherJsonAumids: data.notInLauncherJsonAumids,
             };
         } else {
             allowedKioskAppsCache = { error: data.error || 'read failed' };
@@ -673,9 +805,11 @@ export function syncAllowedKioskAppsClientinfo(clientinfo) {
         log.warn(`windowsKioskSetup @ syncAllowedKioskApps: clientinfo.allowedKioskApps error=${a.error}`);
     } else {
         log.info(`windowsKioskSetup @ syncAllowedKioskApps: clientinfo payload — restrictRun (${(a.restrictRunExeNames || []).length}): ${(a.restrictRunExeNames || []).join(', ') || '(none)'}`);
-        log.info(`windowsKioskSetup @ syncAllowedKioskApps: clientinfo payload — desktopPaths (${(a.desktopPaths || []).length}): ${(a.desktopPaths || []).join(' | ') || '(none)'}`);
+        log.info(`windowsKioskSetup @ syncAllowedKioskApps: clientinfo payload — startLayoutReadable=${a.startLayoutReadable} startPins (${(a.startPinDesktopPaths || []).length}): ${(a.startPinDesktopPaths || []).join(' | ') || '(none)'}`);
+        log.info(`windowsKioskSetup @ syncAllowedKioskApps: clientinfo payload — policyAllowed (${(a.policyAllowedDesktopPaths || []).length}): ${(a.policyAllowedDesktopPaths || []).join(' | ') || '(none)'}`);
         log.info(`windowsKioskSetup @ syncAllowedKioskApps: clientinfo payload — appUserModelIds (${(a.appUserModelIds || []).length}): ${(a.appUserModelIds || []).join(', ') || '(none)'}`);
-        log.info(`windowsKioskSetup @ syncAllowedKioskApps: clientinfo payload — mdmPolicyReadable=${a.mdmPolicyReadable} notInLauncherJson (${(a.notInLauncherJson || []).length}): ${(a.notInLauncherJson || []).join(' | ') || '(none)'}`);
+        log.info(`windowsKioskSetup @ syncAllowedKioskApps: clientinfo payload — notInLauncherJson (${(a.notInLauncherJson || []).length}): ${(a.notInLauncherJson || []).join(' | ') || '(none)'}`);
+        log.info(`windowsKioskSetup @ syncAllowedKioskApps: clientinfo payload — notInLauncherJsonAumids (${(a.notInLauncherJsonAumids || []).length}): ${(a.notInLauncherJsonAumids || []).join(', ') || '(none)'}`);
     }
     log.info('windowsKioskSetup @ syncAllowedKioskApps: attached allowedKioskApps to clientinfo for teacher update');
 }
