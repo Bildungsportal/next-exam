@@ -27,6 +27,9 @@ const INTERNAL_KIOSK_ALLOWED_EXE_NAMES = new Set([
     'java.exe', 'javaw.exe', 'disable-shortcuts.exe', 'netsh.exe',
     'powershell.exe', 'reg.exe', 'whoami.exe', 'next-exam-student.exe',
 ]);
+const KIOSK_BUNDLE_LAUNCH_EXE_CANDIDATES = ['Next-Exam-Student.exe', 'next-exam.exe'];
+const KIOSK_BUNDLE_PORTABLE_UNPACK_DIR = path.join(os.tmpdir(), 'next-exam-student');
+const KIOSK_BUNDLE_MSI_INSTALL_DIR = 'C:\\Program Files\\Next-Exam-Student';
 
 /**
  * Wipe leftover student data on kiosk app quit so the next student starts fresh.
@@ -76,29 +79,48 @@ function isElectronAppBundleDir(dir) {
         || existsSync(path.join(dir, 'locales'));
 }
 
+/** First launch exe name present in a valid Electron bundle dir. */
+function findLaunchExeInBundleDir(appDir) {
+    for (const name of KIOSK_BUNDLE_LAUNCH_EXE_CANDIDATES) {
+        if (existsSync(path.join(appDir, name))) return name;
+    }
+    return null;
+}
+
+/** Resolve bundle dir + launch exe when dir contains resources\\ (Electron unpack or MSI install). */
+function tryResolveBundleFromDir(appDir) {
+    if (!appDir || !isElectronAppBundleDir(appDir)) return null;
+    const launchExe = findLaunchExeInBundleDir(appDir);
+    if (!launchExe) return null;
+    return { appDir: path.resolve(appDir), launchExe };
+}
+
 /** Resolves the full app tree to copy (not the NSIS portable launcher in Downloads). */
 export function resolveWindowsKioskAppBundle() {
     if (!app.isPackaged) {
         return { ok: false, error: 'Kiosk setup requires a packaged Next-Exam build (not dev/quasar).' };
     }
-    const launchExe = path.basename(process.execPath);
-    let appDir = path.dirname(process.execPath);
-    // PORTABLE_EXECUTABLE_DIR often points at Downloads (launcher), not %TEMP%\next-exam-student — validate
+    const candidates = [];
     const portableDir = process.env.PORTABLE_EXECUTABLE_DIR?.trim();
-    if (portableDir && isElectronAppBundleDir(portableDir)) {
-        appDir = portableDir;
+    if (portableDir) candidates.push(portableDir);
+    candidates.push(path.dirname(process.execPath));
+    candidates.push(KIOSK_BUNDLE_PORTABLE_UNPACK_DIR);
+    candidates.push(KIOSK_BUNDLE_MSI_INSTALL_DIR);
+    const seen = new Set();
+    for (const dir of candidates) {
+        const key = path.resolve(dir).toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const hit = tryResolveBundleFromDir(dir);
+        if (hit) {
+            log.info(`windowsKioskSetup: detected source bundle=${hit.appDir} launch=${hit.launchExe}`);
+            return { ok: true, appDir: hit.appDir, launchExe: hit.launchExe };
+        }
     }
-    if (!isElectronAppBundleDir(appDir)) {
-        return {
-            ok: false,
-            error: `Could not locate Next-Exam app folder (expected resources\\app.asar). Got: ${appDir}`,
-        };
-    }
-    if (!existsSync(path.join(appDir, launchExe))) {
-        return { ok: false, error: `Launch exe missing in app folder: ${path.join(appDir, launchExe)}` };
-    }
-    log.info(`windowsKioskSetup: detected source bundle=${appDir} launch=${launchExe}`);
-    return { ok: true, appDir, launchExe };
+    return {
+        ok: false,
+        error: 'Could not locate Next-Exam app folder (portable unpack, running exe dir, or MSI Program Files).',
+    };
 }
 
 /** IPC success payload including paths copied from (for log + optional UI). */
