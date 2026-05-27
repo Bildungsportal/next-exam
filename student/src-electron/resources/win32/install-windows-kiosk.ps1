@@ -7,6 +7,8 @@
 #   OR shorthand -AppPath = full path to that launch .exe (parent folder is copied)
 #
 # STANDALONE USAGE EXAMPLES (elevated PowerShell):
+#   .\install-windows-kiosk.ps1
+#   .\install-windows-kiosk.ps1 -ExtraAppsFile "C:\Users\Lehrer\kiosk-allowed-apps.txt"
 #   .\install-windows-kiosk.ps1 -AppDir "$env:TEMP\next-exam-student" -LaunchExe "Next-Exam-Student.exe"
 #   .\install-windows-kiosk.ps1 -AppDir "C:\Program Files\Next-Exam-Student" -LaunchExe "Next-Exam-Student.exe"
 #   .\install-windows-kiosk.ps1 -AppPath "$env:TEMP\next-exam-student\Next-Exam-Student.exe"
