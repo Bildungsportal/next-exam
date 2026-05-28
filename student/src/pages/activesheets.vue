@@ -726,13 +726,10 @@ export default {
                     return
                 }
 
-                await this.waitUntilSigningSwalPainted()
+                // SWAL temporaer disabled - body.swal2-shown kills multi-page printToPDF
+                // await this.waitUntilSigningSwalPainted()
                 let response
-                try {
-                    response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
-                } finally {
-                    this.$swal.close()
-                }
+                response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
                 if (response?.status !== 'success') return
                 this.currentpreviewBase64 = response.base64pdf
                 if (directsend) {
@@ -1064,21 +1061,26 @@ export default {
 @media print { 
 
 
-    #webview, #apphead, #focuswarning, .focus-container, #preview, #pdfembed, #toolbar, #statusbar  {
+    #webview, #apphead, #focuswarning, .focus-container, #preview, #pdfembed, #toolbar, #statusbar, .pdfview-pane-rendered,
+    .embed-container.pdfview-pane-rendered , .zoombutton, #preview, .pdf-overlay-root   {
         display: none !important;
     }
 
-    .pdfview-pane-rendered,
-    .embed-container.pdfview-pane-rendered {
-        display: none !important;
+    .swal2-container, .swal2-center, .swal2-backdrop-show , .swal2-popup, .swal2-modal, .swal2-icon-info, .swal2-show {
+        display:none !important;
     }
-    html, body, .activesheets-root, .activesheets-body {
-        position: relative !important;
-        height: auto !important;
-        max-height: none !important;
+
+    ::-webkit-scrollbar {
+        display: none;
+    }
+
+
+    #vuexambody, .activesheets-root, .activesheets-body{
+        display: block !important;
+        position: absolute !important;
         overflow: visible !important;
     }
-    #vuexambody { position: absolute !important; } /* required for multi-page printing */
+   
    
     // Use :deep() to target child component styles - remove all height restrictions for printing
     // zoom 8/9: pdfparser rendert page mit scale 1.5 (=> 1pt = 1.5px); printToPDF mappt 1pt = 96/72 = 1.333px.
@@ -1086,6 +1088,8 @@ export default {
     :deep(.pdf-overlay-root) {
         height: auto !important;
         max-height: none !important;
+        display: block !important;
+        position: absolute !important;
         overflow: visible !important;
         zoom: calc(8 / 9) !important;
     }
@@ -1096,39 +1100,20 @@ export default {
         box-shadow: none !important;
         padding: 0px !important;
         margin: 0px !important;
-        height: auto !important;
-        max-height: none !important;
+
+
+        position: absolute !important;
+        overflow: visible !important;
+
+    }
+ 
+
+    html, body, .activesheets-root, .activesheets-body {
+        position: absolute !important;
         overflow: visible !important;
     }
-    
-    :deep(.pdf-page-wrapper) {
-        page-break-after: always !important;
-        break-after: page !important;
-        margin-bottom: 0px !important;
-        box-shadow: none !important;
-    }
 
 
-
-    #app {
-        display:block !important;
-       
-        max-height: none !important;
-        overflow: visible !important;
-        position:absolute !important;
-    }
-    
-    #content {
-        overflow: visible !important;
-        height: auto !important;
-        max-height: none !important;
-        position:absolute !important;
-        background-color: #ffffff !important;
-    }
-
-    ::-webkit-scrollbar {
-                display: none;
-            }
 
     // p { page-break-after: always; }
     .footer { 
@@ -1136,27 +1121,22 @@ export default {
         bottom: 0px; 
     }
 
-    .zoombutton, #preview {
-    display:none !important;
-    }
 
-    .swal2-container, .swal2-center, .swal2-backdrop-show , .swal2-popup, .swal2-modal, .swal2-icon-info, .swal2-show {
-        display:none !important;
-    }
+
+
 
   
-    
-    // Ensure content is visible
-    #content {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        overflow: visible !important;
-        height: auto !important;
-    }
 
 }
 
 
 
 
+</style>
+
+<style>
+/* unscoped: body lebt ausserhalb des template-scope */
+@media print {
+    #vuexambody { position: absolute !important; }
+}
 </style>

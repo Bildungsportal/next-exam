@@ -54,6 +54,7 @@ IPC^student^controlBearer^POST /server/control/update|updatescreenshot|submissio
 TECH^moodle^proof^shared/nextExamMoodleProofSecret.js+buildNextExamMoodleProof.js HMAC-SHA256 hex(secret, quizId|UTC YYYY-MM-DD); header X-Next-Exam-Moodle-Proof+X-Next-Exam-Client:1; eduvidual guest webRequest ipchandler attach/detach; exammode required
 TECH^exam^fileCrypto^NXE1 v1 AES-256-GCM+scrypt; key=serverstatus.encryptionPassword (64 hex auto); examPassword=human exit only
 TECH^submissionSign^pades^auto always; bip=userprivateaccesskey; local=sha256(pin|token|timeMs); rewritePdfForPlainSignpdf before plainAddPlaceholder; HIDDEN_SIG_WIDGET_RECT to suppress widget line; visible stamp last page center; printBackground:false on signed export (else gray bands)^shared/submissionPdfSign.js
+BUG^print^swal2MultiPage^body.swal2-shown setzt im @media print "[aria-hidden=true] { display:none }" auf alle body-children → killt multi-page print bei activesheets previewSigned. Fix in activesheets.vue @media print: body.swal2-shown > [aria-hidden="true"] { display:block !important }
 
 # Exam schema
 RULE^exam^sectionSchema^mode config only group.examConfig.{editor|website|eduvidual|forms|rdp|localvm|activeSheets|microsoft365}; section has examtype+sectionname+timelimit+locked+startTs+groups only

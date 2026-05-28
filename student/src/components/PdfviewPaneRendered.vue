@@ -552,9 +552,9 @@
     }
 
     @media print {
-    .pdfview-pane-rendered {
-        display: none !important;
-    }
+        .pdfview-pane-rendered {
+            display: none !important;
+        }
     }
 
 </style>

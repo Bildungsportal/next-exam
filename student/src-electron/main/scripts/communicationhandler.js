@@ -755,7 +755,7 @@ import {
                 ? { top: 0, right: 0, bottom: 0, left: 0 }
                 : { top: 0.5, right: 0, bottom: isSigningExport ? 0 : 0.5, left: 0 },
             pageSize: 'A4',
-            printBackground: isSigningExport ? false : printBackground,
+            printBackground: isFullpage ? printBackground : (isSigningExport ? false : printBackground),
             printSelectionOnly: false,
             landscape: false,
             displayHeaderFooter: !isFullpage,
