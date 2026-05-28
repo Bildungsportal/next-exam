@@ -253,8 +253,6 @@ export default {
             focus: true,
             exammode: false,
             currentFile:null,
-            saveinterval: null,
-            fetchinfointerval: null,
             lockedSection: null,
             clientinfo: null,
             now : new Date().getTime(),
@@ -362,14 +360,11 @@ export default {
 
 
             // do not use setInterval() for intervals as it keeps all objects of the callbacks including fetch() responses in memory until the interval is stopped
-            this.fetchinfointerval = new SchedulerService(5000);
-            this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-            this.fetchinfointerval.start();
+            this.autoSchedulerService(this.fetchInfo, 5000);
             await this.fetchInfo(); // initial sync for clientinfo, serverstatus and lockedSection
-            this.saveinterval = new SchedulerService(20000);
+
             this.saveContentGgbAuto = () => this.saveContent(false, 'auto'); // detour so interval does not pass Scheduler event as first arg
-            this.saveinterval.addEventListener('action', this.saveContentGgbAuto);
-            this.saveinterval.start();
+            this.autoSchedulerService(this.saveContentGgbAuto, 20000);
 
             attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
 
@@ -879,11 +874,6 @@ export default {
             this._stopExammodeWatch()
         }
 
-        this.saveinterval.removeEventListener('action', this.saveContentGgbAuto);
-        this.saveinterval.stop() 
-
-        this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
-        this.fetchinfointerval.stop() 
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
         if (this._ggbResizeObs) {

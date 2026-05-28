@@ -62,7 +62,7 @@ export const autoCleanupMixin = {
 
         // Remove all scheduler services
         this.schedulerServices.forEach((schedulerService: SchedulerService) => {
-            schedulerService.stop()
+            schedulerService.stop();
         });
 
         // Run cleanup functions
