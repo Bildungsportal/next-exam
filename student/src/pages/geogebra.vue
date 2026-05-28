@@ -171,7 +171,11 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 import { getExamMaterials, loadPDF, loadImage, loadGGB, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import {SignalBridge} from '../utils/signalBridge.js'
-import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
+import {
+    attachExamMouseleaveGuard,
+    attachExamMouseleaveGuardBoolean,
+    shouldSkipEdgeFocusLost
+} from '../utils/linuxCageKiosk.js'
 import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
@@ -229,12 +233,10 @@ export default {
 
       let examtype = ref(infoStore.examtype);
       let servername = ref(infoStore.servername);
-      let servertoken = ref(infoStore.servertoken);
       let serverip = ref(infoStore.serverip);
       let token = ref(infoStore.token);
       let clientname = ref(infoStore.clientname);
       let serverstatus = ref(infoStore.serverstatus);
-      let clientApiPort = ref(infoStore.clientApiPort);
       let pincode = ref(infoStore.pincode);
       let localLockdown = ref(infoStore.localLockdown);
       let online = ref(infoStore.online);
@@ -243,9 +245,8 @@ export default {
       let entryTime = ref(infoStore.entryTime);
       let componentName = ref(infoStore.componentName);
 
-      return { infoStore,
-        development, serverApiPort, electron, hostip,
-        examtype, servername, servertoken, serverip, token, clientname, serverstatus, clientApiPort, pincode, localLockdown, online, battery, wlanInfo, entryTime, componentName};
+      return { development, serverApiPort, electron, hostip,
+        examtype, servername, serverip, token, clientname, serverstatus, pincode, localLockdown, online, battery, wlanInfo, entryTime, componentName};
     },
 
     data() {
@@ -366,7 +367,7 @@ export default {
             this.saveContentGgbAuto = () => this.saveContent(false, 'auto'); // detour so interval does not pass Scheduler event as first arg
             this.autoSchedulerService(this.saveContentGgbAuto, 20000);
 
-            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
+            attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
 
             this.loadFilelist()
             this.getExamMaterials()

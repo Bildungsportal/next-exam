@@ -3,19 +3,6 @@
 
     <!-- HEADER START -->
     <exam-header
-        :serverstatus="serverstatus"
-        :clientinfo="clientinfo"
-        :online="online"
-        :clientname="clientname"
-        :exammode="exammode"
-        :servername="servername"
-        :pincode="pincode"
-        :battery="battery"
-        :entrytime="entrytime"
-        :componentName="componentName"
-        :localLockdown="localLockdown"
-        :wlanInfo="wlanInfo"
-        :hostip="hostip"
         @reconnect="reconnect"
         @gracefullyExit="gracefullyExit"
         @sectionSwitched="fetchInfo"
@@ -793,13 +780,21 @@ import {getExamMaterials, loadDOCX, loadHTML, loadImage, loadODT, loadPDF, playA
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 
 import {SignalBridge} from '../utils/signalBridge.js'
-import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
+import {
+    attachExamMouseleaveGuard,
+    attachExamMouseleaveGuardBoolean,
+    shouldSkipEdgeFocusLost
+} from '../utils/linuxCageKiosk.js'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
 import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
     resolveLockedSection,
 } from '../utils/examFetchInfoSync.js'
+import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
+import {ref} from "vue";
+import {useInfoStore} from "stores/infoStore.ts";
+import {useConfigStore} from "stores/configStore.ts";
 const lowlight = createLowlight(common)
 
 // signalBridge instance centralizes ipc calls with platform checks
@@ -817,6 +812,40 @@ export default {
         WebviewPane,
         PdfviewPaneRendered
     },
+    mixins: [autoCleanupMixin],
+
+    setup() {
+      const configStore = useConfigStore();
+      let development = ref(configStore.development);
+      let serverApiPort = ref(configStore.serverApiPort);
+      let electron = ref(configStore.electron);
+      let hostip = ref(configStore.hostip);
+
+      const infoStore = useInfoStore();
+      infoStore.online = true;
+      infoStore.componentName = "Writer";
+
+      let examtype = ref(infoStore.examtype);
+      let servername = ref(infoStore.servername);
+      let serverip = ref(infoStore.serverip);
+      let token = ref(infoStore.token);
+      let clientname = ref(infoStore.clientname);
+      let serverstatus = ref(infoStore.serverstatus);
+      let pincode = ref(infoStore.pincode);
+      let localLockdown = ref(infoStore.localLockdown);
+      let online = ref(infoStore.online);
+      let battery = ref(infoStore.battery);
+      let wlanInfo = ref(infoStore.wlanInfo);
+      let entryTime = ref(infoStore.entryTime);
+      let componentName = ref(infoStore.componentName);
+      let cmargin = ref(infoStore.cmargin);
+
+      cmargin = cmargin ? cmargin : {side: 'right', size: 3};
+
+      return { development, serverApiPort, electron, hostip,
+        examtype, servername, serverip, token, clientname, serverstatus, pincode, localLockdown, online, battery, wlanInfo, entryTime, componentName, cmargin};
+    },
+
     data() {
         const status = this.$route.params.serverstatus;
         let activeSection = {};
@@ -834,14 +863,11 @@ export default {
 
         return {
             index: 0,
-            componentName: 'Writer',
-            online: true,
             focus: true,
             focusLostMessage: '',
             focusLockReason: '',
             focusLockMessage: '',
             exammode: false,
-            examtype: this.$route.params.examtype,
             selectedFile: null,
             currentFile: null,
             editor: null,
@@ -849,29 +875,17 @@ export default {
             fetchinfointerval: null,
             statusCountInterval: null,
             loadfilelistinterval: null,
-            servername: this.$route.params.servername,
-            servertoken: this.$route.params.servertoken,
-            serverip: this.$route.params.serverip,
-            token: this.$route.params.token,
-            clientname: this.$route.params.clientname,
-            localLockdown: this.$route.params.localLockdown,
             localUnlockPassword: '',
             localUnlockError: false,
             localUnlockBusy: false,
             localfiles: null,
-            serverApiPort: this.$route.params.serverApiPort,
-            clientApiPort: this.$route.params.clientApiPort,
-            electron: this.$route.params.electron,
-            config: this.$route.params.config,
             clientinfo: null,
             entrytime: 0,
             caretContextLabel: '',
-            pincode: this.$route.params.pincode,
             zoom: EDITOR_ZOOM_INITIAL,
             battery: null,
             proseMirrorMargin: '30mm',
             editorWidth: '210mm',
-            cmargin: this.$route.params.cmargin ? this.$route.params.cmargin : {side: 'right', size: 3},
             selectedWordCount: 0,
             selectedCharCount: 0,
             currentRange: 0,
@@ -1097,9 +1111,9 @@ export default {
             // Use pointer events to support mouse + touch.
             if (!this.splitview) return;
             this._splitResizing = true;
-            window.addEventListener('pointermove', this.onSplitResizeMove, { passive: false });
-            window.addEventListener('pointerup', this.stopSplitResize, { passive: true });
-            window.addEventListener('pointercancel', this.stopSplitResize, { passive: true });
+            this.autoEventListener(window,'pointermove', this.onSplitResizeMove, { passive: false });
+            this.autoEventListener(window,'pointerup', this.stopSplitResize, { passive: true });
+            this.autoEventListener(window,'pointercancel', this.stopSplitResize, { passive: true });
             this.onSplitResizeMove(e);
         },
 
@@ -1903,7 +1917,7 @@ export default {
                             resolve();
                         };
                         const onReady = () => cleanup();
-                        try { webview.addEventListener('dom-ready', onReady, { once: true }); } catch (_) { /* ignore */ }
+                        try { this.autoEventListener(webview,'dom-ready', onReady, { once: true }); } catch (_) { /* ignore */ }
                         setTimeout(cleanup, timeoutMs);
                     });
                 };
@@ -1998,7 +2012,7 @@ export default {
 
 
             if (this.splitview === false) {
-                document.querySelector("#preview").addEventListener("click", this.hidepreview);
+                this.autoEventListener(document.querySelector("#preview"),"click", this.hidepreview);
             }
             if (this.splitview === true) {
                 document.querySelector("#preview").removeEventListener("click", this.hidepreview);
@@ -2009,12 +2023,12 @@ export default {
             if (editorcontainer) editorcontainer.style.zoom = this.zoom;
             const editorcontent = document.getElementById('editorcontent');
             if (editorcontent) {
-                editorcontent.addEventListener('mouseup', this.getSelectedTextInfo);   // show amount of words and characters
-                editorcontent.addEventListener('keydown', this.insertSpaceInsteadOfTab)   //this changes the tab behaviour and allows tabstops
+                this.autoEventListener(editorcontent, 'mouseup', this.getSelectedTextInfo);   // show amount of words and characters
+                this.autoEventListener(editorcontent, 'keydown', this.insertSpaceInsteadOfTab)   //this changes the tab behaviour and allows tabstops
             }
             const editormaincontainer = document.getElementById('editormaincontainer');
             if (editormaincontainer) {
-                editormaincontainer.addEventListener('scroll', this.LTupdateHighlights, {passive: true});
+              this.autoEventListener(editormaincontainer,'scroll', this.LTupdateHighlights, {passive: true});
             }
 
 
@@ -2071,9 +2085,9 @@ export default {
         },
         async sendFocuslost(ctrlalt = false, options = {}) {
             const { instantBlock = false, forceBackendLock = false, message = '' } = options;
-            if (!forceBackendLock && await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
+            if (!forceBackendLock && await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             if (message) this.focusLostMessage = message;
-            if (instantBlock && !this.config.development) {
+            if (instantBlock && !this.development) {
                 this.focus = false;
                 const editorcontentcontainer = document.getElementById('editorcontent');
                 const editableDiv = editorcontentcontainer?.firstElementChild;
@@ -2092,7 +2106,7 @@ export default {
                 return;
             }
 
-            if (response && !this.config.development && !response.focus) { // immediately block frontend
+            if (response && !this.development && !response.focus) { // immediately block frontend
                 this.focus = false;
                 const editorcontentcontainer = document.getElementById('editorcontent');
                 const editableDiv = editorcontentcontainer?.firstElementChild;
@@ -2463,7 +2477,7 @@ export default {
         signalBridge.on('focusLock', (_event, payload = {}) => {
             this.focusLockReason = payload.reason || '';
             this.focusLockMessage = payload.message || '';
-            if (!this.config.development) this.focus = false;
+            if (!this.development) this.focus = false;
         });
 
         signalBridge.on('getmaterials', (event) => {  // get exam materials from teacher
@@ -2528,18 +2542,18 @@ export default {
 
 
         // add some eventlisteners once
-        document.querySelector("#preview").addEventListener("click", function () {
+        this.autoEventListener(document.querySelector("#preview"),"click", function () {
             this.style.display = 'none';
             this.setAttribute("src", "about:blank");
             URL.revokeObjectURL(this.currentpreview);
             // this.classList.add('fadeinfast');  // removed once the pdf is visible to avoid flickering, then added back here
         });
 
-        document.querySelector("#mugshotpreview").addEventListener("click", function () {
+        this.autoEventListener(document.querySelector("#mugshotpreview"),"click", function () {
             this.style.display = 'none';
         });
 
-        document.querySelector("#audioclose").addEventListener("click", function (e) {
+        this.autoEventListener(document.querySelector("#audioclose"),"click", function (e) {
             audioPlayer.pause();
             console.log('editor @ audioclose: Playback stopped');
             document.querySelector("#aplayer").style.display = 'none';
@@ -2547,7 +2561,7 @@ export default {
 
         const audioPlayer = document.getElementById('audioPlayer');
         if (audioPlayer) {
-            audioPlayer.addEventListener('contextmenu', (e) => {
+            this.autoEventListener(audioPlayer,'contextmenu', (e) => {
                 e.preventDefault();
             });
         }
@@ -2556,18 +2570,10 @@ export default {
         this.entrytime = new Date().getTime()
 
         // do not use setInterval() for intervals as it keeps all objects of the callbacks including fetch() responses in memory until the interval is stopped
-        this.fetchinfointerval = new SchedulerService(5000);
-        this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-        this.fetchinfointerval.start();
+        this.autoSchedulerService(this.fetchInfo, 5000);
+        this.autoSchedulerService(() => this.saveContent(true, 'auto'), 20000);
+        this.autoSchedulerService(this.updateEditorStatusCounts, 1000);
 
-        this.saveContentCallback = () => this.saveContent(true, 'auto');  // this detour is needed because of 2 parameters, otherwise the event listener cannot be removed
-        this.saveinterval = new SchedulerService(20000);
-        this.saveinterval.addEventListener('action', this.saveContentCallback);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-        this.saveinterval.start();
-
-        this.statusCountInterval = new SchedulerService(1000);
-        this.statusCountInterval.addEventListener('action', this.updateEditorStatusCounts);
-        this.statusCountInterval.start();
         this.$nextTick(() => this.updateEditorStatusCounts());
 
 
@@ -2580,8 +2586,8 @@ export default {
         this.$nextTick(() => {
             this.editorcontentcontainer = document.getElementById('editorcontent');
             if (this.editorcontentcontainer) {
-                this.editorcontentcontainer.addEventListener('mouseup', this.getSelectedTextInfo);   // show amount of words and characters
-                this.editorcontentcontainer.addEventListener('keydown', this.insertSpaceInsteadOfTab)   //this changes the tab behaviour and allows tabstops
+                this.autoEventListener(this.editorcontentcontainer,'mouseup', this.getSelectedTextInfo);   // show amount of words and characters
+                this.autoEventListener(this.editorcontentcontainer,'keydown', this.insertSpaceInsteadOfTab)   //this changes the tab behaviour and allows tabstops
             }
 
             // start language tool locally (if allowed)
@@ -2591,13 +2597,12 @@ export default {
 
 
         // update LThighlights positions on scroll
-        document.getElementById('editormaincontainer').addEventListener('scroll', this.LTupdateHighlights, {passive: true});
+        this.autoEventListener(document.getElementById('editormaincontainer'),'scroll', this.LTupdateHighlights, {passive: true});
 
         // block editor on escape
-        if (!this.config.development) {
-            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
-            // document.body.addEventListener('keydown', this.handleCtrlAlt);
-            window.addEventListener('visibilitychange', this.handleVisibilityChange);
+        if (!this.development) {
+            attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
+            this.autoEventListener(window,'visibilitychange', this.handleVisibilityChange);
         }
 
       
@@ -2608,10 +2613,10 @@ export default {
         this.sleep(1000).then(() => {
             this.editorContent = this.editorcontentcontainer.querySelector('.ProseMirror');
             if (this.editorContent) {
-                this.editorContent.addEventListener('paste', this.handlePaste, true);
-                this.editorContent.addEventListener('drop', this.handleDrop, true);
+                this.autoEventListener(this.editorContent,'paste', this.handlePaste, true);
+                this.autoEventListener(this.editorContent,'drop', this.handleDrop, true);
                 this.typingRhythmKeydownListener = this.handleTypingRhythmKeydown.bind(this);
-                this.editorContent.addEventListener('keydown', this.typingRhythmKeydownListener, true);
+                this.autoEventListener(this.editorContent,'keydown', this.typingRhythmKeydownListener, true);
             }
             console.log(`editor @ mounted: Calling loadBackupFile`)
             this.loadBackupFile()
@@ -2628,62 +2633,10 @@ export default {
         /**
          *   REMOVE EVENT LISTENERS
          */
-        this.editorcontentcontainer.removeEventListener('keydown', this.insertSpaceInsteadOfTab)
-        this.editorcontentcontainer.removeEventListener('contextmenu', this.getWord);
 
-        if (this.editorContent) {
-            this.editorContent.removeEventListener('paste', this.handlePaste, true);
-            this.editorContent.removeEventListener('drop', this.handleDrop, true);
-            if (this.typingRhythmKeydownListener) {
-                this.editorContent.removeEventListener('keydown', this.typingRhythmKeydownListener, true);
-            }
-        }
-        //document.removeEventListener('input', this.checkAllWordsOnSpacebar)
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
-        // document.body.removeEventListener('keydown', this.handleCtrlAlt);
-        window.removeEventListener('visibilitychange', this.handleVisibilityChange);
 
-        document.removeEventListener('click', this.hideSpellcheckMenu);
-        this.editorcontentcontainer.removeEventListener('mouseup', this.getSelectedTextInfo);
-        document.getElementById('editormaincontainer').removeEventListener('scroll', this.LTupdateHighlights, {passive: true});
         this.stopSplitResize()
-
-        this.saveinterval.removeEventListener('action', this.saveContentCallback);
-
-        // Clean up preview click listeners
-        const preview = document.querySelector("#preview");
-        if (preview) {
-            preview.removeEventListener("click", this.hidepreview);
-        }
-
-        const mugshotPreview = document.querySelector("#mugshotpreview");
-        if (mugshotPreview) {
-            mugshotPreview.removeEventListener("click", function () {
-                this.style.display = 'none';
-            });
-        }
-
-        const audioClose = document.querySelector("#audioclose");
-        if (audioClose) {
-            audioClose.removeEventListener("click", function (e) {
-                audioPlayer.pause();
-                console.log('editor @ audioclose: Playback stopped');
-            });
-        }
-
-        const audioPlayer = document.getElementById('audioPlayer');
-        if (audioPlayer) {
-            audioPlayer.removeEventListener('contextmenu', (e) => {
-                e.preventDefault();
-            });
-        }
-        this.saveinterval.stop()
-
-        this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
-        this.fetchinfointerval.stop()
-
-        this.statusCountInterval.removeEventListener('action', this.updateEditorStatusCounts);
-        this.statusCountInterval.stop()
 
         signalBridge.removeAllListeners('getmaterials')
         signalBridge.removeAllListeners('finalsubmit')
