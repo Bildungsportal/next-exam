@@ -149,10 +149,12 @@
                 :currentpreviewPath=currentpreviewPath
                 :currentpreviewBase64=currentpreviewBase64
                 :currentpreviewType="currentpreviewType"
+                :activesheets-correction="activesheetsCorrection"
                 @close="hidepreview"
                 @printBase64="printBase64"
                 @downloadFile="downloadFile"
                 @openFileExternal="openFileExternal"
+                @save-correction="saveActivesheetsCorrectedPdf"
             />
         </div>
         <PdfRenderer
@@ -162,6 +164,7 @@
             :loading="false"
             :customFields="activesheetsPreviewCustomFields"
             :blacklist="activesheetsPreviewBlacklist"
+            :initial-form-data="activesheetsPreviewInitialFormData"
             @close="discardActivesheetsPdf"
             @save-custom-fields="saveCustomFields"
             @save-correction-template="saveActivesheetsCorrectionTemplate"
@@ -1341,7 +1344,7 @@ import { isStudentReachable, countReachableStudents } from '../utils/studentPres
 
 import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile, createSharingLink, fileExistsInAppFolder, downloadFilesFromOneDrive} from '../msalutils/onedrive'
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
-import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate } from '../utils/filemanager'
+import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate, saveActivesheetsCorrectedPdf } from '../utils/filemanager'
 import { swalQueued } from '../utils/swalQueue.js'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, lockSectionForAll, endExam, kick, restore } from '../utils/exammanagement.js'
 import { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, configureEditorTemplate, removeEditorTemplate, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
@@ -1431,8 +1434,10 @@ export default {
             activesheetsPreviewFilename: null,
             activesheetsPreviewCustomFields: [],
             activesheetsPreviewBlacklist: [],
+            activesheetsPreviewInitialFormData: null,
             activesheetsPreviewGroup: null,
             activesheetsPreviewFileIndex: -1,
+            activesheetsCorrection: null,
             
             serverlog: [],
             serverlogActive: false,
@@ -1834,6 +1839,7 @@ computed: {
         showBase64ImagePreview:showBase64ImagePreview,              // displays a base64 encoded image in the preview panel
         showBase64PdfInRenderer:showBase64PdfInRenderer,            // displays a base64 encoded pdf in PdfRenderer component
         saveActivesheetsCorrectionTemplate: saveActivesheetsCorrectionTemplate,
+        saveActivesheetsCorrectedPdf: saveActivesheetsCorrectedPdf,
 
         /**
          * Exam Managment functions
@@ -2406,6 +2412,7 @@ computed: {
             this.currentpreviewBase64 = null;
             this.currentpreviewPath = null;
             this.currentpreviewname = null;
+            this.activesheetsCorrection = null;
         },
         // discard activesheets PDF
         discardActivesheetsPdf() {
@@ -2413,6 +2420,7 @@ computed: {
             this.activesheetsPreviewFilename = null;
             this.activesheetsPreviewCustomFields = [];
             this.activesheetsPreviewBlacklist = [];
+            this.activesheetsPreviewInitialFormData = null;
             this.activesheetsPreviewGroup = null;
             this.hidepreview();
         },

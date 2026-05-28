@@ -1199,6 +1199,56 @@ class IpcHandler {
             }
         })
 
+        /** Captures visible teacher window as PDF (activesheets correction save). */
+        ipcMain.handle('captureTeacherPreviewPdf', async () => {
+            const wc = this.WindowHandler?.mainwindow?.webContents
+            if (!wc) {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            try {
+                const data = await wc.printToPDF({
+                    printBackground: true,
+                    pageSize: 'A4',
+                    landscape: false,
+                    margins: { top: 0.5, right: 0, bottom: 0.5, left: 0 },
+                })
+                return { status: 'success', sender: 'server', base64pdf: Buffer.from(data).toString('base64') }
+            } catch (err) {
+                log.error('ipchandler @ captureTeacherPreviewPdf:', err)
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+        })
+
+        /** Overwrites a student ABGABE submission PDF from teacher correction preview. */
+        ipcMain.handle('overwriteTeacherAbgabePdf', async (_event, payload = {}) => {
+            const servername = payload?.servername
+            const servertoken = payload?.servertoken
+            const filepath = payload?.filepath
+            const base64pdf = payload?.base64pdf
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer || servertoken !== mcServer.serverinfo?.servertoken) {
+                return { status: 'error', sender: 'server', message: t('data.tokennotvalid') }
+            }
+            if (!filepath || typeof filepath !== 'string' || typeof base64pdf !== 'string') {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            const examRoot = path.resolve(path.join(this.config.workdirectory, mcServer.serverinfo.servername))
+            const absTarget = path.resolve(filepath)
+            const rel = path.relative(examRoot, absTarget).replace(/\\/g, '/')
+            if (rel.startsWith('..') || path.isAbsolute(rel) || !rel.includes('ABGABE/')) {
+                log.warn(`ipchandler @ overwriteTeacherAbgabePdf: rejected path (${filepath})`)
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            try {
+                const pdfBuffer = Buffer.from(base64pdf, 'base64')
+                await fs.promises.writeFile(absTarget, pdfBuffer)
+                return { status: 'success', sender: 'server', filepath: absTarget }
+            } catch (err) {
+                log.error('ipchandler @ overwriteTeacherAbgabePdf:', err)
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+        })
+
         /** Writes UTF-8 JSON from trusted teacher renderer; basename must end with _editor_timeline.json. */
         ipcMain.handle('writeTeacherWorkdirUtf8File', async (_event, payload = {}) => {
             const servername = payload?.servername
@@ -1256,6 +1306,9 @@ class IpcHandler {
         /** Get Specific Submission by filepath as base64 string */
         ipcMain.handle('getSpecificSubmissionBase64', async (event, filepath) => {
             try {
+                if (!/\.pdf$/i.test(String(filepath || ''))) {
+                    return { submission: false, status: 'error', message: 'not a pdf' }
+                }
                 let raw = fs.readFileSync(filepath)
                 const rel = path.relative(this.config.workdirectory, filepath)
                 const servername = rel.split(path.sep)[0]
@@ -1424,7 +1477,8 @@ class IpcHandler {
                             let sectionFiles = fs.readdirSync(sectionDir, { withFileTypes: true })
                                 .filter(dirent => dirent.isFile()) // only files, not directories
                                 .map(dirent => dirent.name)
-                            
+                                .filter((file) => /\.pdf$/i.test(file)) // ignore sidecar .htm form data
+
                             if (sectionFiles.length > 0) {
                                 let latestSubmission = sectionFiles
                                     .map(file => {

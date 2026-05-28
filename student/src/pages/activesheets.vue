@@ -144,6 +144,7 @@ import PdfOverlay from '../components/PdfRenderer.vue';
 import {SignalBridge} from '../utils/signalBridge.js'
 import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
+import { collectActivesheetsFormData } from 'next-exam-shared/activesheetsFormData.js'
 import {
     activeSheetLoadKey,
     applyClientinfoFromFetch,
@@ -611,36 +612,11 @@ export default {
                 })
             }
 
-            // Collect all input field values from PdfRenderer
-            // Use the Active Sheet PDF filename, not the backup filename
-            const formData = { filename: this.activeSheetPdfFilename || 'unknown.pdf' };
-            
-            // Get all input fields (text, textarea, checkbox) from PdfRenderer
-            const textInputs = document.querySelectorAll('.interactive-input.text, .interactive-input.cloze, .interactive-input.table-cell');
-            const textareas = document.querySelectorAll('.interactive-input.textarea');
-            const checkboxes = document.querySelectorAll('.interactive-input.checkbox');
-            
-            // Collect text input values
-            textInputs.forEach(input => {
-                if (input.id) {
-                    formData[input.id] = input.value || '';
-                }
-            });
-            
-            // Collect textarea values
-            textareas.forEach(textarea => {
-                if (textarea.id) {
-                    formData[textarea.id] = textarea.value || '';
-                }
-            });
-            
-            // Collect checkbox values
-            checkboxes.forEach(checkbox => {
-                if (checkbox.id) {
-                    formData[checkbox.id] = checkbox.checked || false;
-                }
-            });
-            
+            const formData = collectActivesheetsFormData(
+                document.getElementById('pdfrenderer'),
+                this.activeSheetPdfFilename || 'unknown.pdf'
+            );
+
             // Save form data to .htm file via IPC
             signalBridge.send('saveActivesheetsBak', {
                 filename: filename || this.clientname,
@@ -679,7 +655,13 @@ export default {
                 printrequest: printrequest,
                 submissionnumber: this.submissionnumber,
                 lockedsection: this.lockedSection,
-                saveReason: sr
+                saveReason: sr,
+            }
+            if (!printrequest) {
+                payload.formData = collectActivesheetsFormData(
+                    document.getElementById('pdfrenderer'),
+                    this.activeSheetPdfFilename || 'unknown.pdf'
+                )
             }
 
             examApiFetch(url, {
@@ -717,6 +699,11 @@ export default {
                 console.error('activesheets @ sendExamToTeacher: Invalid section data');
                 return;
             }
+            // Ensure printToPDF captures only the form content (no preview overlay, no zoom).
+            const prevZoom = this.zoom
+            this.hidepreview()
+            const contentEl = document.getElementById('content')
+            if (contentEl) contentEl.style.zoom = 1
             const pdfArgs = {
                 landscape: false,
                 servername: this.servername,
@@ -725,35 +712,40 @@ export default {
                 sectionname: this.serverstatus.examSections[this.lockedSection].sectionname,
                 printBackground: true,
             }
-            if (type === 'print') {
-                const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'print' })
+            try {
+                if (type === 'print') {
+                    const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'print' })
+                    if (response?.status !== 'success') return
+                    this.currentpreviewBase64 = response.base64pdf
+                    this.loadPDF({
+                        filename: `${this.clientname}.pdf`,
+                        filetype: "pdf",
+                        filecontent: response.dataUrl
+                    }, true, 100, true, type)
+                    return
+                }
+
+                await this.waitUntilSigningSwalPainted()
+                let response
+                try {
+                    response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
+                } finally {
+                    this.$swal.close()
+                }
                 if (response?.status !== 'success') return
                 this.currentpreviewBase64 = response.base64pdf
+                if (directsend) {
+                    return this.printBase64(false, 'directsend')
+                }
                 this.loadPDF({
                     filename: `${this.clientname}.pdf`,
                     filetype: "pdf",
                     filecontent: response.dataUrl
                 }, true, 100, true, type)
-                return
-            }
-
-            await this.waitUntilSigningSwalPainted()
-            let response
-            try {
-                response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
             } finally {
-                this.$swal.close()
+                const restoreEl = document.getElementById('content')
+                if (restoreEl) restoreEl.style.zoom = prevZoom
             }
-            if (response?.status !== 'success') return
-            this.currentpreviewBase64 = response.base64pdf
-            if (directsend) {
-                return this.printBase64(false, 'directsend')
-            }
-            this.loadPDF({
-                filename: `${this.clientname}.pdf`,
-                filetype: "pdf",
-                filecontent: response.dataUrl
-            }, true, 100, true, type)
         },
 
         waitUntilSigningSwalPainted() {
@@ -915,14 +907,7 @@ export default {
     
 }
 </script>
-<style >
-@media print {
-    #vuexambody {
-            position:absolute !important;   /* position:absolute is required for printing of pdfs with multiple pages*/
-    }
-}
 
-</style>
 
 
 <style scoped lang="scss">
@@ -958,12 +943,7 @@ export default {
     background-color: #eee;
 }
 
-:deep(.pdf-scroll-container) {
-    overflow: visible;
-    height: auto;
-    max-height: none;
-    min-height: fit-content;
-}
+/* Keep PdfviewPaneRendered internal scrolling intact. */
 
 .split-view-container {
     display: flex;
@@ -1059,14 +1039,13 @@ export default {
 #preview {
     display: none;
     position: absolute;
-    top: var(--nx-preview-top-offset, var(--nx-apphead-h, 60px));
+    top: 0;
     left: 0;
-    width:100vw;
-    height: calc(100vh - var(--nx-preview-top-offset, var(--nx-apphead-h, 60px)));
+    width: 100vw;
+    height: 100vh;
     background-color: rgba(0, 0, 0, 0.4);
-    z-index:100001;
+    z-index: 100001;
     backdrop-filter: blur(2px);
-  
 }
 
 .split-view-container #preview {
@@ -1084,7 +1063,12 @@ export default {
 @media print { 
 
 
-    #webview, #apphead, #focuswarning, .focus-container, #preview, #pdfembed, #toolbar  {
+    #webview, #apphead, #focuswarning, .focus-container, #preview, #pdfembed, #toolbar, #statusbar  {
+        display: none !important;
+    }
+
+    .pdfview-pane-rendered,
+    .embed-container.pdfview-pane-rendered {
         display: none !important;
     }
     html, body {

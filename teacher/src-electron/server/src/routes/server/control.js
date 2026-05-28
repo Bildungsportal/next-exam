@@ -589,7 +589,25 @@ router.post('/submission/:servername', async function (req, res, next) {
             return res.status(500).send({ sender: 'server', message: t("control.submissionfailed"), status: 'error' });
         }
         await fsp.writeFile(absoluteFilename, pdfBuffer)                                       // write main
-      
+
+        const formData = req.body.formData
+        if (formData && typeof formData === 'object' && !Array.isArray(formData)) {
+            const htmName = filename.replace(/\.pdf$/i, '.htm')
+            if (isSafePathSegment(htmName)) {
+                const absoluteHtm = resolvePathUnderRoot(filepath, [htmName])
+                if (absoluteHtm) {
+                    await fsp.writeFile(absoluteHtm, JSON.stringify(formData, null, 2), 'utf8')
+                    if (config.backupdirectory) {
+                        const backuppath = resolvePathUnderRoot(config.backupdirectory, [mcServer.serverinfo.servername, student.clientname, 'ABGABE', lockedsection])
+                        const absoluteBackupHtm = backuppath ? resolvePathUnderRoot(backuppath, [htmName]) : null
+                        if (absoluteBackupHtm) {
+                            await fsp.writeFile(absoluteBackupHtm, JSON.stringify(formData, null, 2), 'utf8')
+                        }
+                    }
+                }
+            }
+        }
+
         log.info(`control @ submission: Received and stored submission file for user: ${student.clientname} saveReason=${saveReason}`)
         WindowHandler.mainwindow.webContents.send('submission', { clientname: student.clientname, clientip: student.clientip, hostname: student.hostname, printrequest: !!printrequest, saveReason })
         // create backup of abgabe

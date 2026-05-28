@@ -103,142 +103,16 @@
             >
                 <img :src="page.imgSrc" class="pdf-bg-image" />
 
-                <div
-                    v-for="field in page.formFields"
-                    v-show="!isBlacklisted(field.id)"
-                    :key="field.id"
-                    :class="['input-overlay', editMode && drawMode === 'delete' ? 'delete-mode-field' : '']"
-                    :id="field.id + '_wrapper'"
-                    :style="field.style"
-                    @click.stop="editMode && drawMode === 'delete' ? deleteField(field.id, false) : null"
-                >
-                    <input
-                        v-if="field.type === 'checkbox'"
-                        type="checkbox"
-                        :checked="field.checked"
-                        :name="field.name"
-                        :id="field.id"
-                        class="interactive-input checkbox"
-                    />
-                    <textarea
-                        v-else-if="field.type === 'textarea'"
-                        :name="field.name"
-                        :id="field.id"
-                        class="interactive-input textarea"
-                    >
-                        {{ field.value }}
-                    </textarea>
-                    <input
-                        v-else
-                        type="text"
-                        :value="field.value"
-                        :name="field.name"
-                        :id="field.id"
-                        class="interactive-input text"
-                    />
-                </div>
-
-                <div
-                    v-for="cloze in page.clozeFields"
-                    v-show="!isBlacklisted(cloze.id)"
-                    :key="cloze.id"
-                    :class="['input-overlay', cloze.type === 'checkbox' || cloze.type === 'deselect' ? 'checkbox-overlay' : '', editMode && drawMode === 'delete' ? 'delete-mode-field' : '']"
-                    :id="cloze.id + '_wrapper'"
-                    :style="cloze.style"
-                    @click.stop="editMode && drawMode === 'delete' ? deleteField(cloze.id, false) : null"
-                >
-                    <input
-                        v-if="cloze.type === 'checkbox'"
-                        type="checkbox"
-                        :checked="cloze.checked || false"
-                        :name="cloze.id"
-                        :id="cloze.id"
-                        class="interactive-input checkbox"
-                    />
-                    <input
-                        v-else-if="cloze.type === 'deselect'"
-                        type="checkbox"
-                        :checked="cloze.checked || false"
-                        :name="cloze.id"
-                        :id="cloze.id"
-                        class="interactive-input checkbox deselect-checkbox"
-                    />
-                    <input
-                        v-else
-                        type="text"
-                        class="interactive-input cloze"
-                        :name="cloze.id"
-                        :id="cloze.id"
-                    />
-                </div>
-
-                <div
-                    v-for="box in page.boxFields"
-                    v-show="!isBlacklisted(box.id)"
-                    :key="box.id"
-                    :class="['input-overlay', box.type === 'checkbox' ? 'checkbox-overlay' : '', editMode && drawMode === 'delete' ? 'delete-mode-field' : '']"
-                    :id="box.id + '_wrapper'"
-                    :style="box.style"
-                    @click.stop="editMode && drawMode === 'delete' ? deleteField(box.id, false) : null"
-                >
-                    <input
-                        v-if="box.type === 'checkbox'"
-                        type="checkbox"
-                        :name="box.id"
-                        :id="box.id"
-                        class="interactive-input checkbox"
-                    />
-                    <textarea
-                        v-else-if="box.type === 'textarea' || box.isTextarea"
-                        class="interactive-input textarea"
-                        :name="box.id"
-                        :id="box.id"
-                    ></textarea>
-                    <input
-                        v-else
-                        type="text"
-                        class="interactive-input table-cell"
-                        :name="box.id"
-                        :id="box.id"
-                    />
-                </div>
-
-                <div
-                    v-for="customField in getCustomFieldsForPage(pageIndex)"
-                    :key="customField.id"
-                    :class="['input-overlay', editMode && drawMode === 'delete' ? 'delete-mode-field' : '']"
-                    :id="customField.id + '_wrapper'"
-                    :style="customField.style"
-                    @click.stop="editMode && drawMode === 'delete' ? deleteField(customField.id, true) : null"
-                >
-                    <textarea
-                        v-if="!customField.type || customField.type === 'textarea'"
-                        class="interactive-input textarea"
-                        :name="customField.id"
-                        :id="customField.id"
-                    ></textarea>
-                    <input
-                        v-else-if="customField.type === 'textinput'"
-                        type="text"
-                        class="interactive-input text"
-                        :name="customField.id"
-                        :id="customField.id"
-                    />
-                    <input
-                        v-else-if="customField.type === 'checkbox'"
-                        type="checkbox"
-                        class="interactive-input checkbox"
-                        :name="customField.id"
-                        :id="customField.id"
-                    />
-                    <input
-                        v-else
-                        type="checkbox"
-                        class="interactive-input checkbox deselect-checkbox"
-                        :name="customField.id"
-                        :id="customField.id"
-                    />
-                </div>
+                <ActivesheetsFieldLayer
+                    :page="page"
+                    :page-index="pageIndex"
+                    :custom-fields="localCustomFields"
+                    :blacklist="localBlacklist"
+                    :interactive="true"
+                    :edit-mode="editMode"
+                    :draw-mode="drawMode"
+                    @deleteField="deleteField"
+                />
 
                 <div
                     v-if="currentRect && currentRect.pageIndex === pageIndex"
@@ -255,10 +129,13 @@
 
 <script>
 import { parsePdfToPages, ensurePdfOverlayFontsReady } from 'next-exam-shared/pdfparser/index.js';
+import { collectActivesheetsFormData, applyActivesheetsFormData } from 'next-exam-shared/activesheetsFormData.js';
 import Swal from 'sweetalert2';
+import ActivesheetsFieldLayer from './ActivesheetsFieldLayer.vue';
 
 export default {
     name: 'PdfOverlay',
+    components: { ActivesheetsFieldLayer },
     props: {
         pdfBase64: {
             type: String,
@@ -279,6 +156,10 @@ export default {
         sourcePdfFilename: {
             type: String,
             default: null
+        },
+        initialFormData: {
+            type: Object,
+            default: null
         }
     },
     data() {
@@ -286,6 +167,7 @@ export default {
             parsedPages: [],
             isParsing: false,
             warningShown: false,
+            initialFormDataApplied: false,
             editMode: false,
             localCustomFields: [],
             localBlacklist: [],
@@ -347,19 +229,41 @@ export default {
                         this.showWarningDialog(pagesWithWarning);
                     }
                 }
+                this.scheduleApplyInitialFormData();
             },
             immediate: false
-        }
+        },
+        initialFormData() {
+            this.initialFormDataApplied = false;
+            this.scheduleApplyInitialFormData();
+        },
     },
     methods: {
+        scheduleApplyInitialFormData() {
+            if (!this.initialFormData || this.initialFormDataApplied) return;
+            this.$nextTick(() => {
+                requestAnimationFrame(() => this.tryApplyInitialFormData());
+            });
+        },
+        tryApplyInitialFormData() {
+            if (!this.initialFormData || this.initialFormDataApplied || this.effectiveLoading) return;
+            if (!this.parsedPages.length) return;
+            const root = document.getElementById('pdfrenderer');
+            if (!root || root.querySelectorAll('.interactive-input').length === 0) return;
+            if (applyActivesheetsFormData(root, this.initialFormData)) {
+                this.initialFormDataApplied = true;
+            }
+        },
         async processPdf(base64Data) {
             if (!base64Data) {
                 this.parsedPages = [];
                 this.warningShown = false;
+                this.initialFormDataApplied = false;
                 return;
             }
             this.isParsing = true;
-            this.warningShown = false; // Reset warning flag for new PDF
+            this.warningShown = false;
+            this.initialFormDataApplied = false;
             try {
                 await ensurePdfOverlayFontsReady();
                 const uint8 = this.base64ToUint8Array(base64Data);
@@ -369,6 +273,7 @@ export default {
                 this.parsedPages = [];
             } finally {
                 this.isParsing = false;
+                this.scheduleApplyInitialFormData();
             }
         },
         base64ToUint8Array(data) {
@@ -411,24 +316,11 @@ export default {
         closePane() {
             this.$emit('close');
         },
-        // Same field map as student activesheets .htm backup (filename + input id → value).
-        collectActivesheetsFormData() {
-            const formData = { filename: this.sourcePdfFilename || 'unknown.pdf' };
-            const root = document.getElementById('pdfrenderer');
-            if (!root) return formData;
-            root.querySelectorAll('.interactive-input.text, .interactive-input.cloze, .interactive-input.table-cell').forEach((input) => {
-                if (input.id) formData[input.id] = input.value || '';
-            });
-            root.querySelectorAll('.interactive-input.textarea').forEach((textarea) => {
-                if (textarea.id) formData[textarea.id] = textarea.value || '';
-            });
-            root.querySelectorAll('.interactive-input.checkbox').forEach((checkbox) => {
-                if (checkbox.id) formData[checkbox.id] = checkbox.checked || false;
-            });
-            return formData;
-        },
         saveCorrectionTemplate() {
-            this.$emit('save-correction-template', this.collectActivesheetsFormData());
+            this.$emit('save-correction-template', collectActivesheetsFormData(
+                document.getElementById('pdfrenderer'),
+                this.sourcePdfFilename || 'unknown.pdf'
+            ));
         },
         toggleEditMode() {
             if (this.editMode) {
