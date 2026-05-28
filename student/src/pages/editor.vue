@@ -791,8 +791,8 @@ import {
 } from '../utils/examFetchInfoSync.js'
 import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
 import {ref} from "vue";
-import {useInfoStore} from "stores/infoStore.ts";
-import {useConfigStore} from "stores/configStore.ts";
+import {useConfigStore} from "../stores/configStore.ts";
+import {useInfoStore} from "../stores/infoStore.ts";
 const lowlight = createLowlight(common)
 
 // signalBridge instance centralizes ipc calls with platform checks

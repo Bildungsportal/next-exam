@@ -179,7 +179,7 @@ import {
     resolveLockedSection,
 } from '../utils/examFetchInfoSync.js'
 import {ref} from "vue";
-import { useConfigStore } from "stores/configStore.ts";
+import {useConfigStore} from "../stores/configStore.ts";
 import {useInfoStore} from "../stores/infoStore.ts";
 import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
 
@@ -240,10 +240,9 @@ export default {
       let battery = ref(infoStore.battery);
       let wlanInfo = ref(infoStore.wlanInfo);
       let entrytime = ref(infoStore.entryTime);
-      let componentName = ref(infoStore.componentName);
 
       return { development, serverApiPort, electron, hostip,
-        examtype, servername, serverip, token, clientname, serverstatus, pincode, localLockdown, online, battery, wlanInfo, entrytime, componentName};
+        examtype, servername, serverip, token, clientname, serverstatus, pincode, localLockdown, online, battery, wlanInfo, entrytime};
     },
 
     data() {

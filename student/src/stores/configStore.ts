@@ -12,6 +12,7 @@ export const useConfigStore = defineStore("config", {
         hostip: config.hostip as string,
         bipIntegration: config.bipIntegration as boolean,
         bipApiUrl: config.bipApiUrl as string,
-        bipDemo: config.bipDemo as boolean
+        bipDemo: config.bipDemo as boolean,
+        showdevtools: config.showdevtools as boolean
     }),
 });

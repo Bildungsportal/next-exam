@@ -141,8 +141,8 @@ import {
 } from '../utils/examFetchInfoSync.js'
 import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
 import {ref} from "vue";
-import {useConfigStore} from "stores/configStore.ts";
-import {useInfoStore} from "stores/infoStore.ts";
+import {useConfigStore} from "../stores/configStore.ts";
+import {useInfoStore} from "../stores/infoStore.ts";
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
 
@@ -171,14 +171,12 @@ export default {
         let clientname = ref(infoStore.clientname);
         let serverstatus = ref(infoStore.serverstatus);
         let localLockdown = ref(infoStore.localLockdown);
-        let online = ref(infoStore.online);
         let battery = ref(infoStore.battery);
         let wlanInfo = ref(infoStore.wlanInfo);
         let entrytime = ref(infoStore.entryTime);
-        let componentName = ref(infoStore.componentName);
 
         return { development, serverApiPort, hostip,
-            examtype, servername, serverip, token, clientname, serverstatus, localLockdown, online, battery, wlanInfo, entrytime, componentName};
+            examtype, servername, serverip, token, clientname, serverstatus, localLockdown, battery, wlanInfo, entrytime};
     },
     data() {
         return {
