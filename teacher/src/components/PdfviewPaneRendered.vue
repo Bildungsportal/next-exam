@@ -566,7 +566,7 @@
         .pdf-toolbar, .render-overlay, .correction-base-preview-hint { display: none !important; }
         .embed-container.pdfview-pane-rendered { height: auto !important; overflow: visible !important; }
         .pdf-scroll-container { top: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; zoom: calc(8 / 9); }
-        .pdf-page-wrapper { transform: none !important; break-after: page; page-break-after: always; break-inside: avoid; page-break-inside: avoid; }
+        .pdf-page-wrapper { transform: none !important; break-after: page; page-break-after: always; }
         .pdf-page-layout { width: auto !important; height: auto !important; }
     }
 </style>
