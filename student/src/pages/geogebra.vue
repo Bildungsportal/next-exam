@@ -166,13 +166,10 @@ import ExamHeader from '../components/ExamHeader.vue';
 import WebviewPane from '../components/WebviewPane.vue'
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 
-import {SchedulerService} from '../utils/schedulerservice.js'
-
 import { getExamMaterials, loadPDF, loadImage, loadGGB, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import {SignalBridge} from '../utils/signalBridge.js'
 import {
-    attachExamMouseleaveGuard,
     attachExamMouseleaveGuardBoolean,
     shouldSkipEdgeFocusLost
 } from '../utils/linuxCageKiosk.js'
@@ -242,11 +239,11 @@ export default {
       let online = ref(infoStore.online);
       let battery = ref(infoStore.battery);
       let wlanInfo = ref(infoStore.wlanInfo);
-      let entryTime = ref(infoStore.entryTime);
+      let entrytime = ref(infoStore.entryTime);
       let componentName = ref(infoStore.componentName);
 
       return { development, serverApiPort, electron, hostip,
-        examtype, servername, serverip, token, clientname, serverstatus, pincode, localLockdown, online, battery, wlanInfo, entryTime, componentName};
+        examtype, servername, serverip, token, clientname, serverstatus, pincode, localLockdown, online, battery, wlanInfo, entrytime, componentName};
     },
 
     data() {
