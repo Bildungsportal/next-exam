@@ -2,19 +2,6 @@
 
     <!-- HEADER START -->
     <exam-header
-    :serverstatus="serverstatus"
-      :clientinfo="clientinfo"
-      :online="online"
-      :clientname="clientname"
-      :exammode="exammode"
-      :servername="servername"
-      :pincode="pincode"
-      :battery="battery"
-      :entrytime="entrytime"
-      :componentName="componentName"
-      :localLockdown="localLockdown"
-      :wlanInfo="wlanInfo"
-      :hostip="hostip"
       @reconnect="reconnect"
       @gracefullyExit="gracefullyExit"
     ></exam-header>
@@ -104,11 +91,13 @@
 
 <script>
 import ExamHeader from '../components/ExamHeader.vue';
-import {SchedulerService} from '../utils/schedulerservice.js'
 import {isElectronWindow} from "../types/platform.js";
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import {SignalBridge} from '../utils/signalBridge.js'
-import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
+import {
+    attachExamMouseleaveGuardBoolean,
+    shouldSkipEdgeFocusLost
+} from '../utils/linuxCageKiosk.js'
 import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
@@ -121,29 +110,42 @@ const signalBridge = new SignalBridge(window);
 import { getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue';
+import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
+import {ref} from "vue";
+import {useConfigStore} from "../stores/configStore.ts";
+import {useInfoStore} from "../stores/infoStore.ts";
 
 export default {
+    mixins: [autoCleanupMixin],
+
+    setup() {
+        const configStore = useConfigStore();
+        let development = ref(configStore.development);
+        let serverApiPort = ref(configStore.serverApiPort);
+        let hostip = ref(configStore.hostip);
+        let showdevtools = ref(configStore.showdevtools);
+
+        const infoStore = useInfoStore();
+        infoStore.online = true;
+        infoStore.componentName = "Moodle Test";
+
+        let examtype = ref(infoStore.examtype);
+        let clientname = ref(infoStore.clientname);
+        let serverstatus = ref(infoStore.serverstatus);
+        let localLockdown = ref(infoStore.localLockdown);
+        let battery = ref(infoStore.battery);
+        let wlanInfo = ref(infoStore.wlanInfo);
+        let entrytime = ref(infoStore.entryTime);
+
+        return { development, serverApiPort, hostip, showdevtools,
+            examtype, clientname, serverstatus, localLockdown, battery, wlanInfo, entrytime};
+    },
+
     data() {
         return {
-            componentName: 'Moodle Test',
-        
-            online: true,
             focus: true,
             exammode: false,
-            examtype: this.$route.params.examtype,
             currentFile:null,
-            fetchinfointerval: null,
-            loadfilelistinterval: null,
-            servername: this.$route.params.servername,
-            servertoken: this.$route.params.servertoken,
-            serverip: this.$route.params.serverip,
-            token: this.$route.params.token,
-            clientname: this.$route.params.clientname,
-            serverApiPort: this.$route.params.serverApiPort,
-            clientApiPort: this.$route.params.clientApiPort,
-            electron: this.$route.params.electron,
-            pincode : this.$route.params.pincode,
-            serverstatus: this.$route.params.serverstatus,
             // section and moodle config will be resolved on first fetchInfo based on allowSectionSwitch
             activeSection: null,
             lockedSection: null,
@@ -152,18 +154,11 @@ export default {
             moodleTestType: null,
             moodleTestId: null,
 
-            config: this.$route.params.config,
-            localLockdown: this.$route.params.localLockdown,
             clientinfo: null,
-            entrytime: 0,
-            now : new Date().getTime(),
             localfiles: null,
-            battery: null,
             
             currentpreview: null,
             isLoading: true,
-            wlanInfo: null,
-            hostip: null,
 
             examMaterials: [],
             urlForWebview: null,
@@ -199,9 +194,7 @@ export default {
                   
 
             // do not use setInterval() for intervals as it keeps all objects of the callbacks including fetch() responses in memory until the interval is stopped
-            this.fetchinfointerval = new SchedulerService(5000);
-            this.fetchinfointerval.addEventListener('action',  this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-            this.fetchinfointerval.start();
+            this.autoSchedulerService(this.fetchInfo, 5000);
             await this.fetchInfo(); // initial sync for clientinfo, serverstatus and moodle url
 
             try {
@@ -211,11 +204,9 @@ export default {
             } catch (err) {
                 console.error('eduvidual @ mounted: initial wlan/host ip error', err)
             }
-                
-            this.loadfilelistinterval = new SchedulerService(20000);
-            this.loadfilelistinterval.addEventListener('action',  this.loadFilelist);
-            this.loadfilelistinterval.start();
-            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
+
+            this.autoSchedulerService(this.loadFilelist, 20000);
+            attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
 
 
             this.loadFilelist()
@@ -227,7 +218,7 @@ export default {
                 this.setAttribute("src", "about:blank");
                 URL.revokeObjectURL(this.currentpreview);
             };
-            document.querySelector("#preview").addEventListener("click", this._onPreviewClick);
+            this.autoEventListener(document.querySelector("#preview"),"click", this._onPreviewClick);
 
 
             // fetches shadow root of webview and sets height to 100% 
@@ -246,13 +237,13 @@ export default {
                             });
                         }, 100);
                     };
-                    webview.addEventListener('dom-ready', retrySetup, { once: true });
+                    this.autoEventListener(webview,'dom-ready', retrySetup, { once: true });
                 });
                 
                 console.log('eduvidual @ mounted: backend blocking setup initiated');
                 
                 this._onDidFinishLoad = () => {
-                    if (this.config.showdevtools) {webview.openDevTools();  }
+                    if (this.showdevtools) {webview.openDevTools();  }
                     const preloadScriptContent = `
                         (function() {
                             const css = \`
@@ -284,12 +275,12 @@ export default {
                     .then(() => {     this.isLoading = false;  })  // Verberge das Overlay und zeige den Webview-Inhalt
                     .catch((err) => { this.isLoading = false;  })
                 };
-                webview.addEventListener('did-finish-load', this._onDidFinishLoad);
+                this.autoEventListener(webview,'did-finish-load', this._onDidFinishLoad);
                 
                 this._onDidStartLoading = () => { this.isLoading = true;   }; // show the overlay while loading
                 this._onDidStopLoading = () => {   this.isLoading = false;  };           // hide the overlay when loading stops
-                webview.addEventListener('did-start-loading', this._onDidStartLoading);
-                webview.addEventListener('did-stop-loading', this._onDidStopLoading);
+                this.autoEventListener(webview,'did-start-loading', this._onDidStartLoading);
+                this.autoEventListener(webview,'did-stop-loading', this._onDidStopLoading);
             }
             this.wlanInfo = await signalBridge.invoke('get-wlan-info')
             this.hostip = await signalBridge.invoke('checkhostip')
@@ -356,10 +347,10 @@ export default {
             return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed
         },
         async sendFocuslost(){
-            if (await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
+            if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             if (isElectronWindow(window)) {
                 let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
-                if (!this.config.development && !response.focus) {  //immediately block frontend
+                if (!this.development && !response.focus) {  //immediately block frontend
                     this.focus = false
                 }
             }
@@ -427,11 +418,6 @@ export default {
        
     },
     beforeUnmount() {
-        this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
-        this.fetchinfointerval.stop() 
-        this.loadfilelistinterval.removeEventListener('action', this.loadFilelist);
-        this.loadfilelistinterval.stop() 
-
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
         
         // Clean up webview event listeners (blocking is handled in backend, but we still clean up local listeners)
@@ -443,21 +429,6 @@ export default {
                     signalBridge.invoke('detach-eduvidual-moodle-proof', { guestId }).catch(() => {});
                 }
             }
-            if (this._onDidFinishLoad) {
-                webview.removeEventListener('did-finish-load', this._onDidFinishLoad);
-            }
-            if (this._onDidStartLoading) {
-                webview.removeEventListener('did-start-loading', this._onDidStartLoading);
-            }
-            if (this._onDidStopLoading) {
-                webview.removeEventListener('did-stop-loading', this._onDidStopLoading);
-            }
-        }
-        
-        // Clean up preview click listener
-        const preview = document.querySelector("#preview");
-        if (preview && this._onPreviewClick) {
-            preview.removeEventListener("click", this._onPreviewClick);
         }
     },
 
