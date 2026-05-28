@@ -1072,12 +1072,13 @@ export default {
     .embed-container.pdfview-pane-rendered {
         display: none !important;
     }
-    html, body {
+    html, body, .activesheets-root, .activesheets-body {
         position: relative !important;
         height: auto !important;
         max-height: none !important;
         overflow: visible !important;
     }
+    #vuexambody { position: absolute !important; } /* required for multi-page printing */
    
     // Use :deep() to target child component styles - remove all height restrictions for printing
     // zoom 8/9: pdfparser rendert page mit scale 1.5 (=> 1pt = 1.5px); printToPDF mappt 1pt = 96/72 = 1.333px.
@@ -1090,6 +1091,7 @@ export default {
     }
     
     :deep(.pdf-scroll-container) {
+        display: block !important;
         background-color: white !important;
         box-shadow: none !important;
         padding: 0px !important;
@@ -1101,9 +1103,7 @@ export default {
     
     :deep(.pdf-page-wrapper) {
         page-break-after: always !important;
-        page-break-inside: avoid !important;
         break-after: page !important;
-        break-inside: avoid !important;
         margin-bottom: 0px !important;
         box-shadow: none !important;
     }

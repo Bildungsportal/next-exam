@@ -5014,14 +5014,16 @@ hr {
 }
 
 @media print {
+    #wrapper { height: auto !important; overflow: visible !important; }
     #pdfpreview {
-        position: fixed !important; inset: 0 !important;
+        position: absolute !important; top: 0 !important; left: 0 !important; right: 0 !important;
+        width: 100% !important; height: auto !important;
         padding: 0 !important; background: #fff !important;
         backdrop-filter: none !important; z-index: 2147483647 !important;
     }
     .pdfpreview-centered {
-        position: static !important; transform: none !important; top: 0 !important; left: 0 !important;
-        width: 100% !important; height: 100% !important;
+        position: static !important; transform: none !important;
+        width: 100% !important; height: auto !important;
         max-width: none !important; max-height: none !important;
         margin: 0 !important; padding: 0 !important;
         border-radius: 0 !important; box-shadow: none !important;
