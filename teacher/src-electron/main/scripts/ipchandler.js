@@ -1210,7 +1210,7 @@ class IpcHandler {
                     printBackground: true,
                     pageSize: 'A4',
                     landscape: false,
-                    margins: { top: 0.5, right: 0, bottom: 0.5, left: 0 },
+                    margins: { top: 0, right: 0, bottom: 0, left: 0 },
                 })
                 return { status: 'success', sender: 'server', base64pdf: Buffer.from(data).toString('base64') }
             } catch (err) {

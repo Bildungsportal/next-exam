@@ -115,7 +115,7 @@
         :backupdirectory="serverstatus.backupdirectory || ''"
         @close="showExplorer = false"
         @load-filelist="(path) => loadFilelist(path)"
-        @load-pdf="({ path, name }) => loadPDF(path, name)"
+        @load-pdf="({ path, name }) => showPDFPreview({ filepath: path, filename: name })"
         @load-image="(path) => loadImage(path)"
         @load-text="({ path, name }) => loadTextFile(path, name)"
         @send-file="(file) => dashboardExplorerSendFile(file)"
@@ -861,7 +861,7 @@
                 :exammode="serverstatus.exammode"
                 @remove-file="handleFileRemove"
                 @choose-materials="handleChooseMaterialsGroup"
-                @show-preview="(base64, filename) => showBase64FilePreview.call(this, base64, filename)"
+                @show-preview="(base64, filename) => showPDFPreview.call(this, { base64, filename })"
                 @show-pdf-in-renderer="(base64, filename) => showBase64PdfInRenderer.call(this, base64, filename)"
                 @show-image-preview="showBase64ImagePreview"
                 @play-audio-file="playAudioFile"
@@ -1309,7 +1309,7 @@
         :lockPdfSummary="lockPdfSummary"
         @close="showSubmissionsView = false"
         @get-latest="getLatest()"
-        @open-pdf="({ path, name }) => loadPDF(path, name)"
+        @open-pdf="({ path, name }) => showPDFPreview({ filepath: path, filename: name })"
     />
 
         <div v-if="showDesc" id="description" class="bg-dark text-white" v-html="currentDescription"></div>
@@ -1344,7 +1344,7 @@ import { isStudentReachable, countReachableStudents } from '../utils/studentPres
 
 import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile, createSharingLink, fileExistsInAppFolder, downloadFilesFromOneDrive} from '../msalutils/onedrive'
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
-import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate, saveActivesheetsCorrectedPdf } from '../utils/filemanager'
+import { loadFilelist, getLatest, processPrintrequest,  loadImage, showPDFPreview, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate, saveActivesheetsCorrectedPdf } from '../utils/filemanager'
 import { swalQueued } from '../utils/swalQueue.js'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, lockSectionForAll, endExam, kick, restore } from '../utils/exammanagement.js'
 import { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, configureEditorTemplate, removeEditorTemplate, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
@@ -1814,8 +1814,7 @@ computed: {
                 })
                 return
             }
-            this.showBase64FilePreview(res.base64, res.filename)
-            this.currentpreviewPath = res.filePath
+            this.showPDFPreview({ filepath: res.filePath, filename: res.filename, base64: res.base64 })
         },
 
         /**
@@ -1827,7 +1826,7 @@ computed: {
         getLatest:getLatest,                        // get latest files from all students and concatenate all pdf files
         processPrintrequest:processPrintrequest,  // handles a print request and first fetches the latest version from a specific student
         loadImage:loadImage,                        // displays an image in the preview panel
-        loadPDF:loadPDF,                            // displays a pdf in the preview panel
+        showPDFPreview: showPDFPreview,             // displays a pdf in the preview panel ({filepath, filename, base64})
         loadTextFile:loadTextFile,                  // shows plain text / .log in a modal (DashboardExplorer)
         dashboardExplorerSendFile:dashboardExplorerSendFile,        // sends a given file to the selected student
         downloadFile:downloadFile,                                  // store the selected file to a local folder
@@ -1835,7 +1834,6 @@ computed: {
         fdelete:fdelete,                                            // deletes a file
         openLatestFolder:openLatestFolder,                          // opens the newest folder that belongs to the current visible student
         openStudentEditorTimelineDiff: openStudentEditorTimelineDiff, // scans .htm backups, writes *_editor_timeline.json, opens diff viewer
-        showBase64FilePreview:showBase64FilePreview,                // displays a base64 encoded pdf in the preview panel
         showBase64ImagePreview:showBase64ImagePreview,              // displays a base64 encoded image in the preview panel
         showBase64PdfInRenderer:showBase64PdfInRenderer,            // displays a base64 encoded pdf in PdfRenderer component
         saveActivesheetsCorrectionTemplate: saveActivesheetsCorrectionTemplate,
@@ -2134,7 +2132,7 @@ computed: {
         async getSpecificSubmissionBase64(filepath) {
             const result = await ipcRenderer.invoke('getSpecificSubmissionBase64', filepath)
             if (result.status === "success") {
-                this.showBase64FilePreview(result.submission, filepath.split('/').pop())
+                this.showPDFPreview({ filepath, filename: filepath.split('/').pop(), base64: result.submission })
             }
             else {
                 this.$swal.fire({
@@ -3293,7 +3291,7 @@ computed: {
     width: 600px;
     /* background-color:rgba(0, 0, 0, 0.1); */
     text-align:center;
-
+    z-index: 100002; /* ueber #pdfpreview (100001) */
 }
 #aplayer audio {
     box-shadow: 0px 0px 10px rgba(0,0,0,0.6);
@@ -3561,6 +3559,11 @@ computed: {
         grid-template-columns: 1fr;
     }
 }
+
+
+
+
+
 
 .setup-scroll {
     width: 100%;
@@ -5010,5 +5013,19 @@ hr {
     transform: translateX(-10%);
 }
 
-
+@media print {
+    #pdfpreview {
+        position: fixed !important; inset: 0 !important;
+        padding: 0 !important; background: #fff !important;
+        backdrop-filter: none !important; z-index: 2147483647 !important;
+    }
+    .pdfpreview-centered {
+        position: static !important; transform: none !important; top: 0 !important; left: 0 !important;
+        width: 100% !important; height: 100% !important;
+        max-width: none !important; max-height: none !important;
+        margin: 0 !important; padding: 0 !important;
+        border-radius: 0 !important; box-shadow: none !important;
+        overflow: visible !important;
+    }
+}
 </style>

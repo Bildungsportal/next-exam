@@ -429,7 +429,7 @@
     },
     "pdf": {
         "activesheets": "Bitte überprüfen Sie die Darstellung und Positionierung der aktiven Formularfelder vor dem Start der Prüfung!",
-        "autocorrect": "Autocorrect",
+        "autocorrect": "Automatisch Korrigieren",
         "correctionBasePreviewNotice": "Abgabe-PDF konnte nicht gerendert werden – Basislayout für Autocorrect-Markierungen.",
         "correctionNoSubmissionHtm": "Keine Schüler-.htm-Abgabe neben der PDF gefunden.",
         "correctionNoTemplate": "Keine Korrekturvorlage unter activesheets/ vorhanden.",

@@ -7,7 +7,7 @@ import { parseActivesheetsFormDataJson, diffActivesheetsFormData } from 'next-ex
 
 /**
  * Dashboard explorer: read file bytes from the active exam workdir (decrypted in main when applicable).
- * Used by loadPDF (PDF preview), loadTextFile (log popup), loadImage (image preview) in this module.
+ * Used by showPDFPreview (PDF preview), loadTextFile (log popup), loadImage (image preview) in this module.
  */
 async function readWorkdirFileForDashboard(ctx, filepath) {
     const res = await window.ipcRenderer.invoke('readTeacherWorkdirFile', {
@@ -86,6 +86,7 @@ function base64ToUint8Array(data) {
 async function loadActivesheetsCorrectionContext(vm, pdfFilepath) {
     vm.activesheetsCorrection = null;
     if (!String(pdfFilepath || '').replace(/\\/g, '/').includes('/ABGABE/')) return;
+    if (/-korrigiert\.pdf$/i.test(pdfFilepath)) return; // bereits korrigierte Ausgabe nicht erneut als korrigierbar markieren
     const section = vm.serverstatus?.examSections?.[vm.serverstatus.activeSection];
     if (!section || section.examtype !== 'activesheets') return;
 
@@ -268,40 +269,57 @@ function dashboardExplorerSendFile(file){
 
 
 
-// fetch file from disc - show preview
-function loadPDF(filepath, filename){
-    readWorkdirFileForDashboard(this, filepath)
-    .then( async (raw) => {
-        const bytes = normalizeWorkdirBytes(raw)
-        const isvalid = isValidPdf(bytes)
-        log.info("filemanager @ loadPDF: pdf is valid: ", isvalid)
-        if (!isvalid) {
-            await swalQueued({
-                icon: 'error',
-                title: this.$t('dashboard.invalidpdf'),
-                text: bytes.length >= 4 && bytes[0] === 0x4e && bytes[1] === 0x58
-                    ? this.$t('pdf.encryptedCannotPreview')
-                    : '',
-            })
+// Unified PDF preview: bytes either from workdir (filepath) or from base64.
+// filepath enables PDF-header validation, correction context, and external-open in pane.
+async function showPDFPreview({ filepath = '', filename = '', base64 = '' } = {}) {
+    try {
+        let bytes
+        if (filepath) {
+            const raw = await readWorkdirFileForDashboard(this, filepath)
+            bytes = normalizeWorkdirBytes(raw)
+            if (!isValidPdf(bytes)) {
+                log.info('filemanager @ showPDFPreview: pdf is not valid')
+                await swalQueued({
+                    icon: 'error',
+                    title: this.$t('dashboard.invalidpdf'),
+                    text: bytes.length >= 4 && bytes[0] === 0x4e && bytes[1] === 0x58
+                        ? this.$t('pdf.encryptedCannotPreview')
+                        : '',
+                })
+                return
+            }
+        } else if (base64) {
+            if (filename && !/\.pdf$/i.test(String(filename))) {
+                log.warn('filemanager @ showPDFPreview: not a pdf, skipped', filename)
+                return
+            }
+            bytes = base64ToUint8Array(base64)
+        } else {
+            log.warn('filemanager @ showPDFPreview: no filepath or base64')
             return
         }
 
-        await maybePromptVerifySignedSubmissionPdf(this, bytes)
-        URL.revokeObjectURL(this.currentpreview);  //speicher freigeben
+        try { await maybePromptVerifySignedSubmissionPdf(this, bytes) }
+        catch (e) { log.warn('filemanager @ showPDFPreview: signature probe skipped', e) }
 
-        await loadActivesheetsCorrectionContext(this, filepath);
+        URL.revokeObjectURL(this.currentpreview)
 
-        this.currentpreviewBase64 = Buffer.from(bytes).toString('base64');
+        // correction context only applies to /ABGABE/ submissions (loader filters internally)
+        if (filepath) await loadActivesheetsCorrectionContext(this, filepath)
+        else this.activesheetsCorrection = null
+
+        this.currentpreviewBase64 = Buffer.from(bytes).toString('base64')
         this.currentpreview = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))
-        this.currentpreviewname = filename   //needed for preview buttons
+        this.currentpreviewname = filename
         this.currentpreviewPath = filepath
-        this.currentpreviewType = "pdf"
+        this.currentpreviewType = 'pdf'
 
-        this.activesheetsPreviewPdf = null;
-        this.webviewVisible = false;
-        document.querySelector("#pdfpreview").style.display = 'block';
-
-    }).catch(err => { log.error(err) });     
+        this.activesheetsPreviewPdf = null
+        this.webviewVisible = false
+        document.querySelector('#pdfpreview').style.display = 'block'
+    } catch (err) {
+        log.error('filemanager @ showPDFPreview:', err)
+    }
 }
 
 function isValidPdf(data) {
@@ -466,7 +484,7 @@ async function getLatest(){
             await sleep(2000)
         }
         // show pdf
-        this.loadPDF(responseObj.pdfPath, "combined.pdf")
+        this.showPDFPreview({ filepath: responseObj.pdfPath, filename: 'combined.pdf' })
     } catch (err) {
         log.error(err)
     }
@@ -556,56 +574,6 @@ async function processPrintrequest(student){
 
 
 
-
-
-// show base64 encoded pdf in preview panel
-async function showBase64FilePreview(base64, filename){
-    if (!/\.pdf$/i.test(String(filename || ''))) {
-        log.warn('filemanager @ showBase64FilePreview: not a pdf, skipped', filename)
-        return
-    }
-
-    this.urlForWebview = null;
-    this.webviewVisible = false;
-
-    let cleanBase64 = base64;
-    if (base64.includes(',')) {
-        cleanBase64 = base64.split(',')[1];
-    }
-    try {
-        const binaryString = atob(cleanBase64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-        await maybePromptVerifySignedSubmissionPdf(this, bytes)
-    } catch (e) {
-        log.warn('filemanager @ showBase64FilePreview: signature probe skipped', e)
-    }
-
-    this.currentpreviewBase64 = base64
-    this.currentpreviewType = "pdf";
-    this.currentpreviewname = filename
-
-    // Convert base64 to blob URL
-    try {
-        const binaryString = atob(cleanBase64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-        const blob = new Blob([bytes], { type: 'application/pdf' });
-        const blobUrl = URL.createObjectURL(blob);
-        this.currentpreview = blobUrl;
-    } catch (error) {
-        console.error('Error converting base64 to blob:', error);
-        // Fallback: use the original base64 string
-        this.currentpreview = base64;
-    }
-
-    this.activesheetsPreviewPdf = null;
-    document.querySelector("#pdfpreview").style.display = 'block';
-}
 
 
 
@@ -765,10 +733,12 @@ async function saveActivesheetsCorrectedPdf() {
             await this.$swal.fire({ icon: 'error', text: cap?.message || 'PDF capture failed' });
             return;
         }
+        // Korrektur in separate Datei -korrigiert.pdf neben dem Original speichern; Anzeige bleibt unveraendert
+        const correctedPath = this.currentpreviewPath.replace(/(\.pdf)$/i, '-korrigiert$1');
         const res = await window.ipcRenderer.invoke('overwriteTeacherAbgabePdf', {
             servername: this.servername,
             servertoken: this.servertoken,
-            filepath: this.currentpreviewPath,
+            filepath: correctedPath,
             base64pdf: cap.base64pdf,
         });
         if (res?.status === 'success') {
@@ -778,10 +748,6 @@ async function saveActivesheetsCorrectedPdf() {
                 timer: 3000,
                 timerProgressBar: true,
             });
-            const raw = Uint8Array.from(atob(cap.base64pdf), (c) => c.charCodeAt(0));
-            this.currentpreviewBase64 = cap.base64pdf;
-            URL.revokeObjectURL(this.currentpreview);
-            this.currentpreview = URL.createObjectURL(new Blob([raw], { type: 'application/pdf' }));
             return;
         }
         await this.$swal.fire({ icon: 'error', text: res?.message || 'Save failed' });
@@ -791,4 +757,4 @@ async function saveActivesheetsCorrectedPdf() {
     }
 }
 
-export {loadFilelist, getLatest, processPrintrequest, loadImage, loadPDF, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate, saveActivesheetsCorrectedPdf, base64ToUint8Array}
+export {loadFilelist, getLatest, processPrintrequest, loadImage, showPDFPreview, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate, saveActivesheetsCorrectedPdf, base64ToUint8Array}

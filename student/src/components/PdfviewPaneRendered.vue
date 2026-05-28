@@ -35,6 +35,9 @@
             <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'underline-red' }" @click.stop="setTool('underline-red')" title="Underline red">
             <span class="tool-underline tool-underline--red"></span>
             </button>
+            <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'pen-red' }" @click.stop="setTool('pen-red')" title="Pen red">
+            <img src="/src/assets/img/svg/document-edit.svg" class="white">
+            </button>
             <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'delete' }" @click.stop="setTool('delete')" title="Delete">
             ✕
             </button>
@@ -101,7 +104,25 @@
                 stroke-width="3"
                 stroke-linecap="round"
                 @click.stop="tool === 'delete' ? deleteAnnotation(ann.id) : null"
-                style="pointer-events: all;"
+                :style="{ pointerEvents: 'all', cursor: tool === 'delete' ? 'pointer' : 'default' }"
+                />
+            </svg>
+
+            <svg
+                v-for="ann in penForPage(pageIndex)"
+                :key="ann.id"
+                class="ann-pen"
+                :style="{ position:'absolute', left:0, top:0, width: page.width + 'px', height: page.height + 'px', pointerEvents: 'none', zIndex: 22 }"
+            >
+                <polyline
+                :points="penPointsAttr(ann.points)"
+                fill="none"
+                stroke="rgba(220,53,69,0.95)"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                @click.stop="tool === 'delete' ? deleteAnnotation(ann.id) : null"
+                :style="{ pointerEvents: 'all', cursor: tool === 'delete' ? 'pointer' : 'default' }"
                 />
             </svg>
             </template>
@@ -109,6 +130,9 @@
             <div v-if="currentDraft && currentDraft.pageIndex === pageIndex" class="draft" :style="draftStyle"></div>
             <svg v-if="draftLine && draftLine.pageIndex === pageIndex" class="draft-line" :style="{ position:'absolute', left:0, top:0, width: page.width + 'px', height: page.height + 'px' }">
             <line :x1="draftLine.x1" :y1="draftLine.y1" :x2="draftLine.x2" :y2="draftLine.y2" stroke="rgba(220,53,69,0.95)" stroke-width="3" stroke-linecap="round" />
+            </svg>
+            <svg v-if="draftPenPath && draftPenPath.pageIndex === pageIndex" class="draft-pen" :style="{ position:'absolute', left:0, top:0, width: page.width + 'px', height: page.height + 'px', pointerEvents: 'none' }">
+            <polyline :points="penPointsAttr(draftPenPath.points)" fill="none" stroke="rgba(220,53,69,0.95)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
         </div>
         </div>
@@ -118,12 +142,14 @@
 
 <script>
     import { parsePdfToPages } from 'next-exam-shared/pdfparser/index.js'
+    import { pdfPageAnnotationsMixin } from 'next-exam-shared/pdfPageAnnotationsMixin.js'
     import { SignalBridge } from '../utils/signalBridge.js'
 
     const signalBridge = new SignalBridge(window)
 
     export default {
     name: 'PdfviewPaneRendered',
+    mixins: [pdfPageAnnotationsMixin],
     props: {
         localLockdown: { type: Boolean, default: false },
         examtype: { type: String, default: 'math' },
@@ -137,12 +163,6 @@
         parsedPages: [],
         imagePreviewUrl: '',
         zoom: 1,
-        tool: 'highlight-yellow',
-        isDrawing: false,
-        drawStart: null,
-        currentDraft: null,
-        draftLine: null,
-        annotations: [],
         annotationsKey: null,
         _saveTimer: null,
         }
@@ -154,9 +174,6 @@
         },
         isSubmissionPreview() {
         return !!(this.toolbar?.showSend || this.toolbar?.showPrint)
-        },
-        draftStyle() {
-        return this.currentDraft?.style || {}
         },
     },
     watch: {
@@ -175,158 +192,12 @@
         closePane() { this.$emit('close') },
         printBase64(base64 = false) { this.$emit('printBase64', base64) },
         insertImage() { this.$emit('insertImage') },
-        setTool(tool) { this.tool = tool },
         zoomIn() { this.zoom = Math.min(2.5, Math.round((this.zoom + 0.1) * 10) / 10) },
         zoomOut() { this.zoom = Math.max(0.5, Math.round((this.zoom - 0.1) * 10) / 10) },
         resetZoom() { this.zoom = 1 },
 
-        annotationsForPage(pageIndex) {
-        return this.annotations.filter(a => a.pageIndex === pageIndex && a.kind === 'highlight')
-        },
-        underlineForPage(pageIndex) {
-        return this.annotations.filter(a => a.pageIndex === pageIndex && a.kind === 'underline')
-        },
-        annotationStyle(ann) {
-        if (ann.kind !== 'highlight') return {}
-        return {
-            position: 'absolute',
-            left: `${ann.x}px`,
-            top: `${ann.y}px`,
-            width: `${ann.w}px`,
-            height: `${ann.h}px`,
-            backgroundColor: ann.color,
-            borderRadius: '2px',
-            pointerEvents: 'auto',
-            cursor: this.tool === 'delete' ? 'pointer' : 'default',
-        }
-        },
-
-        deleteAnnotation(id) {
-        this.annotations = this.annotations.filter(a => a.id !== id)
-        this.queueSave()
-        },
-
-        getRelativePoint(event) {
-        const pageWrapper = event.currentTarget
-        const rect = pageWrapper.getBoundingClientRect()
-        const x = (event.clientX - rect.left) / this.zoom
-        const y = (event.clientY - rect.top) / this.zoom
-        return { x, y }
-        },
-
-        startDraw(event, pageIndex) {
-        if (this.tool === 'delete') return
-        event.preventDefault()
-        event.stopPropagation()
-        const { x, y } = this.getRelativePoint(event)
-        this.isDrawing = true
-        this.drawStart = { x, y, pageIndex }
-        if (this.tool === 'underline-red') {
-            this.draftLine = { pageIndex, x1: x, y1: y, x2: x, y2: y }
-        } else {
-            this.currentDraft = {
-            pageIndex,
-            style: {
-                position: 'absolute',
-                left: `${x}px`,
-                top: `${y}px`,
-                width: '0px',
-                height: '0px',
-                border: '1px dashed rgba(0,0,0,0.3)',
-                backgroundColor: 'rgba(0,0,0,0.03)',
-                pointerEvents: 'none',
-                zIndex: 1000,
-            },
-            }
-        }
-        },
-
-        updateDraw(event, pageIndex) {
-        if (!this.isDrawing || !this.drawStart || this.drawStart.pageIndex !== pageIndex) return
-        event.preventDefault()
-        event.stopPropagation()
-        const { x, y } = this.getRelativePoint(event)
-        const sx = this.drawStart.x
-        const sy = this.drawStart.y
-        if (this.tool === 'underline-red') {
-            this.draftLine = { pageIndex, x1: sx, y1: sy, x2: x, y2: y }
-            return
-        }
-        const left = Math.min(sx, x)
-        const top = Math.min(sy, y)
-        const w = Math.abs(x - sx)
-        const h = Math.abs(y - sy)
-        this.currentDraft = {
-            pageIndex,
-            style: {
-            position: 'absolute',
-            left: `${left}px`,
-            top: `${top}px`,
-            width: `${w}px`,
-            height: `${h}px`,
-            border: '1px dashed rgba(0,0,0,0.3)',
-            backgroundColor: 'rgba(0,0,0,0.03)',
-            pointerEvents: 'none',
-            zIndex: 1000,
-            },
-        }
-        },
-
-        finishDraw(event, pageIndex) {
-        if (!this.isDrawing || !this.drawStart || this.drawStart.pageIndex !== pageIndex) return
-        event.preventDefault()
-        event.stopPropagation()
-        const { x, y } = this.getRelativePoint(event)
-        const sx = this.drawStart.x
-        const sy = this.drawStart.y
-
-        if (this.tool === 'underline-red') {
-            const dx = Math.abs(x - sx)
-            const dy = Math.abs(y - sy)
-            if (dx > 6 || dy > 6) {
-            this.annotations.push({
-                id: `ann_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-                kind: 'underline',
-                pageIndex,
-                x1: sx, y1: sy, x2: x, y2: y,
-            })
-            this.queueSave()
-            }
-            this.cancelDraw()
-            return
-        }
-
-        const left = Math.min(sx, x)
-        const top = Math.min(sy, y)
-        const w = Math.abs(x - sx)
-        const h = Math.abs(y - sy)
-        if (w > 10 && h > 6) {
-            const color = this.tool === 'highlight-green'
-            ? 'rgba(0,255,90,0.28)'
-            : this.tool === 'highlight-blue'
-                ? 'rgba(0,170,255,0.26)'
-                : 'rgba(255,255,0,0.32)'
-            this.annotations.push({
-            id: `ann_${Date.now()}_${Math.random().toString(16).slice(2)}`,
-            kind: 'highlight',
-            pageIndex,
-            x: left,
-            y: top,
-            w,
-            h,
-            color,
-            })
-            this.queueSave()
-        }
-        this.cancelDraw()
-        },
-
-        cancelDraw() {
-        this.isDrawing = false
-        this.drawStart = null
-        this.currentDraft = null
-        this.draftLine = null
-        },
+        // Mixin-Hook: nach add/delete/undo Annotations persistieren
+        onAnnotationsChange() { this.queueSave() },
 
         async applyPreview(preview) {
         const kind = preview?.kind || ''
@@ -498,6 +369,12 @@
     min-width: 40px;
     padding-left: 0 !important;
     padding-right: 0 !important;
+    }
+    .pdf-tool-btn img {
+    width: 20px !important;
+    height: 20px !important;
+    margin: 0 !important;
+    padding: 0 !important;
     }
 
     .pdf-tool-btn.active {

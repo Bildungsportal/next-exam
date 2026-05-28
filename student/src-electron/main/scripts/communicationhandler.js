@@ -722,7 +722,8 @@ import {
 
     //get base64 pdf from editor
     // ATTENTION: there is a similar method in ipchandler.js that also generates a pdf but stores it as file in the exam directory
-    async getBase64PDF(submissionnumber, sectionname, printBackground=false, saveReason){
+    // pageMode='fullpage' => margins 0 + Chromium-Header aus; gleicher Header-String wird als HTML-Overlay injiziert (activesheets 1:1 PDF-Seite)
+    async getBase64PDF(submissionnumber, sectionname, printBackground=false, saveReason, pageMode){
         if (saveReason !== 'auto') log.info("communicationhandler @ getBase64PDF: getting base64 encoded pdf")
         const traceTiming = saveReason === 'previewSigned' || saveReason === 'directsend'
         const t0 = traceTiming ? Date.now() : 0
@@ -748,13 +749,16 @@ import {
         const headerTemplate = `<div style='display: inline-block; height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-left: 30px; margin-top:10px;'><span style="float:left;">${this.multicastClient.clientinfo.servername}</span><span style="float:left;">&nbsp;|&nbsp; </span><span style="float:left;">${sectionname}</span><span style="float:left;">&nbsp;|&nbsp; </span><span class=date style="float:left;"></span><span style="float:left;">&nbsp;|&nbsp;Abgabe: ${submissionnumber}</span><span style="float:right;">${this.multicastClient.clientinfo.name}</span></div>`
         const footerTemplatePageNums = "<div style='height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-bottom:10px;'><span class=pageNumber></span>|<span class=totalPages></span></div>"
         
+        const isFullpage = pageMode === 'fullpage'
         var options = {
-            margins: { top: 0.5, right: 0, bottom: isSigningExport ? 0 : 0.5, left: 0 },
+            margins: isFullpage
+                ? { top: 0, right: 0, bottom: 0, left: 0 }
+                : { top: 0.5, right: 0, bottom: isSigningExport ? 0 : 0.5, left: 0 },
             pageSize: 'A4',
             printBackground: isSigningExport ? false : printBackground,
             printSelectionOnly: false,
             landscape: false,
-            displayHeaderFooter: true,
+            displayHeaderFooter: !isFullpage,
             footerTemplate: isSigningExport ? '<div></div>' : footerTemplatePageNums,
             headerTemplate,
             preferCSSPageSize: false
@@ -762,10 +766,24 @@ import {
         
         // set the title of the exam window and therefore the document title
         await WindowHandler.examwindow.webContents.executeJavaScript(`document.title = "${this.multicastClient.clientinfo.name} - ${this.multicastClient.clientinfo.servername} - Version ${submissionnumber}"`);
-        
+
+        // pageMode='fullpage': Chromium-Header aus; gleicher Header-String als DOM-Overlay (verbraucht keinen margin) - nur 1. Druckseite
+        // <span class=date> ist Chromium-headerTemplate-Magic -> im DOM-Kontext durch ein gerendertes Datum ersetzen
+        if (isFullpage) {
+            const now = new Date()
+            const dStr = `${String(now.getDate()).padStart(2,'0')}.${String(now.getMonth()+1).padStart(2,'0')}.${now.getFullYear()}`
+            // Datum-magic ersetzen + margins/top aus dem Editor-Template raus (Wrapper-div positioniert)
+            const overlayInner = headerTemplate
+                .replace(/<span class=date[^>]*><\/span>/, `<span style="float:left;">${dStr}</span>`)
+                .replace(/margin-(left|right|top):\s*\d+px;?/g, '')
+            // Wrapper: 85% breit zentriert, top 30px (visuell auf PDF-Inhalt der mit zoom 8/9 skaliert ist abgestimmt)
+            const overlayHtml = JSON.stringify(`<div id="__fullpageHeaderOverlay__" style="position:absolute;top:30px;left:50%;transform:translateX(-50%);width:85%;z-index:2147483647;pointer-events:none;">${overlayInner}</div>`)
+            await WindowHandler.examwindow.webContents.executeJavaScript(`(()=>{const o=document.getElementById('__fullpageHeaderOverlay__');if(o)o.remove();document.body.insertAdjacentHTML('afterbegin', ${overlayHtml});})()`)
+        }
+
         // Set lock before starting PDF generation
         IpcHandler.isPrintingPdf = true;
-        
+
         try {
             const tPrint = traceTiming ? Date.now() : 0
             const data = await WindowHandler.examwindow.webContents.printToPDF(options);
@@ -810,6 +828,11 @@ import {
         } finally {
             // Always release the lock, even if an error occurred
             IpcHandler.isPrintingPdf = false;
+            if (isFullpage) {
+                try {
+                    await WindowHandler.examwindow?.webContents?.executeJavaScript(`(()=>{const o=document.getElementById('__fullpageHeaderOverlay__');if(o)o.remove();})()`)
+                } catch (e) { /* exam window may be gone */ }
+            }
         }
     }
 

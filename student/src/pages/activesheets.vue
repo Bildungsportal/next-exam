@@ -632,7 +632,7 @@ export default {
                 signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: this.currentpreviewBase64 })  
             } else {
                 // Otherwise generate from current view
-                let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true, reason: why})
+                let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true, reason: why, pageMode: 'fullpage'})
                 if (response?.status == "success") {
                     signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })  
                 }
@@ -711,6 +711,7 @@ export default {
                 submissionnumber: this.submissionnumber,
                 sectionname: this.serverstatus.examSections[this.lockedSection].sectionname,
                 printBackground: true,
+                pageMode: 'fullpage', // margins 0 + Header als DOM-Overlay (siehe communicationhandler.getBase64PDF)
             }
             try {
                 if (type === 'print') {
@@ -1079,10 +1080,13 @@ export default {
     }
    
     // Use :deep() to target child component styles - remove all height restrictions for printing
+    // zoom 8/9: pdfparser rendert page mit scale 1.5 (=> 1pt = 1.5px); printToPDF mappt 1pt = 96/72 = 1.333px.
+    // Verhaeltnis 1.333/1.5 = 8/9 skaliert das Overlay exakt auf die A4-Druckseite (Margins muessen 0 sein - siehe pageMode='fullpage').
     :deep(.pdf-overlay-root) {
         height: auto !important;
         max-height: none !important;
         overflow: visible !important;
+        zoom: calc(8 / 9) !important;
     }
     
     :deep(.pdf-scroll-container) {

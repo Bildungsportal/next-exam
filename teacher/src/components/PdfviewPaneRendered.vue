@@ -13,7 +13,7 @@
                 </button>
             </li>
 
-            <li class="nav-item">
+            <li v-if="currentpreviewPath" class="nav-item">
                 <button type="button" class="btn btn-light pdf-tool-btn" id="openPDF" @click="openFileExternal(currentpreviewPath)" :title="$t('dashboard.open')">
                     <img src="/src/assets/img/svg/stock_exit_up.svg" class="white">
                 </button>
@@ -21,18 +21,6 @@
 
             <template v-if="correctionMode">
                 <li class="nav-item ms-2">
-                    <button
-                        type="button"
-                        class="btn btn-sm"
-                        :class="showMismatchOverlay ? 'btn-warning' : 'btn-outline-secondary'"
-                        :disabled="!activesheetsCorrection?.canAutocorrect"
-                        :title="autocorrectTitle"
-                        @click.stop="toggleAutocorrect"
-                    >
-                        {{ $t('pdf.autocorrect') }}
-                    </button>
-                </li>
-                <li class="nav-item ms-1">
                     <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'highlight-yellow' }" @click.stop="setTool('highlight-yellow')" title="Highlight yellow">
                         <span class="tool-swatch tool-swatch--yellow"></span>
                     </button>
@@ -45,12 +33,27 @@
                     <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'underline-red' }" @click.stop="setTool('underline-red')" title="Underline red">
                         <span class="tool-underline tool-underline--red"></span>
                     </button>
+                    <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'pen-red' }" @click.stop="setTool('pen-red')" title="Pen red">
+                        <img src="/src/assets/img/svg/document-edit.svg" class="white">
+                    </button>
                     <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'delete' }" @click.stop="setTool('delete')" title="Delete">
                         ✕
                     </button>
                 </li>
                 <li class="nav-item ms-1">
                     <button type="button" class="btn btn-light pdf-tool-btn" :disabled="!canUndoAnnotation" @click.stop="undoCorrection" title="Undo">↶</button>
+                </li>
+                <li class="nav-item ms-2">
+                    <button
+                        type="button"
+                        class="btn btn-sm"
+                        :class="showMismatchOverlay ? 'btn-warning' : 'btn-outline-secondary'"
+                        :disabled="!activesheetsCorrection?.canAutocorrect"
+                        :title="autocorrectTitle"
+                        @click.stop="toggleAutocorrect"
+                    >
+                        {{ $t('pdf.autocorrect') }}
+                    </button>
                 </li>
                 <li class="nav-item ms-1">
                     <button type="button" class="btn btn-sm btn-primary" @click.stop="$emit('save-correction')">
@@ -114,6 +117,7 @@
                     :show-mismatch-overlay="showMismatchOverlay"
                     :mismatch-field-ids="activesheetsCorrection.mismatchFieldIds"
                     :dismissed-mismatch-ids="dismissedMismatchIds"
+                    :delete-tool-active="tool === 'delete'"
                     @dismissMismatch="dismissMismatch"
                 />
 
@@ -140,13 +144,34 @@
                         stroke-width="3"
                         stroke-linecap="round"
                         @click.stop="tool === 'delete' ? deleteAnnotation(ann.id) : null"
-                        style="pointer-events: all;"
+                        :style="{ pointerEvents: 'all', cursor: tool === 'delete' ? 'pointer' : 'default' }"
+                    />
+                </svg>
+
+                <svg
+                    v-for="ann in penForPage(pageIndex)"
+                    :key="ann.id"
+                    class="ann-pen"
+                    :style="{ position:'absolute', left:0, top:0, width: page.width + 'px', height: page.height + 'px', pointerEvents: 'none', zIndex: 22 }"
+                >
+                    <polyline
+                        :points="penPointsAttr(ann.points)"
+                        fill="none"
+                        stroke="rgba(220,53,69,0.95)"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        @click.stop="tool === 'delete' ? deleteAnnotation(ann.id) : null"
+                        :style="{ pointerEvents: 'all', cursor: tool === 'delete' ? 'pointer' : 'default' }"
                     />
                 </svg>
 
                 <div v-if="currentDraft && currentDraft.pageIndex === pageIndex" class="draft" :style="draftStyle"></div>
                 <svg v-if="draftLine && draftLine.pageIndex === pageIndex" class="draft-line" :style="{ position:'absolute', left:0, top:0, width: page.width + 'px', height: page.height + 'px' }">
                     <line :x1="draftLine.x1" :y1="draftLine.y1" :x2="draftLine.x2" :y2="draftLine.y2" stroke="rgba(220,53,69,0.95)" stroke-width="3" stroke-linecap="round" />
+                </svg>
+                <svg v-if="draftPenPath && draftPenPath.pageIndex === pageIndex" class="draft-pen" :style="{ position:'absolute', left:0, top:0, width: page.width + 'px', height: page.height + 'px', pointerEvents: 'none' }">
+                    <polyline :points="penPointsAttr(draftPenPath.points)" fill="none" stroke="rgba(220,53,69,0.95)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
             </div>
             </div>
@@ -159,7 +184,7 @@
 <script>
     import log from 'electron-log/renderer';
     import { parsePdfToPages } from 'next-exam-shared/pdfparser/index.js'
-    import { pdfPageAnnotationsMixin } from '../composables/pdfPageAnnotationsMixin.js'
+    import { pdfPageAnnotationsMixin } from 'next-exam-shared/pdfPageAnnotationsMixin.js'
     import ActivesheetsFieldLayer from './ActivesheetsFieldLayer.vue'
     import { base64ToUint8Array } from '../utils/filemanager.js'
 
@@ -534,6 +559,14 @@
         display: flex;
         align-items: flex-start;
         box-sizing: border-box;
+    }
+
+    @media print {
+        html, body { height: auto !important; overflow: visible !important; }
+        .pdf-toolbar, .render-overlay, .correction-base-preview-hint { display: none !important; }
+        .pdf-scroll-container { top: 0 !important; padding: 0 !important; overflow: visible !important; zoom: calc(8 / 9); }
+        .pdf-page-wrapper { transform: none !important; }
+        .pdf-page-layout { width: auto !important; height: auto !important; }
     }
 </style>
 

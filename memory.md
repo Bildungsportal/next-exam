@@ -103,6 +103,12 @@ BUG^localvm^firstBootRegistry^autounattend SPI+UserPreferencesMask at FirstLogon
 
 # Misc utilities
 PATH^print^pdf^teacher/src-electron/main/scripts/printjobhandler.js+teacher/src/pages/SystemPrintPdf.vue
+PATH^teacher^showPDFPreview^teacher/src/utils/filemanager.js: single entry for PDF preview ({filepath?, filename, base64?}); filepath=>readWorkdir+isValidPdf+loadActivesheetsCorrectionContext; base64=>direct bytes; replaced loadPDF+showBase64FilePreview
+PATH^pdfAnnotations^mixin^shared/pdfPageAnnotationsMixin.js (both student+teacher import via next-exam-shared); state+draw+undo+resetAnnotations+cancelDraw. Tools: highlight-yellow/green/blue (kind:highlight box), underline-red (kind:underline line), pen-red (kind:pen freehand polyline via draftPenPath.points). Hooks: onAnnotationsChange() (student=>queueSave) + onAnnotationUndoRestore(prev). Toolbar+render+mouse-events bleiben inline in jeweiligem PdfviewPaneRendered.vue
+RULE^teacher^submissionPreviewPath^submission preview muss filepath mitgeben (loadActivesheetsCorrectionContext filtert /ABGABE/+examtype=activesheets) sonst kein annotation toolbar+kein autocorrect button im PdfviewPaneRendered
+TECH^print^activesheetsScale^pdfparser rendert page CSS-px=PDF-pt*1.5; Chromium printToPDF mappt 1pt=96/72=1.333px → wrapper 12% breiter als A4. activesheets nutzt pageMode='fullpage' (margins 0+kein header/footer) + :deep(.pdf-overlay-root){zoom:calc(8/9)} im @media print für 1:1 PDF-Seite ↔ A4-Druckseite
+TECH^print^activesheetsHeader^pageMode='fullpage' margins 0+chromium header/footer off; getBase64PDF injiziert headerTemplate als #__fullpageHeaderOverlay__ div (position:absolute top:0) per executeJavaScript vor printToPDF, finally-Block entfernt es → Wrapper bleibt 1:1, Header ueberdeckt obere ~14px der 1. Druckseite, kein neuer Header-String
+IPC^student^getPDFbase64^args.pageMode='fullpage' (optional) => margins 0+displayHeaderFooter false+DOM overlay header; default behält editor-Verhalten (top/bottom 0.5"+header/footer)
 PATH^student^odtTiptap^student/src/utils/odtToTiptapHtml.js+filehandler loadODT+editor.vue materials+localfiles
 TECH^teacherCli^overrides^applyCliOverrides.js consumes --exam-modes=csv (override config.exammodes) + --expose-students (GET connectedstudentips→text/plain); needs running examServerList[0]
 TECH^macRosetta^check^platformDispatcher.macRosettaEmulation{runningUnderRosetta,nativeHostArch,processArch,procTranslated}; arm64 host+x64+sysctl.proc_translated; student.vue warnMacRosettaArch swal on mount

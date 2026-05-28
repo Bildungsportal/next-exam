@@ -9,12 +9,6 @@
         :style="field.style"
         @click.stop="onFieldClick(field.id, false)"
     >
-        <button
-            v-if="mismatchVisible(field.id)"
-            type="button"
-            class="mismatch-dismiss-btn"
-            @click.stop="$emit('dismissMismatch', field.id)"
-        >&times;</button>
         <template v-if="interactive">
             <input
                 v-if="field.type === 'checkbox'"
@@ -50,12 +44,6 @@
         :style="cloze.style"
         @click.stop="onFieldClick(cloze.id, false)"
     >
-        <button
-            v-if="mismatchVisible(cloze.id)"
-            type="button"
-            class="mismatch-dismiss-btn"
-            @click.stop="$emit('dismissMismatch', cloze.id)"
-        >&times;</button>
         <template v-if="interactive">
             <input
                 v-if="cloze.type === 'checkbox'"
@@ -92,12 +80,6 @@
         :style="box.style"
         @click.stop="onFieldClick(box.id, false)"
     >
-        <button
-            v-if="mismatchVisible(box.id)"
-            type="button"
-            class="mismatch-dismiss-btn"
-            @click.stop="$emit('dismissMismatch', box.id)"
-        >&times;</button>
         <template v-if="interactive">
             <input
                 v-if="box.type === 'checkbox'"
@@ -131,12 +113,6 @@
         :style="customField.style"
         @click.stop="onFieldClick(customField.id, true)"
     >
-        <button
-            v-if="mismatchVisible(customField.id)"
-            type="button"
-            class="mismatch-dismiss-btn"
-            @click.stop="$emit('dismissMismatch', customField.id)"
-        >&times;</button>
         <template v-if="interactive">
             <textarea
                 v-if="!customField.type || customField.type === 'textarea'"
@@ -185,6 +161,7 @@ export default {
         showMismatchOverlay: { type: Boolean, default: false },
         mismatchFieldIds: { type: Array, default: () => [] },
         dismissedMismatchIds: { type: Array, default: () => [] },
+        deleteToolActive: { type: Boolean, default: false }, // dismiss mismatches nur wenn Annotation-Delete-Tool aktiv
     },
     computed: {
         customFieldsForPage() {
@@ -209,11 +186,14 @@ export default {
             const classes = ['input-overlay'];
             if (checkboxOverlay) classes.push('checkbox-overlay');
             if (this.interactive && this.editMode && this.drawMode === 'delete') classes.push('delete-mode-field');
-            if (this.mismatchVisible(id)) classes.push('mismatch-overlay');
+            if (this.mismatchVisible(id)) {
+                classes.push('mismatch-overlay');
+                if (this.deleteToolActive) classes.push('mismatch-overlay--deletable');
+            }
             return classes;
         },
         onFieldClick(id, isCustom) {
-            if (this.mismatchVisible(id)) {
+            if (this.mismatchVisible(id) && this.deleteToolActive) {
                 this.$emit('dismissMismatch', id);
                 return;
             }
@@ -237,27 +217,13 @@ export default {
 }
 
 .mismatch-overlay {
-    background-color: rgba(220, 53, 69, 0.28);
-    border: 2px solid rgba(220, 53, 69, 0.75);
-    cursor: pointer;
+    background-color: rgba(220, 53, 69, 0.12);
+    border: 1px solid rgba(220, 53, 69, 0.45);
+    border-radius: 6px;
     z-index: 15;
 }
 
-.mismatch-dismiss-btn {
-    position: absolute;
-    top: 0;
-    right: 0;
-    z-index: 16;
-    width: 18px;
-    height: 18px;
-    padding: 0;
-    line-height: 1;
-    font-size: 14px;
-    font-weight: bold;
-    border: none;
-    border-radius: 2px;
-    background: rgba(220, 53, 69, 0.95);
-    color: #fff;
+.mismatch-overlay--deletable {
     cursor: pointer;
 }
 
