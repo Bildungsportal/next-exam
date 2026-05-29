@@ -244,9 +244,10 @@ class IpcHandler {
 
         ipcMain.handle('install-linux-cage-kiosk', () => {
             if (process.platform === 'win32') {
-                // optional extra apps list under EXAM-STUDENT workdir; passed through to PS only if file exists
+                // optional EXAM-STUDENT hooks; passed through to PS only if each file exists
                 const extraAppsFile = path.join(this.config.workdirectory, 'kiosk-allowed-apps.txt');
-                return initiateWindowsKioskSetup(process.execPath, extraAppsFile);
+                const firewallRulesScript = path.join(this.config.workdirectory, 'firewall-rules.ps1');
+                return initiateWindowsKioskSetup(process.execPath, extraAppsFile, firewallRulesScript);
             }
             const source = process.env.APPIMAGE || process.execPath;
             const script = app.isPackaged

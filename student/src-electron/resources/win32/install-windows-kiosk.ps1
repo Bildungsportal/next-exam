@@ -9,6 +9,7 @@
 # STANDALONE USAGE EXAMPLES (elevated PowerShell):
 #   .\install-windows-kiosk.ps1
 #   .\install-windows-kiosk.ps1 -ExtraAppsFile "C:\Users\Lehrer\kiosk-allowed-apps.txt"
+#   .\install-windows-kiosk.ps1 -FirewallRulesScript "C:\Users\Lehrer\EXAM-STUDENT\firewall-rules.ps1"
 #   .\install-windows-kiosk.ps1 -AppDir "$env:TEMP\next-exam-student" -LaunchExe "Next-Exam-Student.exe"
 #   .\install-windows-kiosk.ps1 -AppDir "C:\Program Files\Next-Exam-Student" -LaunchExe "Next-Exam-Student.exe"
 #   .\install-windows-kiosk.ps1 -AppPath "$env:TEMP\next-exam-student\Next-Exam-Student.exe"
@@ -44,6 +45,12 @@
 #     C:\Program Files\Bentley\MicroStation\MicroStation.exe
 #     C:\Windows\System32\calc.exe
 #
+# OPTIONAL FIREWALL HOOK (-FirewallRulesScript):
+#   PowerShell script applied near end of provisioning (same elevated admin token as this script).
+#   Default probe (same folder as kiosk-allowed-apps.txt):
+#     %USERPROFILE%\EXAM-STUDENT\firewall-rules.ps1
+#   Optional; non-zero exit logs WARNING only (kiosk provisioning still completes).
+#
 # EXIT CODES (consumed by windowsKioskSetup.js):
 #     0   success
 #     10  EDITION_UNSUPPORTED (Home/Core; needs Pro/Edu/Enterprise)
@@ -59,7 +66,9 @@ param(
     [string]$KioskUser = 'next-exam-kiosk',
     [string]$InstallDir = 'C:\NextExam',
     # optional plaintext file with one absolute exe path per line; blank/# lines ignored
-    [string]$ExtraAppsFile = ''
+    [string]$ExtraAppsFile = '',
+    # optional elevated hook script (e.g. EXAM-STUDENT\firewall-rules.ps1); full path
+    [string]$FirewallRulesScript = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -192,6 +201,20 @@ function Invoke-OfflineNtuserHardening([string]$NtuserPath, [string]$HiveAlias, 
         return $true
     } finally {
         $null = cmd.exe /c "reg unload $hiveKey 2>nul"
+    }
+}
+
+# Run optional EXAM-STUDENT firewall-rules.ps1 hook (already elevated; failure is non-fatal).
+function Invoke-NextExamKioskFirewallRulesScript([string]$ScriptPath) {
+    if (-not $ScriptPath -or -not (Test-Path -LiteralPath $ScriptPath -PathType Leaf)) { return }
+    Write-Step "running firewall rules script: $ScriptPath"
+    try {
+        & $ScriptPath
+        if ($LASTEXITCODE -ne 0) {
+            Write-Step "WARNING: firewall-rules.ps1 exited $LASTEXITCODE (kiosk provisioning still complete)"
+        }
+    } catch {
+        Write-Step "WARNING: firewall-rules.ps1 failed: $($_.Exception.Message)"
     }
 }
 
@@ -685,6 +708,30 @@ if (-not $ExtraAppsFile) {
     }
 }
 
+if (-not $FirewallRulesScript) {
+    $fwDir = if ($ExtraAppsFile) { Split-Path -Parent $ExtraAppsFile } else { $null }
+    if (-not $fwDir) {
+        try {
+            $explorer = Get-CimInstance Win32_Process -Filter "Name='explorer.exe'" | Select-Object -First 1
+            if ($explorer) {
+                $ownerInfo = Invoke-CimMethod -InputObject $explorer -MethodName GetOwner
+                if ($ownerInfo.ReturnValue -eq 0 -and $ownerInfo.User) {
+                    $fwDir = Join-Path "C:\Users\$($ownerInfo.User)" 'EXAM-STUDENT'
+                }
+            }
+        } catch {
+            Write-Step "WARNING: could not auto-detect firewall-rules.ps1: $($_.Exception.Message)"
+        }
+    }
+    if ($fwDir) {
+        $fwCandidate = Join-Path $fwDir 'firewall-rules.ps1'
+        if (Test-Path -LiteralPath $fwCandidate -PathType Leaf) {
+            $FirewallRulesScript = $fwCandidate
+            Write-Step "auto-detected firewall rules script: $FirewallRulesScript"
+        }
+    }
+}
+
 if ($ExtraAppsFile -and (Test-Path $ExtraAppsFile)) {
     Write-Step "reading extra apps from $ExtraAppsFile"
     $lines = Get-Content -LiteralPath $ExtraAppsFile -Encoding UTF8
@@ -800,6 +847,8 @@ try {
 } catch {
     Write-Step "WARNING: logoff wipe task not registered (kiosk login/AA still OK): $($_.Exception.Message)"
 }
+
+Invoke-NextExamKioskFirewallRulesScript -ScriptPath $FirewallRulesScript
 
 # marker: renderer treats provisioning as complete only after this file exists (partial runs keep install button visible)
 Set-Content -LiteralPath (Join-Path $InstallDir '.kiosk-provision-complete') -Value (Get-Date -Format 'o') -Encoding UTF8

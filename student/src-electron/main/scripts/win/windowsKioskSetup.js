@@ -918,10 +918,11 @@ function isProcessElevated() {
 
 /**
  * relaunches the PowerShell payload via `Start-Process -Verb RunAs` (UAC).
- * extraAppsFile (optional) = absolute path to a plaintext file with one extra exe path per line.
+ * extraAppsFile (optional) = absolute path to kiosk-allowed-apps.txt
+ * firewallRulesScript (optional) = absolute path to firewall-rules.ps1 (same EXAM-STUDENT folder)
  * Returns Promise<{ok:boolean,error?:string,code?:string,skipped?:boolean}>.
  */
-export async function initiateKioskSetup(_appPathIgnored, extraAppsFile = '') {
+export async function initiateKioskSetup(_appPathIgnored, extraAppsFile = '', firewallRulesScript = '') {
     if (process.platform !== 'win32') {
         // Linux/macOS callers should use their own setup path; signal no-op here
         return { ok: false, skipped: true, error: 'initiateKioskSetup: non-win32 handled elsewhere' };
@@ -937,11 +938,12 @@ export async function initiateKioskSetup(_appPathIgnored, extraAppsFile = '') {
     }
     // optional: only pass ExtraAppsFile if it actually exists (avoid PS errors on stale paths)
     const extraFile = extraAppsFile && existsSync(extraAppsFile) ? extraAppsFile : '';
+    const firewallFile = firewallRulesScript && existsSync(firewallRulesScript) ? firewallRulesScript : '';
 
     // when already elevated (rare for a portable app) skip Start-Process and run inline
     if (isProcessElevated()) {
         log.info('windowsKioskSetup: already elevated, running provisioning inline');
-        const inline = await runPowerShellInline(script, bundle.appDir, bundle.launchExe, extraFile);
+        const inline = await runPowerShellInline(script, bundle.appDir, bundle.launchExe, extraFile, firewallFile);
         return inline.ok ? kioskSetupSuccessResult(bundle) : inline;
     }
 
@@ -955,9 +957,10 @@ export async function initiateKioskSetup(_appPathIgnored, extraAppsFile = '') {
     // child PS command: run provisioning script, transcript stdout/stderr to logFile, persist $LASTEXITCODE
     const psEscape = (s) => String(s).replace(/'/g, "''");
     const extraArg = extraFile ? ` -ExtraAppsFile '${psEscape(extraFile)}'` : '';
+    const firewallArg = firewallFile ? ` -FirewallRulesScript '${psEscape(firewallFile)}'` : '';
     const childCommand =
         `try { ` +
-        `& '${psEscape(script)}' -AppDir '${psEscape(bundle.appDir)}' -LaunchExe '${psEscape(bundle.launchExe)}'${extraArg} *>&1 | Tee-Object -FilePath '${psEscape(logFile)}'; ` +
+        `& '${psEscape(script)}' -AppDir '${psEscape(bundle.appDir)}' -LaunchExe '${psEscape(bundle.launchExe)}'${extraArg}${firewallArg} *>&1 | Tee-Object -FilePath '${psEscape(logFile)}'; ` +
         `Set-Content -Path '${psEscape(exitFile)}' -Value $LASTEXITCODE -Encoding ASCII ` +
         `} catch { ` +
         `($_ | Out-String) | Tee-Object -FilePath '${psEscape(logFile)}' -Append; ` +
@@ -1015,10 +1018,11 @@ export async function initiateKioskSetup(_appPathIgnored, extraAppsFile = '') {
 }
 
 // fallback path when host is already admin (e.g. dev box with elevated electron)
-function runPowerShellInline(script, appDir, launchExe, extraFile = '') {
+function runPowerShellInline(script, appDir, launchExe, extraFile = '', firewallFile = '') {
     const args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script,
         '-AppDir', appDir, '-LaunchExe', launchExe];
     if (extraFile) { args.push('-ExtraAppsFile', extraFile); }
+    if (firewallFile) { args.push('-FirewallRulesScript', firewallFile); }
     return new Promise((resolve) => {
         const child = spawn('powershell.exe', args, { windowsHide: true });
         let stdout = '';
