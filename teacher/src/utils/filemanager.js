@@ -7,7 +7,7 @@ import { parseActivesheetsFormDataJson, diffActivesheetsFormData } from 'next-ex
 
 /**
  * Dashboard explorer: read file bytes from the active exam workdir (decrypted in main when applicable).
- * Used by showPDFPreview (PDF preview), loadTextFile (log popup), loadImage (image preview) in this module.
+ * Used by showPDFPreview, loadTextFile, loadImage, loadHtmlFile in this module.
  */
 async function readWorkdirFileForDashboard(ctx, filepath, { optional = false } = {}) {
     const res = await window.ipcRenderer.invoke('readTeacherWorkdirFile', {
@@ -408,6 +408,47 @@ function loadTextFile(filepath, filename){
         .catch((err) => { log.error(err) })
 }
 
+// Ensure local .htm previews stay readable when the export omits body background.
+function ensureHtmlPaperBackground(html) {
+    const tag = '<style>html,body{background:#fff;color:#000}</style>'
+    const raw = String(html)
+    if (/<\/head>/i.test(raw)) return raw.replace(/<\/head>/i, `${tag}</head>`)
+    if (/<head[\s>]/i.test(raw)) return raw.replace(/<head(\s[^>]*)?>/i, `$&${tag}`)
+    if (/<html[\s>]/i.test(raw)) return raw.replace(/<html(\s[^>]*)?>/i, `$&<head>${tag}</head>`)
+    return `${tag}${raw}`
+}
+
+// Render local .htm/.html in the dashboard webview pane via blob URL.
+async function loadHtmlFile(filepath, filename) {
+    try {
+        const raw = await readWorkdirFileForDashboard(this, filepath)
+        const bytes = normalizeWorkdirBytes(raw)
+        const html = ensureHtmlPaperBackground(workdirBytesToUtf8(bytes))
+
+        if (this.urlForWebview?.startsWith('blob:')) {
+            URL.revokeObjectURL(this.urlForWebview)
+        }
+        if (this.currentpreview) {
+            URL.revokeObjectURL(this.currentpreview)
+        }
+
+        this.currentpreview = null
+        this.currentpreviewBase64 = null
+        this.currentpreviewPath = filepath
+        this.currentpreviewname = filename || filepath.split('/').pop()
+        this.currentpreviewType = 'html'
+        this.activesheetsPreviewPdf = null
+        this.activesheetsCorrection = null
+
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+        this.urlForWebview = URL.createObjectURL(blob)
+        this.webviewVisible = true
+        document.querySelector('#pdfpreview').style.display = 'block'
+    } catch (err) {
+        log.error('filemanager @ loadHtmlFile:', err)
+    }
+}
+
 function normalizeFsPath(p){
     return String(p || '').replace(/\\/g, '/').replace(/\/+$/, '')
 }
@@ -756,4 +797,4 @@ async function saveActivesheetsCorrectedPdf() {
     }
 }
 
-export {loadFilelist, getLatest, processPrintrequest, loadImage, showPDFPreview, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate, saveActivesheetsCorrectedPdf, base64ToUint8Array}
+export {loadFilelist, getLatest, processPrintrequest, loadImage, showPDFPreview, loadTextFile, loadHtmlFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate, saveActivesheetsCorrectedPdf, base64ToUint8Array}

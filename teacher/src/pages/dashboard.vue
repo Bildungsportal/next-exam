@@ -121,6 +121,7 @@
         @load-pdf="({ path, name }) => showPDFPreview({ filepath: path, filename: name })"
         @load-image="(path) => loadImage(path)"
         @load-text="({ path, name }) => loadTextFile(path, name)"
+        @load-html="({ path, name }) => loadHtmlFile(path, name)"
         @send-file="(file) => dashboardExplorerSendFile(file)"
         @download-file="(file) => downloadFile(file)"
         @delete-file="(file) => fdelete(file)"
@@ -1291,6 +1292,7 @@
             :visible="webviewVisible"
             :allowed-url="urlForWebview"
             :block-external="true"
+            :paper-background="currentpreviewType === 'html'"
             @close="hidepreview"
         />
         <div v-if="currentpreview" class="pdfpreview-centered">
@@ -1349,7 +1351,7 @@ import { isStudentReachable, countReachableStudents } from '../utils/studentPres
 
 import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile, createSharingLink, fileExistsInAppFolder, downloadFilesFromOneDrive} from '../msalutils/onedrive'
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
-import { loadFilelist, getLatest, processPrintrequest,  loadImage, showPDFPreview, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate, saveActivesheetsCorrectedPdf } from '../utils/filemanager'
+import { loadFilelist, getLatest, processPrintrequest,  loadImage, showPDFPreview, loadTextFile, loadHtmlFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate, saveActivesheetsCorrectedPdf } from '../utils/filemanager'
 import { swalQueued } from '../utils/swalQueue.js'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, lockSectionForAll, endExam, kick, restore } from '../utils/exammanagement.js'
 import { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, configureEditorTemplate, removeEditorTemplate, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
@@ -1833,6 +1835,7 @@ computed: {
         loadImage:loadImage,                        // displays an image in the preview panel
         showPDFPreview: showPDFPreview,             // displays a pdf in the preview panel ({filepath, filename, base64})
         loadTextFile:loadTextFile,                  // shows plain text / .log in a modal (DashboardExplorer)
+        loadHtmlFile: loadHtmlFile,                 // renders .htm/.html in webview pane (DashboardExplorer)
         dashboardExplorerSendFile:dashboardExplorerSendFile,        // sends a given file to the selected student
         downloadFile:downloadFile,                                  // store the selected file to a local folder
         showWorkfolder:showWorkfolder,                              // makes the dashboard explorer visible
@@ -2410,12 +2413,15 @@ computed: {
         },
         hidepreview() {
             document.querySelector("#pdfpreview").style.display = 'none';
-            URL.revokeObjectURL(this.currentpreview);
+            if (this.currentpreview) URL.revokeObjectURL(this.currentpreview);
+            if (this.urlForWebview?.startsWith('blob:')) URL.revokeObjectURL(this.urlForWebview);
             this.currentpreview = null;
             this.currentpreviewBase64 = null;
             this.currentpreviewPath = null;
             this.currentpreviewname = null;
             this.activesheetsCorrection = null;
+            this.urlForWebview = null;
+            this.webviewVisible = false;
         },
         // discard activesheets PDF
         discardActivesheetsPdf() {
