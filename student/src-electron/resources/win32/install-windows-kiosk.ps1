@@ -125,6 +125,36 @@ function Add-NextExamKioskNtuserHardening([string]$HiveRoot) {
     }
 }
 
+# Redirect Desktop/Documents/Downloads/Pictures/Music/Videos to EXAM-STUDENT in offline NTUSER (Known Folders).
+function Add-NextExamKioskKnownFolderRedirects([string]$HiveRoot, [string]$ExamStudentPath) {
+    $userShell = "$HiveRoot\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+    $shellFolders = "$HiveRoot\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders"
+    New-Item -Path $userShell -Force | Out-Null
+    New-Item -Path $shellFolders -Force | Out-Null
+    $expandTarget = '%USERPROFILE%\EXAM-STUDENT'
+    foreach ($g in @(
+        '{B4BF4253-8F59-4A32-8558-EBCBAB75C11F}', # Desktop
+        '{F42EE2D3-909F-4907-8871-4CB22F31667B}', # Documents
+        '{374DE290-123F-4565-9164-39C4925E467B}', # Downloads
+        '{33E28130-4E1E-4676-837A-9846C755B074}', # Pictures
+        '{4BD8D571-6D19-48D9-A611-9729E11DEE96}', # Music
+        '{18989B1D-99B5-455B-ABBC-AEA9D8B76B9B}'  # Videos
+    )) {
+        Set-ItemProperty -Path $userShell -Name $g -Value $expandTarget -Type ExpandString
+    }
+    foreach ($entry in @{
+        'Desktop'     = $ExamStudentPath
+        'Personal'    = $ExamStudentPath
+        'Downloads'   = $ExamStudentPath
+        'My Pictures' = $ExamStudentPath
+        'My Music'    = $ExamStudentPath
+        'My Video'    = $ExamStudentPath
+    }.GetEnumerator()) {
+        Set-ItemProperty -Path $shellFolders -Name $entry.Key -Value $entry.Value -Type String
+    }
+    Write-Step "known folders -> $ExamStudentPath (Desktop/Documents/Downloads/Pictures/Music/Videos)"
+}
+
 # Purge DirectWrite font caches after offline DPI/ClearType hive edits (stale 125% metrics).
 function Clear-NextExamFontCaches([string]$KioskProfilePath) {
     $targets = @(
@@ -141,8 +171,8 @@ function Clear-NextExamFontCaches([string]$KioskProfilePath) {
     }
 }
 
-# Load an offline NTUSER.DAT, run Add-NextExamKioskNtuserHardening, unload.
-function Invoke-OfflineNtuserHardening([string]$NtuserPath, [string]$HiveAlias) {
+# Load an offline NTUSER.DAT, run hardening + known-folder redirects, unload.
+function Invoke-OfflineNtuserHardening([string]$NtuserPath, [string]$HiveAlias, [string]$ExamStudentPath) {
     if (-not (Test-Path -LiteralPath $NtuserPath)) { return $false }
     $hiveKey = "HKU\$HiveAlias"
     $loadOut = (& reg.exe load $hiveKey $NtuserPath 2>&1 | Out-String).Trim()
@@ -151,7 +181,11 @@ function Invoke-OfflineNtuserHardening([string]$NtuserPath, [string]$HiveAlias) 
         return $false
     }
     try {
-        Add-NextExamKioskNtuserHardening -HiveRoot "Registry::HKEY_USERS\$HiveAlias"
+        $hiveRoot = "Registry::HKEY_USERS\$HiveAlias"
+        Add-NextExamKioskNtuserHardening -HiveRoot $hiveRoot
+        if ($ExamStudentPath) {
+            Add-NextExamKioskKnownFolderRedirects -HiveRoot $hiveRoot -ExamStudentPath $ExamStudentPath
+        }
         [gc]::Collect()
         Start-Sleep -Milliseconds 500
         Write-Step "patched NTUSER.DAT hardening: $NtuserPath"
@@ -532,8 +566,12 @@ public static extern int CreateProfile(
 }
 
 # 2b) Harden kiosk profile NTUSER (persistent profile — avoids temp-profile + "setting up" on every logon).
+$examStudentPath = Join-Path $ProfilePath 'EXAM-STUDENT'
+if (-not (Test-Path -LiteralPath $examStudentPath)) {
+    New-Item -ItemType Directory -Path $examStudentPath -Force | Out-Null
+}
 $kioskNtuser = Join-Path $ProfilePath 'NTUSER.DAT'
-Invoke-OfflineNtuserHardening -NtuserPath $kioskNtuser -HiveAlias 'NEXTEXAM_KIOSK_HIVE' | Out-Null
+Invoke-OfflineNtuserHardening -NtuserPath $kioskNtuser -HiveAlias 'NEXTEXAM_KIOSK_HIVE' -ExamStudentPath $examStudentPath | Out-Null
 Clear-NextExamFontCaches -KioskProfilePath $ProfilePath
 Write-Step 'cleared FontCache (LocalService, installer, kiosk profile)'
 

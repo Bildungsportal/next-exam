@@ -567,7 +567,8 @@
         html, body { height: auto !important; overflow: visible !important; }
         .pdf-toolbar, .render-overlay, .correction-base-preview-hint { display: none !important; }
         .embed-container.pdfview-pane-rendered { display: block !important; overflow: visible !important;  }
-        /* zoom minimal unter 8/9: bei exakt 8/9 ragt die gerenderte Seite (1262.8px @ scale1.5) um Subpixel ueber A4 -> Leerblatt nach jeder Seite */
+        /* zoom-Basis 8/9: pdfparser rendert scale 1.5 (1pt=1.5px), printToPDF mappt 1pt=96/72=1.333px -> 1.333/1.5=8/9.
+           Bei Teacher ragt die so skalierte Seite um Subpixel ueber die A4-Druckhoehe (anders als student/, wo .pdf-overlay-root absolut positioniert ist) -> minimal kleiner (0.882) + break-before pro Folgeseite ergibt exakt N Blaetter ohne Leerseite. */
         .pdf-scroll-container { position: static !important; top: auto !important; padding: 0 !important; height: auto !important; overflow: hidden !important; background: #fff !important; zoom: 0.882; }
         .pdf-page-wrapper { transform: none !important; margin: 0 !important; box-shadow: none !important; }
         .pdf-page-layout { width: auto !important; height: auto !important; margin: 0 !important; overflow: hidden !important; break-inside: avoid; page-break-inside: avoid; }
@@ -581,7 +582,7 @@
     html, body { background: #fff !important; }
     .pdf-scroll-container, .pdf-page-layout, .pdf-page-wrapper { background: #fff !important; }
     .pdf-page-wrapper { transform: none !important; margin: 0 !important; box-shadow: none !important; }
-    .pdf-page-layout { margin: 0 !important; break-inside: avoid; page-break-inside: avoid; }
+    .pdf-page-layout { margin: 0 !important; overflow: hidden !important; break-inside: avoid; page-break-inside: avoid; }
     .pdf-page-layout + .pdf-page-layout { break-before: page; page-break-before: always; }
 }
 </style>
