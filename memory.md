@@ -60,6 +60,7 @@ BUG^print^swal2MultiPage^body.swal2-shown setzt im @media print "[aria-hidden=tr
 
 # Exam schema
 RULE^exam^sectionSchema^mode config only group.examConfig.{editor|website|eduvidual|forms|rdp|localvm|activeSheets|microsoft365}; section has examtype+sectionname+timelimit+locked+startTs+groups only
+RULE^student^sectionSwitch^switchExamSection.js must not sendBase64PDFtoTeacher nor sendToTeacher; only local examDir↔section folder swap+reload exam window
 PATH^shared^editorExamConfig^shared/editorExamConfig.js DEFAULT_EDITOR_EXAM_CONFIG+resolveEditorExamConfig+resolveGroupKey
 RULE^student^clientname^trim+lowercase canonical id; shared/normalizeStudentClientName.js; student.vue @input+register; teacher control.js registerclient+workdir rename case-only mismatch
 RULE^student^registerExamMismatch^client exammode=true and !serverstatus.exammode→deny+t(control.exammismatchregistration); registerSecurePayload requires !examServerList[servername] before processSecurePayload (empty sessionRef→Wrong PIN)
