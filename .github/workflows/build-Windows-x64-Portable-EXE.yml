@@ -41,33 +41,33 @@ jobs:
           node-version: '24.14.0'
 
       # --- faster CI: teacher portable skipped; for release uncomment teacher block below ---
-      - name: Teacher cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ./teacher/.npm
-            ./teacher/node_modules
-          key: ${{ runner.os }}-node-t-${{ hashFiles('./teacher/**/package-lock.json') }}
+      # - name: Teacher cache dependencies
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: |
+      #       ./teacher/.npm
+      #       ./teacher/node_modules
+      #     key: ${{ runner.os }}-node-t-${{ hashFiles('./teacher/**/package-lock.json') }}
 
-      - name: Teacher install dependencies
-        working-directory: ./teacher
-        run: |
-          npm install
-          mkdir dist
+      # - name: Teacher install dependencies
+      #   working-directory: ./teacher
+      #   run: |
+      #     npm install
+      #     mkdir dist
 
-      - name: Teacher build
-        working-directory: ./teacher
-        env:
-          CSC_LINK: "file://../certificate.p12"
-          CSC_KEY_PASSWORD: ${{ secrets.P12_PASSWORD }}
-        run: npm run build:win:portable
+      # - name: Teacher build
+      #   working-directory: ./teacher
+      #   env:
+      #     CSC_LINK: "file://../certificate.p12"
+      #     CSC_KEY_PASSWORD: ${{ secrets.P12_PASSWORD }}
+      #   run: npm run build:win:portable
 
-      - name: Upload Teacher Windows x64 Portable EXE
-        uses: actions/upload-artifact@v4
-        with:
-          name: next-exam-teacher-windows-x64-portable-exe
-          path: ./teacher/dist/electron/Packaged/Next-Exam-Teacher*x64.exe
-          retention-days: 5
+      # - name: Upload Teacher Windows x64 Portable EXE
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: next-exam-teacher-windows-x64-portable-exe
+      #     path: ./teacher/dist/electron/Packaged/Next-Exam-Teacher*x64.exe
+      #     retention-days: 5
 
       - name: Student cache dependencies
         uses: actions/cache@v4
