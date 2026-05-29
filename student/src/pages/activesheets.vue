@@ -634,16 +634,31 @@ export default {
                 // Otherwise generate from current view
                 let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true, reason: why, pageMode: 'fullpage'})
                 if (response?.status == "success") {
-                    signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })  
+                    signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })
+                } else {
+                    this.showPdfGenerationError(response)
                 }
             }
             this.loadFilelist()
+        },
+
+        // Maps getPDFbase64 IPC error payloads to a localized Swal title.
+        showPdfGenerationError(response) {
+            const msg = typeof response?.message === 'string' ? response.message : ''
+            let title = this.$t('editor.pdfGenerationFailed')
+            if (msg.includes('timeout') || msg.includes('in progress')) {
+                title = this.$t('editor.pdfBusyTimeout')
+            } else if (msg.toLowerCase().includes('signing failed')) {
+                title = this.$t('editor.pdfSigningFailed')
+            }
+            this.$swal.fire({ title, icon: 'error' })
         },
 
         // send direct print request to teacher and append current document as base64
         async printBase64(printrequest=false, saveReason = 'n/a'){
             if (!this.currentpreviewBase64) {
                 console.warn('activesheets @ printBase64: No PDF available to send');
+                this.$swal.fire({ title: this.$t('editor.noPdfToSend'), icon: 'error' })
                 return;
             }
 
@@ -689,8 +704,9 @@ export default {
                     })
                 }
             })
-            .catch(error => {  
-                console.log("activesheets @ printbase64:",error.message)    
+            .catch(error => {
+                console.log("activesheets @ printbase64:",error.message)
+                this.$swal.fire({ title: this.$t('editor.submissionNetworkFailed'), icon: 'error' })
             });
         },
 
@@ -716,7 +732,10 @@ export default {
             try {
                 if (type === 'print') {
                     const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'print' })
-                    if (response?.status !== 'success') return
+                    if (response?.status !== 'success') {
+                        this.showPdfGenerationError(response)
+                        return
+                    }
                     this.currentpreviewBase64 = response.base64pdf
                     this.loadPDF({
                         filename: `${this.clientname}.pdf`,
@@ -730,7 +749,10 @@ export default {
                 // await this.waitUntilSigningSwalPainted()
                 let response
                 response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
-                if (response?.status !== 'success') return
+                if (response?.status !== 'success') {
+                    this.showPdfGenerationError(response)
+                    return
+                }
                 this.currentpreviewBase64 = response.base64pdf
                 if (directsend) {
                     return this.printBase64(false, 'directsend')

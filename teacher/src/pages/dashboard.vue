@@ -79,6 +79,9 @@
 <!-- Header END -->
 
 
+
+
+
 <div id="wrapper" class="w-100 h-100 d-flex"  style="z-index: 100;">
     
     <StudentView
@@ -133,44 +136,7 @@
 
 
 
-    <!-- pdf preview start -->
-    <div :key="4" id="pdfpreview" class="fadeinfast p-4">
-        <WebviewPane
-            id="webview"
-            :src="urlForWebview"
-            :visible="webviewVisible"
-            :allowed-url="urlForWebview"
-            :block-external="true"
-            @close="hidepreview"
-        />
-        <div v-if="currentpreview" class="pdfpreview-centered">
-            <PdfviewPaneRendered
-                :src=currentpreview
-                :currentpreviewPath=currentpreviewPath
-                :currentpreviewBase64=currentpreviewBase64
-                :currentpreviewType="currentpreviewType"
-                :activesheets-correction="activesheetsCorrection"
-                @close="hidepreview"
-                @printBase64="printBase64"
-                @downloadFile="downloadFile"
-                @openFileExternal="openFileExternal"
-                @save-correction="saveActivesheetsCorrectedPdf"
-            />
-        </div>
-        <PdfRenderer
-            v-if="activesheetsPreviewPdf"
-            :pdfBase64="activesheetsPreviewPdf"
-            :sourcePdfFilename="activesheetsPreviewFilename"
-            :loading="false"
-            :customFields="activesheetsPreviewCustomFields"
-            :blacklist="activesheetsPreviewBlacklist"
-            :initial-form-data="activesheetsPreviewInitialFormData"
-            @close="discardActivesheetsPdf"
-            @save-custom-fields="saveCustomFields"
-            @save-correction-template="saveActivesheetsCorrectionTemplate"
-        />
-    </div>
-    <!-- pdf preview end -->
+
    
 
 
@@ -1316,6 +1282,45 @@
         <div id="statusdiv" class="bg-dark text-white">{{ $t('dashboard.connected') }}</div>
     
 </div>
+
+    <!-- pdf preview start -->
+    <div :key="4" id="pdfpreview" class="fadeinfast p-4">
+        <WebviewPane
+            id="webview"
+            :src="urlForWebview"
+            :visible="webviewVisible"
+            :allowed-url="urlForWebview"
+            :block-external="true"
+            @close="hidepreview"
+        />
+        <div v-if="currentpreview" class="pdfpreview-centered">
+            <PdfviewPaneRendered
+                :src=currentpreview
+                :currentpreviewPath=currentpreviewPath
+                :currentpreviewBase64=currentpreviewBase64
+                :currentpreviewType="currentpreviewType"
+                :activesheets-correction="activesheetsCorrection"
+                @close="hidepreview"
+                @printBase64="printBase64"
+                @downloadFile="downloadFile"
+                @openFileExternal="openFileExternal"
+                @save-correction="saveActivesheetsCorrectedPdf"
+            />
+        </div>
+        <PdfRenderer
+            v-if="activesheetsPreviewPdf"
+            :pdfBase64="activesheetsPreviewPdf"
+            :sourcePdfFilename="activesheetsPreviewFilename"
+            :loading="false"
+            :customFields="activesheetsPreviewCustomFields"
+            :blacklist="activesheetsPreviewBlacklist"
+            :initial-form-data="activesheetsPreviewInitialFormData"
+            @close="discardActivesheetsPdf"
+            @save-custom-fields="saveCustomFields"
+            @save-correction-template="saveActivesheetsCorrectionTemplate"
+        />
+    </div>
+    <!-- pdf preview end -->
 </template>
 
 
@@ -3136,7 +3141,7 @@ computed: {
             this.pdfPreviewEventlisterenCallback = () => { this.hidepreview(); } //unload pdf
 
             document.getElementById('setupdiv').addEventListener('click', function(e) { e.stopPropagation();});
-            document.querySelector("#pdfpreview").addEventListener("click", this.pdfPreviewEventlisterenCallback); // Set the event listener for #pdfpreview
+            document.querySelector("#pdfpreview").addEventListener("click", this.pdfPreviewEventlisterenCallback);
 
             document.querySelector("#audioclose").addEventListener("click", function(e) {
                 audioPlayer.pause();
@@ -4256,13 +4261,13 @@ computed: {
 
 #pdfpreview {
     display: none;
-    position: absolute;
-    top:0;
+    position: fixed;
+    top: 0;
     left: 0;
-    width:100vw;
+    width: 100vw;
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.4);
-    z-index:100001;
+    z-index: 100001;
     backdrop-filter: blur(3px);
 }
 #pdfembed { 
@@ -4538,8 +4543,8 @@ hr {
 }
 
 .swal2-container {
-    backdrop-filter: blur(2px); 
-    z-index: 100000 !important;
+    backdrop-filter: blur(2px);
+    z-index: 100003 !important; /* ueber #pdfpreview (100001) */
     transition: none !important;
     animation: none !important;
     -webkit-transition: none !important;
@@ -5014,12 +5019,23 @@ hr {
 }
 
 @media print {
-    #wrapper { height: auto !important; overflow: visible !important; }
+    /* nur #pdfpreview im Print sichtbar, Rest weg damit Layout-Flow den PDF-Wrapper voll nutzt */
+    /* #pdfpreview haengt unter #q-app als Sibling von #wrapper -> alle Geschwister ausser #pdfpreview ausblenden */
+    #q-app > *:not(#pdfpreview),
+    #setupoverlay, .sidebar-root, #content,
+    .studentslist-controls, .tab-buttons-container { display: none !important; }
+    /* Root entclippen: body inline position:fixed + #q-app height:100vh begrenzen sonst Druck auf 1 Viewport-Hoehe -> nur Seite 1 */
+    html, body#vuexambody { position: static !important; height: auto !important; overflow: visible !important; }
+    #q-app { display: block !important; height: auto !important; overflow: visible !important; }
     #pdfpreview {
-        position: absolute !important; top: 0 !important; left: 0 !important; right: 0 !important;
+        display: block !important;
+        /* hart an top/left 0 verankern: printToPDF paginiert ab html-Layout, nicht ab #pdfpreview;
+           absolute gegen den initial containing block eliminiert jeden Vorfluss-Offset (DevTools-Print zeigt's korrekt, printToPDF sonst verschoben) */
+        position: absolute !important;
+        top: 0 !important; left: 0 !important; right: 0 !important;
         width: 100% !important; height: auto !important;
-        padding: 0 !important; background: #fff !important;
-        backdrop-filter: none !important; z-index: 2147483647 !important;
+        padding: 0 !important; margin: 0 !important;
+        background: #fff !important; backdrop-filter: none !important;
     }
     .pdfpreview-centered {
         position: static !important; transform: none !important;
@@ -5029,5 +5045,6 @@ hr {
         border-radius: 0 !important; box-shadow: none !important;
         overflow: visible !important;
     }
+
 }
 </style>

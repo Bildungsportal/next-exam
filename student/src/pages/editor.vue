@@ -1762,10 +1762,23 @@ export default {
         },
 
 
+        // Maps getPDFbase64 IPC error payloads to a localized Swal title.
+        showPdfGenerationError(response) {
+            const msg = typeof response?.message === 'string' ? response.message : ''
+            let title = this.$t('editor.pdfGenerationFailed')
+            if (msg.includes('timeout') || msg.includes('in progress')) {
+                title = this.$t('editor.pdfBusyTimeout')
+            } else if (msg.toLowerCase().includes('signing failed')) {
+                title = this.$t('editor.pdfSigningFailed')
+            }
+            this.$swal.fire({ title, icon: 'error' })
+        },
+
         // send direct print request to teacher and append current document as base64
         async printBase64(printrequest = false, saveReason = 'n/a') {
             if (!this.currentpreviewBase64) {
                 console.warn('editor @ printBase64: No PDF available to send')
+                this.$swal.fire({ title: this.$t('editor.noPdfToSend'), icon: 'error' })
                 return
             }
 
@@ -1814,6 +1827,7 @@ export default {
             })
             .catch(error => {
                 console.log("editor @ printbase64:", error.message)
+                this.$swal.fire({ title: this.$t('editor.submissionNetworkFailed'), icon: 'error' })
             });
 
         },
@@ -1831,6 +1845,7 @@ export default {
                 const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'print' })
                 if (response?.status !== 'success') {
                     console.log("editor @ sendExamToTeacher: Error sending exam to teacher")
+                    this.showPdfGenerationError(response)
                     return
                 }
                 this.currentpreviewBase64 = response.base64pdf
@@ -1851,6 +1866,7 @@ export default {
             }
             if (response?.status !== 'success') {
                 console.log("editor @ sendExamToTeacher: Error sending exam to teacher")
+                this.showPdfGenerationError(response)
                 return
             }
             this.currentpreviewBase64 = response.base64pdf

@@ -562,12 +562,27 @@
     }
 
     @media print {
+        /* A4 ohne Rand: sonst ragt skalierte Seite (zoom 8/9) ueber bedruckbare Hoehe -> Folgeseite + Leerblatt */
+        @page { size: A4; margin: 0; }
         html, body { height: auto !important; overflow: visible !important; }
         .pdf-toolbar, .render-overlay, .correction-base-preview-hint { display: none !important; }
-        .embed-container.pdfview-pane-rendered { height: auto !important; overflow: visible !important; }
-        .pdf-scroll-container { top: 0 !important; padding: 0 !important; height: auto !important; overflow: visible !important; zoom: calc(8 / 9); }
-        .pdf-page-wrapper { transform: none !important; break-after: page; page-break-after: always; }
-        .pdf-page-layout { width: auto !important; height: auto !important; }
+        .embed-container.pdfview-pane-rendered { display: block !important; overflow: visible !important;  }
+        /* zoom minimal unter 8/9: bei exakt 8/9 ragt die gerenderte Seite (1262.8px @ scale1.5) um Subpixel ueber A4 -> Leerblatt nach jeder Seite */
+        .pdf-scroll-container { position: static !important; top: auto !important; padding: 0 !important; height: auto !important; overflow: hidden !important; background: #fff !important; zoom: 0.882; }
+        .pdf-page-wrapper { transform: none !important; margin: 0 !important; box-shadow: none !important; }
+        .pdf-page-layout { width: auto !important; height: auto !important; margin: 0 !important; overflow: hidden !important; break-inside: avoid; page-break-inside: avoid; }
+        .pdf-page-layout + .pdf-page-layout { break-before: page; page-break-before: always; }
     }
+</style>
+
+<style>
+/* unscoped: forciert weisser hintergrund + page-fluss im print, scope-unabhaengig */
+@media print {
+    html, body { background: #fff !important; }
+    .pdf-scroll-container, .pdf-page-layout, .pdf-page-wrapper { background: #fff !important; }
+    .pdf-page-wrapper { transform: none !important; margin: 0 !important; box-shadow: none !important; }
+    .pdf-page-layout { margin: 0 !important; break-inside: avoid; page-break-inside: avoid; }
+    .pdf-page-layout + .pdf-page-layout { break-before: page; page-break-before: always; }
+}
 </style>
 
