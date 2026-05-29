@@ -117,4 +117,4 @@ PATH^student^odtTiptap^student/src/utils/odtToTiptapHtml.js+filehandler loadODT+
 TECH^teacherCli^overrides^applyCliOverrides.js consumes --exam-modes=csv (override config.exammodes) + --expose-students (GET connectedstudentips→text/plain); needs running examServerList[0]
 TECH^macRosetta^check^platformDispatcher.macRosettaEmulation{runningUnderRosetta,nativeHostArch,processArch,procTranslated}; arm64 host+x64+sysctl.proc_translated; student.vue warnMacRosettaArch swal on mount
 RULE^teacher^logViewerTruncate^loadTextFile truncateLogTextForViewer keeps tail (max 200k chars); scroll bottom on open+dashboard serverlog
-TECH^exam^editorTimelineJson^workdir student folder `<Student>_editor_timeline.json` (listed in explorer); schema {version,kind,studentFolder,generatedAt,jsonPath,entries[{timestamp_name,timestamp,text,sourceHtm}]}
+TECH^languagetool^studentToggle^editor.vue ltExternalHost+ltUseExternal default external; sidebar Lokal/Extern btns beside update; LThost/LTport via applyLtActiveEndpoint; isLanguageToolRunning IPC opts host+port

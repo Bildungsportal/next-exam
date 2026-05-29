@@ -90,7 +90,10 @@ async function LTcheckAllWords(closeLT = true){
     this.LTinfo = this.$t('editor.ltSearching')
 
     try {
-        const ltStatus = await signalBridge.invoke('isLanguageToolRunning')
+        const ltStatus = await signalBridge.invoke('isLanguageToolRunning', {
+            host: this.LThost,
+            port: this.LTport ?? '8088',
+        })
         if (!ltStatus?.running) {
             this.LTinfo = this.$t('editor.ltUnreachable')
             console.warn('languagetool.js @ LTcheckAllwords (status check): LT server is not reachable')

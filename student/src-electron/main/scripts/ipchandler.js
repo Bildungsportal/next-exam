@@ -821,16 +821,23 @@ class IpcHandler {
         })
 
         /**
-         * Check if LanguageTool server responds on configured port
+         * Check if LanguageTool server responds on configured port (optional host/port from renderer toggle)
          */ 
-        ipcMain.handle('isLanguageToolRunning', async () => { 
-            const port = languageToolServer.port || 8088;
-            const hosts = ['127.0.0.1', '::1', 'localhost'];
-            // Run all checks in parallel for better performance, use longer timeout for server startup detection
-            const results = await Promise.all(hosts.map(host => checkPortOpen(port, host, 2500)));
-            // Return first successful result, or last result if none succeeded
-            const successResult = results.find(result => result.running);
-            return successResult || results[results.length - 1];
+        ipcMain.handle('isLanguageToolRunning', async (_event, opts = {}) => {
+            const port = parseInt(String(opts.port ?? languageToolServer.port ?? 8088), 10) || 8088;
+            const hostRaw = opts.host ? String(opts.host).trim() : '';
+            if (!hostRaw) {
+                const hosts = ['127.0.0.1', '::1', 'localhost'];
+                const results = await Promise.all(hosts.map(host => checkPortOpen(port, host, 2500)));
+                const successResult = results.find(result => result.running);
+                return successResult || results[results.length - 1];
+            }
+            let hostOnly = hostRaw.replace(/^https?:\/\//i, '').split('/')[0];
+            const colonIdx = hostOnly.lastIndexOf(':');
+            if (colonIdx > 0 && /^\d+$/.test(hostOnly.slice(colonIdx + 1))) {
+                hostOnly = hostOnly.slice(0, colonIdx);
+            }
+            return checkPortOpen(port, hostOnly, 2500);
         })
 
         /**

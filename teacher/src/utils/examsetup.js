@@ -1662,16 +1662,14 @@ async function configureCustomLanguageToolHost() {
             const rawPort = (portEl?.value || '').trim();
             if (!rawHost) return this.$t('dashboard.host_required');
             if (rawPort && !/^\d+$/.test(rawPort)) return this.$t('dashboard.port_invalid');
-            return true;
+            // Swal removes custom html on close; capture values here before DOM teardown
+            return { rawHost, rawPort };
         },
     });
 
-    if (!result.isConfirmed) return;
+    if (!result.isConfirmed || !result.value) return;
 
-    const hostEl = document.getElementById('ltHost');
-    const portEl = document.getElementById('ltPort');
-    const rawHost = (hostEl?.value || '').trim();
-    const rawPort = (portEl?.value || '').trim();
+    const { rawHost, rawPort } = result.value;
     const protocolMatch = rawHost.match(/^(https?:\/\/)/i);
     const protocol = protocolMatch ? protocolMatch[1] : 'http://';
     const hostForConfig = resolvedLtIp ? `${protocol}${resolvedLtIp}` : rawHost;

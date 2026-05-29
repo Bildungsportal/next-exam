@@ -604,11 +604,19 @@
         </div>
         <div class="ltscrollarea">
 
-            <div style="display:flex;align-items: center; width:100%;  margin-bottom:20px;">
-                <div @click="LTcheckAllWordsAndHighlight(false);" class="btn btn-sm btn-success center"
-                     style=" display: inline-block; text-align: center;  margin-left:10px;"> {{ $t('editor.update') }}
+            <div style="display:flex;align-items: center; width:100%; margin-bottom:20px; flex-wrap:wrap; gap:6px;">
+                <button type="button" class="btn btn-sm btn-cyan" style="margin-left:10px;"
+                        @click="LTcheckAllWordsAndHighlight(false)">{{ $t('editor.update') }}</button>
+                <div v-if="ltExternalHost" class="btn-group btn-group-sm" role="group"
+                     :aria-label="$t('editor.ltEndpointGroup')">
+                    <button type="button" class="btn"
+                            :class="!ltUseExternal ? 'btn-teal' : 'btn-outline-secondary'"
+                            @click="toggleLtEndpoint(false)">{{ $t('editor.ltLocal') }}</button>
+                    <button type="button" class="btn"
+                            :class="ltUseExternal ? 'btn-teal' : 'btn-outline-secondary'"
+                            @click="toggleLtEndpoint(true)">{{ $t('editor.ltExternal') }}</button>
                 </div>
-                <div class="" style=" width:100%;display: inline-block; text-align:right;  "
+                <div class="" style="flex:1; text-align:right;"
                      @click="LTresetIgnorelist();LTcheckAllWordsAndHighlight(false);" title="Clear ignore list">
                     <span v-if="ignoreList.size > 0" class="text-mini"> ({{ ignoreList.size }}) ignored</span>
                     <img class="white" width=20 height=20 src="/src/assets/img/svg/edit-delete.svg"
@@ -629,7 +637,7 @@
                 {{ this.LTinfo }}
             </div>
 
-            <div v-if="spellcheckFallback"
+            <div v-if="spellcheckFallback && !ltUseExternal"
                  style="text-align: left; font-size: 0.8em;margin-left:10px; display:flex; align-items:center; gap:8px;">
                 <button type="button" class="btn btn-sm btn-outline-secondary" @click="retryLanguageToolStart"
                         :disabled="ltStartInProgress">
@@ -832,6 +840,11 @@ export default {
             }
         }
         const initialEditorCfg = resolveEditorExamConfig(activeSection, 'groupA');
+        const ltExternalHost = initialEditorCfg.languagetoolhost || null;
+        const ltExternalPort = String(initialEditorCfg.languagetoolport || '8088');
+        const ltLocalHost = 'http://127.0.0.1';
+        const ltLocalPort = '8088';
+        const ltUseExternal = !!ltExternalHost;
 
         return {
             index: 0,
@@ -918,8 +931,13 @@ export default {
             allowedUrls: [],
             lockedSection: 1,
             internetCheckCounter:0,
-            LThost: initialEditorCfg.languagetoolhost || "http://127.0.0.1",
-            LTport: initialEditorCfg.languagetoolport || "8088",
+            ltExternalHost,
+            ltExternalPort,
+            ltUseExternal,
+            ltLocalHost,
+            ltLocalPort,
+            LThost: ltUseExternal ? ltExternalHost : ltLocalHost,
+            LTport: ltUseExternal ? ltExternalPort : ltLocalPort,
             ltLanguage: initialEditorCfg.spellchecklang || "de-DE",
             clipboardHistory: [],
             showClipboardSidebar: false,
@@ -1081,14 +1099,43 @@ export default {
             }
         },
 
+        // Point LThost/LTport at the student-selected local or external LT endpoint.
+        applyLtActiveEndpoint() {
+            if (this.ltUseExternal && this.ltExternalHost) {
+                this.LThost = this.ltExternalHost;
+                this.LTport = this.ltExternalPort || '8088';
+            } else {
+                this.LThost = this.ltLocalHost;
+                this.LTport = this.ltLocalPort;
+            }
+        },
+
+        async toggleLtEndpoint(useExternal) {
+            if (!this.ltExternalHost || this.ltUseExternal === !!useExternal) return;
+            this.ltUseExternal = !!useExternal;
+            this.applyLtActiveEndpoint();
+            if (this.LTactive) {
+                this.spellcheckFallback = false;
+                await this.LTcheckAllWordsAndHighlight(false);
+            }
+        },
+
         syncEditorLanguageSettings() {
             const cfg = this.getEditorExamConfig(this.lockedSection);
-            const host = cfg.languagetoolhost || 'http://127.0.0.1';
-            const port = cfg.languagetoolport || '8088';
             const lang = cfg.spellchecklang || 'de-DE';
-            if (host !== this.LThost) this.LThost = host;
-            if (port !== this.LTport) this.LTport = port;
             if (lang !== this.ltLanguage) this.ltLanguage = lang;
+
+            const extHost = cfg.languagetoolhost || null;
+            const extPort = String(cfg.languagetoolport || '8088');
+            const hadExternal = !!this.ltExternalHost;
+            this.ltExternalHost = extHost;
+            this.ltExternalPort = extPort;
+            if (extHost && !hadExternal) {
+                this.ltUseExternal = true;
+            } else if (!extHost) {
+                this.ltUseExternal = false;
+            }
+            this.applyLtActiveEndpoint();
         },
 
         // Apply cmargin/fonts/linespacing from examConfig.editor to layout CSS variables.
