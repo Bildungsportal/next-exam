@@ -311,10 +311,10 @@ class WindowHandler {
         }
         // just to be sure we check some important vars here
         if (examtype !== "rdp" && examtype !== "website" &&  examtype !== "forms" && examtype !== "eduvidual" && examtype !== "editor" && examtype !== "math" && examtype !== "microsoft365" && examtype !== "activesheets" && examtype !== "localvm" || !token){  // for now.. we probably should stop everything here
-            log.warn("missing parameters for exam-mode or mode not in allowed list!")
-            examtype = "editor" 
-        } 
-        
+            log.warn("missing parameters for exam-mode or mode not in allowed list!");
+            examtype = "editor";
+        }
+
         // Always use primary display for exam window
         if (!primarydisplay || !primarydisplay.bounds || !primarydisplay.id) {
             primarydisplay = screen.getPrimaryDisplay()
@@ -323,7 +323,7 @@ class WindowHandler {
                 primarydisplay = displays[0] || primarydisplay
             }
         }
-        
+
         let px = 0
         let py = 0
         if (primarydisplay && primarydisplay.bounds && primarydisplay.bounds.x) {
@@ -332,6 +332,7 @@ class WindowHandler {
         }
 
         this._examWindowCreating = true;
+        try {
         if (examtype === "microsoft365"  ) { //external page
 
             this.examwindow = new BrowserWindow({
@@ -345,7 +346,7 @@ class WindowHandler {
                 // closable: false,  // if we can't define 'parent' this window has to be closable - why?
                 //alwaysOnTop: true,
                 opacity: 1,
-                skipTaskbar: true,
+                skipTaskbar:true,
                 autoHideMenuBar: true,
                 minimizable: false,
                 visibleOnAllWorkspaces: true,
@@ -366,176 +367,170 @@ class WindowHandler {
         }
 
 
-        // Electron 39: ready-to-show fires AFTER show() is called, so use did-finish-load instead
-        this.examwindow.webContents.once('did-finish-load', async () => {
-            if (!this.examwindow) return;
-            
-            if (this.config.showdevtools) { this.examwindow.webContents.openDevTools()  }
-            
-            if (!this.config.development) {
-                try {
-                    this.examwindow.removeMenu()
-                    platformDispatcher.applyElectronKioskMode(this.examwindow);
+            // Electron 39: ready-to-show fires AFTER show() is called, so use did-finish-load instead
+            this.examwindow.webContents.once('did-finish-load', async () => {
+                if (!this.examwindow) return;
+                if (this.config.showdevtools) { this.examwindow.webContents.openDevTools()  }
+                if (!this.config.development) {
+                    try {
+                        this.examwindow.removeMenu()
+                        platformDispatcher.applyElectronKioskMode(this.examwindow);
 
-                    await this.sleep(500)
-                    this.examwindow.moveTop()
-                    this.examwindow.focus()
+                        await this.sleep(500)
+                        this.examwindow.moveTop()
+                        this.examwindow.focus()
 
-                    // probably not needed because we disable missioncontrol anyways - seems to interfere with kiosk mode on macos (again)
-                    // this.examwindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-
-
-                    if (!platformDispatcher.skipElectronKiosk) {
-                        this.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
-                        await enableRestrictions(this)
-                        await this.sleep(1000)
-                        this.addBlurListener()
+                        if (!platformDispatcher.skipElectronKiosk) {
+                            this.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
+                            await enableRestrictions(this)
+                            await this.sleep(1000)
+                            this.addBlurListener()
+                        }
                     }
+                    catch(e){ log.error("windowhandler @ did-finish-load: error in examwindow setup", e)}
                 }
-                catch(e){ log.error("windowhandler @ did-finish-load: error in examwindow setup", e)}
-            }
-        })
-
-
-        this.examwindow.serverstatus = serverstatus //we keep it there to make it accessable via examwindow in ipcHandler
-        this.examwindow.menuHeight = 94   // start position for the content view
-        
-
-        /**
-         * Microsoft 365 emebeds its editor in an iframe with active Content Security Policy (CSP)
-         * The only way to be able to inject code is to load it directly in the main window <embed> <iframe> or even <webview> offers no workaround
-         * therefore we use "BrowserView" in order to display two pages in one window: on top > exam header, on bottom > office
-         */
-
-        if (examtype === "microsoft365"  ) { //external page
-            log.info("starting microsoft365 exam...")
-            let urlview = this.multicastClient.clientinfo.msofficeshare   
-            if (!urlview) {// we wait for the next update tick - msofficeshare needs to be set ! (could happen when a student connects later then exam mode is set but his share url needs some time)
-                log.warn("windowhandler @ createExamWindow: no url for microsoft365 was set yet - waiting for next update tick")
-      
-                this.examwindow.destroy(); 
-                this.examwindow = null;
-                disableRestrictions(this.examwindow)
-                this.multicastClient.clientinfo.exammode = false
-                this.multicastClient.clientinfo.focus = true
-                return
-            }
-            // load top menu in MainPage
-            let url = examtype   // editor || math || eduvidual || tbd.
-            if (app.isPackaged) {
-                this.examwindow.loadFile(getRendererIndexPath(), {hash: `#/${url}/${token}`})
-            } 
-            else {
-                let backgroundurl = `${process.env.APP_URL}/#/${url}/${token}/`
-                this.examwindow.loadURL(backgroundurl);
-            }
-            // Define the MainContentPage view
-            let contentView = new BrowserView({
-                webPreferences: {
-                  spellcheck: false,  
-                  contextIsolation: true,
-                }
-            });
-        
-            contentView.setBounds({
-                x: 0,
-                y: this.examwindow.menuHeight,
-                width: this.examwindow.getBounds().width,
-                height: this.examwindow.getBounds().height - this.examwindow.menuHeight
-            });
-            contentView.setAutoResize({ width: true, height: true, horizontal: true, vertical: true });
-            contentView.webContents.loadURL(urlview);
-            if (this.config.showdevtools) {       contentView.webContents.openDevTools() }
-
-            this.examwindow.addBrowserView(contentView);
-
-            this.examwindow.on('enter-full-screen', () => {
-                this.examwindow.setBrowserView(contentView);
-
-                let newBounds = this.examwindow.getBounds();
-                contentView.setBounds({
-                  x: 0,
-                  y: this.examwindow.menuHeight,
-                  width: newBounds.width,
-                  height: newBounds.height - this.examwindow.menuHeight
-                });
-            });
-
-            this.examwindow.on('resize', () => {
-                let newBounds = this.examwindow.getBounds();
-                contentView.setBounds({
-                  x: 0,
-                  y: this.examwindow.menuHeight,
-                  width: newBounds.width,
-                  height: newBounds.height - this.examwindow.menuHeight
-                });
-            });
-        }
-        // this is the normal exam mode (editor, math, eduvidual, website, forms, activesheets, localvm)
-        else { 
-            let url = examtype   // editor || math || tbd.
-            if (app.isPackaged) {
-                this.examwindow.loadFile(getRendererIndexPath(), {hash: `#/${url}/${token}`})
-            } 
-            else {
-                url = `${process.env.APP_URL}/#/${url}/${token}/`
-                this.examwindow.loadURL(url)
-            }
-        }
-
-
-
-        /**
-         * Handle special NAVIGATION situations
-         */
-
-
-        /***************************
-         *  Forms, Website, Eduvidual, Editor, RDP, Microsoft365
-         ***************************/
-        // Block navigation on examwindow.webContents level for all modes that can display PDFs in examheader
-        // This prevents navigation when clicking links in PDFs displayed in the examheader
-        // Webview/BrowserView blocking is handled separately via IPC in ipchandler.js or mode-specific handlers below
-        const examTypesWithPdfInHeader = ["forms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math", "localvm"];
-        if (examTypesWithPdfInHeader.includes(serverstatus.examSections[serverstatus.lockedSection].examtype)) {
-            this.examwindow.webContents.on('will-navigate', (event, _) => {
-                event.preventDefault(); // Prevent navigation away from the Vue app (e.g. from PDF links in examheader)
-            });
-
-            // Prevent new windows from opening in the examwindow
-            this.examwindow.webContents.on('new-window', (event, url) => { 
-                log.warn("windowhandler @ examwindow: blocked new-window", url);
-                event.preventDefault();   
-            });
-     
-            this.examwindow.webContents.setWindowOpenHandler(({ url }) => { 
-                log.warn("windowhandler @ examwindow: blocked setWindowOpenHandler", url);
-                return { action: 'deny' };   
-            });
-        }
-
-        /***************************
-         *  Microsoft Excel/Word
-         ***************************/
-        let effectiveSection = serverstatus.allowSectionSwitch ? this.multicastClient.clientinfo.lockedSection : serverstatus.lockedSection;
-        if ( serverstatus.examSections[effectiveSection].examtype === "microsoft365"){  // do not under any circumstances allow navigation away from the current exam url
-            const browserView = this.examwindow.getBrowserView(0);
-
-            // if the user wants to navigate away from this page
-            browserView.webContents.on('will-navigate', (event, url) => {
-                if (url !== this.multicastClient.clientinfo.msofficeshare ) {
-                    log.warn("do not navigate away from this test.. ")
-                    event.preventDefault()
-                }  
             })
 
-            // if a new window should open triggered by window.open()
-            browserView.webContents.on('new-window', (event, _) => { event.preventDefault();   }); // Prevent the new window from opening
-     
-            // if a new window should open triggered by target="_blank"
-            browserView.webContents.setWindowOpenHandler(({ _ }) => { return { action: 'deny' };   }); // Prevent the new window from opening
 
-            let executeCode =  `
+            this.examwindow.serverstatus = serverstatus //we keep it there to make it accessable via examwindow in ipcHandler
+            this.examwindow.menuHeight = 94   // start position for the content view
+
+
+            /**
+             * Microsoft 365 emebeds its editor in an iframe with active Content Security Policy (CSP)
+             * The only way to be able to inject code is to load it directly in the main window <embed> <iframe> or even <webview> offers no workaround
+             * therefore we use "BrowserView" in order to display two pages in one window: on top > exam header, on bottom > office
+             */
+
+            if (examtype === "microsoft365"  ) { //external page
+                log.info("starting microsoft365 exam...")
+                let urlview = this.multicastClient.clientinfo.msofficeshare
+                if (!urlview) {// we wait for the next update tick - msofficeshare needs to be set ! (could happen when a student connects later then exam mode is set but his share url needs some time)
+                    log.warn("windowhandler @ createExamWindow: no url for microsoft365 was set yet - waiting for next update tick")
+
+                    this.examwindow.destroy();
+                    this.examwindow = null;
+                    disableRestrictions(this.examwindow)
+                    this.multicastClient.clientinfo.exammode = false
+                    this.multicastClient.clientinfo.focus = true
+                    return
+                }
+                // load top menu in MainPage
+                let url = examtype   // editor || math || eduvidual || tbd.
+                if (app.isPackaged) {
+                    this.examwindow.loadFile(getRendererIndexPath(), {hash: `#/${url}/${token}`})
+                }
+                else {
+                    let backgroundurl = `${process.env.APP_URL}/#/${url}/${token}/`
+                    this.examwindow.loadURL(backgroundurl);
+                }
+                // Define the MainContentPage view
+                let contentView = new BrowserView({
+                    webPreferences: {
+                        spellcheck: false,
+                        contextIsolation: true,
+                    }
+                });
+
+                contentView.setBounds({
+                    x: 0,
+                    y: this.examwindow.menuHeight,
+                    width: this.examwindow.getBounds().width,
+                    height: this.examwindow.getBounds().height - this.examwindow.menuHeight
+                });
+                contentView.setAutoResize({ width: true, height: true, horizontal: true, vertical: true });
+                contentView.webContents.loadURL(urlview);
+                if (this.config.showdevtools) {       contentView.webContents.openDevTools() }
+
+                this.examwindow.addBrowserView(contentView);
+
+                this.examwindow.on('enter-full-screen', () => {
+                    this.examwindow.setBrowserView(contentView);
+
+                    let newBounds = this.examwindow.getBounds();
+                    contentView.setBounds({
+                        x: 0,
+                        y: this.examwindow.menuHeight,
+                        width: newBounds.width,
+                        height: newBounds.height - this.examwindow.menuHeight
+                    });
+                });
+
+                this.examwindow.on('resize', () => {
+                    let newBounds = this.examwindow.getBounds();
+                    contentView.setBounds({
+                        x: 0,
+                        y: this.examwindow.menuHeight,
+                        width: newBounds.width,
+                        height: newBounds.height - this.examwindow.menuHeight
+                    });
+                });
+            }
+            // this is the normal exam mode (editor, math, eduvidual, website, forms, activesheets, localvm)
+            else {
+                let url = examtype   // editor || math || tbd.
+                if (app.isPackaged) {
+                    this.examwindow.loadFile(getRendererIndexPath(), {hash: `#/${url}/${token}`})
+                }
+                else {
+                    url = `${process.env.APP_URL}/#/${url}/${token}/`
+                    this.examwindow.loadURL(url)
+                }
+            }
+
+
+
+            /**
+             * Handle special NAVIGATION situations
+             */
+
+
+            /***************************
+             *  Forms, Website, Eduvidual, Editor, RDP, Microsoft365
+             ***************************/
+                // Block navigation on examwindow.webContents level for all modes that can display PDFs in examheader
+                // This prevents navigation when clicking links in PDFs displayed in the examheader
+                // Webview/BrowserView blocking is handled separately via IPC in ipchandler.js or mode-specific handlers below
+            const examTypesWithPdfInHeader = ["forms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math", "localvm"];
+            if (examTypesWithPdfInHeader.includes(serverstatus.examSections[serverstatus.lockedSection].examtype)) {
+                this.examwindow.webContents.on('will-navigate', (event, url) => {
+                    event.preventDefault(); // Prevent navigation away from the Vue app (e.g. from PDF links in examheader)
+                });
+
+                // Prevent new windows from opening in the examwindow
+                this.examwindow.webContents.on('new-window', (event, url) => {
+                    log.warn("windowhandler @ examwindow: blocked new-window", url);
+                    event.preventDefault();
+                });
+
+                this.examwindow.webContents.setWindowOpenHandler(({ url }) => {
+                    log.warn("windowhandler @ examwindow: blocked setWindowOpenHandler", url);
+                    return { action: 'deny' };
+                });
+            }
+
+            /***************************
+             *  Microsoft Excel/Word
+             ***************************/
+            let effectiveSection = serverstatus.allowSectionSwitch ? this.multicastClient.clientinfo.lockedSection : serverstatus.lockedSection;
+            if ( serverstatus.examSections[effectiveSection].examtype === "microsoft365"){  // do not under any circumstances allow navigation away from the current exam url
+                const browserView = this.examwindow.getBrowserView(0);
+
+                // if the user wants to navigate away from this page
+                browserView.webContents.on('will-navigate', (event, url) => {
+                    if (url !== this.multicastClient.clientinfo.msofficeshare ) {
+                        log.warn("do not navigate away from this test.. ")
+                        event.preventDefault()
+                    }
+                })
+
+                // if a new window should open triggered by window.open()
+                browserView.webContents.on('new-window', (event, _) => { event.preventDefault();   }); // Prevent the new window from opening
+
+                // if a new window should open triggered by target="_blank"
+                browserView.webContents.setWindowOpenHandler(({ _ }) => { return { action: 'deny' };   }); // Prevent the new window from opening
+
+                let executeCode =  `
                     function lock(){
                         // 'WACDialogOuterContainer','WACDialogInnerContainer','WACDialogPanel',
                         const hideusByID = ['ShowHideEquationToolsPane','LinkGroup','GraphicsEditor','InsertTableOfContentsInInsertTab','InsertOnlinevideo','Picture','Ribbon-PictureMenuMLRDropdown','InsertAddInFlyout','Designer','Editor','FarPane','Help','InsertAppsForOffice','FileMenuLauncherContainer','Help-wrapper','Review-wrapper','Header','FarPeripheralControlsContainer','BusinessBar']
@@ -574,46 +569,45 @@ class WindowHandler {
                     lock()  //for some reason excel delays that call.. doesnt happen on page finish load
                     `
 
-            let schedulerInstance = null
-            this.lockCallback = () => this.lock365(browserView, executeCode, schedulerInstance); 
-            schedulerInstance = new SchedulerService(this.lockCallback, 400)
-            this.lockScheduler = schedulerInstance
-            schedulerInstance.start()
-            // Wait until the webContents is fully loaded  // this is not working reliably because the page is loaded in many steps and the ui elements are not available yet
-            browserView.webContents.on('did-finish-load', async () => {
-                browserView.webContents.mainFrame.frames.filter((frame) => {
-                    if (frame) {
-                        frame.executeJavaScript(executeCode); 
-                    }
-                })
+                let schedulerInstance = null
+                this.lockCallback = () => this.lock365(browserView, executeCode, schedulerInstance);
+                schedulerInstance = new SchedulerService(this.lockCallback, 400)
+                this.lockScheduler = schedulerInstance
+                schedulerInstance.start()
+                // Wait until the webContents is fully loaded  // this is not working reliably because the page is loaded in many steps and the ui elements are not available yet
+                browserView.webContents.on('did-finish-load', async () => {
+                    browserView.webContents.mainFrame.frames.filter((frame) => {
+                        if (frame) {
+                            frame.executeJavaScript(executeCode);
+                        }
+                    })
+                });
+            }
+
+            this.examwindow.on('app-command', (e, cmd) => {
+                // 'browser-backward' und 'browser-forward' sind die Befehle, die beim Klick auf die Maustasten gesendet werden
+                if (cmd === 'browser-backward' || cmd === 'browser-forward') {
+                    log.warn("no navigation allowed")
+                    e.preventDefault(); // Verhindern Sie das Standardverhalten
+                }
             });
-        }
 
-        this.examwindow.on('app-command', (e, cmd) => {
-            // 'browser-backward' und 'browser-forward' sind die Befehle, die beim Klick auf die Maustasten gesendet werden
-            if (cmd === 'browser-backward' || cmd === 'browser-forward') {
-                log.warn("no navigation allowed")
-                e.preventDefault(); // Verhindern Sie das Standardverhalten
-            }
-        });
-
-        this.examwindow.on('close', async  (e) => {   // window should not be closed manually.. ever! but if you do make sure to clean examwindow variable and end exam for the client
-            if (this.multicastClient.clientinfo.exammode) {
-                if (!this.config.development) { e.preventDefault(); }
-            }
-            else {              
-                this.examwindow.destroy(); 
-                this.examwindow = null;
-                //disableRestrictions(this.examwindow)  //do not disable twice
-                this.multicastClient.clientinfo.exammode = false
-                this.multicastClient.clientinfo.focus = true
-            }  
-        });
+            this.examwindow.on('close', async  (e) => {   // window should not be closed manually.. ever! but if you do make sure to clean examwindow variable and end exam for the client
+                if (this.multicastClient.clientinfo.exammode) {
+                    if (!this.config.development) { e.preventDefault(); }
+                }
+                else {
+                    this.examwindow.destroy();
+                    this.examwindow = null;
+                    //disableRestrictions(this.examwindow)  //do not disable twice
+                    this.multicastClient.clientinfo.exammode = false
+                    this.multicastClient.clientinfo.focus = true
+                }
+            });
         } finally {
             this._examWindowCreating = false;
         }
     }
-
 
 
 

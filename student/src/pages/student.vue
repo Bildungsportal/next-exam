@@ -596,7 +596,7 @@ export default {
 
         async maybeShowWinKioskSessionInfo() {
             const k = this.platformKiosk;
-            if (!isElectronWindow(window) || this.config.development) return;
+            if (!isElectronWindow(window) || this.development) return;
             if (!k.runningInCage || k.displayServer !== 'windows') return;
             if (this.activeDialog) return;
             if (sessionStorage.getItem('next-exam-win-kiosk-session-info') === '1') return;
@@ -1760,14 +1760,6 @@ export default {
             // Win32 kiosk uses normal getDisplayMedia full-desktop path; cage fallback only for Linux cage.
             setCageWindowCaptureFallback(this.platformKiosk.runningInCage && this.platformKiosk.displayServer !== 'windows');
             this.cageLauncherApps = await loadWinKioskLauncherApps(signalBridge);
-            // Dev-only: preview cage launcher UI without kiosk user / provisioning
-            // if (this.config.development) {
-            //     this.platformKiosk.runningInCage = true;
-            //     this.cageLauncherApps = [
-            //         { name: 'calc', path: 'C:\\Windows\\System32\\calc.exe' },
-            //         { name: 'Archicad', path: 'C:\\Program Files\\Graphisoft\\Archicad\\Archicad.exe' },
-            //     ];
-            // }
             await this.maybeOfferCageKioskSetup();
         }
 
