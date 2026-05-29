@@ -234,6 +234,9 @@ const initialViewport = page.getViewport({ scale: 1.5 });
         }
 
         const totalFields = formFieldsFiltered.length + filteredClozeFieldsOut.length + filteredBoxFieldsOut.length;
+        if (this.enableLogging) {
+            console.log(`pdfparser p${pageNum}: ${totalFields} active fields`);
+        }
         const warnings = [];
         const hasWarning = isVectorizedPage || totalFields < this.SCAN_MIN_BOXES;
         if (isVectorizedPage) {

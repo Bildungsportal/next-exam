@@ -271,7 +271,7 @@ export const detectorMethods = {
 
   buildRectanglesFromLines(lineStore, viewport, boxFields) {
     const allHoriz = lineStore.hLines;
-    console.log(`[PREMERGE] V x=57:`, lineStore.vLines.filter(v=>Math.abs(v.x-57)<=2).map(v=>`[${v.y1.toFixed(0)}-${v.y2.toFixed(0)}]`).join(' '));
+    if (this.enableLogging) console.log(`[PREMERGE] V x=57:`, lineStore.vLines.filter(v=>Math.abs(v.x-57)<=2).map(v=>`[${v.y1.toFixed(0)}-${v.y2.toFixed(0)}]`).join(' '));
     const allVert = mergeVerticalLineSegments(lineStore.vLines);
     if (!allHoriz.length || !allVert.length) {
       return;
@@ -317,11 +317,11 @@ export const detectorMethods = {
       return result;
     };
 
-    console.log(`[PREDEDUP] V:`, allVert.map(v=>`x=${v.x.toFixed(0)}[${v.y1.toFixed(0)}-${v.y2.toFixed(0)}]`).join(' '));
+    if (this.enableLogging) console.log(`[PREDEDUP] V:`, allVert.map(v=>`x=${v.x.toFixed(0)}[${v.y1.toFixed(0)}-${v.y2.toFixed(0)}]`).join(' '));
     const horizontals = deduplicateHLines(allHoriz);
     const verticals = deduplicateVLines(allVert);
-    console.log(`[DEDUP] H:`, horizontals.map(h=>`y=${h.y.toFixed(0)}[${h.x1.toFixed(0)}-${h.x2.toFixed(0)}]`).join(' '));
-    console.log(`[DEDUP] V:`, verticals.map(v=>`x=${v.x.toFixed(0)}[${v.y1.toFixed(0)}-${v.y2.toFixed(0)}]`).join(' '));
+    if (this.enableLogging) console.log(`[DEDUP] H:`, horizontals.map(h=>`y=${h.y.toFixed(0)}[${h.x1.toFixed(0)}-${h.x2.toFixed(0)}]`).join(' '));
+    if (this.enableLogging) console.log(`[DEDUP] V:`, verticals.map(v=>`x=${v.x.toFixed(0)}[${v.y1.toFixed(0)}-${v.y2.toFixed(0)}]`).join(' '));
 
     const tol = 5;
     const minSpan = this.MIN_SIZE_PDF_UNITS;
@@ -379,7 +379,7 @@ export const detectorMethods = {
           return (spansHeight || almostSpansHeight || (looseSpan && crossesBand)) && inRange;
         });
 
-        console.log(`[BUILD] H-Band y=${cellTop.toFixed(0)}-${cellBottom.toFixed(0)}: ${intersectingVerticals.length} V-Linien:`, intersectingVerticals.map(v=>`x=${v.x.toFixed(0)}[${v.y1.toFixed(0)}-${v.y2.toFixed(0)}]`).join(' '));
+        if (this.enableLogging) console.log(`[BUILD] H-Band y=${cellTop.toFixed(0)}-${cellBottom.toFixed(0)}: ${intersectingVerticals.length} V-Linien:`, intersectingVerticals.map(v=>`x=${v.x.toFixed(0)}[${v.y1.toFixed(0)}-${v.y2.toFixed(0)}]`).join(' '));
 
         if (intersectingVerticals.length < 2) {
           skippedNoIntersection += 1;
@@ -429,12 +429,8 @@ export const detectorMethods = {
     }
 
     if (this.enableLogging && this.debugBoxExtraction) {
-      console.log(
-        `pdfparser @ buildRectanglesFromLines: ${horizontals.length} horizontal lines, ${verticals.length} vertical lines`,
-      );
-      console.log(
-        `pdfparser @ buildRectanglesFromLines: constructed ${added} rectangles, skipped ${skippedTooSmall} too small, ${skippedNoIntersection} no intersection`,
-      );
+      console.log(`pdfparser @ buildRectanglesFromLines: ${horizontals.length} horizontal lines, ${verticals.length} vertical lines`);
+      console.log(`pdfparser @ buildRectanglesFromLines: constructed ${added} rectangles, skipped ${skippedTooSmall} too small, ${skippedNoIntersection} no intersection`);
     }
   },
 
@@ -656,12 +652,12 @@ export const detectorMethods = {
       }
     }
 
-    console.log(`[LINES] H:`, lineStore.hLines.map(h => `y=${h.y.toFixed(0)}[${h.x1.toFixed(0)}-${h.x2.toFixed(0)}]`).join(' '));
-    console.log(`[LINES] V:`, lineStore.vLines.map(v => `x=${v.x.toFixed(0)}[${v.y1.toFixed(0)}-${v.y2.toFixed(0)}]`).join(' '));
+    if (this.enableLogging) console.log(`[LINES] H:`, lineStore.hLines.map(h => `y=${h.y.toFixed(0)}[${h.x1.toFixed(0)}-${h.x2.toFixed(0)}]`).join(' '));
+    if (this.enableLogging) console.log(`[LINES] V:`, lineStore.vLines.map(v => `x=${v.x.toFixed(0)}[${v.y1.toFixed(0)}-${v.y2.toFixed(0)}]`).join(' '));
     this.buildRectanglesFromLines(lineStore, viewport, boxFields);
 
     const tcs = boxFields.filter(b => b.isTableCell);
-    console.log(`[TABLE] ${tcs.length} TCs:`, tcs.map(b => `${b.id} ${parseFloat(b.style.left).toFixed(0)},${parseFloat(b.style.top).toFixed(0)} ${parseFloat(b.style.width).toFixed(0)}x${parseFloat(b.style.height).toFixed(0)}`));
+    if (this.enableLogging) console.log(`[TABLE] ${tcs.length} TCs:`, tcs.map(b => `${b.id} ${parseFloat(b.style.left).toFixed(0)},${parseFloat(b.style.top).toFixed(0)} ${parseFloat(b.style.width).toFixed(0)}x${parseFloat(b.style.height).toFixed(0)}`));
 
     return boxFields;
   },
@@ -1007,7 +1003,10 @@ export const detectorMethods = {
       clozeFields.push(...isolatedLineFields);
     }
 
-    console.log('[CLOZE-ALL]', clozeFields.map(f => ({ type: f.type, left: f.style.left, top: f.style.top, w: f.style.width })));
+    if (this.enableLogging) {
+      console.log(`pdfparser: ${clozeFields.length} cloze fields`);
+    }
+
     return clozeFields;
   },
 

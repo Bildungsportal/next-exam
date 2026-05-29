@@ -9,16 +9,15 @@ import { parseActivesheetsFormDataJson, diffActivesheetsFormData } from 'next-ex
  * Dashboard explorer: read file bytes from the active exam workdir (decrypted in main when applicable).
  * Used by showPDFPreview (PDF preview), loadTextFile (log popup), loadImage (image preview) in this module.
  */
-async function readWorkdirFileForDashboard(ctx, filepath) {
+async function readWorkdirFileForDashboard(ctx, filepath, { optional = false } = {}) {
     const res = await window.ipcRenderer.invoke('readTeacherWorkdirFile', {
         servername: ctx.servername,
         servertoken: ctx.servertoken,
         filepath,
     })
-    if (!res || res.status !== 'success' || res.data == null) {
-        throw new Error(res?.message || 'read failed')
-    }
-    return res.data
+    if (res?.status === 'success' && res.data != null) return res.data
+    if (optional && res?.code === 'ENOENT') return null
+    throw new Error(res?.message || 'read failed')
 }
 
 // Copy IPC/file bytes into a standalone Uint8Array (handles Buffer JSON and subarrays).
@@ -99,21 +98,21 @@ async function loadActivesheetsCorrectionContext(vm, pdfFilepath) {
     let disabledReason = null;
 
     const htmPath = pdfFilepath.replace(/\.pdf$/i, '.htm');
-    try {
-        const htmRaw = await readWorkdirFileForDashboard(vm, htmPath);
-        submissionFormData = parseActivesheetsFormDataJson(workdirBytesToUtf8(htmRaw));
-    } catch (err) {
-        log.warn('filemanager @ loadActivesheetsCorrectionContext: submission htm', err);
+    const htmRaw = await readWorkdirFileForDashboard(vm, htmPath, { optional: true });
+    if (htmRaw == null) {
+        log.warn('filemanager @ loadActivesheetsCorrectionContext: no submission htm found');
         disabledReason = vm.$t('pdf.correctionNoSubmissionHtm');
+    } else {
+        submissionFormData = parseActivesheetsFormDataJson(workdirBytesToUtf8(htmRaw));
     }
 
     const templatePath = activesheetsCorrectionTemplatePath(vm.workdirectory, activeSheets.filename);
-    try {
-        const tplRaw = await readWorkdirFileForDashboard(vm, templatePath);
-        templateFormData = parseActivesheetsFormDataJson(workdirBytesToUtf8(tplRaw));
-    } catch (err) {
-        log.warn('filemanager @ loadActivesheetsCorrectionContext: template htm', err);
+    const tplRaw = await readWorkdirFileForDashboard(vm, templatePath, { optional: true });
+    if (tplRaw == null) {
+        log.warn('filemanager @ loadActivesheetsCorrectionContext: no autocorrect template found');
         disabledReason = disabledReason || vm.$t('pdf.correctionNoTemplate');
+    } else {
+        templateFormData = parseActivesheetsFormDataJson(workdirBytesToUtf8(tplRaw));
     }
 
     let baseParsedPages = [];

@@ -156,7 +156,7 @@ export const filterMethods = {
             const cellHeight = cellRect.bottom - cellRect.top;
             const deadZoneTop = Math.min(fontSize2 * 0.5, cellHeight * 0.3);
             if (baseline < cellRect.top + deadZoneTop) continue;
-            console.log(`[TC] text match "${visible}" → cell ${cellRect.left.toFixed(0)},${cellRect.top.toFixed(0)} ${(cellRect.right-cellRect.left).toFixed(0)}x${(cellRect.bottom-cellRect.top).toFixed(0)} → filtered`);
+            if (this.enableLogging) console.log(`[TC] text match "${visible}" → cell ${cellRect.left.toFixed(0)},${cellRect.top.toFixed(0)} ${(cellRect.right-cellRect.left).toFixed(0)}x${(cellRect.bottom-cellRect.top).toFixed(0)} → filtered`);
             return true;
         }
         return false;
