@@ -46,6 +46,10 @@
                             <img src="/src/assets/img/svg/document.svg" width="18" height="18">
                             <span>{{ file.name }}</span>
                         </div>
+                        <div v-else-if="isHtmlFile(file)" class="wf-entry wf-html" @click="$emit('load-html', { path: file.path, name: file.name })">
+                            <img src="/src/assets/img/svg/document.svg" width="18" height="18">
+                            <span>{{ file.name }}</span>
+                        </div>
                         <div v-else class="wf-entry wf-other">
                             <img src="/src/assets/img/svg/document.svg" width="18" height="18">
                             <span>{{ file.name }}</span>
@@ -61,6 +65,9 @@
                             <img src="/src/assets/img/svg/eye-fill.svg" class="white" width="16" height="16">
                         </div>
                         <div v-if="file.type === 'file' && file.ext === '.log'" class="btn btn-sm btn-dark" @click="$emit('load-text', { path: file.path, name: file.name })" :title="$t('dashboard.preview')">
+                            <img src="/src/assets/img/svg/eye-fill.svg" class="white" width="16" height="16">
+                        </div>
+                        <div v-if="file.type === 'file' && isHtmlFile(file)" class="btn btn-sm btn-dark" @click="$emit('load-html', { path: file.path, name: file.name })" :title="$t('dashboard.preview')">
                             <img src="/src/assets/img/svg/eye-fill.svg" class="white" width="16" height="16">
                         </div>
                         <div v-if="file.type === 'file'" class="btn btn-sm btn-dark" :class="lockSendFile ? 'disabledexam' : ''" @click="$emit('send-file', file)" :title="$t('dashboard.send')">
@@ -95,6 +102,8 @@
 <script>
 import { isStudentExplorerRowForTimeline } from '../utils/studentEditorTimeline.js'
 
+const HTML_EXTENSIONS = ['.htm', '.html']
+
 export default {
     name: 'DashboardExplorer',
 
@@ -108,9 +117,12 @@ export default {
         backupdirectory:      { type: String, default: '' },
     },
 
-    emits: ['close', 'load-filelist', 'load-pdf', 'load-image', 'load-text', 'send-file', 'download-file', 'delete-file', 'timeline-diff'],
+    emits: ['close', 'load-filelist', 'load-pdf', 'load-image', 'load-text', 'load-html', 'send-file', 'download-file', 'delete-file', 'timeline-diff'],
 
     methods: {
+        isHtmlFile(file) {
+            return file?.type === 'file' && HTML_EXTENSIONS.includes(file.ext)
+        },
         isTimelineStudentDir(file) {
             return isStudentExplorerRowForTimeline(file, this.workdirectory)
         },
@@ -233,6 +245,7 @@ export default {
 .wf-pdf  span { color: var(--bs-info); }
 .wf-img  span { color: var(--bs-info); }
 .wf-log  span { color: var(--bs-warning); }
+.wf-html span { color: var(--bs-info); }
 .wf-other span { color: rgba(255,255,255,0.5); cursor: default; }
 .wf-actions {
     display: flex;

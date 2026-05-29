@@ -7,7 +7,11 @@ on:
         type: boolean
         required: false
         default: false
-  workflow_dispatch: {} 
+  workflow_dispatch: {}
+
+# opt in to Node 24 runtime for js actions (default from 2026-06-16); pre-validate
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   build:
@@ -29,7 +33,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.19.0'
+          node-version: '24.14.0'
   
   
       - name: Teacher cache dependencies
@@ -60,7 +64,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: next-exam-teacher-linux-x64-appimage
-          path: ./release/**/Next-Exam-Teacher*x86_64.AppImage
+          path: ./teacher/dist/electron/Packaged/Next-Exam-Teacher*x86_64.AppImage
           retention-days: 5
           
           
@@ -92,5 +96,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: next-exam-student-linux-x64-appimage
-          path: ./release/**/Next-Exam-Student*x86_64.AppImage
+          path: ./student/dist/electron/Packaged/Next-Exam-Student*x86_64.AppImage
           retention-days: 5

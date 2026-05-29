@@ -1,9 +1,18 @@
-import { exec } from 'child_process';
+import { exec, execFile } from 'child_process';
 import { promisify } from 'util';
+import path from 'path';
 import os from 'os';
 import log from 'electron-log';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+/** Full path to System32 exe (Sysnative for x86 Node on x64). Avoids cmd.exe via exec() in Assigned Access. */
+function resolveWindowsSystem32Exe(...segments) {
+    const root = process.env.SystemRoot || process.env.windir || 'C:\\Windows';
+    const base = process.arch === 'ia32' ? path.join(root, 'Sysnative') : path.join(root, 'System32');
+    return path.join(base, ...segments);
+}
 
 // Counter for failed attempts - skip execution after 4 consecutive failures
 let failureCounter = 0;
@@ -244,10 +253,12 @@ async function getWlanInfoLinux() {
  * Get WLAN info on Windows using netsh
  */
 async function getWlanInfoWindows() {
+    const netshExe = resolveWindowsSystem32Exe('netsh.exe');
     try {
-        const { stdout, stderr } = await execAsync('netsh wlan show interfaces', {
+        const { stdout, stderr } = await execFileAsync(netshExe, ['wlan', 'show', 'interfaces'], {
             timeout: 5000,
-            maxBuffer: 1024 * 64
+            maxBuffer: 1024 * 64,
+            windowsHide: true,
         });
         
         // Check stderr for service errors
@@ -382,9 +393,12 @@ async function getWlanInfoWindowsPowerShell() {
         let ssid = null;
         try {
             // Get the active Wi-Fi connection profile
-            const { stdout: ssidOutput } = await execAsync('powershell -Command "$profile = Get-NetConnectionProfile | Where-Object {$_.InterfaceAlias -like \'*Wi-Fi*\' -or $_.InterfaceAlias -like \'*Wireless*\'} | Select-Object -First 1; if ($profile) { $profile.Name }"', {
+            const psExe = resolveWindowsSystem32Exe('WindowsPowerShell', 'v1.0', 'powershell.exe');
+            const psCmd = '$profile = Get-NetConnectionProfile | Where-Object {$_.InterfaceAlias -like \'*Wi-Fi*\' -or $_.InterfaceAlias -like \'*Wireless*\'} | Select-Object -First 1; if ($profile) { $profile.Name }';
+            const { stdout: ssidOutput } = await execFileAsync(psExe, ['-NoProfile', '-NonInteractive', '-Command', psCmd], {
                 timeout: 3000,
-                maxBuffer: 1024 * 64
+                maxBuffer: 1024 * 64,
+                windowsHide: true,
             });
             const ssidStr = ssidOutput.trim();
             if (ssidStr && ssidStr.length > 0 && !ssidStr.match(/^(N\/A|n\/a|none|keine)$/i)) {

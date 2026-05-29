@@ -11,3 +11,5 @@ export async function parsePdfToPages(pdfData, options = {}) {
     return parseV5(pdfData, options);
 }
 
+export { ensurePdfOverlayFontsReady, PDF_OVERLAY_FONT_FAMILIES } from './pdfOverlayFonts.js';
+

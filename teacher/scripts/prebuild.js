@@ -1,8 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
-// load .env (same as student / quasar way)
-dotenv.config();
+
+// load .env when present (local dev); otherwise fall back to committed .env.production (CI)
+const envFile = fs.existsSync('./.env') ? './.env' : './.env.production';
+dotenv.config({ path: envFile });
+console.log(`📦 prebuild loaded env from ${envFile}`);
 
 const now = new Date();
 const buildDate = now.getFullYear() +
@@ -51,11 +54,15 @@ const config = {
         localvm: ${process.env.EXAMMODE_LOCALVM === 'true'}
     },
 
+    exposeStudents: false,
+
     version: '${process.env.VERSION}.${process.env.BUILD_NUMBER}',
     buildDate: '${buildDate}',
     buildNumber: '${process.env.BUILD_NUMBER}',
     info: '${process.env.INFO}'
 }
+import { applyCliOverrides } from './applyCliOverrides.js';
+applyCliOverrides(config, process.argv);
 export default config;
 `;
 

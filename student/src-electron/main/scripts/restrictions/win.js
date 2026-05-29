@@ -17,6 +17,7 @@ const __dirname = import.meta.dirname;
  * @param {string[]} appsToClose - app names to kill
  */
 export async function enableWindowsRestrictions(winhandler, appsToClose) {
+    if (platformDispatcher.skipElectronKiosk) return;
     try {
         const publicBase = platformDispatcher.publicBase;
         const executable1 = join(publicBase, 'disable-shortcuts.exe');
@@ -70,6 +71,7 @@ export async function enableWindowsRestrictions(winhandler, appsToClose) {
  * Disable Windows-specific restrictions (unblock shortcuts, restart explorer).
  */
 export function disableWindowsRestrictions() {
+    if (platformDispatcher.skipElectronKiosk) return;
     log.info("platformrestrictions @ disableRestrictions (win): unblocking shortcuts...");
     try {
         childProcess.exec(`taskkill  /IM "disable-shortcuts.exe" /T /F`, (error, stdout, stderr) => {

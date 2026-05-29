@@ -6,10 +6,12 @@ import JavaScriptObfuscator from 'javascript-obfuscator';
 import { transform } from 'esbuild';
 import bytenode from 'bytenode';
 import dotenv from 'dotenv';
+import fsSync from 'fs';
 
 const require = createRequire(import.meta.url);
 
-dotenv.config();
+const envFile = fsSync.existsSync('./.env') ? './.env' : './.env.production';
+dotenv.config({ path: envFile });
 
 if (process.env.OBFUSCATE_MAIN === 'false') {
   // obfuscation disabled via OBFUSCATE_MAIN env var

@@ -29,3 +29,11 @@ virtio-win.iso
 win11_iot.iso
 win11.qcow2
 autounattend-iso-root
+
+# QEMU binaries: system install only; repo keeps autounattend.iso under public/qemu/
+teacher/public/qemu/win/
+teacher/public/qemu/lin/
+teacher/public/qemu/mac/
+student/public/qemu/win/
+student/public/qemu/lin/
+student/public/qemu/mac/

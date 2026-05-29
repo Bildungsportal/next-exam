@@ -133,6 +133,7 @@ import {
     shouldSkipEdgeFocusLost
 } from '../utils/linuxCageKiosk.js'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
+import { collectActivesheetsFormData } from 'next-exam-shared/activesheetsFormData.js'
 import {
     activeSheetLoadKey,
     applyClientinfoFromFetch,
@@ -606,36 +607,11 @@ export default {
                 })
             }
 
-            // Collect all input field values from PdfRenderer
-            // Use the Active Sheet PDF filename, not the backup filename
-            const formData = { filename: this.activeSheetPdfFilename || 'unknown.pdf' };
-            
-            // Get all input fields (text, textarea, checkbox) from PdfRenderer
-            const textInputs = document.querySelectorAll('.interactive-input.text, .interactive-input.cloze, .interactive-input.table-cell');
-            const textareas = document.querySelectorAll('.interactive-input.textarea');
-            const checkboxes = document.querySelectorAll('.interactive-input.checkbox');
-            
-            // Collect text input values
-            textInputs.forEach(input => {
-                if (input.id) {
-                    formData[input.id] = input.value || '';
-                }
-            });
-            
-            // Collect textarea values
-            textareas.forEach(textarea => {
-                if (textarea.id) {
-                    formData[textarea.id] = textarea.value || '';
-                }
-            });
-            
-            // Collect checkbox values
-            checkboxes.forEach(checkbox => {
-                if (checkbox.id) {
-                    formData[checkbox.id] = checkbox.checked || false;
-                }
-            });
-            
+            const formData = collectActivesheetsFormData(
+                document.getElementById('pdfrenderer'),
+                this.activeSheetPdfFilename || 'unknown.pdf'
+            );
+
             // Save form data to .htm file via IPC
             signalBridge.send('saveActivesheetsBak', {
                 filename: filename || this.clientname,
@@ -651,18 +627,33 @@ export default {
                 signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: this.currentpreviewBase64 })  
             } else {
                 // Otherwise generate from current view
-                let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true, reason: why})
+                let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true, reason: why, pageMode: 'fullpage'})
                 if (response?.status == "success") {
-                    signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })  
+                    signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })
+                } else {
+                    this.showPdfGenerationError(response)
                 }
             }
             this.loadFilelist()
+        },
+
+        // Maps getPDFbase64 IPC error payloads to a localized Swal title.
+        showPdfGenerationError(response) {
+            const msg = typeof response?.message === 'string' ? response.message : ''
+            let title = this.$t('editor.pdfGenerationFailed')
+            if (msg.includes('timeout') || msg.includes('in progress')) {
+                title = this.$t('editor.pdfBusyTimeout')
+            } else if (msg.toLowerCase().includes('signing failed')) {
+                title = this.$t('editor.pdfSigningFailed')
+            }
+            this.$swal.fire({ title, icon: 'error' })
         },
 
         // send direct print request to teacher and append current document as base64
         async printBase64(printrequest=false, saveReason = 'n/a'){
             if (!this.currentpreviewBase64) {
                 console.warn('activesheets @ printBase64: No PDF available to send');
+                this.$swal.fire({ title: this.$t('editor.noPdfToSend'), icon: 'error' })
                 return;
             }
 
@@ -674,7 +665,13 @@ export default {
                 printrequest: printrequest,
                 submissionnumber: this.submissionnumber,
                 lockedsection: this.lockedSection,
-                saveReason: sr
+                saveReason: sr,
+            }
+            if (!printrequest) {
+                payload.formData = collectActivesheetsFormData(
+                    document.getElementById('pdfrenderer'),
+                    this.activeSheetPdfFilename || 'unknown.pdf'
+                )
             }
 
             examApiFetch(url, {
@@ -702,8 +699,9 @@ export default {
                     })
                 }
             })
-            .catch(error => {  
-                console.log("activesheets @ printbase64:",error.message)    
+            .catch(error => {
+                console.log("activesheets @ printbase64:",error.message)
+                this.$swal.fire({ title: this.$t('editor.submissionNetworkFailed'), icon: 'error' })
             });
         },
 
@@ -712,6 +710,11 @@ export default {
                 console.error('activesheets @ sendExamToTeacher: Invalid section data');
                 return;
             }
+            // Ensure printToPDF captures only the form content (no preview overlay, no zoom).
+            const prevZoom = this.zoom
+            this.hidepreview()
+            const contentEl = document.getElementById('content')
+            if (contentEl) contentEl.style.zoom = 1
             const pdfArgs = {
                 landscape: false,
                 servername: this.servername,
@@ -719,36 +722,45 @@ export default {
                 submissionnumber: this.submissionnumber,
                 sectionname: this.serverstatus.examSections[this.lockedSection].sectionname,
                 printBackground: true,
+                pageMode: 'fullpage', // margins 0 + Header als DOM-Overlay (siehe communicationhandler.getBase64PDF)
             }
-            if (type === 'print') {
-                const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'print' })
-                if (response?.status !== 'success') return
+            try {
+                if (type === 'print') {
+                    const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'print' })
+                    if (response?.status !== 'success') {
+                        this.showPdfGenerationError(response)
+                        return
+                    }
+                    this.currentpreviewBase64 = response.base64pdf
+                    this.loadPDF({
+                        filename: `${this.clientname}.pdf`,
+                        filetype: "pdf",
+                        filecontent: response.dataUrl
+                    }, true, 100, true, type)
+                    return
+                }
+
+                // SWAL temporaer disabled - body.swal2-shown kills multi-page printToPDF
+                // await this.waitUntilSigningSwalPainted()
+                let response
+                response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
+                if (response?.status !== 'success') {
+                    this.showPdfGenerationError(response)
+                    return
+                }
                 this.currentpreviewBase64 = response.base64pdf
+                if (directsend) {
+                    return this.printBase64(false, 'directsend')
+                }
                 this.loadPDF({
                     filename: `${this.clientname}.pdf`,
                     filetype: "pdf",
                     filecontent: response.dataUrl
                 }, true, 100, true, type)
-                return
-            }
-
-            await this.waitUntilSigningSwalPainted()
-            let response
-            try {
-                response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
             } finally {
-                this.$swal.close()
+                const restoreEl = document.getElementById('content')
+                if (restoreEl) restoreEl.style.zoom = prevZoom
             }
-            if (response?.status !== 'success') return
-            this.currentpreviewBase64 = response.base64pdf
-            if (directsend) {
-                return this.printBase64(false, 'directsend')
-            }
-            this.loadPDF({
-                filename: `${this.clientname}.pdf`,
-                filetype: "pdf",
-                filecontent: response.dataUrl
-            }, true, 100, true, type)
         },
 
         waitUntilSigningSwalPainted() {
@@ -885,14 +897,7 @@ export default {
     
 }
 </script>
-<style >
-@media print {
-    #vuexambody {
-            position:absolute !important;   /* position:absolute is required for printing of pdfs with multiple pages*/
-    }
-}
 
-</style>
 
 
 <style scoped lang="scss">
@@ -928,12 +933,7 @@ export default {
     background-color: #eee;
 }
 
-:deep(.pdf-scroll-container) {
-    overflow: visible;
-    height: auto;
-    max-height: none;
-    min-height: fit-content;
-}
+/* Keep PdfviewPaneRendered internal scrolling intact. */
 
 .split-view-container {
     display: flex;
@@ -1029,14 +1029,13 @@ export default {
 #preview {
     display: none;
     position: absolute;
-    top: var(--nx-preview-top-offset, var(--nx-apphead-h, 60px));
+    top: 0;
     left: 0;
-    width:100vw;
-    height: calc(100vh - var(--nx-preview-top-offset, var(--nx-apphead-h, 60px)));
+    width: 100vw;
+    height: 100vh;
     background-color: rgba(0, 0, 0, 0.4);
-    z-index:100001;
+    z-index: 100001;
     backdrop-filter: blur(2px);
-  
 }
 
 .split-view-container #preview {
@@ -1054,63 +1053,59 @@ export default {
 @media print { 
 
 
-    #webview, #apphead, #focuswarning, .focus-container, #preview, #pdfembed, #toolbar  {
+    #webview, #apphead, #focuswarning, .focus-container, #preview, #pdfembed, #toolbar, #statusbar, .pdfview-pane-rendered,
+    .embed-container.pdfview-pane-rendered , .zoombutton, #preview, .pdf-overlay-root   {
         display: none !important;
     }
-    html, body {
-        position: relative !important;
-        height: auto !important;
-        max-height: none !important;
+
+    .swal2-container, .swal2-center, .swal2-backdrop-show , .swal2-popup, .swal2-modal, .swal2-icon-info, .swal2-show {
+        display:none !important;
+    }
+
+    ::-webkit-scrollbar {
+        display: none;
+    }
+
+
+    #vuexambody, .activesheets-root, .activesheets-body{
+        display: block !important;
+        position: absolute !important;
         overflow: visible !important;
     }
    
+   
     // Use :deep() to target child component styles - remove all height restrictions for printing
+    // zoom 8/9: pdfparser rendert page mit scale 1.5 (=> 1pt = 1.5px); printToPDF mappt 1pt = 96/72 = 1.333px.
+    // Verhaeltnis 1.333/1.5 = 8/9 skaliert das Overlay exakt auf die A4-Druckseite (Margins muessen 0 sein - siehe pageMode='fullpage').
     :deep(.pdf-overlay-root) {
         height: auto !important;
         max-height: none !important;
+        display: block !important;
+        position: absolute !important;
         overflow: visible !important;
+        zoom: calc(8 / 9) !important;
     }
     
     :deep(.pdf-scroll-container) {
+        display: block !important;
         background-color: white !important;
         box-shadow: none !important;
         padding: 0px !important;
         margin: 0px !important;
-        height: auto !important;
-        max-height: none !important;
+
+
+        position: absolute !important;
+        overflow: visible !important;
+
+    }
+ 
+
+    html, body, .activesheets-root, .activesheets-body {
+        position: absolute !important;
         overflow: visible !important;
     }
-    
-    :deep(.pdf-page-wrapper) {
-        page-break-after: always !important;
-        page-break-inside: avoid !important;
-        break-after: page !important;
-        break-inside: avoid !important;
-        margin-bottom: 0px !important;
-        box-shadow: none !important;
-    }
 
 
-
-    #app {
-        display:block !important;
-       
-        max-height: none !important;
-        overflow: visible !important;
-        position:absolute !important;
-    }
-    
-    #content {
-        overflow: visible !important;
-        height: auto !important;
-        max-height: none !important;
-        position:absolute !important;
-        background-color: #ffffff !important;
-    }
-
-    ::-webkit-scrollbar {
-                display: none;
-            }
 
     // p { page-break-after: always; }
     .footer { 
@@ -1118,27 +1113,22 @@ export default {
         bottom: 0px; 
     }
 
-    .zoombutton, #preview {
-    display:none !important;
-    }
 
-    .swal2-container, .swal2-center, .swal2-backdrop-show , .swal2-popup, .swal2-modal, .swal2-icon-info, .swal2-show {
-        display:none !important;
-    }
+
+
 
   
-    
-    // Ensure content is visible
-    #content {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        overflow: visible !important;
-        height: auto !important;
-    }
 
 }
 
 
 
 
+</style>
+
+<style>
+/* unscoped: body lebt ausserhalb des template-scope */
+@media print {
+    #vuexambody { position: absolute !important; }
+}
 </style>

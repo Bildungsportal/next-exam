@@ -18,6 +18,7 @@
 import crypto from 'crypto';
 import { Router } from 'express';
 import log from 'electron-log';
+import config from '../../../main/config.js';
 import { NEXT_EXAM_API_SECRET, NEXT_EXAM_API_SECRET_HEADER } from '../../../../../shared/nextExamApiSecret.js';
 import controlRoutes from './server/control.js';
 import dataRoutes from './server/data.js';
@@ -30,7 +31,7 @@ function requireNextExamAppSecret(req, res, next) {
         return next();
     }
     const p = req.path || '';
-    if (p === '/control/oauth' || p === '/control/msauth' || p === '/control/connectedstudentips') {
+    if (p === '/control/oauth' || p === '/control/msauth' || (config.exposeStudents && p === '/control/connectedstudentips')) {
         return next();
     }
     const got = req.get(NEXT_EXAM_API_SECRET_HEADER);

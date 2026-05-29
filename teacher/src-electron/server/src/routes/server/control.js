@@ -150,7 +150,7 @@ router.get('/msauth', async (req, res) => {
 
 /**
  * STUDENT-ORIENTED ROUTES (Bearer student token required except: oauth, msauth, registerclient=PIN,
- * serverlist+pong+connectedstudentips=open LAN discovery).
+ * serverlist+pong=open LAN discovery; connectedstudentips only if config.exposeStudents).
  */
 
 
@@ -193,25 +193,26 @@ router.get('/serverlist', function (req, res, next) {
 
 
 
-/**
- * Returns reachable student IPs only while serverstatus.exammode is true; otherwise ips: [] (open LAN).
- */
-router.get('/connectedstudentips', function (req, res) {
-    const servers = Object.values(config.examServerList)
-    if (servers.length === 0) {
-        return res.status(404).json({ sender: 'server', status: 'error', message: t('control.notfound') })
-    }
-    const mcServer = servers[0]
-    if (!mcServer.serverstatus?.exammode) {
-        return res.json({ sender: 'server', status: 'success', ips: [] })
-    }
-    const now = Date.now()
-    const ips = (mcServer.studentList || [])
-        .filter((student) => isStudentReachable(student, now))
-        .map((student) => student.clientip)
-        .filter((ip) => typeof ip === 'string' && ip.length > 0)
-    return res.json({ sender: 'server', status: 'success', ips })
-})
+if (config.exposeStudents) {
+    /** Plain text allowlist: one reachable student IP per line (text/plain; empty body outside exammode). */
+    router.get('/connectedstudentips', function (req, res) {
+        const servers = Object.values(config.examServerList)
+        if (servers.length === 0) {
+            return res.status(404).type('text/plain').send('')
+        }
+        const mcServer = servers[0]
+        if (!mcServer.serverstatus?.exammode) {
+            return res.type('text/plain').send('')
+        }
+        const now = Date.now()
+        const ips = [...new Set((mcServer.studentList || [])
+            .filter((student) => isStudentReachable(student, now))
+            .map((student) => student.clientip)
+            .filter((ip) => typeof ip === 'string' && ip.length > 0))]
+        const body = ips.length ? `${ips.join('\n')}\n` : ''
+        return res.type('text/plain').send(body)
+    })
+}
 
  /** OPEN ROUTES END*/
 /////////////////////
@@ -419,6 +420,14 @@ router.get('/connectedstudentips', function (req, res) {
     if (typeof clientinfo.displayCount === 'number') student.displayCount = clientinfo.displayCount
     if (typeof clientinfo.multiMonitor === 'boolean') student.multiMonitor = clientinfo.multiMonitor
     if (typeof clientinfo.isRunningInCage === 'boolean') student.isRunningInCage = clientinfo.isRunningInCage
+    if (clientinfo.isRunningInCage && clientinfo.allowedKioskApps) {
+        student.allowedKioskApps = {
+            startLayoutReadable: !!clientinfo.allowedKioskApps.startLayoutReadable,
+            appNames: Array.isArray(clientinfo.allowedKioskApps.appNames) ? clientinfo.allowedKioskApps.appNames : [],
+        }
+    } else {
+        delete student.allowedKioskApps
+    }
 
 
     if (clientinfo.focus) { student.status.restorefocusstate = false }  // remove task because its obviously done
@@ -580,7 +589,25 @@ router.post('/submission/:servername', async function (req, res, next) {
             return res.status(500).send({ sender: 'server', message: t("control.submissionfailed"), status: 'error' });
         }
         await fsp.writeFile(absoluteFilename, pdfBuffer)                                       // write main
-      
+
+        const formData = req.body.formData
+        if (formData && typeof formData === 'object' && !Array.isArray(formData)) {
+            const htmName = filename.replace(/\.pdf$/i, '.htm')
+            if (isSafePathSegment(htmName)) {
+                const absoluteHtm = resolvePathUnderRoot(filepath, [htmName])
+                if (absoluteHtm) {
+                    await fsp.writeFile(absoluteHtm, JSON.stringify(formData, null, 2), 'utf8')
+                    if (config.backupdirectory) {
+                        const backuppath = resolvePathUnderRoot(config.backupdirectory, [mcServer.serverinfo.servername, student.clientname, 'ABGABE', lockedsection])
+                        const absoluteBackupHtm = backuppath ? resolvePathUnderRoot(backuppath, [htmName]) : null
+                        if (absoluteBackupHtm) {
+                            await fsp.writeFile(absoluteBackupHtm, JSON.stringify(formData, null, 2), 'utf8')
+                        }
+                    }
+                }
+            }
+        }
+
         log.info(`control @ submission: Received and stored submission file for user: ${student.clientname} saveReason=${saveReason}`)
         WindowHandler.mainwindow.webContents.send('submission', { clientname: student.clientname, clientip: student.clientip, hostname: student.hostname, printrequest: !!printrequest, saveReason })
         // create backup of abgabe

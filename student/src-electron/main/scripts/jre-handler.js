@@ -26,6 +26,12 @@ import platformDispatcher from './platformDispatcher.js';
 
 const __dirname = import.meta.dirname;
 
+function spawnJava(javapath, args) {
+    const binDir = path.dirname(javapath);
+    const env = { ...process.env, PATH: `${binDir}${path.delimiter}${process.env.PATH || ''}` };
+    return spawn(javapath, args, { shell: false, windowsHide: true, cwd: binDir, env });
+}
+
  // every platform needs it's own jre (linux, win32, darwin) //fixme: use GraalVM to precompile languagetool in order to save space and get rid of jre?
 class JreHandler {
     constructor () { }
@@ -35,14 +41,24 @@ class JreHandler {
     }
 
 
-    jTest(){
-        let javapath = this.driver(); // '/pfad/zur/java'
-        const proc = spawn(javapath, ['-version']);
-    
-        proc.stderr.on('data', data => {
-            const lines = data.toString().split('\n'); // in Zeilen splitten
-            log.debug(`jre-handler @ jTest: ${lines[0]}`); // nur die erste Zeile loggen
-        });
+    jTest() {
+        const javapath = this.driver();
+        if (!fs.existsSync(javapath)) {
+            log.warn(`jre-handler @ jTest: bundled java missing (${javapath}); LanguageTool may fail until JRE is present`);
+            return;
+        }
+        try {
+            const proc = spawnJava(javapath, ['-version']);
+            proc.on('error', (err) => {
+                log.warn(`jre-handler @ jTest: spawn failed (${javapath}): ${err.message}`);
+            });
+            proc.stderr?.on('data', (data) => {
+                const lines = data.toString().split('\n');
+                log.debug(`jre-handler @ jTest: ${lines[0]}`);
+            });
+        } catch (err) {
+            log.warn(`jre-handler @ jTest: ${err.message}`);
+        }
     }
     fail(reason) {
         log.error(reason);
@@ -66,21 +82,21 @@ class JreHandler {
         args = (args || []).slice();
         classpath = classpath || [];
         args.unshift(classname);
-        args.unshift(classpath.join(this._platform === 'win32' ? ';' : ':'));
+        args.unshift(classpath.join(process.platform === 'win32' ? ';' : ':'));
         args.unshift('-cp');
         return args;
     }
 
     jSpawn(classpath, classname, args) {
-        
-        let javapath = this.driver()
-        let javaargs = this.getArgs(classpath, classname, args)
-        let javacmdline =  `${javapath} ${javaargs.join(' ')} `
-
-        log.info(`jre-handler @ jSpawn: '${platformDispatcher.jre}' selected`)
-        log.info(`jre-handler @ jSpawn: spawning java process: ${javacmdline}`)
-        return spawn(javapath, javaargs, {shell:false});
-       // return spawn(javacmdline);
+        const javapath = this.driver();
+        const javaargs = this.getArgs(classpath, classname, args);
+        const javacmdline = `${javapath} ${javaargs.join(' ')} `;
+        if (!fs.existsSync(javapath)) {
+            throw new Error(`jre-handler @ jSpawn: java not found at ${javapath}`);
+        }
+        log.info(`jre-handler @ jSpawn: '${platformDispatcher.jre}' selected`);
+        log.info(`jre-handler @ jSpawn: spawning java process: ${javacmdline}`);
+        return spawnJava(javapath, javaargs);
     }
 }
 

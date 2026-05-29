@@ -21,8 +21,8 @@ import { join } from 'path'
 import {disableRestrictions, enableRestrictions} from './platformrestrictions.js';
 import log from 'electron-log'
 import {SchedulerService} from './schedulerservice.ts'
-import { activeWindow } from 'get-windows';
 import platformDispatcher from './platformDispatcher.js';
+import i18n from '../../../src/locales/locales.js';
 import {fileURLToPath} from "node:url";
 import path from 'path';
 
@@ -62,14 +62,13 @@ class WindowHandler {
     
       this.exitWarningOpen = false  // track if exit warning dialog is open
       this.exitQuestionOpen = false  // track if exit question dialog is open
+      this.cageExitWarningOpen = false
       this.minimizeWarningOpen = false  // track if minimize warning dialog is open
     }
 
     init (mc, config) {
         this.multicastClient = mc
         this.config = config
-        this.checkWindowInterval = new SchedulerService(this.windowTracker.bind(this), 1000)
-        this.focusTargetAllowed = true
     }
 
     getBiPUrl(biptest) {
@@ -256,7 +255,7 @@ class WindowHandler {
             
             screenlockWindow.removeMenu() 
             screenlockWindow.setMinimizable(false)
-            screenlockWindow.setKiosk(true)
+            platformDispatcher.applyElectronKioskMode(screenlockWindow)
             screenlockWindow.setAlwaysOnTop(true, "pop-up-menu", 1)   //above exam window (pop-up-menu, 0)
             screenlockWindow.show()
             screenlockWindow.moveTop();
@@ -300,7 +299,7 @@ class WindowHandler {
      * @param serverstatus the serverstatus object containing info about spellcheck language etc.
      */
     async createExamWindow(examtype, token, serverstatus, primarydisplay) {
-        if (this.examwindow) {
+        if (this._examWindowCreating || (this.examwindow && !this.examwindow.isDestroyed?.())) {
             log.warn('windowhandler @ createExamWindow: examwindow already exists, skip duplicate create');
             try {
                 this.examwindow.show();
@@ -332,7 +331,7 @@ class WindowHandler {
             py = primarydisplay.bounds.y
         }
 
-
+        this._examWindowCreating = true;
         if (examtype === "microsoft365"  ) { //external page
 
             this.examwindow = new BrowserWindow({
@@ -375,22 +374,23 @@ class WindowHandler {
             
             if (!this.config.development) {
                 try {
-                    this.examwindow.removeMenu()                 
-                    this.examwindow.setAlwaysOnTop(true, "screen-saver", 1) 
-                    this.examwindow.setKiosk(true);
-                
+                    this.examwindow.removeMenu()
+                    platformDispatcher.applyElectronKioskMode(this.examwindow);
+
                     await this.sleep(500)
                     this.examwindow.moveTop()
                     this.examwindow.focus()
-                    
+
                     // probably not needed because we disable missioncontrol anyways - seems to interfere with kiosk mode on macos (again)
                     // this.examwindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
-                    if (!platformDispatcher.isWayland){ this.checkWindowInterval.start() } // constantly check if the active window is the examwindow - if not, bring it to front
-                    await enableRestrictions(this)  // disable keyboard shortcuts etc.
-                    
-                    await this.sleep(1000)  // do not set blur listener too early
-                    this.addBlurListener()  // add blur listener to the examwindow
+
+                    if (!platformDispatcher.skipElectronKiosk) {
+                        this.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
+                        await enableRestrictions(this)
+                        await this.sleep(1000)
+                        this.addBlurListener()
+                    }
                 }
                 catch(e){ log.error("windowhandler @ did-finish-load: error in examwindow setup", e)}
             }
@@ -604,12 +604,14 @@ class WindowHandler {
             else {              
                 this.examwindow.destroy(); 
                 this.examwindow = null;
-                this.checkWindowInterval.stop()
                 //disableRestrictions(this.examwindow)  //do not disable twice
                 this.multicastClient.clientinfo.exammode = false
                 this.multicastClient.clientinfo.focus = true
             }  
         });
+        } finally {
+            this._examWindowCreating = false;
+        }
     }
 
 
@@ -704,6 +706,11 @@ class WindowHandler {
         // Register event handlers before loading
         this.mainwindow.on('close', async  (e) => {   // ask before closing
             if (!this.config.development && !this.mainwindow.allowexit) {  // allowexit ist ein override vom context menu oder screenshot test. dieser kann die app schliessen
+                if (platformDispatcher.runningInCage) {
+                    e.preventDefault();
+                    await this.showCageExitWarning();
+                    return;
+                }
                 if (this.multicastClient.clientinfo.token){
                     const allowTray = !platformDispatcher._isGNOME(); // GNOME has no legacy tray
                     if (!allowTray) { 
@@ -716,6 +723,7 @@ class WindowHandler {
                     await this.showMinimizeWarning()
                     log.warn(`windowhandler @ createMainWindow: Minimizing Next-Exam to Systemtray`)  
                     this.mainwindow.hide();
+                    return;
                 }
             }
         });
@@ -747,6 +755,52 @@ class WindowHandler {
 
 
 
+
+
+
+
+
+    async showExitWarning(message){
+        this.exitWarningOpen = true
+        this.mainwindow.allowexit = true
+        try {
+            await dialog.showMessageBox(this.mainwindow, {
+                type: 'warning',
+                buttons: ['Ok'],
+                title: 'Programm Beenden',
+                message: message,
+                cancelId: 1
+            });
+            app.quit()
+        } finally {
+            this.exitWarningOpen = false
+        }
+    }
+
+    // Block window close in cage/kiosk until user confirms they cannot continue without re-login.
+    async showCageExitWarning() {
+        if (this.cageExitWarningOpen) return;
+        this.cageExitWarningOpen = true;
+        const t = (k) => i18n.global.t(k);
+        const isWin = platformDispatcher.platform === 'win32';
+        try {
+            const choice = await dialog.showMessageBox(this.mainwindow, {
+                type: 'warning',
+                buttons: [t('student.cageExit'), t('dashboard.cancel')],
+                defaultId: 1,
+                cancelId: 1,
+                title: t('student.cageExitWarnTitle'),
+                message: t('student.cageExitWarnTitle'),
+                detail: t(isWin ? 'student.cageExitWarnWindows' : 'student.cageExitWarnLinux').replace(/<[^>]+>/g, ''),
+            });
+            if (choice.response === 0) {
+                this.mainwindow.allowexit = true;
+                app.quit();
+            }
+        } finally {
+            this.cageExitWarningOpen = false;
+        }
+    }
 
     async showExitQuestion(){
         if (this.exitQuestionOpen) {
@@ -795,36 +849,8 @@ class WindowHandler {
      * Additional Functions
      */
 
-    // this function uses active-win to receive name and url from active window - yet another way to figure out if the focus is still on nextexam
-    // this is used to introduce exemptions for the blur listener
-    // (downgraded from get-windows because of napi v9 issue) https://github.com/sindresorhus/get-windows/issues/186
-    async windowTracker(){
-        try{
-            // const getwin = await this.getActiveWindow();
-            const activeWin = await activeWindow()
-         
-            if (activeWin && activeWin.owner && activeWin.owner.name) {
-                let name = activeWin.owner.name
-                let wpath = activeWin.owner.path
-                let nameLower = name.toLowerCase()
-                let wpathLower = wpath.toLowerCase()
-
-                if (nameLower.includes("exam") || nameLower.includes("next")  || nameLower.includes("electron") ||  wpathLower.includes("easeofaccessdialog") ||  wpathLower.includes("disable-shortcuts") ){  
-                    // fokus is on allowed window instance
-                    this.focusTargetAllowed = true
-                }
-                else { //focus is not on next-exam or any other allowed window
-                    if (this.focusTargetAllowed){  //log just once
-                        log.warn(`windowhandler @ windowTracker: focus lost event was triggered. app: ${wpath} - ${name} `)
-                    }
-                    this.multicastClient.clientinfo.focus = false
-                    this.focusTargetAllowed = false
-                }
-            }
-        }
-        catch(err){
-            log.error(`windowhandler @ windowTracker: ${err}`) 
-        }
+    isWayland(){
+        return process.env.XDG_SESSION_TYPE === 'wayland'; 
     }
 
     //adds blur listener when entering exammode   // blur event isnt fired on macos MISSIONCONTROL (which cant be deactivated anymore) - damn you apple!
@@ -859,27 +885,16 @@ class WindowHandler {
 
         log.info("windowhandler @ blurevent: student tried to leave exam window")
 
-        if (process.platform !== 'linux'){
-            await this.windowTracker()  //checks if new focus window is allowed
-            log.info("windowtracker check done...")
-        }
         // Clean up destroyed screenlock windows from array and check if any still exist
         winhandler.screenlockwindows = winhandler.screenlockwindows.filter(win => win && !win.isDestroyed())
         const hasActiveScreenlock = winhandler.screenlockwindows.some(win => win && !win.isDestroyed() && win.isVisible())
         // Also check clientinfo.screenlock flag as fallback in case array was cleared but windows still exist
         if (hasActiveScreenlock || winhandler.multicastClient?.clientinfo?.screenlock) { return }// do nothing if screenlockwindow stole focus // do not trigger an infinite loop between exam window and screenlock window (stealing each others focus because screenlockwindow appears above exam window and will capture a klick and therefore steal focus)
-        if (!winhandler.focusTargetAllowed){ 
-            winhandler.examwindow.moveTop();
-            winhandler.examwindow.show(); 
-            winhandler.examwindow.focus(); // still return focus to the app
-            log.warn(`windowhandler @ blurevent: blurevent was triggered but target is allowed`)
-            return
-        } 
-        
+
         winhandler.multicastClient.clientinfo.focus = false   //inform the teacher
         
         winhandler.examwindow.moveTop();
-        winhandler.examwindow.setKiosk(true);
+        platformDispatcher.applyElectronKioskMode(winhandler.examwindow);
         winhandler.examwindow.show();  
         winhandler.examwindow.focus();    // we keep focus on the window.. no matter what
 

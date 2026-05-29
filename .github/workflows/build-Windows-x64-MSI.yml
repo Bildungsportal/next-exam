@@ -9,9 +9,15 @@ on:
         default: false
   workflow_dispatch: {}
 
+# opt in to Node 24 runtime for js actions (default from 2026-06-16); pre-validate
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
+  # TEMP: entire MSI workflow disabled — remove `if: false` on job to re-enable
   build:
-    runs-on: windows-latest
+    if: false
+    runs-on: windows-2025-vs2026
     steps:
       - name: Checkout This Repository
         if: ${{ inputs.prerelease == false }}
@@ -36,7 +42,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.19.0'
+          node-version: '24.14.0'
      
      
       - name: Teacher cache dependencies
@@ -64,7 +70,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: next-exam-teacher-windows-x64-msi
-          path: ./release/**/Next-Exam-Teacher*x64.msi
+          path: ./teacher/dist/electron/Packaged/Next-Exam-Teacher*x64.msi
           retention-days: 5
           
           
@@ -93,5 +99,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: next-exam-student-windows-x64-msi
-          path: ./release/**/Next-Exam-Student*x64.msi
+          path: ./student/dist/electron/Packaged/Next-Exam-Student*x64.msi
           retention-days: 5

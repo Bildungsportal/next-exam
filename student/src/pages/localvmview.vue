@@ -84,7 +84,7 @@
         <div class="vnc-overlay" v-if="showVmOverlay">
           <div class="status-text q-mb-sm">
             <div v-if="isMissingVm">VM-Disk nicht gefunden</div>
-            <div v-else-if="isHashMismatch">SHA-256 Hash Missmatch</div>
+            <div v-else-if="isHashMismatch">{{ $t('student.localvmDiskMismatch') }}</div>
             <div v-else-if="isVerifyingHash" class="localvm-hash-verify-layout">
               <div class="localvm-hash-spinner" aria-hidden="true"></div>
               <div class="text-subtitle1">{{ vmVerifyingText }}</div>
@@ -441,8 +441,8 @@ export default {
         credentials: { password: '1234' },
         // favour smoothness over bandwidth (lokale VM)
         qualityLevel: 8,
-        compressionLevel: 1,
-        resizeSession: true,
+        compressionLevel: 0,
+        alwaysUseDotCursor: true,
         shared: true,
         viewport: true
       };
@@ -465,8 +465,10 @@ export default {
         this.onConnectError();
         return;
       }
+      this.rfb.showDotCursor = true;
       this.rfb.scaleViewport = true;
-      this.rfb.resizeSession = true;
+      // QEMU VNC rejects SetDesktopSize; scale viewport locally instead of resizeSession.
+      this.rfb.resizeSession = false;
       this.rfb.clipViewport = false;
 
       this.rfb.addEventListener('connect', () => {
@@ -661,6 +663,10 @@ export default {
   flex: 1;
   background: #000;
   overflow: hidden;
+}
+
+.vnc-container :deep(canvas) {
+  cursor: none;
 }
 
 .vnc-overlay {

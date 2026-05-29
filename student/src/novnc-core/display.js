@@ -10,6 +10,9 @@ import * as Log from './util/logging.js';
 import Base64 from "./base64.js";
 import { toSigned32bit } from './util/int.js';
 
+// Backbuffer uses getImageData on resize; avoids Chrome readback perf warning.
+const CANVAS2D_READBACK_OPTS = { willReadFrequently: true };
+
 export default class Display {
     constructor(target) {
         this._drawCtx = null;
@@ -47,7 +50,7 @@ export default class Display {
 
         // The hidden canvas, where we do the actual rendering
         this._backbuffer = document.createElement('canvas');
-        this._drawCtx = this._backbuffer.getContext('2d');
+        this._drawCtx = this._backbuffer.getContext('2d', CANVAS2D_READBACK_OPTS);
 
         this._damageBounds = { left: 0, top: 0,
                                right: this._backbuffer.width,

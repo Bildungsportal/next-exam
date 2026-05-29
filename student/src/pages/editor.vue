@@ -591,11 +591,19 @@
         </div>
         <div class="ltscrollarea">
 
-            <div style="display:flex;align-items: center; width:100%;  margin-bottom:20px;">
-                <div @click="LTcheckAllWordsAndHighlight(false);" class="btn btn-sm btn-success center"
-                     style=" display: inline-block; text-align: center;  margin-left:10px;"> {{ $t('editor.update') }}
+            <div style="display:flex;align-items: center; width:100%; margin-bottom:20px; flex-wrap:wrap; gap:6px;">
+                <button type="button" class="btn btn-sm btn-cyan" style="margin-left:10px;"
+                        @click="LTcheckAllWordsAndHighlight(false)">{{ $t('editor.update') }}</button>
+                <div v-if="ltExternalHost" class="btn-group btn-group-sm" role="group"
+                     :aria-label="$t('editor.ltEndpointGroup')">
+                    <button type="button" class="btn"
+                            :class="!ltUseExternal ? 'btn-teal' : 'btn-outline-secondary'"
+                            @click="toggleLtEndpoint(false)">{{ $t('editor.ltLocal') }}</button>
+                    <button type="button" class="btn"
+                            :class="ltUseExternal ? 'btn-teal' : 'btn-outline-secondary'"
+                            @click="toggleLtEndpoint(true)">{{ $t('editor.ltExternal') }}</button>
                 </div>
-                <div class="" style=" width:100%;display: inline-block; text-align:right;  "
+                <div class="" style="flex:1; text-align:right;"
                      @click="LTresetIgnorelist();LTcheckAllWordsAndHighlight(false);" title="Clear ignore list">
                     <span v-if="ignoreList.size > 0" class="text-mini"> ({{ ignoreList.size }}) ignored</span>
                     <img class="white" width=20 height=20 src="/src/assets/img/svg/edit-delete.svg"
@@ -616,7 +624,7 @@
                 {{ this.LTinfo }}
             </div>
 
-            <div v-if="spellcheckFallback"
+            <div v-if="spellcheckFallback && !ltUseExternal"
                  style="text-align: left; font-size: 0.8em;margin-left:10px; display:flex; align-items:center; gap:8px;">
                 <button type="button" class="btn btn-sm btn-outline-secondary" @click="retryLanguageToolStart"
                         :disabled="ltStartInProgress">
@@ -789,6 +797,7 @@ import {
     applyServerstatusFromFetch,
     resolveLockedSection,
 } from '../utils/examFetchInfoSync.js'
+import { resolveEditorExamConfig, DEFAULT_EDITOR_EXAM_CONFIG } from 'next-exam-shared/editorExamConfig.js'
 import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
 import {ref} from "vue";
 import {useConfigStore} from "../stores/configStore.ts";
@@ -836,11 +845,8 @@ export default {
       let wlanInfo = ref(infoStore.wlanInfo);
       let entrytime = ref(infoStore.entryTime);
       let componentName = ref(infoStore.componentName);
-      let cmargin = ref(infoStore.cmargin);
 
-      cmargin = cmargin ? cmargin : {side: 'right', size: 3};
-
-      return { development, serverApiPort, electron, hostip,
+       return { development, serverApiPort, electron, hostip,
         examtype, servername, serverip, token, clientname, serverstatus, pincode, localLockdown, online, battery, wlanInfo, entrytime, componentName, cmargin};
     },
 
@@ -857,7 +863,12 @@ export default {
                 activeSection = examSections[activeSectionIndex] || {};
             }
         }
-        const initialEditorCfg = activeSection?.groupA?.examConfig?.editor || {};
+        const initialEditorCfg = resolveEditorExamConfig(activeSection, 'groupA');
+        const ltExternalHost = initialEditorCfg.languagetoolhost || null;
+        const ltExternalPort = String(initialEditorCfg.languagetoolport || '8088');
+        const ltLocalHost = 'http://127.0.0.1';
+        const ltLocalPort = '8088';
+        const ltUseExternal = !!ltExternalHost;
 
         return {
             index: 0,
@@ -878,15 +889,16 @@ export default {
             zoom: EDITOR_ZOOM_INITIAL,
             proseMirrorMargin: '30mm',
             editorWidth: '210mm',
+            cmargin: { ...(initialEditorCfg.cmargin || DEFAULT_EDITOR_EXAM_CONFIG.cmargin) },
             selectedWordCount: 0,
             selectedCharCount: 0,
             currentRange: 0,
             word: "",
             editorcontentcontainer: null,
             editorContent: null,
-            linespacing: activeSection.linespacing || '2',
-            fontfamily: activeSection.fontfamily || "sans",
-            fontsize: activeSection.fontsize || '12pt',
+            linespacing: String(initialEditorCfg.linespacing ?? DEFAULT_EDITOR_EXAM_CONFIG.linespacing),
+            fontfamily: initialEditorCfg.fontfamily || DEFAULT_EDITOR_EXAM_CONFIG.fontfamily,
+            fontsize: initialEditorCfg.fontsize || DEFAULT_EDITOR_EXAM_CONFIG.fontsize,
             privateSpellcheck: {activate: false, activated: false, suggestions: false}, // this is a per student override (for students with legasthenie)
             individualSpellcheckActivated: false,
             audioSource: null,
@@ -920,8 +932,13 @@ export default {
             allowedUrls: [],
             lockedSection: 1,
             internetCheckCounter:0,
-            LThost: initialEditorCfg.languagetoolhost || "http://127.0.0.1",
-            LTport: initialEditorCfg.languagetoolport || "8088",
+            ltExternalHost,
+            ltExternalPort,
+            ltUseExternal,
+            ltLocalHost,
+            ltLocalPort,
+            LThost: ltUseExternal ? ltExternalHost : ltLocalHost,
+            LTport: ltUseExternal ? ltExternalPort : ltLocalPort,
             ltLanguage: initialEditorCfg.spellchecklang || "de-DE",
             clipboardHistory: [],
             showClipboardSidebar: false,
@@ -1025,8 +1042,8 @@ export default {
                         ? (this.clientinfo?.lockedSection ?? this.lockedSection ?? status.activeSection ?? 0)
                         : (status.lockedSection ?? status.activeSection ?? 0)));
             const section = status.examSections?.[sectionIndex] || status.examSections?.[1] || null;
-            const groupKey = section && section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA'
-            return section?.[groupKey]?.examConfig?.editor || {};
+            const groupKey = section && section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA';
+            return resolveEditorExamConfig(section, groupKey);
         },
 
         // Teacher-set ODT/DOCX template under examConfig.editor.editorTemplate (not materials).
@@ -1083,14 +1100,103 @@ export default {
             }
         },
 
+        // Point LThost/LTport at the student-selected local or external LT endpoint.
+        applyLtActiveEndpoint() {
+            if (this.ltUseExternal && this.ltExternalHost) {
+                this.LThost = this.ltExternalHost;
+                this.LTport = this.ltExternalPort || '8088';
+            } else {
+                this.LThost = this.ltLocalHost;
+                this.LTport = this.ltLocalPort;
+            }
+        },
+
+        async toggleLtEndpoint(useExternal) {
+            if (!this.ltExternalHost || this.ltUseExternal === !!useExternal) return;
+            this.ltUseExternal = !!useExternal;
+            this.applyLtActiveEndpoint();
+            if (this.LTactive) {
+                this.spellcheckFallback = false;
+                await this.LTcheckAllWordsAndHighlight(false);
+            }
+        },
+
         syncEditorLanguageSettings() {
             const cfg = this.getEditorExamConfig(this.lockedSection);
-            const host = cfg.languagetoolhost || 'http://127.0.0.1';
-            const port = cfg.languagetoolport || '8088';
             const lang = cfg.spellchecklang || 'de-DE';
-            if (host !== this.LThost) this.LThost = host;
-            if (port !== this.LTport) this.LTport = port;
             if (lang !== this.ltLanguage) this.ltLanguage = lang;
+
+            const extHost = cfg.languagetoolhost || null;
+            const extPort = String(cfg.languagetoolport || '8088');
+            const hadExternal = !!this.ltExternalHost;
+            this.ltExternalHost = extHost;
+            this.ltExternalPort = extPort;
+            if (extHost && !hadExternal) {
+                this.ltUseExternal = true;
+            } else if (!extHost) {
+                this.ltUseExternal = false;
+            }
+            this.applyLtActiveEndpoint();
+        },
+
+        // Apply cmargin/fonts/linespacing from examConfig.editor to layout CSS variables.
+        applyEditorLayoutCss() {
+            switch (Number(this.cmargin?.size)) {
+                case 5:
+                    this.proseMirrorMargin = '50mm';
+                    this.editorWidth = '160mm';
+                    break;
+                case 4.5:
+                    this.proseMirrorMargin = '45mm';
+                    this.editorWidth = '165mm';
+                    break;
+                case 4:
+                    this.proseMirrorMargin = '40mm';
+                    this.editorWidth = '170mm';
+                    break;
+                case 3.5:
+                    this.proseMirrorMargin = '35mm';
+                    this.editorWidth = '175mm';
+                    break;
+                case 3:
+                    this.proseMirrorMargin = '30mm';
+                    this.editorWidth = '180mm';
+                    break;
+                case 2.5:
+                    this.proseMirrorMargin = '25mm';
+                    this.editorWidth = '185mm';
+                    break;
+                case 2:
+                    this.proseMirrorMargin = '20mm';
+                    this.editorWidth = '190mm';
+                    break;
+                default:
+                    this.proseMirrorMargin = '30mm';
+                    this.editorWidth = '180mm';
+            }
+            if (this.cmargin.side === 'right') {
+                this.setCSSVariable('--js-margin', `0 ${this.proseMirrorMargin} 0 0`);
+                this.setCSSVariable('--js-borderright', `1px solid #ccc`);
+                this.setCSSVariable('--js-borderleft', `0px solid #ccc`);
+            } else {
+                this.setCSSVariable('--js-margin', `0 0 0 ${this.proseMirrorMargin}`);
+                this.setCSSVariable('--js-borderright', `0px solid #ccc`);
+                this.setCSSVariable('--js-borderleft', `1px solid #ccc`);
+            }
+            this.setCSSVariable('--js-editorWidth', `${this.editorWidth}`);
+            this.setCSSVariable('--js-linespacing', `${this.linespacing}`);
+            this.setCSSVariable('--js-fontfamily', `${this.fontfamily}`);
+            this.setCSSVariable('--js-fontsize', `${this.fontsize}`);
+        },
+
+        syncEditorVisualSettings() {
+            const cfg = this.getEditorExamConfig(this.lockedSection);
+            const cm = cfg.cmargin || DEFAULT_EDITOR_EXAM_CONFIG.cmargin;
+            this.cmargin = { side: cm.side || 'right', size: cm.size ?? 3 };
+            this.linespacing = String(cfg.linespacing ?? DEFAULT_EDITOR_EXAM_CONFIG.linespacing);
+            this.fontfamily = cfg.fontfamily || DEFAULT_EDITOR_EXAM_CONFIG.fontfamily;
+            this.fontsize = cfg.fontsize || DEFAULT_EDITOR_EXAM_CONFIG.fontsize;
+            this.applyEditorLayoutCss();
         },
 
 
@@ -1268,8 +1374,10 @@ export default {
             if (sectionIndex !== this.lockedSection) {
                 this.lockedSection = sectionIndex;
                 this.syncEditorLanguageSettings();
+                this.syncEditorVisualSettings();
             } else if (serverstatusChanged) {
                 this.syncEditorLanguageSettings();
+                this.syncEditorVisualSettings();
             }
 
             // console.log(this.serverstatus)
@@ -1575,7 +1683,7 @@ export default {
                     if (!existingaudiofile) {
                         this.audiofiles.push({
                             name: file.name,
-                            playbacks: this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat
+                            playbacks: Number(this.getEditorExamConfig(this.lockedSection).audioRepeat) || 0
                         })
                     }
                 }
@@ -1702,10 +1810,23 @@ export default {
         },
 
 
+        // Maps getPDFbase64 IPC error payloads to a localized Swal title.
+        showPdfGenerationError(response) {
+            const msg = typeof response?.message === 'string' ? response.message : ''
+            let title = this.$t('editor.pdfGenerationFailed')
+            if (msg.includes('timeout') || msg.includes('in progress')) {
+                title = this.$t('editor.pdfBusyTimeout')
+            } else if (msg.toLowerCase().includes('signing failed')) {
+                title = this.$t('editor.pdfSigningFailed')
+            }
+            this.$swal.fire({ title, icon: 'error' })
+        },
+
         // send direct print request to teacher and append current document as base64
         async printBase64(printrequest = false, saveReason = 'n/a') {
             if (!this.currentpreviewBase64) {
                 console.warn('editor @ printBase64: No PDF available to send')
+                this.$swal.fire({ title: this.$t('editor.noPdfToSend'), icon: 'error' })
                 return
             }
 
@@ -1754,6 +1875,7 @@ export default {
             })
             .catch(error => {
                 console.log("editor @ printbase64:", error.message)
+                this.$swal.fire({ title: this.$t('editor.submissionNetworkFailed'), icon: 'error' })
             });
 
         },
@@ -1771,6 +1893,7 @@ export default {
                 const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'print' })
                 if (response?.status !== 'success') {
                     console.log("editor @ sendExamToTeacher: Error sending exam to teacher")
+                    this.showPdfGenerationError(response)
                     return
                 }
                 this.currentpreviewBase64 = response.base64pdf
@@ -1791,6 +1914,7 @@ export default {
             }
             if (response?.status !== 'success') {
                 console.log("editor @ sendExamToTeacher: Error sending exam to teacher")
+                this.showPdfGenerationError(response)
                 return
             }
             this.currentpreviewBase64 = response.base64pdf
@@ -2404,57 +2528,7 @@ export default {
 
         // Detect platform using navigator.platform (available in renderer process)
         this.isMac = navigator.platform.toLowerCase().includes('mac');
-
-        switch (this.cmargin.size) {
-            case 5:
-                this.proseMirrorMargin = '50mm';
-                this.editorWidth = '160mm';
-                break;
-            case 4.5:
-                this.proseMirrorMargin = '45mm';
-                this.editorWidth = '165mm';
-                break;
-            case 4:
-                this.proseMirrorMargin = '40mm';
-                this.editorWidth = '170mm';
-                break;
-            case 3.5:
-                this.proseMirrorMargin = '35mm';
-                this.editorWidth = '175mm';
-                break;
-            case 3:
-                this.proseMirrorMargin = '30mm';
-                this.editorWidth = '180mm';
-                break;
-            case 2.5:
-                this.proseMirrorMargin = '25mm';
-                this.editorWidth = '185mm';
-                break;
-            case 2:
-                this.proseMirrorMargin = '20mm';
-                this.editorWidth = '190mm';
-                break;
-            default:
-                this.proseMirrorMargin = '30mm';
-                this.editorWidth = '180mm';
-        }
-        if (this.cmargin.side === "right") {
-            this.setCSSVariable('--js-margin', `0 ${this.proseMirrorMargin} 0 0`);
-            this.setCSSVariable('--js-borderright', `1px solid #ccc`);
-            this.setCSSVariable('--js-borderleft', `0px solid #ccc`);
-        } else {
-            this.setCSSVariable('--js-margin', `0 0 0 ${this.proseMirrorMargin}`);
-            this.setCSSVariable('--js-borderright', `0px solid #ccc`);
-            this.setCSSVariable('--js-borderleft', `1px solid #ccc`);
-        }
-
-        this.setCSSVariable('--js-editorWidth', `${this.editorWidth}`);
-        this.setCSSVariable('--js-linespacing', `${this.linespacing}`);
-        this.setCSSVariable('--js-fontfamily', `${this.fontfamily}`);
-        this.setCSSVariable('--js-fontsize', `${this.fontsize}`);
-
-
-        console.log(`editor @ mounted: Component mounted, initializing editor`)
+        this.applyEditorLayoutCss();
         this.createEditor(); // this initializes the editor
         this.getExamMaterials()
         setTimeout(() => {

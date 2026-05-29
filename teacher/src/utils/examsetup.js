@@ -1,6 +1,12 @@
 
 import CryptoJS from 'crypto-js';
-import { buildQemuMissingWarningHtml } from 'next-exam-shared/qemuMissingWarningHtml.js';
+import log from 'electron-log/renderer';
+import { ensureQemuAvailableForLocalVmUi, showLocalVmQemuIssueDialog } from 'next-exam-shared/qemuLocalVmDialogs.js';
+import { DEFAULT_LOCAL_VM_DISPLAY_RESOLUTION,
+    LOCAL_VM_DISPLAY_RESOLUTIONS,
+    resolveLocalVmDisplayResolution,
+} from 'next-exam-shared/localVmDisplayResolutions.js';
+import { DEFAULT_EDITOR_EXAM_CONFIG } from 'next-exam-shared/editorExamConfig.js';
 
 function ensureGroupsAndExamConfig(section) {
     const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
@@ -12,8 +18,12 @@ function ensureGroupsAndExamConfig(section) {
 
 function ensureEditorExamConfig(section) {
     const { groupA, groupB } = ensureGroupsAndExamConfig(section);
-    if (!groupA.examConfig.editor) groupA.examConfig.editor = {};
-    if (!groupB.examConfig.editor) groupB.examConfig.editor = {};
+    if (!groupA.examConfig.editor || !Object.keys(groupA.examConfig.editor).length) {
+        groupA.examConfig.editor = { ...DEFAULT_EDITOR_EXAM_CONFIG };
+    }
+    if (!groupB.examConfig.editor || !Object.keys(groupB.examConfig.editor).length) {
+        groupB.examConfig.editor = { ...DEFAULT_EDITOR_EXAM_CONFIG };
+    }
     return { groupA, groupB };
 }
 
@@ -168,7 +178,7 @@ async function configureEduvidual(presetGroup) {
 
 /**
  * Forms (Google or Microsoft): configure per group (A/B) or for all (AB when groups off).
- * Stores settings in group.examConfig.gforms and removes legacy section.formsUrl.
+ * Stores settings in group.examConfig.forms (Google + Microsoft Forms).
  * @param {'a'|'b'|'all'|undefined} presetGroup
  */
 async function configureForms(presetGroup){
@@ -182,7 +192,7 @@ async function configureForms(presetGroup){
     if (!groupA.examConfig) groupA.examConfig = {};
     if (!groupB.examConfig) groupB.examConfig = {};
 
-    const currentConfig = activeGroup === 'b' ? (groupB.examConfig.gforms || {}) : (groupA.examConfig.gforms || {});
+    const currentConfig = activeGroup === 'b' ? (groupB.examConfig.forms || {}) : (groupA.examConfig.forms || {});
 
     this.$swal.fire({
         customClass: {
@@ -220,7 +230,7 @@ async function configureForms(presetGroup){
         </div>`,
         didOpen: () => {
             const el = document.getElementsByClassName('my-custom-input')[0];
-            if (el) el.value = currentConfig.url || this.serverstatus.examSections[this.serverstatus.activeSection]?.formsUrl || '';
+            if (el) el.value = currentConfig.url || '';
         },
         inputValidator: (value) => {
             if (!value) {return this.$t("dashboard.moodleInvalidId")}
@@ -245,15 +255,13 @@ async function configureForms(presetGroup){
             const nextConfig = { url, provider };
 
             if (!hasGroups) {
-                groupA.examConfig.gforms = nextConfig;
-                groupB.examConfig.gforms = nextConfig;
+                groupA.examConfig.forms = nextConfig;
+                groupB.examConfig.forms = nextConfig;
             } else if (activeGroup === 'b') {
-                groupB.examConfig.gforms = nextConfig;
+                groupB.examConfig.forms = nextConfig;
             } else {
-                groupA.examConfig.gforms = nextConfig;
+                groupA.examConfig.forms = nextConfig;
             }
-
-            if (Object.prototype.hasOwnProperty.call(section, 'formsUrl')) delete section.formsUrl;
             this.backupinterval.stop();
             this.autobackup = false;
         }
@@ -501,7 +509,6 @@ async function configureMicrosoft365Template(presetGroup) {
         groupA.examConfig.microsoft365.template = template;
     }
 
-    if (Object.prototype.hasOwnProperty.call(section, 'msOfficeFile')) delete section.msOfficeFile;
     this.setServerStatus();
 }
 
@@ -650,7 +657,7 @@ function removeFormsUrl(group) {
     if (!section) return;
     const clearCfg = (g) => {
         if (!g || !g.examConfig) return;
-        g.examConfig.gforms = {};
+        g.examConfig.forms = {};
     };
     if (!section.groups || group === 'all') {
         clearCfg(section.groupA);
@@ -802,38 +809,288 @@ async function configureRDP(presetGroup){
 }
 
 
-/** Swal when qemu-system-x86_64 / qemu-img are not on PATH (LocalVM). */
-async function showQemuMissingWarning(vm) {
-    await vm.$swal.fire({
-        icon: 'warning',
-        title: vm.$t('dashboard.qemuMissingTitle'),
-        html: buildQemuMissingWarningHtml(vm.$t('dashboard.qemuMissingText')),
-        confirmButtonText: vm.$t('dashboard.qemuMissingConfirm'),
+/** IPC probe; false when QEMU / Hypervisor missing (shared swal + actions). */
+async function ensureQemuAvailableForLocalVm(vm) {
+    if (!window.ipcRenderer) {
+        return false;
+    }
+    return ensureQemuAvailableForLocalVmUi({
+        swal: vm.$swal,
+        t: vm.$t.bind(vm),
+        invoke: (channel, ...args) => window.ipcRenderer.invoke(channel, ...args),
+        i18nPrefix: 'dashboard',
+        cancelKey: 'cancel',
     });
 }
 
-/** IPC probe; false when QEMU missing (warning already shown). */
-async function ensureQemuAvailableForLocalVm(vm) {
-    const ipc = window.ipcRenderer;
-    if (!ipc) {
-        return false;
-    }
-    try {
-        const res = await ipc.invoke('qemu-check-available');
-        if (res?.ok) {
-            return true;
+function showQemuMissingWarning(vm, check = {}) {
+    return showLocalVmQemuIssueDialog({
+        swal: vm.$swal,
+        t: vm.$t.bind(vm),
+        invoke: (channel, ...args) => window.ipcRenderer?.invoke?.(channel, ...args),
+        i18nPrefix: 'dashboard',
+        check,
+        cancelKey: 'cancel',
+    });
+}
+
+/** Escape text for Swal HTML fragments built from i18n strings. */
+function escapeSwalHtmlText(text) {
+    return String(text ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/"/g, '&quot;');
+}
+
+/** Mutable base disk vs immutable overlay — null when cancelled. */
+async function promptLocalVmBootMode(vm, diskName) {
+    const vmName = String(diskName || '').trim() || 'VM';
+    const t = (key) => escapeSwalHtmlText(vm.$t(`dashboard.${key}`));
+    const html = `<div style="text-align:left; font-size:0.95em;">
+        <div style="padding:10px; border:1px solid rgba(32,201,151,0.55); border-radius:8px; margin-bottom:10px;">
+            <div style="font-weight:700; color:#20c997;">${t('localvmBootImmutableBtn')}</div>
+            <div style="color:#6c757d; margin-top:4px;">${t('localvmBootImmutableDesc')}</div>
+        </div>
+        <div style="padding:10px; border:1px solid rgba(255,193,7,0.35); border-radius:8px;">
+            <div style="font-weight:700; color:#ffc107;">${t('localvmBootMutableBtn')}</div>
+            <div style="color:#6c757d; margin-top:4px;">${t('localvmBootMutableDesc')}</div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:14px;">
+            <button type="button" class="btn btn-teal" id="qemuBootImmutableBtn" style="flex:1;">${t('localvmBootImmutableBtn')}</button>
+            <button type="button" class="btn btn-warning" id="qemuBootMutableBtn" style="flex:1;">${t('localvmBootMutableBtn')}</button>
+        </div>
+        <div style="margin-top:8px;">
+            <button type="button" class="btn btn-cyan" id="qemuBootCancelBtn" style="width:100%;">${t('cancel')}</button>
+        </div>
+    </div>`;
+    return await new Promise((resolve) => {
+        let settled = false;
+        const finish = (mode) => {
+            if (settled) return;
+            settled = true;
+            try { vm.$swal.close(); } catch (e) {}
+            resolve(mode);
+        };
+        vm.$swal.fire({
+            customClass: {
+                popup: 'my-popup',
+                title: 'my-title',
+                content: 'my-content',
+                actions: 'd-none',
+            },
+            title: vm.$t('dashboard.localvmBootTitle', { name: vmName }),
+            icon: 'question',
+            html,
+            showConfirmButton: false,
+            showCancelButton: false,
+            showDenyButton: false,
+            allowOutsideClick: false,
+            didOpen: () => {
+                document.getElementById('qemuBootImmutableBtn')?.addEventListener('click', () => finish('immutable'));
+                document.getElementById('qemuBootMutableBtn')?.addEventListener('click', () => finish('mutable'));
+                document.getElementById('qemuBootCancelBtn')?.addEventListener('click', () => finish(null));
+            },
+        }).then(() => {
+            if (!settled) finish(null);
+        });
+    });
+}
+
+/** Boot qcow2; mode dialog then loader (reopens disk picker when presetGroup set). */
+async function bootLocalVmDisk(vm, { ipc, diskName, presetGroup = null }) {
+    const mode = await promptLocalVmBootMode(vm, diskName);
+    if (!mode) {
+        if (presetGroup != null) {
+            setTimeout(() => { configureLocalVM.call(vm, presetGroup); }, 50);
         }
-    } catch (e) {
-        console.error('examsetup @ ensureQemuAvailableForLocalVm', e);
+        return;
     }
-    await showQemuMissingWarning(vm);
-    return false;
+
+    const useOverlay = mode === 'immutable';
+    log.info(`examsetup @ bootLocalVmDisk: start disk=${diskName} mode=${mode}`);
+
+    try {
+        vm.$swal.fire({
+            title: vm.$t('dashboard.localvmTitle'),
+            text: useOverlay ? vm.$t('dashboard.localvmBootStartingImmutable') : vm.$t('dashboard.localvmBootStartingMutable'),
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => { vm.$swal.showLoading(); },
+        });
+    } catch (e) {}
+
+    try {
+        const bootRes = await ipc.invoke('qemu-boot-disk', { qcow2Name: diskName, useOverlay });
+        try { vm.$swal.close(); } catch (e) {}
+        if (bootRes?.qemuMissing) {
+            await showQemuMissingWarning(vm, bootRes);
+            return;
+        }
+        if (!bootRes?.ok) {
+            await vm.$swal.fire({
+                icon: 'error',
+                title: vm.$t('dashboard.localvmTitle'),
+                text: bootRes?.error || vm.$t('dashboard.localvmBootError'),
+            });
+            return;
+        }
+        await vm.$swal.fire({
+            icon: 'success',
+            title: vm.$t('dashboard.localvmTitle'),
+            text: useOverlay ? vm.$t('dashboard.localvmBootSuccessImmutable') : vm.$t('dashboard.localvmBootSuccessMutable'),
+            timer: 2800,
+            showConfirmButton: false,
+        });
+        log.info('examsetup @ bootLocalVmDisk: ok');
+    } catch (e) {
+        try { vm.$swal.close(); } catch (err) {}
+        log.error('examsetup @ bootLocalVmDisk', e);
+        await vm.$swal.fire({
+            icon: 'error',
+            title: vm.$t('dashboard.localvmTitle'),
+            text: String(e?.message || e),
+        });
+    } finally {
+        if (presetGroup != null) {
+            setTimeout(() => { configureLocalVM.call(vm, presetGroup); }, 50);
+        }
+    }
+}
+
+function buildQemuDiskRowsHtml(disks, selectedDisk) {
+    return (disks || []).map((d) => {
+        const raw = String(d);
+        const safeLabel = raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        const encoded = encodeURIComponent(raw);
+        const isActive = raw === selectedDisk;
+        return `<div class="qemu-row" style="display:flex; align-items:center; gap:8px; margin:6px 0;">
+            <button
+                type="button"
+                class="btn btn-sm ${isActive ? 'btn-teal' : 'btn-outline-secondary'} qemu-select"
+                data-qemu-select="${encoded}"
+                title="${safeLabel}"
+                style="flex:1; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
+            >
+                ${safeLabel}
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-qemu-boot="${encoded}">Boot</button>
+        </div>`;
+    }).join('');
+}
+
+/** List qcow2 names; short retry helps Windows right after copy/link. */
+async function listQemuDisksWithRetry(ipc) {
+    const attempts = 4;
+    for (let i = 0; i < attempts; i += 1) {
+        log.info(`examsetup @ listQemuDisksWithRetry: attempt ${i + 1}/${attempts}`);
+        try {
+            const disks = await ipc.invoke('qemu-list-disks');
+            if (Array.isArray(disks) && disks.length > 0) {
+                log.info(`examsetup @ listQemuDisksWithRetry: found ${disks.length} disk(s)`);
+                return disks;
+            }
+        } catch (e) {
+            log.warn(`examsetup @ listQemuDisksWithRetry: failed (${e?.message || e})`);
+        }
+        if (i < attempts - 1) {
+            await new Promise((resolve) => { setTimeout(resolve, 200); });
+        }
+    }
+    log.warn('examsetup @ listQemuDisksWithRetry: no disks after retries');
+    return [];
+}
+
+/** File picker + import IPC; refresh disk list in open LocalVM Swal. */
+async function pickImportAndRefreshQemuDiskList(ipc, { statusEl, listEl, labelEl, setSelectedDisk } = {}) {
+    const setStatus = (msg) => {
+        try {
+            if (statusEl) statusEl.textContent = msg ?? '';
+        } catch (e) {}
+    };
+    log.info('examsetup @ pickImport: opening file picker…');
+    setStatus('Öffne Dateiauswahl…');
+    let pick;
+    try {
+        pick = await ipc.invoke('qemu-pick-disk-file');
+    } catch (e) {
+        log.error('examsetup @ pickImport: pick failed', e);
+        setStatus(String(e?.message || e));
+        return null;
+    }
+    if (pick?.cancelled) {
+        log.info('examsetup @ pickImport: cancelled');
+        setStatus('');
+        return null;
+    }
+    if (!pick?.ok || !pick.sourcePath) {
+        log.warn(`examsetup @ pickImport: pick error ${pick?.error || 'unknown'}`);
+        setStatus(pick?.error ? String(pick.error) : 'Dateiauswahl fehlgeschlagen.');
+        return null;
+    }
+    log.info(`examsetup @ pickImport: selected ${pick.sourcePath}`);
+    setStatus('Kopiere qcow2… 0%');
+    let onImportProgress = null;
+    try {
+        onImportProgress = (_event, payload) => {
+            const phase = payload?.phase || '';
+            const pct = typeof payload?.percent === 'number' ? payload.percent : null;
+            if (phase === 'skip') {
+                setStatus('Bereits im QEMU-Ordner.');
+                return;
+            }
+            if (phase === 'linked') {
+                setStatus('Verknüpft (kein Kopieren nötig).');
+                return;
+            }
+            if (pct != null) {
+                setStatus(`Kopiere qcow2… ${pct}%`);
+            }
+        };
+        ipc.removeAllListeners?.('qemu-import-progress');
+        ipc.on?.('qemu-import-progress', onImportProgress);
+    } catch (e) {}
+    let importRes;
+    try {
+        importRes = await ipc.invoke('qemu-import-disk', { sourcePath: pick.sourcePath });
+    } catch (e) {
+        log.error('examsetup @ pickImport: import failed', e);
+        setStatus(String(e?.message || e));
+        return null;
+    } finally {
+        try {
+            if (onImportProgress) {
+                ipc.removeListener?.('qemu-import-progress', onImportProgress);
+            }
+        } catch (e) {}
+    }
+    if (!importRes?.ok || !importRes?.filename) {
+        log.warn(`examsetup @ pickImport: import error ${importRes?.error || 'unknown'}`);
+        setStatus(importRes?.error ? String(importRes.error) : 'Import fehlgeschlagen.');
+        return null;
+    }
+    log.info(`examsetup @ pickImport: import ok filename=${importRes.filename} skipped=${!!importRes.skipped} linked=${!!importRes.linked}`);
+    setStatus('Aktualisiere Liste…');
+    const disks = await listQemuDisksWithRetry(ipc);
+    if (!disks.length) {
+        setStatus('Import fertig, aber qcow2 nicht in QEMU-Ordner sichtbar.');
+        return null;
+    }
+    const selected = disks.includes(importRes.filename) ? importRes.filename : disks[0];
+    if (listEl) {
+        listEl.innerHTML = buildQemuDiskRowsHtml(disks, selected) || '<div class="text-muted">Keine Disks gefunden.</div>';
+    }
+    if (labelEl) labelEl.textContent = selected;
+    if (setSelectedDisk) setSelectedDisk(selected);
+    setStatus(importRes.skipped ? 'Bereits im QEMU-Ordner.' : '');
+    log.info(`examsetup @ pickImport: UI refreshed selected=${selected}`);
+    return { selected, disks };
 }
 
 /**
  * LocalVM (QEMU qcow2 selection in workdir/EXAM-TEACHER/QEMU)
  */
 async function configureLocalVM(presetGroup){
+    log.info(`examsetup @ configureLocalVM: start presetGroup=${presetGroup}`);
     const ipc = window.ipcRenderer;
     if (!ipc) {
         this.$swal.fire({
@@ -841,10 +1098,6 @@ async function configureLocalVM(presetGroup){
             title: 'LocalVM',
             text: 'Local QEMU integration is not available in this environment.'
         });
-        return;
-    }
-
-    if (!(await ensureQemuAvailableForLocalVm(this))) {
         return;
     }
 
@@ -862,13 +1115,15 @@ async function configureLocalVM(presetGroup){
     let disks = [];
     try {
         disks = await ipc.invoke('qemu-list-disks');
+        log.info(`examsetup @ configureLocalVM: list-disks count=${Array.isArray(disks) ? disks.length : 0}`);
     } catch (error) {
-        console.error('examsetup @ configureLocalVM: qemu-list-disks failed', error);
+        log.error('examsetup @ configureLocalVM: qemu-list-disks failed', error);
         disks = [];
     }
 
     let preferredDisk = null;
     if (!Array.isArray(disks) || disks.length === 0) {
+        log.info('examsetup @ configureLocalVM: no disks → empty dialog');
         const firstHtml = `<div style="text-align:left;">
             <div><b>Keine QEMU-VM gefunden</b> im Workdirectory unter <code>EXAM-TEACHER/QEMU</code>.</div>
             <div style="margin-top:8px;">Du kannst jetzt eine VM <b>vollautomatisch installieren</b> (inkl. Download der ISOs). Das kann <b>~10 Minuten</b> dauern.</div>
@@ -900,29 +1155,19 @@ async function configureLocalVM(presetGroup){
                 const installBtn = document.getElementById('qemuInstallBtn');
 
                 browseBtn?.addEventListener('click', async () => {
-                    try {
-                        if (statusEl) statusEl.textContent = 'Öffne Dateiauswahl…';
-                    } catch (e) {}
-                    try {
-                        const importRes = await ipc.invoke('qemu-pick-import-disk');
-                        if (importRes && importRes.ok && importRes.filename) {
-                            preferredDisk = importRes.filename;
-                        }
-                    } catch (e) {}
-                    try {
-                        disks = await ipc.invoke('qemu-list-disks');
-                    } catch (e) {
-                        disks = [];
-                    }
-                    if (!Array.isArray(disks) || disks.length === 0) {
-                        if (statusEl) statusEl.textContent = 'Keine qcow2 Disk gefunden.';
-                        return;
-                    }
+                    log.info('examsetup @ configureLocalVM: browse (empty dialog)');
+                    const res = await pickImportAndRefreshQemuDiskList(ipc, { statusEl });
+                    if (!res) return;
+                    preferredDisk = res.selected;
+                    log.info(`examsetup @ configureLocalVM: reopening disk picker preferred=${preferredDisk}`);
                     try { this.$swal.close(); } catch (e) {}
                     setTimeout(() => { configureLocalVM.call(this, presetGroup); }, 50);
                 });
 
                 installBtn?.addEventListener('click', async () => {
+                    if (!(await ensureQemuAvailableForLocalVm(this))) {
+                        return;
+                    }
                     let onProgress = null;
                     try {
                         if (statusEl) statusEl.textContent = 'Starte VM-Build…';
@@ -965,7 +1210,7 @@ async function configureLocalVM(presetGroup){
                     try {
                         const res = await ipc.invoke('qemu-install-default');
                         if (res?.qemuMissing) {
-                            await showQemuMissingWarning(this);
+                            await showQemuMissingWarning(this, res);
                             return;
                         }
                         if (!res || res.ok !== true) {
@@ -1016,30 +1261,23 @@ async function configureLocalVM(presetGroup){
         activeGroup === 'b'
             ? (groupB.examConfig.localvm.calculateSha256 === true)
             : (groupA.examConfig.localvm.calculateSha256 === true);
+    const currentDisplayResolution =
+        activeGroup === 'b'
+            ? (groupB.examConfig.localvm.displayResolution || DEFAULT_LOCAL_VM_DISPLAY_RESOLUTION)
+            : (groupA.examConfig.localvm.displayResolution || DEFAULT_LOCAL_VM_DISPLAY_RESOLUTION);
+    const resolvedDisplay = resolveLocalVmDisplayResolution(currentDisplayResolution);
+    const resolutionOptionsHtml = LOCAL_VM_DISPLAY_RESOLUTIONS.map((r) => {
+        const selected = r.id === resolvedDisplay.id ? ' selected' : '';
+        const label = this.$t(`dashboard.localvmRes${r.id}`);
+        return `<option value="${r.id}"${selected}>${label}</option>`;
+    }).join('');
 
     let selectedDisk =
         preferredDisk && disks.includes(preferredDisk)
             ? preferredDisk
             : (currentDisk && disks.includes(currentDisk) ? currentDisk : (disks[0] || ''));
 
-    const rowsHtml = disks.map((d) => {
-        const raw = String(d);
-        const safeLabel = raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-        const encoded = encodeURIComponent(raw);
-        const isActive = raw === selectedDisk;
-        return `<div class="qemu-row" style="display:flex; align-items:center; gap:8px; margin:6px 0;">
-            <button
-                type="button"
-                class="btn btn-sm ${isActive ? 'btn-teal' : 'btn-outline-secondary'} qemu-select"
-                data-qemu-select="${encoded}"
-                title="${safeLabel}"
-                style="flex:1; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
-            >
-                ${safeLabel}
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-qemu-boot="${encoded}">Boot</button>
-        </div>`;
-    }).join('');
+    const rowsHtml = buildQemuDiskRowsHtml(disks, selectedDisk);
 
     const html = `<div class="my-content" style="text-align:left; padding:0px!important;">
         <div style="padding:0px; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(255,255,255,0.03);">
@@ -1053,6 +1291,15 @@ async function configureLocalVM(presetGroup){
             <div style="margin-top:10px;" id="qemuDiskList">
                 ${rowsHtml || '<div class="text-muted">Keine Disks gefunden.</div>'}
             </div>
+        </div>
+
+        <div style="margin:4px 0; height:1px; background:rgba(255,255,255,0.08);"></div>
+
+        <div style="padding:0; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(255,255,255,0.03);">
+            <div style="font-weight:700; margin-bottom:8px;">${this.$t('dashboard.localvmDisplayResolutionLabel')}</div>
+            <select id="qemuDisplayResolution" class="form-select form-select-sm" style="max-width:320px;">
+                ${resolutionOptionsHtml}
+            </select>
         </div>
 
         <div style="margin:4px 0; height:1px; background:rgba(255,255,255,0.08);"></div>
@@ -1109,6 +1356,9 @@ async function configureLocalVM(presetGroup){
         preConfirm: async () => {
             const blockInternet = !!document.getElementById('qemuBlockInternet')?.checked;
             const calculateSha256 = !!document.getElementById('qemuCalculateSha256')?.checked;
+            const displayResolution = resolveLocalVmDisplayResolution(
+                document.getElementById('qemuDisplayResolution')?.value
+            ).id;
             try {
                 const statusEl = document.getElementById('qemuHashStatus');
                 if (statusEl) statusEl.textContent = calculateSha256 ? 'Berechne SHA-256…' : 'Prüfe Dateigröße…';
@@ -1136,7 +1386,7 @@ async function configureLocalVM(presetGroup){
                 return 'Konnte Dateigröße der qcow2 Disk nicht ermitteln.';
             }
             if (!calculateSha256) {
-                return { selectedDisk, sha256: null, sizeBytes, blockInternet, calculateSha256: false };
+                return { selectedDisk, sha256: null, sizeBytes, blockInternet, calculateSha256: false, displayResolution };
             }
             try {
                 const hashRes = await ipc.invoke('qemu-hash-disk', { qcow2Name: selectedDisk });
@@ -1144,7 +1394,7 @@ async function configureLocalVM(presetGroup){
                 if (!sha256) {
                     return 'Konnte SHA-256 Hash der qcow2 Disk nicht berechnen.';
                 }
-                return { selectedDisk, sha256, sizeBytes, blockInternet, calculateSha256: true };
+                return { selectedDisk, sha256, sizeBytes, blockInternet, calculateSha256: true, displayResolution };
             } catch (e) {
                 return 'Konnte SHA-256 Hash der qcow2 Disk nicht berechnen.';
             }
@@ -1175,84 +1425,26 @@ async function configureLocalVM(presetGroup){
                 const enc = btn.getAttribute('data-qemu-boot');
                 const diskName = enc ? decodeURIComponent(enc) : '';
                 if (!diskName) return;
-                try {
-                    const bootRes = await ipc.invoke('qemu-boot-disk', { qcow2Name: diskName });
-                    if (bootRes?.qemuMissing) {
-                        await showQemuMissingWarning(this);
-                        return;
-                    }
-                    if (!bootRes?.ok) {
-                        await this.$swal.fire({
-                            icon: 'error',
-                            title: 'LocalVM',
-                            text: bootRes?.error || 'QEMU konnte nicht gestartet werden.',
-                        });
-                        return;
-                    }
-                } catch (e) {
-                    await this.$swal.fire({
-                        icon: 'error',
-                        title: 'LocalVM',
-                        text: String(e?.message || e),
-                    });
-                }
+                await bootLocalVmDisk(this, { ipc, diskName, presetGroup });
             });
             const browseBtn = document.getElementById('qemuBrowseBtn');
             browseBtn?.addEventListener('click', async () => {
-                let imported = null;
                 const statusEl = document.getElementById('qemuHashStatus');
-                if (statusEl) statusEl.textContent = 'Importiere qcow2…';
-                try {
-                    const importRes = await ipc.invoke('qemu-pick-import-disk');
-                    if (importRes && importRes.ok && importRes.filename) {
-                        imported = importRes.filename;
-                    }
-                } catch (e) {}
-                if (!imported) {
-                    if (statusEl) statusEl.textContent = '';
-                    return;
-                }
-                try {
-                    disks = await ipc.invoke('qemu-list-disks');
-                } catch (e) {
-                    disks = [];
-                }
-
-                if (!Array.isArray(disks) || disks.length === 0) {
-                    if (statusEl) statusEl.textContent = 'Import abgeschlossen, aber keine qcow2 Disk gefunden.';
-                    return;
-                }
-
-                selectedDisk = disks.includes(imported) ? imported : (disks[0] || imported);
-
                 const listEl = document.getElementById('qemuDiskList');
-                if (listEl) {
-                    const rows = disks.map((d) => {
-                        const raw = String(d);
-                        const safeLabel = raw.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-                        const encoded = encodeURIComponent(raw);
-                        const isActive = raw === selectedDisk;
-                        return `<div class="qemu-row" style="display:flex; align-items:center; gap:8px; margin:6px 0;">
-                            <button
-                                type="button"
-                                class="btn btn-sm ${isActive ? 'btn-teal' : 'btn-outline-secondary'} qemu-select"
-                                data-qemu-select="${encoded}"
-                                title="${safeLabel}"
-                                style="flex:1; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
-                            >
-                                ${safeLabel}
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-qemu-boot="${encoded}">Boot</button>
-                        </div>`;
-                    }).join('');
-                    listEl.innerHTML = rows || '<div class="text-muted">Keine Disks gefunden.</div>';
-                }
-                const label = document.getElementById('qemuSelectedLabel');
-                if (label) label.textContent = selectedDisk;
-                if (statusEl) statusEl.textContent = '';
+                const labelEl = document.getElementById('qemuSelectedLabel');
+                const res = await pickImportAndRefreshQemuDiskList(ipc, {
+                    statusEl,
+                    listEl,
+                    labelEl,
+                    setSelectedDisk: (name) => { selectedDisk = name; },
+                });
+                if (res?.disks) disks = res.disks;
             });
             const installBtn = document.getElementById('qemuInstallBtn');
             installBtn?.addEventListener('click', async () => {
+                if (!(await ensureQemuAvailableForLocalVm(this))) {
+                    return;
+                }
                 try {
                     const statusEl = document.getElementById('qemuHashStatus');
                     if (statusEl) statusEl.textContent = 'Starte VM-Build…';
@@ -1295,7 +1487,7 @@ async function configureLocalVM(presetGroup){
                 try {
                     const res = await ipc.invoke('qemu-install-default');
                     if (res?.qemuMissing) {
-                        await showQemuMissingWarning(this);
+                        await showQemuMissingWarning(this, res);
                         return;
                     }
                     if (!res || res.ok !== true) {
@@ -1341,7 +1533,16 @@ async function configureLocalVM(presetGroup){
         return;
     }
 
-    const nextCfg = { qcow2Name: finalDisk, vncPort: 5901, calculateSha256, qcow2Sha256: sha256, qcow2SizeBytes: sizeBytes, blockInternet };
+    const displayResolution = resolveLocalVmDisplayResolution(pick.value?.displayResolution).id;
+    const nextCfg = {
+        qcow2Name: finalDisk,
+        vncPort: 5901,
+        calculateSha256,
+        qcow2Sha256: sha256,
+        qcow2SizeBytes: sizeBytes,
+        blockInternet,
+        displayResolution,
+    };
     if (!hasGroups) {
         groupA.examConfig.localvm = nextCfg;
         groupB.examConfig.localvm = { ...nextCfg };
@@ -1354,414 +1555,6 @@ async function configureLocalVM(presetGroup){
 }
 
 
-/**
-* Text Editor
-*/
-async function configureEditor(){
-    const inputOptions = {
-        'de-DE': this.$t("dashboard.de"),
-        'en-GB': this.$t("dashboard.en"),
-        'en-US': this.$t("dashboard.en_us"),
-        'fr-FR': this.$t("dashboard.fr"),
-        'es-ES': this.$t("dashboard.es"),
-        'it-IT': this.$t("dashboard.it"),
-        'sl-SI': this.$t("dashboard.sl"),
-        'none':this.$t("dashboard.none"),
-    }
-
-    // holds resolved IPv4 for custom LanguageTool host while dialog is open
-    let resolvedLtIp = null;
-
-    const updateMarginValueDisplay = () => {
-        const marginValueInput = document.getElementById('marginValue');
-        const marginValueDisplay = document.getElementById('marginValueDisplay');
-        marginValueDisplay.textContent = marginValueInput.value;
-    };
-
-    const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-    const { groupA } = ensureEditorExamConfig(section);
-    const cfg = groupA.examConfig.editor || {};
-
-    const { value: language } = await this.$swal.fire({
-        customClass: {
-            popup: 'my-popup-sprachen',
-            title: 'my-title',
-            content: 'my-content',
-            input: 'my-custom-input-select',
-            actions: 'my-swal2-actions',
-           
-        },
-        title: this.$t("dashboard.texteditor"),
-        html: `
-        <div class="my-content" style="font-size: 0.8em !important; text-align:left; margin:0 12px;">
-            <div>
-                <label >
-                    <h6>${this.$t("dashboard.cmargin-value")}</h6>
-                    <input style="width:100px" type="range" id="marginValue" name="margin_value" min="2" max="5" step="0.5" value="${cfg.cmargin?.size ?? 3}" />
-                    <div style="width:32px; display: inline-block"  id="marginValueDisplay">${cfg.cmargin?.size ?? 3}</div>(cm)
-                </label>
-                <br>
-                <label>
-                    <input type="radio" name="correction_margin" value="left"  />
-                    ${this.$t("dashboard.cmargin-left")}
-                </label>
-                <label>
-                    <input type="radio" name="correction_margin" value="right" checked/>
-                    ${this.$t("dashboard.cmargin-right")}
-                </label>
-            </div>
-            <div> 
-                <h6> ${this.$t("dashboard.linespacing")}</h6>
-                <label><input type="radio" name="linespacing" value="1"/> 1</label> &nbsp;
-                <label><input type="radio" name="linespacing" value="2" checked/> 2</label> &nbsp;
-                <label><input type="radio" name="linespacing" value="3"/> 3</label> &nbsp;
-            </div>
-            <div> 
-                <h6>${this.$t("dashboard.fontfamily")}</h6>
-                <label><input type="radio" name="fontfamily" value="serif"/> serif</label> &nbsp;
-                <label><input type="radio" name="fontfamily" value="sans-serif" checked/> sans-serif</label> &nbsp;
-            </div>
-
-            <div style="margin-top:8px;">
-                <h6>${this.$t("dashboard.fontsize")}</h6>
-                <select id="fontsize" class="my-select" value="12pt" style="width:100%;max-width:100%;">
-                    <option value="8pt">8 pt</option>
-                    <option value="10pt">10 pt</option>
-                    <option value="12pt">12 pt</option>
-                    <option value="14pt">14 pt</option>
-                    <option value="16pt">16 pt</option>
-                    <option value="18pt">18 pt</option>
-                    <option value="20pt">20 pt</option>
-                </select>
-            </div>
-
-            <hr>
-            <div style="margin-top:8px;">
-                <h6>${this.$t("dashboard.audiorepeattitle")}</h6>
-                <select id="audiorepeat" class="my-select" style="width:100%;max-width:100%;">
-                    <option value="0">${this.$t("dashboard.audioallow")}</option>
-                    <option value="1">1${this.$t("dashboard.audiorepeat1")}</option>
-                    <option value="2">2${this.$t("dashboard.audiorepeat2")}</option>
-                    <option value="3">3${this.$t("dashboard.audiorepeat2")}</option>
-                    <option value="4">4${this.$t("dashboard.audiorepeat2")}</option>
-                </select>
-            </div>
-
-            <hr>
-            <div>
-                <h6>${this.$t("dashboard.spellcheck")}</h6>
-               
-                <input class="form-check-input" type="checkbox" id="checkboxLT">
-                <label class="form-check-label" for="checkboxLT"> LanguageTool ${this.$t("dashboard.activate")} </label> <br>
-                <input class="form-check-input" type="checkbox" id="checkboxsuggestions">
-                <label class="form-check-label" for="checkboxsuggestions"> ${this.$t("dashboard.suggest")} </label><br>
-                <input class="form-check-input" type="checkbox" id="checkboxCustomHost">
-                <label class="form-check-label" for="checkboxCustomHost"> ${this.$t("dashboard.customhost")} </label><br>
-                
-                <div style="display:flex; gap:8px; margin-top:4px; width:99%; align-items:center;">
-                    <div style="position:relative; flex:1;">
-                        <input type="text" id="languagetoolhost" class="form-control" style="width:100%; padding-right:24px; color: #6c757d;" value="https://languagetool" disabled>
-                        <span id="languagetoolhostStatus" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-weight:bold; cursor:help; z-index:2;"></span>
-                    </div>
-                    <input type="text" id="languagetoolport" class="form-control" style="width:90px; color: #6c757d;" value="8088" disabled>
-                </div>
-                <br><br>
-                <h6 style="margin-bottom:0px;">${this.$t("dashboard.spellcheckchoose")}</h6>
-            </div>
-             
-        </div>`,
-        input: 'select',
-        inputOptions: inputOptions,
-        focusConfirm: false,
-        showCancelButton: true,
-        cancelButtonText: this.$t("dashboard.cancel"),
-        didOpen: () => {
-            const marginValueInput = document.getElementById('marginValue');
-            marginValueInput.addEventListener('input', updateMarginValueDisplay);
-            document.getElementById('checkboxLT').checked = !!cfg.languagetool
-            document.getElementById('checkboxsuggestions').checked = !!cfg.suggestions
-            document.getElementById('audiorepeat').value = String(cfg.audioRepeat ?? '0')
-            
-            // Set the radio button for linespacing
-            const linespacing = String(cfg.linespacing ?? '2');
-            const radioButton = document.querySelector(`input[name="linespacing"][value="${linespacing}"]`);
-            if (radioButton) {
-                radioButton.checked = true;
-            }
-
-            // Set the radio button for fontfamily
-            const fontfamily = String(cfg.fontfamily ?? 'sans-serif');
-            const fontfamilyRadioButton = document.querySelector(`input[name="fontfamily"][value="${fontfamily}"]`);
-            if (fontfamilyRadioButton) {
-                fontfamilyRadioButton.checked = true;
-            }
-
-            // Set the radio button for correction_margin
-            const correctionMargin = String(cfg.cmargin?.side ?? 'right');
-            const correctionMarginRadioButton = document.querySelector(`input[name="correction_margin"][value="${correctionMargin}"]`);
-            if (correctionMarginRadioButton) {
-                correctionMarginRadioButton.checked = true;
-            }
-
-            // Set the value for the language
-            const language = String(cfg.spellchecklang ?? 'de-DE');
-            const selectElement = document.querySelector('.swal2-select');
-            if (selectElement) {
-                // delay when setting the value
-                setTimeout(() => {
-                    selectElement.value = language;
-                }, 100);
-            }
-
-            const defaultFontSize = String(cfg.fontsize || '12pt');
-            // console.log("defaultFontSize:", defaultFontSize)
-            const selectElement2 = document.getElementById('fontsize');
-            if (selectElement2) {
-                setTimeout(() => {
-                    selectElement2.value = defaultFontSize;
-                }, 100);
-            }
-
-
-
-            const checkboxLT = document.getElementById('checkboxLT');
-            const checkboxSuggestions = document.getElementById('checkboxsuggestions');
-            const checkboxCustomHost = document.getElementById('checkboxCustomHost');
-            const languagetoolhostInput = document.getElementById('languagetoolhost');
-            const languagetoolportInput = document.getElementById('languagetoolport');
-            const hostStatus = document.getElementById('languagetoolhostStatus');
-            
-            // Initialize LanguageTool host and port fields
-            const savedHost = cfg.languagetoolhost;
-            const savedPort = cfg.languagetoolport;
-            
-            // Set default values or saved values
-            if (savedHost) {
-                languagetoolhostInput.value = savedHost;
-                checkboxCustomHost.checked = true;
-                languagetoolhostInput.disabled = false;
-                languagetoolhostInput.style.color = '#000000';
-                if (languagetoolportInput) {
-                    languagetoolportInput.value = savedPort || '8088';
-                    languagetoolportInput.disabled = false;
-                    languagetoolportInput.style.color = '#000000';
-                }
-            } else {
-                languagetoolhostInput.value = 'https://languagetool';
-                checkboxCustomHost.checked = false;
-                languagetoolhostInput.disabled = true;
-                languagetoolhostInput.style.color = '#6c757d';
-                if (languagetoolportInput) {
-                    languagetoolportInput.value = '8088';
-                    languagetoolportInput.disabled = true;
-                    languagetoolportInput.style.color = '#6c757d';
-                }
-            }
-
-            // Helper to update status icon
-            const setHostStatus = (state) => {
-                if (!hostStatus) { return; }
-                if (state === 'ok') {
-                    hostStatus.textContent = '✓';
-                    hostStatus.style.color = '#28a745';
-                    hostStatus.title = this.$t('dashboard.host_ok');
-                } else if (state === 'warn') {
-                    hostStatus.textContent = '▲';
-                    hostStatus.style.color = '#ffc107';
-                    hostStatus.title = this.$t('dashboard.host_warn');
-                } else {
-                    hostStatus.textContent = '';
-                    hostStatus.removeAttribute('title');
-                }
-            };
-            
-            // Initial: suggestions and custom host checkboxes deaktivieren, falls LT nicht gecheckt ist
-            checkboxSuggestions.disabled = !checkboxLT.checked;
-            checkboxCustomHost.disabled = !checkboxLT.checked;
-            // Also disable input field if LT is not checked
-            if (!checkboxLT.checked) {
-                languagetoolhostInput.disabled = true;
-                languagetoolhostInput.style.color = '#6c757d';
-                if (languagetoolportInput) {
-                    languagetoolportInput.disabled = true;
-                    languagetoolportInput.style.color = '#6c757d';
-                }
-            }
-            
-            // Event listener for checkboxLT to adjust the state of checkboxsuggestions and checkboxCustomHost
-            checkboxLT.addEventListener('change', () => {
-                checkboxSuggestions.disabled = !checkboxLT.checked;
-                checkboxCustomHost.disabled = !checkboxLT.checked;
-                // When checkboxLT is unchecked, suggestions and custom host should also be reset:
-                if (!checkboxLT.checked) {
-                    checkboxSuggestions.checked = false;
-                    checkboxCustomHost.checked = false;
-                    languagetoolhostInput.disabled = true;
-                    languagetoolhostInput.style.color = '#6c757d';
-                    if (languagetoolportInput) {
-                        languagetoolportInput.disabled = true;
-                        languagetoolportInput.style.color = '#6c757d';
-                    }
-                }
-            });
-            
-            // Event listener for checkboxCustomHost to enable/disable the text input
-            checkboxCustomHost.addEventListener('change', () => {
-                const enabled = checkboxCustomHost.checked;
-                languagetoolhostInput.disabled = !enabled;
-                languagetoolhostInput.style.color = enabled ? '#000000' : '#6c757d';
-                if (languagetoolportInput) {
-                    languagetoolportInput.disabled = !enabled;
-                    languagetoolportInput.style.color = enabled ? '#000000' : '#6c757d';
-                }
-                if (!enabled) {
-                    setHostStatus('none');
-                    resolvedLtIp = null;
-                }
-            });
-
-            // DNS check while the dialog is open (debounced)
-            let ltResolveTimeout = null;
-            const scheduleResolve = () => {
-                if (!checkboxCustomHost.checked || languagetoolhostInput.disabled) {
-                    setHostStatus('none');
-                    resolvedLtIp = null;
-                    return;
-                }
-                const raw = languagetoolhostInput.value || '';
-                if (!raw.trim()) {
-                    setHostStatus('none');
-                    resolvedLtIp = null;
-                    return;
-                }
-                if (ltResolveTimeout) {
-                    clearTimeout(ltResolveTimeout);
-                }
-                ltResolveTimeout = setTimeout(async () => {
-                    try {
-                        const hostOnly = raw.trim().replace(/^https?:\/\//i, '').split('/')[0];
-                        const result = await window.ipcRenderer?.invoke?.('resolveHostToIp', hostOnly);
-                        if (!result || !result.ok || !result.ip) {
-                            setHostStatus('warn');
-                            resolvedLtIp = null;
-                            return;
-                        }
-                        setHostStatus('ok');
-                        resolvedLtIp = result.ip;
-                    } catch (e) {
-                        setHostStatus('warn');
-                        resolvedLtIp = null;
-                    }
-                }, 600);
-            };
-
-            if (languagetoolhostInput) {
-                languagetoolhostInput.addEventListener('input', scheduleResolve);
-                // Initial check for default value only when custom host is active
-                if (checkboxCustomHost.checked) {
-                    scheduleResolve();
-                }
-            }
-
-            
-        },
-        willClose: () => {
-            const marginValueInput = document.getElementById('marginValue');
-            if (marginValueInput) {
-                marginValueInput.removeEventListener('input', updateMarginValueDisplay);
-            }
-        },
-        inputValidator: (value) => {
-            if (!value) {  return 'You need to choose a language!' }
-
-        },
-        preConfirm: () => {
-            // Save all values before dialog closes (Electron 39 compatibility)
-            const checkboxSuggestionsElement = document.getElementById('checkboxsuggestions');
-            const checkboxLTElement = document.getElementById('checkboxLT');
-            const checkboxCustomHostElement = document.getElementById('checkboxCustomHost');
-            const languagetoolhostElement = document.getElementById('languagetoolhost');
-            const languagetoolportElement = document.getElementById('languagetoolport');
-            const marginValueElement = document.getElementById('marginValue');
-            const audioRepeatElement = document.getElementById('audiorepeat');
-            const fontSizeElement = document.getElementById('fontsize');
-
-            const patch = {};
-            patch.suggestions = checkboxSuggestionsElement ? checkboxSuggestionsElement.checked : false;
-            patch.languagetool = checkboxLTElement ? checkboxLTElement.checked : false;
-            
-            // Save LanguageTool host (as resolved IP) and port values if custom host checkbox is checked
-            if (checkboxCustomHostElement && checkboxCustomHostElement.checked && languagetoolhostElement) {
-                const rawHost = languagetoolhostElement.value || 'http://127.0.0.1';
-                const protocolMatch = rawHost.match(/^(https?:\/\/)/i);
-                const protocol = protocolMatch ? protocolMatch[1] : 'http://';
-                const hostForConfig = resolvedLtIp ? `${protocol}${resolvedLtIp}` : rawHost;
-                patch.languagetoolhost = hostForConfig;
-                if (languagetoolportElement && languagetoolportElement.value) {
-                    patch.languagetoolport = languagetoolportElement.value;
-                } else {
-                    patch.languagetoolport = '8088';
-                }
-            } else {
-                patch.languagetoolhost = null;
-                patch.languagetoolport = null;
-            } 
-
-            const radioButtons = document.querySelectorAll('input[name="correction_margin"]');
-            const marginValue = marginValueElement ? marginValueElement.value : '';
-            const linespacingradioButtons = document.querySelectorAll('input[name="linespacing"]');
-            const fontfamilyradioButtons = document.querySelectorAll('input[name="fontfamily"]');
-            const audioRepeat = audioRepeatElement ? audioRepeatElement.value : '';
-            const fontSize = fontSizeElement ? fontSizeElement.value : '';
-
-            let selectedMargin = '';
-            radioButtons.forEach((radio) => {
-                if (radio.checked) {
-                    selectedMargin = radio.value;
-                }
-            });
-
-            let selectedSpacing = '';
-            linespacingradioButtons.forEach((radio) => {
-                if (radio.checked) {
-                    selectedSpacing = radio.value;
-                }
-            });
-
-            let selectedFont = '';
-            fontfamilyradioButtons.forEach((radio) => {
-                if (radio.checked) {
-                    selectedFont = radio.value;
-                }
-            });
-
-            if (marginValue && selectedMargin) {
-                patch.cmargin = {
-                    side: selectedMargin,
-                    size: parseFloat(marginValue)
-                }
-            }
-
-            patch.linespacing = selectedSpacing
-            patch.fontfamily = selectedFont
-            patch.fontsize = fontSize
-            patch.audioRepeat = audioRepeat
-
-            const selectEl = document.querySelector('.swal2-select');
-            const spellchecklang = selectEl ? String(selectEl.value || '') : '';
-            patch.spellchecklang = spellchecklang || 'de-DE';
-            if (patch.spellchecklang === 'none') {
-                patch.languagetool = false;
-                patch.suggestions = false;
-                patch.languagetoolhost = null;
-                patch.languagetoolport = null;
-            }
-
-            setEditorExamConfigPatch.call(this, patch);
-        }
-    })
-    if (!language) return;
-}   
 
 function setEditorExamConfigPatch(patch) {
     const section = this.serverstatus.examSections[this.serverstatus.activeSection];
@@ -1869,16 +1662,14 @@ async function configureCustomLanguageToolHost() {
             const rawPort = (portEl?.value || '').trim();
             if (!rawHost) return this.$t('dashboard.host_required');
             if (rawPort && !/^\d+$/.test(rawPort)) return this.$t('dashboard.port_invalid');
-            return true;
+            // Swal removes custom html on close; capture values here before DOM teardown
+            return { rawHost, rawPort };
         },
     });
 
-    if (!result.isConfirmed) return;
+    if (!result.isConfirmed || !result.value) return;
 
-    const hostEl = document.getElementById('ltHost');
-    const portEl = document.getElementById('ltPort');
-    const rawHost = (hostEl?.value || '').trim();
-    const rawPort = (portEl?.value || '').trim();
+    const { rawHost, rawPort } = result.value;
     const protocolMatch = rawHost.match(/^(https?:\/\/)/i);
     const protocol = protocolMatch ? protocolMatch[1] : 'http://';
     const hostForConfig = resolvedLtIp ? `${protocol}${resolvedLtIp}` : rawHost;
@@ -2367,4 +2158,4 @@ function openAllowedUrl(allowedUrl){
 
 
 
-export { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, configureEditorTemplate, removeEditorTemplate, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, getFormsID, configureEditor, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }
+export { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, configureEditorTemplate, removeEditorTemplate, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, getFormsID, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureMath, configureActivesheets, configureRDP, configureLocalVM, extractDomainAndId, isValidMoodleDomainName, isValidFullDomainName, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial }

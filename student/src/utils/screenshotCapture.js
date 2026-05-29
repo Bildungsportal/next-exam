@@ -138,13 +138,14 @@ async function captureAndUpload(signalBridge, config, sharedRef) {
   }
 }
 
-/** Stop and clear the shared stream/video */
+/** Stop and clear the shared stream/video; clears initAttempted so Connect can re-acquire with user gesture. */
 function stopSharedStream(sharedRef) {
   if (sharedRef.stream) {
     sharedRef.stream.getTracks().forEach((t) => t.stop());
     sharedRef.stream = null;
   }
   sharedRef.video = null;
+  initAttempted = false;
 }
 
 /** Hard-reset capture stream (e.g. dev only); not used on teacher disconnect — that would force invisible OS re-consent in kiosk. */
@@ -179,10 +180,13 @@ async function acquireDisplayStream() {
       video.onloadedmetadata = () => video.play().then(() => {
         log.info('screenshotCapture @ acquireDisplayStream: video resolution', video.videoWidth + 'x' + video.videoHeight);
         try {
-          const screenWidth = window.screen?.width;
-          const screenHeight = window.screen?.height;
+          // window.screen.width is CSS pixels, video.videoWidth is hardware pixels.
+          // On HiDPI displays (Win11 default 125-200% scaling, common on Lenovo) those differ by devicePixelRatio.
+          const dpr = window.devicePixelRatio || 1;
+          const screenWidth = (window.screen?.width || 0) * dpr;
+          const screenHeight = (window.screen?.height || 0) * dpr;
           if (screenWidth && screenHeight) {
-            log.info('screenshotCapture @ acquireDisplayStream: primary screen resolution', screenWidth + 'x' + screenHeight);
+            log.info('screenshotCapture @ acquireDisplayStream: primary screen resolution (hw)', screenWidth + 'x' + screenHeight, 'dpr', dpr);
             const widthDiff = Math.abs(video.videoWidth - screenWidth);
             const heightDiff = Math.abs(video.videoHeight - screenHeight);
             const widthRel = widthDiff / screenWidth;
@@ -228,10 +232,11 @@ export function canRegisterWithoutDisplayStream() {
   return linuxKioskRunningInCage || useWindowCaptureFallback;
 }
 
-/** First successful acquire only (initAttempted); keeps stream for app lifetime unless hard reset or track ends. */
+/** Acquire once per live stream; re-runs after track loss (initAttempted cleared in stopSharedStream). */
 export async function initDisplayStreamOnce() {
   if (!isElectronWindow(window)) return;
-  if (initAttempted) return;
+  if (initAttempted && hasActiveScreenshotStream()) return;
+  if (initAttempted && !hasActiveScreenshotStream()) initAttempted = false;
   initAttempted = true;
   const acquired = await acquireDisplayStream();
   if (acquired) {
@@ -252,6 +257,7 @@ export async function initDisplayStreamOnce() {
 /** Acquire display stream when called with user gesture (e.g. Connect click). Returns true if stream is ready. */
 export async function ensureDisplayStreamAsync() {
   if (hasActiveScreenshotStream()) return true;
+  if (initAttempted && !hasActiveScreenshotStream()) initAttempted = false;
   await initDisplayStreamOnce();
   if (linuxKioskRunningInCage) {
     return hasActiveScreenshotStream() || useWindowCaptureFallback;
@@ -339,8 +345,7 @@ function applyConfig(signalBridge, config) {
           if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
             if (intervalId) clearInterval(intervalId);
             intervalId = null;
-            stopSharedStream(sharedRef);
-            log.warn('screenshotCapture @ applyConfig: screenshot capture paused after', MAX_CONSECUTIVE_FAILURES, 'consecutive failures (will resume on next screenshot-config)');
+            log.warn('screenshotCapture @ applyConfig: screenshot upload paused after', MAX_CONSECUTIVE_FAILURES, 'failures (stream kept; resumes on screenshot-config)');
           }
         }
       });

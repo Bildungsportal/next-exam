@@ -70,6 +70,10 @@ export const filterMethods = {
         const minH = Math.max(12, m * 0.9);
         return fields.filter((f) => {
             if (f.type === 'checkbox' || f.type === 'deselect') return true;
+            // Cloze markers (underscore runs, dot fills, isolated underlines)
+            // are intentional fill-in slots — exempt them from the 22px
+            // minimum so "__10__" style worksheets keep all slots.
+            if (f.isClozeField) return true;
             if (f.isTableCell) {
                 const rTc = this.getRectFromStyle(f.style);
                 // Drop line-reconstruction hulls that cover a huge fraction of the page (not a real cell).
@@ -152,7 +156,7 @@ export const filterMethods = {
             const cellHeight = cellRect.bottom - cellRect.top;
             const deadZoneTop = Math.min(fontSize2 * 0.5, cellHeight * 0.3);
             if (baseline < cellRect.top + deadZoneTop) continue;
-            console.log(`[TC] text match "${visible}" → cell ${cellRect.left.toFixed(0)},${cellRect.top.toFixed(0)} ${(cellRect.right-cellRect.left).toFixed(0)}x${(cellRect.bottom-cellRect.top).toFixed(0)} → filtered`);
+            if (this.enableLogging) console.log(`[TC] text match "${visible}" → cell ${cellRect.left.toFixed(0)},${cellRect.top.toFixed(0)} ${(cellRect.right-cellRect.left).toFixed(0)}x${(cellRect.bottom-cellRect.top).toFixed(0)} → filtered`);
             return true;
         }
         return false;

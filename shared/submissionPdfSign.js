@@ -202,7 +202,7 @@ export function deriveSigningP12(secret, saltHex, commonName, { mode = SUBMISSIO
 
 const STAMP_WIDTH = 220;
 const STAMP_HEIGHT = 50;
-const STAMP_BOTTOM_PT = 76;
+const STAMP_BOTTOM_PT = 48; // 76pt minus 1cm (72/2.54pt)
 
 // Default signpdf widget [0,0,0,0] draws a visible gray edge line in common PDF viewers.
 const HIDDEN_SIG_WIDGET_RECT = [-20, -20, -1, -1];

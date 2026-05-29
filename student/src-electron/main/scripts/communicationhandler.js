@@ -36,9 +36,9 @@ import { examApiFetch } from '../../../../shared/examApiFetch.js'
 import languageToolServer from './lt-server.js';
 import { setClientFocusLock, clearClientFocusLock } from './focusLockState.js';
 import { syncClientDisplayInfo } from './displayInfo.js';
-import { detectRunningInCage } from './cageDetect.js';
 import qemuService from './qemuService.js';
 import { checkQemuAvailability } from '../../../../shared/qemuAvailability.js';
+import { pickLocalVmGroupConfig } from '../../../../shared/localVmDisplayResolutions.js';
 import { stopProxy } from './vncproxy.js';
 import { switchExamSection } from './switchExamSection.js';
 import {
@@ -71,6 +71,7 @@ import {
         this.config = config
         this.lastExamWriteSaveReason = 'n/a' // updated on successful examdir writes; sent with ZIP to teacher /receive
         this.localVmStartState = 'idle' // idle|starting|blocked
+        this._startExamRunning = false
         this.updateScheduler = new SchedulerService(this.requestUpdate.bind(this), 5000)
         this.updateScheduler.start()
     }
@@ -86,7 +87,7 @@ import {
         const examWin = WindowHandler?.examwindow;
         if (examWin && !this.config?.development) {
             examWin.moveTop();
-            examWin.setKiosk(true);
+            platformDispatcher.applyElectronKioskMode(examWin);
             examWin.show();
             examWin.focus();
         }
@@ -139,6 +140,29 @@ import {
         }
     }
 
+    // Tell student UI to show compat-check Swal before slow QEMU / disk probes.
+    notifyLocalVmCompatCheckStart() {
+        this.multicastClient.clientinfo.examtype = 'localvm';
+        this.multicastClient.clientinfo.localVMState = 'checking_compat';
+        try {
+            WindowHandler.mainwindow?.webContents?.send('localvm-compat-check-start');
+        } catch (e) {
+            log.debug('communicationhandler @ notifyLocalVmCompatCheckStart: send failed', e?.message);
+        }
+    }
+
+    // Dismiss compat-check Swal when leaving checking_compat (success, failure, or next preflight state).
+    notifyLocalVmCompatCheckEnd() {
+        if (this.multicastClient.clientinfo.localVMState === 'checking_compat') {
+            this.multicastClient.clientinfo.localVMState = null;
+        }
+        try {
+            WindowHandler.mainwindow?.webContents?.send('localvm-compat-check-end');
+        } catch (e) {
+            log.debug('communicationhandler @ notifyLocalVmCompatCheckEnd: send failed', e?.message);
+        }
+    }
+
     // Notify renderer and block LocalVM exam start when qemu-system-x86_64 / qemu-img are missing.
     async ensureQemuAvailableForLocalVm() {
         try {
@@ -148,7 +172,10 @@ import {
             }
             log.warn('communicationhandler @ ensureQemuAvailableForLocalVm: QEMU missing', check.missing);
             try {
-                WindowHandler.mainwindow?.webContents?.send('qemu-not-available', { missing: check.missing });
+                WindowHandler.mainwindow?.webContents?.send('qemu-not-available', {
+                    missing: check.missing,
+                    hypervisorPlatform: check.hypervisorPlatform,
+                });
             } catch (e) {
                 log.debug('communicationhandler @ ensureQemuAvailableForLocalVm: send failed', e?.message);
             }
@@ -214,22 +241,11 @@ import {
 
     async preflightLocalVm(serverstatus, effectiveSection) {
         const examSection = serverstatus.examSections[effectiveSection];
-        const hasGroups = !!examSection?.groups;
-        let group = this.multicastClient.clientinfo.group || 'a';
-        if (hasGroups) {
-            const clientname = this.multicastClient.clientinfo.name;
-            const groupA = examSection.groupA?.users ?? [];
-            const groupB = examSection.groupB?.users ?? [];
-            if (groupB.includes(clientname)) group = 'b';
-            else if (groupA.includes(clientname)) group = 'a';
-            else group = 'a';
-        } else {
-            group = 'a';
-        }
-
-        const vmConfig = group === 'b'
-            ? (examSection?.groupB?.examConfig?.localvm || {})
-            : (examSection?.groupA?.examConfig?.localvm || {});
+        const { group, vmConfig, display } = pickLocalVmGroupConfig(
+            examSection,
+            this.multicastClient.clientinfo.name
+        );
+        this.multicastClient.clientinfo.group = group;
 
         const qcow2Name = vmConfig.qcow2Name;
         const vncPort = Number(vmConfig.vncPort || 5901);
@@ -241,8 +257,9 @@ import {
         this.multicastClient.clientinfo.examtype = 'localvm';
         this.multicastClient.clientinfo.localVMHost = null;
         this.multicastClient.clientinfo.localVMPort = vncPort;
+        this.notifyLocalVmCompatCheckEnd();
 
-        log.info(`communicationhandler @ preflightLocalVm: cfg (disk=${qcow2Name || '-'}, port=${vncPort}, blockInternet=${blockInternet}, calcHash=${calculateSha256}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
+        log.info(`communicationhandler @ preflightLocalVm: cfg (disk=${qcow2Name || '-'}, port=${vncPort}, display=${display.id}, blockInternet=${blockInternet}, calcHash=${calculateSha256}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
 
         if (!qcow2Name) {
             this.multicastClient.clientinfo.localVMState = 'missing';
@@ -271,6 +288,8 @@ import {
             vncPort,
             overlayName: `${qcow2Name}.overlay.${this.multicastClient.clientinfo.servername || 'exam'}.${this.multicastClient.clientinfo.pin || '0'}.qcow2`,
             blockInternet,
+            displayWidth: display.width,
+            displayHeight: display.height,
         };
     }
 
@@ -280,8 +299,7 @@ import {
 
     async requestUpdate(){
         syncClientDisplayInfo(this.multicastClient.clientinfo);
-        this.multicastClient.clientinfo.isRunningInCage =
-            process.platform === 'linux' ? detectRunningInCage() : false;
+        this.multicastClient.clientinfo.isRunningInCage = platformDispatcher.runningInCage;
 
         this.timer++   // we use timer to time loops with different intervals without introducing new unneccesary schedulers
         if (this.timer % 20 === 0 ){  // run every 20*5 (updateloop) seconds
@@ -521,7 +539,7 @@ import {
             clearClientFocusLock(this.multicastClient.clientinfo);
             this.multicastClient.clientinfo.focus = true;
             if (WindowHandler.examwindow && !this.config.development){ 
-                WindowHandler.examwindow.setKiosk(true);
+                platformDispatcher.applyElectronKioskMode(WindowHandler.examwindow);
                 WindowHandler.examwindow.focus();
             }
         }
@@ -627,6 +645,10 @@ import {
         if (serverstatus.exammode && !this.multicastClient.clientinfo.exammode){
             const lockedSection = Number(serverstatus.lockedSection || 1);
             const examtype = serverstatus?.examSections?.[lockedSection]?.examtype;
+            if (this._startExamRunning) {
+                log.info('communicationhandler @ processUpdatedServerstatus: startExam already running, skip duplicate');
+                return;
+            }
             if (examtype === 'localvm' && this.localVmStartState !== 'idle') {
                 log.info(`communicationhandler @ processUpdatedServerstatus: localvm start suppressed (state=${this.localVmStartState})`);
                 return;
@@ -643,11 +665,13 @@ import {
 
         if (!serverstatus.exammode && this.multicastClient.clientinfo.examtype === 'localvm') {
             const st = this.multicastClient.clientinfo.localVMState;
-            const inPreflightState = st === 'missing' || st === 'hash_mismatch' || st === 'verifying_hash' || st === 'error';
-            if (inPreflightState || this.localVmStartState !== 'idle') {
-                log.info('communicationhandler @ processUpdatedServerstatus: localvm exammode off -> clearing preflight state');
+            const keepFixUi = st === 'missing' || st === 'hash_mismatch' || st === 'error';
+            if (!keepFixUi && st) {
+                log.info(`communicationhandler @ processUpdatedServerstatus: localvm exammode off -> clearing transient vm state (${st})`);
                 this.multicastClient.clientinfo.localVMState = null;
                 this.multicastClient.clientinfo.localVMHost = null;
+            }
+            if (this.localVmStartState !== 'idle') {
                 this.localVmStartState = 'idle';
             }
         }
@@ -698,7 +722,8 @@ import {
 
     //get base64 pdf from editor
     // ATTENTION: there is a similar method in ipchandler.js that also generates a pdf but stores it as file in the exam directory
-    async getBase64PDF(submissionnumber, sectionname, printBackground=false, saveReason){
+    // pageMode='fullpage' => margins 0 + Chromium-Header aus; gleicher Header-String wird als HTML-Overlay injiziert (activesheets 1:1 PDF-Seite)
+    async getBase64PDF(submissionnumber, sectionname, printBackground=false, saveReason, pageMode){
         if (saveReason !== 'auto') log.info("communicationhandler @ getBase64PDF: getting base64 encoded pdf")
         const traceTiming = saveReason === 'previewSigned' || saveReason === 'directsend'
         const t0 = traceTiming ? Date.now() : 0
@@ -724,13 +749,16 @@ import {
         const headerTemplate = `<div style='display: inline-block; height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-left: 30px; margin-top:10px;'><span style="float:left;">${this.multicastClient.clientinfo.servername}</span><span style="float:left;">&nbsp;|&nbsp; </span><span style="float:left;">${sectionname}</span><span style="float:left;">&nbsp;|&nbsp; </span><span class=date style="float:left;"></span><span style="float:left;">&nbsp;|&nbsp;Abgabe: ${submissionnumber}</span><span style="float:right;">${this.multicastClient.clientinfo.name}</span></div>`
         const footerTemplatePageNums = "<div style='height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-bottom:10px;'><span class=pageNumber></span>|<span class=totalPages></span></div>"
         
+        const isFullpage = pageMode === 'fullpage'
         var options = {
-            margins: { top: 0.5, right: 0, bottom: isSigningExport ? 0 : 0.5, left: 0 },
+            margins: isFullpage
+                ? { top: 0, right: 0, bottom: 0, left: 0 }
+                : { top: 0.5, right: 0, bottom: isSigningExport ? 0 : 0.5, left: 0 },
             pageSize: 'A4',
-            printBackground: isSigningExport ? false : printBackground,
+            printBackground: isFullpage ? printBackground : (isSigningExport ? false : printBackground),
             printSelectionOnly: false,
             landscape: false,
-            displayHeaderFooter: true,
+            displayHeaderFooter: !isFullpage,
             footerTemplate: isSigningExport ? '<div></div>' : footerTemplatePageNums,
             headerTemplate,
             preferCSSPageSize: false
@@ -738,10 +766,24 @@ import {
         
         // set the title of the exam window and therefore the document title
         await WindowHandler.examwindow.webContents.executeJavaScript(`document.title = "${this.multicastClient.clientinfo.name} - ${this.multicastClient.clientinfo.servername} - Version ${submissionnumber}"`);
-        
+
+        // pageMode='fullpage': Chromium-Header aus; gleicher Header-String als DOM-Overlay (verbraucht keinen margin) - nur 1. Druckseite
+        // <span class=date> ist Chromium-headerTemplate-Magic -> im DOM-Kontext durch ein gerendertes Datum ersetzen
+        if (isFullpage) {
+            const now = new Date()
+            const dStr = `${String(now.getDate()).padStart(2,'0')}.${String(now.getMonth()+1).padStart(2,'0')}.${now.getFullYear()}`
+            // Datum-magic ersetzen + margins/top aus dem Editor-Template raus (Wrapper-div positioniert)
+            const overlayInner = headerTemplate
+                .replace(/<span class=date[^>]*><\/span>/, `<span style="float:left;">${dStr}</span>`)
+                .replace(/margin-(left|right|top):\s*\d+px;?/g, '')
+            // Wrapper: 85% breit zentriert, top 30px (visuell auf PDF-Inhalt der mit zoom 8/9 skaliert ist abgestimmt)
+            const overlayHtml = JSON.stringify(`<div id="__fullpageHeaderOverlay__" style="position:absolute;top:30px;left:50%;transform:translateX(-50%);width:85%;z-index:2147483647;pointer-events:none;">${overlayInner}</div>`)
+            await WindowHandler.examwindow.webContents.executeJavaScript(`(()=>{const o=document.getElementById('__fullpageHeaderOverlay__');if(o)o.remove();document.body.insertAdjacentHTML('afterbegin', ${overlayHtml});})()`)
+        }
+
         // Set lock before starting PDF generation
         IpcHandler.isPrintingPdf = true;
-        
+
         try {
             const tPrint = traceTiming ? Date.now() : 0
             const data = await WindowHandler.examwindow.webContents.printToPDF(options);
@@ -786,6 +828,11 @@ import {
         } finally {
             // Always release the lock, even if an error occurred
             IpcHandler.isPrintingPdf = false;
+            if (isFullpage) {
+                try {
+                    await WindowHandler.examwindow?.webContents?.executeJavaScript(`(()=>{const o=document.getElementById('__fullpageHeaderOverlay__');if(o)o.remove();})()`)
+                } catch (e) { /* exam window may be gone */ }
+            }
         }
     }
 
@@ -842,6 +889,12 @@ import {
      * @param serverstatus contains information about exammode, examtype, and other settings from the teacher instance
      */
     async startExam(serverstatus){
+        if (this._startExamRunning) {
+            log.info('communicationhandler @ startExam: already running, skip duplicate');
+            return;
+        }
+        this._startExamRunning = true;
+        try {
         // check if any dialog is open and log warning
         if (WindowHandler.exitWarningOpen || WindowHandler.exitQuestionOpen || WindowHandler.minimizeWarningOpen) {
             log.warn("communicationhandler @ startExam: Dialog is still open - exam will start anyway")
@@ -870,11 +923,22 @@ import {
                 log.info(`communicationhandler @ startExam: localvm start suppressed (state=${this.localVmStartState})`);
                 return;
             }
-            if (!(await this.ensureQemuAvailableForLocalVm())) {
+            this.localVmStartState = 'starting';
+            this.notifyLocalVmCompatCheckStart();
+            let qemuOk = false;
+            try {
+                qemuOk = await this.ensureQemuAvailableForLocalVm();
+            } finally {
+                if (!qemuOk) {
+                    this.notifyLocalVmCompatCheckEnd();
+                }
+            }
+            if (!qemuOk) {
                 this.multicastClient.clientinfo.exammode = false;
+                // 'blocked' (not 'idle') so next 5s server poll does not re-trigger startExam -> re-spawn qemu-not-available dialog every cycle; reset to 'idle' happens when teacher turns exammode off (see processUpdatedServerstatus)
+                this.localVmStartState = 'blocked';
                 return;
             }
-            this.localVmStartState = 'starting';
             try {                
                 let preflight = null;
                 try {
@@ -899,6 +963,9 @@ import {
                         vncDisplay: ':1',
                         overlayName: preflight.overlayName,
                         blockInternet: preflight.blockInternet,
+                        forceFreshOverlay: true,
+                        displayWidth: preflight.displayWidth,
+                        displayHeight: preflight.displayHeight,
                     });
                     this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
                     this.multicastClient.clientinfo.localVMPort = Number(preflight.vncPort) || 5901;
@@ -914,9 +981,6 @@ import {
 
                 this.multicastClient.clientinfo.exammode = true
                 this.multicastClient.clientinfo.examtype = examtype
-                this.multicastClient.clientinfo.cmargin = serverstatus.examSections[effectiveSection].cmargin
-                this.multicastClient.clientinfo.linespacing = serverstatus.examSections[effectiveSection].linespacing
-                this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[effectiveSection].audioRepeat
                 log.info("communicationhandler @ startExam: creating exam window")
                 WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
                 this.localVmStartState = 'idle';
@@ -928,11 +992,8 @@ import {
         }
 
         this.multicastClient.clientinfo.exammode = true
-        this.multicastClient.clientinfo.cmargin = serverstatus.examSections[effectiveSection].cmargin  // this is used to configure margin settings for the editor
-        this.multicastClient.clientinfo.linespacing = serverstatus.examSections[effectiveSection].linespacing // we try to double linespacing on demand in pdf creation
-        this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[effectiveSection].audioRepeat // restrict repetition of audio files (for listening comprehension)
 
-        if (!WindowHandler.examwindow){  // why do we check? because exammode is left if the server connection gets lost but students could reconnect while the exam window is still open and we don't want to create a second one
+        if (!WindowHandler.examwindow){
             log.info("communicationhandler @ startExam: creating exam window")
             this.multicastClient.clientinfo.examtype = examtype
             WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
@@ -941,16 +1002,18 @@ import {
             log.error("communicationhandler @ startExam: found existing Examwindow..")
             try {  // switch existing window back to exam mode
                 WindowHandler.examwindow.show() 
-                if (!this.config.development) { 
-                    WindowHandler.examwindow.setFullScreen(true)  //go fullscreen again
-                    WindowHandler.examwindow.setAlwaysOnTop(true, "screen-saver", 1)  //make sure the window is 1 level above everything
-                    await enableRestrictions(WindowHandler)
-                    await this.sleep(2000) // wait an additional 2 sec for windows restrictions to kick in (they steal focus)
-                    WindowHandler.addBlurListener();
-                    await this.sleep(500)
+                if (!this.config.development) {
+                    if (!platformDispatcher.skipElectronKiosk) {
+                        WindowHandler.examwindow.setFullScreen(true)
+                        WindowHandler.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
+                        await enableRestrictions(WindowHandler)
+                        await this.sleep(2000)
+                        WindowHandler.addBlurListener()
+                        await this.sleep(500)
+                    }
                     WindowHandler.examwindow.moveTop()
                     WindowHandler.examwindow.focus()
-                }   
+                }
             }
             catch (e) { //examwindow variable is still set but the window is not managable anymore (manually closed in dev mode?)
                 log.error("communicationhandler @ startExam: no functional examwindow found.. resetting")
@@ -962,6 +1025,9 @@ import {
                 this.multicastClient.clientinfo.token = false
                 return  // in that case.. we are finished here !
             }
+        }
+        } finally {
+            this._startExamRunning = false;
         }
     }
 
@@ -1069,6 +1135,8 @@ import {
     }
 
     async endExam(serverstatus){
+        const localVmExam = this.multicastClient.clientinfo.examtype === 'localvm'
+            || this.multicastClient.clientinfo.localVMState === 'running';
         this.clearBipSiteInfo()
         WindowHandler.removeBlurListener();
       
@@ -1114,19 +1182,21 @@ import {
         this.multicastClient.clientinfo.focus = true
         this.multicastClient.clientinfo.localLockdown = false;
 
-        // stop VNC proxy + shutdown VM after window teardown to avoid reconnect loops
-        stopProxy();
-        try {
-            log.info('communicationhandler @ endExam: requesting VM shutdown');
-            await qemuService.stopVmAsync({ graceful: true, shutdownTimeoutMs: 8000, killTimeoutMs: 8000 });
-        } catch (e) {
-            log.warn('communicationhandler @ endExam: shutdown failed, killing VM');
-            await qemuService.stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
-        }
-        try {
-            await qemuService.killAllLocalQemu(this.config.workdirectory);
-        } catch (e) {
-            log.warn('communicationhandler @ endExam: killAllLocalQemu sweep', e);
+        // stop VNC proxy + shutdown VM after window teardown (LocalVM only)
+        if (localVmExam) {
+            stopProxy();
+            try {
+                log.info('communicationhandler @ endExam: requesting VM shutdown');
+                await qemuService.stopVmAsync({ graceful: true, shutdownTimeoutMs: 8000, killTimeoutMs: 8000 });
+            } catch (e) {
+                log.warn('communicationhandler @ endExam: shutdown failed, killing VM');
+                await qemuService.stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
+            }
+            try {
+                await qemuService.killAllLocalQemu(this.config.workdirectory);
+            } catch (e) {
+                log.warn('communicationhandler @ endExam: killAllLocalQemu sweep', e);
+            }
         }
 
         if (languageToolServer.languageToolProcess){

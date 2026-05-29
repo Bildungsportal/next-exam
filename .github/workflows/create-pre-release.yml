@@ -4,6 +4,10 @@ on:
   workflow_call: { }
   workflow_dispatch: { }
 
+# opt in to Node 24 runtime for js actions (default from 2026-06-16); pre-validate
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   linux:
     uses: ./.github/workflows/build-Linux-x64-AppImage.yml
@@ -56,26 +60,25 @@ jobs:
           path: rel
           merge-multiple: true
 
-      # Neuer Schritt: Lese die Version aus der YAML-Datei
-      - name: Read version from electron-builder.yml
+      # Lese VERSION + BUILD_NUMBER aus committed .env.production (gleiche Quelle wie der Build)
+      - name: Read version from .env.production
         id: version_reader
         run: |
-          # Installiere yq (ein Kommandozeilen-YAML-Prozessor)
-          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
-          
-          # Lese die buildVersion aus der /student/electron-builder.yml
-          VERSION=$(yq e '.buildVersion' student/electron-builder.yml)
-          echo "Gelesene Version: $VERSION"
-          
-          # Erstelle den neuen Pre-Release-Tag
-          NEW_TAG="pre$VERSION"
+          VERSION=$(grep '^VERSION=' student/.env.production | cut -d= -f2- | tr -d '"' | tr -d "'")
+          BUILD_NUMBER=$(grep '^BUILD_NUMBER=' student/.env.production | cut -d= -f2- | tr -d '"' | tr -d "'")
+          if [ -z "$VERSION" ] || [ -z "$BUILD_NUMBER" ]; then
+            echo "ERROR: VERSION or BUILD_NUMBER missing in student/.env.production" >&2
+            exit 1
+          fi
+          BUILD_VERSION="${VERSION}.${BUILD_NUMBER}"
+          NEW_TAG="pre${BUILD_VERSION}"
+          echo "Gelesene Version: $BUILD_VERSION"
           echo "Neuer Tag: $NEW_TAG"
-          
-          # Finde den letzten echten Release-Tag für das Changelog
+
+          # Letzter echter Release-Tag (v-prefix) als Startpunkt für das Changelog
           LAST_RELEASE_TAG=$(git tag --sort=-v:refname | grep "^v[0-9]" | head -n 1)
           echo "Letzter Release-Tag für Changelog: $LAST_RELEASE_TAG"
-          
-          # Setze die Outputs für spätere Schritte
+
           echo "new_prerelease_tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
           echo "last_release_tag=$LAST_RELEASE_TAG" >> "$GITHUB_OUTPUT"
 

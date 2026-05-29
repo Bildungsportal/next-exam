@@ -3,12 +3,17 @@
 
     <!-- Header START -->
     <div v-show="!isLoading" class="w-100 p-3 text-white bg-dark text-left" style="height: 66px; z-index: 1000;">
-    <span class="text-white m-1">
-        <img src='/src/assets/img/svg/speedometer.svg' class="white me-2  " width="32" height="32">
-        <span class="fs-4 align-middle me-4" @click="handleClick">Next-Exam</span>
+    <span class="text-white m-1 d-inline-flex align-items-center flex-wrap ms-1">
+        <img src='/src/assets/img/svg/speedometer.svg' class="white me-2" width="32" height="32">
+        <span class="fs-4 align-middle me-2" @click="handleClick">Next-Exam</span>
+        <span v-if="cageLauncherApps.length" class="d-inline-flex align-items-center flex-wrap gap-2 cage-launcher-group">
+            <button v-for="app in cageLauncherApps" :key="app.path" type="button"
+                    class="btn btn-outline-cyan btn-sm mt-0 px-3"
+                    @click="launchCageApp(app.path)">{{ app.name }}</button>
+        </span>
     </span>
 
-        <span class="fs-4 align-middle  ms-3" style="float: right">Student</span>
+        <span class="fs-4 align-middle ms-3" style="float: right">Student</span>
         <div v-if="token && !localLockdown" id="adv" class="btn btn-success btn-sm m-0  mt-1 "
              style="cursor: unset; float: right">{{ $t("student.connected") }}
         </div>
@@ -57,6 +62,9 @@
                 </div>
 
                 <div class="localvm-preflight-actions">
+                    <button v-if="localVmCanRetryStart && !localVmFixPhase" class="btn btn-success btn-sm" @click="retryLocalVmStart" :disabled="localVmBusy">
+                        {{ $t('student.localvmRetryStartButton') }}
+                    </button>
                     <button v-if="localVmCanFix && !localVmFixPhase" class="btn btn-primary btn-sm" @click="downloadVm" :disabled="localVmBusy">
                         {{ $t('student.localvmDownloadButton') }}
                     </button>
@@ -68,7 +76,7 @@
                 <div v-if="localVmFixPhase && localVmCanFix && !localVmIsVerifying" class="localvm-preflight-verify" style="margin-top: 12px;">
                     <div class="localvm-preflight-spinner" aria-hidden="true"></div>
                     <div class="localvm-preflight-text">
-                        {{ localVmFixPhase === 'waiting_for_start' ? $t('student.localvmWaitingForStart') : $t('student.localvmDownloading') }}
+                        {{ localVmFixPhase === 'waiting_for_start' ? $t('student.localvmWaitingForStart') : (localVmFixPhase === 'importing' ? $t('student.localvmImporting') : $t('student.localvmDownloading')) }}
                     </div>
                     <div v-if="localVmFixPhase !== 'waiting_for_start' && localVmDownloadPercent != null" class="localvm-preflight-subtext">{{ localVmDownloadPercent }}%</div>
                 </div>
@@ -123,9 +131,9 @@
                     :class="(token) ? 'disabledexam' : ''"
                     :disabled="!!token"
                     style="font-size:0.9em"
-                    :title="$t('student.cageSetupText')"
+                    :title="$t(kioskI18n('Text'))"
                     @click="promptCageKioskSetup">
-                {{ $t('student.cageSetupButton') }}
+                {{ $t(kioskI18n('Button')) }}
             </button>
 
             <div><br>
@@ -292,6 +300,7 @@ import {isElectronWindow} from "../types/platform.ts";
 import {SignalBridge} from '../utils/signalBridge.js'
 import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync, setCageWindowCaptureFallback, setLinuxKioskRunningInCage } from '../utils/screenshotCapture.js'
 import { getLinuxKioskInfo } from '../utils/linuxCageKiosk.js'
+import { loadWinKioskLauncherApps } from '../utils/kioskLauncher.js'
 import { Exam } from '../types/api'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
 import { normalizeStudentClientName } from 'next-exam-shared/normalizeStudentClientName.js'
@@ -299,10 +308,10 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
 } from '../utils/examFetchInfoSync.js'
-import { buildQemuMissingWarningHtml } from 'next-exam-shared/qemuMissingWarningHtml.js'
 import { autoCleanupMixin } from "../mixins/autoCleanupMixin.ts";
 import { useConfigStore } from "stores/configStore.ts";
 import { ref } from 'vue';
+import { showLocalVmQemuIssueDialog } from 'next-exam-shared/qemuLocalVmDialogs.js'
 
 function unhandledRejectionFunction(event: PromiseRejectionEvent) {
   const reason = event?.reason;
@@ -311,6 +320,7 @@ function unhandledRejectionFunction(event: PromiseRejectionEvent) {
     event.preventDefault(); // swallow guest view clone errors and ERR_FAILED
     return;
   }
+  log.error('Unhandled promise rejection:', reason); // log all other errors
 }
 
 
@@ -330,7 +340,7 @@ export default {
       let username = "";
       let pincode = "";
       if(configStore.development) {
-        username = "Thomas";
+        username = "thomas";
         pincode = "1111";
       }
       let development = ref(configStore.development);
@@ -366,10 +376,13 @@ export default {
             platformKiosk: {
                 cageInstalled: false,
                 runningInCage: false,
+                isWindowsKioskUser: false,
+                assignedAccessActive: false,
                 cageKioskAppImageInstalled: false,
                 cageKioskDesktopInstalled: false,
                 needsCageKioskSetup: false,
             },
+            cageLauncherApps: [],
 
             biptest: true,
             bipToken: false,
@@ -384,6 +397,7 @@ export default {
             localVmBusy: false,
             localVmDownloadPercent: null,
             localVmFixPhase: null,
+            localVmCompatCheckSwalOpen: false,
 
         };
     },
@@ -415,18 +429,29 @@ export default {
         localVmCanFix() {
             return this.localVmIsMissing || this.localVmIsMismatch || this.clientinfo?.localVMState === 'error';
         },
+        localVmCanRetryStart() {
+            return this.clientinfo?.localVMState === 'error' && !!this.serverstatus?.exammode;
+        },
         localVmVerifyingText() {
             const cfg = this.getLocalVmConfig?.() || {};
             return cfg.calculateSha256 === true ? this.$t('student.vmVerifyingHash') : this.$t('student.vmVerifyingSize');
         },
         showCageKioskInstallBtn() {
             const k = this.platformKiosk;
+            // displayServer set to 'windows' on win32 by ipchandler so the same gate works for both OSes
             return isElectronWindow(window) && k.displayServer !== 'n/a' && !k.runningInCage && k.needsCageKioskSetup;
+        },
+        kioskI18nPrefix() {
+            // win32 uses winKioskSetup* keys, linux keeps the legacy cageSetup* keys
+            return this.platformKiosk?.displayServer === 'windows' ? 'winKioskSetup' : 'cageSetup';
         },
     },
     watch: {
         'clientinfo.localVMState'(nextState) {
             const st = String(nextState || '');
+            if (st !== 'checking_compat') {
+                this.closeLocalVmCompatCheckDialog();
+            }
             const inPreflightState = st === 'missing' || st === 'hash_mismatch' || st === 'verifying_hash' || st === 'error';
             if (!inPreflightState) {
                 this.localVmFixPhase = null;
@@ -446,24 +471,69 @@ export default {
             }
         },
 
-        async showQemuMissingWarning() {
-            await this.$swal.fire({
-                icon: 'warning',
-                title: this.$t('student.qemuMissingTitle'),
-                html: buildQemuMissingWarningHtml(this.$t('student.qemuMissingText')),
-                confirmButtonText: this.$t('student.qemuMissingConfirm'),
+        async showQemuMissingWarning(payload = {}) {
+            this.closeLocalVmCompatCheckDialog();
+            await showLocalVmQemuIssueDialog({
+                swal: this.$swal,
+                t: this.$t.bind(this),
+                invoke: (channel, ...args) => signalBridge.invoke(channel, ...args),
+                i18nPrefix: 'student',
+                check: payload || {},
+                cancelKey: 'cancel',
             });
         },
 
+        // Swal while main runs QEMU / hypervisor compatibility probes before LocalVM exam start.
+        showLocalVmCompatCheckDialog() {
+            if (this.localVmCompatCheckSwalOpen) {
+                return;
+            }
+            this.localVmCompatCheckSwalOpen = true;
+            const text = String(this.$t('student.localvmCompatCheckText') || '');
+            void this.$swal.fire({
+                title: this.$t('student.localvmCompatCheckTitle'),
+                html: text.replace(/\n/g, '<br>'),
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    this.$swal.showLoading();
+                },
+            }).finally(() => {
+                this.localVmCompatCheckSwalOpen = false;
+            });
+        },
+
+        closeLocalVmCompatCheckDialog() {
+            try {
+                if (this.$swal.isVisible()) {
+                    this.$swal.close();
+                }
+            } catch (e) {}
+            this.localVmCompatCheckSwalOpen = false;
+        },
+
+        kioskI18n(suffix) {
+            // helper: prefix=cageSetup on linux, winKioskSetup on windows; falls back to cage key for shared suffixes
+            const key = `student.${this.kioskI18nPrefix}${suffix}`;
+            // i18n returns the key itself when missing -> fallback to cage variant
+            const t = this.$t(key);
+            return t === key ? `student.cageSetup${suffix}` : key;
+        },
+
         async promptCageKioskSetup() {
+            // linux uses cageSetupTextRoot, win32 uses winKioskSetupRoot; pick whichever exists
+            const rootHintKey = this.platformKiosk?.displayServer === 'windows'
+                ? 'student.winKioskSetupRoot'
+                : 'student.cageSetupTextRoot';
             const result = await this.$swal.fire({
-                title: this.$t('student.cageSetupTitle'),
-                html: `${this.$t('student.cageSetupText')}<br><br>${this.$t('student.cageSetupTextRoot')}<br><br>
-                    <label><input type="checkbox" id="cage-setup-dismiss"> ${this.$t('student.cageSetupDontShow')}</label>`,
+                title: this.$t(this.kioskI18n('Title')),
+                html: `${this.$t(this.kioskI18n('Text'))}<br><br>${this.$t(rootHintKey)}<br><br>
+                    <label><input type="checkbox" id="cage-setup-dismiss"> ${this.$t(this.kioskI18n('DontShow'))}</label>`,
                 icon: 'info',
                 showCancelButton: true,
-                confirmButtonText: this.$t('student.cageSetupInstall'),
-                cancelButtonText: this.$t('student.cageSetupLater'),
+                confirmButtonText: this.$t(this.kioskI18n('Install')),
+                cancelButtonText: this.$t(this.kioskI18n('Later')),
                 willClose: (popup) => {
                     if (popup.querySelector('#cage-setup-dismiss')?.checked) {
                         localStorage.setItem('next-exam-cage-kiosk-setup-dismissed', '1');
@@ -474,17 +544,46 @@ export default {
             const install = await signalBridge.invoke('install-linux-cage-kiosk');
             if (install?.ok) {
                 this.platformKiosk = await signalBridge.invoke('get-linux-kiosk-info');
+                let successHtml = `${this.$t(this.kioskI18n('Success'))}<br><br>${this.$t(this.kioskI18n('SuccessHint'))}`;
+                if (install.kioskSourceDir && this.platformKiosk?.displayServer === 'windows') {
+                    const src = this.$t('student.winKioskSetupSuccessSource', {
+                        appDir: install.kioskSourceDir,
+                        launchExe: install.kioskLaunchExe || '',
+                    });
+                    successHtml += `<br><br><small style="font-family:monospace;word-break:break-all;">${src}</small>`;
+                }
                 await this.$swal.fire({
-                    html: `${this.$t('student.cageSetupSuccess')}<br><br>${this.$t('student.cageSetupSuccessHint')}`,
+                    html: successHtml,
                     icon: 'success',
                 });
             } else {
-                await this.$swal.fire({
-                    title: this.$t('student.cageSetupFailed'),
-                    text: install?.error || '',
-                    icon: 'error',
-                });
+                await this.showKioskSetupErrorDialog(install);
             }
+        },
+
+        // Pretty error: structured code from main triggers friendly hint; otherwise mono-font scrollable transcript
+        async showKioskSetupErrorDialog(install) {
+            const raw = String(install?.error || '');
+            if (install?.code === 'EDITION_UNSUPPORTED') {
+                await this.$swal.fire({
+                    icon: 'warning',
+                    title: this.$t('student.winKioskSetupEditionFailed'),
+                    html: this.$t('student.winKioskSetupEditionHint'),
+                    confirmButtonText: 'OK',
+                });
+                return;
+            }
+            const escaped = raw
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            await this.$swal.fire({
+                icon: 'error',
+                title: this.$t(this.kioskI18n('Failed')),
+                html: `<pre style="text-align:left;max-height:50vh;overflow:auto;font-size:0.8em;white-space:pre-wrap;word-break:break-word;background:#f7f7f7;padding:0.5rem;border-radius:4px;">${escaped}</pre>`,
+                confirmButtonText: 'OK',
+                width: '46rem',
+            });
         },
 
         async maybeOfferCageKioskSetup() {
@@ -493,6 +592,31 @@ export default {
             if (k.runningInCage || !k.needsCageKioskSetup) return;
             if (localStorage.getItem('next-exam-cage-kiosk-setup-dismissed') === '1') return;
             await this.promptCageKioskSetup();
+        },
+
+        async maybeShowWinKioskSessionInfo() {
+            const k = this.platformKiosk;
+            if (!isElectronWindow(window) || this.config.development) return;
+            if (!k.runningInCage || k.displayServer !== 'windows') return;
+            if (this.activeDialog) return;
+            if (sessionStorage.getItem('next-exam-win-kiosk-session-info') === '1') return;
+            if (this.hostip?.availableInterfaces?.length > 1 && !this.hostip?.preferredInterface) return;
+            sessionStorage.setItem('next-exam-win-kiosk-session-info', '1');
+            await this.$swal.fire({
+                title: this.$t('student.winKioskSessionInfoTitle'),
+                html: this.$t('student.winKioskSessionInfoText'),
+                icon: 'info',
+                confirmButtonText: this.$t('general.ok'),
+                showCancelButton: false,
+            });
+        },
+
+        async launchCageApp(exePath) {
+            const p = String(exePath || '').trim();
+            if (!p) return;
+            const res = await signalBridge.invoke('launch-kiosk-allowed-app', p);
+            if (res?.ok) return;
+            this.$swal.fire({ title: 'Error', text: res?.error || 'launch failed', icon: 'error', showCancelButton: false });
         },
 
         async warnMacRosettaArch() {
@@ -506,9 +630,15 @@ export default {
 
         quitNextExam() {
             if (this.token) return;
+            // Kiosk: main-process close handler shows the native cage exit warning (single source of truth).
+            // Non-kiosk: simple inline confirm.
+            if (this.platformKiosk?.runningInCage) {
+                signalBridge.invoke('quit-app');
+                return;
+            }
             this.$swal.fire({
                 title: this.$t('student.cageExit'),
-                text: this.$t('student.cageExitConfirm'),
+                html: this.$t('student.cageExitConfirm'),
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonText: this.$t('student.cageExit'),
@@ -558,6 +688,7 @@ export default {
                     this.safeAssign('hostip', updated);
                 }
                 this.activeDialog = false;
+                void this.maybeShowWinKioskSessionInfo();
             });
         },
 
@@ -1272,6 +1403,8 @@ export default {
             if (!hasIp) return;
             if (this.hostip?.availableInterfaces?.length > 1 && !this.hostip?.preferredInterface) {
                 this.selectPreferredInterface();
+            } else {
+                void this.maybeShowWinKioskSessionInfo();
             }
             if (this.clientinfo.token) return;   // stop spamming the api if already connected
 
@@ -1339,6 +1472,23 @@ export default {
             return cfg || {};
         },
 
+        async retryLocalVmStart() {
+            if (this.localVmBusy) return;
+            try {
+                this.localVmBusy = true;
+                this.localVmFixPhase = null;
+                const res = await signalBridge.invoke('localvm-retry-start');
+                if (!res?.ok) {
+                    await this.status(this.$t('student.localvmStartError'));
+                }
+            } catch (e) {
+                log.error('student.vue @ retryLocalVmStart', e);
+                await this.status(this.$t('student.localvmStartError'));
+            } finally {
+                this.localVmBusy = false;
+            }
+        },
+
         async downloadVm() {
             if (this.localVmBusy) return;
             try {
@@ -1384,12 +1534,18 @@ export default {
             if (this.localVmBusy) return;
             try {
                 this.localVmBusy = true;
+                const pick = await signalBridge.invoke('qemu-pick-disk-file');
+                if (!pick?.ok || pick.cancelled) {
+                    await this.status(this.$t('student.localvmImportCancelled'));
+                    this.localVmFixPhase = null;
+                    return;
+                }
                 this.localVmFixPhase = 'importing';
-                await this.status(this.$t('student.localvmImporting'));
-                const res = await signalBridge.invoke('qemu-pick-import-disk', {});
+                this.localVmDownloadPercent = null;
+                const res = await signalBridge.invoke('qemu-import-disk', { sourcePath: pick.sourcePath });
                 const filename = res && res.ok ? res.filename : null;
                 if (!filename) {
-                    await this.status(this.$t('student.localvmImportCancelled'));
+                    await this.status(this.$t('student.localvmImportFailed'));
                     this.localVmFixPhase = null;
                     return;
                 }
@@ -1401,6 +1557,9 @@ export default {
                 this.localVmFixPhase = null;
             } finally {
                 this.localVmBusy = false;
+                if (this.localVmFixPhase !== 'waiting_for_start') {
+                    this.localVmDownloadPercent = null;
+                }
             }
         },
 
@@ -1443,7 +1602,9 @@ export default {
                 this.$swal.fire({ title: "Error", text: this.$t("student.nopin"), icon: 'error', showCancelButton: false });
                 return;
             }
-            if (!this.platformKiosk.runningInCage) {
+            // Win32 AssignedAccess kiosk uses standard getDisplayMedia (full desktop); only Linux cage needs the window-capture fallback.
+            const linuxCage = this.platformKiosk.runningInCage && this.platformKiosk.displayServer !== 'windows';
+            if (!linuxCage) {
                 if (!hasActiveScreenshotStream()) {
                     const ok = await ensureDisplayStreamAsync();
                     if (!ok) {
@@ -1451,7 +1612,10 @@ export default {
                         return;
                     }
                 }
-                if (!isFullDesktopCaptureLikely() && !this.development) {
+                // Win AA kiosk auto-grants sources[0]=screen via main-process handler, so the picker-misclick
+                // heuristic does not apply; skip the check there.
+                const winKiosk = this.platformKiosk.runningInCage && this.platformKiosk.displayServer === 'windows';
+                if (!winKiosk && !isFullDesktopCaptureLikely() && !this.development) {
                     this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
                     return;
                 }
@@ -1593,7 +1757,17 @@ export default {
             }
             this.platformKiosk = await getLinuxKioskInfo(signalBridge);
             setLinuxKioskRunningInCage(this.platformKiosk.runningInCage);
-            setCageWindowCaptureFallback(!!this.platformKiosk.runningInCage);
+            // Win32 kiosk uses normal getDisplayMedia full-desktop path; cage fallback only for Linux cage.
+            setCageWindowCaptureFallback(this.platformKiosk.runningInCage && this.platformKiosk.displayServer !== 'windows');
+            this.cageLauncherApps = await loadWinKioskLauncherApps(signalBridge);
+            // Dev-only: preview cage launcher UI without kiosk user / provisioning
+            // if (this.config.development) {
+            //     this.platformKiosk.runningInCage = true;
+            //     this.cageLauncherApps = [
+            //         { name: 'calc', path: 'C:\\Windows\\System32\\calc.exe' },
+            //         { name: 'Archicad', path: 'C:\\Program Files\\Graphisoft\\Archicad\\Archicad.exe' },
+            //     ];
+            // }
             await this.maybeOfferCageKioskSetup();
         }
 
@@ -1633,8 +1807,24 @@ export default {
             this.localVmDownloadPercent = pct;
         });
 
-        signalBridge.on('qemu-not-available', () => {
-            this.showQemuMissingWarning();
+        signalBridge.on('localvm-compat-check-start', () => {
+            if (!this.clientinfo) {
+                this.clientinfo = {};
+            }
+            this.clientinfo.examtype = 'localvm';
+            this.clientinfo.localVMState = 'checking_compat';
+            this.showLocalVmCompatCheckDialog();
+        });
+
+        signalBridge.on('localvm-compat-check-end', () => {
+            if (this.clientinfo?.localVMState === 'checking_compat') {
+                this.clientinfo.localVMState = null;
+            }
+            this.closeLocalVmCompatCheckDialog();
+        });
+
+        signalBridge.on('qemu-not-available', (_event, payload) => {
+            this.showQemuMissingWarning(payload || {});
         });
 
         // Screenshot scheduler only in main window (this page); exam window never loads student.vue
@@ -1651,6 +1841,8 @@ export default {
         window.removeEventListener('unhandledrejection', event => unhandledRejectionFunction(event));
 
         signalBridge.removeAllListeners('qemu-download-progress');
+        signalBridge.removeAllListeners('localvm-compat-check-start');
+        signalBridge.removeAllListeners('localvm-compat-check-end');
         signalBridge.removeAllListeners('qemu-not-available');
     }
 }
@@ -1796,6 +1988,14 @@ body {
 #statusdiv {
     display: block !important;
     width: 200px;
+}
+
+.cage-launcher-group {
+    margin-left: 4.4rem;
+}
+
+.bg-dark .btn-outline-cyan {
+    color: #fff;
 }
 
 .student-sidebar {

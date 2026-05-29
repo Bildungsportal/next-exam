@@ -49,10 +49,7 @@ async function uploadselect() {
         }
 
         this.visualfeedbackClosemanually(this.$t("dashboard.uploadfiles"))
-        await this.onedriveUpload(input.value)  //this can take a while if 30 students are connected - set this.serverstatus.msOfficeFile only after it finished because it activates the "startexam" button
-        //save valid file info for other students that connect later or reconnect (they all should get a file in onedrive and a sharing link if not 'none')
-        this.serverstatus.examSections[this.serverstatus.activeSection].msOfficeFile = input.value   
-        log.info(this.serverstatus.examSections[this.serverstatus.activeSection].msOfficeFile)
+        await this.onedriveUpload(input.value)
         log.info("upload to onedrive and sharelink setup finished")
     });    
 }

@@ -112,8 +112,11 @@ export async function startProxy({ host, port }) {
     currentTargetPort = portNum;
 
     try {
+        // ELECTRON_RUN_AS_NODE: run packaged electron binary in pure-Node mode so the helper
+        // bypasses singleInstanceLock + app bootstrap and reaches WebSocketServer.listen
         const proc = spawn(process.execPath, [scriptPath, host, String(portNum), String(currentPort)], {
-            stdio: 'inherit'
+            stdio: 'inherit',
+            env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
         });
         child = proc;
         proc.on('exit', (code, signal) => {

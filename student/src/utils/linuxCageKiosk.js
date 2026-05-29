@@ -9,6 +9,8 @@ export async function getLinuxKioskInfo(signalBridge) {
         kioskInfoCache = {
             cageInstalled: false,
             runningInCage: false,
+            isWindowsKioskUser: false,
+            assignedAccessActive: false,
             cageKioskAppImageInstalled: false,
             cageKioskDesktopInstalled: false,
             needsCageKioskSetup: false,

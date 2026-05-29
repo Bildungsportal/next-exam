@@ -39,6 +39,9 @@ const SYSTEM_CRITICAL_NAMES = new Set([
     'wininit', 'wininit.exe', 'csrss', 'csrss.exe', 'winlogon', 'winlogon.exe',
     'dwm', 'dwm.exe', 'smss', 'smss.exe', 'registry', 'system',
     'fontdrvhost', 'fontdrvhost.exe', 'sgrmbroker', 'sgrmbroker.exe',
+    'spoolsv', 'spoolsv.exe', 'jhi_service', 'jhi_service.exe',
+    'smartscreen', 'smartscreen.exe', 'searchapp', 'searchapp.exe',
+    'codemeter', 'codemeter.exe', 'mdnsresponder', 'mdnsresponder.exe',
     // macOS
     'launchd', 'mdnsresponder', 'syslogd', 'configd', 'kernel_task',
     'windowserver', 'loginwindow', 'coreaudiod', 'trustd', 'symptomsd'

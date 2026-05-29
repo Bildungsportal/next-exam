@@ -4,7 +4,13 @@
       "Bash(node scripts/prebuild.js)",
       "Bash(lpstat -p)",
       "Bash(lpstat -d)",
-      "Bash(lpstat -a)"
+      "Bash(lpstat -a)",
+      "Bash(ls -la /home/valueerror/Desktop/test.pdf /home/valueerror/Desktop/demo.pdf 2>&1)",
+      "Read(//home/valueerror/Desktop/**)",
+      "Bash(node glyph-dump.mjs /home/valueerror/Nextcloud/SEMINARE/LiFE-EXAM/demo.pdf)",
+      "Bash(node /tmp/glyph-dump.mjs /home/valueerror/Nextcloud/SEMINARE/LiFE-EXAM/demo.pdf)",
+      "Bash(node /tmp/glyph-dump.mjs /home/valueerror/Nextcloud/SEMINARE/LiFE-EXAM/demo.pdf 2)",
+      "Bash(pwsh -NoProfile -File /tmp/test-kiosk-xml.ps1)"
     ]
   }
 }
