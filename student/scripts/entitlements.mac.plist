@@ -28,10 +28,7 @@
 
     <key>com.apple.developer.automatic-assessment-configuration</key>
     <true/>
-    <key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
-    <array>
-        <string>com.apple.assessmentagent</string>
-    </array>
+    <!-- mach-lookup only if LSMinimumSystemVersion < 11; profile has no mach-lookup; app min macOS 12 -->
 
   </dict>
 </plist>

@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const { signLanguageToolJars } = require('./sign-languagetool-jars.cjs');
 const entitlementsPath = path.join(__dirname, 'entitlements.mac.plist');
+const helperEntitlementsPath = path.join(__dirname, 'entitlements.mac.helpers.plist');
 
 function codesignHelper(helperPath, identity) {
   return new Promise((resolve, reject) => {
@@ -15,7 +16,7 @@ function codesignHelper(helperPath, identity) {
       '--force',
       '--options', 'runtime',
       '--timestamp',
-      '--entitlements', entitlementsPath,
+      '--entitlements', helperEntitlementsPath,
       '-s', identity,
       helperPath,
     ];

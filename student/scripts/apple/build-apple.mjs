@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..', '..');
 const appleDir = path.join(projectRoot, 'scripts', 'apple');
 const helpers = ['assessment-helper', 'wifi-helper'];
-const entitlements = path.join(projectRoot, 'scripts', 'entitlements.mac.plist');
+const entitlements = path.join(projectRoot, 'scripts', 'entitlements.mac.helpers.plist');
 
 function run(cmd, args, opts = {}) {
     return new Promise((resolve, reject) => {
