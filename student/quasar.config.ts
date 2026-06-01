@@ -362,6 +362,8 @@ export default defineConfig(( ctx: any ) => {
         ],
         // directories.output is overridden by quasar to dist/electron/Packaged - cannot change here
         compression: 'normal',
+        // ship only finnish/english/german Chromium UI locales (prunes locales/*.pak)
+        electronLanguages: ['fi', 'en-US', 'en-GB', 'de'],
         linux: {
           target: 'AppImage',
           category: 'Utility',
