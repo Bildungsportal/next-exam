@@ -9,8 +9,8 @@ require('dotenv').config({ path: envPath, override: true });
 const { notarize } = require('@electron/notarize');
 const { exec } = require('child_process');
 
-const { spawn } = require('child_process'); 
-
+const { spawn } = require('child_process');
+const provisionProfilePath = path.join(__dirname, 'apple', 'nextexamstudent.provisionprofile');
 
 // Funktion zum Ausführen eines Befehls als Promise
 function execPromise(command) {
@@ -151,15 +151,28 @@ exports.default = async function notarizing(context) {
   try {
     const st = fs.statSync(appBundlePath);
     fs.chmodSync(appBundlePath, st.mode | 0o200);
-    await run('codesign', [
-        '--deep',
-        '--force',
-        '--options', 'runtime',
-        '--entitlements', entitlementsPath,
-        '-s', ID,
-        appBundlePath,
-    ]);
+    const signArgs = [
+      '--deep',
+      '--force',
+      '--options', 'runtime',
+      '--entitlements', entitlementsPath,
+    ];
+    if (fs.existsSync(provisionProfilePath)) {
+      fs.copyFileSync(
+        provisionProfilePath,
+        path.join(appBundlePath, 'Contents', 'embedded.mobileprovision'),
+      );
+      signArgs.push('--provisioning-profile', provisionProfilePath);
+    } else {
+      console.warn('WARNING: scripts/apple/nextexamstudent.provisionprofile missing — AAC launch may fail');
+    }
+    signArgs.push('-s', ID, appBundlePath);
+    await run('codesign', signArgs);
     console.log(`Successfully re-signed the entire app: ${appBundlePath}`);
+    const embeddedProfile = path.join(appBundlePath, 'Contents', 'embedded.mobileprovision');
+    if (!fs.existsSync(embeddedProfile)) {
+      throw new Error(`embedded.mobileprovision missing after codesign — AAC launch will fail (${embeddedProfile})`);
+    }
   } catch (error) {
     console.error(`Error re-signing the app:`, error);
     throw new Error(`Re-signing failed for ${appBundlePath}`);
@@ -195,13 +208,14 @@ exports.default = async function notarizing(context) {
     await notarize({
       tool: 'notarytool',
       teamId: process.env.TEAMID,
-      appBundleId: 'com.nextexam-student.app',
+      appBundleId: process.env.MAC_BUNDLE_ID || 'com.nextexam.student',
       appPath: appBundlePath,
       appleId: process.env.APPLEID,
       appleIdPassword: process.env.APPLEIDPASS,
     });
     console.log("Notarization successful!");
   } catch (error) {
-    console.error("Failed to notarize:", error);
+    console.error('Failed to notarize:', error);
+    throw error;
   }
 };
