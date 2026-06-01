@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 swiftc "$DIR/assessment.swift" \
   -o "$DIR/assessment-helper" \

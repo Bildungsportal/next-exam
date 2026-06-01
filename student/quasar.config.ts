@@ -12,6 +12,10 @@ import fs from 'fs';
 
 // load .env when present (local dev); otherwise fall back to committed .env.production (CI)
 dotenv.config({ path: fs.existsSync('./.env') ? './.env' : './.env.production' });
+// electron-builder rejects CSC_NAME with "Developer ID Application:" prefix; codesign scripts use SHAID (full name ok)
+if (process.env.CSC_NAME?.startsWith('Developer ID Application:')) {
+  process.env.CSC_NAME = process.env.CSC_NAME.replace(/^Developer ID Application:\s*/, '').trim();
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -395,8 +399,8 @@ export default defineConfig(( ctx: any ) => {
           target: winEbTarget,
           artifactName: artifactNamePattern,
           files: ['**/*', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**', '!public/minimal-jre-11-lin/**', '!public/qemu/win/**', '!public/qemu/lin/**', '!public/qemu/mac/**'],
-          // SIGN env (SIGN !== 'false'): signExecutable gates signtool; CSC_LINK/CSC_KEY_PASSWORD supply the cert when enabled
-          signExecutable: signEnabled,
+          // SIGN env (SIGN !== 'false'): signAndEditExecutable gates signtool on electron-builder 25.x (Quasar dep); use signExecutable on eb 26+
+          signAndEditExecutable: signEnabled,
           ...(signEnabled && {
             signtoolOptions: { signingHashAlgorithms: ['sha256'] },
           }),

@@ -1,8 +1,13 @@
-require('dotenv').config();
-const { notarize } = require('@electron/notarize');
-const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+// electron-builder afterSign cwd is dist/, not student/ — load .env from project root
+const projectRoot = path.join(__dirname, '..');
+const envPath = fs.existsSync(path.join(projectRoot, '.env'))
+  ? path.join(projectRoot, '.env')
+  : path.join(projectRoot, '.env.production');
+require('dotenv').config({ path: envPath, override: true });
+const { notarize } = require('@electron/notarize');
+const { exec } = require('child_process');
 
 const { spawn } = require('child_process'); 
 
@@ -58,7 +63,11 @@ exports.default = async function notarizing(context) {
 
 
   const ID = (process.env.SHAID || process.env.CSC_NAME || '').trim();
-  if (!ID) { throw new Error('Signing identity (SHAID/CSC_NAME) fehlt! Bitte sicherstellen, dass SHAID im Workflow-Env gesetzt ist.');}
+  if (!ID) {
+    throw new Error(
+      `Signing identity (SHAID/CSC_NAME) fehlt! Geladen aus: ${envPath} (exists=${fs.existsSync(envPath)}). In student/.env setzen und Datei speichern.`
+    );
+  }
   
   const run = (cmd, args) => new Promise((resolve, reject) => {
     const p = spawn(cmd, args, { stdio: 'inherit' });

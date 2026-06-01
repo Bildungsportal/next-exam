@@ -2,7 +2,8 @@ import AutomaticAssessmentConfiguration
 import Foundation
 
 let arg = CommandLine.arguments.dropFirst().first ?? ""
-let session = AEAssessmentSession()
+let configuration = AEAssessmentConfiguration()
+let session = AEAssessmentSession(configuration: configuration)
 
 if arg == "start" {
     session.begin()
