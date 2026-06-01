@@ -129,6 +129,7 @@
         "examsectionsinfo": "Sie befinden sich im abgesicherten Modus. Soll dieser Prüfungsabschnitt für alle verbundenen Clients aktiviert werden?",
         "exitbipcompleted": "Prüfung am Bildungsportal auf Abgeschlossen setzen",
         "exitdelete": "Prüfungsdaten auf SchülerPCs löschen",
+        "exitdeletesingle": "Prüfungsdaten auf SchülerPC löschen",
         "exitexam": "Dies beendet den Prüfungsserver.\nDie Schüler:innen können im abgesicherten Modus auch ohne Verbindung weiterarbeiten.",
         "exitexaminfo": "Alle bestehenden Verbindungen werden unterbrochen",
         "exitexamsure": "Prüfungsserver schließen?",
