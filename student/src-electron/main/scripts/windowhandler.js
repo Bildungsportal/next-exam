@@ -679,7 +679,7 @@ class WindowHandler {
             height: windowHeight,
             minWidth: 850,
             minHeight: 600,
-            resizable: false, // prevents resizing
+           // resizable: false, // prevents resizing
             fullscreenable: false, // prevents fullscreen mode - important for macOS: when the mainwindow is fullscreen on macOS the kiosk mode does not take effect on the examwindow - electron bug (needs example code): >> https://github.com/electron/electron/issues/44755
             show: true,
             //visibleOnAllWorkspaces: true,
@@ -691,6 +691,7 @@ class WindowHandler {
                     path.join(process.env.QUASAR_ELECTRON_PRELOAD_FOLDER, 'electron-preload' + process.env.QUASAR_ELECTRON_PRELOAD_EXTENSION)
                 ),
                 spellcheck: false,
+                webviewTag: true,  // exam runs in mainwindow now (eduvidual/website use <webview>)
                 backgroundThrottling: true  // allow throttling when window is in background
             }
         })

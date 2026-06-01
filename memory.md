@@ -74,6 +74,7 @@ BUG^examlog^dupSubmission^dashboard mounted stacked ipcRenderer.on('submission')
 
 # Student exam lifecycle (load, focus, security)
 TECH^student^examWin^dup startExam race: processUpdatedServerstatus+5s poll before clientinfo.exammode; gate with _startExamRunning+localVmStartState early+_examWindowCreating
+TECH^student^examWinReuse^createExamWindow: examwindow=mainwindow for all examtypes except microsoft365 (own BrowserWindow); mainwindow webPreferences MUST keep webviewTag:true else eduvidual/website <webview> not upgraded (shadowRoot null + no page load)^windowhandler.js
 TECH^student^examHeaderClock^ExamHeader :entrytime ms; tickHeaderClock updates ref headerClock textContent+title (no reactive tick)
 IPC^student^focusLock^main sets clientinfo.focusLockReason+focusLockMessage; examwindow webContents.send('focusLock'); editor listens+overlay; i18n editor.focusLockReason_<code>
 RULE^student^pin^noFetchSync^applyClientinfoFromFetch must not set vm.pincode; lobby=user input; exam=router params from register mirror
@@ -84,6 +85,7 @@ RULE^student^screenshotStream^resetConnection must not stop getDisplayMedia stre
 PATH^student^netScan^networkActiveProcesses.js scans non-loopback TCP established + TCP LISTEN; excludes next-exam subtree + LT pid + LT cmdline markers + sys-critical allowlist
 RULE^student^vncproxyHelper^spawn vncproxy-helper.cjs with ELECTRON_RUN_AS_NODE=1 (packaged electron else hits requestSingleInstanceLock and exits 0 without listening)
 TECH^student^previewWebview^applyPreviewWebviewHostLayout(splitview); WebviewPane host no Vue inline style (re-render wiped 80vw); inner nx-webview-pane-fill; setZoomFactor dom-ready+try/catch
+RULE^student^webviewHostDisplay^never set <webview> host display:block; overrides Electron :host{display:flex} so internal iframe(flex:1) collapses (content not full height). Use display:flex + flex:1 1 0 to fill; CSS cannot pierce webview shadow DOM so no iframe-height JS hack^eduvidual.vue #webviewmain
 TECH^student^displayInfo^clientinfo.displayCount+multiMonitor via displayInfo.syncClientDisplayInfo; register blocked if multiMonitor&&!development
 
 # PDF parser

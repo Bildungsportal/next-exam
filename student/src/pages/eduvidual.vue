@@ -164,6 +164,7 @@ export default {
             urlForWebview: null,
             allowedUrls: [],
             webviewVisible: false,
+            eduvidualWebviewReady: false,   // true after main webview dom-ready (guest webContents available)
             
             // Event listener references for cleanup
             _onDidFinishLoad: null,
@@ -221,26 +222,17 @@ export default {
             this.autoEventListener(document.querySelector("#preview"),"click", this._onPreviewClick);
 
 
-            // fetches shadow root of webview and sets height to 100% 
+            // webview sizing handled by CSS (#webviewmain flex:1 + display:flex); Electron sizes the internal iframe itself
             const webview = document.getElementById('webviewmain');
             if (webview) { 
-                const shadowRoot = webview.shadowRoot;
-                const iframe = shadowRoot.querySelector('iframe');
-                if (iframe) { iframe.style.height = '100%'; } 
-                
-                // Try to setup blocking immediately, retry on dom-ready if needed
-                this.setupEduvidualWebviewBackend().catch(() => {
-                    const retrySetup = () => {
-                        setTimeout(() => {
-                            this.setupEduvidualWebviewBackend().catch(() => {
-                                console.warn('eduvidual @ mounted: backend blocking setup failed, will retry');
-                            });
-                        }, 100);
-                    };
-                    this.autoEventListener(webview,'dom-ready', retrySetup, { once: true });
-                });
-                
-                console.log('eduvidual @ mounted: backend blocking setup initiated');
+                // backend URL-filter/proof needs guest webContents → only valid after dom-ready
+                const onWebviewDomReady = () => {
+                    this.eduvidualWebviewReady = true;
+                    this.setupEduvidualWebviewBackend().catch((err) => {
+                        console.warn('eduvidual @ dom-ready: backend blocking setup failed', err);
+                    });
+                };
+                this.autoEventListener(webview, 'dom-ready', onWebviewDomReady);
                 
                 this._onDidFinishLoad = () => {
                     if (this.showdevtools) {webview.openDevTools();  }
@@ -397,7 +389,7 @@ export default {
                 const webview = document.getElementById('webviewmain');
                 if (webview && this.url) webview.setAttribute('src', this.url);
             }
-            if (sectionChanged || urlChanged || this.exammode !== prevExammode) {
+            if (this.eduvidualWebviewReady && (sectionChanged || urlChanged || this.exammode !== prevExammode)) {
                 this.setupEduvidualWebviewBackend().catch((err) => {
                     console.warn('eduvidual @ fetchInfo: webview backend setup', err);
                 });
@@ -471,9 +463,10 @@ export default {
 }
 
 #webviewmain{
-    height: 100% !important;
+    flex: 1 1 0 !important;   /* fill remaining height in #q-app flex column */
+    min-height: 0;
     width: 100% !important;
-    display: block;
+    display: flex;   /* keep Electron's :host flex so the internal iframe (flex:1) fills full height */
     position: relative;
     top:0;
     left:0;
