@@ -65,6 +65,66 @@ const macEbArch = process.env.NXE_EB_MAC_ARCH === 'arm64'
   ? (['arm64'] as const)
   : (['x64'] as const);
 
+// renderer-only deps (+ their transitive deps): Vite bundles them into the renderer chunks,
+// so the raw node_modules copies electron-builder would otherwise pack into the asar are dead weight.
+// Verified none are reachable from the main-process require graph (incl. peer/optional deps).
+const rendererOnlyAsarExcludes = [
+  '!node_modules/@babel/runtime/**',
+  '!node_modules/@popperjs/core/**',
+  '!node_modules/@quasar/extras/**',
+  '!node_modules/@remirror/core-constants/**',
+  '!node_modules/@tiptap/**',
+  '!node_modules/@types/hast/**',
+  '!node_modules/@types/linkify-it/**',
+  '!node_modules/@types/markdown-it/**',
+  '!node_modules/@types/mdurl/**',
+  '!node_modules/@types/raf/**',
+  '!node_modules/@types/trusted-types/**',
+  '!node_modules/@types/unist/**',
+  '!node_modules/atob/**',
+  '!node_modules/base64-arraybuffer/**',
+  '!node_modules/bootstrap/**',
+  '!node_modules/btoa/**',
+  '!node_modules/canvg/**',
+  '!node_modules/core-js/**',
+  '!node_modules/crelt/**',
+  '!node_modules/css-line-break/**',
+  '!node_modules/dequal/**',
+  '!node_modules/devlop/**',
+  '!node_modules/dompurify/**',
+  '!node_modules/es6-promise/**',
+  '!node_modules/escape-string-regexp/**',
+  '!node_modules/highlight.js/**',
+  '!node_modules/html2canvas/**',
+  '!node_modules/html2pdf-jspdf2/**',
+  '!node_modules/jspdf/**',
+  '!node_modules/linkify-it/**',
+  '!node_modules/lowlight/**',
+  '!node_modules/markdown-it/**',
+  '!node_modules/mdurl/**',
+  '!node_modules/moment-timezone/**',
+  '!node_modules/moment/**',
+  '!node_modules/orderedmap/**',
+  '!node_modules/performance-now/**',
+  '!node_modules/prosemirror-*/**',
+  '!node_modules/punycode.js/**',
+  '!node_modules/quasar/**',
+  '!node_modules/raf/**',
+  '!node_modules/rgbcolor/**',
+  '!node_modules/rope-sequence/**',
+  '!node_modules/stackblur-canvas/**',
+  '!node_modules/svg-pathdata/**',
+  '!node_modules/sweetalert2/**',
+  '!node_modules/text-segmentation/**',
+  '!node_modules/tippy.js/**',
+  '!node_modules/uc.micro/**',
+  '!node_modules/utrie/**',
+  '!node_modules/validator/**',
+  '!node_modules/vue-router/**',
+  '!node_modules/vue-sweetalert2/**',
+  '!node_modules/w3c-keyname/**',
+];
+
 export default defineConfig(( ctx: any ) => {
   return {
     // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
@@ -370,7 +430,7 @@ export default defineConfig(( ctx: any ) => {
           icon: 'public/icons/256x256.png',
           artifactName: artifactNamePattern,
           // Quasar UnPackaged root has electron-main.js, index.html, preload/, assets/ – include all, exclude other platforms’ JRE
-          files: ['**/*', '!public/minimal-jre-11-win/**', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**', '!public/qemu/win/**', '!public/qemu/mac/**'],
+          files: ['**/*', '!public/minimal-jre-11-win/**', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**', '!public/qemu/win/**', '!public/qemu/mac/**', ...rendererOnlyAsarExcludes],
         },
         mac: {
           icon: 'public/icons/icon.png',
@@ -385,10 +445,10 @@ export default defineConfig(( ctx: any ) => {
             : {}),
           category: 'public.app-category.utilities',
           target: { target: 'dmg', arch: macEbArch },
-          files: ['**/*', '!public/minimal-jre-11-win/**', '!public/minimal-jre-11-lin/**', '!public/qemu/win/**', '!public/qemu/lin/**'],
+          files: ['**/*', '!public/minimal-jre-11-win/**', '!public/minimal-jre-11-lin/**', '!public/qemu/win/**', '!public/qemu/lin/**', ...rendererOnlyAsarExcludes],
         },
         dmg: { sign: false },
-        portable: { useZip: false, unpackDirName: 'next-exam-student', splashImage: 'public/splash.bmp' },
+        portable: { useZip: true, unpackDirName: 'next-exam-student', splashImage: 'public/splash.bmp' },
         msi: {
           perMachine: true,
           createDesktopShortcut: true,
@@ -400,7 +460,7 @@ export default defineConfig(( ctx: any ) => {
           icon: 'public/icons/icon.ico',
           target: winEbTarget,
           artifactName: artifactNamePattern,
-          files: ['**/*', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**', '!public/minimal-jre-11-lin/**', '!public/qemu/win/**', '!public/qemu/lin/**', '!public/qemu/mac/**'],
+          files: ['**/*', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**', '!public/minimal-jre-11-lin/**', '!public/qemu/win/**', '!public/qemu/lin/**', '!public/qemu/mac/**', ...rendererOnlyAsarExcludes],
           // SIGN env (SIGN !== 'false'): signAndEditExecutable gates signtool on electron-builder 25.x (Quasar dep); use signExecutable on eb 26+
           signAndEditExecutable: signEnabled,
           ...(signEnabled && {
