@@ -24,6 +24,8 @@
     "build:linux": "npm run prebuild && npm run clean && quasar build --verbose -m electron -l",
     "build:mac:x64": "npm run prebuild && npm run clean && npm run build:apple && cross-env NXE_EB_MAC_ARCH=x64 quasar build --verbose -m electron -T mac -A x64",
     "build:mac:arm64": "npm run prebuild && npm run clean && npm run build:apple && cross-env NXE_EB_MAC_ARCH=arm64 quasar build --verbose -m electron -T mac -A arm64",
+    "notarize:mac:arm64": "node scripts/notarize-app-only.cjs",
+    "notarize:mac:x64": "cross-env NXE_EB_MAC_ARCH=x64 node scripts/notarize-app-only.cjs",
     "build:win:portable": "npm run prebuild && npm run cleanwin && quasar build --verbose -m electron -T win -A x64",
     "build:win:msi": "npm run prebuild && npm run cleanwin && cross-env NXE_EB_WIN_TARGET=msi quasar build --verbose -m electron -T win -A x64"
   },

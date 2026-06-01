@@ -1,9 +1,12 @@
 import path from 'path';
 import fs from 'fs-extra';
 import { spawn } from 'child_process';
+import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
+const { signLanguageToolJars } = require('./sign-languagetool-jars.cjs');
 const entitlementsPath = path.join(__dirname, 'entitlements.mac.plist');
 
 function codesignHelper(helperPath, identity) {
@@ -64,6 +67,9 @@ export default async function afterPack(context) {
     const appName = context.packager.appInfo.productFilename;
     const identity = (process.env.SHAID || process.env.CSC_NAME || '').trim();
     const signEnabled = process.env.SIGN !== 'false';
+    if (signEnabled && identity) {
+      await signLanguageToolJars(appPath, appName, identity);
+    }
     for (const name of ['assessment-helper', 'wifi-helper']) {
       const helperPath = path.join(appPath, `${appName}.app`, 'Contents', 'Resources', 'apple', name);
       if (await fs.pathExists(helperPath) && signEnabled && identity) {

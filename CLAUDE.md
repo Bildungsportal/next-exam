@@ -18,6 +18,7 @@ Default voice: dense, not chatty. Save tokens; keep signal.
 - Prefer symbols: `→`, `=`, `vs`, `+`, `/`
 - Bullets/lists over paragraphs when listing facts
 - Code citations OK; prose around them stays minimal
+- **User “Höhlenmensch” / ultra-kurz:** noch kürzer — Stichworte, 1–3 Sätze, keine Tabellen/Erklärblöcke, kein Wiederholen; nur bei `analysiere` / `explain` / `why` ausführlicher
 
 User rules still win (e.g. respond in German when required). Compact ≠ skip required clarifying questions before risky work (§1).
 
