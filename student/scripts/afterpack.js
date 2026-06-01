@@ -22,6 +22,19 @@ function codesignHelper(helperPath, identity) {
   });
 }
 
+// recursively remove every file named `name` under `dir` (mac nests it in the framework, linux/win at root)
+async function removeByName(dir, name) {
+  for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      await removeByName(full, name);
+    } else if (entry.name === name) {
+      await fs.remove(full);
+      console.log(`Removed ${full}`);
+    }
+  }
+}
+
 export default async function afterPack(context) {
   const arch = context.arch;
   const appPath = context.appOutDir;
@@ -40,6 +53,9 @@ export default async function afterPack(context) {
       console.log(`Removed x64 JRE from ARM64 build: ${arm64JrePath}`);
     }
   }
+
+  // drop Chromium license attribution file (~18MB); not loaded at runtime
+  await removeByName(appPath, 'LICENSES.chromium.html');
 
   if (context.electronPlatformName === 'darwin') {
     const appName = context.packager.appInfo.productFilename;
