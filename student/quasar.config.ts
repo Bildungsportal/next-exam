@@ -378,8 +378,8 @@ export default defineConfig(( ctx: any ) => {
           entitlements: 'scripts/entitlements.mac.plist',
           entitlementsInherit: 'scripts/entitlements.mac.plist',
           // embed Developer ID profile (authorizes restricted entitlements) only when present
-          ...(fse.existsSync(path.join(__dirname, 'scripts/apple/nextexamstudent.provisioningprofile'))
-            ? { provisioningProfile: 'scripts/apple/nextexamstudent.provisioningprofile' }
+          ...(fse.existsSync(path.join(__dirname, 'scripts/apple/nextexamstudent.provisionprofile'))
+            ? { provisioningProfile: 'scripts/apple/nextexamstudent.provisionprofile' }
             : {}),
           category: 'public.app-category.utilities',
           target: { target: 'dmg', arch: macEbArch },
