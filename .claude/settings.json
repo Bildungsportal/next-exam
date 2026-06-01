@@ -14,7 +14,9 @@
       "Bash(echo \"---user ~/.claude.json mcp keys---\"; cat ~/.claude.json 2>/dev/null | python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('top mcpServers:', list\\(d.get\\('mcpServers',{}\\).keys\\(\\)\\)\\); p=d.get\\('projects',{}\\).get\\('/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam',{}\\); print\\('project keys:', list\\(p.keys\\(\\)\\)\\); print\\('project mcpServers:', list\\(p.get\\('mcpServers',{}\\).keys\\(\\)\\)\\); print\\('enabledMcpjson:', p.get\\('enabledMcpjsonServers'\\)\\); print\\('disabledMcpjson:', p.get\\('disabledMcpjsonServers'\\)\\)\" 2>/dev/null || echo \"parse failed\"; echo \"---user settings---\"; cat ~/.claude/settings.json 2>/dev/null)",
       "Read(//home/valueerror/**)",
       "Read(//home/valueerror/.claude/**)",
-      "mcp__graphify-next-exam__query_graph"
+      "mcp__graphify-next-exam__query_graph",
+      "Bash(node --check src-electron/main/scripts/assessmentSession.js)",
+      "Bash(command -v swiftc)"
     ]
   }
 }
