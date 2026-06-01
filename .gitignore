@@ -37,4 +37,5 @@ teacher/public/qemu/mac/
 student/public/qemu/win/
 student/public/qemu/lin/
 student/public/qemu/mac/
-student/scripts/assessment/assessment-helper
+student/scripts/apple/assessment-helper
+student/scripts/apple/wifi-helper
