@@ -141,11 +141,18 @@ If a single line cannot fit, split into two atoms with the same `TOPIC^KEY` pref
 
 **Mandatory for agents in this repo.** Graphify is the canonical map of structure and cross-file links; do not substitute guesswork when a graph can ground the answer.
 
-- **Before** substantive or cross-cutting work (architecture, IPC, shared protocols, unfamiliar subsystems, large refactors): read existing outputs under `graphify-out/` (`GRAPH_REPORT.md`, `graph.json`, and `graph.html` when helpful). If outputs are missing or no longer reflect the areas you will touch, run a full build from the repository root: `graphify .` (or the `/graphify` skill / project graphify workflow when available).
+**MCP server `graphify-next-exam` is the primary interface — always consult it FIRST.** It is registered project-scoped and auto-starts with every session (stdio, serves `graphify-out/graph.json`). Before acting on ANY coding instruction in this repo — including small/local edits — query the graph first to ground yourself in the project:
+
+- Tools: `query_graph`, `get_node`, `get_neighbors`, `shortest_path`, `get_community`, `god_nodes`, `graph_stats`, `list_prs`, `triage_prs`, `get_pr_impact`.
+- These tool schemas are **deferred**: load them once per session with `ToolSearch` (`select:mcp__graphify-next-exam__query_graph,...`) before the first call. Keep this step terse.
+- Prefer **targeted MCP queries** over reading whole `graphify-out/*.json` into context — the MCP returns only the requested nodes/edges and is far more token-efficient. Use it for relationship, impact, and cross-file questions (`get_neighbors`, `get_pr_impact`, `shortest_path`).
+- For a trivial edit where a query genuinely adds nothing, you may proceed directly — but state in one line that you checked and why the graph was unnecessary. Default is: query first.
+
+- **Before** substantive or cross-cutting work (architecture, IPC, shared protocols, unfamiliar subsystems, large refactors): on top of the MCP queries above, the static outputs under `graphify-out/` (`GRAPH_REPORT.md`, `graph.html` when helpful) give a broad overview. If outputs are missing or no longer reflect the areas you will touch, run a full build from the repository root: `graphify .` (or the `/graphify` skill / project graphify workflow when available).
 - **After coarse architecture changes** (new packages or apps, IPC/API surface changes, large directory moves, refactors that shift many callsites, or anything that redraws boundaries between `student/`, `teacher/`, and shared code): refresh the graph without being prompted—run `graphify . --update` from repo root when Graphify is installed; if outputs never existed or the delta is too large to trust incrementally, run `graphify .` instead.
 - **Definition of done** for those changes includes an updated `graphify-out/` consistent with the new layout (same session unless the user explicitly defers a long rebuild).
 
-**Order of operations:** for tasks that touch both unknown behavior and structure, skim `memory.md` first, then `graphify-out/` as needed.
+**Order of operations:** skim `memory.md` first, then query the `graphify-next-exam` MCP to map the relevant structure, falling back to `graphify-out/` files only for a broad overview.
 
 ---
 
