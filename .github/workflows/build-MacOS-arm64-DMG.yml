@@ -116,12 +116,12 @@ jobs:
           npm install
           mkdir dist
 
-      - name: Student build assessment helper
+      - name: Student build apple helpers
         working-directory: ./student
         env:
           SHAID: ${{ secrets.SHAID }}
           CSC_NAME: ${{ secrets.SHAID }}
-        run: npm run build:assessment
+        run: npm run build:apple
 
       - name: Student build
         working-directory: ./student
