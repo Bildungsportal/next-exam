@@ -1,7 +1,6 @@
 <template>
     <div class="column" style="height: 100%">
         <!-- HEADER START -->
-        <!-- CHANGED: all props removed from exam-header — ExamHeader reads from stores directly (mirrors geogebra.vue) -->
         <exam-header
             @reconnect="reconnect"
             @gracefullyExit="gracefullyExit"
