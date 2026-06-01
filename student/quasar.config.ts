@@ -373,6 +373,10 @@ export default defineConfig(( ctx: any ) => {
           gatekeeperAssess: false,
           entitlements: 'scripts/entitlements.mac.plist',
           entitlementsInherit: 'scripts/entitlements.mac.plist',
+          // embed Developer ID profile (authorizes restricted entitlements) only when present
+          ...(fse.existsSync(path.join(__dirname, 'scripts/apple/nextexamstudent.provisioningprofile'))
+            ? { provisioningProfile: 'scripts/apple/nextexamstudent.provisioningprofile' }
+            : {}),
           category: 'public.app-category.utilities',
           target: { target: 'dmg', arch: macEbArch },
           files: ['**/*', '!public/minimal-jre-11-win/**', '!public/minimal-jre-11-lin/**', '!public/qemu/win/**', '!public/qemu/lin/**'],
