@@ -352,9 +352,9 @@ export default defineConfig(( ctx: any ) => {
         extraResources: [
           { from: 'src-electron/resources/linux', to: 'linux' },
           { from: 'src-electron/resources/win32', to: 'win32' },
-          ...(fse.existsSync(path.join(__dirname, 'scripts/assessment/assessment-helper'))
-            ? [{ from: 'scripts/assessment/assessment-helper', to: 'assessment/assessment-helper' }]
-            : []),
+          ...['assessment-helper', 'wifi-helper']
+            .filter((name) => fse.existsSync(path.join(__dirname, 'scripts/apple', name)))
+            .map((name) => ({ from: `scripts/apple/${name}`, to: `apple/${name}` })),
         ],
         // directories.output is overridden by quasar to dist/electron/Packaged - cannot change here
         compression: 'normal',

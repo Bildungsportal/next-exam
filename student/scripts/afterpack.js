@@ -18,7 +18,7 @@ function codesignHelper(helperPath, identity) {
     ];
     const p = spawn('codesign', args, { stdio: 'inherit' });
     p.on('error', reject);
-    p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(`codesign assessment-helper failed (${code})`))));
+    p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(`codesign ${path.basename(helperPath)} failed (${code})`))));
   });
 }
 
@@ -43,12 +43,14 @@ export default async function afterPack(context) {
 
   if (context.electronPlatformName === 'darwin') {
     const appName = context.packager.appInfo.productFilename;
-    const helperPath = path.join(appOutDir, `${appName}.app`, 'Contents', 'Resources', 'assessment', 'assessment-helper');
     const identity = (process.env.SHAID || process.env.CSC_NAME || '').trim();
     const signEnabled = process.env.SIGN !== 'false';
-    if (await fs.pathExists(helperPath) && signEnabled && identity) {
-      await codesignHelper(helperPath, identity);
-      console.log(`Signed assessment-helper in app bundle: ${helperPath}`);
+    for (const name of ['assessment-helper', 'wifi-helper']) {
+      const helperPath = path.join(appPath, `${appName}.app`, 'Contents', 'Resources', 'apple', name);
+      if (await fs.pathExists(helperPath) && signEnabled && identity) {
+        await codesignHelper(helperPath, identity);
+        console.log(`Signed ${name} in app bundle: ${helperPath}`);
+      }
     }
   }
 }

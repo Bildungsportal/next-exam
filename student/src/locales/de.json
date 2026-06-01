@@ -206,7 +206,7 @@
     "student": {
         "activate": "aktivieren",
         "advanced": "fortgeschritten",
-        "assessmentFailedMessage": "Der macOS-Prüfungsmodus (Automatic Assessment) konnte nicht gestartet werden. Die Prüfung wird nicht geöffnet.\n\nLokal testen: npm run build:assessment:local",
+        "assessmentFailedMessage": "Der macOS-Prüfungsmodus (Automatic Assessment) konnte nicht gestartet werden. Die Prüfung wird nicht geöffnet.\n\nLokal testen: npm run build:apple:local",
         "assessmentFailedTitle": "Prüfungsmodus nicht verfügbar",
         "bildungsportal": "Bildungsportal",
         "bipLoginConnected": "Verbindung hergestellt.",

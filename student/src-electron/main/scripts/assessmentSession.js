@@ -13,9 +13,9 @@ let assessmentChild = null;
 
 function helperPath() {
     for (const p of [
-        path.join(process.resourcesPath, 'assessment', 'assessment-helper'),
-        path.join(process.cwd(), 'scripts', 'assessment', 'assessment-helper'),
-        path.join(__dirname, '../../../../scripts/assessment/assessment-helper'),
+        path.join(process.resourcesPath, 'apple', 'assessment-helper'),
+        path.join(process.cwd(), 'scripts', 'apple', 'assessment-helper'),
+        path.join(__dirname, '../../../../scripts/apple/assessment-helper'),
     ]) {
         if (p && fs.existsSync(p)) return p;
     }
@@ -29,7 +29,7 @@ export async function startAssessmentSession() {
 
     const bin = helperPath();
     if (!bin) {
-        return { ok: false, reason: 'assessment-helper not found (npm run build:assessment:local on macOS)' };
+        return { ok: false, reason: 'assessment-helper not found (npm run build:apple:local on macOS)' };
     }
     try { fs.chmodSync(bin, 0o755); } catch (_) { /* ignore */ }
 
