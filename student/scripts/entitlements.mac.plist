@@ -22,17 +22,17 @@
     <!-- <key>com.apple.developer.networking.multicast</key><true/>   leads to invalid code-signature crash despite signign and notarizing without errors -->
 
 
-    <key>com.apple.developer.networking.wifi-info</key>
-    <true/>
+    <!-- wifi-info disabled: not in Developer ID profile; SSID via wifi-helper + Location -->
+    <!--<key>com.apple.developer.networking.wifi-info</key>
+    <true/>-->
 
-
-    <key>com.apple.developer.automatic-assessment-configuration</key>
+    <!-- AAC / assessment disabled for local builds -->
+    <!--<key>com.apple.developer.automatic-assessment-configuration</key>
     <true/>
     <key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
     <array>
         <string>com.apple.assessmentagent</string>
-    </array>
-
+    </array>-->
 
   </dict>
 </plist>

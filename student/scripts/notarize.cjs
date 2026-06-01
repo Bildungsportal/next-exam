@@ -12,6 +12,18 @@ const { exec } = require('child_process');
 const { spawn } = require('child_process');
 const provisionProfilePath = path.join(__dirname, 'apple', 'nextexamstudent.provisionprofile');
 
+// True when entitlements.mac.plist has an active (non-commented) AAC entitlement key
+function needsAacProvisionProfile(entitlementsPath) {
+  const lines = fs.readFileSync(entitlementsPath, 'utf8').split('\n');
+  let inComment = false;
+  for (const line of lines) {
+    if (line.includes('<!--')) inComment = true;
+    if (!inComment && line.includes('com.apple.developer.automatic-assessment-configuration')) return true;
+    if (line.includes('-->')) inComment = false;
+  }
+  return false;
+}
+
 // Funktion zum Ausführen eines Befehls als Promise
 function execPromise(command) {
   return new Promise((resolve, reject) => {
@@ -151,28 +163,25 @@ exports.default = async function notarizing(context) {
   try {
     const st = fs.statSync(appBundlePath);
     fs.chmodSync(appBundlePath, st.mode | 0o200);
+    // Do not use --deep here: it re-signs Electron Framework and causes SIGTRAP at V8 init
     const signArgs = [
-      '--deep',
       '--force',
       '--options', 'runtime',
+      '--timestamp',
       '--entitlements', entitlementsPath,
     ];
-    if (fs.existsSync(provisionProfilePath)) {
-      fs.copyFileSync(
-        provisionProfilePath,
-        path.join(appBundlePath, 'Contents', 'embedded.mobileprovision'),
-      );
-      signArgs.push('--provisioning-profile', provisionProfilePath);
-    } else {
-      console.warn('WARNING: scripts/apple/nextexamstudent.provisionprofile missing — AAC launch may fail');
+    const embeddedProfile = path.join(appBundlePath, 'Contents', 'embedded.mobileprovision');
+    const useAacProfile = needsAacProvisionProfile(entitlementsPath);
+    if (useAacProfile && fs.existsSync(provisionProfilePath)) {
+      fs.copyFileSync(provisionProfilePath, embeddedProfile);
+    } else if (fs.existsSync(embeddedProfile)) {
+      fs.rmSync(embeddedProfile);
+    } else if (useAacProfile) {
+      console.warn('WARNING: nextexamstudent.provisionprofile missing — AAC launch may fail');
     }
     signArgs.push('-s', ID, appBundlePath);
     await run('codesign', signArgs);
     console.log(`Successfully re-signed the entire app: ${appBundlePath}`);
-    const embeddedProfile = path.join(appBundlePath, 'Contents', 'embedded.mobileprovision');
-    if (!fs.existsSync(embeddedProfile)) {
-      throw new Error(`embedded.mobileprovision missing after codesign — AAC launch will fail (${embeddedProfile})`);
-    }
   } catch (error) {
     console.error(`Error re-signing the app:`, error);
     throw new Error(`Re-signing failed for ${appBundlePath}`);

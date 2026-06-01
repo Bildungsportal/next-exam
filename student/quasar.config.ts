@@ -65,6 +65,22 @@ const macEbArch = process.env.NXE_EB_MAC_ARCH === 'arm64'
   ? (['arm64'] as const)
   : (['x64'] as const);
 
+/** True when entitlements.mac.plist has active automatic-assessment-configuration (not commented out). */
+function macUsesAacProvisionProfile(): boolean {
+  const plistPath = path.join(__dirname, 'scripts/entitlements.mac.plist');
+  if (!fs.existsSync(plistPath) || !fse.existsSync(path.join(__dirname, 'scripts/apple/nextexamstudent.provisionprofile'))) {
+    return false;
+  }
+  const lines = fs.readFileSync(plistPath, 'utf8').split('\n');
+  let inComment = false;
+  for (const line of lines) {
+    if (line.includes('<!--')) inComment = true;
+    if (!inComment && line.includes('com.apple.developer.automatic-assessment-configuration')) return true;
+    if (line.includes('-->')) inComment = false;
+  }
+  return false;
+}
+
 export default defineConfig(( ctx: any ) => {
   return {
     // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
@@ -377,8 +393,8 @@ export default defineConfig(( ctx: any ) => {
           gatekeeperAssess: false,
           entitlements: 'scripts/entitlements.mac.plist',
           entitlementsInherit: 'scripts/entitlements.mac.plist',
-          // embed Developer ID profile (authorizes restricted entitlements) only when present
-          ...(fse.existsSync(path.join(__dirname, 'scripts/apple/nextexamstudent.provisionprofile'))
+          // Developer ID profile only when AAC entitlement is active in entitlements.mac.plist
+          ...(macUsesAacProvisionProfile()
             ? { provisioningProfile: 'scripts/apple/nextexamstudent.provisionprofile' }
             : {}),
           category: 'public.app-category.utilities',
