@@ -171,6 +171,12 @@ exports.default = async function notarizing(context) {
 
 
 
+  // local dev: keep signing, skip only the slow Apple notarization upload
+  if (process.env.NOTARIZE === 'false') {
+    console.log('Skipping notarization (NOTARIZE=false) - app is signed but not stapled');
+    return;
+  }
+
   // Notarization-Prozess starten
   console.log('--------------------------------');
   console.log("Notarizing Next-Exam-Student");
