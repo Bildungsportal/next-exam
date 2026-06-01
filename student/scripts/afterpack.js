@@ -22,15 +22,15 @@ function codesignHelper(helperPath, identity) {
   });
 }
 
-// recursively remove every file named `name` under `dir` (mac nests it in the framework, linux/win at root)
+// recursively remove every entry (file or dir) named `name` under `dir`
 async function removeByName(dir, name) {
   for (const entry of await fs.readdir(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      await removeByName(full, name);
-    } else if (entry.name === name) {
+    if (entry.name === name) {
       await fs.remove(full);
       console.log(`Removed ${full}`);
+    } else if (entry.isDirectory()) {
+      await removeByName(full, name);
     }
   }
 }
@@ -56,6 +56,9 @@ export default async function afterPack(context) {
 
   // drop Chromium license attribution file (~18MB); not loaded at runtime
   await removeByName(appPath, 'LICENSES.chromium.html');
+
+  // drop @napi-rs/canvas musl binary (~29MB); only needed on Alpine/musl, glibc desktop loads the gnu variant
+  await removeByName(appPath, 'canvas-linux-x64-musl');
 
   if (context.electronPlatformName === 'darwin') {
     const appName = context.packager.appInfo.productFilename;
