@@ -22,7 +22,9 @@ import fs from 'fs'
 import archiver from 'archiver'   // causes severe race conditions with electron's own versions - always keep the same version as electron
 import extract from 'extract-zip'
 import { join } from 'path'
-import { screen, ipcMain, app, BrowserWindow, webContents } from 'electron'
+import { screen, ipcMain, app, BrowserWindow, webContents, dialog } from 'electron'
+import i18n from '../../../src/locales/locales.js';
+import { startAssessmentSession, stopAssessmentSession } from './assessmentSession.js';
 import WindowHandler from './windowhandler.js'
 import IpcHandler from './ipchandler.js'
 import log from 'electron-log';
@@ -881,6 +883,39 @@ import {
 
 
 
+    /** macOS AAC before exam UI; false = abort exam-mode entry (mainwindow dialog, examwindow optional). */
+    async ensureAssessmentForExamStart() {
+        const result = await startAssessmentSession();
+        if (result.ok) return true;
+        await this.abortExamModeStart(result.reason);
+        return false;
+    }
+
+    /** Reset exam state when AAC cannot start. */
+    async abortExamModeStart(detail) {
+        log.error('communicationhandler @ abortExamModeStart:', detail);
+        await stopAssessmentSession();
+        if (WindowHandler.examwindow && !WindowHandler.examwindow.isDestroyed?.()) {
+            try { WindowHandler.examwindow.destroy(); } catch (err) {
+                log.warn('communicationhandler @ abortExamModeStart: destroy examwindow', err?.message || err);
+            }
+        }
+        WindowHandler.examwindow = null;
+        WindowHandler._examWindowCreating = false;
+        this.multicastClient.clientinfo.exammode = false;
+        this.multicastClient.clientinfo.focus = true;
+        const parent = WindowHandler.mainwindow && !WindowHandler.mainwindow.isDestroyed?.()
+            ? WindowHandler.mainwindow
+            : undefined;
+        await dialog.showMessageBox(parent, {
+            type: 'error',
+            buttons: ['OK'],
+            title: i18n.global.t('student.assessmentFailedTitle'),
+            message: i18n.global.t('student.assessmentFailedMessage'),
+            detail: detail ? String(detail) : undefined,
+        });
+    }
+
     /**
      * Starts exam mode for student
      * deletes workfolder contents (if set)
@@ -979,6 +1014,10 @@ import {
                     return;
                 }
 
+                if (!(await this.ensureAssessmentForExamStart())) {
+                    this.localVmStartState = 'blocked';
+                    return;
+                }
                 this.multicastClient.clientinfo.exammode = true
                 this.multicastClient.clientinfo.examtype = examtype
                 log.info("communicationhandler @ startExam: creating exam window")
@@ -991,9 +1030,9 @@ import {
             return;
         }
 
-        this.multicastClient.clientinfo.exammode = true
-
         if (!WindowHandler.examwindow){
+            if (!(await this.ensureAssessmentForExamStart())) return;
+            this.multicastClient.clientinfo.exammode = true
             log.info("communicationhandler @ startExam: creating exam window")
             this.multicastClient.clientinfo.examtype = examtype
             WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
@@ -1001,7 +1040,9 @@ import {
         else if (WindowHandler.examwindow){  //reconnect into active exam session with exam window already open
             log.error("communicationhandler @ startExam: found existing Examwindow..")
             try {  // switch existing window back to exam mode
-                WindowHandler.examwindow.show() 
+                WindowHandler.examwindow.show()
+                if (!(await this.ensureAssessmentForExamStart())) return;
+                this.multicastClient.clientinfo.exammode = true
                 if (!this.config.development) {
                     if (!platformDispatcher.skipElectronKiosk) {
                         WindowHandler.examwindow.setFullScreen(true)

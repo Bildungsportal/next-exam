@@ -206,6 +206,8 @@
     "student": {
         "activate": "activate",
         "advanced": "advanced",
+        "assessmentFailedMessage": "macOS exam mode (Automatic Assessment) could not be started. The exam will not open.\n\nLocal testing: npm run build:assessment:local",
+        "assessmentFailedTitle": "Exam mode unavailable",
         "bildungsportal": "Bildungsportal",
         "bipLoginConnected": "Connection established.",
         "bipLoginWelcome": "Welcome {name}!",

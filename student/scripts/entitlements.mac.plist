@@ -20,5 +20,19 @@
     <!-- <key>NSScreenRecordingUsageDescription</key> -->
     <!-- <string>Diese App benötigt Zugriff auf die Bildschirmaufnahme, um Screenshots zu erstellen.</string> -->
     <!-- <key>com.apple.developer.networking.multicast</key><true/>   leads to invalid code-signature crash despite signign and notarizing without errors -->
+
+
+    <key>com.apple.developer.networking.wifi-info</key>
+    <true/>
+
+
+    <key>com.apple.developer.automatic-assessment-configuration</key>
+    <true/>
+    <key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
+    <array>
+        <string>com.apple.assessmentagent</string>
+    </array>
+
+
   </dict>
 </plist>

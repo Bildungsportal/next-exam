@@ -384,7 +384,7 @@ class WindowHandler {
             if (!this.examwindow) return;
             
             if (this.config.showdevtools) { this.examwindow.webContents.openDevTools()  }
-            
+
             if (!this.config.development) {
                 try {
                     this.examwindow.removeMenu()

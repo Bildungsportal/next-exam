@@ -40,8 +40,9 @@ import { updateSystemTray } from './main/scripts/traymenu.js'
 import JreHandler from './main/scripts/jre-handler.js';
 import { checkParentProcess } from './main/scripts/checkparent.js';
 
-import { toggleMacOSLockdown } from './main/scripts/platformrestrictions.js';
+// toggleMacOSLockdown disabled while macOS Automatic Assessment mode is active
 import { stopProxy } from './main/scripts/vncproxy.js';
+import { stopAssessmentSession } from './main/scripts/assessmentSession.js';
 import { initErrorHandling } from './main/scripts/errorHandling.js';
 import { syncClientDisplayInfo } from './main/scripts/displayInfo.js';
 
@@ -207,8 +208,9 @@ app.on('window-all-closed', async () => {  // last window closed – clear stora
 });
 
 app.on('will-quit', () => {  // if window is closed
-    toggleMacOSLockdown(false)   // could be deleted if assesment mode is enabled
-    
+    if (process.platform === 'darwin') {
+        stopAssessmentSession().catch((err) => log.warn('main @ will-quit: stopAssessmentSession', err));
+    }
     if (process.platform === 'win32' && platformDispatcher.runningInCage) {
         wipeKioskUserFiles({ workdirectory: config.workdirectory }); // win32 kiosk: wipe workdir + standard user folders before quit so the next student starts fresh.
     }
@@ -303,8 +305,6 @@ app.whenReady()
         }, { useSystemPicker: true });
     }
     
-    toggleMacOSLockdown(true);
-   
     /******* Create main window *******/
     WindowHandler.createMainWindow()
 

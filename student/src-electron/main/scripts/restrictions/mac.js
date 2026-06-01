@@ -25,7 +25,7 @@ function onMacRestrictionSignal(signalName) {
         currentWinhandler.examwindow.setKiosk(true);
         currentWinhandler.examwindow.show();
         currentWinhandler.examwindow.focus();
-        toggleMacOSLockdown(true);
+        // toggleMacOSLockdown(true); // disabled: AAC assessment mode replaces defaults lockdown
     }
 }
 

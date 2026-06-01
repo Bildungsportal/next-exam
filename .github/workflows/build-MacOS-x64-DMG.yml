@@ -128,6 +128,13 @@ jobs:
           ELECTRON_ARCH=x64 npm install electron@38.1.2 --force
           mkdir dist
 
+      - name: Student build assessment helper
+        working-directory: ./student
+        env:
+          SHAID: ${{ secrets.SHAID }}
+          CSC_NAME: ${{ secrets.SHAID }}
+        run: npm run build:assessment
+
       - name: Student build
         working-directory: ./student
         env:

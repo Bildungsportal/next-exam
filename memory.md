@@ -24,6 +24,8 @@ TECH^vite^fsAllowShared^student+teacher extendViteConf server.fs.allow repoRoot+
 TECH^build^protectMain^electron-main.js in dist/electron/UnPackaged; protect via electron-builder beforePack^teacher+student scripts/protect-main.mjs+beforepack.js+quasar.config.ts
 TECH^build^electronAssets^prod electron: copy src/assets→public/src/assets; rewrite `/src/assets`→`./src/assets` incl. Vue backtick literals in generateBundle; CSS url() often Vite-inlined^quasar.config.ts
 RULE^student^devtoolsInstaller^electron-devtools-installer devDep only; dynamic import in windowhandler installVueJsDevTools when !app.isPackaged—no top-level require
+PATH^student^assessmentMac^scripts/assessment/main.swift→assessment-helper; npm run build:assessment(:local); extraResources assessment/; assessmentSession.js=start/stop only
+IPC^student^assessment^darwin; CommHandler.startExam→ensureAssessmentForExamStart+abortExamModeStart; before exam UI; toggleMacOSLockdown off
 
 # Kiosk architecture (cross-platform)
 RULE^kiosk^sharedFields^platformDispatcher win32 reuses linux cage field names (runningInCage, cageInstalled, cageKioskAppImageInstalled, cageKioskDesktopInstalled, needsCageKioskSetup); runningInCage on win32 = kioskOsUser && provisionedSid && (aaProof || profileState128); not username-only
