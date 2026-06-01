@@ -26,13 +26,12 @@
     <!--<key>com.apple.developer.networking.wifi-info</key>
     <true/>-->
 
-    <!-- AAC / assessment disabled for local builds -->
-    <!--<key>com.apple.developer.automatic-assessment-configuration</key>
+    <key>com.apple.developer.automatic-assessment-configuration</key>
     <true/>
     <key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
     <array>
         <string>com.apple.assessmentagent</string>
-    </array>-->
+    </array>
 
   </dict>
 </plist>

@@ -222,7 +222,9 @@ exports.default = async function notarizing(context) {
       appleId: process.env.APPLEID,
       appleIdPassword: process.env.APPLEIDPASS,
     });
-    console.log("Notarization successful!");
+    console.log('Notarization successful!');
+    await execPromise(`xcrun stapler staple "${appBundlePath}"`);
+    console.log(`Stapled notarization ticket: ${appBundlePath}`);
   } catch (error) {
     console.error('Failed to notarize:', error);
     throw error;
