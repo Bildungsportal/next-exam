@@ -129,6 +129,7 @@
         "examsectionsinfo": "You are in secured mode. Do you want to activate this exam section for all connected clients?",
         "exitbipcompleted": "Mark exam on Bildungsportal as completed",
         "exitdelete": "Delete all exam-related files on students devices",
+        "exitdeletesingle": "Delete all exam-related files on student device",
         "exitexam": "This kills the connection to all students \nDid you backup everything?",
         "exitexaminfo": "all active connections will be closed",
         "exitexamsure": "Close Exam Server?",

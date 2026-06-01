@@ -315,7 +315,7 @@ async function kick(studenttoken, studentip){
         <br><br>
         
             <input class="form-check-input" style="margin-top: 0.1em;" type="checkbox" id="checkboxdel">
-            <label class="form-check-label" for="checkboxdel"> ${this.$t("dashboard.exitdelete")} </label>
+            <label class="form-check-label" for="checkboxdel"> ${this.$t("dashboard.exitdeletesingle")} </label>
            
         </div>
         `,

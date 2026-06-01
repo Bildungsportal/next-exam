@@ -76,6 +76,7 @@
         "delcolumn": "delcolumn",
         "deletetable": "deletetable",
         "delrow": "delrow",
+        "endexam": "End exam",
         "error": "Error",
         "exit": "Exit safe exam mode?",
         "exitkiosk": "Do not leave safe exam mode without permission.",
