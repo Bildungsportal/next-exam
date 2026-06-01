@@ -6,8 +6,11 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..', '..');
 const appleDir = path.join(projectRoot, 'scripts', 'apple');
-const helpers = ['assessment-helper', 'wifi-helper'];
-const entitlements = path.join(projectRoot, 'scripts', 'entitlements.mac.helpers.plist');
+
+const helperEntitlements = {
+    'assessment-helper': path.join(projectRoot, 'scripts', 'entitlements.mac.assessment.plist'),
+    'wifi-helper': path.join(projectRoot, 'scripts', 'entitlements.mac.wifi.plist'),
+};
 
 function run(cmd, args, opts = {}) {
     return new Promise((resolve, reject) => {
@@ -20,14 +23,14 @@ function run(cmd, args, opts = {}) {
     });
 }
 
-// Codesign a single helper binary with the shared entitlements file.
-async function signHelper(helperPath, identity, adhoc) {
+// Codesign one helper with its own entitlements plist.
+async function signHelper(helperPath, entitlementsPath, identity, adhoc) {
     if (identity) {
         await run('codesign', [
             '--force',
             '--options', 'runtime',
             '--timestamp',
-            '--entitlements', entitlements,
+            '--entitlements', entitlementsPath,
             '-s', identity,
             helperPath,
         ]);
@@ -37,29 +40,28 @@ async function signHelper(helperPath, identity, adhoc) {
     if (adhoc) {
         await run('codesign', [
             '--force',
-            '--entitlements', entitlements,
+            '--entitlements', entitlementsPath,
             '-s', '-',
             helperPath,
         ]);
-        console.log(`Ad-hoc signed ${path.basename(helperPath)} (local dev, no notarization)`);
+        console.log(`Ad-hoc signed ${path.basename(helperPath)} (local dev)`);
     }
 }
 
-// Sign every built helper with the same identity/entitlements.
 async function maybeSign() {
     const identity = (process.env.NXE_APPLE_SIGN_IDENTITY || process.env.CSC_NAME || process.env.SHAID || '').trim();
     const adhoc = process.env.NXE_APPLE_ADHOC === '1' || process.env.SIGN === 'false';
-    for (const name of helpers) {
+    for (const [name, entitlementsPath] of Object.entries(helperEntitlements)) {
         const helperPath = path.join(appleDir, name);
         if (!fs.existsSync(helperPath)) continue;
-        await signHelper(helperPath, identity, adhoc);
+        await signHelper(helperPath, entitlementsPath, identity, adhoc);
     }
 }
 
 async function main() {
     if (process.platform !== 'darwin') {
         console.warn('apple helper build skipped: requires macOS (swiftc + Apple frameworks)');
-        const allPresent = helpers.every((name) => fs.existsSync(path.join(appleDir, name)));
+        const allPresent = Object.keys(helperEntitlements).every((name) => fs.existsSync(path.join(appleDir, name)));
         if (!allPresent) process.exit(0);
         return;
     }

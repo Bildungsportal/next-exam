@@ -7,16 +7,25 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const { signLanguageToolJars } = require('./sign-languagetool-jars.cjs');
-const entitlementsPath = path.join(__dirname, 'entitlements.mac.plist');
-const helperEntitlementsPath = path.join(__dirname, 'entitlements.mac.helpers.plist');
 
-function codesignHelper(helperPath, identity) {
+const scriptsDir = __dirname;
+const assessmentEntitlements = path.join(scriptsDir, 'entitlements.mac.assessment.plist');
+const wifiEntitlements = path.join(scriptsDir, 'entitlements.mac.wifi.plist');
+const provisionProfile = path.join(scriptsDir, 'apple', 'nextexamstudent.provisionprofile');
+
+const helperEntitlements = {
+  'assessment-helper': assessmentEntitlements,
+  'wifi-helper': wifiEntitlements,
+};
+
+// Codesign a bundled apple/* helper with helper-specific entitlements (not Electron plist).
+function codesignHelper(helperPath, identity, entitlementsPath) {
   return new Promise((resolve, reject) => {
     const args = [
       '--force',
       '--options', 'runtime',
       '--timestamp',
-      '--entitlements', helperEntitlementsPath,
+      '--entitlements', entitlementsPath,
       '-s', identity,
       helperPath,
     ];
@@ -58,26 +67,33 @@ export default async function afterPack(context) {
     }
   }
 
-  // drop Chromium license attribution file (~18MB); not loaded at runtime
   await removeByName(appPath, 'LICENSES.chromium.html');
-
-  // drop @napi-rs/canvas musl binary (~29MB); only needed on Alpine/musl, glibc desktop loads the gnu variant
   await removeByName(appPath, 'canvas-linux-x64-musl');
 
   if (context.electronPlatformName === 'darwin') {
     const appName = context.packager.appInfo.productFilename;
     const identity = (process.env.SHAID || process.env.CSC_NAME || '').trim();
     const signEnabled = process.env.SIGN !== 'false';
+    const bundlePath = path.join(appPath, `${appName}.app`);
+
+    if (signEnabled && identity && (await fs.pathExists(provisionProfile)) && (await fs.pathExists(assessmentEntitlements))) {
+      await fs.copy(
+        provisionProfile,
+        path.join(bundlePath, 'Contents', 'embedded.provisionprofile'),
+      );
+      console.log('Copied embedded.provisionprofile (AAC on assessment-helper only)');
+    }
+
     if (signEnabled && identity) {
       await signLanguageToolJars(appPath, appName, identity);
     }
-    for (const name of ['assessment-helper', 'wifi-helper']) {
-      const helperPath = path.join(appPath, `${appName}.app`, 'Contents', 'Resources', 'apple', name);
+
+    for (const [name, entitlementsPath] of Object.entries(helperEntitlements)) {
+      const helperPath = path.join(bundlePath, 'Contents', 'Resources', 'apple', name);
       if (await fs.pathExists(helperPath) && signEnabled && identity) {
-        await codesignHelper(helperPath, identity);
-        console.log(`Signed ${name} in app bundle: ${helperPath}`);
+        await codesignHelper(helperPath, identity, entitlementsPath);
+        console.log(`Signed ${name} with ${path.basename(entitlementsPath)}`);
       }
     }
   }
 }
-
