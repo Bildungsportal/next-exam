@@ -23,6 +23,7 @@ import log from 'electron-log'
 import {SchedulerService} from './schedulerservice.ts'
 //import { activeWindow } from 'get-windows';
 import platformDispatcher from './platformDispatcher.js';
+import { isAssessmentSessionActive } from './assessmentSession.js';
 import i18n from '../../../src/locales/locales.js';
 import {fileURLToPath} from "node:url";
 import path from 'path';
@@ -900,6 +901,10 @@ class WindowHandler {
     //adds blur listener when entering exammode   // blur event isnt fired on macos MISSIONCONTROL (which cant be deactivated anymore) - damn you apple!
     addBlurListener(window = "examwindow"){
         if (platformDispatcher.runningInCage) {
+            return;
+        }
+        // macOS AAC assessment mode owns the lockdown; no blur-based re-focus needed (and blur fires unreliably under AAC)
+        if (isAssessmentSessionActive()) {
             return;
         }
         if (window === "examwindow"){ 

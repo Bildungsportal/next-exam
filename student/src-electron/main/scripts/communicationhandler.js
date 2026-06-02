@@ -24,7 +24,7 @@ import extract from 'extract-zip'
 import { join } from 'path'
 import { screen, ipcMain, app, BrowserWindow, webContents, dialog } from 'electron'
 import i18n from '../../../src/locales/locales.js';
-import { startAssessmentSession, stopAssessmentSession } from './assessmentSession.js';
+import { startAssessmentSession, stopAssessmentSession, isAssessmentSessionActive } from './assessmentSession.js';
 import WindowHandler from './windowhandler.js'
 import IpcHandler from './ipchandler.js'
 import log from 'electron-log';
@@ -302,6 +302,7 @@ import {
     async requestUpdate(){
         syncClientDisplayInfo(this.multicastClient.clientinfo);
         this.multicastClient.clientinfo.isRunningInCage = platformDispatcher.runningInCage;
+        this.multicastClient.clientinfo.isAssessmentMode = isAssessmentSessionActive();
 
         this.timer++   // we use timer to time loops with different intervals without introducing new unneccesary schedulers
         if (this.timer % 20 === 0 ){  // run every 20*5 (updateloop) seconds
@@ -1058,7 +1059,8 @@ import {
                 this.multicastClient.clientinfo.exammode = true
                 if (!this.config.development) {
                     if (!platformDispatcher.skipElectronKiosk) {
-                        WindowHandler.examwindow.setFullScreen(true)
+                        if (platformDispatcher.platform === 'darwin') WindowHandler.examwindow.setSimpleFullScreen(true)
+                        else WindowHandler.examwindow.setFullScreen(true)
                         WindowHandler.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
                         await enableRestrictions(WindowHandler)
                         await this.sleep(2000)

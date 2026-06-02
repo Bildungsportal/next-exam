@@ -1184,14 +1184,14 @@
                                         <img src="/src/assets/img/svg/edit-delete.svg" width="22" height="22" class="delfolderstudent" @click="delfolderquestion(student.token)"  @mouseover="showDescription($t('dashboard.delsingle'))" @mouseout="hideDescription" >
                                     </div>
                                     <br>
-                                    <img v-if="student.isRunningInCage && isStudentReachable(student, now)"
+                                    <img v-if="(student.isRunningInCage || student.isAssessmentMode) && isStudentReachable(student, now)"
                                         src="/src/assets/img/svg/shield-lock-fill.svg"
                                         width="14"
                                         height="14"
                                         class="white me-1"
                                         style="vertical-align: text-bottom; display: inline-block;"
                                         alt=""
-                                        @mouseover="showDescription($t('dashboard.cageKioskInfo'))"
+                                        @mouseover="showDescription($t(student.isAssessmentMode ? 'dashboard.assessmentModeInfo' : 'dashboard.cageKioskInfo'))"
                                         @mouseout="hideDescription">
                                     {{ truncatedClientName(student.clientname) }}  
                                     <button  @click='kick(student.token,student.clientip)'  @mouseover="showDescription($t('dashboard.kick'))" @mouseout="hideDescription" type="button" class=" btn-close  btn-close-white pt-1 pe-2 float-end"></button> 

@@ -420,6 +420,7 @@ if (config.exposeStudents) {
     if (typeof clientinfo.displayCount === 'number') student.displayCount = clientinfo.displayCount
     if (typeof clientinfo.multiMonitor === 'boolean') student.multiMonitor = clientinfo.multiMonitor
     if (typeof clientinfo.isRunningInCage === 'boolean') student.isRunningInCage = clientinfo.isRunningInCage
+    if (typeof clientinfo.isAssessmentMode === 'boolean') student.isAssessmentMode = clientinfo.isAssessmentMode
     if (clientinfo.isRunningInCage && clientinfo.allowedKioskApps) {
         student.allowedKioskApps = {
             startLayoutReadable: !!clientinfo.allowedKioskApps.startLayoutReadable,

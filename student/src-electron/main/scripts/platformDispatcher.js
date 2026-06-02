@@ -138,6 +138,12 @@ class PlatformDispatcher {
   applyElectronKioskMode(win) {
     if (!win || win.isDestroyed?.()) return;
     if (this.skipElectronKiosk) return;
+    // macOS: AAC assessment mode handles the lockdown; we only want a borderless fullscreen
+    // (simple fullscreen = no separate Space, no notch/camera safe-area inset, no menu bar).
+    if (this.platform === 'darwin') {
+      win.setSimpleFullScreen(true);
+      return;
+    }
     win.setKiosk(true);
   }
 

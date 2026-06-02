@@ -49,6 +49,7 @@
         "allowsectionswitch": "Allow students to switch between exam sections",
         "allowsectionswitchshort": "Allow section switch",
         "allowspellcheck": "Activate spellcheck for specific student",
+        "assessmentModeInfo": "Student is running in macOS Assessment Mode",
         "attention": "Attention!",
         "audioallow": "no restrictions",
         "audiorepeat1": "repetition",

@@ -8,6 +8,12 @@ import platformDispatcher from './platformDispatcher.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let assessmentChild = null;
+let assessmentActive = false;
+
+/** true while a macOS AAC session is live (begin received, not yet ended). Mirrors the real helper state. */
+export function isAssessmentSessionActive() {
+    return assessmentActive;
+}
 
 // assessment-helper is bundled as assessment-helper.app (embedded profile authorizes the restricted
 // AAC entitlement); the executable sits at Contents/MacOS/assessment-helper.
@@ -43,6 +49,7 @@ export async function startAssessmentSession() {
             if (settled) return;
             settled = true;
             if (assessmentChild === child) assessmentChild = null;
+            assessmentActive = false;
             try { child.kill('SIGTERM'); } catch (_) { /* ignore */ }
             log.error('assessmentSession @ start:', reason);
             resolve({ ok: false, reason });
@@ -51,7 +58,8 @@ export async function startAssessmentSession() {
             if (settled) return;
             settled = true;
             log.info('assessmentSession @ start: AAC session begin');
-            child.on('exit', () => { if (assessmentChild === child) assessmentChild = null; });
+            assessmentActive = true;
+            child.on('exit', () => { assessmentActive = false; if (assessmentChild === child) assessmentChild = null; });
             resolve({ ok: true });
         };
 
@@ -67,7 +75,12 @@ export async function startAssessmentSession() {
                 let event;
                 try { event = JSON.parse(line).event; } catch (_) { log.warn('assessment-helper (stdout):', line); continue; }
                 if (event === 'begin') succeed();
-                else if (event === 'failed' || event === 'interrupted' || event === 'end') fail(`helper event=${event}: ${line}`);
+                // pre-begin: settle the start promise as failure. post-begin (settled): the live AAC
+                // session ended/was interrupted by the system -> clear active flag so isAssessmentSessionActive() stays truthful.
+                else if (event === 'failed' || event === 'interrupted' || event === 'end') {
+                    if (settled) { assessmentActive = false; log.warn(`assessmentSession @ live: ${event}: ${line}`); }
+                    else fail(`helper event=${event}: ${line}`);
+                }
             }
         });
         child.stderr?.on('data', (d) => log.warn('assessment-helper:', String(d).trim()));
@@ -83,6 +96,7 @@ export async function stopAssessmentSession() {
     if (platformDispatcher.platform !== 'darwin') return;
     const child = assessmentChild;
     assessmentChild = null;
+    assessmentActive = false;
     if (!child || child.killed || child.exitCode !== null) return;
 
     await new Promise((resolve) => {

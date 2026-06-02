@@ -35,6 +35,7 @@ import mammoth from 'mammoth';
 
 import languageToolServer from './lt-server';
 import platformDispatcher from './platformDispatcher.js';
+import { isAssessmentSessionActive } from './assessmentSession.js';
 import { updateSystemTray } from './traymenu.js';
 import { ensureNetworkOrReset } from './testpermissionsMac.js';
 import { getWlanInfo } from './getwlaninfo.js';
@@ -982,9 +983,13 @@ class IpcHandler {
         /**
          * Set FOCUS state to false (mouse left exam window)
          */ 
-        ipcMain.handle('focuslost', (event, ctrlalt=false) => { 
-            let answer = false 
+        ipcMain.handle('focuslost', (event, ctrlalt=false) => {
+            let answer = false
             if (platformDispatcher.runningInCage) {
+                return { sender: 'client', focus: true };
+            }
+            // macOS AAC assessment mode owns the lockdown; ignore mouseleave-driven focus loss
+            if (isAssessmentSessionActive()) {
                 return { sender: 'client', focus: true };
             }
             if (this.config.development || !this.multicastClient.clientinfo.exammode) { 
