@@ -144,7 +144,7 @@
 
 
 
-            <input v-if="!isMac" :title="$t('editor.textcolor')" type="color" @input="handleColorInput"
+            <input :title="$t('editor.textcolor')" type="color" @input="handleColorInput"
                    :value="getHexColor || '#000000'" class="invisible-button btn btn-outline-info p-2 me-2 mb-1 btn-sm"
                    style="height: 33.25px; width:32px">
 
