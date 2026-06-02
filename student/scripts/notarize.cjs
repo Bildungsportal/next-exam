@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+const { spawn } = require('child_process');
 // electron-builder afterSign cwd is dist/, not student/ — load .env from project root
 const projectRoot = path.join(__dirname, '..');
 const envPath = fs.existsSync(path.join(projectRoot, '.env'))
@@ -9,6 +10,9 @@ require('dotenv').config({ path: envPath, override: true });
 const { notarize } = require('@electron/notarize');
 const { exec } = require('child_process');
 
+const assessmentEntitlements = path.join(projectRoot, 'scripts', 'entitlements.mac.assessment.plist');
+const wifiEntitlements = path.join(projectRoot, 'scripts', 'entitlements.mac.wifi.plist');
+
 function execPromise(command) {
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
@@ -16,6 +20,48 @@ function execPromise(command) {
       else resolve(stdout);
     });
   });
+}
+
+// Re-sign apple/* helpers after electron-builder deep-sign (it overwrites afterpack with entitlementsInherit).
+function codesignHelper(helperPath, identity, entitlementsPath, identifier) {
+  return new Promise((resolve, reject) => {
+    const args = [
+      '--force',
+      '--options', 'runtime',
+      '--timestamp',
+      '--entitlements', entitlementsPath,
+      '-s', identity,
+    ];
+    if (identifier) args.push('--identifier', identifier);
+    args.push(helperPath);
+    const p = spawn('codesign', args, { stdio: 'inherit' });
+    p.on('error', reject);
+    p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(`codesign ${path.basename(helperPath)} failed (${code})`))));
+  });
+}
+
+async function resignAppleHelpers(appBundlePath) {
+  const identity = (process.env.SHAID || process.env.CSC_NAME || '').trim();
+  if (!identity || process.env.SIGN === 'false') return;
+  const bundleId = process.env.MAC_BUNDLE_ID || 'com.nextexam.student';
+  const mainEntitlements = path.join(path.dirname(assessmentEntitlements), 'entitlements.mac.plist');
+  const helpers = [
+    { name: 'assessment-helper', entitlements: assessmentEntitlements, identifier: bundleId },
+    { name: 'wifi-helper', entitlements: wifiEntitlements, identifier: null },
+  ];
+  let anyReSigned = false;
+  for (const { name, entitlements, identifier } of helpers) {
+    const helperPath = path.join(appBundlePath, 'Contents', 'Resources', 'apple', name);
+    if (!fs.existsSync(helperPath) || !fs.existsSync(entitlements)) continue;
+    await codesignHelper(helperPath, identity, entitlements, identifier);
+    console.log(`Re-signed ${name} (${path.basename(entitlements)})`);
+    anyReSigned = true;
+  }
+  // Re-signing helpers invalidates sealed resources of the outer .app; re-sign the bundle to update hashes.
+  if (anyReSigned) {
+    await codesignHelper(appBundlePath, identity, mainEntitlements, bundleId);
+    console.log(`Re-signed outer .app bundle to seal updated helper hashes`);
+  }
 }
 
 exports.default = async function notarizing(context) {
@@ -31,6 +77,9 @@ exports.default = async function notarizing(context) {
   if (!fs.existsSync(appBundlePath)) {
     throw new Error(`appBundle does not exist ${appBundlePath}`);
   }
+
+  // Helpers must be signed after electron-builder (afterpack signing is overwritten by entitlementsInherit).
+  await resignAppleHelpers(appBundlePath);
 
   // JAR signing runs in afterpack.js before electron-builder signs the .app (avoids broken re-sign with profile)
   if (process.env.NOTARIZE === 'false') {
