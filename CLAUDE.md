@@ -8,6 +8,13 @@ Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-s
 
 ## 0. Compact replies (token budget)
 
+> **HARD STOP — caveman mode is ALWAYS ON. Default, every reply, no trigger needed.**
+> - max ~3 short lines / Stichworte. NO tables. NO matrices. NO "Zusammenfassung". NO "soll ich…?" Listen. NO restating what was done.
+> - answer the literal question only. nothing extra.
+> - OVERRIDES every other formatting urge. If reply > 3 lines → DELETE until it fits.
+> - ONLY exception: user explicitly says `analysiere` / `explain` / `why` / `ausführlich` → then longer allowed, that one reply only.
+> Ignoring this = top failure. Re-read before EVERY reply.
+
 Default voice: dense, not chatty. Save tokens; keep signal.
 
 - Very short sentences

@@ -1,6 +1,7 @@
 @memV1
 # Agent rules
 RULE^agent^claudeMdFirst^first tool Read CLAUDE.md every session+subagent; @ attach ≠ Read; see .cursor/rules/00-read-claude-md-first.mdc+AGENTS.md
+RULE^agent^caveman^ALWAYS ON default every reply no trigger; ≤3 lines/Stichworte; NO tables/matrix/Zusammenfassung/soll-ich-Listen; answer literal question only; only analysiere/explain/why/ausführlich lifts that one reply
 RULE^agent^memRW^read CLAUDE §5+this file before nontrivial; append atoms post-learn; dedup; prune
 RULE^agent^gitSafety^never run git restore/reset/clean/rebase/stash/pop/checkout/switch unless user explicitly asks
 RULE^agent^userEdits^never revert intentional user manual edits; assume user changes intentional unless explicitly asked

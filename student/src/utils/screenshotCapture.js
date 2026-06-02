@@ -164,7 +164,6 @@ let initAttempted = false;
 let fullDesktopLikely = true;
 let useWindowCaptureFallback = false;
 let linuxKioskRunningInCage = false;
-const isMac = typeof process !== 'undefined' && process.platform === 'darwin';
 
 /**
  * Acquire display stream once and set up a long-lived video element for frame capture.
@@ -270,10 +269,8 @@ export async function initDisplayStreamOnce() {
 
 /** Acquire display stream when called with user gesture (e.g. Connect click). Returns true if stream is ready. */
 export async function ensureDisplayStreamAsync() {
-  if (isMac) {
-    setCageWindowCaptureFallback(true);
-    return true;
-  }
+  // macOS / Cage: capturePage path needs no getDisplayMedia stream.
+  if (useWindowCaptureFallback) return true;
   if (hasActiveScreenshotStream()) return true;
   if (initAttempted && !hasActiveScreenshotStream()) initAttempted = false;
   await initDisplayStreamOnce();
@@ -382,9 +379,8 @@ export function initScreenshotScheduler(signalBridge) {
   }
   log.info('screenshotCapture @ initScreenshotScheduler: registering screenshot-config listener and fetching getScreenshotConfig');
 
-  if (isMac) {
-    setCageWindowCaptureFallback(true);
-  } else {
+  // macOS / Cage use capturePage; only getDisplayMedia platforms need a pre-warmed stream.
+  if (!useWindowCaptureFallback) {
     // Initialize display stream once so it is already available when interval starts after server connect
     initDisplayStreamOnce();
   }

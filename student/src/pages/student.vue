@@ -300,7 +300,7 @@ import {SchedulerService} from '../utils/schedulerservice.js'
 import {isElectronWindow} from "../types/platform.ts";
 import config from '../../src-electron/main/config.js'
 import {SignalBridge} from '../utils/signalBridge.js'
-import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync, setCageWindowCaptureFallback, setLinuxKioskRunningInCage } from '../utils/screenshotCapture.js'
+import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync, setCageWindowCaptureFallback, setLinuxKioskRunningInCage, isCageWindowCaptureFallback } from '../utils/screenshotCapture.js'
 import { getLinuxKioskInfo } from '../utils/linuxCageKiosk.js'
 import { loadWinKioskLauncherApps } from '../utils/kioskLauncher.js'
 import { Exam } from '../types/api'
@@ -528,7 +528,7 @@ export default {
             if (!result.isConfirmed) return;
             const install = await signalBridge.invoke('install-linux-cage-kiosk');
             if (install?.ok) {
-                this.platformKiosk = await signalBridge.invoke('get-linux-kiosk-info');
+                this.platformKiosk = await signalBridge.invoke('get-platform-info');
                 let successHtml = `${this.$t(this.kioskI18n('Success'))}<br><br>${this.$t(this.kioskI18n('SuccessHint'))}`;
                 if (install.kioskSourceDir && this.platformKiosk?.displayServer === 'windows') {
                     const src = this.$t('student.winKioskSetupSuccessSource', {
@@ -1596,12 +1596,9 @@ export default {
                 this.$swal.fire({ title: "Error", text: this.$t("student.nopin"), icon: 'error', showCancelButton: false });
                 return;
             }
-            // macOS: always use main-process capturePage (no getDisplayMedia/picker).
-            const isMac = typeof process !== 'undefined' && process.platform === 'darwin';
-            // Win32 AssignedAccess kiosk uses standard getDisplayMedia (full desktop); only Linux cage needs the window-capture fallback.
-            const linuxCage = this.platformKiosk.runningInCage && this.platformKiosk.displayServer !== 'windows';
-            const useIpcWindowCapture = isMac || linuxCage;
-            if (!useIpcWindowCapture) {
+            // capturePage path (macOS + Linux Cage) was already selected at init via setCageWindowCaptureFallback;
+            // Win32 AssignedAccess and plain desktop use getDisplayMedia.
+            if (!isCageWindowCaptureFallback()) {
                 if (!hasActiveScreenshotStream()) {
                     const ok = await ensureDisplayStreamAsync();
                     if (!ok) {
@@ -1616,8 +1613,6 @@ export default {
                     this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
                     return;
                 }
-            } else {
-                setCageWindowCaptureFallback(true);
             }
             const displayInfo = await signalBridge.invoke('getinfoasync');
             if (displayInfo?.clientinfo?.multiMonitor && !this.$route.params.config.development) {
@@ -1786,8 +1781,10 @@ export default {
             }
             this.platformKiosk = await getLinuxKioskInfo(signalBridge);
             setLinuxKioskRunningInCage(this.platformKiosk.runningInCage);
-            // Win32 kiosk uses normal getDisplayMedia full-desktop path; cage fallback only for Linux cage.
-            setCageWindowCaptureFallback(this.platformKiosk.runningInCage && this.platformKiosk.displayServer !== 'windows');
+            // capturePage path (no getDisplayMedia/picker): macOS always, plus Linux Cage. Win32 kiosk uses normal full-desktop getDisplayMedia.
+            const isMac = this.platformKiosk.platform === 'darwin';
+            const linuxCage = this.platformKiosk.runningInCage && this.platformKiosk.displayServer !== 'windows';
+            setCageWindowCaptureFallback(isMac || linuxCage);
             this.cageLauncherApps = await loadWinKioskLauncherApps(signalBridge);
             // Dev-only: preview cage launcher UI without kiosk user / provisioning
             // if (this.config.development) {

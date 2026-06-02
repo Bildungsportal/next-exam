@@ -15,10 +15,11 @@ export async function getLinuxKioskInfo(signalBridge) {
             cageKioskDesktopInstalled: false,
             needsCageKioskSetup: false,
             displayServer: 'n/a',
+            platform: 'n/a',
         };
         return kioskInfoCache;
     }
-    kioskInfoCache = await signalBridge.invoke('get-linux-kiosk-info');
+    kioskInfoCache = await signalBridge.invoke('get-platform-info');
     return kioskInfoCache;
 }
 

@@ -16,7 +16,9 @@
       "Read(//home/valueerror/.claude/**)",
       "mcp__graphify-next-exam__query_graph",
       "Bash(node --check src-electron/main/scripts/assessmentSession.js)",
-      "Bash(command -v swiftc)"
+      "Bash(command -v swiftc)",
+      "Bash(node --check src/utils/screenshotCapture.js)",
+      "Bash(node --check src-electron/main/scripts/ipchandler.js)"
     ]
   }
 }

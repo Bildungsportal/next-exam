@@ -193,12 +193,15 @@ class IpcHandler {
         this.CommunicationHandler = ch
         
 
-        // kept channel name 'get-linux-kiosk-info' so renderer code stays untouched;
-        // on win32 the same fields are populated from windowsKioskSetup (runningInCage=kiosk OS user).
-        ipcMain.handle('get-linux-kiosk-info', () => {
-            if (process.platform === 'win32') {
+        // Single source of truth: platformDispatcher.platform decides which kiosk model applies.
+        // win32 = AssignedAccess, linux = Cage, darwin = no kiosk (all flags false). platform/displayServer always set.
+        ipcMain.handle('get-platform-info', () => {
+            const platform = platformDispatcher.platform;
+            const base = { displayServer: platformDispatcher.displayServer, platform };
+            if (platform === 'win32') {
                 const installed = detectWindowsKioskInstalled() && detectWindowsKioskUserExists();
                 return {
+                    ...base,
                     cageInstalled: detectWindowsKioskUserExists(),
                     runningInCage: detectRunningInWindowsKiosk(),
                     isWindowsKioskUser: isWindowsKioskOsUser(),
@@ -206,16 +209,26 @@ class IpcHandler {
                     cageKioskAppImageInstalled: detectWindowsKioskInstalled(),
                     cageKioskDesktopInstalled: installed,
                     needsCageKioskSetup: needsWindowsKioskSetup(),
-                    displayServer: platformDispatcher.displayServer,
                 };
             }
+            if (platform === 'linux') {
+                return {
+                    ...base,
+                    cageInstalled: detectCageInstalled(),
+                    runningInCage: detectRunningInCage(),
+                    cageKioskAppImageInstalled: detectCageKioskAppImageInstalled(),
+                    cageKioskDesktopInstalled: detectCageKioskDesktopInstalled(),
+                    needsCageKioskSetup: needsCageKioskSetup(),
+                };
+            }
+            // darwin (and any other): no kiosk model, no cage/AssignedAccess checks.
             return {
-                cageInstalled: detectCageInstalled(),
-                runningInCage: detectRunningInCage(),
-                cageKioskAppImageInstalled: detectCageKioskAppImageInstalled(),
-                cageKioskDesktopInstalled: detectCageKioskDesktopInstalled(),
-                needsCageKioskSetup: needsCageKioskSetup(),
-                displayServer: platformDispatcher.displayServer,
+                ...base,
+                cageInstalled: false,
+                runningInCage: false,
+                cageKioskAppImageInstalled: false,
+                cageKioskDesktopInstalled: false,
+                needsCageKioskSetup: false,
             };
         });
 
