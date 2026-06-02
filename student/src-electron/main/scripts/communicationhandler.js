@@ -1062,7 +1062,9 @@ import {
                     if (!platformDispatcher.skipElectronKiosk) {
                         if (platformDispatcher.platform === 'darwin') WindowHandler.examwindow.setSimpleFullScreen(true)
                         else WindowHandler.examwindow.setFullScreen(true)
-                        WindowHandler.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
+                        if (!isAssessmentSessionActive()) {
+                            WindowHandler.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
+                        }
                         await enableRestrictions(WindowHandler)
                         await this.sleep(2000)
                         WindowHandler.addBlurListener()
@@ -1202,6 +1204,10 @@ import {
             this.multicastClient.clientinfo.exammode = false
             disableRestrictions()
         }
+
+        // macOS: assessment (AAC) mode must always be stopped when the exam ends - even if exammode was
+        // already false (e.g. connection lost path where disableRestrictions is skipped). idempotent no-op if no session is active.
+        await stopAssessmentSession()
 
         // delete students work on students pc (makes sense if exam is written on school property)
         if (serverstatus && serverstatus.delfolderonexit === true){

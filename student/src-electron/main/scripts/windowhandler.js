@@ -400,7 +400,10 @@ class WindowHandler {
 
 
                     if (!platformDispatcher.skipElectronKiosk) {
-                        this.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
+                        // AAC assessment mode owns stacking; screen-saver level fights the session
+                        if (!isAssessmentSessionActive()) {
+                            this.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
+                        }
                         await enableRestrictions(this)
                         await this.sleep(1000)
                         this.addBlurListener()

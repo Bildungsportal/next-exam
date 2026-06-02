@@ -115,10 +115,13 @@ export async function startProxy({ host, port }) {
         // ELECTRON_RUN_AS_NODE: run packaged electron binary in pure-Node mode so the helper
         // bypasses singleInstanceLock + app bootstrap and reaches WebSocketServer.listen
         const proc = spawn(process.execPath, [scriptPath, host, String(portNum), String(currentPort)], {
-            stdio: 'inherit',
+            stdio: ['ignore', 'pipe', 'pipe'],
             env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
         });
         child = proc;
+        // pipe helper stdout/stderr into electron-log so packaged-build crashes (e.g. require/port) are visible
+        proc.stdout?.on('data', (d) => log.info('vncproxy-helper(out):', String(d).trim()));
+        proc.stderr?.on('data', (d) => log.error('vncproxy-helper(err):', String(d).trim()));
         proc.on('exit', (code, signal) => {
             log.info(`vncproxy-helper exited with code ${code}, signal ${signal}`);
             clearStateIfProcess(proc);
