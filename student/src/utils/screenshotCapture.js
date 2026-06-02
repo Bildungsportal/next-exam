@@ -180,6 +180,19 @@ async function acquireDisplayStream() {
       video.onloadedmetadata = () => video.play().then(() => {
         log.info('screenshotCapture @ acquireDisplayStream: video resolution', video.videoWidth + 'x' + video.videoHeight);
         try {
+          // Prefer displaySurface (monitor vs window) over brittle resolution heuristics when available.
+          const track = stream.getVideoTracks?.()?.[0];
+          const surface = track?.getSettings?.()?.displaySurface;
+          if (surface === 'monitor') {
+            fullDesktopLikely = true;
+            resolve();
+            return;
+          }
+          if (surface === 'window') {
+            fullDesktopLikely = false;
+            resolve();
+            return;
+          }
           // window.screen.width is CSS pixels, video.videoWidth is hardware pixels.
           // On HiDPI displays (Win11 default 125-200% scaling, common on Lenovo) those differ by devicePixelRatio.
           const dpr = window.devicePixelRatio || 1;

@@ -416,7 +416,8 @@ export default defineConfig(( ctx: any ) => {
         extraResources: [
           { from: 'src-electron/resources/linux', to: 'linux' },
           { from: 'src-electron/resources/win32', to: 'win32' },
-          ...['assessment-helper', 'wifi-helper']
+          // assessment-helper.app = .app bundle (embedded profile authorizes restricted AAC entitlement); wifi-helper = plain CLI
+          ...['assessment-helper.app', 'wifi-helper']
             .filter((name) => fse.existsSync(path.join(__dirname, 'scripts/apple', name)))
             .map((name) => ({ from: `scripts/apple/${name}`, to: `apple/${name}` })),
         ],

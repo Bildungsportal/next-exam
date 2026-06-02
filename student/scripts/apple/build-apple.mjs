@@ -7,8 +7,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..', '..');
 const appleDir = path.join(projectRoot, 'scripts', 'apple');
 
+// assessment-helper is a .app bundle (embedded profile authorizes the restricted AAC entitlement);
+// wifi-helper is a plain CLI. Sign each at its bundle/binary path with its own entitlements.
 const helperEntitlements = {
-    'assessment-helper': path.join(projectRoot, 'scripts', 'entitlements.mac.assessment.plist'),
+    'assessment-helper.app': path.join(projectRoot, 'scripts', 'entitlements.mac.assessment.plist'),
     'wifi-helper': path.join(projectRoot, 'scripts', 'entitlements.mac.wifi.plist'),
 };
 

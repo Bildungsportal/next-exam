@@ -16,7 +16,19 @@ final class AssessmentRunner: NSObject, AEAssessmentSessionDelegate {
     private let session: AEAssessmentSession
 
     override init() {
+        // The helper itself is the assessment's "main" app (it calls begin()) but has no window ->
+        // a bare config would lock down to a blank grey screen. Permit Next-Exam-Student as an
+        // additional app so the user can use the exam window during the locked session.
+        // setConfiguration(_:for:) is macOS 12+. AEAssessmentApplication requires a valid signature
+        // and that the app is notarized/App-Store (so Next-Exam must be notarized); pass teamIdentifier
+        // for an unambiguous identity match. requiresSignatureValidation stays true (default).
         let configuration = AEAssessmentConfiguration()
+        let examApp = AEAssessmentApplication(bundleIdentifier: "com.nextexam.student", teamIdentifier: "89V82RD7XY")
+        let examAppConfig = AEAssessmentParticipantConfiguration()
+        // Next-Exam needs network during the exam (teacher comms, materials); default is false.
+        // Media/audio playback is NOT restricted by AAC, so no extra config for that.
+        examAppConfig.allowsNetworkAccess = true
+        configuration.setConfiguration(examAppConfig, for: examApp)
         session = AEAssessmentSession(configuration: configuration)
         super.init()
         session.delegate = self
