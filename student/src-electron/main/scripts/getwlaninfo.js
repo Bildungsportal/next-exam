@@ -472,7 +472,7 @@ async function getWlanInfoMacOSHelper() {
 async function getWlanInfoMacOS() {
     // Native CoreWLAN helper is the only reliable SSID source on macOS 14+; use it when available.
     const helperResult = await getWlanInfoMacOSHelper();
-    if (helperResult && (helperResult.ssid || helperResult.bssid)) {
+    if (helperResult && (helperResult.ssid || helperResult.bssid || helperResult.quality !== null)) {
         return helperResult;
     }
 

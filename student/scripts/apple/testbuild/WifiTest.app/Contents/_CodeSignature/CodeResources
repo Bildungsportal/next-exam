@@ -5,15 +5,7 @@
 	<key>files</key>
 	<dict/>
 	<key>files2</key>
-	<dict>
-		<key>embedded.provisionprofile</key>
-		<dict>
-			<key>hash2</key>
-			<data>
-			veytAtoTSyF/UJxesyT02qMpQL8qeoan4xQg9HyUoxI=
-			</data>
-		</dict>
-	</dict>
+	<dict/>
 	<key>rules</key>
 	<dict>
 		<key>^Resources/</key>
