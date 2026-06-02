@@ -46,7 +46,7 @@ async function resignAppleHelpers(appBundlePath) {
   const bundleId = process.env.MAC_BUNDLE_ID || 'com.nextexam.student';
   const mainEntitlements = path.join(path.dirname(assessmentEntitlements), 'entitlements.mac.plist');
   const helpers = [
-    { name: 'assessment-helper', entitlements: assessmentEntitlements, identifier: bundleId },
+    { name: 'assessment-helper.app', entitlements: assessmentEntitlements, identifier: bundleId },
     { name: 'wifi-helper', entitlements: wifiEntitlements, identifier: null },
   ];
   let anyReSigned = false;
@@ -63,6 +63,8 @@ async function resignAppleHelpers(appBundlePath) {
     console.log(`Re-signed outer .app bundle to seal updated helper hashes`);
   }
 }
+
+exports.resignAppleHelpers = resignAppleHelpers;
 
 exports.default = async function notarizing(context) {
   const { electronPlatformName, appOutDir } = context;

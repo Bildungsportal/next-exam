@@ -12,6 +12,7 @@ dotenv.config({
 });
 
 const { notarize } = require('@electron/notarize');
+const { resignAppleHelpers } = require('./notarize.cjs');
 
 const arch = process.env.NXE_EB_MAC_ARCH === 'x64' ? 'mac' : 'mac-arm64';
 const appBundlePath = path.join(
@@ -49,6 +50,8 @@ async function main() {
     appleId: process.env.APPLEID,
     appleIdPassword: process.env.APPLEIDPASS,
   };
+
+  await resignAppleHelpers(appBundlePath);
 
   console.log(`Notarizing: ${appBundlePath}`);
   const maxAttempts = 3;
