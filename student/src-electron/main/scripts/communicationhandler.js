@@ -886,6 +886,7 @@ import {
 
     /** macOS AAC before exam UI; false = abort exam-mode entry (mainwindow dialog, examwindow optional). */
     async ensureAssessmentForExamStart() {
+        if (this.config.development) return true; // dev mode: do not lock the machine into AAC assessment mode
         const result = await startAssessmentSession();
         if (!result.ok) {
             await this.abortExamModeStart(result.reason);
