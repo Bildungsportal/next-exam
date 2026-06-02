@@ -284,9 +284,11 @@ app.whenReady()
             });
         }, { useSystemPicker: false });
     } else {
-        // macOS: do not install a handler in non-kiosk, otherwise it can override the user's system-picker selection.
+        // Non-kiosk: system picker must win. On macOS, never override the picker by forcing sources[0].
         if (process.platform === 'darwin') {
-            session.defaultSession.setDisplayMediaRequestHandler(null);
+            session.defaultSession.setDisplayMediaRequestHandler((_request, callback) => {
+                callback(null);
+            }, { useSystemPicker: true });
         } else {
             // Use system picker when available; fallback to first screen (non-macOS).
             session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {

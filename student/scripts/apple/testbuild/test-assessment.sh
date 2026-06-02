@@ -47,6 +47,40 @@ codesign --force --options runtime --timestamp \
 echo "-- Signatur:"; codesign -vvv --strict "$APP" && echo "   OK" || echo "   INVALID"
 echo "-- entitlements:"; codesign -d --entitlements - "$APP" 2>/dev/null || true
 
+# 2b) Next-Exam (permitted app) finden + nach vorne holen, damit der permitted-app-Effekt
+#     realistisch testbar ist. AAC verlangt gueltige Signatur + Notarisierung der permitted app.
+NEXEXAM_BUNDLE="$(mdfind "kMDItemCFBundleIdentifier == 'com.nextexam.student'" 2>/dev/null | head -1)"
+if [ -n "$NEXEXAM_BUNDLE" ]; then
+  echo "== Next-Exam gefunden: $NEXEXAM_BUNDLE"
+  echo "-- Signatur/Notarisierung der permitted app (AAC verlangt valid+notarized):"
+  codesign -dv --verbose=2 "$NEXEXAM_BUNDLE" 2>&1 | grep -Ei "Authority|TeamIdentifier|Identifier=" || true
+  spctl -a -vv "$NEXEXAM_BUNDLE" 2>&1 | head -3 || true
+  echo "-- oeffne Next-Exam (muss beim begin() laufen + erlaubt sein)"
+  open "$NEXEXAM_BUNDLE" || true
+  sleep 2
+else
+  echo "WARN: keine installierte Next-Exam-App (bundleId com.nextexam.student) gefunden." >&2
+  echo "      Ohne notarisierte Next-Exam-App testet das nur ob begin() ueberhaupt durchlaeuft," >&2
+  echo "      NICHT ob die permitted app den grauen Schirm vermeidet." >&2
+fi
+
+# 2b) Next-Exam (permitted app) finden + nach vorne holen, damit der permitted-app-Effekt
+#     realistisch testbar ist. AAC verlangt gueltige Signatur + Notarisierung der permitted app.
+NEXEXAM_BUNDLE="$(mdfind "kMDItemCFBundleIdentifier == 'com.nextexam.student'" 2>/dev/null | head -1)"
+if [ -n "$NEXEXAM_BUNDLE" ]; then
+  echo "== Next-Exam gefunden: $NEXEXAM_BUNDLE"
+  echo "-- Signatur/Notarisierung der permitted app (AAC verlangt valid+notarized):"
+  codesign -dv --verbose=2 "$NEXEXAM_BUNDLE" 2>&1 | grep -Ei "Authority|TeamIdentifier|Identifier=" || true
+  spctl -a -vv "$NEXEXAM_BUNDLE" 2>&1 | head -3 || true
+  echo "-- oeffne Next-Exam (muss beim begin() laufen + erlaubt sein)"
+  open "$NEXEXAM_BUNDLE" || true
+  sleep 2
+else
+  echo "WARN: keine installierte Next-Exam-App (bundleId com.nextexam.student) gefunden." >&2
+  echo "      Ohne notarisierte Next-Exam-App testet das nur ob begin() ueberhaupt durchlaeuft," >&2
+  echo "      NICHT ob die permitted app den grauen Schirm vermeidet." >&2
+fi
+
 # 3) Starten + Outcome
 EXE="$APP/Contents/MacOS/assessment-helper"
 echo "== [3/3] Start: $EXE start   (Ctrl-C beendet die Session)"
