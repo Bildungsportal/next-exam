@@ -1596,9 +1596,12 @@ export default {
                 this.$swal.fire({ title: "Error", text: this.$t("student.nopin"), icon: 'error', showCancelButton: false });
                 return;
             }
+            // macOS: always use main-process capturePage (no getDisplayMedia/picker).
+            const isMac = typeof process !== 'undefined' && process.platform === 'darwin';
             // Win32 AssignedAccess kiosk uses standard getDisplayMedia (full desktop); only Linux cage needs the window-capture fallback.
             const linuxCage = this.platformKiosk.runningInCage && this.platformKiosk.displayServer !== 'windows';
-            if (!linuxCage) {
+            const useIpcWindowCapture = isMac || linuxCage;
+            if (!useIpcWindowCapture) {
                 if (!hasActiveScreenshotStream()) {
                     const ok = await ensureDisplayStreamAsync();
                     if (!ok) {

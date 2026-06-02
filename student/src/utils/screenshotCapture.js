@@ -164,6 +164,7 @@ let initAttempted = false;
 let fullDesktopLikely = true;
 let useWindowCaptureFallback = false;
 let linuxKioskRunningInCage = false;
+const isMac = typeof process !== 'undefined' && process.platform === 'darwin';
 
 /**
  * Acquire display stream once and set up a long-lived video element for frame capture.
@@ -269,6 +270,10 @@ export async function initDisplayStreamOnce() {
 
 /** Acquire display stream when called with user gesture (e.g. Connect click). Returns true if stream is ready. */
 export async function ensureDisplayStreamAsync() {
+  if (isMac) {
+    setCageWindowCaptureFallback(true);
+    return true;
+  }
   if (hasActiveScreenshotStream()) return true;
   if (initAttempted && !hasActiveScreenshotStream()) initAttempted = false;
   await initDisplayStreamOnce();
@@ -377,8 +382,12 @@ export function initScreenshotScheduler(signalBridge) {
   }
   log.info('screenshotCapture @ initScreenshotScheduler: registering screenshot-config listener and fetching getScreenshotConfig');
 
-  // Initialize display stream once so it is already available when interval starts after server connect
-  initDisplayStreamOnce();
+  if (isMac) {
+    setCageWindowCaptureFallback(true);
+  } else {
+    // Initialize display stream once so it is already available when interval starts after server connect
+    initDisplayStreamOnce();
+  }
 
   signalBridge.on('screenshot-config', (_event, config) => {
     applyConfig(signalBridge, config);
