@@ -284,28 +284,32 @@ app.whenReady()
             });
         }, { useSystemPicker: false });
     } else {
-        // Use system picker when available; fallback to first screen.
-        session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
-            if (process.platform === 'darwin') {
-                log.warn('main @ setDisplayMediaRequestHandler: darwin handler invoked (system picker not used?)');
-            }
-            desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
-                try {
-                    if (sources.length > 0) {
-                        callback({ video: sources[0] });
-                    } else {
-                        log.warn('main @ setDisplayMediaRequestHandler: no screen sources available');
+        // Non-kiosk: system picker must win. On macOS, never override the picker by forcing sources[0].
+        if (process.platform === 'darwin') {
+            session.defaultSession.setDisplayMediaRequestHandler((_request, callback) => {
+                callback(null);
+            }, { useSystemPicker: true });
+        } else {
+            // Use system picker when available; fallback to first screen (non-macOS).
+            session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+                desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+                    try {
+                        if (sources.length > 0) {
+                            callback({ video: sources[0] });
+                        } else {
+                            log.warn('main @ setDisplayMediaRequestHandler: no screen sources available');
+                            callback(null);
+                        }
+                    } catch (e) {
+                        log.warn('main @ setDisplayMediaRequestHandler: exception in handler', e?.message || e);
                         callback(null);
                     }
-                } catch (e) {
-                    log.warn('main @ setDisplayMediaRequestHandler: exception in handler', e?.message || e);
+                }).catch((err) => {
+                    log.warn('main @ setDisplayMediaRequestHandler:', err?.message || err);
                     callback(null);
-                }
-            }).catch((err) => {
-                log.warn('main @ setDisplayMediaRequestHandler:', err?.message || err);
-                callback(null);
-            });
-        }, { useSystemPicker: true });
+                });
+            }, { useSystemPicker: true });
+        }
     }
     
     /******* Create main window *******/
