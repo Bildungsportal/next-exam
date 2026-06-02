@@ -284,25 +284,30 @@ app.whenReady()
             });
         }, { useSystemPicker: false });
     } else {
-        // Use system picker (KDE/PipeWire dialog on Linux) when available; fallback to first screen
-        session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
-            desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
-                try {
-                    if (sources.length > 0) {
-                        callback({ video: sources[0] });
-                    } else {
-                        log.warn('main @ setDisplayMediaRequestHandler: no screen sources available');
+        // macOS: do not install a handler in non-kiosk, otherwise it can override the user's system-picker selection.
+        if (process.platform === 'darwin') {
+            session.defaultSession.setDisplayMediaRequestHandler(null);
+        } else {
+            // Use system picker when available; fallback to first screen (non-macOS).
+            session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+                desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+                    try {
+                        if (sources.length > 0) {
+                            callback({ video: sources[0] });
+                        } else {
+                            log.warn('main @ setDisplayMediaRequestHandler: no screen sources available');
+                            callback(null);
+                        }
+                    } catch (e) {
+                        log.warn('main @ setDisplayMediaRequestHandler: exception in handler', e?.message || e);
                         callback(null);
                     }
-                } catch (e) {
-                    log.warn('main @ setDisplayMediaRequestHandler: exception in handler', e?.message || e);
+                }).catch((err) => {
+                    log.warn('main @ setDisplayMediaRequestHandler:', err?.message || err);
                     callback(null);
-                }
-            }).catch((err) => {
-                log.warn('main @ setDisplayMediaRequestHandler:', err?.message || err);
-                callback(null);
-            });
-        }, { useSystemPicker: true });
+                });
+            }, { useSystemPicker: true });
+        }
     }
     
     /******* Create main window *******/

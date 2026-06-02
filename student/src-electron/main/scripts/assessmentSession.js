@@ -9,11 +9,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let assessmentChild = null;
 
+// assessment-helper is bundled as assessment-helper.app (embedded profile authorizes the restricted
+// AAC entitlement); the executable sits at Contents/MacOS/assessment-helper.
 function helperPath() {
+    const inner = path.join('assessment-helper.app', 'Contents', 'MacOS', 'assessment-helper');
     for (const p of [
-        path.join(process.resourcesPath, 'apple', 'assessment-helper'),
-        path.join(process.cwd(), 'scripts', 'apple', 'assessment-helper'),
-        path.join(__dirname, '../../../../scripts/apple/assessment-helper'),
+        path.join(process.resourcesPath, 'apple', inner),
+        path.join(process.cwd(), 'scripts', 'apple', inner),
+        path.join(__dirname, '../../../../scripts/apple', inner),
     ]) {
         if (p && fs.existsSync(p)) return p;
     }

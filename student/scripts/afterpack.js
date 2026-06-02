@@ -11,10 +11,11 @@ const { signLanguageToolJars } = require('./sign-languagetool-jars.cjs');
 const scriptsDir = __dirname;
 const assessmentEntitlements = path.join(scriptsDir, 'entitlements.mac.assessment.plist');
 const wifiEntitlements = path.join(scriptsDir, 'entitlements.mac.wifi.plist');
-const provisionProfile = path.join(scriptsDir, 'apple', 'nextexamstudent.provisionprofile');
 
+// assessment-helper.app = .app bundle (own embedded profile authorizes restricted AAC entitlement);
+// wifi-helper = plain CLI. codesign each at its bundle/binary path with its own entitlements.
 const helperEntitlements = {
-  'assessment-helper': assessmentEntitlements,
+  'assessment-helper.app': assessmentEntitlements,
   'wifi-helper': wifiEntitlements,
 };
 
@@ -76,13 +77,8 @@ export default async function afterPack(context) {
     const signEnabled = process.env.SIGN !== 'false';
     const bundlePath = path.join(appPath, `${appName}.app`);
 
-    if (signEnabled && identity && (await fs.pathExists(provisionProfile)) && (await fs.pathExists(assessmentEntitlements))) {
-      await fs.copy(
-        provisionProfile,
-        path.join(bundlePath, 'Contents', 'embedded.provisionprofile'),
-      );
-      console.log('Copied embedded.provisionprofile (AAC on assessment-helper only)');
-    }
+    // NOTE: no embedded.provisionprofile on the main .app — it holds no restricted entitlement.
+    // The AAC profile lives inside assessment-helper.app (built by scripts/apple/build.sh).
 
     if (signEnabled && identity) {
       await signLanguageToolJars(appPath, appName, identity);

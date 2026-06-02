@@ -886,9 +886,22 @@ import {
     /** macOS AAC before exam UI; false = abort exam-mode entry (mainwindow dialog, examwindow optional). */
     async ensureAssessmentForExamStart() {
         const result = await startAssessmentSession();
-        if (result.ok) return true;
-        await this.abortExamModeStart(result.reason);
-        return false;
+        if (!result.ok) {
+            await this.abortExamModeStart(result.reason);
+            return false;
+        }
+        // AAC's "main" app is the windowless helper; Next-Exam is the permitted secondary app and
+        // is already open+front here. Soft nudge in case AAC briefly shows the empty main-app screen
+        // on begin(); no steal:true since Next-Exam already holds focus.
+        if (process.platform === 'darwin') {
+            const win = WindowHandler.examwindow && !WindowHandler.examwindow.isDestroyed?.()
+                ? WindowHandler.examwindow
+                : WindowHandler.mainwindow;
+            try { win?.show?.(); win?.moveTop?.(); win?.focus?.(); } catch (e) {
+                log.warn('communicationhandler @ ensureAssessmentForExamStart: focus front window', e?.message || e);
+            }
+        }
+        return true;
     }
 
     /** Reset exam state when AAC cannot start. */

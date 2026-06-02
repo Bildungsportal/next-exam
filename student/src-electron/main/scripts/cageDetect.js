@@ -43,6 +43,7 @@ export function detectCageKioskDesktopInstalled() {
 
 /** Show install UI while cage, AppImage, or kiosk desktop entry is still missing. */
 export function needsCageKioskSetup() {
+    if (process.platform !== 'linux') return false;
     return !detectCageInstalled() || !detectCageKioskAppImageInstalled() || !detectCageKioskDesktopInstalled();
 }
 
