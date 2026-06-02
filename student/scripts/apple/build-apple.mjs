@@ -2,10 +2,15 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..', '..');
 const appleDir = path.join(projectRoot, 'scripts', 'apple');
+
+// Load signing identity (SHAID etc.) from .env — invoked standalone via `npm run build:apple`, which does not inherit prebuild's dotenv.
+const envFile = fs.existsSync(path.join(projectRoot, '.env')) ? path.join(projectRoot, '.env') : path.join(projectRoot, '.env.production');
+dotenv.config({ path: envFile });
 
 // assessment-helper is a .app bundle (embedded profile authorizes the restricted AAC entitlement);
 // wifi-helper is a plain CLI. Sign each at its bundle/binary path with its own entitlements.
