@@ -36,10 +36,18 @@ final class AssessmentRunner: NSObject, AEAssessmentSessionDelegate {
     }
 
     func assessmentSession(_ session: AEAssessmentSession, failedToBeginWithError error: Error) {
-        let msg = error.localizedDescription
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-        emit("{\"event\":\"failed\",\"error\":\"\(msg)\"}")
+        // generic localizedDescription ("operation couldn't be completed") is useless;
+        // the real signal is the NSError domain + code (+ underlying error / failureReason).
+        let ns = error as NSError
+        func esc(_ s: String) -> String {
+            s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+        }
+        let underlying = (ns.userInfo[NSUnderlyingErrorKey] as? NSError)
+            .map { "\($0.domain) code=\($0.code) \($0.localizedDescription)" } ?? ""
+        let reason = ns.localizedFailureReason ?? ""
+        emit("{\"event\":\"failed\",\"domain\":\"\(esc(ns.domain))\",\"code\":\(ns.code),\"error\":\"\(esc(ns.localizedDescription))\",\"reason\":\"\(esc(reason))\",\"underlying\":\"\(esc(underlying))\"}")
+        // full dump to stderr for the electron-log warn channel
+        FileHandle.standardError.write("assessment failedToBegin: \(ns)\n".data(using: .utf8)!)
         exit(1)
     }
 
