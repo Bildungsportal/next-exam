@@ -442,7 +442,7 @@ export default {
         // favour smoothness over bandwidth (lokale VM)
         qualityLevel: 8,
         compressionLevel: 0,
-        alwaysUseDotCursor: true,
+        alwaysUseDotCursor: false,
         shared: true,
         viewport: true
       };
@@ -465,7 +465,7 @@ export default {
         this.onConnectError();
         return;
       }
-      this.rfb.showDotCursor = true;
+      this.rfb.showDotCursor = false;
       this.rfb.scaleViewport = true;
       // QEMU VNC rejects SetDesktopSize; scale viewport locally instead of resizeSession.
       this.rfb.resizeSession = false;
@@ -655,6 +655,7 @@ export default {
   flex: 1;
   display: flex;
   min-height: 0;
+  min-width: 0;
 }
 
 .vnc-container {
@@ -663,6 +664,22 @@ export default {
   flex: 1;
   background: #000;
   overflow: hidden;
+  /* fix px canvas inside must not dictate min content width → let it shrink */
+  min-width: 0;
+  position: relative;
+}
+
+/* noVNC injects a flex <div> (_screen) holding the canvas. Take it out of flow
+   (absolute) so its fixed-px canvas can never inflate the container width →
+   container follows the window, autoscale gets real width → contain on both axes. */
+.vnc-container :deep(> div) {
+  position: absolute;
+  inset: 0;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
 }
 
 .vnc-container :deep(canvas) {
