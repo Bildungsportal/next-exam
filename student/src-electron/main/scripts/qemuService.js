@@ -462,7 +462,15 @@ async function startHeadless({
     const proc = spawnLogged(qemuSystem, args, {
         cwd: binDir,
         env: buildQemuSpawnEnv(binDir),
-        stdio: 'ignore',
+        stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    // surface qemu startup failures (KVM/disk-lock/missing device) instead of only "vnc not ready"
+    let stderrBuf = '';
+    proc.stdout?.on('data', (d) => log.info('qemu(out):', String(d).trim()));
+    proc.stderr?.on('data', (d) => {
+        const s = String(d);
+        stderrBuf += s;
+        log.error('qemu(err):', s.trim());
     });
 
     const vncPort = vncDisplayToPort(vncDisplay);
@@ -470,6 +478,12 @@ async function startHeadless({
     const ready = await waitForTcpPortOpen({ host: '127.0.0.1', port: vncPort, timeoutMs: 15000, stepMs: 250 });
     if (!ready) {
         try { proc.kill(); } catch (e) {}
+        // CPU virtualization disabled in BIOS/UEFI: KVM (linux) / HVF (mac) accelerator can't init
+        if (/Could not access KVM kernel module|failed to initialize kvm|HV_ERROR|hvf|No accelerator found/i.test(stderrBuf)) {
+            const err = new Error('qemu accelerator unavailable (CPU virtualization disabled)');
+            err.code = 'virt-disabled';
+            throw err;
+        }
         throw new Error(`qemu vnc not ready on 127.0.0.1:${vncPort}`);
     }
     log.info(`qemuService @ startHeadless: VNC ready on 127.0.0.1:${vncPort}`);

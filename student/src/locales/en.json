@@ -320,6 +320,8 @@
         "qemuMissingOpenDownload": "Open download page",
         "qemuMissingText": "LocalVM needs a system install of qemu. They were not found on this computer.",
         "qemuMissingTitle": "QEMU not found",
+        "qemuVirtDisabledText": "Hardware virtualization (Intel VT-x / AMD-V) is disabled on this computer. LocalVM requires this CPU feature.\n\nPlease enable \"Virtualization Technology\" (Intel VT-x) or \"SVM Mode\" (AMD) in your BIOS/UEFI and restart the computer.",
+        "qemuVirtDisabledTitle": "CPU virtualization disabled",
         "versionNewer": "Your version of Next-Exam is newer than the teacher's!",
         "versionOld": "Your version of Next-Exam is too old. Please download a current version!",
         "versionUnknown": "Unknown error during connection.",

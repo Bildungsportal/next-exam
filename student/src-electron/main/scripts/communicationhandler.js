@@ -1026,6 +1026,11 @@ import {
                     this.multicastClient.clientinfo.localVMState = 'error';
                     this.multicastClient.clientinfo.exammode = false;
                     this.localVmStartState = 'blocked';
+                    // CPU virtualization off in BIOS/UEFI -> tell the user instead of a silent "error" state
+                    if (e?.code === 'virt-disabled') {
+                        try { WindowHandler.mainwindow?.webContents?.send('qemu-not-available', { reason: 'virt-disabled' }); }
+                        catch (err) { log.debug('communicationhandler @ startExam: virt-disabled notify failed', err?.message); }
+                    }
                     return;
                 }
 

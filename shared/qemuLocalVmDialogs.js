@@ -11,6 +11,22 @@ export function isHypervisorPlatformMissing(check) {
     return Array.isArray(check?.missing) && check.missing.includes('HypervisorPlatform');
 }
 
+/** True when qemu failed because CPU virtualization (VT-x/AMD-V) is disabled in BIOS/UEFI. */
+export function isVirtualizationDisabled(check) {
+    return check?.reason === 'virt-disabled';
+}
+
+/** Swal: CPU virtualization disabled in BIOS/UEFI -> info dialog, no action button. */
+export async function showVirtualizationDisabledDialog({ swal, t, i18nPrefix, cancelKey = 'cancel' }) {
+    const p = (key) => t(`${i18nPrefix}.${key}`);
+    await swal.fire({
+        icon: 'warning',
+        title: p('qemuVirtDisabledTitle'),
+        html: buildQemuMissingWarningHtml(p('qemuVirtDisabledText')),
+        confirmButtonText: p(cancelKey),
+    });
+}
+
 /** Swal: system QEMU missing → open download page. */
 export async function showQemuMissingDialog({ swal, t, invoke, i18nPrefix, check = {} }) {
     const p = (key) => t(`${i18nPrefix}.${key}`);
@@ -96,6 +112,10 @@ export async function showLocalVmQemuIssueDialog({
     check = {},
     cancelKey = 'cancel',
 }) {
+    if (isVirtualizationDisabled(check)) {
+        await showVirtualizationDisabledDialog({ swal, t, i18nPrefix, cancelKey });
+        return;
+    }
     if (isHypervisorPlatformMissing(check)) {
         await showHypervisorPlatformDialog({ swal, t, invoke, i18nPrefix, cancelKey });
         return;
