@@ -416,6 +416,10 @@ export default defineConfig(( ctx: any ) => {
         extraResources: [
           { from: 'src-electron/resources/linux', to: 'linux' },
           { from: 'src-electron/resources/win32', to: 'win32' },
+          // vncproxy-helper runs as a plain node process (ELECTRON_RUN_AS_NODE) -> cannot require from app.asar;
+          // ship it + its only dep (ws, pure JS) unpacked so require('ws') resolves next to the helper
+          { from: 'src-electron/main/scripts/vncproxy-helper.cjs', to: 'vncproxy/vncproxy-helper.cjs' },
+          { from: 'node_modules/ws', to: 'vncproxy/node_modules/ws' },
           // assessment-helper.app = .app bundle (embedded profile authorizes restricted AAC entitlement); wifi-helper = plain CLI
           ...['assessment-helper.app', 'wifi-helper']
             .filter((name) => fse.existsSync(path.join(__dirname, 'scripts/apple', name)))

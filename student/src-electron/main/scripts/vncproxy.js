@@ -13,6 +13,10 @@ let currentTargetPort = null;
 function getHelperPath() {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
+    // Packaged: helper + its own node_modules/ws are shipped unpacked as extraResource (see quasar.config.ts);
+    // the helper runs as a plain node process and cannot require from app.asar.
+    const packaged = path.join(process.resourcesPath || '', 'vncproxy', 'vncproxy-helper.cjs');
+    if (fs.existsSync(packaged)) return packaged;
     const nextToMain = path.join(__dirname, 'vncproxy-helper.cjs');
     if (fs.existsSync(nextToMain)) return nextToMain;
     // Dev: main is bundled in .quasar/dev-electron, helper lives in source tree
