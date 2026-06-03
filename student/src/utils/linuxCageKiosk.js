@@ -43,3 +43,12 @@ export async function attachExamMouseleaveGuard(signalBridge, config, handler) {
         document.body.addEventListener('mouseleave', handler);
     }
 }
+
+/** Registers body mouseleave for sendFocuslost unless Cage or development. */
+export async function attachExamMouseleaveGuardBoolean(signalBridge, development, handler) {
+    if (development) return;
+    const kiosk = await getLinuxKioskInfo(signalBridge);
+    if (shouldUseEdgeFocusGuards(kiosk, development)) {
+        document.body.addEventListener('mouseleave', handler);
+    }
+}

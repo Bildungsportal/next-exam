@@ -1,6 +1,13 @@
 <template>
 
 
+    <div v-if="enteringExamModeOverlay" class="exam-enter-backdrop">
+        <div class="exam-enter-card">
+            <div class="exam-enter-spinner" aria-hidden="true"></div>
+            <div class="exam-enter-text">{{ $t('student.enteringExamMode') }}</div>
+        </div>
+    </div>
+
     <!-- Header START -->
     <div v-show="!isLoading" class="w-100 p-3 text-white bg-dark text-left" style="height: 66px; z-index: 1000;">
     <span class="text-white m-1 d-inline-flex align-items-center flex-wrap ms-1">
@@ -99,7 +106,7 @@
 
 
             <!-- BIP Section START -->
-            <div v-if="config.bipIntegration" class="mt-4">
+            <div v-if="bipIntegration" class="mt-4">
                 <span class="small m-1 me-0">{{ $t("student.bildungsportal") }}</span> <span v-if="bipToken"
                                                                                              class="small m-1 me-0 text-secondary">(verbunden)</span>
                 <div v-if="bipToken" title="logout" id="biploginbutton" @click="logoutBiP()"
@@ -292,13 +299,11 @@
 
 </template>
 
-
 <script lang="ts">
-import validator from 'validator'
+import validator, {isEmpty} from 'validator'
 import log from 'electron-log/renderer'
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {isElectronWindow} from "../types/platform.ts";
-import config from '../../src-electron/main/config.js'
 import {SignalBridge} from '../utils/signalBridge.js'
 import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync, setCageWindowCaptureFallback, setLinuxKioskRunningInCage, isCageWindowCaptureFallback } from '../utils/screenshotCapture.js'
 import { getLinuxKioskInfo } from '../utils/linuxCageKiosk.js'
@@ -310,54 +315,72 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
 } from '../utils/examFetchInfoSync.js'
+import { autoCleanupMixin } from "../mixins/autoCleanupMixin.ts";
+import { useConfigStore } from "stores/configStore.ts";
+import { ref } from 'vue';
 import { showLocalVmQemuIssueDialog } from 'next-exam-shared/qemuLocalVmDialogs.js'
 
-
-// Capture unhandled promise rejections
-window.addEventListener('unhandledrejection', event => {
+function unhandledRejectionFunction(event: PromiseRejectionEvent) {
   const reason = event?.reason;
   const msg = typeof reason === 'string' ? reason : reason && reason.message;
-  if (msg && ( msg.includes('GUEST_VIEW_MANAGER_CALL') || msg.includes('ERR_FAILED'))) {
+  if (msg && (msg.includes('GUEST_VIEW_MANAGER_CALL') || msg.includes('ERR_FAILED'))) {
     event.preventDefault(); // swallow guest view clone errors and ERR_FAILED
     return;
   }
   log.error('Unhandled promise rejection:', reason); // log all other errors
-});
+}
+
+
+// Capture unhandled promise rejections
+window.addEventListener('unhandledrejection', event => unhandledRejectionFunction(event));
 
 Object.assign(console, log.functions);  // Replace all console logs with logger
 
 // signalBridge instance centralizes ipc send calls with platform checks
 const signalBridge = new SignalBridge(window);
 
-
 export default {
+    mixins: [autoCleanupMixin],
+
+    setup() {
+      const configStore = useConfigStore();
+      let username = "";
+      let pincode = "";
+      if(configStore.development) {
+        username = "thomas";
+        pincode = "1111";
+      }
+      let development = ref(configStore.development);
+      let version = ref(configStore.version);
+      let serverApiPort = ref(configStore.serverApiPort);
+      let electron = ref(configStore.electron);
+      let info = ref(configStore.info);
+      let buildDate = ref(configStore.buildDate);
+      let hostip = ref(configStore.hostIp);
+      let bipIntegration = ref(configStore.bipIntegration);
+      let bipApiUrl = ref(configStore.bipApiUrl);
+      let bipDemo = ref(configStore.bipDemo);
+      return { username, pincode, development, version, serverApiPort, electron, info, buildDate, hostip, bipIntegration, bipApiUrl, bipDemo };
+    },
+
     data() {
         return {
-            version: this.$route.params.version,
             token: "",
-            username: this.$route.params.config.development ? "thomas" : "" as string | boolean,
-            pincode: this.$route.params.config.development ? "1111" : "" as string,
             clientinfo: {},
             serverstatus: null,
             serverlist: [],
             serverlistAdvanced: [],
-            fetchinterval: null,
-            autoUpdateInterval: null,
-            serverApiPort: this.$route.params.serverApiPort,
-            clientApiPort: this.$route.params.clientApiPort,
-            electron: this.$route.params.electron,
-            config: this.$route.params.config,
-            info: this.$route.params.config.info,
-            buildDate: this.$route.params.config.buildDate,
+            fetchinterval: null as SchedulerService,
+            autoUpdateInterval: null as SchedulerService,
             startExamEvent: null,
             advanced: false,
             serverip: "" as string,
             servername: "",
-            hostip: this.$route.params.config.hostip,
             clickCount: 0,
             networkerror: false,
             localLockdown: false,
             isLoading: true,
+            enteringExamModeOverlay: false,
             platformKiosk: {
                 cageInstalled: false,
                 runningInCage: false,
@@ -573,7 +596,7 @@ export default {
 
         async maybeOfferCageKioskSetup() {
             const k = this.platformKiosk;
-            if (!isElectronWindow(window) || this.config.development) return;
+            if (!isElectronWindow(window) || this.development) return;
             if (k.runningInCage || !k.needsCageKioskSetup) return;
             if (localStorage.getItem('next-exam-cage-kiosk-setup-dismissed') === '1') return;
             await this.promptCageKioskSetup();
@@ -581,7 +604,7 @@ export default {
 
         async maybeShowWinKioskSessionInfo() {
             const k = this.platformKiosk;
-            if (!isElectronWindow(window) || this.config.development) return;
+            if (!isElectronWindow(window) || this.development) return;
             if (!k.runningInCage || k.displayServer !== 'windows') return;
             if (this.activeDialog) return;
             if (sessionStorage.getItem('next-exam-win-kiosk-session-info') === '1') return;
@@ -684,16 +707,7 @@ export default {
         },
 
         async loginBiP() {
-            /*if (this.config.bipDemo) {   // skip bip logon and fake bip info
-                this.bipUsername = "Marie Curie"
-                this.bipuserID = 8
-                this.bipToken = btoa("Token:4fce5b97fe36cb42313621ebf3ff2a1a")
-                this.username = this.bipUsername
 
-                await this.fetchBipExams()
-                this.bipAutoconnect()
-                return  //skip real login
-            }*/
             let IPCresponse = signalBridge.sendSync('loginBiP', this.biptest)
             if (IPCresponse && IPCresponse.status === "success") {
                 
@@ -760,8 +774,8 @@ export default {
         },
 
         getBiPUrl(): string {
-            if (this.config.bipDemo) {
-                return this.config.bipApiUrl;
+            if (this.bipDemo) {
+                return this.bipApiUrl;
             } else if (this.biptest) {
                 return `https://q.bildung.gv.at`;
             } else {
@@ -781,7 +795,7 @@ export default {
             
             const url = this.getBiPUrl() + '/webservice/rest/server.php?wstoken=' + token + '&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json';
            
-            await fetch(url, { method: "GET" })
+            await this.autoFetch(url, { method: "GET" })
             .then(response => {
                 return response.json();
             })
@@ -801,7 +815,7 @@ export default {
             console.log("token"+token);
             let url = this.getBiPUrl()+'/webservice/rest/server.php?wstoken='+token+'&wsfunction=core_webservice_get_site_info&moodlewsrestformat=json';
 
-            fetch(url, {method: 'POST'})
+            this.autoFetch(url, {method: 'POST'})
                 .then(res => res.json())
                 .then(async (response) => {
                     if (response.fullname){
@@ -913,14 +927,14 @@ export default {
                     const localPasswordElement = document.getElementById("localpassword");
                     const localPasswordConfirmElement = document.getElementById("localpasswordconfirm");
 
-                    localUserElement.addEventListener('input', () => {
+                    this.autoEventListener(localUserElement,"input", () => {
                         const normalized = normalizeStudentClientName(localUserElement.value);
                         if (normalized !== localUserElement.value) {
                             localUserElement.value = normalized;
                         }
                     });
 
-                    localUserElement.addEventListener("keypress", function(e) {
+                  this.autoEventListener(localUserElement,"keypress", function(e) {
                          // var lettersOnly = /^[a-zA-Z ]+$/;
                         var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
                         var key = e.key || String.fromCharCode(e.which);
@@ -939,11 +953,11 @@ export default {
                     };
                     
                     // Add listener to document for general Enter key handling
-                    document.addEventListener('keydown', handleEnterKey);
+                    this.autoEventListener(document,"keydown", handleEnterKey);
                     // Add listener directly to input fields to catch Enter when focused
-                    localUserElement.addEventListener('keydown', handleEnterKey);
-                    localPasswordElement.addEventListener('keydown', handleEnterKey);
-                    localPasswordConfirmElement.addEventListener('keydown', handleEnterKey);
+                    this.autoEventListener(localUserElement,"keydown", handleEnterKey);
+                    this.autoEventListener(localPasswordElement,"keydown", handleEnterKey);
+                    this.autoEventListener(localPasswordConfirmElement,"keydown", handleEnterKey);
 
                     // Store handler reference for cleanup (will be cleaned up when dialog closes)
                     this._enterKeyHandler = handleEnterKey;
@@ -981,7 +995,7 @@ export default {
                     checkboxSuggestions.disabled = !checkboxLT.checked;
 
                     // Event listener for checkboxLT to adjust the state of checkboxsuggestions
-                    checkboxLT.addEventListener('change', () => {
+                  this.autoEventListener(checkboxLT,"change", () => {
                         checkboxSuggestions.disabled = !checkboxLT.checked;
                         // When checkboxLT is unchecked, suggestions should also be reset:
                         if (!checkboxLT.checked) {
@@ -990,8 +1004,8 @@ export default {
                     });
 
                     // Event listener for radio buttons to show/hide the spellcheck section
-                    editorRadio.addEventListener('change', toggleSpellcheckSection);
-                    mathRadio.addEventListener('change', toggleSpellcheckSection);
+                    this.autoEventListener(editorRadio, "change", toggleSpellcheckSection);
+                    this.autoEventListener(mathRadio, "change", toggleSpellcheckSection);
 
                     // Initial visibility based on selected radio button
                     toggleSpellcheckSection();
@@ -1609,13 +1623,13 @@ export default {
                 // Win AA kiosk auto-grants sources[0]=screen via main-process handler, so the picker-misclick
                 // heuristic does not apply; skip the check there.
                 const winKiosk = this.platformKiosk.runningInCage && this.platformKiosk.displayServer === 'windows';
-                if (!winKiosk && !isFullDesktopCaptureLikely() && !this.$route.params.config.development) {
+                if (!winKiosk && !isFullDesktopCaptureLikely() && !this.development) {
                     this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
                     return;
                 }
             }
             const displayInfo = await signalBridge.invoke('getinfoasync');
-            if (displayInfo?.clientinfo?.multiMonitor && !this.$route.params.config.development) {
+            if (displayInfo?.clientinfo?.multiMonitor && !this.development) {
                 this.$swal.fire({ title: "Error", text: this.$t("student.multimonitor"), icon: 'error', showCancelButton: false });
                 return;
             }
@@ -1738,42 +1752,10 @@ export default {
     },
     async mounted() {
         document.querySelector("#statusdiv").style.visibility = "hidden";
-        
-
-
-// this.lastFrameTime = performance.now(); // Initialize timing
-
-// const checkFrameGap = () => {
-//   const currentTime = performance.now(); // Get high-res timestamp
-//   const delta = currentTime - this.lastFrameTime; // Calculate time since last frame
-
-
-
-//   if (delta > 200) { // Threshold for macOS occlusion/suspension
-   
-//     this.$swal({
-//       title: 'Breakout detected!',
-//       text: `The app was suspended for ${Math.round(delta)}ms.`,
-//       icon: 'warning',
-//       confirmButtonText: 'Understood'
-//     });
-//   }
-
-//   this.lastFrameTime = currentTime; // Update last frame reference
-//   requestAnimationFrame(checkFrameGap); // Schedule next frame check
-// };
-
-// requestAnimationFrame(checkFrameGap); // Start the loop
-
-
-
-
-
-
         this.isLoading = false;
 
         if (isElectronWindow(window)) {
-            if (!this.config.development) {
+            if (!this.development) {
                 const macArch = await signalBridge.invoke('get-mac-arch-info');
                 if (macArch?.runningUnderRosetta) {
                     await this.warnMacRosettaArch();
@@ -1786,14 +1768,6 @@ export default {
             const linuxCage = this.platformKiosk.runningInCage && this.platformKiosk.displayServer !== 'windows';
             setCageWindowCaptureFallback(isMac || linuxCage);
             this.cageLauncherApps = await loadWinKioskLauncherApps(signalBridge);
-            // Dev-only: preview cage launcher UI without kiosk user / provisioning
-            // if (this.config.development) {
-            //     this.platformKiosk.runningInCage = true;
-            //     this.cageLauncherApps = [
-            //         { name: 'calc', path: 'C:\\Windows\\System32\\calc.exe' },
-            //         { name: 'Archicad', path: 'C:\\Program Files\\Graphisoft\\Archicad\\Archicad.exe' },
-            //     ];
-            // }
             await this.maybeOfferCageKioskSetup();
         }
 
@@ -1808,22 +1782,22 @@ export default {
         // Fetch info asynchronously without blocking
         this.fetchInfo();
 
-        this.fetchinterval = new SchedulerService(4000);
-        this.fetchinterval.addEventListener('action', this.fetchInfo);  // Add event listener that reacts to the 'action' event
-        this.fetchinterval.start();
+        this.fetchinterval = this.autoSchedulerService(this.fetchInfo, 4000)
 
-        this.autoUpdateInterval = new SchedulerService(10000);
-        this.autoUpdateInterval.addEventListener('action', this.bipAutoUpdate);  // Add event listener that reacts to the 'action' event
-        this.autoUpdateInterval.start();
+        this.autoUpdateInterval = this.autoSchedulerService(this.bipAutoUpdate, 10000)
 
-        // add event listener to user input field to supress all special chars 
-        document.getElementById("user").addEventListener("keypress", function (e) {
-            // var lettersOnly = /^[a-zA-Z ]+$/;
-            var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
-            var key = e.key || String.fromCharCode(e.which);
-            if (!lettersOnly.test(key)) {
-                e.preventDefault();
-            }
+        // add event listener to user input field to supress all special chars
+        this.autoEventListener(document.getElementById("user"), "keypress", function (e) {
+          // var lettersOnly = /^[a-zA-Z ]+$/;
+          var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
+          var key = e.key || String.fromCharCode(e.which);
+          if (!lettersOnly.test(key)) {
+            e.preventDefault();
+          }
+        });
+
+        signalBridge.on('entering-exam-mode', () => {
+            this.enteringExamModeOverlay = true;
         });
 
         signalBridge.on('bipToken', (event, token) => {
@@ -1867,11 +1841,8 @@ export default {
 
     },
     beforeUnmount() {
-        this.fetchinterval.removeEventListener('action', this.fetchInfo);
-        this.fetchinterval.stop()
 
-        this.autoUpdateInterval.removeEventListener('action', this.bipAutoUpdate);
-        this.autoUpdateInterval.stop()
+        window.removeEventListener('unhandledrejection', event => unhandledRejectionFunction(event));
 
         signalBridge.removeAllListeners('qemu-download-progress');
         signalBridge.removeAllListeners('localvm-compat-check-start');
@@ -1935,6 +1906,46 @@ body {
 .disabledtext {
     filter: contrast(40%) grayscale(100%) brightness(130%) blur(0.6px);
     pointer-events: none;
+}
+
+.exam-enter-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.38);
+    z-index: 200001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.exam-enter-card {
+    background: rgba(33, 37, 41, 0.94);
+    border-radius: 10px;
+    padding: 22px 28px;
+    text-align: center;
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.exam-enter-spinner {
+    width: 28px;
+    height: 28px;
+    margin: 0 auto;
+    border: 3px solid rgba(255, 255, 255, 0.25);
+    border-top-color: #0aa2c0;
+    border-radius: 50%;
+    animation: exam-enter-spin 0.85s linear infinite;
+}
+
+@keyframes exam-enter-spin {
+    to { transform: rotate(360deg); }
+}
+
+.exam-enter-text {
+    margin-top: 12px;
+    font-size: 0.95rem;
+    opacity: 0.92;
 }
 
 .localvm-preflight-backdrop {

@@ -1891,10 +1891,10 @@ function defineMaterials(who) {
             }
         }
       
-        if (!input.value) { 
-            this.setStudentStatus({getmaterials: true}, 'all'); 
-            this.setServerStatus()
-            return;   
+        if (!input.value) {
+            await this.setServerStatus()
+            await this.setStudentStatus({getmaterials: true}, 'all')
+            return;
         } // no further processing if no files are selected
 
         this.status(this.$t("dashboard.processingfiles"));
@@ -1936,9 +1936,9 @@ function defineMaterials(who) {
                 console.error(`exammanagement @ defineMaterials: Error processing file ${file.name}:`, error);
             }
         }
-        this.setStudentStatus({getmaterials: true}, 'all'); 
-        this.setServerStatus()
-    });    
+        await this.setServerStatus()
+        await this.setStudentStatus({getmaterials: true}, 'all')
+    });
 }
 
 // Helper function to read file as Base64
@@ -2122,7 +2122,8 @@ function handleAllowedUrlRemove(group, index){
             } else {
                 this.serverstatus.examSections[this.serverstatus.activeSection].groupB.allowedUrls.splice(index, 1);
             }
-            this.setServerStatus()
+            await this.setServerStatus()
+            await this.setStudentStatus({getmaterials: true}, 'all')
 
         }
     })

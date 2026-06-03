@@ -135,17 +135,24 @@ import WebviewPane from '../components/WebviewPane.vue'
 import {getExamMaterials, loadImage, loadPDF, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import {isElectronWindow} from "../types/platform.ts";
 import {SignalBridge} from '../utils/signalBridge.js'
-import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
+import { attachExamMouseleaveGuardBoolean, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
 import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
     resolveLockedSection,
 } from '../utils/examFetchInfoSync.js'
+import {useConfigStore} from '../stores/configStore.ts'
+import {ref} from 'vue'
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
 
 export default {
+    setup() {
+        const configStore = useConfigStore();
+        const development = ref(configStore.development);
+        return { development };
+    },
     data() {
         return {
             componentName: 'Microsoft365',
@@ -166,7 +173,6 @@ export default {
             pincode: this.$route.params.pincode,
             serverstatus: this.$route.params.serverstatus,
             localLockdown: this.$route.params.localLockdown,
-            config: this.$route.params.config,
             lockedSection: null,
             clientinfo: null,
             entrytime: 0,
@@ -176,7 +182,7 @@ export default {
             currentpreview: null,
             wlanInfo: null,
             hostip: null,
-            examtype: this.$route.params.examtype,
+            examtype: 'microsoft365',
             localLockdown: this.$route.params.localLockdown,
             examMaterials: [],
             urlForWebview: null,
@@ -206,7 +212,12 @@ export default {
             this.loadfilelistinterval.addEventListener('action', this.loadFilelist);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
             this.loadfilelistinterval.start();
 
-            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
+            attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
+
+            signalBridge.on('getmaterials', () => {
+                console.log("microsoft365 @ getmaterials: get materials request received")
+                this.getExamMaterials()
+            });
 
             this.loadFilelist()
             this.getExamMaterials()
@@ -292,10 +303,10 @@ export default {
         },
 
         async sendFocuslost() {
-            if (await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
+            if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             if (isElectronWindow(window)) {
                 let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
-                if (!this.config.development && !response.focus) {  //immediately block frontend
+                if (!this.development && !response.focus) {  //immediately block frontend
                     this.focus = false
                 }
             }
@@ -372,6 +383,8 @@ export default {
         this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
         this.fetchinfointerval.stop()
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
+
+        signalBridge.removeAllListeners('getmaterials')
 
         // Remove resize event listener
         window.removeEventListener('resize', this.updateHeaderHeight);

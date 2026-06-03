@@ -1,4 +1,4 @@
-import { defineBoot } from '#q-app/wrappers'
+import { defineBoot } from "#q-app/wrappers";
 import i18n from "../locales/locales.js";
 import VueSweetalert2 from "vue-sweetalert2";
 
@@ -29,9 +29,9 @@ export default defineBoot(async ( { app, router } ) => {
         }
     };
 
-    app.use(i18n)
+    app.use(i18n);
 // Das Plugin wird mit den Optionen installiert, die nun den globalen didOpen Hook enthalten.
-    app.use(VueSweetalert2, options)
+    app.use(VueSweetalert2, options);
 
 // wait until router is ready before mounting to ensure hydration match
     router.isReady().then(() => {

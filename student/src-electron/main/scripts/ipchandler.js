@@ -779,7 +779,8 @@ class IpcHandler {
          * Reload the browser view
          */
         ipcMain.handle('reload-browser-view', (event, url) => {
-            const browserView = this.WindowHandler.examwindow.getBrowserView(0);
+            const browserView = this.WindowHandler.getMs365BrowserView();
+            if (!browserView) return;
             browserView.webContents.loadURL(url);
         });
 
@@ -1534,46 +1535,28 @@ class IpcHandler {
          * in order to be able to dislay fullscreen information from the Exam header we temporarily collapse the BrowserView for Office
          * and restore it afterwards - not perfect but looks ok
          */ 
-        ipcMain.on('collapse-browserview', (event) => {
-            const mainWindow = this.WindowHandler.examwindow
-            if (!mainWindow){ return }
-            const contentView = mainWindow.getBrowserView(0); // assuming it's the 1st added view
-            contentView.setBounds({ x: 0, y: 0, width: 0, height: 0 });
-            
+        ipcMain.on('collapse-browserview', () => {
+            this.WindowHandler.collapseMs365BrowserView()
         });
-        ipcMain.on('restore-browserview', (event) => {
-            const mainWindow = this.WindowHandler.examwindow
-            if (!mainWindow){ return }
-            const menuHeight = mainWindow.menuHeight;
-            const newBounds = mainWindow.getBounds(); // Get the current bounds of the mainWindow
-            const contentView = mainWindow.getBrowserView(0); // assuming it's the 1st added view
-            // Set the new bounds of the contentView
-            contentView.setBounds({
-                x: 0,
-                y: menuHeight,
-                width: newBounds.width, // full width of the mainWindow
-                height: newBounds.height - menuHeight // remaining height after the menu
-            });
+        ipcMain.on('restore-browserview', () => {
+            this.WindowHandler.restoreMs365BrowserView()
         });
 
         /**
          * Update menu height dynamically when header content changes
          */
         ipcMain.on('update-menu-height', (event, height) => {
-            const mainWindow = this.WindowHandler.examwindow;
+            const mainWindow = this.WindowHandler.examwindow || this.WindowHandler.mainwindow;
             if (mainWindow && height > 0) {
-                // Update the stored menu height
                 mainWindow.menuHeight = height;
-                
-                // Reposition the browser view with new height
                 const newBounds = mainWindow.getBounds();
-                const contentView = mainWindow.getBrowserView(0);
+                const contentView = this.WindowHandler.getMs365BrowserView(mainWindow);
                 if (contentView) {
                     contentView.setBounds({
                         x: 0,
                         y: height,
                         width: newBounds.width,
-                        height: newBounds.height - height
+                        height: Math.max(0, newBounds.height - height),
                     });
                 }
             }

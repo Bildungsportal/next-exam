@@ -4,8 +4,8 @@
         <div class="header-left">
             <div v-if="online && !localLockdown" class="header-item">
                 <img src="/src/assets/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style="float: left;" />
-                <button v-if="clientinfo && clientinfo.groups  && clientinfo.group == 'a'" type="button" class="header-item btn btn-info btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> A  </button>
-                <button v-if="clientinfo && clientinfo.groups  && clientinfo.group == 'b'" type="button" class="header-item btn btn-warning btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> B  </button>
+                <button v-if="groups  && group === 'a'" type="button" class="header-item btn btn-info btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> A  </button>
+                <button v-if="groups  && group === 'b'" type="button" class="header-item btn btn-warning btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> B  </button>
                 <span class="fs-5 align-middle me-1" style="float: left;">{{clientname}} @ {{servername}} | {{pincode}}</span>
                 <span class="fs-5 align-middle me-4 teal" style="float: left;" >| {{$t('student.connected')}}</span>
                 <span v-if="kioskLauncherApps.length" class="kiosk-launcher-bar ms-1">
@@ -36,7 +36,7 @@
         <div v-if="serverstatus?.useExamSections" class="header-item me-2">
             <div v-for="n in 4" :key="n"
                 class="header-item btn btn-sm ms-1 p-0 pe-1 ps-1"
-                :class="(clientinfo?.lockedSection === n ? 'btn-teal' : 'btn-outline-secondary') + (!serverstatus?.allowSectionSwitch ? ' disabledbtn' : '') "
+                :class="(lockedSection === n ? 'btn-teal' : 'btn-outline-secondary') + (!serverstatus?.allowSectionSwitch ? ' disabledbtn' : '') "
                 @click="switchExamSection(n)">
                 {{ serverstatus?.examSections?.[n]?.sectionname || n }}
             </div>
@@ -114,6 +114,10 @@
   import moment from 'moment-timezone';
   import {SignalBridge} from '../utils/signalBridge.js'
   import {SchedulerService} from '../utils/schedulerservice.js'
+  import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
+  import {storeToRefs} from "pinia";
+  import {useInfoStore} from "../stores/infoStore.ts";
+  import {useConfigStore} from "../stores/configStore.ts";
   import { loadWinKioskLauncherApps } from '../utils/kioskLauncher.js'
 
   // signalBridge instance centralizes ipc calls with platform checks
@@ -122,7 +126,23 @@
 
   export default {
     name: 'ExamHeader',
-    props: ['serverstatus','clientinfo','online', 'clientname', 'exammode', 'servername', 'pincode', 'battery', 'entrytime', 'componentName','localLockdown','wlanInfo','hostip'],
+    mixins: [autoCleanupMixin],
+
+    setup() {
+      const configStore = useConfigStore();
+      const infoStore = useInfoStore();
+      const { hostip } = storeToRefs(configStore);
+      const {
+        groups, group, examtype, servername, clientname, serverstatus, pincode,
+        localLockdown, online, battery, entryTime, componentName, wlanInfo,
+        exammode, lockedSection,
+      } = storeToRefs(infoStore);
+
+      return {
+        hostip, groups, group, examtype, servername, clientname, serverstatus, pincode,
+        localLockdown, online, battery, entryTime, componentName, wlanInfo, exammode, lockedSection,
+      };
+    },
     data() {
       return {
         lastShownMessage: null,
@@ -153,6 +173,8 @@
       window.addEventListener('resize', this._nxSetHeaderHeightVar);
       this.$nextTick(() => this.tickHeaderClock());
       loadWinKioskLauncherApps(signalBridge).then((apps) => { this.kioskLauncherApps = apps; });
+      useInfoStore().updateInfo();
+      this.autoSchedulerService(() => useInfoStore().updateInfo(), 5000);
     },
     beforeUnmount() {
       if (this._clockInterval) {
@@ -212,9 +234,9 @@
         this.$swal.fire({ title: 'Error', text: res?.error || 'launch failed', icon: 'error', showCancelButton: false });
       },
       async switchExamSection(sectionNumber) {
-        if (!this.serverstatus?.allowSectionSwitch || this.clientinfo?.lockedSection === sectionNumber) return;
-        
-        if (this.serverstatus.examSections[this.clientinfo.lockedSection].examtype == 'microsoft365'){
+        if (!this.serverstatus?.allowSectionSwitch || this.lockedSection === sectionNumber) return;
+
+        if (this.serverstatus.examSections[this.lockedSection].examtype == 'microsoft365'){
           signalBridge.send('collapse-browserview');
         }
         //  ask if the user wants to switch to the new section via swal2dialog
@@ -231,7 +253,7 @@
             signalBridge.invoke('switch-exam-section', sectionNumber);
           }
           else {
-            if (this.serverstatus.examSections[this.clientinfo.lockedSection].examtype == 'microsoft365'){
+            if (this.serverstatus.examSections[this.lockedSection].examtype == 'microsoft365'){
               signalBridge.send('restore-browserview');
             }
           }

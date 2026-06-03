@@ -910,11 +910,7 @@ import {
     async abortExamModeStart(detail) {
         log.error('communicationhandler @ abortExamModeStart:', detail);
         await stopAssessmentSession();
-        if (WindowHandler.examwindow && !WindowHandler.examwindow.isDestroyed?.()) {
-            try { WindowHandler.examwindow.destroy(); } catch (err) {
-                log.warn('communicationhandler @ abortExamModeStart: destroy examwindow', err?.message || err);
-            }
-        }
+        WindowHandler.returnToStudentView()
         WindowHandler.examwindow = null;
         WindowHandler._examWindowCreating = false;
         this.multicastClient.clientinfo.exammode = false;
@@ -1295,9 +1291,7 @@ import {
         }
 
         try {
-            if (!examWin.isDestroyed?.()){
-                examWin.close() // normal close, on('close') handler does the rest
-            }
+            WindowHandler.returnToStudentView()
         } catch (e){
             log.error("communicationhandler @ closeExamWindowSafely: error while closing examwindow", e)
         } finally {

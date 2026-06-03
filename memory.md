@@ -70,12 +70,13 @@ BUG^print^swal2MultiPage^body.swal2-shown setzt im @media print "[aria-hidden=tr
 # Exam schema
 RULE^exam^sectionSchema^mode config only group.examConfig.{editor|website|eduvidual|forms|rdp|localvm|activeSheets|microsoft365}; section has examtype+sectionname+timelimit+locked+startTs+groups only
 RULE^student^sectionSwitch^switchExamSection.js must not sendBase64PDFtoTeacher nor sendToTeacher; only local examDir↔section folder swap+reload exam window
+RULE^student^examWindow^examwindow always mainwindow; endExam closeExamWindowSafely→returnToStudentView #/; teardownExamChrome BrowserViews+listeners; switchExamSection teardown+startExam never close/destroy window
 PATH^shared^editorExamConfig^shared/editorExamConfig.js DEFAULT_EDITOR_EXAM_CONFIG+resolveEditorExamConfig+resolveGroupKey
 RULE^student^clientname^trim+lowercase canonical id; shared/normalizeStudentClientName.js; student.vue @input+register; teacher control.js registerclient+workdir rename case-only mismatch
 RULE^student^registerExamMismatch^client exammode=true and !serverstatus.exammode→deny+t(control.exammismatchregistration); registerSecurePayload requires !examServerList[servername] before processSecurePayload (empty sessionRef→Wrong PIN)
 TECH^exam^editorBackupExt^editor/activesheets HTML backup filename <name>.htm + type htm in getfilesasync; teacher getLatestBakFile reads <student>.htm in latest backup dir
 
-# Dashboard architecture
+RULE^materials^pushOrder^teacher: await setServerStatus before setStudentStatus getmaterials; flag one-shot else student fetches stale list
 RULE^dashboard^setupLogic^exam setup funcs live in teacher/src/utils/examsetup.js; dashboard.vue should mostly import+map
 TECH^dashboard^overlayZ^StudentView 4000; DashboardExplorer 4100; StudentEditorTimelineDiffViewer 1003 (below StudentView unless raised)
 PATH^examlog^settings^examLogSettings.js snapshot on examstart→event.settings; ExamLog.vue UI+print; examEventBus.push meta.settings
@@ -83,6 +84,7 @@ BUG^examlog^dupSubmission^dashboard mounted stacked ipcRenderer.on('submission')
 
 # Student exam lifecycle (load, focus, security)
 TECH^student^examWin^dup startExam race: processUpdatedServerstatus+5s poll before clientinfo.exammode; gate with _startExamRunning+localVmStartState early+_examWindowCreating
+TECH^student^examWinReuse^createExamWindow: examwindow=mainwindow for all examtypes except microsoft365 (own BrowserWindow); mainwindow webPreferences MUST keep webviewTag:true else eduvidual/website <webview> not upgraded (shadowRoot null + no page load)^windowhandler.js
 TECH^student^examHeaderClock^ExamHeader :entrytime ms; tickHeaderClock updates ref headerClock textContent+title (no reactive tick)
 IPC^student^focusLock^main sets clientinfo.focusLockReason+focusLockMessage; examwindow webContents.send('focusLock'); editor listens+overlay; i18n editor.focusLockReason_<code>
 RULE^student^pin^noFetchSync^applyClientinfoFromFetch must not set vm.pincode; lobby=user input; exam=router params from register mirror
@@ -93,6 +95,7 @@ RULE^student^screenshotStream^resetConnection must not stop getDisplayMedia stre
 PATH^student^netScan^networkActiveProcesses.js scans non-loopback TCP established + TCP LISTEN; excludes next-exam subtree + LT pid + LT cmdline markers + sys-critical allowlist
 RULE^student^vncproxyHelper^spawn vncproxy-helper.cjs with ELECTRON_RUN_AS_NODE=1 (packaged electron else hits requestSingleInstanceLock and exits 0 without listening)
 TECH^student^previewWebview^applyPreviewWebviewHostLayout(splitview); WebviewPane host no Vue inline style (re-render wiped 80vw); inner nx-webview-pane-fill; setZoomFactor dom-ready+try/catch
+RULE^student^webviewHostDisplay^never set <webview> host display:block; overrides Electron :host{display:flex} so internal iframe(flex:1) collapses (content not full height). Use display:flex + flex:1 1 0 to fill; CSS cannot pierce webview shadow DOM so no iframe-height JS hack^eduvidual.vue #webviewmain
 TECH^student^displayInfo^clientinfo.displayCount+multiMonitor via displayInfo.syncClientDisplayInfo; register blocked if multiMonitor&&!development
 
 # PDF parser

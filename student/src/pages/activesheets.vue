@@ -2,19 +2,6 @@
     <div class="activesheets-root">
     <!-- HEADER START -->
     <exam-header
-    :serverstatus="serverstatus"
-      :clientinfo="clientinfo"
-      :online="online"
-      :clientname="clientname"
-      :exammode="exammode"
-      :servername="servername"
-      :pincode="pincode"
-      :battery="battery"
-      :entrytime="entrytime"
-      :componentName="componentName"
-      :localLockdown="localLockdown"
-      :wlanInfo="wlanInfo"
-      :hostip="hostip"
       @reconnect="reconnect"
       @gracefullyExit="gracefullyExit"
     ></exam-header>
@@ -135,14 +122,16 @@
 
 <script>
 import ExamHeader from '../components/ExamHeader.vue';
-import {SchedulerService} from '../utils/schedulerservice.js'
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import { getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue';
 import PdfOverlay from '../components/PdfRenderer.vue';
 import {SignalBridge} from '../utils/signalBridge.js'
-import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
+import {
+    attachExamMouseleaveGuardBoolean,
+    shouldSkipEdgeFocusLost
+} from '../utils/linuxCageKiosk.js'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
 import { collectActivesheetsFormData } from 'next-exam-shared/activesheetsFormData.js'
 import {
@@ -151,6 +140,10 @@ import {
     applyServerstatusFromFetch,
     resolveLockedSection,
 } from '../utils/examFetchInfoSync.js'
+import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
+import {ref} from "vue";
+import {useConfigStore} from "../stores/configStore.ts";
+import {useInfoStore} from "../stores/infoStore.ts";
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
 
@@ -160,29 +153,38 @@ const ACTIVESHEETS_ZOOM_MIN = 0.85
 const ACTIVESHEETS_ZOOM_MAX = 2.2
 
 export default {
+    mixins: [autoCleanupMixin],
+
+    setup() {
+        const configStore = useConfigStore();
+        let development = ref(configStore.development);
+        let serverApiPort = ref(configStore.serverApiPort);
+        let hostip = ref(configStore.hostip);
+
+        const infoStore = useInfoStore();
+        infoStore.online = true;
+        infoStore.componentName = "Active Sheets";
+
+        let examtype = ref(infoStore.examtype);
+        let servername = ref(infoStore.servername);
+        let serverip = ref(infoStore.serverip);
+        let token = ref(infoStore.token);
+        let clientname = ref(infoStore.clientname);
+        let serverstatus = ref(infoStore.serverstatus);
+        let localLockdown = ref(infoStore.localLockdown);
+        let battery = ref(infoStore.battery);
+        let wlanInfo = ref(infoStore.wlanInfo);
+        let entrytime = ref(infoStore.entryTime);
+
+        return { development, serverApiPort, hostip,
+            examtype, servername, serverip, token, clientname, serverstatus, localLockdown, battery, wlanInfo, entrytime};
+    },
     data() {
         return {
             // ... (Deine existierenden Data Properties hier behalten) ...
-            componentName: 'Active Sheets',
-            online: true,
             focus: true,
             exammode: false,
-            examtype: this.$route.params.examtype,
             currentFile:null,
-            fetchinfointerval: null,
-            loadfilelistinterval: null,
-            servername: this.$route.params.servername,
-            servertoken: this.$route.params.servertoken,
-            serverip: this.$route.params.serverip,
-            token: this.$route.params.token,
-            clientname: this.$route.params.clientname,
-            serverApiPort: this.$route.params.serverApiPort,
-            clientApiPort: this.$route.params.clientApiPort,
-            electron: this.$route.params.electron,
-            pincode : this.$route.params.pincode,
-            serverstatus: this.$route.params.serverstatus,
-            config: this.$route.params.config,
-            localLockdown: this.$route.params.localLockdown,
 
             // section and url will be resolved on first fetchInfo based on allowSectionSwitch
             lockedSection: null,
@@ -190,15 +192,11 @@ export default {
             domain: null,
 
             clientinfo: null,
-            entrytime: 0,
             activeSheetLoadKey: '',
             localfiles: null,
-            battery: null,
           
             currentpreview: null,
             isLoading: true,
-            wlanInfo: null,
-            hostip: null,
 
             examMaterials: [],
             urlForWebview: null,
@@ -207,9 +205,6 @@ export default {
             allowedDomain: null, // Extracted domain for navigation validation
             
             // Event listener references for cleanup
-            _onDidStartLoading: null,
-            _onDidStopLoading: null,
-            _onDomReady: null,
             _onPreviewClick: null,
             internetCheckCounter:0,
             
@@ -278,16 +273,16 @@ export default {
                 this.pdfPreviewState = null;
                 preview.style.display = 'none';
                 URL.revokeObjectURL(this.currentpreview);
-                if (this._onPreviewClick) preview.addEventListener("click", this._onPreviewClick);
+                if (this._onPreviewClick) this.autoEventListener(preview,"click", this._onPreviewClick);
             });
         },
 
         startSplitResize(e) {
             if (!this.splitview) return;
             this._splitResizing = true;
-            window.addEventListener('pointermove', this.onSplitResizeMove, { passive: false });
-            window.addEventListener('pointerup', this.stopSplitResize, { passive: true });
-            window.addEventListener('pointercancel', this.stopSplitResize, { passive: true });
+            this.autoEventListener(window,'pointermove', this.onSplitResizeMove, { passive: false });
+            this.autoEventListener(window,'pointerup', this.stopSplitResize, { passive: true });
+            this.autoEventListener(window,'pointercancel', this.stopSplitResize, { passive: true });
             this.onSplitResizeMove(e);
         },
 
@@ -326,9 +321,9 @@ export default {
         },
        
         async sendFocuslost(){
-            if (await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
+            if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
-            if (!this.config.development && !response.focus){  //immediately block frontend
+            if (!this.development && !response.focus){  //immediately block frontend
                 this.focus = false 
             }  
         },
@@ -828,20 +823,11 @@ export default {
             const content = document.getElementById(`content`)
             if (content) content.style.zoom = this.zoom
 
-            this.fetchinfointerval = new SchedulerService(5000);
-            this.fetchinfointerval.addEventListener('action',  this.fetchInfo);
-            this.fetchinfointerval.start();
-            
-            this.loadfilelistinterval = new SchedulerService(20000);
-            this.loadfilelistinterval.addEventListener('action',  this.loadFilelist);
-            this.loadfilelistinterval.start();
-            this.saveContentCallback = () => this.saveContent(true, 'auto');  // wegs 2 parameter muss dieser umweg genommen werden sonst kann ich den eventlistener nicht mehr entfernen
-            this.saveinterval = new SchedulerService(20000);
-            this.saveinterval.addEventListener('action', this.saveContentCallback );  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-            this.saveinterval.start();
+            this.autoSchedulerService(this.fetchInfo, 5000);
+            this.autoSchedulerService(this.loadFilelist, 20000);
+            this.autoSchedulerService(() => this.saveContent(true, 'auto'), 20000)
 
-
-            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
+            attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
 
             signalBridge.on('getmaterials', (event) => {   this.getExamMaterials()  });
             
@@ -875,7 +861,7 @@ export default {
                 this.setAttribute("src", "about:blank");
                 URL.revokeObjectURL(this.currentpreview);
             };
-            document.querySelector("#preview").addEventListener("click", this._onPreviewClick);
+            this.autoSchedulerService(document.querySelector("#preview"),"click", this._onPreviewClick);
 
 
             this.wlanInfo = await signalBridge.invoke('get-wlan-info')
@@ -897,24 +883,8 @@ export default {
         });
     },
         beforeUnmount() {
-        // Clean up interval services
-        if (this.fetchinfointerval) {
-            this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
-            this.fetchinfointerval.stop();
-        }
-        if (this.loadfilelistinterval) {
-            this.loadfilelistinterval.removeEventListener('action', this.loadFilelist);
-            this.loadfilelistinterval.stop();
-        }
-
         // Clean up DOM event listeners
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
-        
-        // Clean up preview click listener
-        const preview = document.querySelector("#preview");
-        if (preview && this._onPreviewClick) {
-            preview.removeEventListener("click", this._onPreviewClick);
-        }
 
         // Clean up IPC listeners
         signalBridge.removeAllListeners('getmaterials');
