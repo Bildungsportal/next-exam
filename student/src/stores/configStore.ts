@@ -9,7 +9,7 @@ export const useConfigStore = defineStore("config", {
         development: config.development as boolean,
         info: config.info as string,
         buildDate: config.buildDate as string,
-        hostip: config.hostip as string,
+        hostip: config.hostip as string | Record<string, unknown> | false,
         bipIntegration: config.bipIntegration as boolean,
         bipApiUrl: config.bipApiUrl as string,
         bipDemo: config.bipDemo as boolean,

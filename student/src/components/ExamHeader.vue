@@ -45,43 +45,42 @@
         <div class="header-item">
 
             <!-- Show WLAN SSID -->
-            <div v-if="wlanInfo && wlanInfo?.ssid && !wlanInfo.ssid.includes('redacted') && !wlanInfo.ssid.includes('<') " style="font-size: 0.8rem;" class="me-1"> {{ wlanInfo.ssid }}  </div>
+            <div v-if="showWlanSsid" style="font-size: 0.8rem;" class="me-1"> {{ wlanInfo.ssid }}  </div>
 
 
             <!-- WiFi icon (mutually exclusive states: never show 2 WiFi icons at once) -->
             <!-- Show WLAN quality -->
-            <div v-if="wlanInfo && wlanInfo?.quality" class="me-2">
-                <img v-if="wlanInfo && wlanInfo.quality > 80" src="/src/assets/img/svg/network-wireless-connected-100.svg"  :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" class="" width="24" height="24" style="vertical-align: bottom;" />
-                <img v-if="wlanInfo && wlanInfo.quality > 50 && wlanInfo.quality <= 80" src="/src/assets/img/svg/network-wireless-connected-80.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
-                <img v-if="wlanInfo && wlanInfo.quality > 30 && wlanInfo.quality <= 50" src="/src/assets/img/svg/network-wireless-connected-60.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
-                <img v-if="wlanInfo && wlanInfo.quality > 10 && wlanInfo.quality <= 30" src="/src/assets/img/svg/network-wireless-connected-40.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
-                <img v-if="wlanInfo && wlanInfo.quality > 5  && wlanInfo.quality <= 10" src="/src/assets/img/svg/network-wireless-connected-20.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
-                <img v-if="wlanInfo && wlanInfo.quality <= 5" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" src="/src/assets/img/svg/network-wireless-connected-00.svg" width="24" height="24" style="vertical-align: bottom;" />
+            <div v-if="showWlanQuality" class="me-2">
+                <img v-if="wlanInfo.quality > 80" src="/src/assets/img/svg/network-wireless-connected-100.svg"  :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" class="" width="24" height="24" style="vertical-align: bottom;" />
+                <img v-else-if="wlanInfo.quality > 50" src="/src/assets/img/svg/network-wireless-connected-80.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
+                <img v-else-if="wlanInfo.quality > 30" src="/src/assets/img/svg/network-wireless-connected-60.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
+                <img v-else-if="wlanInfo.quality > 10" src="/src/assets/img/svg/network-wireless-connected-40.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
+                <img v-else-if="wlanInfo.quality > 5" src="/src/assets/img/svg/network-wireless-connected-20.svg" :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" class="" width="24" height="24" style="vertical-align: bottom;"/>
+                <img v-else :title="'Quality: '+wlanInfo.quality+'% \nIP: '+hostipDisplay" :alt="wlanInfo.quality+'%'" src="/src/assets/img/svg/network-wireless-connected-00.svg" width="24" height="24" style="vertical-align: bottom;" />
             </div>
 
             <!-- WLAN permission not available -->
-            <div v-else-if="wlanInfo && wlanInfo?.message == 'nopermissions'" class="me-2">
+            <div v-else-if="showWlanNoPermissions" class="me-2">
                 <img :title="$t('student.wlanNopermissionsText')" :alt="$t('student.wlanNopermissionsText')" src="/src/assets/img/svg/network-wireless-disconnected.svg" width="24" height="24" >
             </div>
 
-            <!-- WLAN disconnected - no interface available -->
-            <div v-else-if="wlanInfo && wlanInfo?.message == 'nointerface'" class="me-2">
+            <!-- WLAN not connected (no interface, givingup, or idle adapter) -->
+            <div v-else-if="showWlanDisconnected" class="me-2">
                 <img title="WLAN disconnected" alt="WLAN disconnected" src="/src/assets/img/svg/network-wireless-disconnected.svg" width="24" height="24" >
             </div>
 
-            <!-- WLAN info not available (e.g. SSID redacted or no SSID/quality, but IP available) -->
-            <div v-else-if="wlanInfo && hostipDisplay && !wlanInfo.quality && (!wlanInfo.ssid || wlanInfo.ssid.includes('redacted') || wlanInfo.ssid.includes('<'))" class="me-2">
+            <!-- Redacted SSID on WiFi (e.g. macOS privacy) while IP is known -->
+            <div v-else-if="showWlanRedactedHint" class="me-2">
               <img :title="'WiFi Information not available \nIP: '+hostipDisplay" :alt="'WiFi Information not available'" src="/src/assets/img/svg/network-wireless-connected-20.svg" width="24" height="24" style="vertical-align: bottom;" />
             </div>
-   
 
-            <!-- Show LAN connected if IP is available and no WLAN info available -->
-            <div v-if="hostipDisplay && wlanInfo?.message == 'nointerface'" class="me-2">
+            <!-- LAN connected whenever host IP is known (independent of WiFi state) -->
+            <div v-if="showLanConnected" class="me-2">
                 <img :title="'Connected: '+hostipDisplay" alt="Connected" src="/src/assets/img/svg/network-wired-available.svg" width="24" height="24" >
             </div>
 
-            <!-- Show LAN disconnected if IP is not available and no WLAN info available -->
-            <div v-if="!hostipDisplay && (!wlanInfo?.ssid && !wlanInfo?.quality)" class="me-2">
+            <!-- LAN disconnected only after network poll, when no host IP -->
+            <div v-else-if="showLanDisconnected" class="me-2">
                 <img title="Disconnected" alt="Disconnected" src="/src/assets/img/svg/network-wired-unavailable.svg" width="24" height="24" >
             </div>
 
@@ -122,7 +121,14 @@
 
   // signalBridge instance centralizes ipc calls with platform checks
   const signalBridge = new SignalBridge(window);
-  
+
+  // Match wlan/wlp/wifi interface names from checkhostip — not a link-type probe.
+  function isWirelessInterfaceName(name) {
+    if (!name) return false;
+    const n = String(name).toLowerCase();
+    if (n.includes('wifi') || n.includes('wlan') || n.includes('wireless') || n.includes('wi-fi')) return true;
+    return /^wl(p|x|an|o)?[\d]/.test(n) || n.startsWith('wl-');
+  }
 
   export default {
     name: 'ExamHeader',
@@ -158,7 +164,53 @@
       },
       hostipDisplay() {
         return this.hostip && (typeof this.hostip === 'object' ? this.hostip.hostip : this.hostip);
-      }
+      },
+      hostInterfaceName() {
+        const h = this.hostip;
+        return (h && typeof h === 'object' && h.interface) ? String(h.interface) : '';
+      },
+      hostIpOnWirelessInterface() {
+        return isWirelessInterfaceName(this.hostInterfaceName);
+      },
+      // True when WiFi is connected with usable SSID or signal.
+      hasActiveWlan() {
+        const w = this.wlanInfo;
+        if (!w) return false;
+        if (w.quality != null && w.quality > 0) return true;
+        const ssid = w.ssid;
+        return !!(ssid && !ssid.includes('redacted') && !ssid.includes('<') && ssid !== 'off/any');
+      },
+      // macOS-style redacted SSID while an IP is present.
+      wifiSsidRedacted() {
+        const ssid = this.wlanInfo?.ssid;
+        return !!(ssid && (ssid.includes('redacted') || ssid.includes('<')));
+      },
+      showWlanQuality() {
+        return this.hasActiveWlan && this.wlanInfo?.quality != null;
+      },
+      showWlanNoPermissions() {
+        return this.wlanInfo?.message === 'nopermissions';
+      },
+      showWlanDisconnected() {
+        const w = this.wlanInfo;
+        if (!w || this.hasActiveWlan || this.showWlanNoPermissions || this.wifiSsidRedacted) return false;
+        return true;
+      },
+      showWlanRedactedHint() {
+        return this.wifiSsidRedacted && !!this.hostipDisplay;
+      },
+      showLanConnected() {
+        if (!this.hostipDisplay || this.hasActiveWlan || this.hostIpOnWirelessInterface) return false;
+        return true;
+      },
+      showLanDisconnected() {
+        if (this.hostipDisplay || this.hasActiveWlan || this.wlanInfo == null) return false;
+        return !this.hostIpOnWirelessInterface;
+      },
+      showWlanSsid() {
+        const ssid = this.wlanInfo?.ssid;
+        return !!(ssid && !ssid.includes('redacted') && !ssid.includes('<'));
+      },
     },
     mounted() {
       this._entrytimeMs = Number(this.entrytime) || Date.now();

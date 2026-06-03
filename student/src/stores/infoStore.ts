@@ -1,5 +1,6 @@
 import {defineStore} from 'pinia'
 import {SignalBridge} from "../utils/signalBridge.js";
+import {useConfigStore} from "./configStore.ts";
 
 const signalBridge = new SignalBridge(window);
 
@@ -27,6 +28,20 @@ export const useInfoStore = defineStore("info", {
         lockedSection: 1 as number,
     }),
     actions: {
+        // Poll wlan + host IP for ExamHeader network icons.
+        async refreshNetworkInfo(): Promise<void> {
+            try {
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info');
+            } catch {
+                // keep previous wlanInfo
+            }
+            try {
+                const ipResult = await signalBridge.invoke('checkhostip');
+                if (ipResult) useConfigStore().hostip = ipResult;
+            } catch {
+                // keep previous hostip
+            }
+        },
         async updateInfo(): Promise<boolean> {
             let response = await signalBridge.invoke('getinfoasync')
             if (response) {
@@ -45,7 +60,9 @@ export const useInfoStore = defineStore("info", {
                 this.group = clientinfo.group;
                 this.exammode = !!clientinfo.exammode;
                 this.lockedSection = clientinfo.lockedSection ?? 1;
+                this.online = !!clientinfo?.token;
             }
+            await this.refreshNetworkInfo();
             return true
         },
     },
