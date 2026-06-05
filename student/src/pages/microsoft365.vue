@@ -3,19 +3,6 @@
 
         <!-- HEADER START -->
         <exam-header
-            :serverstatus="serverstatus"
-            :clientinfo="clientinfo"
-            :online="online"
-            :clientname="clientname"
-            :exammode="exammode"
-            :servername="servername"
-            :pincode="pincode"
-            :battery="battery"
-            :entrytime="entrytime"
-            :componentName="componentName"
-            :localLockdown="localLockdown"
-            :wlanInfo="wlanInfo"
-            :hostip="hostip"
             @reconnect="reconnect"
             @gracefullyExit="gracefullyExit"
         ></exam-header>
@@ -114,11 +101,11 @@
         <!-- focuswarning end  -->
     </div>
 
-    <!-- 
-    Microsoft 365 embeds it's editors into an iframe and activates strict content security. therfore it is not possible to inject 
+    <!--
+    Microsoft 365 embeds it's editors into an iframe and activates strict content security. therfore it is not possible to inject
     Javascript into the frame inside a frame like <iframe></iframe> <embed> or chromium <webview></webview>
     The only way to inject JS code is via the backend but only if we open the Microsoft365 page directly in the electron window (no sub-frames whatsoever)
-    That's why we use electrons "BrowserView" feature to load 2 pages in 1 window. we present this page as "topmenu" and load the ms editors as "content" below. 
+    That's why we use electrons "BrowserView" feature to load 2 pages in 1 window. we present this page as "topmenu" and load the ms editors as "content" below.
     This is actually the safest way to do this because of "ContextIsolation" no scripts from the loaded pages can interfere with the rest of the app.
     Unfortunately this means that we need to collapse the browserview when we want to open a file or a url from the next-exam header.
     -->
@@ -128,7 +115,6 @@
 
 <script>
 import ExamHeader from '../components/ExamHeader.vue';
-import {SchedulerService} from '../utils/schedulerservice.js'
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue'
@@ -141,49 +127,58 @@ import {
     applyServerstatusFromFetch,
     resolveLockedSection,
 } from '../utils/examFetchInfoSync.js'
-import {useConfigStore} from '../stores/configStore.ts'
-import {ref} from 'vue'
+import {ref} from "vue";
+import {useConfigStore} from "../stores/configStore.ts";
+import {useInfoStore} from "../stores/infoStore.ts";
+import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
 
 export default {
+    mixins: [autoCleanupMixin],
+
     setup() {
         const configStore = useConfigStore();
-        const development = ref(configStore.development);
-        return { development };
+        let development = ref(configStore.development);
+        let serverApiPort = ref(configStore.serverApiPort);
+        let electron = ref(configStore.electron);
+        let hostip = ref(configStore.hostip);
+
+        const infoStore = useInfoStore();
+        infoStore.online = true;
+        infoStore.componentName = "Microsoft365";
+        infoStore.examType = "microsoft365";
+        let examtype = ref(infoStore.examtype);
+        let servername = ref(infoStore.servername);
+        let servertoken = ref(infoStore.servertoken);
+        let serverip = ref(infoStore.serverip);
+        let token = ref(infoStore.token);
+        let clientname = ref(infoStore.clientname);
+        let serverstatus = ref(infoStore.serverstatus);
+        let clientApiPort = ref(infoStore.clientApiPort);
+        let pincode = ref(infoStore.pincode);
+        let localLockdown = ref(infoStore.localLockdown);
+        let online = ref(infoStore.online);
+        let battery = ref(infoStore.battery);
+        let wlanInfo = ref(infoStore.wlanInfo);
+        let entrytime = ref(infoStore.entryTime);
+
+        return { development, serverApiPort, electron, hostip,
+            examtype, servername, servertoken, serverip, token, clientname, serverstatus, clientApiPort,
+            pincode, localLockdown, online, battery, wlanInfo, entrytime };
     },
+
     data() {
         return {
-            componentName: 'Microsoft365',
-            online: true,
             focus: true,
             exammode: false,
             currentFile: null,
-            fetchinfointerval: null,
-            loadfilelistinterval: null,
-            servername: this.$route.params.servername,
-            servertoken: this.$route.params.servertoken,
-            serverip: this.$route.params.serverip,
-            token: this.$route.params.token,
-            clientname: this.$route.params.clientname,
-            serverApiPort: this.$route.params.serverApiPort,
-            clientApiPort: this.$route.params.clientApiPort,
-            electron: this.$route.params.electron,
-            pincode: this.$route.params.pincode,
-            serverstatus: this.$route.params.serverstatus,
-            localLockdown: this.$route.params.localLockdown,
             lockedSection: null,
             clientinfo: null,
-            entrytime: 0,
             localfiles: null,
-            battery: null,
             warning: false,
             currentpreview: null,
-            wlanInfo: null,
-            hostip: null,
-            examtype: 'microsoft365',
-            localLockdown: this.$route.params.localLockdown,
             examMaterials: [],
             urlForWebview: null,
             allowedUrls: [],
@@ -192,6 +187,7 @@ export default {
             msOfficeShare: null,
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
             pdfPreviewState: null,
+            _onPreviewClick: null,
         }
     },
     components: {
@@ -203,14 +199,8 @@ export default {
         this.entrytime = new Date().getTime()
 
         this.$nextTick(async () => { // Code that will run only after the entire view has been rendered
-
-            // do not use setInterval() for intervals as it keeps all objects of the callbacks including fetch() responses in memory until the interval is stopped
-            this.fetchinfointerval = new SchedulerService(5000);
-            this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-            this.fetchinfointerval.start();
-            this.loadfilelistinterval = new SchedulerService(10000);
-            this.loadfilelistinterval.addEventListener('action', this.loadFilelist);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-            this.loadfilelistinterval.start();
+            this.autoSchedulerService(this.fetchInfo, 5000);
+            this.autoSchedulerService(this.loadFilelist, 10000);
 
             attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
 
@@ -223,16 +213,15 @@ export default {
             this.getExamMaterials()
 
             if (isElectronWindow(window)) {
-                document.querySelector("#preview").addEventListener("click", function () {
+                this._onPreviewClick = function () {
                     this.style.display = 'none';
                     this.setAttribute("src", "about:blank");
                     URL.revokeObjectURL(this.currentpreview);
                     signalBridge.send('restore-browserview');
-                });
+                };
+                this.autoEventListener(document.querySelector("#preview"), "click", this._onPreviewClick);
 
-
-                // Listen for window resize events to update header height
-                window.addEventListener('resize', this.updateHeaderHeight);
+                this.autoEventListener(window, 'resize', this.updateHeaderHeight);
 
                 await this.sleep(1000)
                 // Update header height after initial render
@@ -377,26 +366,9 @@ export default {
 
     },
     beforeUnmount() {
-        this.loadfilelistinterval.removeEventListener('action', this.loadFilelist);
-        this.loadfilelistinterval.stop()
-
-        this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
-        this.fetchinfointerval.stop()
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
         signalBridge.removeAllListeners('getmaterials')
-
-        // Remove resize event listener
-        window.removeEventListener('resize', this.updateHeaderHeight);
-
-        // Clean up preview click listener
-        const preview = document.querySelector("#preview");
-        if (preview) {
-            preview.removeEventListener("click", function () {
-                this.style.display = 'none';
-                this.setAttribute("src", "about:blank");
-            });
-        }
     },
 }
 </script>
