@@ -59,7 +59,7 @@ class WindowHandler {
       this.config = null
       this.multicastClient = null
       this.multicastServer = null
-     
+      this.bipAuthPending = null
   
     }
 
@@ -79,6 +79,9 @@ class WindowHandler {
     }
 
     createBiPLoginWin(biptest) {
+        if (this.bipwindow && !this.bipwindow.isDestroyed()) {
+            this.bipwindow.close()
+        }
         this.bipwindow = new BrowserWindow({
             title: 'Next-Exam',
             icon: join(getPublicBase(), 'icons', 'icon.png'),
@@ -139,11 +142,78 @@ class WindowHandler {
     
                 log.info('Captured Token:');
                 log.info(token);
-                this.mainwindow.webContents.send('bipToken', token);
+                if (this.bipAuthPending) {
+                    this.bipAuthPending.resolve(token)
+                    this.clearBipAuthPendingState()
+                } else {
+                    this.mainwindow.webContents.send('bipToken', token);
+                }
                 this.bipwindow.close();
             }
           });
 
+        this.bipwindow.on('closed', () => {
+            this.bipwindow = null
+            this.abortBipAuthPending('BIP_AUTH_CANCELLED')
+        })
+    }
+
+    /** Clears pending auth wait without rejecting (success path). */
+    clearBipAuthPendingState() {
+        if (!this.bipAuthPending) return
+        if (this.bipAuthPending.timeout) clearTimeout(this.bipAuthPending.timeout)
+        this.bipAuthPending = null
+    }
+
+    /** Rejects pending BiP auth wait (window closed, timeout, superseded). */
+    abortBipAuthPending(code = 'BIP_AUTH_CANCELLED') {
+        if (!this.bipAuthPending) return
+        const pending = this.bipAuthPending
+        this.bipAuthPending = null
+        if (pending.timeout) clearTimeout(pending.timeout)
+        pending.reject(new Error(code))
+    }
+
+    /** Opens BiP login and resolves with captured token (signature verify flow). */
+    waitForBipAuthToken(biptest, timeoutMs = 300000) {
+        return new Promise((resolve, reject) => {
+            if (this.bipAuthPending) {
+                const winAlive = this.bipwindow && !this.bipwindow.isDestroyed()
+                if (!winAlive) {
+                    this.abortBipAuthPending('BIP_AUTH_CANCELLED')
+                } else {
+                    this.bipwindow.focus()
+                    reject(new Error('BIP_AUTH_PENDING'))
+                    return
+                }
+            }
+            const timeout = setTimeout(() => {
+                if (!this.bipAuthPending) return
+                this.bipAuthPending = null
+                try {
+                    if (this.bipwindow && !this.bipwindow.isDestroyed()) {
+                        this.bipwindow.close()
+                    }
+                } catch {
+                    // ignore close errors
+                }
+                reject(new Error('BIP_LOGIN_TIMEOUT'))
+            }, timeoutMs)
+            this.bipAuthPending = {
+                timeout,
+                resolve: (token) => {
+                    clearTimeout(timeout)
+                    this.clearBipAuthPendingState()
+                    resolve(token)
+                },
+                reject: (err) => {
+                    clearTimeout(timeout)
+                    this.bipAuthPending = null
+                    reject(err)
+                },
+            }
+            this.createBiPLoginWin(biptest)
+        })
     }
 
 
@@ -170,8 +240,7 @@ class WindowHandler {
 
 
     createWindow() {
-        const primaryDisplay = screen.getPrimaryDisplay()
-        const { width, height } = { width: 1280, height: 800 }
+        const { width, height } = { width: 1400, height: 800 }
         const currentDir = fileURLToPath(new URL('.', import.meta.url))
 
         this.mainwindow = new BrowserWindow({

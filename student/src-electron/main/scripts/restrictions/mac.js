@@ -22,10 +22,10 @@ function onMacRestrictionSignal(signalName) {
     if (!currentWinhandler?.examwindow?.isDestroyed?.()) {
         if (currentWinhandler.multicastClient?.clientinfo) currentWinhandler.multicastClient.clientinfo.focus = false; // inform the teacher
         currentWinhandler.examwindow.moveTop();
-        currentWinhandler.examwindow.setKiosk(true);
+        currentWinhandler.examwindow.setSimpleFullScreen(true);
         currentWinhandler.examwindow.show();
         currentWinhandler.examwindow.focus();
-        toggleMacOSLockdown(true);
+        // toggleMacOSLockdown(true); // disabled: AAC assessment mode replaces defaults lockdown
     }
 }
 

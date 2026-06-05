@@ -1,5 +1,5 @@
 <template>
-    <div :id="id" v-show="visible" class="position-relative w-100 h-100">
+    <div :id="id" v-show="visible" class="position-relative w-100 h-100" :style="paneStyle">
       
         <ul
         class="nav nav-tabs position-absolute top-0 start-0 end-0 w-100 bg-white"
@@ -52,7 +52,7 @@
         ref="wv"
         :src="src || ''"
         class="position-absolute start-0 w-100 "
-        style="top:42px; z-index:9999; height:calc(100% - 42px);"
+        :style="webviewStyle"
       />
     </div>
   </template>
@@ -68,8 +68,24 @@
       visible: { type: Boolean, default: true },
       allowedUrl: { type: String, default: '' },
       blockExternal: { type: Boolean, default: false },
+      paperBackground: { type: Boolean, default: false },
     },
 
+
+    computed: {
+      paneStyle() {
+        return this.paperBackground ? { background: '#fff' } : null
+      },
+      webviewStyle() {
+        const style = {
+          top: '42px',
+          zIndex: 9999,
+          height: 'calc(100% - 42px)',
+        }
+        if (this.paperBackground) style.background = '#fff'
+        return style
+      },
+    },
 
     data() {
       return {

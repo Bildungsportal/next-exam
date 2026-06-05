@@ -1,135 +1,14 @@
-// 1. Bootstrap functions & variables — needed to reference $blue-400, $teal-600 etc.
 @import '../../node_modules/bootstrap/scss/functions';
 @import '../../node_modules/bootstrap/scss/variables';
 @import '../../node_modules/bootstrap/scss/variables-dark';
-
-// 2. Override theme-colors BEFORE Bootstrap compiles utilities
-//    Bootstrap variables use !default so our definitions here take precedence
-$theme-colors: (
-  "primary":    $blue-700,
-  "secondary":  $secondary,
-  "success":    $green-400,
-  "info":       $cyan-500,
-  "warning":    $yellow-400,
-  "danger":     $red-600,
-  "light":      $light,
-  "dark":       $dark,
-  "gray":       $gray-600,
-  "gray-dark":  $gray-800,
-);
-
-// 3. Full Bootstrap (generates all utilities with our overrides above)
+@import '../../../shared/css/nxe-bootstrap-config.scss';
 @import '../../node_modules/bootstrap/scss/bootstrap';
 @import '../../node_modules/sweetalert2/dist/sweetalert2.css';
 @import './style-main.css';
-
-
-// 4. Custom classes not covered by Bootstrap's utility generation
-
-.bg-teal       { background-color: $teal-600; }
-.bg-teal:hover { background-color: $teal-700; }
-
-
-/* CYAN BACKGROUND */
-
-.bg-cyan       { background-color: $cyan-600 !important; }
-.bg-cyan-transparent { background-color:rgba(10.4, 161.6, 192, 0.4) !important; }
-.btn-cyan       { background-color: $cyan-600 !important; color: $white; }
-.btn-cyan:hover { background-color: $cyan-500 !important; color: $white; }
-
-
-/* TEAL BACKGROUND */
-
-.bg-teal       { background-color: $teal-600 !important; }
-
-.btn-teal       { background-color: $teal-600; }
-.btn-teal:hover { background-color: $teal-700; }
-
-
-/* GREEN BORDER */
-.bs-success        { border-color: $green-400 !important; }
-.bs-success:hover  { border-color: $green-300 !important; }
-
-/* GRAY BACKGROUND */
-.bg-gray       { background-color: $gray-600 !important; }
-.bg-gray-dark  { background-color: $gray-800 !important; }
-
-.btn-gray       { background-color: $gray-600; }
-.btn-gray:hover { background-color: $gray-500; }
-.btn-gray-dark       { background-color: $gray-800; }
-.btn-gray-dark:hover { background-color: $gray-700; }
-
-.btn-outline-gray       { border-color: $gray-600; color: $gray-600; }
-.btn-outline-gray:hover { background-color: $gray-500; border-color: $gray-500; color: $gray-900; }
-
-.btn-outline-gray-dark       { border-color: $gray-800; color: $gray-800; }
-.btn-outline-gray-dark:hover { background-color: $gray-700; border-color: $gray-700; color: $gray-900; }
-
-.btn-primary        { background-color: $blue-400; border-color: $blue-400; }
-.btn-primary:hover  { background-color: $blue-300; border-color: $blue-300; }
-
-
-.bs-info        { border-color: $blue-400 !important; }
-.bs-info:hover  { border-color: $blue-300 !important; }
-
-.cyanback-500 {
-    background-color: $cyan-500;
-}
-.grayback {
-    background-color: $gray-200;
-}
-
-.form-check-input:checked {
-    background-color: $blue-600;
-    border-color: $blue-600;
-}
+@import '../../../shared/css/nxe-theme.scss';
 
 #description {
     background-color: $teal-600;
     border-color: $teal-700;
     color: $white;
-}
-
-
-.invert {
-    filter: invert(100%);
-}
-.snowwhite {
-    filter: invert(100%) brightness(200%);
-}
-
-// SweetAlert2: left-align globally (overrides sweetalert2.css centering; align with student/src/css/app.scss)
-.swal2-popup {
-    text-align: left !important;
-}
-
-.swal2-html-container {
-    text-align: left !important;
-    margin-left: 2em !important;
-    overflow: visible !important;
-}
-
-.swal2-title {
-    text-align: left !important;
-    margin-left: 0.2em !important;
-}
-
-.swal2-icon {
-    margin-left: 2.5em !important;
-    margin-right: auto !important;
-}
-
-.swal2-actions {
-    width: 80% !important;
-    margin-left: 1.9em !important;
-    margin-right: 1.9em !important;
-    justify-content: flex-start !important;
-}
-
-.swal2-html-container .swal2-input,
-.swal2-html-container .swal2-textarea,
-.swal2-html-container .swal2-select,
-.swal2-html-container .swal2-file {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
 }

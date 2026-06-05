@@ -12,18 +12,16 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
     const examDir = config.examdirectory;
 
     log.warn(`switchExamSection: changing section to ${newLockedSection } ${serverstatus.examSections[newLockedSection].sectionname} , Examtype: ${serverstatus.examSections[newLockedSection].examtype}` )
-                        
-    //save all files from the old section (if exam mode is "editor") and send to teacher - trigger sendToTeacher()
-    if (multicastClient.clientinfo.examtype === "editor"){
-        log.info("switchExamSection: sending exam to teacher (final submit)")
 
-        // send current work as base64 to teacher (stores pdf in ABGABE folder with submission number)
-        let pdf = await CommunicationHandler.getBase64PDF(multicastClient.clientinfo.submissionnumber, serverstatus.examSections[currentLockedSection].sectionname)  // local function to get base64 pdf from editor
-        if (pdf.status === "success"){
-            CommunicationHandler.sendBase64PDFtoTeacher(pdf.base64pdf, currentLockedSection)
-        }
-    }
-    CommunicationHandler.sendToTeacher(); //backup local files and send to teacher (archive with timestamp)
+    // Disabled: section switch must not submit to teacher — only explicit student submit actions may upload.
+    // if (multicastClient.clientinfo.examtype === "editor"){
+    //     log.info("switchExamSection: sending exam to teacher (final submit)")
+    //     let pdf = await CommunicationHandler.getBase64PDF(multicastClient.clientinfo.submissionnumber, serverstatus.examSections[currentLockedSection].sectionname)
+    //     if (pdf.status === "success"){
+    //         CommunicationHandler.sendBase64PDFtoTeacher(pdf.base64pdf, currentLockedSection)
+    //     }
+    // }
+    // CommunicationHandler.sendToTeacher()
 
 
 
@@ -117,30 +115,17 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
      */
     //close exam window or relead the new exam section in the same window
     if (WindowHandler.examwindow){
-
-
-                // destroy devtools window - if you don't next-exam will crash silently on reload and section switch
+            // destroy devtools window - if you don't next-exam will crash silently on reload and section switch
             if (config.development){
-                webContents.getAllWebContents().forEach(wc => {                        // all WebViews of the child
+                webContents.getAllWebContents().forEach(wc => {
                     if (wc.hostWebContents?.id === WindowHandler.examwindow.webContents.id && wc.isDevToolsOpened?.()){
                         log.info("switchExamSection: destroying devtools window")
-                        wc.closeDevTools()                                                 // close DevTools of the WebView (also when detached)
+                        wc.closeDevTools()
                     }
                 })
-            } 
-            //close exam window and reopen it with the new exam section
-            WindowHandler.examwindow.once('closed', async () => {
-                if (process.platform == 'darwin'){
-                    await disableRestrictions()
-                    await CommunicationHandler.sleep(500)
-                }
-
-
-                WindowHandler.examwindow = null;
-                CommunicationHandler.startExam(serverstatus);
-            });
-            WindowHandler.examwindow.close();
-            WindowHandler.examwindow.destroy();
-
+            }
+            WindowHandler.teardownExamChrome(WindowHandler.mainwindow)
+            WindowHandler.examwindow = null
+            CommunicationHandler.startExam(serverstatus)
     }
 }

@@ -43,7 +43,17 @@ export function detectCageKioskDesktopInstalled() {
 
 /** Show install UI while cage, AppImage, or kiosk desktop entry is still missing. */
 export function needsCageKioskSetup() {
+    if (process.platform !== 'linux') return false;
     return !detectCageInstalled() || !detectCageKioskAppImageInstalled() || !detectCageKioskDesktopInstalled();
+}
+
+/** Startup log lines for Linux Cage kiosk detection (electron-main platform block). */
+export function getLinuxCageDetectionLogLines() {
+    if (process.platform !== 'linux') return [];
+    return [
+        `main: Linux Cage kiosk: runningInCage=${detectRunningInCage()}`,
+        `main: Linux Cage check: cageInstalled=${detectCageInstalled()} appImage=${detectCageKioskAppImageInstalled()} desktopEntry=${detectCageKioskDesktopInstalled()}`
+    ];
 }
 
 function getProcessInfoSync(pid) {

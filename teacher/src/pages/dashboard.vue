@@ -79,6 +79,9 @@
 <!-- Header END -->
 
 
+
+
+
 <div id="wrapper" class="w-100 h-100 d-flex"  style="z-index: 100;">
     
     <StudentView
@@ -115,9 +118,10 @@
         :backupdirectory="serverstatus.backupdirectory || ''"
         @close="showExplorer = false"
         @load-filelist="(path) => loadFilelist(path)"
-        @load-pdf="({ path, name }) => loadPDF(path, name)"
+        @load-pdf="({ path, name }) => showPDFPreview({ filepath: path, filename: name })"
         @load-image="(path) => loadImage(path)"
         @load-text="({ path, name }) => loadTextFile(path, name)"
+        @load-html="({ path, name }) => loadHtmlFile(path, name)"
         @send-file="(file) => dashboardExplorerSendFile(file)"
         @download-file="(file) => downloadFile(file)"
         @delete-file="(file) => fdelete(file)"
@@ -133,39 +137,7 @@
 
 
 
-    <!-- pdf preview start -->
-    <div :key="4" id="pdfpreview" class="fadeinfast p-4">
-        <WebviewPane
-            id="webview"
-            :src="urlForWebview"
-            :visible="webviewVisible"
-            :allowed-url="urlForWebview"
-            :block-external="true"
-            @close="hidepreview"
-        />
-        <div v-if="currentpreview" class="pdfpreview-centered">
-            <PdfviewPaneRendered
-                :src=currentpreview
-                :currentpreviewPath=currentpreviewPath
-                :currentpreviewBase64=currentpreviewBase64
-                :currentpreviewType="currentpreviewType"
-                @close="hidepreview"
-                @printBase64="printBase64"
-                @downloadFile="downloadFile"
-                @openFileExternal="openFileExternal"
-            />
-        </div>
-        <PdfRenderer
-            v-if="activesheetsPreviewPdf"
-            :pdfBase64="activesheetsPreviewPdf"
-            :loading="false"
-            :customFields="activesheetsPreviewCustomFields"
-            :blacklist="activesheetsPreviewBlacklist"
-            @close="discardActivesheetsPdf"
-            @save-custom-fields="saveCustomFields"
-        />
-    </div>
-    <!-- pdf preview end -->
+
    
 
 
@@ -206,10 +178,10 @@
             <ul class="dropdown-menu" style="cursor: pointer;">
                 <li v-if="config.exammodes && config.exammodes.math"><a class="dropdown-item" @click="selectExamType('math')" :class="{ active: isExamType('math') }">{{$t('dashboard.math')}}</a></li>
                 <li v-if="config.exammodes && config.exammodes.editor"><a class="dropdown-item" @click="selectExamType('editor')" :class="{ active: isExamType('editor') }">{{$t('dashboard.lang')}}</a></li>
+                <li v-if="config.exammodes && config.exammodes.activesheets"><a class="dropdown-item" @click="selectExamType('activesheets')" :class="{ active: isExamType('activesheets') }">Active Sheets</a></li>
                 <li v-if="config.exammodes && config.exammodes.eduvidual"><a class="dropdown-item" @click="selectExamType('eduvidual')" :class="{ active: isExamType('eduvidual') }">{{$t('dashboard.eduvidual')}}</a></li>
                 <li v-if="config.exammodes && config.exammodes.forms"><a class="dropdown-item" @click="selectExamType('forms')" :class="{ active: isExamType('forms') }">{{$t('dashboard.forms')}}</a></li>
                 <li v-if="config.exammodes && config.exammodes.website"><a class="dropdown-item" @click="selectExamType('website')" :class="{ active: isExamType('website') }">Website</a></li>
-                <li v-if="config.exammodes && config.exammodes.activesheets"><a class="dropdown-item" @click="selectExamType('activesheets')" :class="{ active: isExamType('activesheets') }">Active Sheets</a></li>
                 <li v-if="config.exammodes && config.exammodes.microsoft365"><a class="dropdown-item" @click="selectExamType('microsoft365')" :class="{ active: isExamType('microsoft365') }">Microsoft365</a></li>
                 <li v-if="config.exammodes && config.exammodes.rdp"><a class="dropdown-item" @click="selectExamType('rdp')" :class="{ active: isExamType('rdp') }">RDP</a> </li>
                 <li v-if="config.exammodes && config.exammodes.localvm"><a class="dropdown-item" @click="selectExamType('localvm')" :class="{ active: isExamType('localvm') }">LocalVM</a> </li>
@@ -540,10 +512,10 @@
                     <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
                         <div class="basematerial-row">
                             <span class="basematerial-group-pill">A</span>
-                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.gforms?.url">
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.forms?.url">
                                 <div class="btn-group basematerial-filegroup" role="group">
-                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url, blockSubdomains: false, blockSubfolders: false })">
-                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url }}</span>
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.forms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.forms.url, blockSubdomains: false, blockSubfolders: false })">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.forms.url }}</span>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeFormsUrl('a')"><span class="remove-x">&times;</span></button>
                                 </div>
@@ -556,10 +528,10 @@
 
                         <div class="basematerial-row">
                             <span class="basematerial-group-pill basematerial-group-pill--b">B</span>
-                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.gforms?.url">
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupB?.examConfig?.forms?.url">
                                 <div class="btn-group basematerial-filegroup" role="group">
-                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.gforms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.gforms.url, blockSubdomains: false, blockSubfolders: false })">
-                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.gforms.url }}</span>
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.forms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.forms.url, blockSubdomains: false, blockSubfolders: false })">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupB.examConfig.forms.url }}</span>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeFormsUrl('b')"><span class="remove-x">&times;</span></button>
                                 </div>
@@ -574,10 +546,10 @@
                     <template v-else>
                         <div class="basematerial-row">
                             <span class="basematerial-group-pill basematerial-group-pill--ab" aria-label="A/B">AB</span>
-                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.gforms?.url">
+                            <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.forms?.url">
                                 <div class="btn-group basematerial-filegroup" role="group">
-                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url, blockSubdomains: false, blockSubfolders: false })">
-                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.gforms.url }}</span>
+                                    <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.forms.url" @click="openAllowedUrl({ url: serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.forms.url, blockSubdomains: false, blockSubfolders: false })">
+                                        <span class="basematerial-filename-truncate">{{ serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.forms.url }}</span>
                                     </button>
                                     <button type="button" class="btn btn-sm btn-secondary basematerial-remove" :title="$t('dashboard.removefile')" @click="removeFormsUrl('all')"><span class="remove-x">&times;</span></button>
                                 </div>
@@ -856,7 +828,7 @@
                 :exammode="serverstatus.exammode"
                 @remove-file="handleFileRemove"
                 @choose-materials="handleChooseMaterialsGroup"
-                @show-preview="(base64, filename) => showBase64FilePreview.call(this, base64, filename)"
+                @show-preview="(base64, filename) => showPDFPreview.call(this, { base64, filename })"
                 @show-pdf-in-renderer="(base64, filename) => showBase64PdfInRenderer.call(this, base64, filename)"
                 @show-image-preview="showBase64ImagePreview"
                 @play-audio-file="playAudioFile"
@@ -935,24 +907,6 @@
                     <div class="setup-card">
                         <div
                             class="setup-row setup-row-split"
-                            :class="serverstatus.useExamSections ? 'setup-row-disabled' : ''"
-                            @mouseenter="serverstatus.useExamSections ? setSetupStatus($t('dashboard.sectionSettingsRequiredHint')) : null"
-                            @mouseleave="serverstatus.useExamSections ? clearSetupStatus() : null">
-                            <div class="setup-field-label">{{$t('dashboard.groups')}}</div>
-                            <div class="form-check form-switch m-0">
-                                <input
-                                    id="activategroups"
-                                    class="form-check-input"
-                                    type="checkbox"
-                                    v-model="serverstatus.examSections[1].groups"
-                                    :disabled="serverstatus.useExamSections"
-                                    @mouseenter="setSetupStatus($t('dashboard.groupinfo'))"
-                                    @mouseleave="clearSetupStatus"
-                                    @change="serverstatus.useExamSections ? null : (serverstatus.examSections[1].groups ? setupGroups(1) : setServerStatus())">
-                            </div>
-                        </div>
-                        <div
-                            class="setup-row setup-row-split"
                             :class="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? 'setup-row-disabled' : ''"
                             @mouseenter="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? setSetupStatus($t('dashboard.sectionSettingsRequiredHint')) : null"
                             @mouseleave="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? clearSetupStatus() : null">
@@ -1007,16 +961,27 @@
                     </div>
 
                     <div class="setup-card">
+                        <div
+                            class="setup-row"
+                            :class="serverstatus.useExamSections ? 'setup-row-disabled' : ''"
+                            @mouseenter="serverstatus.useExamSections ? setSetupStatus($t('dashboard.sectionSettingsRequiredHint')) : setSetupStatus($t('dashboard.groupinfo'))"
+                            @mouseleave="clearSetupStatus">
+                            <div class="form-check form-switch m-0">
+                                <input
+                                    id="activategroups"
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    v-model="serverstatus.examSections[1].groups"
+                                    :disabled="serverstatus.useExamSections"
+                                    @change="serverstatus.useExamSections ? null : (serverstatus.examSections[1].groups ? setupGroups(1) : setServerStatus())">
+                                <label class="form-check-label" for="activategroups">{{$t('dashboard.groups')}}</label>
+                            </div>
+                        </div>
+                        <div class="setup-divider"></div>
                         <div class="setup-row">
                             <div class="form-check form-switch m-0">
                                 <input v-model="muteAudio" class="form-check-input" type="checkbox" id="muteaudio" @mouseenter="setSetupStatus($t('dashboard.muteaudiointro'))" @mouseleave="clearSetupStatus">
                                 <label class="form-check-label" for="muteaudio">{{$t('dashboard.muteaudio')}}</label>
-                            </div>
-                        </div>
-                        <div class="setup-row">
-                            <div class="form-check form-switch m-0">
-                                <input id="screenshotOcr" type="checkbox" v-model="serverstatus.screenshotocr" class="form-check-input" @change="updateScreenshotInterval" @mouseenter="setSetupStatus($t('dashboard.ocrinfo'))" @mouseleave="clearSetupStatus">
-                                <label for="screenshotOcr" class="form-check-label">{{$t('dashboard.ocr')}}</label>
                             </div>
                         </div>
                         <div class="setup-divider"></div>
@@ -1219,14 +1184,14 @@
                                         <img src="/src/assets/img/svg/edit-delete.svg" width="22" height="22" class="delfolderstudent" @click="delfolderquestion(student.token)"  @mouseover="showDescription($t('dashboard.delsingle'))" @mouseout="hideDescription" >
                                     </div>
                                     <br>
-                                    <img v-if="student.isRunningInCage && isStudentReachable(student, now)"
+                                    <img v-if="(student.isRunningInCage || student.isAssessmentMode) && isStudentReachable(student, now)"
                                         src="/src/assets/img/svg/shield-lock-fill.svg"
                                         width="14"
                                         height="14"
                                         class="white me-1"
                                         style="vertical-align: text-bottom; display: inline-block;"
                                         alt=""
-                                        @mouseover="showDescription($t('dashboard.cageKioskInfo'))"
+                                        @mouseover="showDescription($t(student.isAssessmentMode ? 'dashboard.assessmentModeInfo' : 'dashboard.cageKioskInfo'))"
                                         @mouseout="hideDescription">
                                     {{ truncatedClientName(student.clientname) }}  
                                     <button  @click='kick(student.token,student.clientip)'  @mouseover="showDescription($t('dashboard.kick'))" @mouseout="hideDescription" type="button" class=" btn-close  btn-close-white pt-1 pe-2 float-end"></button> 
@@ -1311,13 +1276,53 @@
         :lockPdfSummary="lockPdfSummary"
         @close="showSubmissionsView = false"
         @get-latest="getLatest()"
-        @open-pdf="({ path, name }) => loadPDF(path, name)"
+        @open-pdf="({ path, name }) => showPDFPreview({ filepath: path, filename: name })"
     />
 
         <div v-if="showDesc" id="description" class="bg-dark text-white" v-html="currentDescription"></div>
         <div id="statusdiv" class="bg-dark text-white">{{ $t('dashboard.connected') }}</div>
     
 </div>
+
+    <!-- pdf preview start -->
+    <div :key="4" id="pdfpreview" class="fadeinfast p-4">
+        <WebviewPane
+            id="webview"
+            :src="urlForWebview"
+            :visible="webviewVisible"
+            :allowed-url="urlForWebview"
+            :block-external="true"
+            :paper-background="currentpreviewType === 'html'"
+            @close="hidepreview"
+        />
+        <div v-if="currentpreview" class="pdfpreview-centered">
+            <PdfviewPaneRendered
+                :src=currentpreview
+                :currentpreviewPath=currentpreviewPath
+                :currentpreviewBase64=currentpreviewBase64
+                :currentpreviewType="currentpreviewType"
+                :activesheets-correction="activesheetsCorrection"
+                @close="hidepreview"
+                @printBase64="printBase64"
+                @downloadFile="downloadFile"
+                @openFileExternal="openFileExternal"
+                @save-correction="saveActivesheetsCorrectedPdf"
+            />
+        </div>
+        <PdfRenderer
+            v-if="activesheetsPreviewPdf"
+            :pdfBase64="activesheetsPreviewPdf"
+            :sourcePdfFilename="activesheetsPreviewFilename"
+            :loading="false"
+            :customFields="activesheetsPreviewCustomFields"
+            :blacklist="activesheetsPreviewBlacklist"
+            :initial-form-data="activesheetsPreviewInitialFormData"
+            @close="discardActivesheetsPdf"
+            @save-custom-fields="saveCustomFields"
+            @save-correction-template="saveActivesheetsCorrectionTemplate"
+        />
+    </div>
+    <!-- pdf preview end -->
 </template>
 
 
@@ -1346,7 +1351,7 @@ import { isStudentReachable, countReachableStudents } from '../utils/studentPres
 
 import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile, createSharingLink, fileExistsInAppFolder, downloadFilesFromOneDrive} from '../msalutils/onedrive'
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
-import { loadFilelist, getLatest, processPrintrequest,  loadImage, loadPDF, loadTextFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64FilePreview, showBase64ImagePreview, showBase64PdfInRenderer } from '../utils/filemanager'
+import { loadFilelist, getLatest, processPrintrequest,  loadImage, showPDFPreview, loadTextFile, loadHtmlFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate, saveActivesheetsCorrectedPdf } from '../utils/filemanager'
 import { swalQueued } from '../utils/swalQueue.js'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, lockSectionForAll, endExam, kick, restore } from '../utils/exammanagement.js'
 import { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, configureEditorTemplate, removeEditorTemplate, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
@@ -1354,6 +1359,7 @@ import { Exam } from '../types/api'
 import { generateEncryptionPassword } from '../utils/encryptionPassword.js'
 import { openStudentEditorTimelineDiff } from '../utils/studentEditorTimeline.js'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
+import { DEFAULT_EDITOR_EXAM_CONFIG } from 'next-exam-shared/editorExamConfig.js'
 
 class EmptyWidget {
     constructor() {
@@ -1435,8 +1441,10 @@ export default {
             activesheetsPreviewFilename: null,
             activesheetsPreviewCustomFields: [],
             activesheetsPreviewBlacklist: [],
+            activesheetsPreviewInitialFormData: null,
             activesheetsPreviewGroup: null,
             activesheetsPreviewFileIndex: -1,
+            activesheetsCorrection: null,
             
             serverlog: [],
             serverlogActive: false,
@@ -1479,7 +1487,6 @@ export default {
                 screenshotinterval: 4,
                 backupintervalPause:6,
                 screenslocked: false,
-                screenshotocr: false,
                 directPrintAllowed: false,
                 examTeachers: [],
                 examSecurityKey: "oI9xGzHkUFe7Lg2iTXHkYp4pDab3Nvj4kFEOqA93cZE=",
@@ -1489,95 +1496,40 @@ export default {
                 lockedSection: 1,
                 examSections: {
                     1: {
-                        examtype: 'math',   
+                        examtype: 'math',
                         timelimit: 600,
-                        locked: false,  // if true, the current section is locked and no changes can be made - this means its currently active for students
+                        locked: false,
                         sectionname: "Abschnitt 1",
-                        spellchecklang: 'de-DE', 
-                        suggestions: false, 
-
-                        cmargin: { side: 'right', size: 3 }, 
-
-                        formsUrl: null,
-                        
-                        linespacing: 2, 
-                        languagetool: false,
-                        fontfamily: "sans-serif", 
-                        fontsize: '12pt',
-                        audioRepeat: 0,
-                        localVMConfig: null,
-
                         groups: false,
-                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
-                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
+                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor: { ...DEFAULT_EDITOR_EXAM_CONFIG }, eduvidual:{}, forms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
+                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor: { ...DEFAULT_EDITOR_EXAM_CONFIG }, eduvidual:{}, forms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
                     },
                     2: {
-                        examtype: 'math',   
+                        examtype: 'math',
                         timelimit: 600,
                         locked: false,
                         sectionname: "Abschnitt 2",
-                        spellchecklang: 'de-DE', 
-                        suggestions: false, 
-
-                        cmargin: { side: 'right', size: 3 }, 
-
-                        formsUrl: null,
-                        
-                        linespacing: 2, 
-                        languagetool: false,
-                        fontfamily: "sans-serif", 
-                        fontsize: '12pt',
-                        audioRepeat: 0,
-                        localVMConfig: null,
-
                         groups: false,
-                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
-                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
+                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor: { ...DEFAULT_EDITOR_EXAM_CONFIG }, eduvidual:{}, forms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
+                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor: { ...DEFAULT_EDITOR_EXAM_CONFIG }, eduvidual:{}, forms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
                     },
                     3: {
-                        examtype: 'math',   
+                        examtype: 'math',
                         timelimit: 600,
                         locked: false,
                         sectionname: "Abschnitt 3",
-                        spellchecklang: 'de-DE', 
-                        suggestions: false, 
-
-                        cmargin: { side: 'right', size: 3 }, 
-
-                        formsUrl: null,
-                        
-                        linespacing: 2, 
-                        languagetool: false,
-                        fontfamily: "sans-serif", 
-                        fontsize: '12pt',
-                        audioRepeat: 0,
-                        localVMConfig: null,
-
                         groups: false,
-                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
-                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
+                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor: { ...DEFAULT_EDITOR_EXAM_CONFIG }, eduvidual:{}, forms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
+                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor: { ...DEFAULT_EDITOR_EXAM_CONFIG }, eduvidual:{}, forms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
                     },
                     4: {
-                        examtype: 'math',   
+                        examtype: 'math',
                         timelimit: 600,
                         locked: false,
                         sectionname: "Abschnitt 4",
-                        spellchecklang: 'de-DE', 
-                        suggestions: false, 
-
-                        cmargin: { side: 'right', size: 3 }, 
-
-                        formsUrl: null,
-                        
-                        linespacing: 2, 
-                        languagetool: false,
-                        fontfamily: "sans-serif", 
-                        fontsize: '12pt',
-                        audioRepeat: 0,
-                        localVMConfig: null,
                         groups: false,
-                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
-                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor:{}, eduvidual:{}, gforms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
+                        groupA: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor: { ...DEFAULT_EDITOR_EXAM_CONFIG }, eduvidual:{}, forms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } },
+                        groupB: { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: { activeSheets:{}, editor: { ...DEFAULT_EDITOR_EXAM_CONFIG }, eduvidual:{}, forms:{}, website:{}, math:{}, microsoft365:{}, rdp:{}, localvm:{} } }
                     }
                 },                
             } as Exam
@@ -1634,8 +1586,8 @@ computed: {
             return section.groups ? (hasA && hasB) : hasA;
         }
         if (examType === 'forms') {
-            const hasA = !!section.groupA?.examConfig?.gforms?.url;
-            const hasB = !!section.groupB?.examConfig?.gforms?.url;
+            const hasA = !!section.groupA?.examConfig?.forms?.url;
+            const hasB = !!section.groupB?.examConfig?.forms?.url;
             return section.groups ? (hasA && hasB) : hasA;
         }
         if (examType === 'localvm') {
@@ -1862,15 +1814,14 @@ computed: {
                     ERROR: 'dashboard.openEncryptedPdfError',
                 }
                 const key = map[res.code] || 'dashboard.openEncryptedPdfError'
-                await swalQueued.fire({
+                await swalQueued({
                     icon: 'error',
                     title: this.$t(key),
                     text: res.message || '',
                 })
                 return
             }
-            this.showBase64FilePreview(res.base64, res.filename)
-            this.currentpreviewPath = res.filePath
+            this.showPDFPreview({ filepath: res.filePath, filename: res.filename, base64: res.base64 })
         },
 
         /**
@@ -1882,17 +1833,19 @@ computed: {
         getLatest:getLatest,                        // get latest files from all students and concatenate all pdf files
         processPrintrequest:processPrintrequest,  // handles a print request and first fetches the latest version from a specific student
         loadImage:loadImage,                        // displays an image in the preview panel
-        loadPDF:loadPDF,                            // displays a pdf in the preview panel
+        showPDFPreview: showPDFPreview,             // displays a pdf in the preview panel ({filepath, filename, base64})
         loadTextFile:loadTextFile,                  // shows plain text / .log in a modal (DashboardExplorer)
+        loadHtmlFile: loadHtmlFile,                 // renders .htm/.html in webview pane (DashboardExplorer)
         dashboardExplorerSendFile:dashboardExplorerSendFile,        // sends a given file to the selected student
         downloadFile:downloadFile,                                  // store the selected file to a local folder
         showWorkfolder:showWorkfolder,                              // makes the dashboard explorer visible
         fdelete:fdelete,                                            // deletes a file
         openLatestFolder:openLatestFolder,                          // opens the newest folder that belongs to the current visible student
         openStudentEditorTimelineDiff: openStudentEditorTimelineDiff, // scans .htm backups, writes *_editor_timeline.json, opens diff viewer
-        showBase64FilePreview:showBase64FilePreview,                // displays a base64 encoded pdf in the preview panel
         showBase64ImagePreview:showBase64ImagePreview,              // displays a base64 encoded image in the preview panel
         showBase64PdfInRenderer:showBase64PdfInRenderer,            // displays a base64 encoded pdf in PdfRenderer component
+        saveActivesheetsCorrectionTemplate: saveActivesheetsCorrectionTemplate,
+        saveActivesheetsCorrectedPdf: saveActivesheetsCorrectedPdf,
 
         /**
          * Exam Managment functions
@@ -2187,7 +2140,7 @@ computed: {
         async getSpecificSubmissionBase64(filepath) {
             const result = await ipcRenderer.invoke('getSpecificSubmissionBase64', filepath)
             if (result.status === "success") {
-                this.showBase64FilePreview(result.submission, filepath.split('/').pop())
+                this.showPDFPreview({ filepath, filename: filepath.split('/').pop(), base64: result.submission })
             }
             else {
                 this.$swal.fire({
@@ -2219,10 +2172,10 @@ computed: {
                 
             }).then(async (result) => {
                 if (result.isConfirmed) {
-                    if (group === 'A') { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.examInstructionFiles.splice(index, 1); } 
+                    if (group === 'A') { this.serverstatus.examSections[this.serverstatus.activeSection].groupA.examInstructionFiles.splice(index, 1); }
                     else {               this.serverstatus.examSections[this.serverstatus.activeSection].groupB.examInstructionFiles.splice(index, 1); }
-                    this.setStudentStatus({getmaterials: true}, 'all'); 
-                    this.setServerStatus()
+                    await this.setServerStatus()
+                    await this.setStudentStatus({getmaterials: true}, 'all')
                 }
             })
 
@@ -2328,7 +2281,6 @@ computed: {
             if (interval === 0) { // Screenshots deaktivieren
                 console.log("dashboard @ updateScreenshotInterval: deactivating screenshots");
                 this.serverstatus.screenshotinterval = 0;
-                this.serverstatus.screenshotocr = false;
                 this.autoscreenshot = false;
             } else {
                 console.log("dashboard @ updateScreenshotInterval: setting screenshot interval to", interval);
@@ -2461,11 +2413,15 @@ computed: {
         },
         hidepreview() {
             document.querySelector("#pdfpreview").style.display = 'none';
-            URL.revokeObjectURL(this.currentpreview);
+            if (this.currentpreview) URL.revokeObjectURL(this.currentpreview);
+            if (this.urlForWebview?.startsWith('blob:')) URL.revokeObjectURL(this.urlForWebview);
             this.currentpreview = null;
             this.currentpreviewBase64 = null;
             this.currentpreviewPath = null;
             this.currentpreviewname = null;
+            this.activesheetsCorrection = null;
+            this.urlForWebview = null;
+            this.webviewVisible = false;
         },
         // discard activesheets PDF
         discardActivesheetsPdf() {
@@ -2473,6 +2429,7 @@ computed: {
             this.activesheetsPreviewFilename = null;
             this.activesheetsPreviewCustomFields = [];
             this.activesheetsPreviewBlacklist = [];
+            this.activesheetsPreviewInitialFormData = null;
             this.activesheetsPreviewGroup = null;
             this.hidepreview();
         },
@@ -3190,7 +3147,7 @@ computed: {
             this.pdfPreviewEventlisterenCallback = () => { this.hidepreview(); } //unload pdf
 
             document.getElementById('setupdiv').addEventListener('click', function(e) { e.stopPropagation();});
-            document.querySelector("#pdfpreview").addEventListener("click", this.pdfPreviewEventlisterenCallback); // Set the event listener for #pdfpreview
+            document.querySelector("#pdfpreview").addEventListener("click", this.pdfPreviewEventlisterenCallback);
 
             document.querySelector("#audioclose").addEventListener("click", function(e) {
                 audioPlayer.pause();
@@ -3345,7 +3302,7 @@ computed: {
     width: 600px;
     /* background-color:rgba(0, 0, 0, 0.1); */
     text-align:center;
-
+    z-index: 100002; /* ueber #pdfpreview (100001) */
 }
 #aplayer audio {
     box-shadow: 0px 0px 10px rgba(0,0,0,0.6);
@@ -3613,6 +3570,11 @@ computed: {
         grid-template-columns: 1fr;
     }
 }
+
+
+
+
+
 
 .setup-scroll {
     width: 100%;
@@ -4305,13 +4267,13 @@ computed: {
 
 #pdfpreview {
     display: none;
-    position: absolute;
-    top:0;
+    position: fixed;
+    top: 0;
     left: 0;
-    width:100vw;
+    width: 100vw;
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.4);
-    z-index:100001;
+    z-index: 100001;
     backdrop-filter: blur(3px);
 }
 #pdfembed { 
@@ -4587,8 +4549,8 @@ hr {
 }
 
 .swal2-container {
-    backdrop-filter: blur(2px); 
-    z-index: 100000 !important;
+    backdrop-filter: blur(2px);
+    z-index: 100003 !important; /* ueber #pdfpreview (100001) */
     transition: none !important;
     animation: none !important;
     -webkit-transition: none !important;
@@ -5062,5 +5024,33 @@ hr {
     transform: translateX(-10%);
 }
 
+@media print {
+    /* nur #pdfpreview im Print sichtbar, Rest weg damit Layout-Flow den PDF-Wrapper voll nutzt */
+    /* #pdfpreview haengt unter #q-app als Sibling von #wrapper -> alle Geschwister ausser #pdfpreview ausblenden */
+    #q-app > *:not(#pdfpreview),
+    #setupoverlay, .sidebar-root, #content,
+    .studentslist-controls, .tab-buttons-container { display: none !important; }
+    /* Root entclippen: body inline position:fixed + #q-app height:100vh begrenzen sonst Druck auf 1 Viewport-Hoehe -> nur Seite 1 */
+    html, body#vuexambody { position: static !important; height: auto !important; overflow: visible !important; }
+    #q-app { display: block !important; height: auto !important; overflow: visible !important; }
+    #pdfpreview {
+        display: block !important;
+        /* hart an top/left 0 verankern: printToPDF paginiert ab html-Layout, nicht ab #pdfpreview;
+           absolute gegen den initial containing block eliminiert jeden Vorfluss-Offset (DevTools-Print zeigt's korrekt, printToPDF sonst verschoben) */
+        position: absolute !important;
+        top: 0 !important; left: 0 !important; right: 0 !important;
+        width: 100% !important; height: auto !important;
+        padding: 0 !important; margin: 0 !important;
+        background: #fff !important; backdrop-filter: none !important;
+    }
+    .pdfpreview-centered {
+        position: static !important; transform: none !important;
+        width: 100% !important; height: auto !important;
+        max-width: none !important; max-height: none !important;
+        margin: 0 !important; padding: 0 !important;
+        border-radius: 0 !important; box-shadow: none !important;
+        overflow: visible !important;
+    }
 
+}
 </style>

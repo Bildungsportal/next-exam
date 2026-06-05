@@ -39,6 +39,9 @@ const SYSTEM_CRITICAL_NAMES = new Set([
     'wininit', 'wininit.exe', 'csrss', 'csrss.exe', 'winlogon', 'winlogon.exe',
     'dwm', 'dwm.exe', 'smss', 'smss.exe', 'registry', 'system',
     'fontdrvhost', 'fontdrvhost.exe', 'sgrmbroker', 'sgrmbroker.exe',
+    'spoolsv', 'spoolsv.exe', 'jhi_service', 'jhi_service.exe',
+    'smartscreen', 'smartscreen.exe', 'searchapp', 'searchapp.exe',
+    'codemeter', 'codemeter.exe', 'mdnsresponder', 'mdnsresponder.exe',
     // macOS
     'launchd', 'mdnsresponder', 'syslogd', 'configd', 'kernel_task',
     'windowserver', 'loginwindow', 'coreaudiod', 'trustd', 'symptomsd'
@@ -138,6 +141,16 @@ export async function getNextExamExcludePids() {
 }
 
 /**
+ * macOS `comm` is capped at 16 chars; use the first token of the full command line instead.
+ * @param {string} cmdline
+ */
+function darwinProcessName(cmdline) {
+    const s = String(cmdline || '').trim();
+    if (!s) return '';
+    return s.split(/\s+/)[0].replace(/^['"]|['"]$/g, '');
+}
+
+/**
  * Resolve pid -> {name, cmdline} via `ps` (Linux/macOS), in batches; used by collectLinux + collectDarwin.
  * @param {Iterable<number>} pids
  * @returns {Promise<Map<number,{name:string,cmdline:string}>>}
@@ -145,13 +158,21 @@ export async function getNextExamExcludePids() {
 async function unixMeta(pids) {
     const arr = [...new Set([...pids].filter(Number.isFinite))].sort((a, b) => a - b);
     const meta = new Map();
+    const isDarwin = platformDispatcher.platform === 'darwin';
     for (let i = 0; i < arr.length; i += 80) {
         const chunk = arr.slice(i, i + 80);
-        const text = await sh('ps', ['-p', chunk.join(','), '-o', 'pid=,comm=,args=']);
+        const text = await sh('ps', ['-p', chunk.join(','), '-o', isDarwin ? 'pid=,command=' : 'pid=,comm=,args=']);
         for (const line of text.split('\n')) {
-            const m = line.trim().match(/^(\d+)\s+(\S+)\s*(.*)$/);
-            if (!m) continue;
-            meta.set(+m[1], { name: m[2], cmdline: m[3] || m[2] });
+            if (isDarwin) {
+                const m = line.trim().match(/^(\d+)\s+(.*)$/);
+                if (!m) continue;
+                const cmdline = m[2].trim();
+                meta.set(+m[1], { name: darwinProcessName(cmdline) || 'unknown', cmdline });
+            } else {
+                const m = line.trim().match(/^(\d+)\s+(\S+)\s*(.*)$/);
+                if (!m) continue;
+                meta.set(+m[1], { name: m[2], cmdline: m[3] || m[2] });
+            }
         }
     }
     return meta;

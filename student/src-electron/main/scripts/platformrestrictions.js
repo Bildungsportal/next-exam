@@ -44,6 +44,7 @@ import { enableLinuxRestrictions, disableLinuxRestrictions } from './restriction
 import { enableWindowsRestrictions, disableWindowsRestrictions } from './restrictions/win.js';
 import { enableMacRestrictions, disableMacRestrictions, toggleMacOSLockdown as toggleMacOSLockdownImpl } from './restrictions/mac.js';
 import {isElectronWindow, isIOS} from "../../../src/types/platform.ts";
+import { stopAssessmentSession } from './assessmentSession.js';
 
 let clipboardInterval;
 let configStore = {
@@ -200,6 +201,9 @@ export async function enableRestrictions(winhandler) {
 }
 
 export async function disableRestrictions() {
+    if (platformDispatcher.platform === 'darwin') {
+        await stopAssessmentSession();
+    }
     if (config.development) { return; }
     log.info("platformrestrictions @ disableRestrictions: removing restrictions...");
 

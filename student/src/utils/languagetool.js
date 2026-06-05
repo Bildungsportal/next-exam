@@ -90,7 +90,10 @@ async function LTcheckAllWords(closeLT = true){
     this.LTinfo = this.$t('editor.ltSearching')
 
     try {
-        const ltStatus = await signalBridge.invoke('isLanguageToolRunning')
+        const ltStatus = await signalBridge.invoke('isLanguageToolRunning', {
+            host: this.LThost,
+            port: this.LTport ?? '8088',
+        })
         if (!ltStatus?.running) {
             this.LTinfo = this.$t('editor.ltUnreachable')
             console.warn('languagetool.js @ LTcheckAllwords (status check): LT server is not reachable')
@@ -131,7 +134,7 @@ async function LTcheckAllWords(closeLT = true){
             headers,
             body: new URLSearchParams({
                 text: this.text,
-                language: this.ltLanguage || this.getEditorExamConfig?.(this.lockedSection)?.spellchecklang || this.serverstatus?.examSections?.[this.serverstatus?.activeSection]?.spellchecklang
+                language: this.ltLanguage || this.getEditorExamConfig?.(this.lockedSection)?.spellchecklang || 'de-DE'
             }).toString()
         });
 
@@ -513,7 +516,7 @@ function LTfindByOffsetMap(word, offsetMap) {
     
 function LThighlightWords() {
     const editorCfg = this.getEditorExamConfig?.(this.lockedSection) || null
-    const ltEnabled = editorCfg ? !!editorCfg.languagetool : !!this.serverstatus?.examSections?.[this.serverstatus?.activeSection]?.languagetool
+    const ltEnabled = !!editorCfg?.languagetool
     if (!this.textContainer || (!ltEnabled && !this.privateSpellcheck.activated)) {
         console.log(this.privateSpellcheck);
         this.LTdisable(); 

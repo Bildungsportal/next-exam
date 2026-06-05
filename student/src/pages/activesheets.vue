@@ -2,20 +2,6 @@
     <div class="activesheets-root">
     <!-- HEADER START -->
     <exam-header
-    :serverstatus="serverstatus"
-      :clientinfo="clientinfo"
-      :online="online"
-      :clientname="clientname"
-      :exammode="exammode"
-      :servername="servername"
-      :pincode="pincode"
-      :battery="battery"
-      :currenttime="currenttime"
-      :timesinceentry="timesinceentry"
-      :componentName="componentName"
-      :localLockdown="localLockdown"
-      :wlanInfo="wlanInfo"
-      :hostip="hostip"
       @reconnect="reconnect"
       @gracefullyExit="gracefullyExit"
     ></exam-header>
@@ -135,18 +121,29 @@
 </template>
 
 <script>
-import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
-import {SchedulerService} from '../utils/schedulerservice.js'
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import { getExamMaterials, loadPDF, loadImage, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue';
 import PdfOverlay from '../components/PdfRenderer.vue';
 import {SignalBridge} from '../utils/signalBridge.js'
-import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
+import {
+    attachExamMouseleaveGuardBoolean,
+    shouldSkipEdgeFocusLost
+} from '../utils/linuxCageKiosk.js'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
-
+import { collectActivesheetsFormData } from 'next-exam-shared/activesheetsFormData.js'
+import {
+    activeSheetLoadKey,
+    applyClientinfoFromFetch,
+    applyServerstatusFromFetch,
+    resolveLockedSection,
+} from '../utils/examFetchInfoSync.js'
+import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
+import {ref} from "vue";
+import {useConfigStore} from "../stores/configStore.ts";
+import {useInfoStore} from "../stores/infoStore.ts";
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
 
@@ -156,30 +153,38 @@ const ACTIVESHEETS_ZOOM_MIN = 0.85
 const ACTIVESHEETS_ZOOM_MAX = 2.2
 
 export default {
+    mixins: [autoCleanupMixin],
+
+    setup() {
+        const configStore = useConfigStore();
+        let development = ref(configStore.development);
+        let serverApiPort = ref(configStore.serverApiPort);
+        let hostip = ref(configStore.hostip);
+
+        const infoStore = useInfoStore();
+        infoStore.online = true;
+        infoStore.componentName = "Active Sheets";
+
+        let examtype = ref(infoStore.examtype);
+        let servername = ref(infoStore.servername);
+        let serverip = ref(infoStore.serverip);
+        let token = ref(infoStore.token);
+        let clientname = ref(infoStore.clientname);
+        let serverstatus = ref(infoStore.serverstatus);
+        let localLockdown = ref(infoStore.localLockdown);
+        let battery = ref(infoStore.battery);
+        let wlanInfo = ref(infoStore.wlanInfo);
+        let entrytime = ref(infoStore.entryTime);
+
+        return { development, serverApiPort, hostip,
+            examtype, servername, serverip, token, clientname, serverstatus, localLockdown, battery, wlanInfo, entrytime};
+    },
     data() {
         return {
             // ... (Deine existierenden Data Properties hier behalten) ...
-            componentName: 'Active Sheets',
-            online: true,
             focus: true,
             exammode: false,
-            examtype: this.$route.params.examtype,
             currentFile:null,
-            fetchinfointerval: null,
-            loadfilelistinterval: null,
-            clockinterval: null,
-            servername: this.$route.params.servername,
-            servertoken: this.$route.params.servertoken,
-            serverip: this.$route.params.serverip,
-            token: this.$route.params.token,
-            clientname: this.$route.params.clientname,
-            serverApiPort: this.$route.params.serverApiPort,
-            clientApiPort: this.$route.params.clientApiPort,
-            electron: this.$route.params.electron,
-            pincode : this.$route.params.pincode,
-            serverstatus: this.$route.params.serverstatus,
-            config: this.$route.params.config,
-            localLockdown: this.$route.params.localLockdown,
 
             // section and url will be resolved on first fetchInfo based on allowSectionSwitch
             lockedSection: null,
@@ -187,17 +192,11 @@ export default {
             domain: null,
 
             clientinfo: null,
-            entrytime: 0,
-            timesinceentry: 0,
-            currenttime: 0,
-            now : new Date().getTime(),
+            activeSheetLoadKey: '',
             localfiles: null,
-            battery: null,
           
             currentpreview: null,
             isLoading: true,
-            wlanInfo: null,
-            hostip: null,
 
             examMaterials: [],
             urlForWebview: null,
@@ -206,9 +205,6 @@ export default {
             allowedDomain: null, // Extracted domain for navigation validation
             
             // Event listener references for cleanup
-            _onDidStartLoading: null,
-            _onDidStopLoading: null,
-            _onDomReady: null,
             _onPreviewClick: null,
             internetCheckCounter:0,
             
@@ -277,16 +273,16 @@ export default {
                 this.pdfPreviewState = null;
                 preview.style.display = 'none';
                 URL.revokeObjectURL(this.currentpreview);
-                if (this._onPreviewClick) preview.addEventListener("click", this._onPreviewClick);
+                if (this._onPreviewClick) this.autoEventListener(preview,"click", this._onPreviewClick);
             });
         },
 
         startSplitResize(e) {
             if (!this.splitview) return;
             this._splitResizing = true;
-            window.addEventListener('pointermove', this.onSplitResizeMove, { passive: false });
-            window.addEventListener('pointerup', this.stopSplitResize, { passive: true });
-            window.addEventListener('pointercancel', this.stopSplitResize, { passive: true });
+            this.autoEventListener(window,'pointermove', this.onSplitResizeMove, { passive: false });
+            this.autoEventListener(window,'pointerup', this.stopSplitResize, { passive: true });
+            this.autoEventListener(window,'pointercancel', this.stopSplitResize, { passive: true });
             this.onSplitResizeMove(e);
         },
 
@@ -325,9 +321,9 @@ export default {
         },
        
         async sendFocuslost(){
-            if (await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
+            if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
-            if (!this.config.development && !response.focus){  //immediately block frontend
+            if (!this.development && !response.focus){  //immediately block frontend
                 this.focus = false 
             }  
         },
@@ -489,45 +485,45 @@ export default {
         formatTime(unixTime) {
             const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
             return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed
-        },
-        clock(){
-            this.now = new Date().getTime()
-            this.timesinceentry =  new Date(this.now - this.entrytime).toISOString().substr(11, 8)
-            this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
         },  
+        // Reload active-sheet PDF only when section/group/filename actually changes (not every fetchInfo poll).
+        maybeReloadActiveSheetPdf() {
+            const key = activeSheetLoadKey(this.serverstatus, this.clientinfo, this.lockedSection);
+            if (!key || key === this.activeSheetLoadKey) return;
+            this.activeSheetLoadKey = key;
+            this.loadPdfParserHtml();
+        },
+
         async fetchInfo() {
-            let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
-            
-            this.clientinfo = getinfo.clientinfo;
-            this.token = this.clientinfo.token
-            this.focus = this.clientinfo.focus
-            this.clientname = this.clientinfo.name
-            this.exammode = this.clientinfo.exammode
-            this.pincode = this.clientinfo.pin
-            
-            this.serverstatus = getinfo.serverstatus
+            const getinfo = await signalBridge.invoke('getinfoasync');
+            const prevClientinfo = this.clientinfo;
+            const prevGroup = prevClientinfo?.group;
 
-            // decide which locked section index is authoritative (client vs server)
-            const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
-                ? this.clientinfo.lockedSection
-                : this.serverstatus.lockedSection
+            applyClientinfoFromFetch(this, getinfo.clientinfo);
+            const serverstatusChanged = getinfo.serverstatus
+                ? applyServerstatusFromFetch(this, getinfo.serverstatus)
+                : false;
 
-            this.lockedSection = sectionIndex
+            const sectionIndex = resolveLockedSection(this.serverstatus, this.clientinfo);
+            const sectionChanged = sectionIndex !== this.lockedSection;
+            if (sectionChanged) this.lockedSection = sectionIndex;
 
-            if (!this.focus){  this.entrytime = new Date().getTime()}
-            if (this.clientinfo && this.clientinfo.token){  this.online = true  }
-            else { this.online = false  }
+            if (!this.focus) this.entrytime = new Date().getTime();
 
-            this.battery = await navigator.getBattery().then(battery => { return battery })
-            .catch(error => { console.error("Error accessing the Battery API:", error);  });
-            
-            this.internetCheckCounter++
-            if (this.internetCheckCounter % 5 === 0){
-                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
-                this.hostip = await signalBridge.invoke('checkhostip')
-                this.internetCheckCounter = 0
+            const groupChanged = prevClientinfo != null && getinfo.clientinfo?.group !== prevGroup;
+            if (sectionChanged || serverstatusChanged || groupChanged) {
+                this.maybeReloadActiveSheetPdf();
             }
 
+            this.battery = await navigator.getBattery().then(battery => battery)
+                .catch(error => { console.error("Error accessing the Battery API:", error); });
+
+            this.internetCheckCounter++;
+            if (this.internetCheckCounter % 5 === 0) {
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info');
+                this.hostip = await signalBridge.invoke('checkhostip');
+                this.internetCheckCounter = 0;
+            }
         }, 
         // --- NEW: Refactored PDF Loader ---
         async loadPdfParserHtml() {
@@ -611,36 +607,11 @@ export default {
                 })
             }
 
-            // Collect all input field values from PdfRenderer
-            // Use the Active Sheet PDF filename, not the backup filename
-            const formData = { filename: this.activeSheetPdfFilename || 'unknown.pdf' };
-            
-            // Get all input fields (text, textarea, checkbox) from PdfRenderer
-            const textInputs = document.querySelectorAll('.interactive-input.text, .interactive-input.cloze, .interactive-input.table-cell');
-            const textareas = document.querySelectorAll('.interactive-input.textarea');
-            const checkboxes = document.querySelectorAll('.interactive-input.checkbox');
-            
-            // Collect text input values
-            textInputs.forEach(input => {
-                if (input.id) {
-                    formData[input.id] = input.value || '';
-                }
-            });
-            
-            // Collect textarea values
-            textareas.forEach(textarea => {
-                if (textarea.id) {
-                    formData[textarea.id] = textarea.value || '';
-                }
-            });
-            
-            // Collect checkbox values
-            checkboxes.forEach(checkbox => {
-                if (checkbox.id) {
-                    formData[checkbox.id] = checkbox.checked || false;
-                }
-            });
-            
+            const formData = collectActivesheetsFormData(
+                document.getElementById('pdfrenderer'),
+                this.activeSheetPdfFilename || 'unknown.pdf'
+            );
+
             // Save form data to .htm file via IPC
             signalBridge.send('saveActivesheetsBak', {
                 filename: filename || this.clientname,
@@ -656,21 +627,36 @@ export default {
                 signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: this.currentpreviewBase64 })  
             } else {
                 // Otherwise generate from current view
-                let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true, reason: why})
+                let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true, reason: why, pageMode: 'fullpage'})
                 if (response?.status == "success") {
-                    signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })  
+                    signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })
+                } else {
+                    this.showPdfGenerationError(response)
                 }
             }
             this.loadFilelist()
         },
 
+        // Maps getPDFbase64 IPC error payloads to a localized Swal title.
+        showPdfGenerationError(response) {
+            const msg = typeof response?.message === 'string' ? response.message : ''
+            let title = this.$t('editor.pdfGenerationFailed')
+            if (msg.includes('timeout') || msg.includes('in progress')) {
+                title = this.$t('editor.pdfBusyTimeout')
+            } else if (msg.toLowerCase().includes('signing failed')) {
+                title = this.$t('editor.pdfSigningFailed')
+            }
+            this.$swal.fire({ title, icon: 'error' })
+        },
+
         // send direct print request to teacher and append current document as base64
-        printBase64(printrequest=false, saveReason = 'n/a'){
+        async printBase64(printrequest=false, saveReason = 'n/a'){
             if (!this.currentpreviewBase64) {
                 console.warn('activesheets @ printBase64: No PDF available to send');
+                this.$swal.fire({ title: this.$t('editor.noPdfToSend'), icon: 'error' })
                 return;
             }
-            
+
             const endpoint = printrequest ? 'printjob' : 'submission'
             const url = `https://${this.serverip}:${this.serverApiPort}/server/control/${endpoint}/${this.servername}`;
             const sr = typeof saveReason === 'string' ? saveReason : 'n/a'
@@ -679,7 +665,13 @@ export default {
                 printrequest: printrequest,
                 submissionnumber: this.submissionnumber,
                 lockedsection: this.lockedSection,
-                saveReason: sr
+                saveReason: sr,
+            }
+            if (!printrequest) {
+                payload.formData = collectActivesheetsFormData(
+                    document.getElementById('pdfrenderer'),
+                    this.activeSheetPdfFilename || 'unknown.pdf'
+                )
             }
 
             examApiFetch(url, {
@@ -707,39 +699,85 @@ export default {
                     })
                 }
             })
-            .catch(error => {  
-                console.log("activesheets @ printbase64:",error.message)    
+            .catch(error => {
+                console.log("activesheets @ printbase64:",error.message)
+                this.$swal.fire({ title: this.$t('editor.submissionNetworkFailed'), icon: 'error' })
             });
         },
 
         async sendExamToTeacher(directsend=false, type="send"){
-            // Generate PDF from current view (with filled form fields)
-            if (!this.serverstatus || !this.serverstatus.examSections || !this.serverstatus.examSections[this.lockedSection]) {
+            if (!this.serverstatus?.examSections?.[this.lockedSection]) {
                 console.error('activesheets @ sendExamToTeacher: Invalid section data');
                 return;
             }
-            let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true})
-
-            if (response?.status == "success"){
-                let base64pdf = response.base64pdf
-                let dataUrl = response.dataUrl
-                
-                // Store the base64 PDF for later use
-                this.currentpreviewBase64 = base64pdf
-                
-                if (directsend){   //direct send to teacher without displaying the print preview
-                    this.printBase64(false, 'directsend')
+            // Ensure printToPDF captures only the form content (no preview overlay, no zoom).
+            const prevZoom = this.zoom
+            this.hidepreview()
+            const contentEl = document.getElementById('content')
+            if (contentEl) contentEl.style.zoom = 1
+            const pdfArgs = {
+                landscape: false,
+                servername: this.servername,
+                clientname: this.clientname,
+                submissionnumber: this.submissionnumber,
+                sectionname: this.serverstatus.examSections[this.lockedSection].sectionname,
+                printBackground: true,
+                pageMode: 'fullpage', // margins 0 + Header als DOM-Overlay (siehe communicationhandler.getBase64PDF)
+            }
+            try {
+                if (type === 'print') {
+                    const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'print' })
+                    if (response?.status !== 'success') {
+                        this.showPdfGenerationError(response)
+                        return
+                    }
+                    this.currentpreviewBase64 = response.base64pdf
+                    this.loadPDF({
+                        filename: `${this.clientname}.pdf`,
+                        filetype: "pdf",
+                        filecontent: response.dataUrl
+                    }, true, 100, true, type)
                     return
                 }
 
-                let file = {
+                // SWAL temporaer disabled - body.swal2-shown kills multi-page printToPDF
+                // await this.waitUntilSigningSwalPainted()
+                let response
+                response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
+                if (response?.status !== 'success') {
+                    this.showPdfGenerationError(response)
+                    return
+                }
+                this.currentpreviewBase64 = response.base64pdf
+                if (directsend) {
+                    return this.printBase64(false, 'directsend')
+                }
+                this.loadPDF({
                     filename: `${this.clientname}.pdf`,
                     filetype: "pdf",
-                    filecontent: dataUrl
-                }
-                this.loadPDF(file, true, 100, true, type)  //this opens the pdf file in the print preview and populates base64 preview
-                this.currentpreviewBase64 = base64pdf  // Store base64 for submission
+                    filecontent: response.dataUrl
+                }, true, 100, true, type)
+            } finally {
+                const restoreEl = document.getElementById('content')
+                if (restoreEl) restoreEl.style.zoom = prevZoom
             }
+        },
+
+        waitUntilSigningSwalPainted() {
+            return new Promise((resolve) => {
+                this.$swal.fire({
+                    title: this.$t('editor.creatingSigningPdf'),
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        this.$swal.showLoading()
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => { setTimeout(resolve, 0) })
+                        })
+                    },
+                })
+            })
         },
 
         // display print denied message and reason
@@ -764,18 +802,6 @@ export default {
     computed: {
     },
     watch: {
-        clientinfo: {
-            handler(newClientinfo) {
-                // Reload PDF when clientinfo is updated and group is available
-                if (newClientinfo && this.serverstatus && this.serverstatus.examSections && this.serverstatus.examSections[this.lockedSection]) {
-                    const section = this.serverstatus.examSections[this.lockedSection];
-                    if (newClientinfo.group || !section.groups) {
-                        this.loadPdfParserHtml();
-                    }
-                }
-            },
-            immediate: false
-        },
         examMaterials: {
             handler(newMaterials) {
                 // Reload PDF when examMaterials are loaded (they might contain the Active Sheet PDF)
@@ -797,27 +823,11 @@ export default {
             const content = document.getElementById(`content`)
             if (content) content.style.zoom = this.zoom
 
-            this.fetchinfointerval = new SchedulerService(5000);
-            this.fetchinfointerval.addEventListener('action',  this.fetchInfo);
-            this.fetchinfointerval.start();
-            
-            this.loadfilelistinterval = new SchedulerService(20000);
-            this.loadfilelistinterval.addEventListener('action',  this.loadFilelist);
-            this.loadfilelistinterval.start();
-            
-            this.clockinterval = new SchedulerService(1000);
-            this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-            this.clockinterval.start();
-                
+            this.autoSchedulerService(this.fetchInfo, 5000);
+            this.autoSchedulerService(this.loadFilelist, 20000);
+            this.autoSchedulerService(() => this.saveContent(true, 'auto'), 20000)
 
-
-            this.saveContentCallback = () => this.saveContent(true, 'auto');  // wegs 2 parameter muss dieser umweg genommen werden sonst kann ich den eventlistener nicht mehr entfernen
-            this.saveinterval = new SchedulerService(20000);
-            this.saveinterval.addEventListener('action', this.saveContentCallback );  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-            this.saveinterval.start();
-
-
-            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
+            attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
 
             signalBridge.on('getmaterials', (event) => {   this.getExamMaterials()  });
             
@@ -851,7 +861,7 @@ export default {
                 this.setAttribute("src", "about:blank");
                 URL.revokeObjectURL(this.currentpreview);
             };
-            document.querySelector("#preview").addEventListener("click", this._onPreviewClick);
+            this.autoSchedulerService(document.querySelector("#preview"),"click", this._onPreviewClick);
 
 
             this.wlanInfo = await signalBridge.invoke('get-wlan-info')
@@ -866,34 +876,15 @@ export default {
 
             console.log(`activesheets @ mounted: Calling loadBackupFile`)
             this.loadBackupFile()
+            setTimeout(() => {
+                signalBridge.invoke('prewarmSubmissionSigningP12').catch(() => {})
+            }, 400)
 
         });
     },
         beforeUnmount() {
-        // Clean up interval services
-        if (this.fetchinfointerval) {
-            this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
-            this.fetchinfointerval.stop();
-        }
-
-        if (this.clockinterval) {
-            this.clockinterval.removeEventListener('action', this.clock);
-            this.clockinterval.stop();
-        }
-
-        if (this.loadfilelistinterval) {
-            this.loadfilelistinterval.removeEventListener('action', this.loadFilelist);
-            this.loadfilelistinterval.stop();
-        }
-
         // Clean up DOM event listeners
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
-        
-        // Clean up preview click listener
-        const preview = document.querySelector("#preview");
-        if (preview && this._onPreviewClick) {
-            preview.removeEventListener("click", this._onPreviewClick);
-        }
 
         // Clean up IPC listeners
         signalBridge.removeAllListeners('getmaterials');
@@ -906,14 +897,7 @@ export default {
     
 }
 </script>
-<style >
-@media print {
-    #vuexambody {
-            position:absolute !important;   /* position:absolute is required for printing of pdfs with multiple pages*/
-    }
-}
 
-</style>
 
 
 <style scoped lang="scss">
@@ -949,12 +933,7 @@ export default {
     background-color: #eee;
 }
 
-:deep(.pdf-scroll-container) {
-    overflow: visible;
-    height: auto;
-    max-height: none;
-    min-height: fit-content;
-}
+/* Keep PdfviewPaneRendered internal scrolling intact. */
 
 .split-view-container {
     display: flex;
@@ -1046,17 +1025,17 @@ export default {
     background: rgba(13, 110, 253, 0.55);
 }
 
+
 #preview {
     display: none;
     position: absolute;
-    top: var(--nx-preview-top-offset, var(--nx-apphead-h, 60px));
+    top: 0;
     left: 0;
-    width:100vw;
-    height: calc(100vh - var(--nx-preview-top-offset, var(--nx-apphead-h, 60px)));
+    width: 100vw;
+    height: 100vh;
     background-color: rgba(0, 0, 0, 0.4);
-    z-index:100001;
+    z-index: 100001;
     backdrop-filter: blur(2px);
-  
 }
 
 .split-view-container #preview {
@@ -1074,62 +1053,59 @@ export default {
 @media print { 
 
 
-    #webview, #apphead, #focuswarning, .focus-container, #preview, #pdfembed, #toolbar  {
+    #webview, #apphead, #focuswarning, .focus-container, #preview, #pdfembed, #toolbar, #statusbar, .pdfview-pane-rendered,
+    .embed-container.pdfview-pane-rendered , .zoombutton, #preview, .pdf-overlay-root   {
         display: none !important;
     }
-    html, body {
-        position: relative !important;
-        height: auto !important;
-        max-height: none !important;
+
+    .swal2-container, .swal2-center, .swal2-backdrop-show , .swal2-popup, .swal2-modal, .swal2-icon-info, .swal2-show {
+        display:none !important;
+    }
+
+    ::-webkit-scrollbar {
+        display: none;
+    }
+
+
+    #vuexambody, .activesheets-root, .activesheets-body{
+        display: block !important;
+        position: absolute !important;
         overflow: visible !important;
     }
    
+   
     // Use :deep() to target child component styles - remove all height restrictions for printing
+    // zoom 8/9: pdfparser rendert page mit scale 1.5 (=> 1pt = 1.5px); printToPDF mappt 1pt = 96/72 = 1.333px.
+    // Verhaeltnis 1.333/1.5 = 8/9 skaliert das Overlay exakt auf die A4-Druckseite (Margins muessen 0 sein - siehe pageMode='fullpage').
     :deep(.pdf-overlay-root) {
         height: auto !important;
         max-height: none !important;
+        display: block !important;
+        position: absolute !important;
         overflow: visible !important;
+        zoom: calc(8 / 9) !important;
     }
     
     :deep(.pdf-scroll-container) {
+        display: block !important;
         background-color: white !important;
         box-shadow: none !important;
         padding: 0px !important;
         margin: 0px !important;
-        height: auto !important;
-        max-height: none !important;
+
+
+        position: absolute !important;
+        overflow: visible !important;
+
+    }
+ 
+
+    html, body, .activesheets-root, .activesheets-body {
+        position: absolute !important;
         overflow: visible !important;
     }
-    
-    :deep(.pdf-page-wrapper) {
-        page-break-after: always !important;
-        page-break-inside: avoid !important;
-        break-after: page !important;
-        break-inside: avoid !important;
-        margin-bottom: 0px !important;
-        box-shadow: none !important;
-    }
 
 
-
-    #app {
-        display:block !important;
-       
-        max-height: none !important;
-        overflow: visible !important;
-        position:absolute !important;
-    }
-    
-    #content {
-        overflow: visible !important;
-        height: auto !important;
-        max-height: none !important;
-        position:absolute !important;
-    }
-
-    ::-webkit-scrollbar {
-                display: none;
-            }
 
     // p { page-break-after: always; }
     .footer { 
@@ -1137,27 +1113,22 @@ export default {
         bottom: 0px; 
     }
 
-    .zoombutton, #preview {
-    display:none !important;
-    }
 
-    .swal2-container, .swal2-center, .swal2-backdrop-show , .swal2-popup, .swal2-modal, .swal2-icon-info, .swal2-show {
-        display:none !important;
-    }
+
+
 
   
-    
-    // Ensure content is visible
-    #content {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        overflow: visible !important;
-        height: auto !important;
-    }
 
 }
 
 
 
 
+</style>
+
+<style>
+/* unscoped: body lebt ausserhalb des template-scope */
+@media print {
+    #vuexambody { position: absolute !important; }
+}
 </style>

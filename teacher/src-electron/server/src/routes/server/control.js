@@ -32,11 +32,7 @@ import { normalizeStudentClientName } from '../../../../../../shared/normalizeSt
 import { isStudentReachable } from '../../../../../src/utils/studentPresence.js';
 
 import WindowHandler from '../../../../main/scripts/windowhandler.js'
-import Tesseract from 'tesseract.js';
-let TesseractWorker = false
 
-import { app } from 'electron'
-const __dirname = import.meta.dirname;
 const fsp = fs.promises 
 
 /**
@@ -154,7 +150,7 @@ router.get('/msauth', async (req, res) => {
 
 /**
  * STUDENT-ORIENTED ROUTES (Bearer student token required except: oauth, msauth, registerclient=PIN,
- * serverlist+pong+connectedstudentips=open LAN discovery).
+ * serverlist+pong=open LAN discovery; connectedstudentips only if config.exposeStudents).
  */
 
 
@@ -197,25 +193,26 @@ router.get('/serverlist', function (req, res, next) {
 
 
 
-/**
- * Returns reachable student IPs only while serverstatus.exammode is true; otherwise ips: [] (open LAN).
- */
-router.get('/connectedstudentips', function (req, res) {
-    const servers = Object.values(config.examServerList)
-    if (servers.length === 0) {
-        return res.status(404).json({ sender: 'server', status: 'error', message: t('control.notfound') })
-    }
-    const mcServer = servers[0]
-    if (!mcServer.serverstatus?.exammode) {
-        return res.json({ sender: 'server', status: 'success', ips: [] })
-    }
-    const now = Date.now()
-    const ips = (mcServer.studentList || [])
-        .filter((student) => isStudentReachable(student, now))
-        .map((student) => student.clientip)
-        .filter((ip) => typeof ip === 'string' && ip.length > 0)
-    return res.json({ sender: 'server', status: 'success', ips })
-})
+if (config.exposeStudents) {
+    /** Plain text allowlist: one reachable student IP per line (text/plain; empty body outside exammode). */
+    router.get('/connectedstudentips', function (req, res) {
+        const servers = Object.values(config.examServerList)
+        if (servers.length === 0) {
+            return res.status(404).type('text/plain').send('')
+        }
+        const mcServer = servers[0]
+        if (!mcServer.serverstatus?.exammode) {
+            return res.type('text/plain').send('')
+        }
+        const now = Date.now()
+        const ips = [...new Set((mcServer.studentList || [])
+            .filter((student) => isStudentReachable(student, now))
+            .map((student) => student.clientip)
+            .filter((ip) => typeof ip === 'string' && ip.length > 0))]
+        const body = ips.length ? `${ips.join('\n')}\n` : ''
+        return res.type('text/plain').send(body)
+    })
+}
 
  /** OPEN ROUTES END*/
 /////////////////////
@@ -423,6 +420,15 @@ router.get('/connectedstudentips', function (req, res) {
     if (typeof clientinfo.displayCount === 'number') student.displayCount = clientinfo.displayCount
     if (typeof clientinfo.multiMonitor === 'boolean') student.multiMonitor = clientinfo.multiMonitor
     if (typeof clientinfo.isRunningInCage === 'boolean') student.isRunningInCage = clientinfo.isRunningInCage
+    if (typeof clientinfo.isAssessmentMode === 'boolean') student.isAssessmentMode = clientinfo.isAssessmentMode
+    if (clientinfo.isRunningInCage && clientinfo.allowedKioskApps) {
+        student.allowedKioskApps = {
+            startLayoutReadable: !!clientinfo.allowedKioskApps.startLayoutReadable,
+            appNames: Array.isArray(clientinfo.allowedKioskApps.appNames) ? clientinfo.allowedKioskApps.appNames : [],
+        }
+    } else {
+        delete student.allowedKioskApps
+    }
 
 
     if (clientinfo.focus) { student.status.restorefocusstate = false }  // remove task because its obviously done
@@ -495,51 +501,6 @@ router.post('/updatescreenshot', async function (req, res, next) {
         //let hash = crypto.createHash('md5').update(Buffer.from(screenshotBase64, 'base64')).digest("hex");  // compute MD5 hash of the base64 string
 
             student.imageurl = 'data:image/jpeg;base64,' + screenshotBase64; // or 'data:image/png;base64,' depending on actual image format
-
-            // only scan screenshot in exam mode and NOT if a restoring/unlocking operation is already in process (otherwise it will lock the unlocked again)
-            if (mcServer.serverstatus.exammode && mcServer.serverstatus.screenshotocr && !student.status.restorefocusstate && student.focus){
-                //put a new distinct timestamp on multicastserver once to track how long ocr and exam mode is activated and only run ocr if the timestamp is older than 10 seconds
-                if (!mcServer.serverinfo.ocrTimestamp){
-                    mcServer.serverinfo.ocrTimestamp = new Date().getTime()
-                }
-
-                if (mcServer.serverinfo.ocrTimestamp + 20000 > new Date().getTime()){
-                    // do nothing  -  give the clients enough time to switch into kiosk mode first (this prevents false positives on exam start)
-                }
-                else {
-                    // run ocr
-                    try{
-                        const rawHeader = req.body.header
-                        if (typeof rawHeader !== 'string' || !rawHeader.includes(';base64,')) {
-                            log.info('control @ updatescreenshot (ocr): missing or invalid header data URL')
-                        } else {
-                        const header = rawHeader.split(';base64,').pop();
-                        const headerimageBuffer = Buffer.from(header, 'base64');
-
-                        const publicPath = app.isPackaged
-                        ? path.join(process.resourcesPath,'app.asar.unpacked', 'public')
-                        : path.resolve(__dirname, '../../public');
-                        
-                        if (!TesseractWorker){
-                            TesseractWorker = await Tesseract.createWorker('eng',1,{
-                                langPath: publicPath , 
-                                cachePath: config.workdirectory   
-                            });
-                        }
-                         
-                        const { data: { text } }  = await TesseractWorker.recognize(headerimageBuffer);
-                        let pincodeVisible = text.includes(mcServer.serverinfo.pin)
-
-                        if (!pincodeVisible){
-                            student.focus = pincodeVisible  // this is the local student object for the frontend
-                            student.status.focus = pincodeVisible  // this sets the studentstatus object which is fetched on every update - the students react on this
-                            log.info("control @ updatescreenshot (ocr): Student Screenshot does not include Exam PIN");
-                        }
-                        }
-                    }
-                    catch(err){ log.info(`control @ updatescreenshot (ocr): ${err}`); }
-                }
-            }
 
             if (!student.focus) { // Archiviere Screenshot, wenn Student nicht fokussiert ist
                 log.info("control @ updatescreenshot: Student out of focus - securing screenshots");
@@ -629,7 +590,25 @@ router.post('/submission/:servername', async function (req, res, next) {
             return res.status(500).send({ sender: 'server', message: t("control.submissionfailed"), status: 'error' });
         }
         await fsp.writeFile(absoluteFilename, pdfBuffer)                                       // write main
-      
+
+        const formData = req.body.formData
+        if (formData && typeof formData === 'object' && !Array.isArray(formData)) {
+            const htmName = filename.replace(/\.pdf$/i, '.htm')
+            if (isSafePathSegment(htmName)) {
+                const absoluteHtm = resolvePathUnderRoot(filepath, [htmName])
+                if (absoluteHtm) {
+                    await fsp.writeFile(absoluteHtm, JSON.stringify(formData, null, 2), 'utf8')
+                    if (config.backupdirectory) {
+                        const backuppath = resolvePathUnderRoot(config.backupdirectory, [mcServer.serverinfo.servername, student.clientname, 'ABGABE', lockedsection])
+                        const absoluteBackupHtm = backuppath ? resolvePathUnderRoot(backuppath, [htmName]) : null
+                        if (absoluteBackupHtm) {
+                            await fsp.writeFile(absoluteBackupHtm, JSON.stringify(formData, null, 2), 'utf8')
+                        }
+                    }
+                }
+            }
+        }
+
         log.info(`control @ submission: Received and stored submission file for user: ${student.clientname} saveReason=${saveReason}`)
         WindowHandler.mainwindow.webContents.send('submission', { clientname: student.clientname, clientip: student.clientip, hostname: student.hostname, printrequest: !!printrequest, saveReason })
         // create backup of abgabe

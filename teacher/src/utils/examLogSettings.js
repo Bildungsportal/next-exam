@@ -8,7 +8,7 @@ const getBaseMaterialUrl = (examtype, examConfig, section) => {
         case 'eduvidual':
             return examConfig.eduvidual?.url || null
         case 'forms':
-            return examConfig.gforms?.url || section?.formsUrl || null
+            return examConfig.forms?.url || null
         case 'rdp':
             return examConfig.rdp?.domain || null
         case 'localvm':

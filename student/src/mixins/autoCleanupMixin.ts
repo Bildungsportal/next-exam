@@ -35,22 +35,15 @@ export const autoCleanupMixin = {
         // Track fetch automatically
         async autoFetch(url: string, options?: RequestInit) {
             const abortController = new AbortController();
-
-            console.log("creating auto fetch", url);
             try {
-                try {
-                    return await fetch(url, {
-                        ...options,
-                        signal: abortController.signal
-                    });
-                } catch (err) {
-                    if (err.name !== 'AbortError') throw err;
-                }
-            } finally {
-                this.onCleanup(() => {
-                    abortController.abort();
-                    console.log("cleaning up auto fetch", url)
+                return await fetch(url, {
+                    ...options,
+                    signal: abortController.signal
                 });
+            } catch (err) {
+                if (err.name !== 'AbortError') throw err;
+            } finally {
+                this.onCleanup(() => { abortController.abort() });
             }
         },
 
@@ -62,22 +55,17 @@ export const autoCleanupMixin = {
 
 
     beforeUnmount() {
-        console.log('Auto-cleanup running');
-
         // Remove all event listeners
         this.eventListeners.forEach(({ target, event, handler }) => {
             target.removeEventListener(event, handler);
         });
-        this.eventListeners.length = 0;
 
         // Remove all scheduler services
         this.schedulerServices.forEach((schedulerService: SchedulerService) => {
-            schedulerService.stop()
+            schedulerService.stop();
         });
 
         // Run cleanup functions
         this.cleanupFunctions.forEach(fn => fn());
-        this.cleanupFunctions.length = 0;
-        console.log('Auto-cleanup finished');
     }
 }

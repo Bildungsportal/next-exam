@@ -1,0 +1,25 @@
+---
+description: MANDATORY — first tool call every session must Read CLAUDE.md at repo root.
+alwaysApply: true
+---
+
+# Read CLAUDE.md first (non-negotiable)
+
+Applies to **Cursor Agent**, **Composer**, and **subagents** in this repository.
+
+## Required first action
+
+1. **First tool call** in the conversation (and at the start of each new subagent) MUST be `Read` on `CLAUDE.md` at the repository root.
+2. Do this **before** any other tool: skills, search, terminal, edits, MCP, or a substantive reply.
+3. **`@CLAUDE.md` in rules does not replace this** — you must still run `Read` so the full current file is loaded.
+4. After `Read`, obey every section in `CLAUDE.md` for the rest of the task (including `memory.md` / Graphify per §5–§6).
+
+## When to skip
+
+Never skip for “simple” questions, greetings, or “just a quick look”. Only skip if you **already** called `Read` on `CLAUDE.md` earlier in **this** conversation and you have not started a new subagent.
+
+## On failure
+
+If `Read` fails (missing path, permission), say so and stop until the path is fixed — do not guess defaults.
+
+@CLAUDE.md

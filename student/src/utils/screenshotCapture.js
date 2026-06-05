@@ -1,6 +1,6 @@
 /**
  * Frontend screenshot capture using getDisplayMedia (Electron desktop capture).
- * Resize 1024px, header crop 150px, isAllBlack check; upload via fetch to teacher API.
+ * Resize to max width; upload via fetch to teacher API.
  */
 
 import { isElectronWindow } from '../types/platform';
@@ -9,18 +9,6 @@ import { examApiFetch } from 'next-exam-shared/examApiFetch.js';
 const log = { info: (...a) => console.log(...a), warn: (...a) => console.warn(...a), error: (...a) => console.error(...a) };
 
 const SCREENSHOT_MAX_WIDTH = 1200;
-const HEADER_CROP_HEIGHT = 150;
-
-/** Check if image data (RGBA) is effectively all black */
-function isAllBlack(imageData) {
-  const data = imageData.data;
-  const len = data.length;
-  const threshold = 10;
-  for (let i = 0; i < len; i += 4) {
-    if (data[i] > threshold || data[i + 1] > threshold || data[i + 2] > threshold) return false;
-  }
-  return true;
-}
 
 /** Compute hash of binary data for screenshothash (SHA-256 in browser) */
 async function hashArrayBuffer(buffer) {
@@ -33,7 +21,7 @@ async function hashArrayBuffer(buffer) {
 
 /**
  * Capture one frame from a live video element (stream already attached and playing).
- * Returns { screenshotBase64, headerBase64, isblack } or null on failure.
+ * Returns { screenshotBase64 } or null on failure.
  */
 function captureFrameFromVideo(video) {
   if (!video?.videoWidth || !video?.videoHeight) return null;
@@ -55,20 +43,9 @@ function captureFrameFromVideo(video) {
   if (!screenshotCtx) return null;
   screenshotCtx.drawImage(fullCanvas, 0, 0, fullCanvas.width, fullCanvas.height, 0, 0, sw, sh);
 
-  const headerCanvas = document.createElement('canvas');
-  headerCanvas.width = sw;
-  headerCanvas.height = Math.min(HEADER_CROP_HEIGHT, sh);
-  const headerCtx = headerCanvas.getContext('2d');
-  if (!headerCtx) return null;
-  headerCtx.drawImage(screenshotCanvas, 0, 0, sw, headerCanvas.height, 0, 0, sw, headerCanvas.height);
-
-  const headerImageData = headerCtx.getImageData(0, 0, headerCanvas.width, headerCanvas.height);
-  const isblack = isAllBlack(headerImageData);
-
   const screenshotBase64 = screenshotCanvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-  const headerBase64 = headerCanvas.toDataURL('image/jpeg', 0.85).split(',')[1];
 
-  return { screenshotBase64, headerBase64, isblack };
+  return { screenshotBase64 };
 }
 
 /** Cage fallback: capture active window via main-process capturePage. */
@@ -81,15 +58,13 @@ async function captureAndUploadFromIpc(signalBridge, config) {
       log.warn('screenshotCapture @ captureAndUploadFromIpc: empty frame');
       return false;
     }
-    const { screenshotBase64, headerBase64, isblack } = result;
+    const { screenshotBase64 } = result;
     const binary = Uint8Array.from(atob(screenshotBase64), (c) => c.charCodeAt(0));
     const screenshothash = await hashArrayBuffer(binary.buffer);
     const payload = {
       clientinfo: { ...clientinfo },
       screenshot: screenshotBase64,
       screenshothash,
-      header: headerBase64,
-      isblack,
       screenshotfilename: (clientinfo.token || 'unknown') + '.jpg',
     };
     const url = `https://${serverip}:${serverApiPort}/server/control/updatescreenshot`;
@@ -129,7 +104,7 @@ async function captureAndUpload(signalBridge, config, sharedRef) {
       log.warn('screenshotCapture @ captureAndUpload: captureFrameFromVideo returned null');
       return false;
     }
-    const { screenshotBase64, headerBase64, isblack } = result;
+    const { screenshotBase64 } = result;
 
     const binary = Uint8Array.from(atob(screenshotBase64), (c) => c.charCodeAt(0));
     const screenshothash = await hashArrayBuffer(binary.buffer);
@@ -138,7 +113,6 @@ async function captureAndUpload(signalBridge, config, sharedRef) {
       clientinfo: { ...clientinfo },
       screenshot: screenshotBase64,
       screenshothash,
-      header: headerBase64,
       screenshotfilename: (clientinfo.token || 'unknown') + '.jpg',
     };
 
@@ -164,13 +138,14 @@ async function captureAndUpload(signalBridge, config, sharedRef) {
   }
 }
 
-/** Stop and clear the shared stream/video */
+/** Stop and clear the shared stream/video; clears initAttempted so Connect can re-acquire with user gesture. */
 function stopSharedStream(sharedRef) {
   if (sharedRef.stream) {
     sharedRef.stream.getTracks().forEach((t) => t.stop());
     sharedRef.stream = null;
   }
   sharedRef.video = null;
+  initAttempted = false;
 }
 
 /** Hard-reset capture stream (e.g. dev only); not used on teacher disconnect — that would force invisible OS re-consent in kiosk. */
@@ -205,10 +180,26 @@ async function acquireDisplayStream() {
       video.onloadedmetadata = () => video.play().then(() => {
         log.info('screenshotCapture @ acquireDisplayStream: video resolution', video.videoWidth + 'x' + video.videoHeight);
         try {
-          const screenWidth = window.screen?.width;
-          const screenHeight = window.screen?.height;
+          // Prefer displaySurface (monitor vs window) over brittle resolution heuristics when available.
+          const track = stream.getVideoTracks?.()?.[0];
+          const surface = track?.getSettings?.()?.displaySurface;
+          if (surface === 'monitor') {
+            fullDesktopLikely = true;
+            resolve();
+            return;
+          }
+          if (surface === 'window') {
+            fullDesktopLikely = false;
+            resolve();
+            return;
+          }
+          // window.screen.width is CSS pixels, video.videoWidth is hardware pixels.
+          // On HiDPI displays (Win11 default 125-200% scaling, common on Lenovo) those differ by devicePixelRatio.
+          const dpr = window.devicePixelRatio || 1;
+          const screenWidth = (window.screen?.width || 0) * dpr;
+          const screenHeight = (window.screen?.height || 0) * dpr;
           if (screenWidth && screenHeight) {
-            log.info('screenshotCapture @ acquireDisplayStream: primary screen resolution', screenWidth + 'x' + screenHeight);
+            log.info('screenshotCapture @ acquireDisplayStream: primary screen resolution (hw)', screenWidth + 'x' + screenHeight, 'dpr', dpr);
             const widthDiff = Math.abs(video.videoWidth - screenWidth);
             const heightDiff = Math.abs(video.videoHeight - screenHeight);
             const widthRel = widthDiff / screenWidth;
@@ -254,10 +245,11 @@ export function canRegisterWithoutDisplayStream() {
   return linuxKioskRunningInCage || useWindowCaptureFallback;
 }
 
-/** First successful acquire only (initAttempted); keeps stream for app lifetime unless hard reset or track ends. */
+/** Acquire once per live stream; re-runs after track loss (initAttempted cleared in stopSharedStream). */
 export async function initDisplayStreamOnce() {
   if (!isElectronWindow(window)) return;
-  if (initAttempted) return;
+  if (initAttempted && hasActiveScreenshotStream()) return;
+  if (initAttempted && !hasActiveScreenshotStream()) initAttempted = false;
   initAttempted = true;
   const acquired = await acquireDisplayStream();
   if (acquired) {
@@ -277,7 +269,10 @@ export async function initDisplayStreamOnce() {
 
 /** Acquire display stream when called with user gesture (e.g. Connect click). Returns true if stream is ready. */
 export async function ensureDisplayStreamAsync() {
+  // macOS / Cage: capturePage path needs no getDisplayMedia stream.
+  if (useWindowCaptureFallback) return true;
   if (hasActiveScreenshotStream()) return true;
+  if (initAttempted && !hasActiveScreenshotStream()) initAttempted = false;
   await initDisplayStreamOnce();
   if (linuxKioskRunningInCage) {
     return hasActiveScreenshotStream() || useWindowCaptureFallback;
@@ -365,8 +360,7 @@ function applyConfig(signalBridge, config) {
           if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
             if (intervalId) clearInterval(intervalId);
             intervalId = null;
-            stopSharedStream(sharedRef);
-            log.warn('screenshotCapture @ applyConfig: screenshot capture paused after', MAX_CONSECUTIVE_FAILURES, 'consecutive failures (will resume on next screenshot-config)');
+            log.warn('screenshotCapture @ applyConfig: screenshot upload paused after', MAX_CONSECUTIVE_FAILURES, 'failures (stream kept; resumes on screenshot-config)');
           }
         }
       });
@@ -385,8 +379,11 @@ export function initScreenshotScheduler(signalBridge) {
   }
   log.info('screenshotCapture @ initScreenshotScheduler: registering screenshot-config listener and fetching getScreenshotConfig');
 
-  // Initialize display stream once so it is already available when interval starts after server connect
-  initDisplayStreamOnce();
+  // macOS / Cage use capturePage; only getDisplayMedia platforms need a pre-warmed stream.
+  if (!useWindowCaptureFallback) {
+    // Initialize display stream once so it is already available when interval starts after server connect
+    initDisplayStreamOnce();
+  }
 
   signalBridge.on('screenshot-config', (_event, config) => {
     applyConfig(signalBridge, config);

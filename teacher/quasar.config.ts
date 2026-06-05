@@ -8,12 +8,37 @@ import { builtinModules } from 'module';
 import fse from 'fs-extra';
 import pkg from './package.json';
 import dotenv from 'dotenv';
+import fs from 'fs';
 
-dotenv.config();
+// load .env when present (local dev); otherwise fall back to committed .env.production (CI)
+dotenv.config({ path: fs.existsSync('./.env') ? './.env' : './.env.production' });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const pdfjsLegacyPdf = path.resolve(__dirname, 'node_modules/pdfjs-dist/legacy/build/pdf.mjs');
-const pdfjsLegacyWorker = path.resolve(__dirname, 'node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs');
+
+/** First existing pdfjs-dist artifact (guards against incomplete node_modules installs). */
+function resolvePdfJsFile(...relPaths: string[]): string {
+  for (const rel of relPaths) {
+    const p = path.resolve(__dirname, 'node_modules/pdfjs-dist', rel);
+    if (fse.existsSync(p)) return p;
+  }
+  throw new Error(
+    `pdfjs-dist files missing under ${path.resolve(__dirname, 'node_modules/pdfjs-dist')}. ` +
+    'Remove node_modules/pdfjs-dist and run npm install.',
+  );
+}
+
+const pdfjsLegacyPdf = resolvePdfJsFile(
+  'legacy/build/pdf.mjs',
+  'legacy/build/pdf.min.mjs',
+  'build/pdf.mjs',
+  'build/pdf.min.mjs',
+);
+const pdfjsLegacyWorker = resolvePdfJsFile(
+  'legacy/build/pdf.worker.mjs',
+  'legacy/build/pdf.worker.min.mjs',
+  'build/pdf.worker.mjs',
+  'build/pdf.worker.min.mjs',
+);
 
 const buildDate = (() => {
   const now = new Date();
@@ -28,6 +53,12 @@ const buildNumber = process.env.BUILD_NUMBER || '1';
 const artifactDate = buildDate;
 const artifactNamePattern = `${productName}_${version}.${buildNumber}_${artifactDate}_\${arch}.\${ext}`;
 const signEnabled = process.env.SIGN !== 'false';
+const winEbTarget = process.env.NXE_EB_WIN_TARGET === 'msi'
+  ? [{ target: 'msi', arch: ['x64'] as const }]
+  : [{ target: 'portable', arch: ['x64'] as const }];
+const macEbArch = process.env.NXE_EB_MAC_ARCH === 'arm64'
+  ? (['arm64'] as const)
+  : (['x64'] as const);
 
 export default defineConfig(( ctx: any ) => {
   return {
@@ -67,7 +98,7 @@ export default defineConfig(( ctx: any ) => {
     build: {
       target: {
         browser: [ 'es2022', 'firefox115', 'chrome115', 'safari14' ],
-        node: 'node20'
+        node: 'node24'
       },
 
       typescript: {
@@ -103,6 +134,14 @@ export default defineConfig(( ctx: any ) => {
         viteConf.css.preprocessorOptions.scss.silenceDeprecations = ['color-functions', 'if-function'];
 
         const sharedDir = path.resolve(__dirname, '..', 'shared');
+        const repoRoot = path.resolve(__dirname, '..');
+        viteConf.server.fs = viteConf.server.fs || {};
+        const fsAllow = new Set([
+          ...(Array.isArray(viteConf.server.fs.allow) ? viteConf.server.fs.allow : []),
+          repoRoot,
+          sharedDir,
+        ]);
+        viteConf.server.fs.allow = [...fsAllow];
         viteConf.resolve = viteConf.resolve || {};
         viteConf.resolve.alias = {
           ...viteConf.resolve.alias,
@@ -291,14 +330,18 @@ export default defineConfig(( ctx: any ) => {
         appId: 'com.nextexam.teacher',
         productName,
         buildVersion: `${version}.${buildNumber}`,
+        // disable implicit CI publishing (removed in electron-builder v27)
+        publish: null,
         asar: true,
         asarUnpack: [
           'public',
         ],
         beforePack: 'scripts/beforepack.js',
         afterPack: 'scripts/afterpack.js',
-        directories: { output: `../release/${version}.${buildNumber}_${artifactDate}` },
+        // directories.output is overridden by quasar to dist/electron/Packaged - cannot change here
         compression: 'normal',
+        // ship only finnish/english/german Chromium UI locales (prunes locales/*.pak)
+        electronLanguages: ['fi', 'en-US', 'en-GB', 'de'],
         // include entire UnPackaged folder (electron-main.js at root, public/, preload/, etc.)
         files: ['**/*'],
         linux: {
@@ -306,7 +349,7 @@ export default defineConfig(( ctx: any ) => {
           category: 'Utility',
           icon: 'public/icons/256x256.png',
           artifactName: artifactNamePattern,
-          files: ['**/*'],
+          files: ['**/*', '!public/qemu/win/**', '!public/qemu/mac/**'],
         },
         mac: {
           icon: 'public/icons/icon.png',
@@ -316,8 +359,8 @@ export default defineConfig(( ctx: any ) => {
           entitlements: 'scripts/entitlements.mac.plist',
           entitlementsInherit: 'scripts/entitlements.mac.plist',
           category: 'public.app-category.utilities',
-          target: { target: 'dmg', arch: ['x64', 'arm64'] },
-          files: ['**/*'],
+          target: { target: 'dmg', arch: macEbArch },
+          files: ['**/*', '!public/qemu/win/**', '!public/qemu/lin/**'],
         },
         dmg: { sign: false },
         portable: { useZip: false, unpackDirName: 'next-exam-teacher', splashImage: 'public/splash.bmp' },
@@ -330,12 +373,13 @@ export default defineConfig(( ctx: any ) => {
         },
         win: {
           icon: 'public/icons/icon.ico',
-          target: [{ target: 'portable', arch: ['x64'] }, { target: 'msi', arch: ['x64'] }],
+          target: winEbTarget,
           artifactName: artifactNamePattern,
-          files: ['**/*'],
-          // electron-builder 26: use signtoolOptions to enable signing (no win.sign boolean)
+          files: ['**/*', '!public/qemu/win/**', '!public/qemu/lin/**', '!public/qemu/mac/**'],
+          // SIGN env (SIGN !== 'false'): signExecutable gates signtool; CSC_LINK/CSC_KEY_PASSWORD supply the cert when enabled
+          signExecutable: signEnabled,
           ...(signEnabled && {
-            signtoolOptions: { certificateSubjectName: 'OSOS Austria', signingHashAlgorithms: ['sha256'] },
+            signtoolOptions: { signingHashAlgorithms: ['sha256'] },
           }),
         },
         ...(signEnabled && { afterSign: 'scripts/notarize.cjs' }),

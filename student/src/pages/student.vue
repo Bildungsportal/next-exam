@@ -1,15 +1,27 @@
 <template>
 
 
+    <div v-if="enteringExamModeOverlay" class="exam-enter-backdrop">
+        <div class="exam-enter-card">
+            <div class="exam-enter-spinner" aria-hidden="true"></div>
+            <div class="exam-enter-text">{{ $t('student.enteringExamMode') }}</div>
+        </div>
+    </div>
+
     <!-- Header START -->
     <div v-show="!isLoading" class="w-100 p-3 text-white bg-dark text-left" style="height: 66px; z-index: 1000;">
-    <span class="text-white m-1">
-        <img :src='speedometer_img' class="white me-2  " width="32" height="32">
-        <span class="fs-4 align-middle me-4" @click="handleClick">Next-Exam</span>
+    <span class="text-white m-1 d-inline-flex align-items-center flex-wrap ms-1">
+        <img src='/src/assets/img/svg/speedometer.svg' class="white me-2" width="32" height="32">
+        <span class="fs-4 align-middle me-2" @click="handleClick">Next-Exam</span>
+        <span v-if="cageLauncherApps.length" class="d-inline-flex align-items-center flex-wrap gap-2 cage-launcher-group">
+            <button v-for="app in cageLauncherApps" :key="app.path" type="button"
+                    class="btn btn-outline-cyan btn-sm mt-0 px-3"
+                    @click="launchCageApp(app.path)">{{ app.name }}</button>
+        </span>
     </span>
 
-        <span class="fs-4 align-middle  ms-3" style="float: right">Student</span>
-        <div v-if="token && !localLockdown" id="adv" class="btn btn-success btn-sm m-0  mt-1"
+        <span class="fs-4 align-middle ms-3" style="float: right">Student</span>
+        <div v-if="token && !localLockdown" id="adv" class="btn btn-success btn-sm m-0  mt-1 "
              style="cursor: unset; float: right">{{ $t("student.connected") }}
         </div>
         <button v-if="clientinfo.groups && clientinfo.group == 'a' && token && !localLockdown" type="button"
@@ -57,6 +69,9 @@
                 </div>
 
                 <div class="localvm-preflight-actions">
+                    <button v-if="localVmCanRetryStart && !localVmFixPhase" class="btn btn-success btn-sm" @click="retryLocalVmStart" :disabled="localVmBusy">
+                        {{ $t('student.localvmRetryStartButton') }}
+                    </button>
                     <button v-if="localVmCanFix && !localVmFixPhase" class="btn btn-primary btn-sm" @click="downloadVm" :disabled="localVmBusy">
                         {{ $t('student.localvmDownloadButton') }}
                     </button>
@@ -68,7 +83,7 @@
                 <div v-if="localVmFixPhase && localVmCanFix && !localVmIsVerifying" class="localvm-preflight-verify" style="margin-top: 12px;">
                     <div class="localvm-preflight-spinner" aria-hidden="true"></div>
                     <div class="localvm-preflight-text">
-                        {{ localVmFixPhase === 'waiting_for_start' ? $t('student.localvmWaitingForStart') : $t('student.localvmDownloading') }}
+                        {{ localVmFixPhase === 'waiting_for_start' ? $t('student.localvmWaitingForStart') : (localVmFixPhase === 'importing' ? $t('student.localvmImporting') : $t('student.localvmDownloading')) }}
                     </div>
                     <div v-if="localVmFixPhase !== 'waiting_for_start' && localVmDownloadPercent != null" class="localvm-preflight-subtext">{{ localVmDownloadPercent }}%</div>
                 </div>
@@ -78,7 +93,7 @@
         <!-- SIDEBAR START -->
         <div class="p-3 text-white bg-dark h-100 student-sidebar" style="width: 240px; min-width: 240px;">
             <div class="btn btn-light ms-1 text-start infobutton nobutton">
-                <img :src='server_img' class="me-2" width="16" height="16"> {{ $t('student.exams') }}
+                <img src='/src/assets/img/svg/server.svg' class="me-2" width="16" height="16"> {{ $t('student.exams') }}
             </div>
             <br>
 
@@ -91,14 +106,14 @@
 
 
             <!-- BIP Section START -->
-            <div v-if="config.bipIntegration" class="mt-4">
+            <div v-if="bipIntegration" class="mt-4">
                 <span class="small m-1 me-0">{{ $t("student.bildungsportal") }}</span> <span v-if="bipToken"
                                                                                              class="small m-1 me-0 text-secondary">(verbunden)</span>
                 <div v-if="bipToken" title="logout" id="biploginbutton" @click="logoutBiP()"
                      class="btn btn-success m-1 " :class="(token)? 'disabledexam':''" style="padding:0;">
                     <img id="biplogo"
                          style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; "
-                         :src="login_students_img">
+                         src="/src/assets/img/login_students.jpg">
                     <span v-if="bipUsername" id="biploginbuttonlabel">{{ bipUsername }}</span>
                     <span v-else id="biploginbuttonlabel">Logout</span>
                 </div>
@@ -106,7 +121,7 @@
                      style="padding:0;" :class="(token)? 'disabledexam':''">
                     <img id="biplogo"
                          style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; "
-                         :src="login_students_img">
+                         src="/src/assets/img/login_students.jpg">
                     <span v-if="bipUsername" id="biploginbuttonlabel">{{ bipUsername }}</span><span v-else
                                                                                                     id="biploginbuttonlabel">Login</span>
                 </div>
@@ -123,9 +138,9 @@
                     :class="(token) ? 'disabledexam' : ''"
                     :disabled="!!token"
                     style="font-size:0.9em"
-                    :title="$t('student.cageSetupText')"
+                    :title="$t(kioskI18n('Text'))"
                     @click="promptCageKioskSetup">
-                {{ $t('student.cageSetupButton') }}
+                {{ $t(kioskI18n('Button')) }}
             </button>
 
             <div><br>
@@ -227,7 +242,7 @@
 
                         <div
                             style="display:flex; flex-direction: row; justify-content: space-between; padding:0px; margin:0px;">
-                            <img v-if="!server.reachable" :src="emblem_warning_img"
+                            <img v-if="!server.reachable" src="/src/assets/img/svg/emblem-warning.svg"
                                  :title="$t('student.unreachable')"
                                  style="width:20px;height:20px;vertical-align:top;cursor: help;position: absolute; margin-top:8px; margin-left:8px; ">
 
@@ -238,19 +253,10 @@
                                                                              name="register" class="btn btn-sm btn-info"
                                                                              :value="$t('student.register')"
                                                                              @click="registerClient(server.serverip,server.servername)">
-
-                                <router-link :to="{ name: 'math', params: { token: 'csrf-cf20e998-3ba7-4867-bc3e-94609d665cd6' } }">
-                                    Test Page
-                                </router-link>
-                                <router-link to="math/csrf-cf20e998-3ba7-4867-bc3e-94609d665cd6">
-                                    Test Page Static
-                                </router-link>
-
                                 <!-- not logged in, bip server, BiP required --> <input v-if="server.bip && server.requireBiP" style="width:200px;"
                                                                                        :id="server.servername" type="button"
                                                                                        name="register" class="btn btn-sm btn-secondary"
                                                                                        value="restricted"/>
-
                                 <!-- not logged in, bip server, exam closed/offline (only if not restricted) --> <input v-if="server.bip && !server.requireBiP && server.examStatus && server.examStatus !== 'open'" style="width:200px;"
                                                                                                                       :id="server.servername" type="button"
                                                                                                                       name="register" class="btn btn-sm btn-secondary"
@@ -283,13 +289,6 @@
                     </div>
 
                     <div v-if="serverlist.length === 0"><h6 class="text-muted ms-1">{{ $t('student.noexams') }}</h6>
-                      <router-link :to="{ name: 'math', params: { token: 'csrf-cf20e998-3ba7-4867-bc3e-94609d665cd6' } }">
-                        Test Page
-                      </router-link>
-
-                      <router-link to="math/csrf-cf20e998-3ba7-4867-bc3e-94609d665cd6">
-                        Test Page Static
-                      </router-link>
                     </div>
                 </div>
             </div>
@@ -300,22 +299,28 @@
 
 </template>
 
-
 <script lang="ts">
-import validator from 'validator'
+import validator, {isEmpty} from 'validator'
+import log from 'electron-log/renderer'
+import {isElectronWindow} from "../types/platform.ts";
 import {SignalBridge} from '../utils/signalBridge.js'
-import speedometer_img from 'src/assets/img/svg/speedometer.svg'
-import server_img from 'src/assets/img/svg/server.svg'
-import login_students_img from 'src/assets/img/login_students.jpg'
-import emblem_warning_img from '/src/assets/img/svg/emblem-warning.svg'
-import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync, setCageWindowCaptureFallback, setLinuxKioskRunningInCage } from '../utils/screenshotCapture.js'
+import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync, setCageWindowCaptureFallback, setLinuxKioskRunningInCage, isCageWindowCaptureFallback } from '../utils/screenshotCapture.js'
 import { getLinuxKioskInfo } from '../utils/linuxCageKiosk.js'
+import { loadWinKioskLauncherApps } from '../utils/kioskLauncher.js'
 import { Exam } from '../types/api'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
 import { normalizeStudentClientName } from 'next-exam-shared/normalizeStudentClientName.js'
+import {
+    applyClientinfoFromFetch,
+    applyServerstatusFromFetch,
+} from '../utils/examFetchInfoSync.js'
+import { autoCleanupMixin } from "../mixins/autoCleanupMixin.ts";
+import { useConfigStore } from "stores/configStore.ts";
+import { ref } from 'vue';
+import { showLocalVmQemuIssueDialog } from 'next-exam-shared/qemuLocalVmDialogs.js'
 import loggingBridge from "../utils/loggingBridge.js";
-import { autoCleanupMixin } from "../mixins/autoCleanupMixin.js";
 
+function unhandledRejectionFunction(event: PromiseRejectionEvent) {
 import { StatusBar } from "@capacitor/status-bar";
 import {isElectronWindow, isIOS} from "../types/platform.js";
 import {router} from "../router/index.js";
@@ -327,51 +332,68 @@ function unhandledRejectionFunction() {
     event.preventDefault(); // swallow guest view clone errors and ERR_FAILED
     return;
   }
+  log.error('Unhandled promise rejection:', reason); // log all other errors
 }
 
-// Capture unhandled promise rejections
-window.addEventListener('unhandledrejection', unhandledRejectionFunction);
 
-//Object.assign(console, loggingBridge.functions);  // Replace all console logs with logger
+// Capture unhandled promise rejections
+window.addEventListener('unhandledrejection', event => unhandledRejectionFunction(event));
+
+Object.assign(console, log.functions);  // Replace all console logs with logger
 
 // signalBridge instance centralizes ipc send calls with platform checks
 const signalBridge = new SignalBridge(window);
 
 export default {
-
     mixins: [autoCleanupMixin],
+
+    setup() {
+      const configStore = useConfigStore();
+      let username = "";
+      let pincode = "";
+      if(configStore.development) {
+        username = "thomas";
+        pincode = "1111";
+      }
+      let development = ref(configStore.development);
+      let version = ref(configStore.version);
+      let serverApiPort = ref(configStore.serverApiPort);
+      let electron = ref(configStore.electron);
+      let info = ref(configStore.info);
+      let buildDate = ref(configStore.buildDate);
+      let hostip = ref(configStore.hostIp);
+      let bipIntegration = ref(configStore.bipIntegration);
+      let bipApiUrl = ref(configStore.bipApiUrl);
+      let bipDemo = ref(configStore.bipDemo);
+      return { username, pincode, development, version, serverApiPort, electron, info, buildDate, hostip, bipIntegration, bipApiUrl, bipDemo };
+    },
+
     data() {
         return {
-            version: this.$route.params.version,
             token: "",
-            username: this.$route.params.config.development ? "Thomas" : "" as string | boolean,
-            pincode: this.$route.params.config.development ? "1111" : "" as string,
             clientinfo: {},
             serverstatus: null,
             serverlist: [],
             serverlistAdvanced: [],
-            serverApiPort: this.$route.params.serverApiPort,
-            clientApiPort: this.$route.params.clientApiPort,
-            electron: this.$route.params.electron,
-            config: this.$route.params.config,
-            info: this.$route.params.config.info,
-            buildDate: this.$route.params.config.buildDate,
             startExamEvent: null,
             advanced: false,
             serverip: "" as string,
             servername: "",
-            hostip: this.$route.params.config.hostip,
             clickCount: 0,
             networkerror: false,
             localLockdown: false,
             isLoading: true,
+            enteringExamModeOverlay: false,
             platformKiosk: {
                 cageInstalled: false,
                 runningInCage: false,
+                isWindowsKioskUser: false,
+                assignedAccessActive: false,
                 cageKioskAppImageInstalled: false,
                 cageKioskDesktopInstalled: false,
                 needsCageKioskSetup: false,
             },
+            cageLauncherApps: [],
 
             biptest: true,
             bipToken: false,
@@ -386,13 +408,8 @@ export default {
             localVmBusy: false,
             localVmDownloadPercent: null,
             localVmFixPhase: null,
+            localVmCompatCheckSwalOpen: false,
 
-            timer: null,
-
-            speedometer_img,
-            server_img,
-            login_students_img,
-            emblem_warning_img
         };
     },
     computed: {
@@ -423,18 +440,29 @@ export default {
         localVmCanFix() {
             return this.localVmIsMissing || this.localVmIsMismatch || this.clientinfo?.localVMState === 'error';
         },
+        localVmCanRetryStart() {
+            return this.clientinfo?.localVMState === 'error' && !!this.serverstatus?.exammode;
+        },
         localVmVerifyingText() {
             const cfg = this.getLocalVmConfig?.() || {};
             return cfg.calculateSha256 === true ? this.$t('student.vmVerifyingHash') : this.$t('student.vmVerifyingSize');
         },
         showCageKioskInstallBtn() {
             const k = this.platformKiosk;
+            // displayServer set to 'windows' on win32 by ipchandler so the same gate works for both OSes
             return isElectronWindow(window) && k.displayServer !== 'n/a' && !k.runningInCage && k.needsCageKioskSetup;
+        },
+        kioskI18nPrefix() {
+            // win32 uses winKioskSetup* keys, linux keeps the legacy cageSetup* keys
+            return this.platformKiosk?.displayServer === 'windows' ? 'winKioskSetup' : 'cageSetup';
         },
     },
     watch: {
         'clientinfo.localVMState'(nextState) {
             const st = String(nextState || '');
+            if (st !== 'checking_compat') {
+                this.closeLocalVmCompatCheckDialog();
+            }
             const inPreflightState = st === 'missing' || st === 'hash_mismatch' || st === 'verifying_hash' || st === 'error';
             if (!inPreflightState) {
                 this.localVmFixPhase = null;
@@ -454,15 +482,69 @@ export default {
             }
         },
 
+        async showQemuMissingWarning(payload = {}) {
+            this.closeLocalVmCompatCheckDialog();
+            await showLocalVmQemuIssueDialog({
+                swal: this.$swal,
+                t: this.$t.bind(this),
+                invoke: (channel, ...args) => signalBridge.invoke(channel, ...args),
+                i18nPrefix: 'student',
+                check: payload || {},
+                cancelKey: 'cancel',
+            });
+        },
+
+        // Swal while main runs QEMU / hypervisor compatibility probes before LocalVM exam start.
+        showLocalVmCompatCheckDialog() {
+            if (this.localVmCompatCheckSwalOpen) {
+                return;
+            }
+            this.localVmCompatCheckSwalOpen = true;
+            const text = String(this.$t('student.localvmCompatCheckText') || '');
+            void this.$swal.fire({
+                title: this.$t('student.localvmCompatCheckTitle'),
+                html: text.replace(/\n/g, '<br>'),
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    this.$swal.showLoading();
+                },
+            }).finally(() => {
+                this.localVmCompatCheckSwalOpen = false;
+            });
+        },
+
+        closeLocalVmCompatCheckDialog() {
+            try {
+                if (this.$swal.isVisible()) {
+                    this.$swal.close();
+                }
+            } catch (e) {}
+            this.localVmCompatCheckSwalOpen = false;
+        },
+
+        kioskI18n(suffix) {
+            // helper: prefix=cageSetup on linux, winKioskSetup on windows; falls back to cage key for shared suffixes
+            const key = `student.${this.kioskI18nPrefix}${suffix}`;
+            // i18n returns the key itself when missing -> fallback to cage variant
+            const t = this.$t(key);
+            return t === key ? `student.cageSetup${suffix}` : key;
+        },
+
         async promptCageKioskSetup() {
+            // linux uses cageSetupTextRoot, win32 uses winKioskSetupRoot; pick whichever exists
+            const rootHintKey = this.platformKiosk?.displayServer === 'windows'
+                ? 'student.winKioskSetupRoot'
+                : 'student.cageSetupTextRoot';
             const result = await this.$swal.fire({
-                title: this.$t('student.cageSetupTitle'),
-                html: `${this.$t('student.cageSetupText')}<br><br>${this.$t('student.cageSetupTextRoot')}<br><br>
-                    <label><input type="checkbox" id="cage-setup-dismiss"> ${this.$t('student.cageSetupDontShow')}</label>`,
+                title: this.$t(this.kioskI18n('Title')),
+                html: `${this.$t(this.kioskI18n('Text'))}<br><br>${this.$t(rootHintKey)}<br><br>
+                    <label><input type="checkbox" id="cage-setup-dismiss"> ${this.$t(this.kioskI18n('DontShow'))}</label>`,
                 icon: 'info',
                 showCancelButton: true,
-                confirmButtonText: this.$t('student.cageSetupInstall'),
-                cancelButtonText: this.$t('student.cageSetupLater'),
+                confirmButtonText: this.$t(this.kioskI18n('Install')),
+                cancelButtonText: this.$t(this.kioskI18n('Later')),
                 willClose: (popup) => {
                     if (popup.querySelector('#cage-setup-dismiss')?.checked) {
                         localStorage.setItem('next-exam-cage-kiosk-setup-dismissed', '1');
@@ -472,26 +554,80 @@ export default {
             if (!result.isConfirmed) return;
             const install = await signalBridge.invoke('install-linux-cage-kiosk');
             if (install?.ok) {
-                this.platformKiosk = await signalBridge.invoke('get-linux-kiosk-info');
+                this.platformKiosk = await signalBridge.invoke('get-platform-info');
+                let successHtml = `${this.$t(this.kioskI18n('Success'))}<br><br>${this.$t(this.kioskI18n('SuccessHint'))}`;
+                if (install.kioskSourceDir && this.platformKiosk?.displayServer === 'windows') {
+                    const src = this.$t('student.winKioskSetupSuccessSource', {
+                        appDir: install.kioskSourceDir,
+                        launchExe: install.kioskLaunchExe || '',
+                    });
+                    successHtml += `<br><br><small style="font-family:monospace;word-break:break-all;">${src}</small>`;
+                }
                 await this.$swal.fire({
-                    html: `${this.$t('student.cageSetupSuccess')}<br><br>${this.$t('student.cageSetupSuccessHint')}`,
+                    html: successHtml,
                     icon: 'success',
                 });
             } else {
-                await this.$swal.fire({
-                    title: this.$t('student.cageSetupFailed'),
-                    text: install?.error || '',
-                    icon: 'error',
-                });
+                await this.showKioskSetupErrorDialog(install);
             }
+        },
+
+        // Pretty error: structured code from main triggers friendly hint; otherwise mono-font scrollable transcript
+        async showKioskSetupErrorDialog(install) {
+            const raw = String(install?.error || '');
+            if (install?.code === 'EDITION_UNSUPPORTED') {
+                await this.$swal.fire({
+                    icon: 'warning',
+                    title: this.$t('student.winKioskSetupEditionFailed'),
+                    html: this.$t('student.winKioskSetupEditionHint'),
+                    confirmButtonText: 'OK',
+                });
+                return;
+            }
+            const escaped = raw
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            await this.$swal.fire({
+                icon: 'error',
+                title: this.$t(this.kioskI18n('Failed')),
+                html: `<pre style="text-align:left;max-height:50vh;overflow:auto;font-size:0.8em;white-space:pre-wrap;word-break:break-word;background:#f7f7f7;padding:0.5rem;border-radius:4px;">${escaped}</pre>`,
+                confirmButtonText: 'OK',
+                width: '46rem',
+            });
         },
 
         async maybeOfferCageKioskSetup() {
             const k = this.platformKiosk;
-            if (!isElectronWindow(window) || this.config.development) return;
+            if (!isElectronWindow(window) || this.development) return;
             if (k.runningInCage || !k.needsCageKioskSetup) return;
             if (localStorage.getItem('next-exam-cage-kiosk-setup-dismissed') === '1') return;
             await this.promptCageKioskSetup();
+        },
+
+        async maybeShowWinKioskSessionInfo() {
+            const k = this.platformKiosk;
+            if (!isElectronWindow(window) || this.development) return;
+            if (!k.runningInCage || k.displayServer !== 'windows') return;
+            if (this.activeDialog) return;
+            if (sessionStorage.getItem('next-exam-win-kiosk-session-info') === '1') return;
+            if (this.hostip?.availableInterfaces?.length > 1 && !this.hostip?.preferredInterface) return;
+            sessionStorage.setItem('next-exam-win-kiosk-session-info', '1');
+            await this.$swal.fire({
+                title: this.$t('student.winKioskSessionInfoTitle'),
+                html: this.$t('student.winKioskSessionInfoText'),
+                icon: 'info',
+                confirmButtonText: this.$t('general.ok'),
+                showCancelButton: false,
+            });
+        },
+
+        async launchCageApp(exePath) {
+            const p = String(exePath || '').trim();
+            if (!p) return;
+            const res = await signalBridge.invoke('launch-kiosk-allowed-app', p);
+            if (res?.ok) return;
+            this.$swal.fire({ title: 'Error', text: res?.error || 'launch failed', icon: 'error', showCancelButton: false });
         },
 
         async warnMacRosettaArch() {
@@ -505,9 +641,15 @@ export default {
 
         quitNextExam() {
             if (this.token) return;
+            // Kiosk: main-process close handler shows the native cage exit warning (single source of truth).
+            // Non-kiosk: simple inline confirm.
+            if (this.platformKiosk?.runningInCage) {
+                signalBridge.invoke('quit-app');
+                return;
+            }
             this.$swal.fire({
                 title: this.$t('student.cageExit'),
-                text: this.$t('student.cageExitConfirm'),
+                html: this.$t('student.cageExitConfirm'),
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonText: this.$t('student.cageExit'),
@@ -558,6 +700,7 @@ export default {
                     this.safeAssign('hostip', updated);
                 }
                 this.activeDialog = false;
+                void this.maybeShowWinKioskSessionInfo();
             });
         },
 
@@ -568,16 +711,7 @@ export default {
         },
 
         async loginBiP() {
-            /*if (this.config.bipDemo) {   // skip bip logon and fake bip info
-                this.bipUsername = "Marie Curie"
-                this.bipuserID = 8
-                this.bipToken = btoa("Token:4fce5b97fe36cb42313621ebf3ff2a1a")
-                this.username = this.bipUsername
 
-                await this.fetchBipExams()
-                this.bipAutoconnect()
-                return  //skip real login
-            }*/
             let IPCresponse = signalBridge.sendSync('loginBiP', this.biptest)
             if (IPCresponse && IPCresponse.status === "success") {
 
@@ -603,6 +737,7 @@ export default {
                     this.pincode = ""
                     this.bipData = null
                     this.onlineExams = []
+                    signalBridge.invoke('clearBipSiteInfo')
                     const loginBtn = document.querySelector('#biploginbutton')
                     if (loginBtn) {
                         loginBtn.classList.remove('disabledbutton')
@@ -643,8 +778,8 @@ export default {
         },
 
         getBiPUrl(): string {
-            if (this.config.bipDemo) {
-                return this.config.bipApiUrl;
+            if (this.bipDemo) {
+                return this.bipApiUrl;
             } else if (this.biptest) {
                 return `https://q.bildung.gv.at`;
             } else {
@@ -663,7 +798,7 @@ export default {
             }
 
             const url = this.getBiPUrl() + '/webservice/rest/server.php?wstoken=' + token + '&wsfunction=local_dpu_get_exams_student&moodlewsrestformat=json';
-
+           
             await this.autoFetch(url, { method: "GET" })
             .then(response => {
                 return response.json();
@@ -688,16 +823,24 @@ export default {
                 .then(res => res.json())
                 .then(async (response) => {
                     if (response.fullname){
+                        const displayName = normalizeStudentClientName(response.fullname)
                         this.$swal.fire({
                             title: "BiP Response",
-                            text: "Verbindung hergestellt",
+                            html: `${this.$t('student.bipLoginConnected')}<br>${this.$t('student.bipLoginWelcome', { name: displayName })}`,
                             icon: 'info',
                             showCancelButton: false,
                         })
 
-                        this.bipUsername = normalizeStudentClientName(response.fullname)
+                        this.bipUsername = displayName
                         this.bipuserID = response.userid
-
+                        if (response.userprivateaccesskey) {
+                            await signalBridge.invoke('setBipSiteInfo', {
+                                userprivateaccesskey: response.userprivateaccesskey,
+                                userid: response.userid,
+                                fullname: response.fullname,
+                            })
+                            signalBridge.invoke('prewarmSubmissionSigningP12').catch(() => {})
+                        }
 
                         document.querySelector("#biploginbutton").classList.remove('btn-info')
                         document.querySelector("#biploginbutton").classList.add('btn-success')
@@ -796,17 +939,17 @@ export default {
                 didOpen: () => {
                     const localUserElement = document.getElementById("localuser");
                     const localPasswordElement = document.getElementById("localpassword");
-const localPasswordConfirmElement = document.getElementById("localpasswordconfirm");
+                    const localPasswordConfirmElement = document.getElementById("localpasswordconfirm");
 
-                    localUserElement.addEventListener('input', () => {
+                    this.autoEventListener(localUserElement,"input", () => {
                         const normalized = normalizeStudentClientName(localUserElement.value);
                         if (normalized !== localUserElement.value) {
                             localUserElement.value = normalized;
                         }
                     });
 
-                    this.autoEventListener(localUserElement,"keypress", function (e) {
-                        // var lettersOnly = /^[a-zA-Z ]+$/;
+                  this.autoEventListener(localUserElement,"keypress", function(e) {
+                         // var lettersOnly = /^[a-zA-Z ]+$/;
                         var lettersOnly = /^[a-zA-ZäöüÄÖÜß ]+$/;  //give some special chars for german a chance
                         var key = e.key || String.fromCharCode(e.which);
                         // Allow Enter key to pass through
@@ -828,17 +971,18 @@ const localPasswordConfirmElement = document.getElementById("localpasswordconfir
                     };
 
                     // Add listener to document for general Enter key handling
-                    this.autoEventListener(document,'keydown', handleEnterKey);
+                    this.autoEventListener(document,"keydown", handleEnterKey);
                     // Add listener directly to input fields to catch Enter when focused
-                    this.autoEventListener(localUserElement,'keydown', handleEnterKey);
-                    this.autoEventListener(localPasswordElement,'keydown', handleEnterKey);
-localPasswordConfirmElement.addEventListener('keydown', handleEnterKey);
+                    this.autoEventListener(localUserElement,"keydown", handleEnterKey);
+                    this.autoEventListener(localPasswordElement,"keydown", handleEnterKey);
+                    this.autoEventListener(localPasswordConfirmElement,"keydown", handleEnterKey);
+
                     // Store handler reference for cleanup (will be cleaned up when dialog closes)
                     this._enterKeyHandler = handleEnterKey;
                     this._enterKeyHandlerUser = handleEnterKey;
                     this._enterKeyHandlerPassword = handleEnterKey;
-this._enterKeyHandlerPasswordConfirm = handleEnterKey;
-
+                    this._enterKeyHandlerPasswordConfirm = handleEnterKey;
+                    
                     const checkboxLT = document.getElementById('checkboxLT');
                     const checkboxSuggestions = document.getElementById('checkboxsuggestions');
                     const spellcheckSection = document.getElementById('spellcheckSection');
@@ -869,7 +1013,7 @@ this._enterKeyHandlerPasswordConfirm = handleEnterKey;
                     checkboxSuggestions.disabled = !checkboxLT.checked;
 
                     // Event listener for checkboxLT to adjust the state of checkboxsuggestions
-                  this.autoEventListener(checkboxLT,'change', () => {
+                  this.autoEventListener(checkboxLT,"change", () => {
                         checkboxSuggestions.disabled = !checkboxLT.checked;
                         // When checkboxLT is unchecked, suggestions should also be reset:
                         if (!checkboxLT.checked) {
@@ -878,8 +1022,8 @@ this._enterKeyHandlerPasswordConfirm = handleEnterKey;
                     });
 
                     // Event listener for radio buttons to show/hide the spellcheck section
-                    this.autoEventListener(editorRadio,'change', toggleSpellcheckSection);
-                    this.autoEventListener(mathRadio,'change', toggleSpellcheckSection);
+                    this.autoEventListener(editorRadio, "change", toggleSpellcheckSection);
+                    this.autoEventListener(mathRadio, "change", toggleSpellcheckSection);
 
                     // Initial visibility based on selected radio button
                     toggleSpellcheckSection();
@@ -1163,13 +1307,8 @@ this._enterKeyHandlerPasswordConfirm = handleEnterKey;
             let getinfo = await signalBridge.invoke('getinfoasync')  // gets serverlist and clientinfo from multicastclient
 
 
-            // Only update if clientinfo has actually changed
-            const clientInfoStr = JSON.stringify(getinfo.clientinfo);
-            const currentClientInfoStr = JSON.stringify(this.clientinfo);
-            if (clientInfoStr !== currentClientInfoStr) {
-                this.clientinfo = getinfo.clientinfo;
-            }
-            this.serverstatus = getinfo.serverstatus || null;
+            applyClientinfoFromFetch(this, getinfo.clientinfo);
+            applyServerstatusFromFetch(this, getinfo.serverstatus || null);
 
             if (getinfo.clientinfo.exammode) {
                 return;
@@ -1290,6 +1429,8 @@ this._enterKeyHandlerPasswordConfirm = handleEnterKey;
             if (!hasIp) return;
             if (this.hostip?.availableInterfaces?.length > 1 && !this.hostip?.preferredInterface) {
                 this.selectPreferredInterface();
+            } else {
+                void this.maybeShowWinKioskSessionInfo();
             }
             if (this.clientinfo.token) return;   // stop spamming the api if already connected
 
@@ -1356,6 +1497,23 @@ this._enterKeyHandlerPasswordConfirm = handleEnterKey;
             return cfg || {};
         },
 
+        async retryLocalVmStart() {
+            if (this.localVmBusy) return;
+            try {
+                this.localVmBusy = true;
+                this.localVmFixPhase = null;
+                const res = await signalBridge.invoke('localvm-retry-start');
+                if (!res?.ok) {
+                    await this.status(this.$t('student.localvmStartError'));
+                }
+            } catch (e) {
+                log.error('student.vue @ retryLocalVmStart', e);
+                await this.status(this.$t('student.localvmStartError'));
+            } finally {
+                this.localVmBusy = false;
+            }
+        },
+
         async downloadVm() {
             if (this.localVmBusy) return;
             try {
@@ -1401,12 +1559,18 @@ this._enterKeyHandlerPasswordConfirm = handleEnterKey;
             if (this.localVmBusy) return;
             try {
                 this.localVmBusy = true;
+                const pick = await signalBridge.invoke('qemu-pick-disk-file');
+                if (!pick?.ok || pick.cancelled) {
+                    await this.status(this.$t('student.localvmImportCancelled'));
+                    this.localVmFixPhase = null;
+                    return;
+                }
                 this.localVmFixPhase = 'importing';
-                await this.status(this.$t('student.localvmImporting'));
-                const res = await signalBridge.invoke('qemu-pick-import-disk', {});
+                this.localVmDownloadPercent = null;
+                const res = await signalBridge.invoke('qemu-import-disk', { sourcePath: pick.sourcePath });
                 const filename = res && res.ok ? res.filename : null;
                 if (!filename) {
-                    await this.status(this.$t('student.localvmImportCancelled'));
+                    await this.status(this.$t('student.localvmImportFailed'));
                     this.localVmFixPhase = null;
                     return;
                 }
@@ -1418,6 +1582,9 @@ this._enterKeyHandlerPasswordConfirm = handleEnterKey;
                 this.localVmFixPhase = null;
             } finally {
                 this.localVmBusy = false;
+                if (this.localVmFixPhase !== 'waiting_for_start') {
+                    this.localVmDownloadPercent = null;
+                }
             }
         },
 
@@ -1460,8 +1627,9 @@ this._enterKeyHandlerPasswordConfirm = handleEnterKey;
                 this.$swal.fire({ title: "Error", text: this.$t("student.nopin"), icon: 'error', showCancelButton: false });
                 return;
             }
-            if (!this.platformKiosk.runningInCage) {
-                /*
+            // capturePage path (macOS + Linux Cage) was already selected at init via setCageWindowCaptureFallback;
+            // Win32 AssignedAccess and plain desktop use getDisplayMedia.
+            if (!isCageWindowCaptureFallback()) {
                 if (!hasActiveScreenshotStream()) {
                     const ok = await ensureDisplayStreamAsync();
                     if (!ok) {
@@ -1469,16 +1637,16 @@ this._enterKeyHandlerPasswordConfirm = handleEnterKey;
                         return;
                     }
                 }
-                if (!isFullDesktopCaptureLikely() && !this.$route.params.config.development) {
+                // Win AA kiosk auto-grants sources[0]=screen via main-process handler, so the picker-misclick
+                // heuristic does not apply; skip the check there.
+                const winKiosk = this.platformKiosk.runningInCage && this.platformKiosk.displayServer === 'windows';
+                if (!winKiosk && !isFullDesktopCaptureLikely() && !this.development) {
                     this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
                     return;
                 }
-                */
-            } else {
-                setCageWindowCaptureFallback(true);
             }
             const displayInfo = await signalBridge.invoke('getinfoasync');
-            if (displayInfo?.clientinfo?.multiMonitor && !this.$route.params.config.development) {
+            if (displayInfo?.clientinfo?.multiMonitor && !this.development) {
                 this.$swal.fire({ title: "Error", text: this.$t("student.multimonitor"), icon: 'error', showCancelButton: false });
                 return;
             }
@@ -1618,40 +1786,10 @@ this._enterKeyHandlerPasswordConfirm = handleEnterKey;
       }
 
         document.querySelector("#statusdiv").style.visibility = "hidden";
-
-        // 2️⃣ Timer
-        this.autoSchedulerService(() => {
-          console.log('The interval still runs');
-        }, 1000);
-
-// this.lastFrameTime = performance.now(); // Initialize timing
-
-// const checkFrameGap = () => {
-//   const currentTime = performance.now(); // Get high-res timestamp
-//   const delta = currentTime - this.lastFrameTime; // Calculate time since last frame
-
-
-//   if (delta > 200) { // Threshold for macOS occlusion/suspension
-
-//     this.$swal({
-//       title: 'Breakout detected!',
-//       text: `The app was suspended for ${Math.round(delta)}ms.`,
-//       icon: 'warning',
-//       confirmButtonText: 'Understood'
-//     });
-//   }
-
-//   this.lastFrameTime = currentTime; // Update last frame reference
-//   requestAnimationFrame(checkFrameGap); // Schedule next frame check
-// };
-
-// requestAnimationFrame(checkFrameGap); // Start the loop
-
-
         this.isLoading = false;
 
         if (isElectronWindow(window)) {
-            if (!this.config.development) {
+            if (!this.development) {
                 const macArch = await signalBridge.invoke('get-mac-arch-info');
                 if (macArch?.runningUnderRosetta) {
                     await this.warnMacRosettaArch();
@@ -1659,7 +1797,11 @@ this._enterKeyHandlerPasswordConfirm = handleEnterKey;
             }
             this.platformKiosk = await getLinuxKioskInfo(signalBridge);
             setLinuxKioskRunningInCage(this.platformKiosk.runningInCage);
-            setCageWindowCaptureFallback(!!this.platformKiosk.runningInCage);
+            // capturePage path (no getDisplayMedia/picker): macOS always, plus Linux Cage. Win32 kiosk uses normal full-desktop getDisplayMedia.
+            const isMac = this.platformKiosk.platform === 'darwin';
+            const linuxCage = this.platformKiosk.runningInCage && this.platformKiosk.displayServer !== 'windows';
+            setCageWindowCaptureFallback(isMac || linuxCage);
+            this.cageLauncherApps = await loadWinKioskLauncherApps(signalBridge);
             await this.maybeOfferCageKioskSetup();
         }
 
@@ -1687,6 +1829,10 @@ this._enterKeyHandlerPasswordConfirm = handleEnterKey;
         });
 
         // TODO: Modify windowhandling and token saving
+        signalBridge.on('entering-exam-mode', () => {
+            this.enteringExamModeOverlay = true;
+        });
+
         signalBridge.on('bipToken', (event, token) => {
             console.log("token received: ", token)
             this.bipToken = token
@@ -1696,6 +1842,26 @@ this._enterKeyHandlerPasswordConfirm = handleEnterKey;
         signalBridge.on('qemu-download-progress', (_event, payload) => {
             const pct = payload && typeof payload.percent === 'number' ? payload.percent : null;
             this.localVmDownloadPercent = pct;
+        });
+
+        signalBridge.on('localvm-compat-check-start', () => {
+            if (!this.clientinfo) {
+                this.clientinfo = {};
+            }
+            this.clientinfo.examtype = 'localvm';
+            this.clientinfo.localVMState = 'checking_compat';
+            this.showLocalVmCompatCheckDialog();
+        });
+
+        signalBridge.on('localvm-compat-check-end', () => {
+            if (this.clientinfo?.localVMState === 'checking_compat') {
+                this.clientinfo.localVMState = null;
+            }
+            this.closeLocalVmCompatCheckDialog();
+        });
+
+        signalBridge.on('qemu-not-available', (_event, payload) => {
+            this.showQemuMissingWarning(payload || {});
         });
 
         // Screenshot scheduler only in main window (this page); exam window never loads student.vue
@@ -1708,14 +1874,13 @@ this._enterKeyHandlerPasswordConfirm = handleEnterKey;
 
     },
     beforeUnmount() {
-        this.fetchinterval.removeEventListener('action', this.fetchInfo);
-        this.fetchinterval.stop()
 
-        this.autoUpdateInterval.removeEventListener('action', this.bipAutoUpdate);
-        this.autoUpdateInterval.stop()
+        window.removeEventListener('unhandledrejection', event => unhandledRejectionFunction(event));
 
         signalBridge.removeAllListeners('qemu-download-progress');
-        window.removeEventListener('unhandledrejection', unhandledRejectionFunction);
+        signalBridge.removeAllListeners('localvm-compat-check-start');
+        signalBridge.removeAllListeners('localvm-compat-check-end');
+        signalBridge.removeAllListeners('qemu-not-available');
     }
 }
 </script>
@@ -1774,6 +1939,46 @@ body {
 .disabledtext {
     filter: contrast(40%) grayscale(100%) brightness(130%) blur(0.6px);
     pointer-events: none;
+}
+
+.exam-enter-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.38);
+    z-index: 200001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.exam-enter-card {
+    background: rgba(33, 37, 41, 0.94);
+    border-radius: 10px;
+    padding: 22px 28px;
+    text-align: center;
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.exam-enter-spinner {
+    width: 28px;
+    height: 28px;
+    margin: 0 auto;
+    border: 3px solid rgba(255, 255, 255, 0.25);
+    border-top-color: #0aa2c0;
+    border-radius: 50%;
+    animation: exam-enter-spin 0.85s linear infinite;
+}
+
+@keyframes exam-enter-spin {
+    to { transform: rotate(360deg); }
+}
+
+.exam-enter-text {
+    margin-top: 12px;
+    font-size: 0.95rem;
+    opacity: 0.92;
 }
 
 .localvm-preflight-backdrop {
@@ -1860,6 +2065,14 @@ body {
 #statusdiv {
     display: block !important;
     width: 200px;
+}
+
+.cage-launcher-group {
+    margin-left: 4.4rem;
+}
+
+.bg-dark .btn-outline-cyan {
+    color: #fff;
 }
 
 .student-sidebar {

@@ -388,7 +388,7 @@ export default {
     width: 100vw;
     height: 100vh;
     background-color: rgba(0, 0, 0, 0.78);
-    z-index: 1003;
+    z-index: 4200; /* above DashboardExplorer overlay (4100) */
     align-items: center;
     justify-content: center;
     padding: 8px;

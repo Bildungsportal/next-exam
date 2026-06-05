@@ -18,10 +18,18 @@
 
 
 import fs from 'fs'
-import { ipcMain, dialog, session } from 'electron'
+import { ipcMain, dialog, session, shell } from 'electron'
 import path, { join } from 'path'
 import log from 'electron-log';
 import { decryptBufferIfNeeded, isNxe1ExamEncrypted, unwrapNxe1ExamBuffer } from './examFileCryptoContext.js';
+import {
+    decodeBipWstoken,
+    fetchBipSiteInfo,
+    pdfHasEmbeddedSignature,
+    verifySubmissionPdfBipIdentity,
+    verifySubmissionPdfIntegrity,
+    SUBMISSION_SIGN_MODE_BIP,
+} from '../../../../shared/submissionPdfSign.js';
 import { networkInterfaces } from 'os'
 import { exec } from 'child_process';
 import { gateway4sync} from 'default-gateway';
@@ -29,6 +37,12 @@ import ip from 'ip'
 import dns from 'dns'
 import net from 'node:net'
 import qemuService from './qemuService.js'
+import {
+    checkQemuAvailability,
+    getQemuInstallInfo,
+    getWindowsHypervisorPlatformState,
+    requestEnableWindowsHypervisorPlatform,
+} from '../../../../shared/qemuAvailability.js'
 import archiver from 'archiver'
 
 import server from "../../server/src/server.js"
@@ -120,7 +134,7 @@ class IpcHandler {
             }
         })
 
-        /** Applies payload.serverstatus to mcServer, validates optional 4-digit pin when present, clears active-section msOfficeFile, writes serverstatus.json under workdir and mirrors it to backupdirectory when configured. */
+        /** Applies payload.serverstatus to mcServer, validates optional 4-digit pin when present, writes serverstatus.json under workdir and mirrors it to backupdirectory when configured. */
         ipcMain.handle('setServerStatus', async (_event, payload) => {
             const { servername, serverstatus: incoming } = payload || {}
             const mcServer = this.config.examServerList[servername]
@@ -145,7 +159,6 @@ class IpcHandler {
                 return { sender: 'server', message: t('control.invalidpayload'), status: 'error' }
             }
             mcServer.serverstatus = incoming
-            mcServer.serverstatus.examSections[mcServer.serverstatus.activeSection].msOfficeFile = false
             if (normalizedPin !== null) {
                 mcServer.serverinfo.pin = normalizedPin
             }
@@ -212,9 +225,9 @@ class IpcHandler {
                 for (const student of mcServer.studentList) {
                     if (sendexam) {
                         student.status.sendexam = true
-                        if (sendlog) {
-                            student.status.sendlog = true
-                        }
+                    }
+                    if (sendlog) {
+                        student.status.sendlog = true
                     }
                     if (fetchfiles && filesPayload !== undefined) {
                         student.status.fetchfiles = true
@@ -238,9 +251,9 @@ class IpcHandler {
                 if (student) {
                     if (sendexam) {
                         student.status.sendexam = true
-                        if (sendlog) {
-                            student.status.sendlog = true
-                        }
+                    }
+                    if (sendlog) {
+                        student.status.sendlog = true
                     }
                     if (fetchfiles && filesPayload !== undefined) {
                         student.status.fetchfiles = true
@@ -451,9 +464,60 @@ class IpcHandler {
         /**
          * QEMU integration (LocalVM, qcow2 in workdir/QEMU)
          */
-        ipcMain.handle('qemu-list-disks', async () => {
+        ipcMain.handle('qemu-check-available', async (_event, opts = {}) => {
+            const quick = opts?.deep === false || opts?.quick === true;
+            log.info(`ipchandler @ qemu-check-available: start quick=${quick} opts=${JSON.stringify(opts || {})}`);
             try {
-                return await qemuService.listDisks({ workdirectory: config.workdirectory })
+                const res = await checkQemuAvailability(opts);
+                log.info(`ipchandler @ qemu-check-available: ok=${res.ok} missing=${(res.missing || []).join(',') || '-'}`);
+                return res;
+            } catch (e) {
+                log.error('ipchandler @ qemu-check-available', e)
+                const install = getQemuInstallInfo()
+                return {
+                    ok: false,
+                    missing: ['qemu-system-x86_64', 'qemu-img'],
+                    downloadUrl: install.downloadUrl,
+                    installHint: install.installHint,
+                }
+            }
+        })
+
+        ipcMain.handle('qemu-open-install-page', async () => {
+            try {
+                const { downloadUrl } = getQemuInstallInfo()
+                await shell.openExternal(downloadUrl)
+                return { ok: true }
+            } catch (e) {
+                log.error('ipchandler @ qemu-open-install-page', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
+
+        ipcMain.handle('qemu-check-hypervisor-platform', async () => {
+            try {
+                return await getWindowsHypervisorPlatformState()
+            } catch (e) {
+                log.error('ipchandler @ qemu-check-hypervisor-platform', e)
+                return { supported: false, enabled: false, state: 'error' }
+            }
+        })
+
+        ipcMain.handle('qemu-request-enable-hypervisor-platform', async () => {
+            try {
+                return requestEnableWindowsHypervisorPlatform()
+            } catch (e) {
+                log.error('ipchandler @ qemu-request-enable-hypervisor-platform', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
+
+        ipcMain.handle('qemu-list-disks', async () => {
+            log.info(`ipchandler @ qemu-list-disks: workdirectory=${config.workdirectory}`);
+            try {
+                const disks = await qemuService.listDisks({ workdirectory: config.workdirectory });
+                log.info(`ipchandler @ qemu-list-disks: returning ${disks.length} name(s)`);
+                return disks;
             } catch (e) {
                 log.error('ipchandler @ qemu-list-disks', e)
                 return []
@@ -462,6 +526,11 @@ class IpcHandler {
 
         ipcMain.handle('qemu-install-default', async () => {
             try {
+                const avail = await checkQemuAvailability()
+                if (!avail.ok) {
+                    log.warn('ipchandler @ qemu-install-default: QEMU not available', avail.missing)
+                    return { ok: false, qemuMissing: true, missing: avail.missing }
+                }
                 log.info('ipchandler @ qemu-install-default: requested');
                 const sendProgress = (p) => {
                     try { this.WindowHandler?.mainwindow?.webContents?.send?.('qemu-install-progress', p); } catch (e) {}
@@ -499,11 +568,65 @@ class IpcHandler {
         })
 
         ipcMain.handle('qemu-boot-disk', async (_event, payload = {}) => {
+            const { qcow2Name, useOverlay } = payload || {};
+            log.info(`ipchandler @ qemu-boot-disk: qcow2=${qcow2Name} useOverlay=${!!useOverlay}`);
             try {
-                const { qcow2Name } = payload || {}
-                return await qemuService.bootDisk({ workdirectory: config.workdirectory, qcow2Name })
+                log.info('ipchandler @ qemu-boot-disk: deep QEMU check…');
+                const avail = await checkQemuAvailability();
+                if (!avail.ok) {
+                    log.warn('ipchandler @ qemu-boot-disk: QEMU not available', avail.missing)
+                    return { ok: false, qemuMissing: true, missing: avail.missing }
+                }
+                return await qemuService.bootDisk({
+                    workdirectory: config.workdirectory,
+                    qcow2Name,
+                    useOverlay: useOverlay === true,
+                })
             } catch (e) {
                 log.error('ipchandler @ qemu-boot-disk', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
+
+        ipcMain.handle('qemu-pick-disk-file', async () => {
+            log.info('ipchandler @ qemu-pick-disk-file: opening file dialog…');
+            try {
+                const result = await dialog.showOpenDialog(this.WindowHandler.mainwindow, {
+                    properties: ['openFile'],
+                    filters: [{ name: 'QEMU Disk', extensions: ['qcow2'] }],
+                })
+                if (result.canceled || !result.filePaths || !result.filePaths[0]) {
+                    log.info('ipchandler @ qemu-pick-disk-file: cancelled');
+                    return { ok: false, cancelled: true }
+                }
+                log.info(`ipchandler @ qemu-pick-disk-file: selected ${result.filePaths[0]}`);
+                return { ok: true, sourcePath: result.filePaths[0] }
+            } catch (e) {
+                log.error('ipchandler @ qemu-pick-disk-file', e)
+                return { ok: false, error: String(e?.message || e) }
+            }
+        })
+
+        ipcMain.handle('qemu-import-disk', async (event, payload = {}) => {
+            try {
+                const { sourcePath } = payload || {}
+                if (!sourcePath) {
+                    log.warn('ipchandler @ qemu-import-disk: missing sourcePath');
+                    return { ok: false, error: 'invalid sourcePath' }
+                }
+                log.info(`ipchandler @ qemu-import-disk: import ${sourcePath}`);
+                const sendProgress = (p) => {
+                    try { event.sender?.send?.('qemu-import-progress', p); } catch (e) {}
+                };
+                const res = await qemuService.importDisk({
+                    workdirectory: config.workdirectory,
+                    sourcePath,
+                    onProgress: sendProgress,
+                });
+                log.info(`ipchandler @ qemu-import-disk: done ok=${res.ok} filename=${res.filename} skipped=${!!res.skipped} linked=${!!res.linked}`);
+                return res;
+            } catch (e) {
+                log.error('ipchandler @ qemu-import-disk', e)
                 return { ok: false, error: String(e?.message || e) }
             }
         })
@@ -1028,6 +1151,104 @@ class IpcHandler {
             }
         })
 
+        /** Active Sheets correction template: JSON in .htm under workdir/<server>/activesheets/<pdfStem>_korrekturvorlage.htm */
+        ipcMain.handle('saveActivesheetsCorrectionTemplate', async (_event, payload = {}) => {
+            const servername = payload?.servername
+            const servertoken = payload?.servertoken
+            const sourcePdfFilename = payload?.sourcePdfFilename
+            const formData = payload?.formData
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer || servertoken !== mcServer.serverinfo?.servertoken) {
+                return { status: 'error', sender: 'server', message: t('data.tokennotvalid') }
+            }
+            if (!formData || typeof formData !== 'object') {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            const pdfBase = path.basename(String(sourcePdfFilename || formData.filename || 'unknown.pdf').trim()) || 'unknown.pdf'
+            const stem = path.basename(pdfBase, path.extname(pdfBase)) || 'unknown'
+            const safeStem = stem.replace(/[^A-Za-z0-9._-]/g, '_').replace(/_+/g, '_').slice(0, 120) || 'unknown'
+            const htmName = `${safeStem}_korrekturvorlage.htm`
+            if (!isSafePathSegment(htmName)) {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            const absTarget = resolvePathUnderRoot(this.config.workdirectory, [
+                mcServer.serverinfo.servername,
+                'activesheets',
+                htmName,
+            ])
+            if (!absTarget) {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            try {
+                await fs.promises.mkdir(path.dirname(absTarget), { recursive: true })
+                const jsonData = JSON.stringify(formData, null, 2)
+                await fs.promises.writeFile(absTarget, jsonData, 'utf8')
+                const examRoot = path.resolve(path.join(this.config.workdirectory, mcServer.serverinfo.servername))
+                const relativePath = path.relative(examRoot, absTarget)
+                log.info(`ipchandler @ saveActivesheetsCorrectionTemplate: wrote ${relativePath}`)
+                return {
+                    status: 'success',
+                    sender: 'server',
+                    filename: htmName,
+                    relativePath: relativePath.split(path.sep).join('/'),
+                    filepath: absTarget,
+                }
+            } catch (err) {
+                log.error('ipchandler @ saveActivesheetsCorrectionTemplate:', err)
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+        })
+
+        /** Captures visible teacher window as PDF (activesheets correction save). */
+        ipcMain.handle('captureTeacherPreviewPdf', async () => {
+            const wc = this.WindowHandler?.mainwindow?.webContents
+            if (!wc) {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            try {
+                const data = await wc.printToPDF({
+                    printBackground: true,
+                    pageSize: 'A4',
+                    landscape: false,
+                    margins: { top: 0, right: 0, bottom: 0, left: 0 },
+                })
+                return { status: 'success', sender: 'server', base64pdf: Buffer.from(data).toString('base64') }
+            } catch (err) {
+                log.error('ipchandler @ captureTeacherPreviewPdf:', err)
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+        })
+
+        /** Overwrites a student ABGABE submission PDF from teacher correction preview. */
+        ipcMain.handle('overwriteTeacherAbgabePdf', async (_event, payload = {}) => {
+            const servername = payload?.servername
+            const servertoken = payload?.servertoken
+            const filepath = payload?.filepath
+            const base64pdf = payload?.base64pdf
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer || servertoken !== mcServer.serverinfo?.servertoken) {
+                return { status: 'error', sender: 'server', message: t('data.tokennotvalid') }
+            }
+            if (!filepath || typeof filepath !== 'string' || typeof base64pdf !== 'string') {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            const examRoot = path.resolve(path.join(this.config.workdirectory, mcServer.serverinfo.servername))
+            const absTarget = path.resolve(filepath)
+            const rel = path.relative(examRoot, absTarget).replace(/\\/g, '/')
+            if (rel.startsWith('..') || path.isAbsolute(rel) || !rel.includes('ABGABE/')) {
+                log.warn(`ipchandler @ overwriteTeacherAbgabePdf: rejected path (${filepath})`)
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            try {
+                const pdfBuffer = Buffer.from(base64pdf, 'base64')
+                await fs.promises.writeFile(absTarget, pdfBuffer)
+                return { status: 'success', sender: 'server', filepath: absTarget }
+            } catch (err) {
+                log.error('ipchandler @ overwriteTeacherAbgabePdf:', err)
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+        })
+
         /** Writes UTF-8 JSON from trusted teacher renderer; basename must end with _editor_timeline.json. */
         ipcMain.handle('writeTeacherWorkdirUtf8File', async (_event, payload = {}) => {
             const servername = payload?.servername
@@ -1085,6 +1306,9 @@ class IpcHandler {
         /** Get Specific Submission by filepath as base64 string */
         ipcMain.handle('getSpecificSubmissionBase64', async (event, filepath) => {
             try {
+                if (!/\.pdf$/i.test(String(filepath || ''))) {
+                    return { submission: false, status: 'error', message: 'not a pdf' }
+                }
                 let raw = fs.readFileSync(filepath)
                 const rel = path.relative(this.config.workdirectory, filepath)
                 const servername = rel.split(path.sep)[0]
@@ -1137,6 +1361,77 @@ class IpcHandler {
             }
         })
 
+        ipcMain.handle('submissionPdfHasSignature', (_event, { pdfBase64 } = {}) => {
+            try {
+                const buf = Buffer.from(String(pdfBase64 || ''), 'base64')
+                return { hasSignature: pdfHasEmbeddedSignature(buf) }
+            } catch (e) {
+                log.error('ipchandler @ submissionPdfHasSignature', e)
+                return { hasSignature: false }
+            }
+        })
+
+        ipcMain.handle('verifySubmissionPdfIntegrity', (_event, { pdfBase64 } = {}) => {
+            try {
+                const buf = Buffer.from(String(pdfBase64 || ''), 'base64')
+                const result = verifySubmissionPdfIntegrity(buf)
+                return {
+                    ok: !!result.integrityValid,
+                    code: result.code,
+                    hasSignature: result.hasSignature,
+                    integrityValid: result.integrityValid,
+                    signMode: result.signMode,
+                    verifyError: result.verifyError || null,
+                }
+            } catch (e) {
+                log.error('ipchandler @ verifySubmissionPdfIntegrity', e)
+                return { ok: false, code: 'ERROR', verifyError: String(e?.message || e) }
+            }
+        })
+
+        ipcMain.handle('verifySubmissionPdfViaBip', async (_event, { pdfBase64, biptest } = {}) => {
+            try {
+                const buf = Buffer.from(String(pdfBase64 || ''), 'base64')
+                const pre = verifySubmissionPdfIntegrity(buf)
+                if (!pre.hasSignature) {
+                    return { ok: false, ...pre, code: 'NO_SIGNATURE' }
+                }
+                if (pre.signMode !== SUBMISSION_SIGN_MODE_BIP) {
+                    return { ok: false, ...pre, code: 'NOT_BIP_SIGNED' }
+                }
+                const rawToken = await this.WindowHandler.waitForBipAuthToken(!!biptest)
+                const wstoken = decodeBipWstoken(rawToken)
+                if (!wstoken) {
+                    return { ok: false, code: 'BIP_TOKEN_INVALID', verifyError: 'invalid bip token' }
+                }
+                const baseUrl = this.WindowHandler.getBiPUrl(!!biptest)
+                const site = await fetchBipSiteInfo({ baseUrl, wstoken })
+                const key = String(site?.userprivateaccesskey ?? '').trim()
+                if (!key) {
+                    return { ok: false, code: 'BIP_SECRET_MISSING', verifyError: 'no userprivateaccesskey' }
+                }
+                const result = verifySubmissionPdfBipIdentity(buf, key)
+                return {
+                    ok: !!result.ok,
+                    code: result.code,
+                    hasSignature: result.hasSignature,
+                    integrityValid: result.integrityValid,
+                    signMode: result.signMode,
+                    bipIdentityValid: result.bipIdentityValid,
+                    bipUserIdInCert: result.bipUserIdInCert ?? null,
+                    verifyError: result.verifyError || null,
+                }
+            } catch (e) {
+                log.error('ipchandler @ verifySubmissionPdfViaBip', e)
+                const msg = String(e?.message || e)
+                const bipFlowCodes = new Set(['BIP_AUTH_CANCELLED', 'BIP_AUTH_PENDING', 'BIP_LOGIN_TIMEOUT'])
+                if (bipFlowCodes.has(msg)) {
+                    return { ok: false, code: msg, verifyError: null }
+                }
+                return { ok: false, code: 'ERROR', verifyError: msg }
+            }
+        })
+
 
 
 
@@ -1182,7 +1477,8 @@ class IpcHandler {
                             let sectionFiles = fs.readdirSync(sectionDir, { withFileTypes: true })
                                 .filter(dirent => dirent.isFile()) // only files, not directories
                                 .map(dirent => dirent.name)
-                            
+                                .filter((file) => /\.pdf$/i.test(file)) // ignore sidecar .htm form data
+
                             if (sectionFiles.length > 0) {
                                 let latestSubmission = sectionFiles
                                     .map(file => {

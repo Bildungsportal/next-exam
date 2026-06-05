@@ -1,23 +1,8 @@
 <template>
     <div class="editor-root">
 
-
     <!-- HEADER START -->
     <exam-header
-        :serverstatus="serverstatus"
-        :clientinfo="clientinfo"
-        :online="online"
-        :clientname="clientname"
-        :exammode="exammode"
-        :servername="servername"
-        :pincode="pincode"
-        :battery="battery"
-        :currenttime="currenttime"
-        :timesinceentry="timesinceentry"
-        :componentName="componentName"
-        :localLockdown="localLockdown"
-        :wlanInfo="wlanInfo"
-        :hostip="hostip"
         @reconnect="reconnect"
         @gracefullyExit="gracefullyExit"
         @sectionSwitched="fetchInfo"
@@ -146,7 +131,7 @@
 
 
 
-            <input v-if="!isMac" :title="$t('editor.textcolor')" type="color" @input="handleColorInput"
+            <input :title="$t('editor.textcolor')" type="color" @input="handleColorInput"
                    :value="getHexColor || '#000000'" class="invisible-button btn btn-outline-info p-2 me-2 mb-1 btn-sm"
                    style="height: 33.25px; width:32px">
 
@@ -440,7 +425,6 @@
                 <div v-if="focusLostMessage || focusLockMessage" class="mb-3 text-dark fw-bold" style="white-space: pre-line">{{ focusLostMessage || focusLockMessage }}</div>
                 <div v-if="focusLockReasonLine" class="mb-3 text-dark fw-bold">{{ focusLockReasonLine }}</div>
                 <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32">
-                <div class="mt-3"> {{ timesinceentry }}</div>
             </div>
             <div v-if="localLockdown" class="mt-2">
                 <div class="input-group">
@@ -607,11 +591,19 @@
         </div>
         <div class="ltscrollarea">
 
-            <div style="display:flex;align-items: center; width:100%;  margin-bottom:20px;">
-                <div @click="LTcheckAllWordsAndHighlight(false);" class="btn btn-sm btn-success center"
-                     style=" display: inline-block; text-align: center;  margin-left:10px;"> {{ $t('editor.update') }}
+            <div style="display:flex;align-items: center; width:100%; margin-bottom:20px; flex-wrap:wrap; gap:6px;">
+                <button type="button" class="btn btn-sm btn-cyan" style="margin-left:10px;"
+                        @click="LTcheckAllWordsAndHighlight(false)">{{ $t('editor.update') }}</button>
+                <div v-if="ltExternalHost" class="btn-group btn-group-sm" role="group"
+                     :aria-label="$t('editor.ltEndpointGroup')">
+                    <button type="button" class="btn"
+                            :class="!ltUseExternal ? 'btn-teal' : 'btn-outline-secondary'"
+                            @click="toggleLtEndpoint(false)">{{ $t('editor.ltLocal') }}</button>
+                    <button type="button" class="btn"
+                            :class="ltUseExternal ? 'btn-teal' : 'btn-outline-secondary'"
+                            @click="toggleLtEndpoint(true)">{{ $t('editor.ltExternal') }}</button>
                 </div>
-                <div class="" style=" width:100%;display: inline-block; text-align:right;  "
+                <div class="" style="flex:1; text-align:right;"
                      @click="LTresetIgnorelist();LTcheckAllWordsAndHighlight(false);" title="Clear ignore list">
                     <span v-if="ignoreList.size > 0" class="text-mini"> ({{ ignoreList.size }}) ignored</span>
                     <img class="white" width=20 height=20 src="/src/assets/img/svg/edit-delete.svg"
@@ -632,7 +624,7 @@
                 {{ this.LTinfo }}
             </div>
 
-            <div v-if="spellcheckFallback"
+            <div v-if="spellcheckFallback && !ltUseExternal"
                  style="text-align: left; font-size: 0.8em;margin-left:10px; display:flex; align-items:center; gap:8px;">
                 <button type="button" class="btn btn-sm btn-outline-secondary" @click="retryLanguageToolStart"
                         :disabled="ltStartInProgress">
@@ -673,9 +665,9 @@
     <div id="statusbar" style="padding-left:15px;padding-right:8px;">
         <div class="statusbar-left">
             <!-- Static text with v-once to prevent re-rendering since $t apparently performs performance measures each time causing memory bloat -->
-            <span>{{ wordcount }}</span> <span v-once>{{ $t("editor.words") }}</span>,  <span>{{ charcount }}</span> <span v-once>{{$t("editor.chars")}}</span>
-            &nbsp; | &nbsp;
-            <span v-once id="editselectedtext"> {{ $t("editor.selected") }}: </span> <span
+            <span ref="statusWordCount">0</span> <span v-once>{{ $t("editor.words") }}</span>,  <span ref="statusCharCount">0</span> <span v-once>{{$t("editor.chars")}}</span>
+            &nbsp; 
+            <span v-once id="editselectedtext">| &nbsp; {{ $t("editor.selected") }}: </span> <span
                 id="editselected"> {{ selectedWordCount }}/{{ selectedCharCount }}</span>
         </div>
         <div class="statusbar-right">
@@ -776,13 +768,10 @@ import {SmilieReplacer} from '../components/SmilieReplacer.ts'
 import {common, createLowlight} from 'lowlight'
 import {Color} from '@tiptap/extension-color'
 import TextStyle from '@tiptap/extension-text-style'
-import moment from 'moment-timezone';
-
 import ExamHeader from '../components/ExamHeader.vue';
 import WebviewPane from '../components/WebviewPane.vue'
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 
-import {SchedulerService} from '../utils/schedulerservice.js'
 import {
     LTcheckAllWords,
     LTdisable,
@@ -798,9 +787,21 @@ import {getExamMaterials, loadDOCX, loadHTML, loadImage, loadODT, loadPDF, playA
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 
 import {SignalBridge} from '../utils/signalBridge.js'
-import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
+import {
+    attachExamMouseleaveGuardBoolean,
+    shouldSkipEdgeFocusLost
+} from '../utils/linuxCageKiosk.js'
 import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
-
+import {
+    applyClientinfoFromFetch,
+    applyServerstatusFromFetch,
+    resolveLockedSection,
+} from '../utils/examFetchInfoSync.js'
+import { resolveEditorExamConfig, DEFAULT_EDITOR_EXAM_CONFIG } from 'next-exam-shared/editorExamConfig.js'
+import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
+import {ref} from "vue";
+import {useConfigStore} from "../stores/configStore.ts";
+import {useInfoStore} from "../stores/infoStore.ts";
 const lowlight = createLowlight(common)
 
 // signalBridge instance centralizes ipc calls with platform checks
@@ -818,6 +819,37 @@ export default {
         WebviewPane,
         PdfviewPaneRendered
     },
+    mixins: [autoCleanupMixin],
+
+    setup() {
+      const configStore = useConfigStore();
+      let development = ref(configStore.development);
+      let serverApiPort = ref(configStore.serverApiPort);
+      let electron = ref(configStore.electron);
+      let hostip = ref(configStore.hostip);
+
+      const infoStore = useInfoStore();
+      infoStore.online = true;
+      infoStore.componentName = "Writer";
+
+      let examtype = ref(infoStore.examtype);
+      let servername = ref(infoStore.servername);
+      let serverip = ref(infoStore.serverip);
+      let token = ref(infoStore.token);
+      let clientname = ref(infoStore.clientname);
+      let serverstatus = ref(infoStore.serverstatus);
+      let pincode = ref(infoStore.pincode);
+      let localLockdown = ref(infoStore.localLockdown);
+      let online = ref(infoStore.online);
+      let battery = ref(infoStore.battery);
+      let wlanInfo = ref(infoStore.wlanInfo);
+      let entrytime = ref(infoStore.entryTime);
+      let componentName = ref(infoStore.componentName);
+
+       return { development, serverApiPort, electron, hostip,
+        examtype, servername, serverip, token, clientname, serverstatus, pincode, localLockdown, online, battery, wlanInfo, entrytime, componentName};
+    },
+
     data() {
         const status = this.$route.params.serverstatus;
         let activeSection = {};
@@ -831,63 +863,42 @@ export default {
                 activeSection = examSections[activeSectionIndex] || {};
             }
         }
-        const initialEditorCfg = activeSection?.groupA?.examConfig?.editor || {};
+        const initialEditorCfg = resolveEditorExamConfig(activeSection, 'groupA');
+        const ltExternalHost = initialEditorCfg.languagetoolhost || null;
+        const ltExternalPort = String(initialEditorCfg.languagetoolport || '8088');
+        const ltLocalHost = 'http://127.0.0.1';
+        const ltLocalPort = '8088';
+        const ltUseExternal = !!ltExternalHost;
 
         return {
             index: 0,
-            componentName: 'Writer',
-            online: true,
             focus: true,
             focusLostMessage: '',
             focusLockReason: '',
             focusLockMessage: '',
             exammode: false,
-            examtype: this.$route.params.examtype,
             selectedFile: null,
             currentFile: null,
             editor: null,
-            saveinterval: null,
-            fetchinfointerval: null,
-            clockinterval: null,
-            loadfilelistinterval: null,
-            servername: this.$route.params.servername,
-            servertoken: this.$route.params.servertoken,
-            serverip: this.$route.params.serverip,
-            token: this.$route.params.token,
-            clientname: this.$route.params.clientname,
-            localLockdown: this.$route.params.localLockdown,
             localUnlockPassword: '',
             localUnlockError: false,
             localUnlockBusy: false,
             localfiles: null,
-            serverApiPort: this.$route.params.serverApiPort,
-            clientApiPort: this.$route.params.clientApiPort,
-            electron: this.$route.params.electron,
-            config: this.$route.params.config,
             clientinfo: null,
-            entrytime: 0,
-            timesinceentry: 0,
-            currenttime: 0,
-            charcount: 0,
-            wordcount: 0,
             caretContextLabel: '',
-            now: 0,
-            pincode: this.$route.params.pincode,
             zoom: EDITOR_ZOOM_INITIAL,
-            battery: null,
             proseMirrorMargin: '30mm',
             editorWidth: '210mm',
-            cmargin: this.$route.params.cmargin ? this.$route.params.cmargin : {side: 'right', size: 3},
+            cmargin: { ...(initialEditorCfg.cmargin || DEFAULT_EDITOR_EXAM_CONFIG.cmargin) },
             selectedWordCount: 0,
             selectedCharCount: 0,
             currentRange: 0,
             word: "",
             editorcontentcontainer: null,
             editorContent: null,
-            serverstatus: status,
-            linespacing: activeSection.linespacing || '2',
-            fontfamily: activeSection.fontfamily || "sans",
-            fontsize: activeSection.fontsize || '12pt',
+            linespacing: String(initialEditorCfg.linespacing ?? DEFAULT_EDITOR_EXAM_CONFIG.linespacing),
+            fontfamily: initialEditorCfg.fontfamily || DEFAULT_EDITOR_EXAM_CONFIG.fontfamily,
+            fontsize: initialEditorCfg.fontsize || DEFAULT_EDITOR_EXAM_CONFIG.fontsize,
             privateSpellcheck: {activate: false, activated: false, suggestions: false}, // this is a per student override (for students with legasthenie)
             individualSpellcheckActivated: false,
             audioSource: null,
@@ -910,8 +921,6 @@ export default {
             currentPDFZoom: 80,
             currentPDFData: null,
             ignoreList: new Set(),
-            wlanInfo: null,
-            hostip: null,
             ltRunning: false,
             ltStartInProgress: false,
             examMaterials: [],
@@ -923,8 +932,13 @@ export default {
             allowedUrls: [],
             lockedSection: 1,
             internetCheckCounter:0,
-            LThost: initialEditorCfg.languagetoolhost || "http://127.0.0.1",
-            LTport: initialEditorCfg.languagetoolport || "8088",
+            ltExternalHost,
+            ltExternalPort,
+            ltUseExternal,
+            ltLocalHost,
+            ltLocalPort,
+            LThost: ltUseExternal ? ltExternalHost : ltLocalHost,
+            LTport: ltUseExternal ? ltExternalPort : ltLocalPort,
             ltLanguage: initialEditorCfg.spellchecklang || "de-DE",
             clipboardHistory: [],
             showClipboardSidebar: false,
@@ -986,12 +1000,6 @@ export default {
 
     methods: {
 
-        // Sync focus-lock overlay fields from main-process clientinfo.
-        syncFocusLockFromClientinfo(clientinfo) {
-            this.focusLockReason = clientinfo?.focusLockReason || '';
-            this.focusLockMessage = clientinfo?.focusLockMessage || '';
-        },
-
         // from filehandler.js
         getExamMaterials: getExamMaterials,
         loadPDF: loadPDF,
@@ -1034,8 +1042,8 @@ export default {
                         ? (this.clientinfo?.lockedSection ?? this.lockedSection ?? status.activeSection ?? 0)
                         : (status.lockedSection ?? status.activeSection ?? 0)));
             const section = status.examSections?.[sectionIndex] || status.examSections?.[1] || null;
-            const groupKey = section && section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA'
-            return section?.[groupKey]?.examConfig?.editor || {};
+            const groupKey = section && section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA';
+            return resolveEditorExamConfig(section, groupKey);
         },
 
         // Teacher-set ODT/DOCX template under examConfig.editor.editorTemplate (not materials).
@@ -1092,11 +1100,103 @@ export default {
             }
         },
 
+        // Point LThost/LTport at the student-selected local or external LT endpoint.
+        applyLtActiveEndpoint() {
+            if (this.ltUseExternal && this.ltExternalHost) {
+                this.LThost = this.ltExternalHost;
+                this.LTport = this.ltExternalPort || '8088';
+            } else {
+                this.LThost = this.ltLocalHost;
+                this.LTport = this.ltLocalPort;
+            }
+        },
+
+        async toggleLtEndpoint(useExternal) {
+            if (!this.ltExternalHost || this.ltUseExternal === !!useExternal) return;
+            this.ltUseExternal = !!useExternal;
+            this.applyLtActiveEndpoint();
+            if (this.LTactive) {
+                this.spellcheckFallback = false;
+                await this.LTcheckAllWordsAndHighlight(false);
+            }
+        },
+
         syncEditorLanguageSettings() {
             const cfg = this.getEditorExamConfig(this.lockedSection);
-            this.LThost = cfg.languagetoolhost || "http://127.0.0.1";
-            this.LTport = cfg.languagetoolport || "8088";
-            this.ltLanguage = cfg.spellchecklang || "de-DE";
+            const lang = cfg.spellchecklang || 'de-DE';
+            if (lang !== this.ltLanguage) this.ltLanguage = lang;
+
+            const extHost = cfg.languagetoolhost || null;
+            const extPort = String(cfg.languagetoolport || '8088');
+            const hadExternal = !!this.ltExternalHost;
+            this.ltExternalHost = extHost;
+            this.ltExternalPort = extPort;
+            if (extHost && !hadExternal) {
+                this.ltUseExternal = true;
+            } else if (!extHost) {
+                this.ltUseExternal = false;
+            }
+            this.applyLtActiveEndpoint();
+        },
+
+        // Apply cmargin/fonts/linespacing from examConfig.editor to layout CSS variables.
+        applyEditorLayoutCss() {
+            switch (Number(this.cmargin?.size)) {
+                case 5:
+                    this.proseMirrorMargin = '50mm';
+                    this.editorWidth = '160mm';
+                    break;
+                case 4.5:
+                    this.proseMirrorMargin = '45mm';
+                    this.editorWidth = '165mm';
+                    break;
+                case 4:
+                    this.proseMirrorMargin = '40mm';
+                    this.editorWidth = '170mm';
+                    break;
+                case 3.5:
+                    this.proseMirrorMargin = '35mm';
+                    this.editorWidth = '175mm';
+                    break;
+                case 3:
+                    this.proseMirrorMargin = '30mm';
+                    this.editorWidth = '180mm';
+                    break;
+                case 2.5:
+                    this.proseMirrorMargin = '25mm';
+                    this.editorWidth = '185mm';
+                    break;
+                case 2:
+                    this.proseMirrorMargin = '20mm';
+                    this.editorWidth = '190mm';
+                    break;
+                default:
+                    this.proseMirrorMargin = '30mm';
+                    this.editorWidth = '180mm';
+            }
+            if (this.cmargin.side === 'right') {
+                this.setCSSVariable('--js-margin', `0 ${this.proseMirrorMargin} 0 0`);
+                this.setCSSVariable('--js-borderright', `1px solid #ccc`);
+                this.setCSSVariable('--js-borderleft', `0px solid #ccc`);
+            } else {
+                this.setCSSVariable('--js-margin', `0 0 0 ${this.proseMirrorMargin}`);
+                this.setCSSVariable('--js-borderright', `0px solid #ccc`);
+                this.setCSSVariable('--js-borderleft', `1px solid #ccc`);
+            }
+            this.setCSSVariable('--js-editorWidth', `${this.editorWidth}`);
+            this.setCSSVariable('--js-linespacing', `${this.linespacing}`);
+            this.setCSSVariable('--js-fontfamily', `${this.fontfamily}`);
+            this.setCSSVariable('--js-fontsize', `${this.fontsize}`);
+        },
+
+        syncEditorVisualSettings() {
+            const cfg = this.getEditorExamConfig(this.lockedSection);
+            const cm = cfg.cmargin || DEFAULT_EDITOR_EXAM_CONFIG.cmargin;
+            this.cmargin = { side: cm.side || 'right', size: cm.size ?? 3 };
+            this.linespacing = String(cfg.linespacing ?? DEFAULT_EDITOR_EXAM_CONFIG.linespacing);
+            this.fontfamily = cfg.fontfamily || DEFAULT_EDITOR_EXAM_CONFIG.fontfamily;
+            this.fontsize = cfg.fontsize || DEFAULT_EDITOR_EXAM_CONFIG.fontsize;
+            this.applyEditorLayoutCss();
         },
 
 
@@ -1106,9 +1206,9 @@ export default {
             // Use pointer events to support mouse + touch.
             if (!this.splitview) return;
             this._splitResizing = true;
-            window.addEventListener('pointermove', this.onSplitResizeMove, { passive: false });
-            window.addEventListener('pointerup', this.stopSplitResize, { passive: true });
-            window.addEventListener('pointercancel', this.stopSplitResize, { passive: true });
+            this.autoEventListener(window,'pointermove', this.onSplitResizeMove, { passive: false });
+            this.autoEventListener(window,'pointerup', this.stopSplitResize, { passive: true });
+            this.autoEventListener(window,'pointercancel', this.stopSplitResize, { passive: true });
             this.onSplitResizeMove(e);
         },
 
@@ -1263,38 +1363,27 @@ export default {
 
         async fetchInfo() {
             let getinfo = await signalBridge.invoke('getinfoasync')  // we need to fetch the updated version of the systemconfig from express api (server.js)
-            this.clientinfo = getinfo.clientinfo;
-            this.token = this.clientinfo.token
-            this.focus = this.clientinfo.focus
-            this.syncFocusLockFromClientinfo(this.clientinfo);
-            this.clientname = this.clientinfo.name
-            this.exammode = this.clientinfo.exammode
-            this.pincode = this.clientinfo.pin
-            this.privateSpellcheck = this.clientinfo.privateSpellcheck
-            
-            if (getinfo.serverstatus) {
-                this.serverstatus = getinfo.serverstatus
+            applyClientinfoFromFetch(this, getinfo.clientinfo, { trackPrivateSpellcheck: true });
+
+            const serverstatusChanged = getinfo.serverstatus
+                ? applyServerstatusFromFetch(this, getinfo.serverstatus)
+                : false;
+
+            const sectionIndex = resolveLockedSection(this.serverstatus, this.clientinfo);
+
+            if (sectionIndex !== this.lockedSection) {
+                this.lockedSection = sectionIndex;
+                this.syncEditorLanguageSettings();
+                this.syncEditorVisualSettings();
+            } else if (serverstatusChanged) {
+                this.syncEditorLanguageSettings();
+                this.syncEditorVisualSettings();
             }
-
-            // decide which section index is authoritative (client vs server)
-            const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
-                ? this.clientinfo.lockedSection
-                : this.serverstatus.lockedSection
-
-            this.lockedSection = sectionIndex
-
-            this.syncEditorLanguageSettings()
 
             // console.log(this.serverstatus)
             if (this.pincode !== "0000") {
                 this.localLockdown = false
             }  // pingcode is 0000 only in localmode
-
-            if (this.clientinfo && this.clientinfo.token) {
-                this.online = true
-            } else {
-                this.online = false
-            }
 
             this.battery = await navigator.getBattery().then(battery => {
                 return battery
@@ -1464,14 +1553,17 @@ export default {
             const [r, g, b] = rgb.match(/\d+/g).map(Number);
             return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
         },
-        clock() {
-            // this.charcount = this.editor.storage.characterCount.characters()   //this also counts blank spaces
-            this.charcount = this.editor.getText().replace(/<[^>]*>/g, '').replace(/\s/g, '').length
-
-            this.wordcount = this.editor.storage.characterCount.words()
-            this.now = new Date().getTime()
-            this.timesinceentry = new Date(this.now - this.entrytime).toISOString().substr(11, 8)
-            this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
+        // Status bar word/char counts via DOM refs — no reactive tick on editor.vue.
+        updateEditorStatusCounts() {
+            if (!this.editor) return;
+            const wordEl = this.$refs.statusWordCount;
+            const charEl = this.$refs.statusCharCount;
+            if (wordEl) {
+                wordEl.textContent = String(this.editor.storage.characterCount.words());
+            }
+            if (charEl) {
+                charEl.textContent = String(this.editor.getText().replace(/<[^>]*>/g, '').replace(/\s/g, '').length);
+            }
         },
 
         // Strip marks, color, alignment, paragraph line-height, then normalize block nodes (unsetAllMarks before clearNodes for full-doc selection).
@@ -1568,7 +1660,7 @@ export default {
 
         // Seconds/minutes/hours since last filesystem mtime (active .htm omits label in template).
         formatHtmLocalFileAge(file) {
-            const t = this.now || Date.now();
+            const t = Date.now();
             const ms = Math.max(0, t - Number(file?.mod || 0));
             const sec = Math.floor(ms / 1000);
             if (sec < 60) return `${sec}s`;
@@ -1591,7 +1683,7 @@ export default {
                     if (!existingaudiofile) {
                         this.audiofiles.push({
                             name: file.name,
-                            playbacks: this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat
+                            playbacks: Number(this.getEditorExamConfig(this.lockedSection).audioRepeat) || 0
                         })
                     }
                 }
@@ -1718,11 +1810,26 @@ export default {
         },
 
 
-        // send direct print request to teacher and append current document as base64
-        printBase64(printrequest = false, saveReason = 'n/a') {
-            //get current exam sectioninfo
+        // Maps getPDFbase64 IPC error payloads to a localized Swal title.
+        showPdfGenerationError(response) {
+            const msg = typeof response?.message === 'string' ? response.message : ''
+            let title = this.$t('editor.pdfGenerationFailed')
+            if (msg.includes('timeout') || msg.includes('in progress')) {
+                title = this.$t('editor.pdfBusyTimeout')
+            } else if (msg.toLowerCase().includes('signing failed')) {
+                title = this.$t('editor.pdfSigningFailed')
+            }
+            this.$swal.fire({ title, icon: 'error' })
+        },
 
-            // this currentpreviewBase64 contains the current visible pdf as base64 string
+        // send direct print request to teacher and append current document as base64
+        async printBase64(printrequest = false, saveReason = 'n/a') {
+            if (!this.currentpreviewBase64) {
+                console.warn('editor @ printBase64: No PDF available to send')
+                this.$swal.fire({ title: this.$t('editor.noPdfToSend'), icon: 'error' })
+                return
+            }
+
             const endpoint = printrequest ? 'printjob' : 'submission'
             const url = `https://${this.serverip}:${this.serverApiPort}/server/control/${endpoint}/${this.servername}`;
             const sr = typeof saveReason === 'string' ? saveReason : 'n/a'
@@ -1768,42 +1875,77 @@ export default {
             })
             .catch(error => {
                 console.log("editor @ printbase64:", error.message)
+                this.$swal.fire({ title: this.$t('editor.submissionNetworkFailed'), icon: 'error' })
             });
 
         },
 
 
         async sendExamToTeacher(directsend = false, type = "send") {
-            let response = await signalBridge.invoke('getPDFbase64', {
+            const pdfArgs = {
                 landscape: false,
                 servername: this.servername,
                 clientname: this.clientname,
                 submissionnumber: this.submissionnumber,
-                sectionname: this.serverstatus.examSections[this.lockedSection].sectionname
-            })
-
-            if (response?.status == "success") {
-                let base64pdf = response.base64pdf
-                let dataUrl = response.dataUrl
-
-                if (directsend) {   //direct send to teacher without displaying the print preview
-                    this.currentpreviewBase64 = base64pdf
-                    this.printBase64(false, 'directsend')
+                sectionname: this.serverstatus.examSections[this.lockedSection].sectionname,
+            }
+            if (type === 'print') {
+                const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'print' })
+                if (response?.status !== 'success') {
+                    console.log("editor @ sendExamToTeacher: Error sending exam to teacher")
+                    this.showPdfGenerationError(response)
                     return
                 }
-
-                let file = {
+                this.currentpreviewBase64 = response.base64pdf
+                this.loadPDF({
                     filename: `${this.clientname}.pdf`,
                     filetype: "pdf",
-                    filecontent: dataUrl
-                }
-                this.loadPDF(file, true, 100, true, type)  //this opens the pdf file in the print preview and populates base64 preview
-            } 
-            else {
-                console.log("editor @ sendExamToTeacher: Error sending exam to teacher")
+                    filecontent: response.dataUrl
+                }, true, 100, true, type)
+                return
             }
+
+            await this.waitUntilSigningSwalPainted()
+            let response
+            try {
+                response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
+            } finally {
+                this.$swal.close()
+            }
+            if (response?.status !== 'success') {
+                console.log("editor @ sendExamToTeacher: Error sending exam to teacher")
+                this.showPdfGenerationError(response)
+                return
+            }
+            this.currentpreviewBase64 = response.base64pdf
+            if (directsend) {
+                return this.printBase64(false, 'directsend')
+            }
+            this.loadPDF({
+                filename: `${this.clientname}.pdf`,
+                filetype: "pdf",
+                filecontent: response.dataUrl
+            }, true, 100, true, type)
         },
 
+
+        // Resolves after Swal modal is in DOM and one frame has painted (nextTick alone is too early).
+        waitUntilSigningSwalPainted() {
+            return new Promise((resolve) => {
+                this.$swal.fire({
+                    title: this.$t('editor.creatingSigningPdf'),
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        this.$swal.showLoading()
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => { setTimeout(resolve, 0) })
+                        })
+                    },
+                })
+            })
+        },
 
         // display print denied message and reason
         printdenied(why) {
@@ -1888,7 +2030,7 @@ export default {
                             resolve();
                         };
                         const onReady = () => cleanup();
-                        try { webview.addEventListener('dom-ready', onReady, { once: true }); } catch (_) { /* ignore */ }
+                        try { this.autoEventListener(webview,'dom-ready', onReady, { once: true }); } catch (_) { /* ignore */ }
                         setTimeout(cleanup, timeoutMs);
                     });
                 };
@@ -1983,7 +2125,7 @@ export default {
 
 
             if (this.splitview === false) {
-                document.querySelector("#preview").addEventListener("click", this.hidepreview);
+                this.autoEventListener(document.querySelector("#preview"),"click", this.hidepreview);
             }
             if (this.splitview === true) {
                 document.querySelector("#preview").removeEventListener("click", this.hidepreview);
@@ -1994,12 +2136,12 @@ export default {
             if (editorcontainer) editorcontainer.style.zoom = this.zoom;
             const editorcontent = document.getElementById('editorcontent');
             if (editorcontent) {
-                editorcontent.addEventListener('mouseup', this.getSelectedTextInfo);   // show amount of words and characters
-                editorcontent.addEventListener('keydown', this.insertSpaceInsteadOfTab)   //this changes the tab behaviour and allows tabstops
+                this.autoEventListener(editorcontent, 'mouseup', this.getSelectedTextInfo);   // show amount of words and characters
+                this.autoEventListener(editorcontent, 'keydown', this.insertSpaceInsteadOfTab)   //this changes the tab behaviour and allows tabstops
             }
             const editormaincontainer = document.getElementById('editormaincontainer');
             if (editormaincontainer) {
-                editormaincontainer.addEventListener('scroll', this.LTupdateHighlights, {passive: true});
+              this.autoEventListener(editormaincontainer,'scroll', this.LTupdateHighlights, {passive: true});
             }
 
 
@@ -2056,9 +2198,9 @@ export default {
         },
         async sendFocuslost(ctrlalt = false, options = {}) {
             const { instantBlock = false, forceBackendLock = false, message = '' } = options;
-            if (!forceBackendLock && await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
+            if (!forceBackendLock && await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             if (message) this.focusLostMessage = message;
-            if (instantBlock && !this.config.development) {
+            if (instantBlock && !this.development) {
                 this.focus = false;
                 const editorcontentcontainer = document.getElementById('editorcontent');
                 const editableDiv = editorcontentcontainer?.firstElementChild;
@@ -2077,7 +2219,7 @@ export default {
                 return;
             }
 
-            if (response && !this.config.development && !response.focus) { // immediately block frontend
+            if (response && !this.development && !response.focus) { // immediately block frontend
                 this.focus = false;
                 const editorcontentcontainer = document.getElementById('editorcontent');
                 const editableDiv = editorcontentcontainer?.firstElementChild;
@@ -2386,66 +2528,19 @@ export default {
 
         // Detect platform using navigator.platform (available in renderer process)
         this.isMac = navigator.platform.toLowerCase().includes('mac');
-
-        switch (this.cmargin.size) {
-            case 5:
-                this.proseMirrorMargin = '50mm';
-                this.editorWidth = '160mm';
-                break;
-            case 4.5:
-                this.proseMirrorMargin = '45mm';
-                this.editorWidth = '165mm';
-                break;
-            case 4:
-                this.proseMirrorMargin = '40mm';
-                this.editorWidth = '170mm';
-                break;
-            case 3.5:
-                this.proseMirrorMargin = '35mm';
-                this.editorWidth = '175mm';
-                break;
-            case 3:
-                this.proseMirrorMargin = '30mm';
-                this.editorWidth = '180mm';
-                break;
-            case 2.5:
-                this.proseMirrorMargin = '25mm';
-                this.editorWidth = '185mm';
-                break;
-            case 2:
-                this.proseMirrorMargin = '20mm';
-                this.editorWidth = '190mm';
-                break;
-            default:
-                this.proseMirrorMargin = '30mm';
-                this.editorWidth = '180mm';
-        }
-        if (this.cmargin.side === "right") {
-            this.setCSSVariable('--js-margin', `0 ${this.proseMirrorMargin} 0 0`);
-            this.setCSSVariable('--js-borderright', `1px solid #ccc`);
-            this.setCSSVariable('--js-borderleft', `0px solid #ccc`);
-        } else {
-            this.setCSSVariable('--js-margin', `0 0 0 ${this.proseMirrorMargin}`);
-            this.setCSSVariable('--js-borderright', `0px solid #ccc`);
-            this.setCSSVariable('--js-borderleft', `1px solid #ccc`);
-        }
-
-        this.setCSSVariable('--js-editorWidth', `${this.editorWidth}`);
-        this.setCSSVariable('--js-linespacing', `${this.linespacing}`);
-        this.setCSSVariable('--js-fontfamily', `${this.fontfamily}`);
-        this.setCSSVariable('--js-fontsize', `${this.fontsize}`);
-
-
-        console.log(`editor @ mounted: Component mounted, initializing editor`)
+        this.applyEditorLayoutCss();
         this.createEditor(); // this initializes the editor
         this.getExamMaterials()
+        setTimeout(() => {
+            signalBridge.invoke('prewarmSubmissionSigningP12').catch(() => {})
+        }, 400)
 
       
 
         signalBridge.on('focusLock', (_event, payload = {}) => {
             this.focusLockReason = payload.reason || '';
             this.focusLockMessage = payload.message || '';
-            if (!this.config.development) this.focus = false;
+            if (!this.development) this.focus = false;
         });
 
         signalBridge.on('getmaterials', (event) => {  // get exam materials from teacher
@@ -2510,18 +2605,18 @@ export default {
 
 
         // add some eventlisteners once
-        document.querySelector("#preview").addEventListener("click", function () {
+        this.autoEventListener(document.querySelector("#preview"),"click", function () {
             this.style.display = 'none';
             this.setAttribute("src", "about:blank");
             URL.revokeObjectURL(this.currentpreview);
             // this.classList.add('fadeinfast');  // removed once the pdf is visible to avoid flickering, then added back here
         });
 
-        document.querySelector("#mugshotpreview").addEventListener("click", function () {
+        this.autoEventListener(document.querySelector("#mugshotpreview"),"click", function () {
             this.style.display = 'none';
         });
 
-        document.querySelector("#audioclose").addEventListener("click", function (e) {
+        this.autoEventListener(document.querySelector("#audioclose"),"click", function (e) {
             audioPlayer.pause();
             console.log('editor @ audioclose: Playback stopped');
             document.querySelector("#aplayer").style.display = 'none';
@@ -2529,7 +2624,7 @@ export default {
 
         const audioPlayer = document.getElementById('audioPlayer');
         if (audioPlayer) {
-            audioPlayer.addEventListener('contextmenu', (e) => {
+            this.autoEventListener(audioPlayer,'contextmenu', (e) => {
                 e.preventDefault();
             });
         }
@@ -2538,18 +2633,11 @@ export default {
         this.entrytime = new Date().getTime()
 
         // do not use setInterval() for intervals as it keeps all objects of the callbacks including fetch() responses in memory until the interval is stopped
-        this.fetchinfointerval = new SchedulerService(5000);
-        this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-        this.fetchinfointerval.start();
+        this.autoSchedulerService(this.fetchInfo, 5000);
+        this.autoSchedulerService(() => this.saveContent(true, 'auto'), 20000);
+        this.autoSchedulerService(this.updateEditorStatusCounts, 1000);
 
-        this.saveContentCallback = () => this.saveContent(true, 'auto');  // this detour is needed because of 2 parameters, otherwise the event listener cannot be removed
-        this.saveinterval = new SchedulerService(20000);
-        this.saveinterval.addEventListener('action', this.saveContentCallback);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-        this.saveinterval.start();
-
-        this.clockinterval = new SchedulerService(1000);
-        this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-        this.clockinterval.start();
+        this.$nextTick(() => this.updateEditorStatusCounts());
 
 
         this.loadFilelist()
@@ -2561,8 +2649,8 @@ export default {
         this.$nextTick(() => {
             this.editorcontentcontainer = document.getElementById('editorcontent');
             if (this.editorcontentcontainer) {
-                this.editorcontentcontainer.addEventListener('mouseup', this.getSelectedTextInfo);   // show amount of words and characters
-                this.editorcontentcontainer.addEventListener('keydown', this.insertSpaceInsteadOfTab)   //this changes the tab behaviour and allows tabstops
+                this.autoEventListener(this.editorcontentcontainer,'mouseup', this.getSelectedTextInfo);   // show amount of words and characters
+                this.autoEventListener(this.editorcontentcontainer,'keydown', this.insertSpaceInsteadOfTab)   //this changes the tab behaviour and allows tabstops
             }
 
             // start language tool locally (if allowed)
@@ -2572,13 +2660,12 @@ export default {
 
 
         // update LThighlights positions on scroll
-        document.getElementById('editormaincontainer').addEventListener('scroll', this.LTupdateHighlights, {passive: true});
+        this.autoEventListener(document.getElementById('editormaincontainer'),'scroll', this.LTupdateHighlights, {passive: true});
 
         // block editor on escape
-        if (!this.config.development) {
-            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
-            // document.body.addEventListener('keydown', this.handleCtrlAlt);
-            window.addEventListener('visibilitychange', this.handleVisibilityChange);
+        if (!this.development) {
+            attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
+            this.autoEventListener(window,'visibilitychange', this.handleVisibilityChange);
         }
 
       
@@ -2589,10 +2676,10 @@ export default {
         this.sleep(1000).then(() => {
             this.editorContent = this.editorcontentcontainer.querySelector('.ProseMirror');
             if (this.editorContent) {
-                this.editorContent.addEventListener('paste', this.handlePaste, true);
-                this.editorContent.addEventListener('drop', this.handleDrop, true);
+                this.autoEventListener(this.editorContent,'paste', this.handlePaste, true);
+                this.autoEventListener(this.editorContent,'drop', this.handleDrop, true);
                 this.typingRhythmKeydownListener = this.handleTypingRhythmKeydown.bind(this);
-                this.editorContent.addEventListener('keydown', this.typingRhythmKeydownListener, true);
+                this.autoEventListener(this.editorContent,'keydown', this.typingRhythmKeydownListener, true);
             }
             console.log(`editor @ mounted: Calling loadBackupFile`)
             this.loadBackupFile()
@@ -2609,62 +2696,10 @@ export default {
         /**
          *   REMOVE EVENT LISTENERS
          */
-        this.editorcontentcontainer.removeEventListener('keydown', this.insertSpaceInsteadOfTab)
-        this.editorcontentcontainer.removeEventListener('contextmenu', this.getWord);
 
-        if (this.editorContent) {
-            this.editorContent.removeEventListener('paste', this.handlePaste, true);
-            this.editorContent.removeEventListener('drop', this.handleDrop, true);
-            if (this.typingRhythmKeydownListener) {
-                this.editorContent.removeEventListener('keydown', this.typingRhythmKeydownListener, true);
-            }
-        }
-        //document.removeEventListener('input', this.checkAllWordsOnSpacebar)
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
-        // document.body.removeEventListener('keydown', this.handleCtrlAlt);
-        window.removeEventListener('visibilitychange', this.handleVisibilityChange);
 
-        document.removeEventListener('click', this.hideSpellcheckMenu);
-        this.editorcontentcontainer.removeEventListener('mouseup', this.getSelectedTextInfo);
-        document.getElementById('editormaincontainer').removeEventListener('scroll', this.LTupdateHighlights, {passive: true});
         this.stopSplitResize()
-
-        this.saveinterval.removeEventListener('action', this.saveContentCallback);
-
-        // Clean up preview click listeners
-        const preview = document.querySelector("#preview");
-        if (preview) {
-            preview.removeEventListener("click", this.hidepreview);
-        }
-
-        const mugshotPreview = document.querySelector("#mugshotpreview");
-        if (mugshotPreview) {
-            mugshotPreview.removeEventListener("click", function () {
-                this.style.display = 'none';
-            });
-        }
-
-        const audioClose = document.querySelector("#audioclose");
-        if (audioClose) {
-            audioClose.removeEventListener("click", function (e) {
-                audioPlayer.pause();
-                console.log('editor @ audioclose: Playback stopped');
-            });
-        }
-
-        const audioPlayer = document.getElementById('audioPlayer');
-        if (audioPlayer) {
-            audioPlayer.removeEventListener('contextmenu', (e) => {
-                e.preventDefault();
-            });
-        }
-        this.saveinterval.stop()
-
-        this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
-        this.fetchinfointerval.stop()
-
-        this.clockinterval.removeEventListener('action', this.clock);
-        this.clockinterval.stop()
 
         signalBridge.removeAllListeners('getmaterials')
         signalBridge.removeAllListeners('finalsubmit')
@@ -2690,24 +2725,27 @@ export default {
         display: none !important;
     }
 
-    body, #vuexambody {
+    html, body, #vuexambody, .editor-root {
         position: relative !important;
         height: auto !important;
         overflow: visible !important;
+        background: #ffffff !important;
+        background-color: #ffffff !important;
     }
     //body is "fixed" to prevent shifting during auto-scroll - but this limits multi-page print to 1 page
 
     #statusbar {
         position: relative !important;
+        top: -4px !important;
         box-shadow: 0px 0px 0px transparent !important;
         background-color: white !important;
         border-top: 1px solid #c5c5c5 !important;
-        //margin-right: var(--js-margin) !important;
-        margin-left: 14px !important;
-        width: var(--js-editorWidth) !important;
+        margin-left: 30px !important;
+        width: calc(var(--js-editorWidth) - 30px) !important;
         display: flex !important;
         align-items: center !important;
         justify-content: space-between !important;
+        padding-left: 0px !important;
     }
     #editorcontent {
         border: 0px !important;
@@ -2732,7 +2770,14 @@ export default {
         overflow: visible !important;
         margin: 0 !important;
         border-radius: 0px !important;
-        background-color: white !important;
+        background: #ffffff !important;
+        background-color: #ffffff !important;
+    }
+
+    .stats-rule-block,
+    .stats-rule-block .stats-rule-badge,
+    .stats-rule-block .stats-rule-hr {
+        background-color: #ffffff !important;
     }
     #vueexambody {
         overflow: hidden !important;

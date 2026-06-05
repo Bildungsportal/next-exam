@@ -1,15 +1,15 @@
 /**
  * @license GPL LICENSE
  * Copyright (c) 2021 Thomas Michael Weissel
- *
- * This program is free software: you can redistribute it and/or modify it
+ * 
+ * This program is free software: you can redistribute it and/or modify it 
  * under the terms of the GNU General Public License as published by the Free Software Foundation,
  * either version 3 of the License, or any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
- *
+ * 
  * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
  * You should have received a copy of the GNU General Public License along with this program.
  * If not, see <http://www.gnu.org/licenses/>
@@ -25,7 +25,7 @@ import net from 'net'
 import dns from 'dns'
 import i18n from '../../../src/locales/locales.js'
 const {t} = i18n.global
-import{ipcMain, clipboard,app, webContents, dialog} from 'electron'
+import { ipcMain, clipboard, app, webContents, dialog, shell } from 'electron'
 import { gateway4sync } from 'default-gateway';
 import os, { networkInterfaces } from 'os'
 import log from 'electron-log';
@@ -35,16 +35,27 @@ import mammoth from 'mammoth';
 
 import languageToolServer from './lt-server';
 import platformDispatcher from './platformDispatcher.js';
+import { isAssessmentSessionActive } from './assessmentSession.js';
 import { updateSystemTray } from './traymenu.js';
 import { ensureNetworkOrReset } from './testpermissionsMac.js';
 import { getWlanInfo } from './getwlaninfo.js';
 import { switchExamSection } from './switchExamSection.js';
 import { startProxy, stopProxy } from './vncproxy.js';
 import qemuService from './qemuService.js';
+import {
+    checkQemuAvailability,
+    getQemuInstallInfo,
+    getWindowsHypervisorPlatformState,
+    requestEnableWindowsHypervisorPlatform,
+} from '../../../../shared/qemuAvailability.js';
+import { pickLocalVmGroupConfig } from '../../../../shared/localVmDisplayResolutions.js';
 import { getVMFindings } from './vmDetection.js';
 import { decryptExamFileBytes, decryptExamFileAllLayers, encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
 import { examApiFetch } from '../../../../shared/examApiFetch.js';
 import { normalizeStudentClientName } from '../../../../shared/normalizeStudentClientName.js';
+import { buildNextExamMoodleProof } from '../../../../shared/buildNextExamMoodleProof.js';
+import { DEFAULT_EDITOR_EXAM_CONFIG } from '../../../../shared/editorExamConfig.js';
+import { NEXT_EXAM_MOODLE_PROOF_HEADER } from '../../../../shared/nextExamMoodleProofSecret.js';
 import { setClientFocusLock, clearClientFocusLock } from './focusLockState.js';
 import { syncClientDisplayInfo } from './displayInfo.js';
 import { captureActiveWindowScreenshot } from './cageScreenshotCapture.js';
@@ -55,12 +66,61 @@ import {
     detectRunningInCage,
     needsCageKioskSetup,
 } from './cageDetect.js';
+import {
+    detectRunningInWindowsKiosk,
+    isWindowsKioskOsUser,
+    isWindowsAssignedAccessSessionActive,
+    detectWindowsKioskInstalled,
+    detectWindowsKioskUserExists,
+    needsWindowsKioskSetup,
+    initiateKioskSetup as initiateWindowsKioskSetup,
+    readKioskLauncherApps,
+    readKioskSystemAllowedApps,
+    syncAllowedKioskAppsClientinfo,
+    launchKioskAllowedApp,
+} from './win/windowsKioskSetup.js';
 
 // Skip info-level file-save log noise when the renderer marks the write as periodic auto-save.
 const logSaveInfoUnlessAuto = (saveReason, message) => {
     if (saveReason === 'auto') return
     log.info(message)
 }
+
+/** Per-guest webRequest hooks for eduvidual Moodle proof headers. */
+const eduvidualMoodleProofHooks = new Map();
+
+/** Remove Moodle proof header injection for an eduvidual webview guest. */
+const detachEduvidualMoodleProofHeaders = (guestId) => {
+    const id = Number(guestId);
+    const entry = eduvidualMoodleProofHooks.get(id);
+    if (!entry) return;
+    try {
+        entry.session.webRequest.onBeforeSendHeaders(entry.filter, null);
+    } catch (e) {
+        log.debug('ipchandler @ detachEduvidualMoodleProofHeaders:', e?.message || e);
+    }
+    eduvidualMoodleProofHooks.delete(id);
+};
+
+/** Attach HMAC proof header on requests to moodleDomain (quizaccess_nextexam contract). */
+const attachEduvidualMoodleProofHeaders = (guest, { moodleDomain, moodleTestId, exammode }) => {
+    if (!guest || guest.isDestroyed?.()) return false;
+    detachEduvidualMoodleProofHeaders(guest.id);
+    if (!exammode || !moodleDomain || moodleTestId == null || moodleTestId === '') return false;
+
+    const proof = buildNextExamMoodleProof(moodleTestId);
+    const host = String(moodleDomain).replace(/^https?:\/\//i, '').split('/')[0];
+    const filter = { urls: [`*://${host}/*`, `*://*.${host}/*`] };
+    const handler = (details, callback) => {
+        details.requestHeaders[NEXT_EXAM_MOODLE_PROOF_HEADER] = proof;
+        details.requestHeaders['X-Next-Exam-Client'] = '1';
+        callback({ requestHeaders: details.requestHeaders });
+    };
+    guest.session.webRequest.onBeforeSendHeaders(filter, handler);
+    eduvidualMoodleProofHooks.set(guest.id, { session: guest.session, filter, handler });
+    log.info(`ipchandler @ attachEduvidualMoodleProofHeaders: guest ${guest.id} quiz ${moodleTestId} host ${host}`);
+    return true;
+};
 
 /** Exam file key: serverstatus.encryptionPassword; local lockdown uses serverstatus.password only. */
 const resolveExamDecryptPassword = (multicastClient) => {
@@ -135,26 +195,75 @@ class IpcHandler {
         this.CommunicationHandler = ch
 
 
-        ipcMain.handle('get-linux-kiosk-info', () => ({
-            cageInstalled: detectCageInstalled(),
-            runningInCage: detectRunningInCage(),
-            cageKioskAppImageInstalled: detectCageKioskAppImageInstalled(),
-            cageKioskDesktopInstalled: detectCageKioskDesktopInstalled(),
-            needsCageKioskSetup: needsCageKioskSetup(),
-            displayServer: platformDispatcher.displayServer,
-        }));
+        // Single source of truth: platformDispatcher.platform decides which kiosk model applies.
+        // win32 = AssignedAccess, linux = Cage, darwin = no kiosk (all flags false). platform/displayServer always set.
+        ipcMain.handle('get-platform-info', () => {
+            const platform = platformDispatcher.platform;
+            const base = { displayServer: platformDispatcher.displayServer, platform };
+            if (platform === 'win32') {
+                const installed = detectWindowsKioskInstalled() && detectWindowsKioskUserExists();
+                return {
+                    ...base,
+                    cageInstalled: detectWindowsKioskUserExists(),
+                    runningInCage: detectRunningInWindowsKiosk(),
+                    isWindowsKioskUser: isWindowsKioskOsUser(),
+                    assignedAccessActive: isWindowsAssignedAccessSessionActive(),
+                    cageKioskAppImageInstalled: detectWindowsKioskInstalled(),
+                    cageKioskDesktopInstalled: installed,
+                    needsCageKioskSetup: needsWindowsKioskSetup(),
+                };
+            }
+            if (platform === 'linux') {
+                return {
+                    ...base,
+                    cageInstalled: detectCageInstalled(),
+                    runningInCage: detectRunningInCage(),
+                    cageKioskAppImageInstalled: detectCageKioskAppImageInstalled(),
+                    cageKioskDesktopInstalled: detectCageKioskDesktopInstalled(),
+                    needsCageKioskSetup: needsCageKioskSetup(),
+                };
+            }
+            // darwin (and any other): no kiosk model, no cage/AssignedAccess checks.
+            return {
+                ...base,
+                cageInstalled: false,
+                runningInCage: false,
+                cageKioskAppImageInstalled: false,
+                cageKioskDesktopInstalled: false,
+                needsCageKioskSetup: false,
+            };
+        });
 
         ipcMain.handle('get-mac-arch-info', () => platformDispatcher.macRosettaEmulation);
 
         ipcMain.handle('quit-app', () => {
-            app.quit();
+            // Route through mainwindow.close so the cage exit warning in windowhandler.on('close') is the single source of truth.
+            if (this.WindowHandler?.mainwindow) this.WindowHandler.mainwindow.close();
+            else app.quit();
         });
 
         ipcMain.handle('capture-screenshot-frame', async () => {
             return captureActiveWindowScreenshot(this.WindowHandler, this.multicastClient);
         });
 
+        // channel name kept for renderer compatibility; win32 routes to UAC + PowerShell payload.
+        ipcMain.handle('get-kiosk-launcher-apps', () => (process.platform === 'win32' ? readKioskLauncherApps() : []));
+
+        ipcMain.handle('get-kiosk-system-allowed-apps', () => (
+            process.platform === 'win32' ? readKioskSystemAllowedApps() : { ok: false, error: 'win32 only' }
+        ));
+
+        ipcMain.handle('launch-kiosk-allowed-app', (_event, exePath) => (
+            process.platform === 'win32' ? launchKioskAllowedApp(exePath) : { ok: false, error: 'win32 only' }
+        ));
+
         ipcMain.handle('install-linux-cage-kiosk', () => {
+            if (process.platform === 'win32') {
+                // optional EXAM-STUDENT hooks; passed through to PS only if each file exists
+                const extraAppsFile = path.join(this.config.workdirectory, 'kiosk-allowed-apps.txt');
+                const firewallRulesScript = path.join(this.config.workdirectory, 'firewall-rules.ps1');
+                return initiateWindowsKioskSetup(process.execPath, extraAppsFile, firewallRulesScript);
+            }
             const source = process.env.APPIMAGE || process.execPath;
             const script = app.isPackaged
                 ? path.join(process.resourcesPath, 'linux', 'install-cage-kiosk.sh')
@@ -239,10 +348,67 @@ class IpcHandler {
             }
         });
 
+        ipcMain.handle('qemu-check-available', async (_event, opts = {}) => {
+            try {
+                return await checkQemuAvailability(opts);
+            } catch (e) {
+                log.error('ipchandler @ qemu-check-available', e);
+                const install = getQemuInstallInfo();
+                return {
+                    ok: false,
+                    missing: ['qemu-system-x86_64', 'qemu-img'],
+                    downloadUrl: install.downloadUrl,
+                    installHint: install.installHint,
+                };
+            }
+        });
+
+        ipcMain.handle('qemu-open-install-page', async () => {
+            try {
+                const { downloadUrl } = getQemuInstallInfo();
+                await shell.openExternal(downloadUrl);
+                return { ok: true };
+            } catch (e) {
+                log.error('ipchandler @ qemu-open-install-page', e);
+                return { ok: false, error: String(e?.message || e) };
+            }
+        });
+
+        ipcMain.handle('qemu-check-hypervisor-platform', async () => {
+            try {
+                return await getWindowsHypervisorPlatformState();
+            } catch (e) {
+                log.error('ipchandler @ qemu-check-hypervisor-platform', e);
+                return { supported: false, enabled: false, state: 'error' };
+            }
+        });
+
+        ipcMain.handle('qemu-request-enable-hypervisor-platform', async () => {
+            try {
+                return requestEnableWindowsHypervisorPlatform();
+            } catch (e) {
+                log.error('ipchandler @ qemu-request-enable-hypervisor-platform', e);
+                return { ok: false, error: String(e?.message || e) };
+            }
+        });
+
         ipcMain.handle('qemu-start-headless', async (_event, payload = {}) => {
             try {
+                const avail = await checkQemuAvailability();
+                if (!avail.ok) {
+                    log.warn('ipchandler @ qemu-start-headless: QEMU not available', avail.missing);
+                    return { ok: false, qemuMissing: true, missing: avail.missing };
+                }
                 const { qcow2Name, vncPort, overlayName, blockInternet, expectedSha256, expectedSizeBytes, forceFreshOverlay } = payload || {};
-                log.info(`ipchandler @ qemu-start-headless: start requested (disk=${qcow2Name}, port=${vncPort}, blockInternet=${!!blockInternet}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
+                const effectiveSection = this.multicastClient?.clientinfo?.lockedSection
+                    || this.multicastClient?.serverstatus?.lockedSection
+                    || this.multicastClient?.serverstatus?.activeSection
+                    || 1;
+                const examSection = this.multicastClient?.serverstatus?.examSections?.[effectiveSection];
+                const { display } = pickLocalVmGroupConfig(examSection, this.multicastClient?.clientinfo?.name);
+                const displayWidth = Number(payload?.displayWidth) > 0 ? Number(payload.displayWidth) : display.width;
+                const displayHeight = Number(payload?.displayHeight) > 0 ? Number(payload.displayHeight) : display.height;
+                log.info(`ipchandler @ qemu-start-headless: start requested (disk=${qcow2Name}, port=${vncPort}, display=${displayWidth}x${displayHeight}, blockInternet=${!!blockInternet}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
                 const vncDisplay = Number(vncPort) === 5901 ? ':1' : ':1';
                 if (this.multicastClient?.clientinfo) {
                     this.multicastClient.clientinfo.localVMHost = null;
@@ -267,6 +433,8 @@ class IpcHandler {
                     overlayName,
                     blockInternet: !!blockInternet,
                     forceFreshOverlay: !!forceFreshOverlay,
+                    displayWidth,
+                    displayHeight,
                 });
                 if (this.multicastClient?.clientinfo) {
                     this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
@@ -305,22 +473,39 @@ class IpcHandler {
             }
         });
 
-        ipcMain.handle('qemu-pick-import-disk', async () => {
+        ipcMain.handle('qemu-pick-disk-file', async () => {
             try {
-                log.info('ipchandler @ qemu-pick-import-disk: selecting qcow2 via filepicker');
                 const result = await dialog.showOpenDialog(this.WindowHandler.mainwindow, {
                     properties: ['openFile'],
                     filters: [{ name: 'QEMU Disk', extensions: ['qcow2'] }],
                 });
-                if (result.canceled || !result.filePaths || !result.filePaths[0]) {
-                    log.info('ipchandler @ qemu-pick-import-disk: cancelled');
+                if (result.canceled || !result.filePaths?.[0]) {
                     return { ok: false, cancelled: true };
                 }
-                log.info(`ipchandler @ qemu-pick-import-disk: selected ${result.filePaths[0]}`);
-                const importRes = await qemuService.importDisk({ workdirectory: this.config.workdirectory, sourcePath: result.filePaths[0] });
+                return { ok: true, sourcePath: result.filePaths[0] };
+            } catch (err) {
+                log.error('ipchandler @ qemu-pick-disk-file', err);
+                return { ok: false, error: String(err?.message || err) };
+            }
+        });
+
+        ipcMain.handle('qemu-import-disk', async (_event, payload = {}) => {
+            try {
+                const sourcePath = payload?.sourcePath;
+                if (!sourcePath) {
+                    return { ok: false, error: 'invalid sourcePath' };
+                }
+                const sendProgress = (p) => {
+                    try { this.WindowHandler?.mainwindow?.webContents?.send?.('qemu-download-progress', p); } catch (e) {}
+                };
+                const importRes = await qemuService.importDisk({
+                    workdirectory: this.config.workdirectory,
+                    sourcePath,
+                    onProgress: sendProgress,
+                });
                 if (importRes?.ok && this.multicastClient?.serverstatus?.exammode) {
                     if (this.CommunicationHandler.localVmStartState === 'starting') {
-                        log.info('ipchandler @ qemu-pick-import-disk: localvm start already in progress, skip startExam');
+                        log.info('ipchandler @ qemu-import-disk: localvm start already in progress, skip startExam');
                     } else {
                         if (this.CommunicationHandler.localVmStartState === 'blocked') {
                             this.CommunicationHandler.localVmStartState = 'idle';
@@ -330,7 +515,27 @@ class IpcHandler {
                 }
                 return importRes;
             } catch (err) {
-                log.error('ipchandler @ qemu-pick-import-disk', err);
+                log.error('ipchandler @ qemu-import-disk', err);
+                return { ok: false, error: String(err?.message || err) };
+            }
+        });
+
+        ipcMain.handle('localvm-retry-start', async () => {
+            try {
+                const serverstatus = this.multicastClient?.serverstatus;
+                if (!serverstatus?.exammode) {
+                    return { ok: false, error: 'exam not active' };
+                }
+                if (this.CommunicationHandler.localVmStartState === 'starting') {
+                    return { ok: false, error: 'start already in progress' };
+                }
+                this.CommunicationHandler.localVmStartState = 'idle';
+                this.multicastClient.clientinfo.localVMState = null;
+                this.multicastClient.clientinfo.localVMHost = null;
+                await this.CommunicationHandler.startExam(serverstatus);
+                return { ok: true };
+            } catch (err) {
+                log.error('ipchandler @ localvm-retry-start', err);
                 return { ok: false, error: String(err?.message || err) };
             }
         });
@@ -461,17 +666,12 @@ class IpcHandler {
 
         // IPC handler for mode-specific webview blocking - supports eduvidual, forms, rdp modes
         // For website mode, prefer using start-blocking-for-webview with webFilter.js instead
-        ipcMain.handle('start-blocking-for-website-webview', (event, {
-            guestId,
-            mode,
-            allowedDomain,
-            baseUrl,
-            blockSubdomains,
-            blockSubfolders,
-            moodleTestId,
-            moodleDomain,
-            formsUrl
-        }) => {
+        ipcMain.handle('detach-eduvidual-moodle-proof', (event, { guestId }) => {
+            detachEduvidualMoodleProofHeaders(guestId);
+            return true;
+        });
+
+        ipcMain.handle('start-blocking-for-website-webview', (event, { guestId, mode, allowedDomain, baseUrl, blockSubdomains, blockSubfolders, moodleTestId, moodleDomain, formsUrl, exammode }) => {
             const guest = webContents.fromId(Number(guestId));
             if (!guest || guest.isDestroyed?.()) return false;
 
@@ -558,6 +758,10 @@ class IpcHandler {
                 }
             });
 
+            if (mode === 'eduvidual') {
+                attachEduvidualMoodleProofHeaders(guest, { moodleDomain, moodleTestId, exammode });
+            }
+
             return true;
         });
 
@@ -576,7 +780,8 @@ class IpcHandler {
          * Reload the browser view
          */
         ipcMain.handle('reload-browser-view', (event, url) => {
-            const browserView = this.WindowHandler.examwindow.getBrowserView(0);
+            const browserView = this.WindowHandler.getMs365BrowserView();
+            if (!browserView) return;
             browserView.webContents.loadURL(url);
         });
 
@@ -608,16 +813,23 @@ class IpcHandler {
         })
 
         /**
-         * Check if LanguageTool server responds on configured port
+         * Check if LanguageTool server responds on configured port (optional host/port from renderer toggle)
          */
-        ipcMain.handle('isLanguageToolRunning', async () => {
-            const port = languageToolServer.port || 8088;
-            const hosts = ['127.0.0.1', '::1', 'localhost'];
-            // Run all checks in parallel for better performance, use longer timeout for server startup detection
-            const results = await Promise.all(hosts.map(host => checkPortOpen(port, host, 2500)));
-            // Return first successful result, or last result if none succeeded
-            const successResult = results.find(result => result.running);
-            return successResult || results[results.length - 1];
+        ipcMain.handle('isLanguageToolRunning', async (_event, opts = {}) => {
+            const port = parseInt(String(opts.port ?? languageToolServer.port ?? 8088), 10) || 8088;
+            const hostRaw = opts.host ? String(opts.host).trim() : '';
+            if (!hostRaw) {
+                const hosts = ['127.0.0.1', '::1', 'localhost'];
+                const results = await Promise.all(hosts.map(host => checkPortOpen(port, host, 2500)));
+                const successResult = results.find(result => result.running);
+                return successResult || results[results.length - 1];
+            }
+            let hostOnly = hostRaw.replace(/^https?:\/\//i, '').split('/')[0];
+            const colonIdx = hostOnly.lastIndexOf(':');
+            if (colonIdx > 0 && /^\d+$/.test(hostOnly.slice(colonIdx + 1))) {
+                hostOnly = hostOnly.slice(0, colonIdx);
+            }
+            return checkPortOpen(port, hostOnly, 2500);
         })
 
         /**
@@ -658,34 +870,55 @@ class IpcHandler {
                 moodleDomain: '',
 
                 screenshotinterval: 0,
-                msOfficeFile: false,
                 screenslocked: false,
                 pin: '0000',
-
-                unlockonexit: false,
-                fontfamily: 'sans-serif',
-                moodleTestId: '',
-                languagetool: false,
                 password: args.password,
-
-                useExamSections: false, //if false exam section 1 is used and no tabs are displayed
+                useExamSections: false,
                 activeSection: 1,
                 lockedSection: 1,
                 examSections: {
                     1: {
                         examtype: args.exammode,
-                        cmargin: {side: 'right', size: 3},
-                        linespacing: '2',
-                        audioRepeat: 3,
+                        sectionname: 'Local',
+                        groups: false,
                         groupA: {
+                            users: [],
+                            examInstructionFiles: [],
+                            allowedUrls: [],
                             examConfig: {
                                 editor: {
+                                    ...DEFAULT_EDITOR_EXAM_CONFIG,
                                     languagetool: args.languagetool || false,
                                     spellchecklang: args.spellchecklang || 'de-DE',
                                     suggestions: args.suggestions || false,
-                                }
-                            }
-                        }
+                                    audioRepeat: '3',
+                                },
+                                activeSheets: {},
+                                eduvidual: {},
+                                forms: {},
+                                website: {},
+                                math: {},
+                                microsoft365: {},
+                                rdp: {},
+                                localvm: {},
+                            },
+                        },
+                        groupB: {
+                            users: [],
+                            examInstructionFiles: [],
+                            allowedUrls: [],
+                            examConfig: {
+                                editor: { ...DEFAULT_EDITOR_EXAM_CONFIG, audioRepeat: '3' },
+                                activeSheets: {},
+                                eduvidual: {},
+                                forms: {},
+                                website: {},
+                                math: {},
+                                microsoft365: {},
+                                rdp: {},
+                                localvm: {},
+                            },
+                        },
                     }
                 }
             }
@@ -731,9 +964,13 @@ class IpcHandler {
         /**
          * Set FOCUS state to false (mouse left exam window)
          */ 
-        ipcMain.handle('focuslost', (event, ctrlalt=false) => { 
-            let answer = false 
+        ipcMain.handle('focuslost', (event, ctrlalt=false) => {
+            let answer = false
             if (platformDispatcher.runningInCage) {
+                return { sender: 'client', focus: true };
+            }
+            // macOS AAC assessment mode owns the lockdown; ignore mouseleave-driven focus loss
+            if (isAssessmentSessionActive()) {
                 return { sender: 'client', focus: true };
             }
             if (this.config.development || !this.multicastClient.clientinfo.exammode) {
@@ -755,16 +992,16 @@ class IpcHandler {
             else {
                 log.warn(`ipchandler @ focuslost: focuslost event was triggered - locking down`)
                 this.WindowHandler.examwindow.moveTop();
-                this.WindowHandler.examwindow.setKiosk(true);
-                this.WindowHandler.examwindow.show();
+                platformDispatcher.applyElectronKioskMode(this.WindowHandler.examwindow);
+                this.WindowHandler.examwindow.show();  
                 this.WindowHandler.examwindow.focus();    // we keep focus on the window.. no matter what
-
+    
                 this.multicastClient.clientinfo.focus = false; // block everything and inform teacher  (probably an overkill on mouseleave - needs testing)
-                answer = {sender: "client", focus: false}
+                answer = { sender: "client", focus: false }
             }
-
+           
             return answer
-        })
+        } )
 
         /**
          * Force FOCUS state to false (security incident)
@@ -777,7 +1014,7 @@ class IpcHandler {
             const examWin = this.WindowHandler?.examwindow;
             if (examWin && !this.config.development) {
                 examWin.moveTop();
-                examWin.setKiosk(true);
+                platformDispatcher.applyElectronKioskMode(examWin);
                 examWin.show();
                 examWin.focus();
             }
@@ -806,7 +1043,7 @@ class IpcHandler {
 
             if (this.WindowHandler?.examwindow && !this.config.development) {
                 this.WindowHandler.examwindow.moveTop();
-                this.WindowHandler.examwindow.setKiosk(true);
+                platformDispatcher.applyElectronKioskMode(this.WindowHandler.examwindow);
                 this.WindowHandler.examwindow.show();
                 this.WindowHandler.examwindow.focus();
             }
@@ -1028,10 +1265,25 @@ class IpcHandler {
         ipcMain.handle('getPDFbase64', async (event, args) => {
             const saveReason = typeof args.reason === 'string' ? args.reason : ''
             logSaveInfoUnlessAuto(saveReason, "ipchandler @ getPDFbase64: getting base64 encoded pdf")
-            this.multicastClient.clientinfo.submissionnumber = args.submissionnumber + 1 // clientinfo keeps track of submissions for automated submissionnumbers at section change - but this obviously happens after manual submit
-            let result = await this.CommunicationHandler.getBase64PDF(args.submissionnumber, args.sectionname, args.printBackground, saveReason)   // why the hell is this function located in communicationhandler.js and not in ipchandler.js ? FIXME !
+            this.multicastClient.clientinfo.submissionnumber = args.submissionnumber+1 // clientinfo keeps track of submissions for automated submissionnumbers at section change - but this obviously happens after manual submit
+            // pageMode='fullpage' => activesheets: A4 ohne Margins/Header/Footer + Header als HTML-Overlay
+            let result = await this.CommunicationHandler.getBase64PDF(args.submissionnumber, args.sectionname, args.printBackground, saveReason, args.pageMode)   // why the hell is this function located in communicationhandler.js and not in ipchandler.js ? FIXME !
             return result
         })
+
+        ipcMain.handle('setBipSiteInfo', (_event, info = {}) => {
+            return this.CommunicationHandler.setBipSiteInfo(info)
+        })
+
+        ipcMain.handle('clearBipSiteInfo', () => {
+            return this.CommunicationHandler.clearBipSiteInfo()
+        })
+
+        ipcMain.handle('prewarmSubmissionSigningP12', () => {
+            return this.CommunicationHandler.prewarmSubmissionSigningP12()
+        })
+
+
 
 
         /**
@@ -1216,6 +1468,7 @@ class IpcHandler {
          */
         ipcMain.handle('getinfoasync', async (event) => {
             syncClientDisplayInfo(this.multicastClient.clientinfo);
+            syncAllowedKioskAppsClientinfo(this.multicastClient.clientinfo);
             let serverstatus = false
             // serverstatus object is only passed to the exam window at the start of the exam for base settings
             // all further updates via the serverstatus object are read in the communication handler and applied to the clientinfo object as needed
@@ -1271,51 +1524,31 @@ class IpcHandler {
          * because of microsoft 365 we need to work with "BrowserView"
          * in order to be able to dislay fullscreen information from the Exam header we temporarily collapse the BrowserView for Office
          * and restore it afterwards - not perfect but looks ok
-         */
-        ipcMain.on('collapse-browserview', (event) => {
-            const mainWindow = this.WindowHandler.examwindow
-            if (!mainWindow) {
-                return
-            }
-            const contentView = mainWindow.getBrowserView(0); // assuming it's the 1st added view
-            contentView.setBounds({x: 0, y: 0, width: 0, height: 0});
-
+         */ 
+        ipcMain.on('collapse-browserview', () => {
+            this.WindowHandler.collapseMs365BrowserView()
         });
-        ipcMain.on('restore-browserview', (event) => {
-            const mainWindow = this.WindowHandler.examwindow
-            if (!mainWindow) {
-                return
-            }
-            const menuHeight = mainWindow.menuHeight;
-            const newBounds = mainWindow.getBounds(); // Get the current bounds of the mainWindow
-            const contentView = mainWindow.getBrowserView(0); // assuming it's the 1st added view
-            // Set the new bounds of the contentView
-            contentView.setBounds({
-                x: 0,
-                y: menuHeight,
-                width: newBounds.width, // full width of the mainWindow
-                height: newBounds.height - menuHeight // remaining height after the menu
-            });
+        ipcMain.on('restore-browserview', () => {
+            this.WindowHandler.restoreMs365BrowserView()
         });
 
         /**
          * Update menu height dynamically when header content changes
          */
         ipcMain.on('update-menu-height', (event, height) => {
-            const mainWindow = this.WindowHandler.examwindow;
+            const mainWindow = this.WindowHandler.examwindow || this.WindowHandler.mainwindow;
             if (mainWindow && height > 0) {
-                // Update the stored menu height
                 mainWindow.menuHeight = height;
 
                 // Reposition the browser view with new height
                 const newBounds = mainWindow.getBounds();
-                const contentView = mainWindow.getBrowserView(0);
+                const contentView = this.WindowHandler.getMs365BrowserView(mainWindow);
                 if (contentView) {
                     contentView.setBounds({
                         x: 0,
                         y: height,
                         width: newBounds.width,
-                        height: newBounds.height - height
+                        height: Math.max(0, newBounds.height - height),
                     });
                 }
             }

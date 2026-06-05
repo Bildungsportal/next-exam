@@ -9,14 +9,17 @@ export async function getLinuxKioskInfo(signalBridge) {
         kioskInfoCache = {
             cageInstalled: false,
             runningInCage: false,
+            isWindowsKioskUser: false,
+            assignedAccessActive: false,
             cageKioskAppImageInstalled: false,
             cageKioskDesktopInstalled: false,
             needsCageKioskSetup: false,
             displayServer: 'n/a',
+            platform: 'n/a',
         };
         return kioskInfoCache;
     }
-    kioskInfoCache = await signalBridge.invoke('get-linux-kiosk-info');
+    kioskInfoCache = await signalBridge.invoke('get-platform-info');
     return kioskInfoCache;
 }
 
@@ -37,6 +40,15 @@ export async function attachExamMouseleaveGuard(signalBridge, config, handler) {
     if (config?.development) return;
     const kiosk = await getLinuxKioskInfo(signalBridge);
     if (shouldUseEdgeFocusGuards(kiosk, config?.development)) {
+        document.body.addEventListener('mouseleave', handler);
+    }
+}
+
+/** Registers body mouseleave for sendFocuslost unless Cage or development. */
+export async function attachExamMouseleaveGuardBoolean(signalBridge, development, handler) {
+    if (development) return;
+    const kiosk = await getLinuxKioskInfo(signalBridge);
+    if (shouldUseEdgeFocusGuards(kiosk, development)) {
         document.body.addEventListener('mouseleave', handler);
     }
 }

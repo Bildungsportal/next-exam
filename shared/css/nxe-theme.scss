@@ -1,0 +1,182 @@
+// Next-Exam shared theme — import after bootstrap + sweetalert2 (Bootstrap variables in scope).
+
+.bg-teal       { background-color: $teal-600; }
+.bg-teal:hover { background-color: $teal-700; }
+
+.bg-cyan       { background-color: $cyan-600 !important; }
+.bg-cyan-transparent { background-color: rgba($cyan-600, 0.4) !important; }
+.btn-cyan       { background-color: $cyan-600 !important; border-color: $cyan-600 !important; color: $white !important; }
+.btn-cyan:hover { background-color: $cyan-500 !important; border-color: $cyan-500 !important; color: $white !important; }
+
+.btn-teal       { background-color: $teal-600; }
+.btn-teal:hover { background-color: $teal-700; }
+
+.btn-outline-teal       { border-color: $teal-600; color: $teal-600; }
+.btn-outline-teal:hover { background-color: $teal-500; border-color: $teal-500; color: $gray-900; }
+
+.btn-outline-cyan       { border-color: $cyan-600; color: $cyan-600; }
+.btn-outline-cyan:hover { background-color: $cyan-500; border-color: $cyan-500; color: $gray-900; }
+
+.bs-success        { border-color: $green-400 !important; }
+.bs-success:hover  { border-color: $green-300 !important; }
+
+.bg-gray       { background-color: $gray-600 !important; }
+.bg-gray-dark  { background-color: $gray-800 !important; }
+
+.btn-gray       { background-color: $gray-600; }
+.btn-gray:hover { background-color: $gray-500; }
+.btn-gray-dark       { background-color: $gray-800; }
+.btn-gray-dark:hover { background-color: $gray-700; }
+
+.btn-outline-gray       { border-color: $gray-600; color: $gray-600; }
+.btn-outline-gray:hover { background-color: $gray-500; border-color: $gray-500; color: $gray-900; }
+
+.btn-outline-gray-dark       { border-color: $gray-800; color: $gray-800; }
+.btn-outline-gray-dark:hover { background-color: $gray-700; border-color: $gray-700; color: $gray-900; }
+
+.btn-primary        { background-color: $blue-400; border-color: $blue-400; }
+.btn-primary:hover  { background-color: $blue-300; border-color: $blue-300; }
+
+.btn-danger       { background-color: $red-600; border-color: $red-600; }
+.btn-danger:hover { background-color: $red-500; border-color: $red-500; }
+
+.btn-warning        { background-color: $yellow-400; }
+.btn-warning:hover  { background-color: $yellow-300; }
+
+.btn-success        { background-color: $green-400; border-color: $green-400; }
+.btn-success:hover  { background-color: $green-300; border-color: $green-300; }
+
+.bs-info        { border-color: $blue-400 !important; }
+.bs-info:hover  { border-color: $blue-300 !important; }
+
+.cyanback-500 { background-color: $cyan-500; }
+.grayback { background-color: $gray-200; }
+
+.teal { color: $teal-600; }
+
+.form-check-input:checked {
+    background-color: $blue-600;
+    border-color: $blue-600;
+}
+
+.invert { filter: invert(100%); }
+.snowwhite { filter: invert(100%) brightness(200%); }
+
+// SweetAlert2 — layout + Next-Exam cyan confirm / gray cancel
+.swal2-container {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 99999 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.swal2-popup {
+    position: relative !important;
+    z-index: 100000 !important;
+    text-align: left !important;
+}
+
+.swal2-html-container {
+    text-align: left !important;
+    margin-left: 2em !important;
+    overflow: visible !important;
+}
+
+.swal2-title {
+    text-align: left !important;
+    margin-left: 0.2em !important;
+}
+
+.swal2-icon {
+    margin-left: 2.5em !important;
+    margin-right: auto !important;
+}
+
+.swal2-actions {
+    width: 80% !important;
+    margin-left: 1.9em !important;
+    margin-right: 1.9em !important;
+    justify-content: flex-start !important;
+}
+
+.swal2-actions .swal2-loader {
+    margin-left: 10px !important;
+    margin-right: auto !important;
+}
+
+.swal2-actions .swal2-confirm,
+.swal2-actions .swal2-deny,
+.swal2-actions .swal2-cancel {
+    min-width: 140px !important;
+}
+
+.swal2-styled.swal2-confirm {
+    background-color: $cyan-600 !important;
+    border-color: $cyan-600 !important;
+    color: $white !important;
+    box-shadow: none !important;
+}
+
+.swal2-styled.swal2-confirm:hover,
+.swal2-styled.swal2-confirm:focus {
+    background-color: $cyan-500 !important;
+    border-color: $cyan-500 !important;
+    color: $white !important;
+}
+
+.swal2-styled.swal2-cancel {
+    background-color: $teal-600 !important;
+    border-color: $teal-600 !important;
+    color: $white !important;
+    box-shadow: none !important;
+}
+
+.swal2-styled.swal2-cancel:hover,
+.swal2-styled.swal2-cancel:focus {
+    background-color: $teal-700 !important;
+    border-color: $teal-700 !important;
+    color: $white !important;
+}
+
+.swal2-styled.swal2-cancel.nx-swal-open-default,
+.swal2-styled.swal2-cancel.nx-swal-open-default:focus {
+    box-shadow: 0 0 0 3px rgba($teal-600, 0.45) !important;
+}
+
+.swal2-styled.swal2-deny {
+    background-color: $cyan-600 !important;
+    border-color: $cyan-600 !important;
+    color: $white !important;
+    box-shadow: none !important;
+}
+
+.swal2-styled.swal2-deny:hover,
+.swal2-styled.swal2-deny:focus {
+    background-color: $cyan-500 !important;
+    border-color: $cyan-500 !important;
+    color: $white !important;
+}
+
+.swal2-html-container .swal2-input,
+.swal2-html-container .swal2-textarea,
+.swal2-html-container .swal2-select,
+.swal2-html-container .swal2-file {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+.nx-swal-form {
+    max-width: 26rem;
+    overflow: visible !important;
+}
+
+.nx-swal-input {
+    width: 100% !important;
+    max-width: 26rem !important;
+    margin-top: 4px;
+}

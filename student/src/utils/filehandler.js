@@ -3,9 +3,19 @@ import DOMPurify from 'dompurify';
 import mammoth from 'mammoth';
 import {SignalBridge} from './signalBridge.js';
 import {odtToTiptapHtml} from './odtToTiptapHtml.js';
+import { resolveEditorExamConfig, resolveGroupKey } from 'next-exam-shared/editorExamConfig.js';
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
+
+/** Read audioRepeat from group.examConfig.editor for the active locked section. */
+function editorAudioRepeatLimit(vm) {
+    const sectionIndex = vm.lockedSection ?? vm.serverstatus?.activeSection ?? 1;
+    const section = vm.serverstatus?.examSections?.[sectionIndex];
+    if (!section) return 0;
+    const groupKey = resolveGroupKey(section, vm.clientinfo?.group);
+    return Number(resolveEditorExamConfig(section, groupKey).audioRepeat) || 0;
+}
 
 /** Resets PdfviewPane toolbar visibility when closing preview (Vue-driven, not DOM hacks). */
 export function resetPdfPreviewToolbar(vm) {
@@ -386,11 +396,12 @@ export async function playAudio(file, base64=false) {
 
     if (!audioFile){
         // create audioFile object if it doesn't exist (for both base64 and non-base64 files)
-        audioFile = {name: filename, playbacks: this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat}
+        audioFile = {name: filename, playbacks: editorAudioRepeatLimit(this)}
         this.audiofiles.push(audioFile)
     }
 
-    if (this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat > 0){
+    const audioRepeatLimit = editorAudioRepeatLimit(this);
+    if (audioRepeatLimit > 0){
         this.$swal.fire({
             title: audioFile.name,
             text:  this.$t("editor.reallyplay"),
@@ -409,7 +420,10 @@ export async function playAudio(file, base64=false) {
                 <span class="col-3" style="">${this.$t("editor.audionotallowed")}</span> 
             `,
             didRender: () => {
-                document.getElementById('soundtest').onclick = () => soundtest(this);
+                const ap = document.getElementById('audioPlayer');
+                const btn = document.getElementById('soundtest');
+                btn.disabled = ap && !ap.paused && !ap.ended;
+                btn.onclick = () => { if (ap && !ap.paused && !ap.ended) return; soundtest(this); };
             }
         }).then(async (result) => {
             if (result.isConfirmed) {
@@ -431,7 +445,7 @@ export async function playAudio(file, base64=false) {
             } 
         }); 
     }
-    if (this.serverstatus.examSections[this.serverstatus.activeSection].audioRepeat == 0){
+    if (editorAudioRepeatLimit(this) === 0){
         document.querySelector("#aplayer").style.display = 'block';
         try {
             
@@ -447,6 +461,8 @@ export async function playAudio(file, base64=false) {
 }
 
 async function soundtest(context){
+    const ap = document.getElementById('audioPlayer');
+    if (ap && !ap.paused && !ap.ended) return;
     try {
         const base64Data = await signalBridge.invoke('getAudioFile', 'attention.wav', true);
         if (base64Data) {

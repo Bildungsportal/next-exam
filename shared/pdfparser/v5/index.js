@@ -138,7 +138,9 @@ const initialViewport = page.getViewport({ scale: 1.5 });
             console.log(`pdfparser @ processPage: Page ${pageNum} - Content detected as rotated, applying ${rotationCorrection}° correction (original: ${initialViewport.width.toFixed(1)}x${initialViewport.height.toFixed(1)}, corrected: ${viewport.width.toFixed(1)}x${viewport.height.toFixed(1)})`);
         }
 
-        const imgSrc = await this.renderPageToCanvas(page, viewport);
+        // PNG hochaufgeloest rendern (Print/Display schaerfer); Detector+Output bleiben in 1.5x-Raum
+        const renderViewport = page.getViewport({ scale: 3, rotation: rotationCorrection || 0 });
+        const imgSrc = await this.renderPageToCanvas(page, renderViewport);
 
         // Two-pass: extract box geometry first so cloze detection can use it as context
         const [formFields, rawBoxFields] = await Promise.all([
@@ -232,6 +234,9 @@ const initialViewport = page.getViewport({ scale: 1.5 });
         }
 
         const totalFields = formFieldsFiltered.length + filteredClozeFieldsOut.length + filteredBoxFieldsOut.length;
+        if (this.enableLogging) {
+            console.log(`pdfparser p${pageNum}: ${totalFields} active fields`);
+        }
         const warnings = [];
         const hasWarning = isVectorizedPage || totalFields < this.SCAN_MIN_BOXES;
         if (isVectorizedPage) {

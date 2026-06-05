@@ -3,20 +3,6 @@
 
         <!-- HEADER START -->
         <exam-header
-            :serverstatus="serverstatus"
-            :clientinfo="clientinfo"
-            :online="online"
-            :clientname="clientname"
-            :exammode="exammode"
-            :servername="servername"
-            :pincode="pincode"
-            :battery="battery"
-            :currenttime="currenttime"
-            :timesinceentry="timesinceentry"
-            :componentName="componentName"
-            :localLockdown="localLockdown"
-            :wlanInfo="wlanInfo"
-            :hostip="hostip"
             @reconnect="reconnect"
             @gracefullyExit="gracefullyExit"
         ></exam-header>
@@ -115,11 +101,11 @@
         <!-- focuswarning end  -->
     </div>
 
-    <!-- 
-    Microsoft 365 embeds it's editors into an iframe and activates strict content security. therfore it is not possible to inject 
+    <!--
+    Microsoft 365 embeds it's editors into an iframe and activates strict content security. therfore it is not possible to inject
     Javascript into the frame inside a frame like <iframe></iframe> <embed> or chromium <webview></webview>
     The only way to inject JS code is via the backend but only if we open the Microsoft365 page directly in the electron window (no sub-frames whatsoever)
-    That's why we use electrons "BrowserView" feature to load 2 pages in 1 window. we present this page as "topmenu" and load the ms editors as "content" below. 
+    That's why we use electrons "BrowserView" feature to load 2 pages in 1 window. we present this page as "topmenu" and load the ms editors as "content" below.
     This is actually the safest way to do this because of "ContextIsolation" no scripts from the loaded pages can interfere with the rest of the app.
     Unfortunately this means that we need to collapse the browserview when we want to open a file or a url from the next-exam header.
     -->
@@ -128,57 +114,71 @@
 </template>
 
 <script>
-import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
-import {SchedulerService} from '../utils/schedulerservice.js'
 import {gracefullyExit, reconnect, showUrl} from '../utils/commonMethods.js'
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 import WebviewPane from '../components/WebviewPane.vue'
 import {getExamMaterials, loadImage, loadPDF, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import {isElectronWindow} from "../types/platform.ts";
 import {SignalBridge} from '../utils/signalBridge.js'
-import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
+import { attachExamMouseleaveGuardBoolean, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
+import {
+    applyClientinfoFromFetch,
+    applyServerstatusFromFetch,
+    resolveLockedSection,
+} from '../utils/examFetchInfoSync.js'
+import {ref} from "vue";
+import {useConfigStore} from "../stores/configStore.ts";
+import {useInfoStore} from "../stores/infoStore.ts";
+import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
 
 export default {
+    mixins: [autoCleanupMixin],
+
+    setup() {
+        const configStore = useConfigStore();
+        let development = ref(configStore.development);
+        let serverApiPort = ref(configStore.serverApiPort);
+        let electron = ref(configStore.electron);
+        let hostip = ref(configStore.hostip);
+
+        const infoStore = useInfoStore();
+        infoStore.online = true;
+        infoStore.componentName = "Microsoft365";
+        infoStore.examType = "microsoft365";
+        let examtype = ref(infoStore.examtype);
+        let servername = ref(infoStore.servername);
+        let servertoken = ref(infoStore.servertoken);
+        let serverip = ref(infoStore.serverip);
+        let token = ref(infoStore.token);
+        let clientname = ref(infoStore.clientname);
+        let serverstatus = ref(infoStore.serverstatus);
+        let clientApiPort = ref(infoStore.clientApiPort);
+        let pincode = ref(infoStore.pincode);
+        let localLockdown = ref(infoStore.localLockdown);
+        let online = ref(infoStore.online);
+        let battery = ref(infoStore.battery);
+        let wlanInfo = ref(infoStore.wlanInfo);
+        let entrytime = ref(infoStore.entryTime);
+
+        return { development, serverApiPort, electron, hostip,
+            examtype, servername, servertoken, serverip, token, clientname, serverstatus, clientApiPort,
+            pincode, localLockdown, online, battery, wlanInfo, entrytime };
+    },
+
     data() {
         return {
-            componentName: 'Microsoft365',
-            online: true,
             focus: true,
             exammode: false,
             currentFile: null,
-            fetchinfointerval: null,
-            loadfilelistinterval: null,
-            clockinterval: null,
-            servername: this.$route.params.servername,
-            servertoken: this.$route.params.servertoken,
-            serverip: this.$route.params.serverip,
-            token: this.$route.params.token,
-            clientname: this.$route.params.clientname,
-            serverApiPort: this.$route.params.serverApiPort,
-            clientApiPort: this.$route.params.clientApiPort,
-            electron: this.$route.params.electron,
-            pincode: this.$route.params.pincode,
-            serverstatus: this.$route.params.serverstatus,
-            localLockdown: this.$route.params.localLockdown,
-            config: this.$route.params.config,
             lockedSection: null,
             clientinfo: null,
-            entrytime: 0,
-            timesinceentry: 0,
-            currenttime: 0,
-            now: new Date().getTime(),
             localfiles: null,
-            battery: null,
             warning: false,
             currentpreview: null,
-            wlanInfo: null,
-            hostip: null,
-            examtype: this.$route.params.examtype,
-            localLockdown: this.$route.params.localLockdown,
             examMaterials: [],
             urlForWebview: null,
             allowedUrls: [],
@@ -187,6 +187,7 @@ export default {
             msOfficeShare: null,
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
             pdfPreviewState: null,
+            _onPreviewClick: null,
         }
     },
     components: {
@@ -198,36 +199,29 @@ export default {
         this.entrytime = new Date().getTime()
 
         this.$nextTick(async () => { // Code that will run only after the entire view has been rendered
+            this.autoSchedulerService(this.fetchInfo, 5000);
+            this.autoSchedulerService(this.loadFilelist, 10000);
 
-            // do not use setInterval() for intervals as it keeps all objects of the callbacks including fetch() responses in memory until the interval is stopped
-            this.fetchinfointerval = new SchedulerService(5000);
-            this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-            this.fetchinfointerval.start();
+            attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
 
-            this.clockinterval = new SchedulerService(1000);
-            this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-            this.clockinterval.start();
-
-            this.loadfilelistinterval = new SchedulerService(10000);
-            this.loadfilelistinterval.addEventListener('action', this.loadFilelist);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-            this.loadfilelistinterval.start();
-
-            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
+            signalBridge.on('getmaterials', () => {
+                console.log("microsoft365 @ getmaterials: get materials request received")
+                this.getExamMaterials()
+            });
 
             this.loadFilelist()
             this.getExamMaterials()
 
             if (isElectronWindow(window)) {
-                document.querySelector("#preview").addEventListener("click", function () {
+                this._onPreviewClick = function () {
                     this.style.display = 'none';
                     this.setAttribute("src", "about:blank");
                     URL.revokeObjectURL(this.currentpreview);
                     signalBridge.send('restore-browserview');
-                });
+                };
+                this.autoEventListener(document.querySelector("#preview"), "click", this._onPreviewClick);
 
-
-                // Listen for window resize events to update header height
-                window.addEventListener('resize', this.updateHeaderHeight);
+                this.autoEventListener(window, 'resize', this.updateHeaderHeight);
 
                 await this.sleep(1000)
                 // Update header height after initial render
@@ -298,10 +292,10 @@ export default {
         },
 
         async sendFocuslost() {
-            if (await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
+            if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             if (isElectronWindow(window)) {
                 let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
-                if (!this.config.development && !response.focus) {  //immediately block frontend
+                if (!this.development && !response.focus) {  //immediately block frontend
                     this.focus = false
                 }
             }
@@ -334,88 +328,47 @@ export default {
                 this.localfiles = filelist;
             }
         },
-        clock() {
-            this.now = new Date().getTime()
-            this.timesinceentry = new Date(this.now - this.entrytime).toISOString().substr(11, 8)
-            this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
-        },
         async fetchInfo() {
-            if (isElectronWindow(window)) {
-                let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+            if (!isElectronWindow(window)) return;
+            const getinfo = await signalBridge.invoke('getinfoasync');
+            const hadFocus = this.focus;
 
-                this.clientinfo = getinfo.clientinfo;
-                this.token = this.clientinfo.token
-                this.focus = this.clientinfo.focus
-                this.clientname = this.clientinfo.name
-                this.exammode = this.clientinfo.exammode
-                this.pincode = this.clientinfo.pin
-                this.msOfficeShare = this.clientinfo.msofficeshare;
+            applyClientinfoFromFetch(this, getinfo.clientinfo);
+            if (getinfo.serverstatus) {
+                applyServerstatusFromFetch(this, getinfo.serverstatus);
+            }
 
-                this.serverstatus = getinfo.serverstatus
+            const sectionIndex = resolveLockedSection(this.serverstatus, this.clientinfo);
+            if (sectionIndex !== this.lockedSection) this.lockedSection = sectionIndex;
 
-                // decide which locked section index is authoritative (client vs server)
-                const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
-                    ? this.clientinfo.lockedSection
-                    : this.serverstatus.lockedSection
+            const nextShare = this.clientinfo?.msofficeshare ?? null;
+            if (nextShare !== this.msOfficeShare) this.msOfficeShare = nextShare;
 
-                this.lockedSection = sectionIndex
+            if (hadFocus && !this.focus) {
+                this.warning = true;
+                this.entrytime = new Date().getTime();
+                signalBridge.send('collapse-browserview');
+            } else if (!hadFocus && this.focus && this.warning) {
+                this.warning = false;
+                signalBridge.send('restore-browserview');
+            }
 
-                if (!this.focus) {
-                    this.warning = true
-                    this.entrytime = new Date().getTime()
-                    signalBridge.send('collapse-browserview')
-                }
-                if (this.focus && this.warning) {
-                    this.warning = false
-                    signalBridge.send('restore-browserview')
-                }
+            this.battery = await navigator.getBattery().then(battery => battery)
+                .catch(error => { console.error('Error accessing the Battery API:', error); });
 
-                if (this.clientinfo && this.clientinfo.token) {
-                    this.online = true
-                } else {
-                    this.online = false
-                }
-
-                this.battery = await navigator.getBattery().then(battery => {
-                    return battery
-                })
-                    .catch(error => {
-                        console.error("Error accessing the Battery API:", error);
-                    });
-
-                this.internetCheckCounter++
-                if (this.internetCheckCounter % 5 === 0) {
-                    this.wlanInfo = await signalBridge.invoke('get-wlan-info')
-                    this.hostip = await signalBridge.invoke('checkhostip')
-                    this.internetCheckCounter = 0
-                }
+            this.internetCheckCounter++;
+            if (this.internetCheckCounter % 5 === 0) {
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info');
+                this.hostip = await signalBridge.invoke('checkhostip');
+                this.internetCheckCounter = 0;
             }
         },
 
     },
     beforeUnmount() {
-        this.loadfilelistinterval.removeEventListener('action', this.loadFilelist);
-        this.loadfilelistinterval.stop()
-
-        this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
-        this.fetchinfointerval.stop()
-
-        this.clockinterval.removeEventListener('action', this.clock);
-        this.clockinterval.stop()
-
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
-        // Remove resize event listener
-        window.removeEventListener('resize', this.updateHeaderHeight);
-
-        // Clean up preview click listener
-        const preview = document.querySelector("#preview");
-        if (preview) {
-            preview.removeEventListener("click", function () {
-                this.style.display = 'none';
-                this.setAttribute("src", "about:blank");
-            });
-        }
+        signalBridge.removeAllListeners('getmaterials')
     },
 }
 </script>

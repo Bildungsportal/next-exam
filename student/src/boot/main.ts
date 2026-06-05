@@ -1,4 +1,4 @@
-import { defineBoot } from '#q-app/wrappers'
+import { defineBoot } from "#q-app/wrappers";
 import i18n from "../locales/locales.js";
 import VueSweetalert2 from "vue-sweetalert2";
 import config from '../utils/config.js';
@@ -13,8 +13,8 @@ import { ipcRenderer as capacitorIpcRenderer } from "../plugins/ipc-renderer.js"
 // more info on params: https://v2.quasar.dev/quasar-cli-vite/boot-files
 export default defineBoot(async ( { app, router } ) => {
     const options = {
-        confirmButtonColor: '#198754',
-        cancelButtonColor: '#ff7674',
+        confirmButtonColor: '#0aa2c0',
+        cancelButtonColor: '#6c757d',
 
         // register the global hook here (as part of the default options)
         didOpen: (popup) => {
@@ -37,9 +37,9 @@ export default defineBoot(async ( { app, router } ) => {
     };
     app.config.globalProperties.$config = config;
 
-    app.use(i18n)
+    app.use(i18n);
 // Das Plugin wird mit den Optionen installiert, die nun den globalen didOpen Hook enthalten.
-    app.use(VueSweetalert2, options)
+    app.use(VueSweetalert2, options);
 
 // wait until router is ready before mounting to ensure hydration match
     router.isReady().then(() => {

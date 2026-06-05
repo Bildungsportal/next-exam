@@ -120,7 +120,7 @@ function lockSectionForAll(sectionIndex){
 function endExam(){
     
     if (this.serverstatus.examSections[this.serverstatus.activeSection].examtype !== 'microsoft365'){
-        this.getFiles('all');
+        this.getFiles('all', false, false, true);
     }
     
 
@@ -166,7 +166,7 @@ function endExam(){
  */
 async function stopserver(){
 
-    if (this.hostip){  this.getFiles('all') }      // fetch files from students before ending exam for everybody - this takes up to 8 seconds and may fail - so this is just a emergency backup and should be properly handled by the teacher
+    if (this.hostip){  this.getFiles('all', false, false, true) }      // fetch files from students before ending exam for everybody - this takes up to 8 seconds and may fail - so this is just a emergency backup and should be properly handled by the teacher
     let message = this.$t("dashboard.exitexam")
     if (!this.serverstatus.exammode) { message = this.$t("dashboard.exitexaminfo")}
 
@@ -315,7 +315,7 @@ async function kick(studenttoken, studentip){
         <br><br>
         
             <input class="form-check-input" style="margin-top: 0.1em;" type="checkbox" id="checkboxdel">
-            <label class="form-check-label" for="checkboxdel"> ${this.$t("dashboard.exitdelete")} </label>
+            <label class="form-check-label" for="checkboxdel"> ${this.$t("dashboard.exitdeletesingle")} </label>
            
         </div>
         `,
@@ -338,6 +338,7 @@ async function kick(studenttoken, studentip){
                 servername: this.servername,
                 studenttoken,
                 delfolder: delfolderonexit,
+                sendlog: true,
                 kick: true,
             })
                 .then((result) => { log.info('exammanagment @ kick:', result.message) })

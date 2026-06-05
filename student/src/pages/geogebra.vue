@@ -16,20 +16,6 @@
 
     <!-- HEADER START -->
     <exam-header
-    :serverstatus="serverstatus"
-      :clientinfo="clientinfo"
-      :online="online"
-      :clientname="clientname"
-      :exammode="exammode"
-      :servername="servername"
-      :pincode="pincode"
-      :battery="battery"
-      :currenttime="currenttime"
-      :timesinceentry="timesinceentry"
-      :componentName="componentName"
-      :localLockdown="localLockdown"
-      :wlanInfo="wlanInfo"
-      :hostip="hostip"
       @reconnect="reconnect"
       @gracefullyExit="gracefullyExit"
     ></exam-header>
@@ -39,12 +25,12 @@
 
     <!-- filelist start - show local files from workfolder (pdf and gbb only)-->
     <div id="toolbar" class="d-inline p-1">  
-        <button title="backup" @click="saveContent(null, 'manual'); " class="btn d-inline btn-success p-0 pe-2 ps-1 ms-1 mb-0 btn-sm"><img :src="document_save_img" class="white" width="20" height="20" /></button>
-        <button title="delete" @click="clearAll(); " class=" btn  d-inline btn-danger p-0 pe-2 ps-1 ms-2 mb-0 btn-sm"><img :src="edit_delete_img" class="white" width="20" height="20" /></button>
-        <button title="paste" @click="showClipboard(); " class="btn  d-inline btn-secondary p-0 pe-2 ps-1 ms-2 mb-0 btn-sm"><img :src="edit_paste_style_img" class="white" width="20" height="20" /></button>
+        <button title="backup" @click="saveContent(null, 'manual'); " class="btn d-inline btn-success p-0 pe-2 ps-1 ms-1 mb-0 btn-sm"><img src="/src/assets/img/svg/document-save.svg" class="white" width="20" height="20" ></button>
+        <button title="delete" @click="clearAll(); " class=" btn  d-inline btn-danger p-0 pe-2 ps-1 ms-2 mb-0 btn-sm"><img src="/src/assets/img/svg/edit-delete.svg" class="white" width="20" height="20" ></button>
+        <button title="paste" @click="showClipboard(); " class="btn  d-inline btn-secondary p-0 pe-2 ps-1 ms-2 mb-0 btn-sm"><img src="/src/assets/img/svg/edit-paste-style.svg" class="white" width="20" height="20" ></button>
         <div class="btn-group  ms-2 me-1 mb-0 " role="group">
-            <div class="btn btn-outline-info btn-sm p-0 pe-2 ps-1  mb-0" @click="setsource('suite')"> <img :src="formula_img" class="" width="20" height="20" />suite</div>
-            <div class="btn btn-outline-info btn-sm p-0 pe-2 ps-1  mb-0" @click="setsource('classic')"> <img :src="formula_img" class="" width="20" height="20" />classic</div>
+            <div class="btn btn-outline-info btn-sm p-0 pe-2 ps-1  mb-0" @click="setsource('suite')"> <img src="/src/assets/img/svg/formula.svg" class="" width="20" height="20" >suite</div>
+            <div class="btn btn-outline-info btn-sm p-0 pe-2 ps-1  mb-0" @click="setsource('classic')"> <img src="/src/assets/img/svg/formula.svg" class="" width="20" height="20" >classic</div>
         </div>
         
 
@@ -53,18 +39,18 @@
 
 
         <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
-        <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img :src="games_solve_img" class="" width="22" height="22" style="vertical-align: top;" /> {{ $t('editor.materials') }}</div>
+        <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
 
         <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
-            <div v-if="(file.filetype == 'htm')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img :src="games_solve_img" class="" width="22" height="22" style="vertical-align: top;" /> {{file.filename}}</div>
-            <div v-if="(file.filetype == 'docx')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img :src="games_solve_img" class="" width="22" height="22" style="vertical-align: top;" /> {{file.filename}}</div>
-            <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img :src="eye_fill_img" class="grey" width="22" height="22" style="vertical-align: top;" /> {{file.filename}} </div>
-            <div v-if="(file.filetype == 'audio')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img :src="im_google_talk_img" class="" width="22" height="22" style="vertical-align: top;" /> {{file.filename}} </div>
-            <div v-if="(file.filetype == 'image')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img :src="eye_fill_img" class="grey" width="22" height="22" style="vertical-align: top;" /> {{file.filename}} </div>
-        </div>       
-        
+            <div v-if="(file.filetype === 'htm')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+            <div v-if="(file.filetype === 'docx')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
+            <div v-if="(file.filetype === 'pdf')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+            <div v-if="(file.filetype === 'audio')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+            <div v-if="(file.filetype === 'image')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{file.filename}} </div>
+        </div>
+
         <div v-if="allowedUrls.length !== 0"  v-for="allowedUrl in allowedUrls  " class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button" :title="getUrlDisplay(allowedUrl)" @click="showUrl(getUrlDisplay(allowedUrl))">
-            <img :src="eye_fill_img" class="grey" width="22" height="22" style="vertical-align: top;" /> {{getUrlDisplay(allowedUrl)}}
+            <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22" style="vertical-align: top;"> {{getUrlDisplay(allowedUrl)}}
         </div>
         <!-- exam materials end -->
 
@@ -75,9 +61,9 @@
         <!-- local files start -->
         <div class="white text-muted me-2 ms-2 small d-inline-block mb-0" style="vertical-align: middle;">{{ $t('editor.localfiles') }} </div>
         <div v-for="file in localfiles" class="d-inline mb-0">
-            <div v-if="(file.type == 'pdf')"   :class="{'bg-warning': file.name == currentFile}" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img :src="document_replace_img" class="" width="20" height="20" /> {{file.name}} </div>
-            <div v-if="(file.type == 'ggb')"   :class="{'bg-warning': file.name == currentFile}" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadGGB(file.name)"><img :src="document_replace_img" class="" width="20" height="20" /> {{file.name}} </div>
-            <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="loadImage(file.name)"><img :src="eye_fill_img" class="white" width="22" height="22" style="vertical-align: top;" /> {{file.name}} </div>
+            <div v-if="(file.type === 'pdf')"   :class="{'bg-warning': file.name == currentFile}" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
+            <div v-if="(file.type === 'ggb')"   :class="{'bg-warning': file.name == currentFile}" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadGGB(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
+            <div v-if="(file.type === 'image')" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
         </div>
         <!-- local files end -->
 
@@ -116,7 +102,7 @@
             <div id="focuswarning" class="infodiv p-4 d-block focuswarning" >
                 <div class="mb-3 row">
                     <div class="mb-3 "> {{$t('editor.leftkiosk')}} <br> {{$t('editor.tellsomeone')}} </div>
-                    <img :src="eye_slash_fill_img" class=" me-2" width="32" height="32" />
+                    <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32" >
                     <div class="mt-3"> {{ formatTime(entrytime) }}</div>
                 </div>
             </div>
@@ -150,12 +136,12 @@
             :key="index"
             type="button"
             class="customClipboard__item"
-            @mousedown.prevent="insertFromClipboar(item)"
-            @keydown.enter.prevent="insertFromClipboar(item)"
-            @keydown.space.prevent="insertFromClipboar(item)"
+            @mousedown.prevent="insertFromClipboard(item)"
+            @keydown.enter.prevent="insertFromClipboard(item)"
+            @keydown.space.prevent="insertFromClipboard(item)"
           >
             <img
-              :src="edit_paste_style_img"
+              src="/src/assets/img/svg/edit-paste-style.svg"
               alt=""
               width="16"
               height="16"
@@ -176,28 +162,27 @@
 
 /* global GGBApplet */
 
-import moment from 'moment-timezone';
 import ExamHeader from '../components/ExamHeader.vue';
 import WebviewPane from '../components/WebviewPane.vue'
 import PdfviewPaneRendered from '../components/PdfviewPaneRendered.vue'
 
-import {SchedulerService} from '../utils/schedulerservice.js'
-
 import { getExamMaterials, loadPDF, loadImage, loadGGB, resetPdfPreviewToolbar} from '../utils/filehandler.js'
 import { gracefullyExit, reconnect, showUrl } from '../utils/commonMethods.js'
 import {SignalBridge} from '../utils/signalBridge.js'
-import { attachExamMouseleaveGuard, shouldSkipEdgeFocusLost } from '../utils/linuxCageKiosk.js'
+import {
+    attachExamMouseleaveGuardBoolean,
+    shouldSkipEdgeFocusLost
+} from '../utils/linuxCageKiosk.js'
+import {
+    applyClientinfoFromFetch,
+    applyServerstatusFromFetch,
+    resolveLockedSection,
+} from '../utils/examFetchInfoSync.js'
+import {ref} from "vue";
+import {useConfigStore} from "../stores/configStore.ts";
+import {useInfoStore} from "../stores/infoStore.ts";
+import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
 
-import document_replace_img from '/src/assets/img/svg/document-replace.svg'
-import document_save_img from '/src/assets/img/svg/document-save.svg'
-import edit_delete_img from '/src/assets/img/svg/edit-delete.svg'
-import edit_paste_img from '/src/assets/img/svg/edit-paste.svg'
-import edit_paste_style_img from '/src/assets/img/svg/edit-paste-style.svg'
-import eye_slash_fill_img from '/src/assets/img/svg/eye-slash-fill.svg'
-import eye_fill_img from '/src/assets/img/svg/eye-fill.svg'
-import formula_img from '/src/assets/img/svg/formula.svg'
-import games_solve_img from '/src/assets/img/svg/games-solve.svg'
-import im_google_talk_img from '/src/assets/img/svg/im-google-talk.svg'
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
 
@@ -230,43 +215,48 @@ function ggbHtml5CodebaseUrl() {
 
 
 export default {
+    mixins: [autoCleanupMixin],
+
+    setup() {
+      const configStore = useConfigStore();
+      let development = ref(configStore.development);
+      let serverApiPort = ref(configStore.serverApiPort);
+      let electron = ref(configStore.electron);
+      let hostip = ref(configStore.hostip);
+
+      const infoStore = useInfoStore();
+      infoStore.online = true;
+      infoStore.componentName = "GeoGebra";
+
+      let examtype = ref(infoStore.examtype);
+      let servername = ref(infoStore.servername);
+      let serverip = ref(infoStore.serverip);
+      let token = ref(infoStore.token);
+      let clientname = ref(infoStore.clientname);
+      let serverstatus = ref(infoStore.serverstatus);
+      let pincode = ref(infoStore.pincode);
+      let localLockdown = ref(infoStore.localLockdown);
+      let online = ref(infoStore.online);
+      let battery = ref(infoStore.battery);
+      let wlanInfo = ref(infoStore.wlanInfo);
+      let entrytime = ref(infoStore.entryTime);
+
+      return { development, serverApiPort, electron, hostip,
+        examtype, servername, serverip, token, clientname, serverstatus, pincode, localLockdown, online, battery, wlanInfo, entrytime};
+    },
+
     data() {
         return {
-            componentName: 'GeoGebra',
-            online: true,
             focus: true,
             exammode: false,
-            examtype: this.$route.params.examtype,
             currentFile:null,
-            saveinterval: null,
-            fetchinfointerval: null,
-            loadfilelistinterval: null,
-            clockinterval: null,
-            servername: this.$route.params.servername,
-            servertoken: this.$route.params.servertoken,
-            serverip: this.$route.params.serverip,
-            token: this.$route.params.token,
-            clientname: this.$route.params.clientname,
-            serverApiPort: this.$route.params.serverApiPort,
-            serverstatus: this.$route.params.serverstatus,
-            clientApiPort: this.$route.params.clientApiPort,
-            config: this.$route.params.config,
-            electron: this.$route.params.electron,
-            pincode : this.$route.params.pincode,
-            localLockdown: this.$route.params.localLockdown,
             lockedSection: null,
             clientinfo: null,
-            entrytime: 0,
-            timesinceentry: 0,
-            currenttime : 0,
             now : new Date().getTime(),
             localfiles: null,
-            battery: null,
             customClipboard: [],
             isClipboardVisible: false,
             currentpreview: null,
-            wlanInfo: null,
-            hostip: null,
             examMaterials: [],
             allowedUrls: [],
             webviewVisible: false,
@@ -288,7 +278,7 @@ export default {
                 button[aria-label="Hilfe"],
                 button[aria-label="Help"] { display: none !important; }
 
-
+ 
                 button.helpBtn { display: none !important; }
                 li[aria-label="Hilfe & Feedback"],
                 li[aria-label="Help & Feedback"],
@@ -314,26 +304,13 @@ export default {
                 'Bild', 'Image',
                 'Hilfe', 'Help',
             ],
-
-            document_replace_img,
-            document_save_img,
-            edit_delete_img,
-            edit_paste_img,
-            edit_paste_style_img,
-            eye_slash_fill_img,
-            eye_fill_img,
-            formula_img,
-            games_solve_img,
-            im_google_talk_img,
         }
     }, 
-    components: { ExamHeader, WebviewPane, PdfviewPaneRendered  },
+    components: { ExamHeader, WebviewPane, PdfviewPaneRendered  },  
     computed: {
 
     },
     async mounted() {
-        console.log(this.urlForWebview);
-
         this.currentFile = `${this.clientname}.ggb`;
         this.entrytime = new Date().getTime()  ;
 
@@ -345,7 +322,7 @@ export default {
                 return;
             }
         };
-        window.addEventListener('unhandledrejection', this._onUnhandledRejection);
+        this.autoEventListener(window,'unhandledrejection', this._onUnhandledRejection);
 
 
         signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
@@ -378,22 +355,15 @@ export default {
 
         this.$nextTick(async function () { // Code that will run only after the entire view has been rendered
 
+
             // do not use setInterval() for intervals as it keeps all objects of the callbacks including fetch() responses in memory until the interval is stopped
-            this.fetchinfointerval = new SchedulerService(5000);
-            this.fetchinfointerval.addEventListener('action', this.fetchInfo);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-            this.fetchinfointerval.start();
+            this.autoSchedulerService(this.fetchInfo, 5000);
             await this.fetchInfo(); // initial sync for clientinfo, serverstatus and lockedSection
 
-            this.clockinterval = new SchedulerService(1000);
-            this.clockinterval.addEventListener('action', this.clock);  // event listener that reacts to the 'action' event (only reacts to 'action' from this instance and does not interfere)
-            this.clockinterval.start();
-
-            this.saveinterval = new SchedulerService(20000);
             this.saveContentGgbAuto = () => this.saveContent(false, 'auto'); // detour so interval does not pass Scheduler event as first arg
-            this.saveinterval.addEventListener('action', this.saveContentGgbAuto);
-            this.saveinterval.start();
+            this.autoSchedulerService(this.saveContentGgbAuto, 20000);
 
-            attachExamMouseleaveGuard(signalBridge, this.config, this.sendFocuslost);
+            attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
 
             this.loadFilelist()
             this.getExamMaterials()
@@ -411,7 +381,7 @@ export default {
                 }
                 URL.revokeObjectURL(this.currentpreview)
             }
-            document.querySelector("#preview").addEventListener("click", this._onPreviewClick);
+            this.autoEventListener(document.querySelector("#preview"),"click", this._onPreviewClick);
 
             await this.$nextTick()
             try {
@@ -421,9 +391,10 @@ export default {
                 console.error('geogebra @ mounted: GeoGebra bootstrap failed', e)
             }
 
-            this.loadfilelistinterval = setInterval(() => { this.loadFilelist() }, 10000)
+            this.autoSchedulerService(this.loadFilelist, 10000)
 
             this.wlanInfo = await signalBridge.invoke('get-wlan-info')
+            console.log(this.wlanInfo);
             this.hostip = await signalBridge.invoke('checkhostip')
         });
     },
@@ -505,9 +476,9 @@ export default {
 
         
         async sendFocuslost(ctrlalt = false){
-            if (await shouldSkipEdgeFocusLost(signalBridge, this.config.development)) return;
+            if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             let response = await signalBridge.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
-            if (response && !this.config.development && !response.focus) {  //immediately block frontend
+            if (response && !this.development && !response.focus) {  //immediately block frontend
                 this.focus = false
             }
         },
@@ -567,14 +538,14 @@ export default {
             const params = {
                 "appName": appName,
                 "language": "de",
-
+              
                 "width": w,
                 "height": h,
                 "showToolBar": true,
                 "showAlgebraInput": true,
                 "showMenuBar": true,
                 "enableCAS": true,
-
+       
                 "enableFileFeatures": false,
 
 
@@ -643,7 +614,7 @@ export default {
                             window.ggbApplet?.setSize(s.w, s.h)
                         }, 150)
                     }
-                    window.addEventListener('resize', this._resizeHandler)
+                  this.autoEventListener(window,'resize', this._resizeHandler)
 
                     const surface = this.$refs.ggbSurface
                     if (surface && typeof ResizeObserver !== 'undefined') {
@@ -698,66 +669,34 @@ export default {
             this.initGeoGebra(source)
         },
 
-        clock(){
-            this.now = new Date().getTime()
-            this.timesinceentry =  new Date(this.now - this.entrytime).toISOString().substr(11, 8)
-            this.currenttime = moment().tz('Europe/Vienna').format('HH:mm:ss');
-        }, 
-
 
 
 
 
         async fetchInfo() {
-            let getinfo = await signalBridge.invoke('getinfoasync')   // we need to fetch the updated version of the systemconfig from express api (server.js)
+            const getinfo = await signalBridge.invoke('getinfoasync');
+            const prevExammode = this.exammode;
 
-            this.clientinfo = getinfo.clientinfo;
-            this.token = this.clientinfo.token
-            this.focus = this.clientinfo.focus
-            this.clientname = this.clientinfo.name
-            this.exammode = this.clientinfo.exammode
-            this.pincode = this.clientinfo.pin
+            applyClientinfoFromFetch(this, getinfo.clientinfo);
+            applyServerstatusFromFetch(this, getinfo.serverstatus);
 
-            console.log('token: ', this.token)
+            const sectionIndex = resolveLockedSection(this.serverstatus, this.clientinfo);
+            if (sectionIndex !== this.lockedSection) this.lockedSection = sectionIndex;
 
-            this.serverstatus = getinfo.serverstatus
+            if (this.pincode !== '0000') this.localLockdown = false;
 
-            // decide which locked section index is authoritative (client vs server)
-            const sectionIndex = (this.serverstatus.allowSectionSwitch && this.clientinfo.lockedSection != null)
-                ? this.clientinfo.lockedSection
-                : this.serverstatus.lockedSection
+            if (!this.focus) this.entrytime = new Date().getTime();
 
-            this.lockedSection = sectionIndex
+            if (this.exammode !== prevExammode) this.injectCSS();
+            this.battery = await navigator.getBattery().then(battery => battery)
+                .catch(error => { console.error('Error accessing the Battery API:', error); });
 
-            if (this.pincode !== "0000") {
-                this.localLockdown = false
-            }
-
-            if (!this.focus) {
-                this.entrytime = new Date().getTime()
-            }
-            if (this.clientinfo && this.clientinfo.token) {
-                this.online = true
-            } else {
-                this.online = false
-            }
-
-
-            this.battery = await navigator.getBattery().then(battery => {
-                return battery
-            })
-            .catch(error => {
-                console.error("Error accessing the Battery API:", error);
-            });
-
-            this.internetCheckCounter++
+            this.internetCheckCounter++;
             if (this.internetCheckCounter % 5 === 0) {
-                this.wlanInfo = await signalBridge.invoke('get-wlan-info')
-                this.hostip = await signalBridge.invoke('checkhostip')
-                this.internetCheckCounter = 0
+                this.wlanInfo = await signalBridge.invoke('get-wlan-info');
+                this.hostip = await signalBridge.invoke('checkhostip');
+                this.internetCheckCounter = 0;
             }
-
-            this.injectCSS()
         },
 
         showClipboard() {
@@ -809,7 +748,7 @@ export default {
             api.setEditorState({ ...state, content: newContent, caret: newCaret })
         },
 
-        insertFromClipboar(value) {
+        insertFromClipboard(value) {
             const text = String(value ?? '')
             if (!text || !window.ggbApplet) {
                 return
@@ -931,24 +870,9 @@ export default {
         if (typeof this._stopExammodeWatch === 'function') {
             this._stopExammodeWatch()
         }
-        clearInterval(this.loadfilelistinterval)
-        this.loadfilelistinterval = null
 
-        this.saveinterval.removeEventListener('action', this.saveContentGgbAuto);
-        this.saveinterval.stop() 
-
-        this.fetchinfointerval.removeEventListener('action', this.fetchInfo);
-        this.fetchinfointerval.stop() 
-
-        this.clockinterval.removeEventListener('action', this.clock);
-        this.clockinterval.stop() 
-        
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
-        if (this._resizeHandler) {
-            window.removeEventListener('resize', this._resizeHandler)
-            this._resizeHandler = null
-        }
         if (this._ggbResizeObs) {
             this._ggbResizeObs.disconnect()
             this._ggbResizeObs = null
@@ -965,10 +889,6 @@ export default {
         if (window.__ggbMenuObserver__) {
             window.__ggbMenuObserver__.disconnect()
             window.__ggbMenuObserver__ = null
-        }
-
-        if (this._onUnhandledRejection) {
-            window.removeEventListener('unhandledrejection', this._onUnhandledRejection);
         }
 
         signalBridge.removeAllListeners('getmaterials')

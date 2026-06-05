@@ -16,12 +16,15 @@
  */
 
 'use strict'
+import crypto from 'node:crypto'
 import {disableRestrictions, enableRestrictions} from './platformrestrictions.js';
 import fs from 'fs' 
 import archiver from 'archiver'   // causes severe race conditions with electron's own versions - always keep the same version as electron
 import extract from 'extract-zip'
 import { join } from 'path'
-import { screen, ipcMain, app, BrowserWindow, webContents } from 'electron'
+import { screen, ipcMain, app, BrowserWindow, webContents, dialog } from 'electron'
+import i18n from '../../../src/locales/locales.js';
+import { startAssessmentSession, stopAssessmentSession, isAssessmentSessionActive } from './assessmentSession.js';
 import WindowHandler from './windowhandler.js'
 import IpcHandler from './ipchandler.js'
 import log from 'electron-log';
@@ -35,10 +38,18 @@ import { examApiFetch } from '../../../../shared/examApiFetch.js'
 import languageToolServer from './lt-server.js';
 import { setClientFocusLock, clearClientFocusLock } from './focusLockState.js';
 import { syncClientDisplayInfo } from './displayInfo.js';
-import { detectRunningInCage } from './cageDetect.js';
 import qemuService from './qemuService.js';
+import { checkQemuAvailability } from '../../../../shared/qemuAvailability.js';
+import { pickLocalVmGroupConfig } from '../../../../shared/localVmDisplayResolutions.js';
 import { stopProxy } from './vncproxy.js';
 import { switchExamSection } from './switchExamSection.js';
+import {
+    buildLocalSubmissionSigningSecret,
+    deriveSigningP12,
+    signSubmissionPdf,
+    SUBMISSION_SIGN_MODE_BIP,
+    SUBMISSION_SIGN_MODE_LOCAL,
+} from '../../../../shared/submissionPdfSign.js';
 
 
 
@@ -53,6 +64,8 @@ import { switchExamSection } from './switchExamSection.js';
         this.updateStudentIntervall = null
         this.WindowHandler = null
         this.timer = 0
+        this.bipSiteInfo = null
+        this.cachedSubmissionSigningP12 = null
     }
  
     init (mc, config) {
@@ -60,6 +73,7 @@ import { switchExamSection } from './switchExamSection.js';
         this.config = config
         this.lastExamWriteSaveReason = 'n/a' // updated on successful examdir writes; sent with ZIP to teacher /receive
         this.localVmStartState = 'idle' // idle|starting|blocked
+        this._startExamRunning = false
         this.updateScheduler = new SchedulerService(this.requestUpdate.bind(this), 5000)
         this.updateScheduler.start()
     }
@@ -75,7 +89,7 @@ import { switchExamSection } from './switchExamSection.js';
         const examWin = WindowHandler?.examwindow;
         if (examWin && !this.config?.development) {
             examWin.moveTop();
-            examWin.setKiosk(true);
+            platformDispatcher.applyElectronKioskMode(examWin);
             examWin.show();
             examWin.focus();
         }
@@ -125,6 +139,55 @@ import { switchExamSection } from './switchExamSection.js';
             } catch (e) {
                 try { await fs.promises.unlink(tmp); } catch {}
             }
+        }
+    }
+
+    // Tell student UI to show compat-check Swal before slow QEMU / disk probes.
+    notifyLocalVmCompatCheckStart() {
+        this.multicastClient.clientinfo.examtype = 'localvm';
+        this.multicastClient.clientinfo.localVMState = 'checking_compat';
+        try {
+            WindowHandler.mainwindow?.webContents?.send('localvm-compat-check-start');
+        } catch (e) {
+            log.debug('communicationhandler @ notifyLocalVmCompatCheckStart: send failed', e?.message);
+        }
+    }
+
+    // Dismiss compat-check Swal when leaving checking_compat (success, failure, or next preflight state).
+    notifyLocalVmCompatCheckEnd() {
+        if (this.multicastClient.clientinfo.localVMState === 'checking_compat') {
+            this.multicastClient.clientinfo.localVMState = null;
+        }
+        try {
+            WindowHandler.mainwindow?.webContents?.send('localvm-compat-check-end');
+        } catch (e) {
+            log.debug('communicationhandler @ notifyLocalVmCompatCheckEnd: send failed', e?.message);
+        }
+    }
+
+    // Notify renderer and block LocalVM exam start when qemu-system-x86_64 / qemu-img are missing.
+    async ensureQemuAvailableForLocalVm() {
+        try {
+            const check = await checkQemuAvailability();
+            if (check.ok) {
+                return true;
+            }
+            log.warn('communicationhandler @ ensureQemuAvailableForLocalVm: QEMU missing', check.missing);
+            try {
+                WindowHandler.mainwindow?.webContents?.send('qemu-not-available', {
+                    missing: check.missing,
+                    hypervisorPlatform: check.hypervisorPlatform,
+                });
+            } catch (e) {
+                log.debug('communicationhandler @ ensureQemuAvailableForLocalVm: send failed', e?.message);
+            }
+            return false;
+        } catch (e) {
+            log.error('communicationhandler @ ensureQemuAvailableForLocalVm', e);
+            try {
+                WindowHandler.mainwindow?.webContents?.send('qemu-not-available', { missing: [] });
+            } catch (err) {}
+            return false;
         }
     }
 
@@ -180,22 +243,11 @@ import { switchExamSection } from './switchExamSection.js';
 
     async preflightLocalVm(serverstatus, effectiveSection) {
         const examSection = serverstatus.examSections[effectiveSection];
-        const hasGroups = !!examSection?.groups;
-        let group = this.multicastClient.clientinfo.group || 'a';
-        if (hasGroups) {
-            const clientname = this.multicastClient.clientinfo.name;
-            const groupA = examSection.groupA?.users ?? [];
-            const groupB = examSection.groupB?.users ?? [];
-            if (groupB.includes(clientname)) group = 'b';
-            else if (groupA.includes(clientname)) group = 'a';
-            else group = 'a';
-        } else {
-            group = 'a';
-        }
-
-        const vmConfig = group === 'b'
-            ? (examSection?.groupB?.examConfig?.localvm || {})
-            : (examSection?.groupA?.examConfig?.localvm || {});
+        const { group, vmConfig, display } = pickLocalVmGroupConfig(
+            examSection,
+            this.multicastClient.clientinfo.name
+        );
+        this.multicastClient.clientinfo.group = group;
 
         const qcow2Name = vmConfig.qcow2Name;
         const vncPort = Number(vmConfig.vncPort || 5901);
@@ -207,8 +259,9 @@ import { switchExamSection } from './switchExamSection.js';
         this.multicastClient.clientinfo.examtype = 'localvm';
         this.multicastClient.clientinfo.localVMHost = null;
         this.multicastClient.clientinfo.localVMPort = vncPort;
+        this.notifyLocalVmCompatCheckEnd();
 
-        log.info(`communicationhandler @ preflightLocalVm: cfg (disk=${qcow2Name || '-'}, port=${vncPort}, blockInternet=${blockInternet}, calcHash=${calculateSha256}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
+        log.info(`communicationhandler @ preflightLocalVm: cfg (disk=${qcow2Name || '-'}, port=${vncPort}, display=${display.id}, blockInternet=${blockInternet}, calcHash=${calculateSha256}, hasHash=${!!expectedSha256}, hasSize=${typeof expectedSizeBytes === 'number'})`);
 
         if (!qcow2Name) {
             this.multicastClient.clientinfo.localVMState = 'missing';
@@ -237,6 +290,8 @@ import { switchExamSection } from './switchExamSection.js';
             vncPort,
             overlayName: `${qcow2Name}.overlay.${this.multicastClient.clientinfo.servername || 'exam'}.${this.multicastClient.clientinfo.pin || '0'}.qcow2`,
             blockInternet,
+            displayWidth: display.width,
+            displayHeight: display.height,
         };
     }
 
@@ -246,8 +301,8 @@ import { switchExamSection } from './switchExamSection.js';
 
     async requestUpdate(){
         syncClientDisplayInfo(this.multicastClient.clientinfo);
-        this.multicastClient.clientinfo.isRunningInCage =
-            process.platform === 'linux' ? detectRunningInCage() : false;
+        this.multicastClient.clientinfo.isRunningInCage = platformDispatcher.runningInCage;
+        this.multicastClient.clientinfo.isAssessmentMode = isAssessmentSessionActive();
 
         this.timer++   // we use timer to time loops with different intervals without introducing new unneccesary schedulers
         if (this.timer % 20 === 0 ){  // run every 20*5 (updateloop) seconds
@@ -428,6 +483,13 @@ import { switchExamSection } from './switchExamSection.js';
             WindowHandler.examwindow.webContents.send('denied');
         }
 
+        if (studentstatus.sendexam === true){
+            await this.sendExamToTeacher();
+        }
+        if (studentstatus.sendlog === true){
+            await this.sendStudentLogToTeacher();
+        }
+
         if (studentstatus.kicked) {
             await this.kickStudent(studentstatus);
             return true;
@@ -480,7 +542,7 @@ import { switchExamSection } from './switchExamSection.js';
             clearClientFocusLock(this.multicastClient.clientinfo);
             this.multicastClient.clientinfo.focus = true;
             if (WindowHandler.examwindow && !this.config.development){ 
-                WindowHandler.examwindow.setKiosk(true);
+                platformDispatcher.applyElectronKioskMode(WindowHandler.examwindow);
                 WindowHandler.examwindow.focus();
             }
         }
@@ -498,12 +560,6 @@ import { switchExamSection } from './switchExamSection.js';
 
         this.multicastClient.clientinfo.privateSpellcheck.suggestions = studentstatus.activatePrivateSuggestions;
 
-        if (studentstatus.sendexam === true){
-            this.sendExamToTeacher();
-        }
-        if (studentstatus.sendlog === true){
-            this.sendStudentLogToTeacher();
-        }
         if (studentstatus.fetchfiles === true){
             this.requestFileFromServer(studentstatus.files);
         }
@@ -571,12 +627,6 @@ import { switchExamSection } from './switchExamSection.js';
             this.killScreenlock();
         }
 
-        if (serverstatus.screenshotocr) {
-            this.multicastClient.clientinfo.screenshotocr = true;
-        } else {
-            this.multicastClient.clientinfo.screenshotocr = false;
-        }
-
         if (serverstatus.screenshotinterval || serverstatus.screenshotinterval === 0) {
             if (this.multicastClient.clientinfo.screenshotinterval !== serverstatus.screenshotinterval*1000 ) {
                 log.info("communicationhandler @ processUpdatedServerstatus: ScreenshotInterval changed to", serverstatus.screenshotinterval*1000);
@@ -598,6 +648,10 @@ import { switchExamSection } from './switchExamSection.js';
         if (serverstatus.exammode && !this.multicastClient.clientinfo.exammode){
             const lockedSection = Number(serverstatus.lockedSection || 1);
             const examtype = serverstatus?.examSections?.[lockedSection]?.examtype;
+            if (this._startExamRunning) {
+                log.info('communicationhandler @ processUpdatedServerstatus: startExam already running, skip duplicate');
+                return;
+            }
             if (examtype === 'localvm' && this.localVmStartState !== 'idle') {
                 log.info(`communicationhandler @ processUpdatedServerstatus: localvm start suppressed (state=${this.localVmStartState})`);
                 return;
@@ -614,11 +668,13 @@ import { switchExamSection } from './switchExamSection.js';
 
         if (!serverstatus.exammode && this.multicastClient.clientinfo.examtype === 'localvm') {
             const st = this.multicastClient.clientinfo.localVMState;
-            const inPreflightState = st === 'missing' || st === 'hash_mismatch' || st === 'verifying_hash' || st === 'error';
-            if (inPreflightState || this.localVmStartState !== 'idle') {
-                log.info('communicationhandler @ processUpdatedServerstatus: localvm exammode off -> clearing preflight state');
+            const keepFixUi = st === 'missing' || st === 'hash_mismatch' || st === 'error';
+            if (!keepFixUi && st) {
+                log.info(`communicationhandler @ processUpdatedServerstatus: localvm exammode off -> clearing transient vm state (${st})`);
                 this.multicastClient.clientinfo.localVMState = null;
                 this.multicastClient.clientinfo.localVMHost = null;
+            }
+            if (this.localVmStartState !== 'idle') {
                 this.localVmStartState = 'idle';
             }
         }
@@ -669,9 +725,12 @@ import { switchExamSection } from './switchExamSection.js';
 
     //get base64 pdf from editor
     // ATTENTION: there is a similar method in ipchandler.js that also generates a pdf but stores it as file in the exam directory
-    async getBase64PDF(submissionnumber, sectionname, printBackground=false, saveReason){
+    // pageMode='fullpage' => margins 0 + Chromium-Header aus; gleicher Header-String wird als HTML-Overlay injiziert (activesheets 1:1 PDF-Seite)
+    async getBase64PDF(submissionnumber, sectionname, printBackground=false, saveReason, pageMode){
         if (saveReason !== 'auto') log.info("communicationhandler @ getBase64PDF: getting base64 encoded pdf")
-        
+        const traceTiming = saveReason === 'previewSigned' || saveReason === 'directsend'
+        const t0 = traceTiming ? Date.now() : 0
+
         // Wait for any ongoing print operation to finish (max 30 seconds)
         let waitCount = 0;
         const maxWait = 300; // 30 seconds with 100ms intervals
@@ -679,43 +738,104 @@ import { switchExamSection } from './switchExamSection.js';
             await this.sleep(100);
             waitCount++;
         }
-        
+        if (traceTiming && waitCount > 0) {
+            log.info(`communicationhandler @ getBase64PDF: waited ${waitCount * 100}ms for printpdf lock (${saveReason})`)
+        }
+
         if (IpcHandler.isPrintingPdf) {
             log.error("communicationhandler @ getBase64PDF: printToPDF lock timeout - another print operation is still running");
             return { sender: "client", message: "PDF generation timeout - another print operation is in progress", status: "error" };
         }
+
+        const signReasons = new Set(['submit', 'directsend', 'submitexam', 'previewSigned'])
+        const isSigningExport = signReasons.has(saveReason)
+        const headerTemplate = `<div style='display: inline-block; height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-left: 30px; margin-top:10px;'><span style="float:left;">${this.multicastClient.clientinfo.servername}</span><span style="float:left;">&nbsp;|&nbsp; </span><span style="float:left;">${sectionname}</span><span style="float:left;">&nbsp;|&nbsp; </span><span class=date style="float:left;"></span><span style="float:left;">&nbsp;|&nbsp;Abgabe: ${submissionnumber}</span><span style="float:right;">${this.multicastClient.clientinfo.name}</span></div>`
+        const footerTemplatePageNums = "<div style='height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-bottom:10px;'><span class=pageNumber></span>|<span class=totalPages></span></div>"
         
+        const isFullpage = pageMode === 'fullpage'
         var options = {
-            margins: {top:0.5, right:0, bottom:0.5, left:0 },
+            margins: isFullpage
+                ? { top: 0, right: 0, bottom: 0, left: 0 }
+                : { top: 0.5, right: 0, bottom: isSigningExport ? 0 : 0.5, left: 0 },
             pageSize: 'A4',
-            printBackground: printBackground,
+            printBackground: isFullpage ? printBackground : (isSigningExport ? false : printBackground),
             printSelectionOnly: false,
             landscape: false,
-            displayHeaderFooter:true,
-
-  
-            footerTemplate: "<div style='height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-bottom:10px;'><span class=pageNumber></span>|<span class=totalPages></span></div>",
-            headerTemplate: `<div style='display: inline-block; height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-left: 30px; margin-top:10px;'><span style="float:left;">${this.multicastClient.clientinfo.servername}</span><span style="float:left;">&nbsp;|&nbsp; </span><span style="float:left;">${sectionname}</span><span style="float:left;">&nbsp;|&nbsp; </span><span class=date style="float:left;"></span><span style="float:left;">&nbsp;|&nbsp;Abgabe: ${submissionnumber}</span><span style="float:right;">${this.multicastClient.clientinfo.name}</span></div>`,
+            displayHeaderFooter: !isFullpage,
+            footerTemplate: isSigningExport ? '<div></div>' : footerTemplatePageNums,
+            headerTemplate,
             preferCSSPageSize: false
         }
         
         // set the title of the exam window and therefore the document title
         await WindowHandler.examwindow.webContents.executeJavaScript(`document.title = "${this.multicastClient.clientinfo.name} - ${this.multicastClient.clientinfo.servername} - Version ${submissionnumber}"`);
-        
+
+        // pageMode='fullpage': Chromium-Header aus; gleicher Header-String als DOM-Overlay (verbraucht keinen margin) - nur 1. Druckseite
+        // <span class=date> ist Chromium-headerTemplate-Magic -> im DOM-Kontext durch ein gerendertes Datum ersetzen
+        if (isFullpage) {
+            const now = new Date()
+            const dStr = `${String(now.getDate()).padStart(2,'0')}.${String(now.getMonth()+1).padStart(2,'0')}.${now.getFullYear()}`
+            // Datum-magic ersetzen + margins/top aus dem Editor-Template raus (Wrapper-div positioniert)
+            const overlayInner = headerTemplate
+                .replace(/<span class=date[^>]*><\/span>/, `<span style="float:left;">${dStr}</span>`)
+                .replace(/margin-(left|right|top):\s*\d+px;?/g, '')
+            // Wrapper: 85% breit zentriert, top 30px (visuell auf PDF-Inhalt der mit zoom 8/9 skaliert ist abgestimmt)
+            const overlayHtml = JSON.stringify(`<div id="__fullpageHeaderOverlay__" style="position:absolute;top:30px;left:50%;transform:translateX(-50%);width:85%;z-index:2147483647;pointer-events:none;">${overlayInner}</div>`)
+            await WindowHandler.examwindow.webContents.executeJavaScript(`(()=>{const o=document.getElementById('__fullpageHeaderOverlay__');if(o)o.remove();document.body.insertAdjacentHTML('afterbegin', ${overlayHtml});})()`)
+        }
+
         // Set lock before starting PDF generation
         IpcHandler.isPrintingPdf = true;
-        
+
         try {
+            const tPrint = traceTiming ? Date.now() : 0
             const data = await WindowHandler.examwindow.webContents.printToPDF(options);
-            const base64pdf = data.toString('base64');
+            if (traceTiming) {
+                log.info(`communicationhandler @ getBase64PDF: printToPDF ${Date.now() - tPrint}ms (${saveReason})`)
+            }
+            let pdfBuf = Buffer.from(data);
+            let signed = false
+            let signMode = null
+            if (isSigningExport) {
+                try {
+                    const tP12 = Date.now()
+                    const { p12Buffer, mode } = this.ensureSubmissionSigningP12()
+                    const p12Ms = Date.now() - tP12
+                    signMode = mode
+                    const signedAt = new Date()
+                    const tSign = Date.now()
+                    pdfBuf = await signSubmissionPdf(pdfBuf, p12Buffer, {
+                        name: this.multicastClient.clientinfo.name,
+                        signMode: mode,
+                        signedAt,
+                        logoPngPath: this.resolveSubmissionStampIconPath(),
+                        reason: 'Next-Exam submission',
+                        contactInfo: 'https://next-exam.at',
+                        location: 'Next-Exam',
+                    })
+                    if (traceTiming) {
+                        log.info(`communicationhandler @ getBase64PDF: p12 ${p12Ms}ms sign ${Date.now() - tSign}ms total ${Date.now() - t0}ms (${saveReason})`)
+                    }
+                    signed = true
+                } catch (signErr) {
+                    log.error('communicationhandler @ getBase64PDF: signing failed', signErr)
+                    return { sender: 'client', message: 'PDF signing failed', status: 'error' }
+                }
+            }
+            const base64pdf = pdfBuf.toString('base64');
             const dataUrl = `data:application/pdf;base64,${base64pdf}`;
-            return { sender: "client", message:"PDF generated", dataUrl:dataUrl, base64pdf: base64pdf, status: "success" };
+            return { sender: "client", message:"PDF generated", dataUrl:dataUrl, base64pdf: base64pdf, status: "success", signed, signMode };
         } catch (error) {
             log.error("communicationhandler @ getBase64PDF: Error generating PDF:", error);
             return { sender: "client", message: "Error generating PDF", status: "error" };
         } finally {
             // Always release the lock, even if an error occurred
             IpcHandler.isPrintingPdf = false;
+            if (isFullpage) {
+                try {
+                    await WindowHandler.examwindow?.webContents?.executeJavaScript(`(()=>{const o=document.getElementById('__fullpageHeaderOverlay__');if(o)o.remove();})()`)
+                } catch (e) { /* exam window may be gone */ }
+            }
         }
     }
 
@@ -764,6 +884,49 @@ import { switchExamSection } from './switchExamSection.js';
 
 
 
+    /** macOS AAC before exam UI; false = abort exam-mode entry (mainwindow dialog, examwindow optional). */
+    async ensureAssessmentForExamStart() {
+        if (this.config.development) return true; // dev mode: do not lock the machine into AAC assessment mode
+        const result = await startAssessmentSession();
+        if (!result.ok) {
+            await this.abortExamModeStart(result.reason);
+            return false;
+        }
+        // AAC's "main" app is the windowless helper; Next-Exam is the permitted secondary app and
+        // is already open+front here. Soft nudge in case AAC briefly shows the empty main-app screen
+        // on begin(); no steal:true since Next-Exam already holds focus.
+        if (process.platform === 'darwin') {
+            const win = WindowHandler.examwindow && !WindowHandler.examwindow.isDestroyed?.()
+                ? WindowHandler.examwindow
+                : WindowHandler.mainwindow;
+            try { win?.show?.(); win?.moveTop?.(); win?.focus?.(); } catch (e) {
+                log.warn('communicationhandler @ ensureAssessmentForExamStart: focus front window', e?.message || e);
+            }
+        }
+        return true;
+    }
+
+    /** Reset exam state when AAC cannot start. */
+    async abortExamModeStart(detail) {
+        log.error('communicationhandler @ abortExamModeStart:', detail);
+        await stopAssessmentSession();
+        WindowHandler.returnToStudentView()
+        WindowHandler.examwindow = null;
+        WindowHandler._examWindowCreating = false;
+        this.multicastClient.clientinfo.exammode = false;
+        this.multicastClient.clientinfo.focus = true;
+        const parent = WindowHandler.mainwindow && !WindowHandler.mainwindow.isDestroyed?.()
+            ? WindowHandler.mainwindow
+            : undefined;
+        await dialog.showMessageBox(parent, {
+            type: 'error',
+            buttons: ['OK'],
+            title: i18n.global.t('student.assessmentFailedTitle'),
+            message: i18n.global.t('student.assessmentFailedMessage'),
+            detail: detail ? String(detail) : undefined,
+        });
+    }
+
     /**
      * Starts exam mode for student
      * deletes workfolder contents (if set)
@@ -772,6 +935,12 @@ import { switchExamSection } from './switchExamSection.js';
      * @param serverstatus contains information about exammode, examtype, and other settings from the teacher instance
      */
     async startExam(serverstatus){
+        if (this._startExamRunning) {
+            log.info('communicationhandler @ startExam: already running, skip duplicate');
+            return;
+        }
+        this._startExamRunning = true;
+        try {
         // check if any dialog is open and log warning
         if (WindowHandler.exitWarningOpen || WindowHandler.exitQuestionOpen || WindowHandler.minimizeWarningOpen) {
             log.warn("communicationhandler @ startExam: Dialog is still open - exam will start anyway")
@@ -801,6 +970,21 @@ import { switchExamSection } from './switchExamSection.js';
                 return;
             }
             this.localVmStartState = 'starting';
+            this.notifyLocalVmCompatCheckStart();
+            let qemuOk = false;
+            try {
+                qemuOk = await this.ensureQemuAvailableForLocalVm();
+            } finally {
+                if (!qemuOk) {
+                    this.notifyLocalVmCompatCheckEnd();
+                }
+            }
+            if (!qemuOk) {
+                this.multicastClient.clientinfo.exammode = false;
+                // 'blocked' (not 'idle') so next 5s server poll does not re-trigger startExam -> re-spawn qemu-not-available dialog every cycle; reset to 'idle' happens when teacher turns exammode off (see processUpdatedServerstatus)
+                this.localVmStartState = 'blocked';
+                return;
+            }
             try {                
                 let preflight = null;
                 try {
@@ -825,6 +1009,9 @@ import { switchExamSection } from './switchExamSection.js';
                         vncDisplay: ':1',
                         overlayName: preflight.overlayName,
                         blockInternet: preflight.blockInternet,
+                        forceFreshOverlay: true,
+                        displayWidth: preflight.displayWidth,
+                        displayHeight: preflight.displayHeight,
                     });
                     this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
                     this.multicastClient.clientinfo.localVMPort = Number(preflight.vncPort) || 5901;
@@ -835,14 +1022,20 @@ import { switchExamSection } from './switchExamSection.js';
                     this.multicastClient.clientinfo.localVMState = 'error';
                     this.multicastClient.clientinfo.exammode = false;
                     this.localVmStartState = 'blocked';
+                    // CPU virtualization off in BIOS/UEFI -> tell the user instead of a silent "error" state
+                    if (e?.code === 'virt-disabled') {
+                        try { WindowHandler.mainwindow?.webContents?.send('qemu-not-available', { reason: 'virt-disabled' }); }
+                        catch (err) { log.debug('communicationhandler @ startExam: virt-disabled notify failed', err?.message); }
+                    }
                     return;
                 }
 
+                if (!(await this.ensureAssessmentForExamStart())) {
+                    this.localVmStartState = 'blocked';
+                    return;
+                }
                 this.multicastClient.clientinfo.exammode = true
                 this.multicastClient.clientinfo.examtype = examtype
-                this.multicastClient.clientinfo.cmargin = serverstatus.examSections[effectiveSection].cmargin
-                this.multicastClient.clientinfo.linespacing = serverstatus.examSections[effectiveSection].linespacing
-                this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[effectiveSection].audioRepeat
                 log.info("communicationhandler @ startExam: creating exam window")
                 WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
                 this.localVmStartState = 'idle';
@@ -853,12 +1046,9 @@ import { switchExamSection } from './switchExamSection.js';
             return;
         }
 
-        this.multicastClient.clientinfo.exammode = true
-        this.multicastClient.clientinfo.cmargin = serverstatus.examSections[effectiveSection].cmargin  // this is used to configure margin settings for the editor
-        this.multicastClient.clientinfo.linespacing = serverstatus.examSections[effectiveSection].linespacing // we try to double linespacing on demand in pdf creation
-        this.multicastClient.clientinfo.audioRepeat = serverstatus.examSections[effectiveSection].audioRepeat // restrict repetition of audio files (for listening comprehension)
-
-        if (!WindowHandler.examwindow){  // why do we check? because exammode is left if the server connection gets lost but students could reconnect while the exam window is still open and we don't want to create a second one
+        if (!WindowHandler.examwindow){
+            if (!(await this.ensureAssessmentForExamStart())) return;
+            this.multicastClient.clientinfo.exammode = true
             log.info("communicationhandler @ startExam: creating exam window")
             this.multicastClient.clientinfo.examtype = examtype
             WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
@@ -866,17 +1056,24 @@ import { switchExamSection } from './switchExamSection.js';
         else if (WindowHandler.examwindow){  //reconnect into active exam session with exam window already open
             log.error("communicationhandler @ startExam: found existing Examwindow..")
             try {  // switch existing window back to exam mode
-                WindowHandler.examwindow.show() 
-                if (!this.config.development) { 
-                    WindowHandler.examwindow.setFullScreen(true)  //go fullscreen again
-                    WindowHandler.examwindow.setAlwaysOnTop(true, "screen-saver", 1)  //make sure the window is 1 level above everything
-                    await enableRestrictions(WindowHandler)
-                    await this.sleep(2000) // wait an additional 2 sec for windows restrictions to kick in (they steal focus)
-                    WindowHandler.addBlurListener();
-                    await this.sleep(500)
+                WindowHandler.examwindow.show()
+                if (!(await this.ensureAssessmentForExamStart())) return;
+                this.multicastClient.clientinfo.exammode = true
+                if (!this.config.development) {
+                    if (!platformDispatcher.skipElectronKiosk) {
+                        if (platformDispatcher.platform === 'darwin') WindowHandler.examwindow.setSimpleFullScreen(true)
+                        else WindowHandler.examwindow.setFullScreen(true)
+                        if (!isAssessmentSessionActive()) {
+                            WindowHandler.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
+                        }
+                        await enableRestrictions(WindowHandler)
+                        await this.sleep(2000)
+                        WindowHandler.addBlurListener()
+                        await this.sleep(500)
+                    }
                     WindowHandler.examwindow.moveTop()
                     WindowHandler.examwindow.focus()
-                }   
+                }
             }
             catch (e) { //examwindow variable is still set but the window is not managable anymore (manually closed in dev mode?)
                 log.error("communicationhandler @ startExam: no functional examwindow found.. resetting")
@@ -889,6 +1086,9 @@ import { switchExamSection } from './switchExamSection.js';
                 return  // in that case.. we are finished here !
             }
         }
+        } finally {
+            this._startExamRunning = false;
+        }
     }
 
 
@@ -900,8 +1100,104 @@ import { switchExamSection } from './switchExamSection.js';
      * closes exam window
      * disables restrictions and blur 
      */
+    /** Stores BiP site_info secrets in main only (never log). */
+    setBipSiteInfo(info) {
+        const key = String(info?.userprivateaccesskey ?? '').trim()
+        if (!key) {
+            this.bipSiteInfo = null
+            this.invalidateSubmissionSigningP12()
+            return { status: 'success', active: false }
+        }
+        this.bipSiteInfo = {
+            userprivateaccesskey: key,
+            userid: info?.userid ?? null,
+            fullname: String(info?.fullname ?? '').trim(),
+        }
+        this.invalidateSubmissionSigningP12()
+        return { status: 'success', active: true }
+    }
+
+    clearBipSiteInfo() {
+        this.bipSiteInfo = null
+        this.invalidateSubmissionSigningP12()
+        return { status: 'success' }
+    }
+
+    /** Drops cached P12 so the next sign uses fresh BiP/local identity material. */
+    invalidateSubmissionSigningP12() {
+        this.cachedSubmissionSigningP12 = null
+    }
+
+    /** Builds signing P12 once per exam session (or after BiP login); reused for every submission. */
+    ensureSubmissionSigningP12() {
+        if (this.cachedSubmissionSigningP12?.p12Buffer?.length) {
+            return this.cachedSubmissionSigningP12
+        }
+        this.cachedSubmissionSigningP12 = this.materializeSubmissionSigningP12()
+        return this.cachedSubmissionSigningP12
+    }
+
+    /** Warms RSA/P12 on main after exam view load so submit does not block the UI. */
+    prewarmSubmissionSigningP12() {
+        return new Promise((resolve) => {
+            setImmediate(() => {
+                try {
+                    const t0 = Date.now()
+                    this.ensureSubmissionSigningP12()
+                    log.info(`communicationhandler @ prewarmSubmissionSigningP12: ready in ${Date.now() - t0}ms`)
+                    resolve({ status: 'success' })
+                } catch (e) {
+                    log.error('communicationhandler @ prewarmSubmissionSigningP12', e)
+                    resolve({ status: 'error', message: e?.message || String(e) })
+                }
+            })
+        })
+    }
+
+    /** Resolves student public/icons/icon.png for the submission stamp (dev + packaged). */
+    resolveSubmissionStampIconPath() {
+        const here = import.meta.dirname;
+        const candidates = [
+            join(app.getAppPath(), 'public/icons/icon.png'),
+            join(process.resourcesPath, 'app.asar.unpacked', 'public/icons/icon.png'),
+            join(here, '../../../public/icons/icon.png'),
+            join(here, '../../public/icons/icon.png'),
+        ];
+        for (const p of candidates) {
+            try {
+                if (p && fs.existsSync(p)) {
+                    return p;
+                }
+            } catch {
+                // try next candidate
+            }
+        }
+        log.warn('communicationhandler @ resolveSubmissionStampIconPath: icon.png not found');
+        return null;
+    }
+
+    /** Creates P12: BiP userprivateaccesskey or local pin+token+time secret (called once per cache cycle). */
+    materializeSubmissionSigningP12() {
+        const displayName = String(this.multicastClient?.clientinfo?.name || 'Next-Exam Student').trim()
+        const saltHex = crypto.randomBytes(16).toString('hex')
+        const bip = this.bipSiteInfo?.userprivateaccesskey
+        if (bip) {
+            return deriveSigningP12(bip, saltHex, this.bipSiteInfo.fullname || displayName, {
+                mode: SUBMISSION_SIGN_MODE_BIP,
+                bipUserId: this.bipSiteInfo.userid,
+            })
+        }
+        const pin = this.multicastClient?.clientinfo?.pin ?? ''
+        const token = this.multicastClient?.clientinfo?.token ?? ''
+        const timeMs = Date.now()
+        const secret = buildLocalSubmissionSigningSecret(pin, token, timeMs)
+        return deriveSigningP12(secret, saltHex, displayName, { mode: SUBMISSION_SIGN_MODE_LOCAL })
+    }
+
     async endExam(serverstatus){
-        
+        const localVmExam = this.multicastClient.clientinfo.examtype === 'localvm'
+            || this.multicastClient.clientinfo.localVMState === 'running';
+        this.clearBipSiteInfo()
         WindowHandler.removeBlurListener();
       
         //only disable restrictions if not in exam mode ( seriosuly.. how could this ever happen? )
@@ -909,6 +1205,10 @@ import { switchExamSection } from './switchExamSection.js';
             this.multicastClient.clientinfo.exammode = false
             disableRestrictions()
         }
+
+        // macOS: assessment (AAC) mode must always be stopped when the exam ends - even if exammode was
+        // already false (e.g. connection lost path where disableRestrictions is skipped). idempotent no-op if no session is active.
+        await stopAssessmentSession()
 
         // delete students work on students pc (makes sense if exam is written on school property)
         if (serverstatus && serverstatus.delfolderonexit === true){
@@ -946,19 +1246,21 @@ import { switchExamSection } from './switchExamSection.js';
         this.multicastClient.clientinfo.focus = true
         this.multicastClient.clientinfo.localLockdown = false;
 
-        // stop VNC proxy + shutdown VM after window teardown to avoid reconnect loops
-        stopProxy();
-        try {
-            log.info('communicationhandler @ endExam: requesting VM shutdown');
-            await qemuService.stopVmAsync({ graceful: true, shutdownTimeoutMs: 8000, killTimeoutMs: 8000 });
-        } catch (e) {
-            log.warn('communicationhandler @ endExam: shutdown failed, killing VM');
-            await qemuService.stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
-        }
-        try {
-            await qemuService.killAllLocalQemu(this.config.workdirectory);
-        } catch (e) {
-            log.warn('communicationhandler @ endExam: killAllLocalQemu sweep', e);
+        // stop VNC proxy + shutdown VM after window teardown (LocalVM only)
+        if (localVmExam) {
+            stopProxy();
+            try {
+                log.info('communicationhandler @ endExam: requesting VM shutdown');
+                await qemuService.stopVmAsync({ graceful: true, shutdownTimeoutMs: 8000, killTimeoutMs: 8000 });
+            } catch (e) {
+                log.warn('communicationhandler @ endExam: shutdown failed, killing VM');
+                await qemuService.stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
+            }
+            try {
+                await qemuService.killAllLocalQemu(this.config.workdirectory);
+            } catch (e) {
+                log.warn('communicationhandler @ endExam: killAllLocalQemu sweep', e);
+            }
         }
 
         if (languageToolServer.languageToolProcess){
@@ -989,9 +1291,7 @@ import { switchExamSection } from './switchExamSection.js';
         }
 
         try {
-            if (!examWin.isDestroyed?.()){
-                examWin.close() // normal close, on('close') handler does the rest
-            }
+            WindowHandler.returnToStudentView()
         } catch (e){
             log.error("communicationhandler @ closeExamWindowSafely: error while closing examwindow", e)
         } finally {
@@ -1154,7 +1454,7 @@ import { switchExamSection } from './switchExamSection.js';
      }
 
     // Upload next-exam-student.log from workdirectory root when teacher requests log snapshot (separate from ZIP backup).
-    sendStudentLogToTeacher(){
+    async sendStudentLogToTeacher(){
         const logPath = platformDispatcher.logfile
         if (!fs.existsSync(logPath)) {
             log.warn(`communicationhandler @ sendStudentLogToTeacher: missing ${logPath}`)
@@ -1172,14 +1472,17 @@ import { switchExamSection } from './switchExamSection.js';
         const studenttoken = this.multicastClient.clientinfo.token
         const clientname = this.multicastClient.clientinfo.name
         const url = `https://${serverip}:${this.config.serverApiPort}/server/data/studentlog/${servername}`
-        examApiFetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${studenttoken}` },
-            body: JSON.stringify({ file: base64File, clientname }),
-        })
-            .then((response) => response.json())
-            .then((data) => { log.info(`communicationhandler @ sendStudentLogToTeacher: ${data.message || data.status}`) })
-            .catch((error) => { log.error(`communicationhandler @ sendStudentLogToTeacher: ${error}`) })
+        try {
+            const response = await examApiFetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${studenttoken}` },
+                body: JSON.stringify({ file: base64File, clientname }),
+            })
+            const data = await response.json()
+            log.info(`communicationhandler @ sendStudentLogToTeacher: ${data.message || data.status}`)
+        } catch (error) {
+            log.error(`communicationhandler @ sendStudentLogToTeacher: ${error}`)
+        }
     }
 
 

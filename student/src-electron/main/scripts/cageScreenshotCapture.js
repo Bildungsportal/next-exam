@@ -1,7 +1,6 @@
 import log from 'electron-log';
 
 const SCREENSHOT_MAX_WIDTH = 1200;
-const HEADER_CROP_HEIGHT = 150;
 
 /** Builds screenshot payload from a NativeImage (same shape as renderer captureFrameFromVideo). */
 function frameFromNativeImage(image) {
@@ -14,14 +13,9 @@ function frameFromNativeImage(image) {
     const sh = Math.round(height * scale);
     const resized = image.resize({ width: sw, height: sh, quality: 'good' });
 
-    const headerHeight = Math.min(HEADER_CROP_HEIGHT, sh);
-    const headerImg = resized.crop({ x: 0, y: 0, width: sw, height: headerHeight });
-
     const screenshotBase64 = resized.toJPEG(85).toString('base64');
-    const headerBase64 = headerImg.toJPEG(85).toString('base64');
 
-    // isAllBlack is a Windows getDisplayMedia concern only; Cage capturePage is never flagged black
-    return { screenshotBase64, headerBase64, isblack: false };
+    return { screenshotBase64 };
 }
 
 /** Captures the active Next-Exam window via webContents.capturePage. */

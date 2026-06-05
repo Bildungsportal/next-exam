@@ -8,12 +8,41 @@ import { builtinModules } from 'module';
 import fse from 'fs-extra';
 import pkg from './package.json';
 import dotenv from 'dotenv';
+import fs from 'fs';
 
-dotenv.config();
+// load .env when present (local dev); otherwise fall back to committed .env.production (CI)
+dotenv.config({ path: fs.existsSync('./.env') ? './.env' : './.env.production' });
+// electron-builder rejects CSC_NAME with "Developer ID Application:" prefix; codesign scripts use SHAID (full name ok)
+if (process.env.CSC_NAME?.startsWith('Developer ID Application:')) {
+  process.env.CSC_NAME = process.env.CSC_NAME.replace(/^Developer ID Application:\s*/, '').trim();
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const pdfjsLegacyPdf = path.resolve(__dirname, 'node_modules/pdfjs-dist/legacy/build/pdf.mjs');
-const pdfjsLegacyWorker = path.resolve(__dirname, 'node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs');
+
+/** First existing pdfjs-dist artifact (guards against incomplete node_modules installs). */
+function resolvePdfJsFile(...relPaths: string[]): string {
+  for (const rel of relPaths) {
+    const p = path.resolve(__dirname, 'node_modules/pdfjs-dist', rel);
+    if (fse.existsSync(p)) return p;
+  }
+  throw new Error(
+    `pdfjs-dist files missing under ${path.resolve(__dirname, 'node_modules/pdfjs-dist')}. ` +
+    'Remove node_modules/pdfjs-dist and run npm install.',
+  );
+}
+
+const pdfjsLegacyPdf = resolvePdfJsFile(
+  'legacy/build/pdf.mjs',
+  'legacy/build/pdf.min.mjs',
+  'build/pdf.mjs',
+  'build/pdf.min.mjs',
+);
+const pdfjsLegacyWorker = resolvePdfJsFile(
+  'legacy/build/pdf.worker.mjs',
+  'legacy/build/pdf.worker.min.mjs',
+  'build/pdf.worker.mjs',
+  'build/pdf.worker.min.mjs',
+);
 
 const buildDate = (() => {
   const now = new Date();
@@ -28,6 +57,73 @@ const buildNumber = process.env.BUILD_NUMBER || '1';
 const artifactDate = buildDate;
 const artifactNamePattern = `${productName}_${version}.${buildNumber}_${artifactDate}_\${arch}.\${ext}`;
 const signEnabled = process.env.SIGN !== 'false';
+// electron-builder builds every entry in win.target; NXE_EB_WIN_TARGET selects portable vs msi (see package.json scripts)
+const winEbTarget = process.env.NXE_EB_WIN_TARGET === 'msi'
+  ? [{ target: 'msi', arch: ['x64'] as const }]
+  : [{ target: 'portable', arch: ['x64'] as const }];
+const macEbArch = process.env.NXE_EB_MAC_ARCH === 'arm64'
+  ? (['arm64'] as const)
+  : (['x64'] as const);
+
+// renderer-only deps (+ their transitive deps): Vite bundles them into the renderer chunks,
+// so the raw node_modules copies electron-builder would otherwise pack into the asar are dead weight.
+// Verified none are reachable from the main-process require graph (incl. peer/optional deps).
+const rendererOnlyAsarExcludes = [
+  '!node_modules/@babel/runtime/**',
+  '!node_modules/@popperjs/core/**',
+  '!node_modules/@quasar/extras/**',
+  '!node_modules/@remirror/core-constants/**',
+  '!node_modules/@tiptap/**',
+  '!node_modules/@types/hast/**',
+  '!node_modules/@types/linkify-it/**',
+  '!node_modules/@types/markdown-it/**',
+  '!node_modules/@types/mdurl/**',
+  '!node_modules/@types/raf/**',
+  '!node_modules/@types/trusted-types/**',
+  '!node_modules/@types/unist/**',
+  '!node_modules/atob/**',
+  '!node_modules/base64-arraybuffer/**',
+  '!node_modules/bootstrap/**',
+  '!node_modules/btoa/**',
+  '!node_modules/canvg/**',
+  '!node_modules/core-js/**',
+  '!node_modules/crelt/**',
+  '!node_modules/css-line-break/**',
+  '!node_modules/dequal/**',
+  '!node_modules/devlop/**',
+  '!node_modules/dompurify/**',
+  '!node_modules/es6-promise/**',
+  '!node_modules/escape-string-regexp/**',
+  '!node_modules/highlight.js/**',
+  '!node_modules/html2canvas/**',
+  '!node_modules/html2pdf-jspdf2/**',
+  '!node_modules/jspdf/**',
+  '!node_modules/linkify-it/**',
+  '!node_modules/lowlight/**',
+  '!node_modules/markdown-it/**',
+  '!node_modules/mdurl/**',
+  '!node_modules/moment-timezone/**',
+  '!node_modules/moment/**',
+  '!node_modules/orderedmap/**',
+  '!node_modules/performance-now/**',
+  '!node_modules/prosemirror-*/**',
+  '!node_modules/punycode.js/**',
+  '!node_modules/quasar/**',
+  '!node_modules/raf/**',
+  '!node_modules/rgbcolor/**',
+  '!node_modules/rope-sequence/**',
+  '!node_modules/stackblur-canvas/**',
+  '!node_modules/svg-pathdata/**',
+  '!node_modules/sweetalert2/**',
+  '!node_modules/text-segmentation/**',
+  '!node_modules/tippy.js/**',
+  '!node_modules/uc.micro/**',
+  '!node_modules/utrie/**',
+  '!node_modules/validator/**',
+  '!node_modules/vue-router/**',
+  '!node_modules/vue-sweetalert2/**',
+  '!node_modules/w3c-keyname/**',
+];
 
 export default defineConfig(( ctx: any ) => {
   return {
@@ -66,8 +162,8 @@ export default defineConfig(( ctx: any ) => {
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#build
     build: {
       target: {
-        browser: [ 'es2022', 'firefox115', 'chrome115', 'safari14' ],
-        node: 'node20'
+        browser: [ 'es2022', 'firefox115', 'chrome115' ],
+        node: 'node24'
       },
 
       typescript: {
@@ -102,6 +198,14 @@ export default defineConfig(( ctx: any ) => {
         viteConf.css.preprocessorOptions.scss.silenceDeprecations = ['color-functions', 'if-function'];
         // Resolve pdfjs-dist legacy build (package has no exports for legacy subpath)
         const sharedDir = path.resolve(__dirname, '..', 'shared');
+        const repoRoot = path.resolve(__dirname, '..');
+        viteConf.server.fs = viteConf.server.fs || {};
+        const fsAllow = new Set([
+          ...(Array.isArray(viteConf.server.fs.allow) ? viteConf.server.fs.allow : []),
+          repoRoot,
+          sharedDir,
+        ]);
+        viteConf.server.fs.allow = [...fsAllow];
         viteConf.resolve = viteConf.resolve || {};
         viteConf.resolve.alias = {
           ...viteConf.resolve.alias,
@@ -118,7 +222,7 @@ export default defineConfig(( ctx: any ) => {
         viteConf.optimizeDeps.include = viteConf.optimizeDeps.include || [];
         viteConf.optimizeDeps.include.push('pdfjs-dist');
         viteConf.build = viteConf.build || {};
-        viteConf.build.chunkSizeWarningLimit = 1500;
+        viteConf.build.chunkSizeWarningLimit = 8000;
         // Electron: build renderer into public/ so one copy – no duplication; base ./ so relative paths work from public/index.html
         if (ctx.mode.electron && ctx.prod) {
           const baseOut = viteConf.build?.outDir ?? path.join(__dirname, 'dist', 'electron', 'UnPackaged');
@@ -301,25 +405,37 @@ export default defineConfig(( ctx: any ) => {
         appId: 'com.nextexam.student',
         productName,
         buildVersion: `${version}.${buildNumber}`,
+        // disable implicit CI publishing (removed in electron-builder v27)
+        publish: null,
         asar: { smartUnpack: true },
         beforePack: 'scripts/beforepack.js',
         afterPack: 'scripts/afterpack.js',
         asarUnpack: [
           'public/**/*',
-          'node_modules/get-windows/**/*',
         ],
         extraResources: [
           { from: 'src-electron/resources/linux', to: 'linux' },
+          { from: 'src-electron/resources/win32', to: 'win32' },
+          // vncproxy-helper runs as a plain node process (ELECTRON_RUN_AS_NODE) -> cannot require from app.asar;
+          // ship it + its only dep (ws, pure JS) unpacked so require('ws') resolves next to the helper
+          { from: 'src-electron/main/scripts/vncproxy-helper.cjs', to: 'vncproxy/vncproxy-helper.cjs' },
+          { from: 'node_modules/ws', to: 'vncproxy/node_modules/ws' },
+          // assessment-helper.app = .app bundle (embedded profile authorizes restricted AAC entitlement); wifi-helper = plain CLI
+          ...['assessment-helper.app', 'wifi-helper']
+            .filter((name) => fse.existsSync(path.join(__dirname, 'scripts/apple', name)))
+            .map((name) => ({ from: `scripts/apple/${name}`, to: `apple/${name}` })),
         ],
-        directories: { output: `../release/${version}.${buildNumber}_${artifactDate}` },
+        // directories.output is overridden by quasar to dist/electron/Packaged - cannot change here
         compression: 'normal',
+        // ship only finnish/english/german Chromium UI locales (prunes locales/*.pak)
+        electronLanguages: ['fi', 'en-US', 'en-GB', 'de'],
         linux: {
           target: 'AppImage',
           category: 'Utility',
           icon: 'public/icons/256x256.png',
           artifactName: artifactNamePattern,
           // Quasar UnPackaged root has electron-main.js, index.html, preload/, assets/ – include all, exclude other platforms’ JRE
-          files: ['**/*', '!public/minimal-jre-11-win/**', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**'],
+          files: ['**/*', '!public/minimal-jre-11-win/**', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**', '!public/qemu/win/**', '!public/qemu/mac/**', ...rendererOnlyAsarExcludes],
         },
         mac: {
           icon: 'public/icons/icon.png',
@@ -329,11 +445,11 @@ export default defineConfig(( ctx: any ) => {
           entitlements: 'scripts/entitlements.mac.plist',
           entitlementsInherit: 'scripts/entitlements.mac.plist',
           category: 'public.app-category.utilities',
-          target: { target: 'dmg', arch: ['x64', 'arm64'] },
-          files: ['**/*', '!public/minimal-jre-11-win/**', '!public/minimal-jre-11-lin/**'],
+          target: { target: 'dmg', arch: macEbArch },
+          files: ['**/*', '!public/minimal-jre-11-win/**', '!public/minimal-jre-11-lin/**', '!public/qemu/win/**', '!public/qemu/lin/**', ...rendererOnlyAsarExcludes],
         },
         dmg: { sign: false },
-        portable: { useZip: false, unpackDirName: 'next-exam-student', splashImage: 'public/splash.bmp' },
+        portable: { useZip: true, unpackDirName: 'next-exam-student', splashImage: 'public/splash.bmp' },
         msi: {
           perMachine: true,
           createDesktopShortcut: true,
@@ -343,12 +459,13 @@ export default defineConfig(( ctx: any ) => {
         },
         win: {
           icon: 'public/icons/icon.ico',
-          target: [{ target: 'portable', arch: ['x64'] }, { target: 'msi', arch: ['x64'] }],
+          target: winEbTarget,
           artifactName: artifactNamePattern,
-          files: ['**/*', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**', '!public/minimal-jre-11-lin/**'],
+          files: ['**/*', '!public/minimal-jre-11-mac/**', '!public/minimal-jre-11-mac-arm64/**', '!public/minimal-jre-11-lin/**', '!public/qemu/win/**', '!public/qemu/lin/**', '!public/qemu/mac/**', ...rendererOnlyAsarExcludes],
+          // SIGN env (SIGN !== 'false'): signAndEditExecutable gates signtool on electron-builder 25.x (Quasar dep); use signExecutable on eb 26+
+          signAndEditExecutable: signEnabled,
           ...(signEnabled && {
-            sign: true,
-            signtoolOptions: { certificateSubjectName: 'OSOS Austria', signingHashAlgorithms: ['sha256'] },
+            signtoolOptions: { signingHashAlgorithms: ['sha256'] },
           }),
         },
         ...(signEnabled && { afterSign: 'scripts/notarize.cjs' }),

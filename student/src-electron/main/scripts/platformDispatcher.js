@@ -38,6 +38,12 @@ import {
     detectRunningInCage,
     needsCageKioskSetup,
 } from './cageDetect.js';
+import {
+    detectRunningInWindowsKiosk,
+    detectWindowsKioskInstalled,
+    detectWindowsKioskProvisionComplete,
+    needsWindowsKioskSetup,
+} from './win/windowsKioskSetup.js';
 dotenv.config();
 const __dirname = import.meta.dirname;
 
@@ -55,12 +61,30 @@ class PlatformDispatcher {
     this.isGNOME = this._isGNOME();
     this.isUnity = this._isUNITY();
     this.isWayland = this._isWayland();
-    this.cageInstalled = this.platform === 'linux' ? detectCageInstalled() : false;
-    this.runningInCage = this.platform === 'linux' ? detectRunningInCage() : false;
+    // Linux + Windows share the same field names so the renderer/IPC layer is one code path.
+    // runningInCage on win32 = process runs as the dedicated kiosk OS user.
+    if (this.platform === 'linux') {
+      this.cageInstalled = detectCageInstalled();
+      this.runningInCage = detectRunningInCage();
+      this.cageKioskAppImageInstalled = detectCageKioskAppImageInstalled();
+      this.cageKioskDesktopInstalled = detectCageKioskDesktopInstalled();
+      this.needsCageKioskSetup = needsCageKioskSetup();
+    } else if (this.platform === 'win32') {
+      this.cageInstalled = detectWindowsKioskProvisionComplete();
+      this.runningInCage = detectRunningInWindowsKiosk();
+      this.cageKioskAppImageInstalled = detectWindowsKioskInstalled();
+      this.cageKioskDesktopInstalled = detectWindowsKioskProvisionComplete();
+      this.needsCageKioskSetup = needsWindowsKioskSetup();
+    } else {
+      this.cageInstalled = false;
+      this.runningInCage = false;
+      this.cageKioskAppImageInstalled = false;
+      this.cageKioskDesktopInstalled = false;
+      this.needsCageKioskSetup = false;
+    }
     this.isCageSession = this.runningInCage;
-    this.cageKioskAppImageInstalled = this.platform === 'linux' ? detectCageKioskAppImageInstalled() : false;
-    this.cageKioskDesktopInstalled = this.platform === 'linux' ? detectCageKioskDesktopInstalled() : false;
-    this.needsCageKioskSetup = this.platform === 'linux' ? needsCageKioskSetup() : false;
+    // Win Assigned Access already shells the session; Electron setKiosk(true) + taskkill explorer breaks it.
+    this.skipElectronKiosk = (this.platform === 'win32' && this.runningInCage);
     this.jre = this._detectJREId();
     this.publicBase = this._getPublicBase();
     this.jreDir = this._resolveJREDir();
@@ -109,6 +133,19 @@ class PlatformDispatcher {
 
   _isIOS() {
     return process.ios === true || process.env.IOS === 'true';
+  }
+
+  /** Electron kiosk flag only when OS is not already in Assigned Access / cage shell. */
+  applyElectronKioskMode(win) {
+    if (!win || win.isDestroyed?.()) return;
+    if (this.skipElectronKiosk) return;
+    // macOS: AAC assessment mode handles the lockdown; we only want a borderless fullscreen
+    // (simple fullscreen = no separate Space, no notch/camera safe-area inset, no menu bar).
+    if (this.platform === 'darwin') {
+      win.setSimpleFullScreen(true);
+      return;
+    }
+    win.setKiosk(true);
   }
 
   _whichDesktopName() {
@@ -199,10 +236,10 @@ class PlatformDispatcher {
     // use bundled jre because its smaller and provides only the needed java modules
     if (config.useBundledJRE) {
       if (app.isPackaged) {
-        this.messages.push("platformDispatcher @ _resolveJREDir: app.isPackaged: " + join(this.publicBase, this.jre));
+        //this.messages.push("platformDispatcher @ _resolveJREDir: app.isPackaged: " + join(this.publicBase, this.jre));
         return join(this.publicBase, this.jre);
       } else {
-        this.messages.push("platformDispatcher @ _resolveJREDir: !app.isPackaged: " + join(__dirname, '../../public', this.jre));
+        //this.messages.push("platformDispatcher @ _resolveJREDir: !app.isPackaged: " + join(__dirname, '../../public', this.jre));
         return join(__dirname, '../../public', this.jre);
       }
     } 
@@ -236,13 +273,14 @@ class PlatformDispatcher {
   _resolveJavaBin() {
     switch (this.platform) {
       case 'darwin': return ['bin', 'java'];
-      case 'win32': return ['bin', 'javaw.exe'];
+      case 'win32': return ['bin', 'java.exe'];
       case 'linux': return ['bin', 'java'];
       default: this._fail(`unsupported platform: ${this.platform}`);
     }
   }
 
   _getDisplayServer() {
+    if (this.platform === 'win32') return 'windows';
     if (this.platform !== 'linux') return 'n/a';
     if (this._env.XDG_SESSION_TYPE === 'wayland') return 'wayland';
     if (this._env.XDG_SESSION_TYPE === 'x11' || this._env.DISPLAY) return 'x11';
@@ -279,7 +317,7 @@ class PlatformDispatcher {
       const out = execSync('echo $XDG_CURRENT_DESKTOP', { shell: '/bin/bash', encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
       return out === 'KDE';
     } catch {
-      this.messages.push("platformDispatcher @ _isKDE: no data");
+      //this.messages.push("platformDispatcher @ _isKDE: no data");
       return false;
     }
   }
@@ -289,7 +327,7 @@ class PlatformDispatcher {
       const out = execSync('echo $XDG_CURRENT_DESKTOP', { shell: '/bin/bash', encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim().toLowerCase();
       return out.includes('gnome');
     } catch (err) {
-      this.messages.push("platformDispatcher @ _isGNOME: no data");
+      //this.messages.push("platformDispatcher @ _isGNOME: no data");
       return false;
     }
   }
@@ -299,7 +337,7 @@ class PlatformDispatcher {
       const out = execSync('echo $XDG_CURRENT_DESKTOP', { shell: '/bin/bash', encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim().toLowerCase();
       return out.includes('unity');
     } catch (err) {
-      this.messages.push("platformDispatcher @ _isUNITY: no data");
+      //this.messages.push("platformDispatcher @ _isUNITY: no data");
       return false;
     }
   }

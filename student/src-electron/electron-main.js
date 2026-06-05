@@ -20,6 +20,8 @@
  * This is the ELECTRON main file that actually opens the electron window
  */
 import platformDispatcher from './main/scripts/platformDispatcher.js';
+import { getLinuxCageDetectionLogLines } from './main/scripts/cageDetect.js';
+import { getWindowsKioskDetectionLogLines, syncAllowedKioskAppsClientinfo } from './main/scripts/win/windowsKioskSetup.js';
 import chalk from 'chalk';
 import log from 'electron-log';
 import { app, BrowserWindow, powerSaveBlocker, nativeTheme, globalShortcut, Tray, Menu, dialog, session, desktopCapturer } from 'electron'
@@ -27,6 +29,7 @@ import config from '../src/utils/config.js';
 import multicastClient from './main/scripts/multicastclient.js'
 import path from 'path'
 import fs from 'fs'
+import { wipeKioskUserFiles } from './main/scripts/win/windowsKioskSetup.js'
 import * as fsExtra from 'fs-extra';
 import ip from 'ip'
 import { gateway4sync } from 'default-gateway';
@@ -37,11 +40,11 @@ import { updateSystemTray } from './main/scripts/traymenu.js'
 import JreHandler from './main/scripts/jre-handler.js';
 import { checkParentProcess } from './main/scripts/checkparent.js';
 
-import { toggleMacOSLockdown } from './main/scripts/platformrestrictions.js';
+// toggleMacOSLockdown disabled while macOS Automatic Assessment mode is active
 import { stopProxy } from './main/scripts/vncproxy.js';
+import { stopAssessmentSession } from './main/scripts/assessmentSession.js';
 import { initErrorHandling } from './main/scripts/errorHandling.js';
 import { syncClientDisplayInfo } from './main/scripts/displayInfo.js';
-JreHandler.init()
 
 if (!config.development && process.argv.some(arg => arg.startsWith('--inspect') || arg.startsWith('--remote-debugging'))) {  // disable options to read v8 heap on production builds
     log.info('main @ electron-main: Inspect mode detected, quitting...');
@@ -102,14 +105,22 @@ log.debug(`main: OS: ${process.platform} ${process.arch}`)
 log.debug(`main: Arch: ${process.arch}`)
 log.debug(`main: Desktop: ${platformDispatcher.desktopName}`)
 log.debug(`main: Display server: ${platformDispatcher.displayServer}`)
+for (const line of getLinuxCageDetectionLogLines()) log.debug(line);
+for (const line of getWindowsKioskDetectionLogLines()) log.debug(line);
+syncAllowedKioskAppsClientinfo(multicastClient.clientinfo);
 if (platformDispatcher.runningUnderMacRosetta) {
     log.warn('main: Intel (x64) build running under Rosetta on Apple Silicon — install the arm64 build');
 }
+
+
+
+
 
 WindowHandler.init(multicastClient, config)  // mainwindow, examwindow
 CommHandler.init(multicastClient, config)    // starts "beacon" intervall and fetches information from the teacher - acts on it (startexam, stopexam, sendfile, getfile)
 IpcHandler.init(multicastClient, config, WindowHandler, CommHandler)  //controll all Inter Process Communication
 initErrorHandling(log, WindowHandler);
+JreHandler.init();
 
 // Prevents Electron from creating the default menu
 Menu.setApplicationMenu(null);
@@ -197,7 +208,12 @@ app.on('window-all-closed', async () => {  // last window closed – clear stora
 });
 
 app.on('will-quit', () => {  // if window is closed
-    toggleMacOSLockdown(false)
+    if (process.platform === 'darwin') {
+        stopAssessmentSession().catch((err) => log.warn('main @ will-quit: stopAssessmentSession', err));
+    }
+    if (process.platform === 'win32' && platformDispatcher.runningInCage) {
+        wipeKioskUserFiles({ workdirectory: config.workdirectory }); // win32 kiosk: wipe workdir + standard user folders before quit so the next student starts fresh.
+    }
 })
 
 app.on('activate', () => {
@@ -243,54 +259,59 @@ app.whenReady()
     nativeTheme.themeSource = 'light'  // prevent theme settings from being adopted from windows
     session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
+   
+    // Kiosk (Linux cage OR Win32 AssignedAccess): no system picker available; auto-grant the
+    // first source. Linux cage limits to windows (cage shows one window). Win32 grants screen.
+    // Non-kiosk: useSystemPicker:true so the OS dialog appears as usual.
     if (platformDispatcher.runningInCage) {
+        const types = process.platform === 'linux' ? ['window'] : ['screen'];
         session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
-            desktopCapturer.getSources({ types: ['window'] }).then((sources) => {
-                try {
-                    let picked = sources[0];
-                    if (sources.length) {
-                        const nextExam = sources.find((s) => /next-exam|next exam/i.test(s.name));
-                        if (nextExam) picked = nextExam;
-                    }
-                    if (picked) {
-                        callback({ video: picked });
-                    } else {
-                        log.warn('main @ setDisplayMediaRequestHandler (cage): no window sources');
-                        callback(null);
-                    }
-                } catch (e) {
-                    log.warn('main @ setDisplayMediaRequestHandler (cage):', e?.message || e);
+            desktopCapturer.getSources({ types }).then((sources) => {
+                if (!sources.length) {
+                    log.warn(`main @ setDisplayMediaRequestHandler (kiosk ${types[0]}): no sources`);
                     callback(null);
+                    return;
                 }
+                let picked = sources[0];
+                if (process.platform === 'linux') {
+                    const nextExam = sources.find((s) => /next-exam|next exam/i.test(s.name));
+                    if (nextExam) picked = nextExam;
+                }
+                callback({ video: picked });
             }).catch((err) => {
-                log.warn('main @ setDisplayMediaRequestHandler (cage):', err?.message || err);
+                log.warn('main @ setDisplayMediaRequestHandler (kiosk):', err?.message || err);
                 callback(null);
             });
         }, { useSystemPicker: false });
     } else {
-        // Use system picker (KDE/PipeWire dialog on Linux) when available; fallback to first screen
-        session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
-            desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
-                try {
-                    if (sources.length > 0) {
-                        callback({ video: sources[0] });
-                    } else {
-                        log.warn('main @ setDisplayMediaRequestHandler: no screen sources available');
+        // Non-kiosk: system picker must win. On macOS, never override the picker by forcing sources[0].
+        if (process.platform === 'darwin') {
+            session.defaultSession.setDisplayMediaRequestHandler((_request, callback) => {
+                callback(null);
+            }, { useSystemPicker: true });
+        } else {
+            // Use system picker when available; fallback to first screen (non-macOS).
+            session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+                desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
+                    try {
+                        if (sources.length > 0) {
+                            callback({ video: sources[0] });
+                        } else {
+                            log.warn('main @ setDisplayMediaRequestHandler: no screen sources available');
+                            callback(null);
+                        }
+                    } catch (e) {
+                        log.warn('main @ setDisplayMediaRequestHandler: exception in handler', e?.message || e);
                         callback(null);
                     }
-                } catch (e) {
-                    log.warn('main @ setDisplayMediaRequestHandler: exception in handler', e?.message || e);
+                }).catch((err) => {
+                    log.warn('main @ setDisplayMediaRequestHandler:', err?.message || err);
                     callback(null);
-                }
-            }).catch((err) => {
-                log.warn('main @ setDisplayMediaRequestHandler:', err?.message || err);
-                callback(null);
-            });
-        }, { useSystemPicker: true });
+                });
+            }, { useSystemPicker: true });
+        }
     }
     
-    toggleMacOSLockdown(true);
-   
     /******* Create main window *******/
     WindowHandler.createMainWindow()
 
@@ -303,7 +324,10 @@ app.whenReady()
         powerSaveBlocker.start('prevent-display-sleep')   // prevent the device from going to sleep
         if (allowTray) { updateSystemTray('de'); }        // skip tray on GNOME
         else { log.info('main @ tray: GNOME detected, skipping system tray'); }
-        runParentProcessCheck();  // this checks if the app was started from within a browser (directly after download)
+        
+        if (!platformDispatcher.runningInCage) {  // Skip in Win/Linux kiosk
+            runParentProcessCheck();  // check if the app was started from within a browser and quit if detected
+        }
     }
     if (config.development){
         globalShortcut.register('CommandOrControl+Shift+G', () => {  if (global && global.gc){ global.gc({type:'mayor',execution: 'async'}); global.gc({type:'minor',execution: 'async'});  }});

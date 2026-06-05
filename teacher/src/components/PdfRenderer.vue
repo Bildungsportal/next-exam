@@ -21,6 +21,14 @@
                 >
                     ↶
                 </button>
+                <button
+                    type="button"
+                    class="btn btn-sm btn-primary"
+                    @click.stop="saveCorrectionTemplate"
+                    style="margin-left: 5px;"
+                >
+                    {{ $t('pdf.saveCorrectionTemplate') }}
+                </button>
             </li>
             <li class="nav-item position-absolute" style="right: 0;">  
                 <div type="button" id="closePDF" class="nav-link btn btn-light btn-sm" :title="$t('dashboard.close')" @click.stop="closePane" style="width:40px; height:45px !important;text-align:center; font-weight:bold;">&times;</div> 
@@ -95,142 +103,16 @@
             >
                 <img :src="page.imgSrc" class="pdf-bg-image" />
 
-                <div
-                    v-for="field in page.formFields"
-                    v-show="!isBlacklisted(field.id)"
-                    :key="field.id"
-                    :class="['input-overlay', editMode && drawMode === 'delete' ? 'delete-mode-field' : '']"
-                    :id="field.id + '_wrapper'"
-                    :style="field.style"
-                    @click.stop="editMode && drawMode === 'delete' ? deleteField(field.id, false) : null"
-                >
-                    <input
-                        v-if="field.type === 'checkbox'"
-                        type="checkbox"
-                        :checked="field.checked"
-                        :name="field.name"
-                        :id="field.id"
-                        class="interactive-input checkbox"
-                    />
-                    <textarea
-                        v-else-if="field.type === 'textarea'"
-                        :name="field.name"
-                        :id="field.id"
-                        class="interactive-input textarea"
-                    >
-                        {{ field.value }}
-                    </textarea>
-                    <input
-                        v-else
-                        type="text"
-                        :value="field.value"
-                        :name="field.name"
-                        :id="field.id"
-                        class="interactive-input text"
-                    />
-                </div>
-
-                <div
-                    v-for="cloze in page.clozeFields"
-                    v-show="!isBlacklisted(cloze.id)"
-                    :key="cloze.id"
-                    :class="['input-overlay', cloze.type === 'checkbox' || cloze.type === 'deselect' ? 'checkbox-overlay' : '', editMode && drawMode === 'delete' ? 'delete-mode-field' : '']"
-                    :id="cloze.id + '_wrapper'"
-                    :style="cloze.style"
-                    @click.stop="editMode && drawMode === 'delete' ? deleteField(cloze.id, false) : null"
-                >
-                    <input
-                        v-if="cloze.type === 'checkbox'"
-                        type="checkbox"
-                        :checked="cloze.checked || false"
-                        :name="cloze.id"
-                        :id="cloze.id"
-                        class="interactive-input checkbox"
-                    />
-                    <input
-                        v-else-if="cloze.type === 'deselect'"
-                        type="checkbox"
-                        :checked="cloze.checked || false"
-                        :name="cloze.id"
-                        :id="cloze.id"
-                        class="interactive-input checkbox deselect-checkbox"
-                    />
-                    <input
-                        v-else
-                        type="text"
-                        class="interactive-input cloze"
-                        :name="cloze.id"
-                        :id="cloze.id"
-                    />
-                </div>
-
-                <div
-                    v-for="box in page.boxFields"
-                    v-show="!isBlacklisted(box.id)"
-                    :key="box.id"
-                    :class="['input-overlay', box.type === 'checkbox' ? 'checkbox-overlay' : '', editMode && drawMode === 'delete' ? 'delete-mode-field' : '']"
-                    :id="box.id + '_wrapper'"
-                    :style="box.style"
-                    @click.stop="editMode && drawMode === 'delete' ? deleteField(box.id, false) : null"
-                >
-                    <input
-                        v-if="box.type === 'checkbox'"
-                        type="checkbox"
-                        :name="box.id"
-                        :id="box.id"
-                        class="interactive-input checkbox"
-                    />
-                    <textarea
-                        v-else-if="box.type === 'textarea' || box.isTextarea"
-                        class="interactive-input textarea"
-                        :name="box.id"
-                        :id="box.id"
-                    ></textarea>
-                    <input
-                        v-else
-                        type="text"
-                        class="interactive-input table-cell"
-                        :name="box.id"
-                        :id="box.id"
-                    />
-                </div>
-
-                <div
-                    v-for="customField in getCustomFieldsForPage(pageIndex)"
-                    :key="customField.id"
-                    :class="['input-overlay', editMode && drawMode === 'delete' ? 'delete-mode-field' : '']"
-                    :id="customField.id + '_wrapper'"
-                    :style="customField.style"
-                    @click.stop="editMode && drawMode === 'delete' ? deleteField(customField.id, true) : null"
-                >
-                    <textarea
-                        v-if="!customField.type || customField.type === 'textarea'"
-                        class="interactive-input textarea"
-                        :name="customField.id"
-                        :id="customField.id"
-                    ></textarea>
-                    <input
-                        v-else-if="customField.type === 'textinput'"
-                        type="text"
-                        class="interactive-input text"
-                        :name="customField.id"
-                        :id="customField.id"
-                    />
-                    <input
-                        v-else-if="customField.type === 'checkbox'"
-                        type="checkbox"
-                        class="interactive-input checkbox"
-                        :name="customField.id"
-                        :id="customField.id"
-                    />
-                    <input
-                        v-else
-                        type="checkbox"
-                        class="interactive-input checkbox deselect-checkbox"
-                        :name="customField.id"
-                        :id="customField.id"
-                    />
-                </div>
+                <ActivesheetsFieldLayer
+                    :page="page"
+                    :page-index="pageIndex"
+                    :custom-fields="localCustomFields"
+                    :blacklist="localBlacklist"
+                    :interactive="true"
+                    :edit-mode="editMode"
+                    :draw-mode="drawMode"
+                    @deleteField="deleteField"
+                />
 
                 <div
                     v-if="currentRect && currentRect.pageIndex === pageIndex"
@@ -246,11 +128,14 @@
 </template>
 
 <script>
-import { parsePdfToPages } from 'next-exam-shared/pdfparser/index.js';
+import { parsePdfToPages, ensurePdfOverlayFontsReady } from 'next-exam-shared/pdfparser/index.js';
+import { collectActivesheetsFormData, applyActivesheetsFormData } from 'next-exam-shared/activesheetsFormData.js';
 import Swal from 'sweetalert2';
+import ActivesheetsFieldLayer from './ActivesheetsFieldLayer.vue';
 
 export default {
     name: 'PdfOverlay',
+    components: { ActivesheetsFieldLayer },
     props: {
         pdfBase64: {
             type: String,
@@ -267,6 +152,14 @@ export default {
         blacklist: {
             type: Array,
             default: () => []
+        },
+        sourcePdfFilename: {
+            type: String,
+            default: null
+        },
+        initialFormData: {
+            type: Object,
+            default: null
         }
     },
     data() {
@@ -274,6 +167,7 @@ export default {
             parsedPages: [],
             isParsing: false,
             warningShown: false,
+            initialFormDataApplied: false,
             editMode: false,
             localCustomFields: [],
             localBlacklist: [],
@@ -335,42 +229,43 @@ export default {
                         this.showWarningDialog(pagesWithWarning);
                     }
                 }
+                this.scheduleApplyInitialFormData();
             },
             immediate: false
-        }
+        },
+        initialFormData() {
+            this.initialFormDataApplied = false;
+            this.scheduleApplyInitialFormData();
+        },
     },
     methods: {
-        async ensurePdfOverlayFontsReady() {
-            // Ensure webfonts are loaded before canvas.measureText drives cloze positioning.
-            if (!document?.fonts) return;
-            try {
-                await Promise.all([
-                    document.fonts.load('16px hv'),
-                    document.fonts.load('16px carlito-regular'),
-                    document.fonts.load('16px carlito-bold'),
-                    document.fonts.load('16px carlito-italic'),
-                    document.fonts.load('16px carlito-bold-italic'),
-                    document.fonts.load('16px Latin-Modern-Math'),
-                    document.fonts.load('16px caladea'),
-                    document.fonts.load('16px dejavuserif'),
-                    document.fonts.load('16px notosanssymbols'),
-                    document.fonts.ready,
-                ]);
-            } catch (e) {
-                // If fonts fail to load, parsing still proceeds (fallback metrics may drift).
-                console.warn('PdfOverlay: font loading skipped', e?.message || e);
+        scheduleApplyInitialFormData() {
+            if (!this.initialFormData || this.initialFormDataApplied) return;
+            this.$nextTick(() => {
+                requestAnimationFrame(() => this.tryApplyInitialFormData());
+            });
+        },
+        tryApplyInitialFormData() {
+            if (!this.initialFormData || this.initialFormDataApplied || this.effectiveLoading) return;
+            if (!this.parsedPages.length) return;
+            const root = document.getElementById('pdfrenderer');
+            if (!root || root.querySelectorAll('.interactive-input').length === 0) return;
+            if (applyActivesheetsFormData(root, this.initialFormData)) {
+                this.initialFormDataApplied = true;
             }
         },
         async processPdf(base64Data) {
             if (!base64Data) {
                 this.parsedPages = [];
                 this.warningShown = false;
+                this.initialFormDataApplied = false;
                 return;
             }
             this.isParsing = true;
-            this.warningShown = false; // Reset warning flag for new PDF
+            this.warningShown = false;
+            this.initialFormDataApplied = false;
             try {
-                await this.ensurePdfOverlayFontsReady();
+                await ensurePdfOverlayFontsReady();
                 const uint8 = this.base64ToUint8Array(base64Data);
                 this.parsedPages = await parsePdfToPages(uint8);
             } catch (error) {
@@ -378,6 +273,7 @@ export default {
                 this.parsedPages = [];
             } finally {
                 this.isParsing = false;
+                this.scheduleApplyInitialFormData();
             }
         },
         base64ToUint8Array(data) {
@@ -419,6 +315,12 @@ export default {
         },
         closePane() {
             this.$emit('close');
+        },
+        saveCorrectionTemplate() {
+            this.$emit('save-correction-template', collectActivesheetsFormData(
+                document.getElementById('pdfrenderer'),
+                this.sourcePdfFilename || 'unknown.pdf'
+            ));
         },
         toggleEditMode() {
             if (this.editMode) {
@@ -585,78 +487,6 @@ export default {
     }
 };
 </script>
-
-<style>
-/* Fonts made from <a href="http://www.webfontfree.com">Web Font Free</a> is licensed by CC BY 4.0 */
-@font-face {
-    font-family: 'hv';
-    src: url('/src/assets/fonts/HelveticaNeueLTPro-Lt.woff2') format('woff2');
-    font-weight: 300;
-    font-style: normal;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'carlito-bold';
-    src: url('/src/assets/fonts/Carlito-Bold.ttf') format('truetype');
-    font-weight: 700;
-    font-style: normal;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'carlito-regular';
-    src: url('/src/assets/fonts/Carlito-Regular.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'carlito-italic';
-    src: url('/src/assets/fonts/Carlito-Italic.ttf') format('truetype');
-    font-weight: normal;
-    font-style: italic;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: 'carlito-bold-italic';
-    src: url('/src/assets/fonts/Carlito-BoldItalic.ttf') format('truetype');
-    font-weight: bold;
-    font-style: italic;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'Latin-Modern-Math';
-    src: url('/src/assets/fonts/LatinmodernmathRegular.otf') format('opentype');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'caladea';
-    src: url('/src/assets/fonts/Caladea-Regular.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
-@font-face {
-    font-family: 'dejavuserif';
-    src: url('/src/assets/fonts/DejaVuSerif.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-} 
-@font-face {
-    font-family: 'notosanssymbols';
-    src: url('/src/assets/fonts/NotoSansSymbols-VariableFont_wght.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-    font-display: swap;
-}
-
-
-
-
-</style>
 
 <style scoped>
 .pdf-overlay-root {
@@ -940,7 +770,7 @@ background-color: transparent;
 }
 
 .interactive-input.cloze {
-    border-bottom: 0;
+    border: 1px solid rgba(0, 0, 0, 0.12);
     background-color: rgba(0, 255, 0, 0.1);
     font-size: 14px;
 }

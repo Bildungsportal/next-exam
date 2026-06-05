@@ -15,7 +15,6 @@ export type Exam = {
   screenshotinterval: number,
   backupintervalPause: number,
   screenslocked: boolean, // Remove?
-  screenshotocr: boolean, // Remove?
   examStudents: Student[],
   examTeachers: Teacher[],
   examSecurityKey: string | null, // Remove?
@@ -42,17 +41,7 @@ export type Section = {
   timelimit: number, // Remove?
   locked: boolean, // Remove?
   sectionname: string,
-  spellchecklang: string | null,
-  suggestions: boolean | null,
-  cmargin: Margin[],
-  formsUrl: string | null,
-  msOfficeFile: boolean | null, // Remove?
-  linespacing: number | null,
-  languagetool: boolean | null,
-  fontfamily: string | null,
-  fontsize: number | null,
-  audioRepeat: number | null,
-  localVMConfig: any,
+  startTs?: number,
   groups: boolean,
   groupA: Group,
   groupB: Group,
@@ -61,6 +50,20 @@ export type Section = {
 export type Margin = {
   side: string | null,
   size: number | null,
+}
+
+export type EditorExamConfig = {
+  spellchecklang?: string,
+  suggestions?: boolean,
+  cmargin?: Margin,
+  linespacing?: string | number,
+  languagetool?: boolean,
+  languagetoolhost?: string | null,
+  languagetoolport?: string | null,
+  fontfamily?: string,
+  fontsize?: string,
+  audioRepeat?: string | number,
+  editorTemplate?: Record<string, unknown>,
 }
 
 export type Group = {
@@ -72,9 +75,9 @@ export type Group = {
 
 export type ExamConfig = {
   activeSheets: ActiveSheetsConfig,
-  editor: Record<string, unknown>,
+  editor: EditorExamConfig,
   eduvidual: EduvidualConfig,
-  gforms: Record<string, unknown>,
+  forms: Record<string, unknown>,
   website: WebsiteConfig,
   math: Record<string, unknown>,
   microsoft365: Microsoft365Config,
@@ -103,6 +106,7 @@ export type EduvidualConfig = {
 
 export type RdpConfig = {
   domain?: string,
+  protocol?: string,
 }
 
 export type Microsoft365Config = {

@@ -113,7 +113,7 @@
                     <div
                         v-for="exam of previousLocalExams"
                         :key="`local-main-${exam.examName}`"
-                        class="bip-exam-card"
+                        class="bip-exam-card bip-exam-card-local"
                         :class="{ 'bg-cyan-transparent': servername === exam.examName, 'cursornotallowed': exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion }"
                         @click="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? '' : setPreviousExam(exam)"
                         :title="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? $t('startserver.incompatible') : ''"
@@ -200,7 +200,7 @@
                     <div
                         v-for="exam of onlineExams"
                         :key="`bip-main-${exam.id}-${exam.examName}`"
-                        class="bip-exam-card"
+                        class="bip-exam-card bip-exam-card-bip"
                         :class="{ 'bip-exam-card-active': servername === exam.examName }"
                         @click="setOnlineExam(exam)"
                     >
@@ -258,8 +258,8 @@
  <div id="bipinfo">
     <div id="bipcheck" @click="fetchBiPNews();"> <div id="eye" class="darkgreen eyeopen"></div> &nbsp;BiP News</div>
     <div class="bipscrollarea">     
-        <div v-if="bipnews.length == 0"  style="text-align: left; font-size: 0.8em; margin-left:10px;"> {{ $t('startserver.noNews') }}</div> 
-        <div v-for="entry in bipnews" :key="entry.id" class="bipentry">
+        <div v-if="bipnewsSorted.length == 0"  style="text-align: left; font-size: 0.8em; margin-left:10px;"> {{ $t('startserver.noNews') }}</div> 
+        <div v-for="entry in bipnewsSorted" :key="entry.id" class="bipentry">
             <div class="color-circle" style="width: 10px; height: 10px;"></div>
             <div class="subject">{{ entry.subject }} </div>
             <div class="message" v-if="entry.message" v-external-links v-html="entry.message"></div>
@@ -370,6 +370,12 @@ export default {
         passwordMismatch() {
             return this.passwordConfirm !== '' && this.password !== this.passwordConfirm;
         },
+        // BiP forum posts newest first (timecreated is Unix seconds from Moodle API).
+        bipnewsSorted() {
+            return [...(this.bipnews || [])].sort(
+                (a, b) => (Number(b.timecreated) || 0) - (Number(a.timecreated) || 0)
+            );
+        },
         // Password sent to control API / dashboard when the user leaves advanced empty (legacy default).
         effectiveExamPassword() {
             if (this.password) return this.password;
@@ -478,6 +484,9 @@ export default {
                         showCancelButton: false,
                     })
 
+                    //log.info('startserver @ fetchBiPData: BiP data fetched', response)
+
+                    
                     this.bipUsername = response.fullname
                     this.bipuserID = response.userid
 
@@ -1314,8 +1323,7 @@ export default {
 .bip-exam-card {
     width: 300px;
     background: #f8f9fa;
-    border: 1px solid #198754;
-    border-left: 1px solid #198754;
+    border: 1px solid;
     border-radius: 5px;
     padding: 7px 10px;
     cursor: pointer;
@@ -1323,13 +1331,26 @@ export default {
     user-select: none;
 }
 
-.bip-exam-card:hover {
-    border-color: var
+/* match btn-cyan (Prüfung starten, local tab) */
+.bip-exam-card-local {
+    border-color: var(--bs-cyan);
+}
+
+.bip-exam-card-local:hover {
+    border-color: var(--bs-cyan);
+}
+
+/* match btn-success (Prüfung starten, Bildungsportal tab) */
+.bip-exam-card-bip {
+    border-color: var(--bs-success);
+}
+
+.bip-exam-card-bip:hover {
+    border-color: var(--bs-success);
 }
 
 .bip-exam-card-active {
     background: #d1e7dd;
-    /* box-shadow: 0 2px 8px rgba(25, 135, 84, 0.25); */
 }
 
 
