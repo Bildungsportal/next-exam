@@ -300,9 +300,8 @@
 </template>
 
 <script lang="ts">
-import validator, {isEmpty} from 'validator'
+import validator from 'validator'
 import log from 'electron-log/renderer'
-import {isElectronWindow} from "../types/platform.ts";
 import {SignalBridge} from '../utils/signalBridge.js'
 import { initScreenshotScheduler, hasActiveScreenshotStream, isFullDesktopCaptureLikely, ensureDisplayStreamAsync, setCageWindowCaptureFallback, setLinuxKioskRunningInCage, isCageWindowCaptureFallback } from '../utils/screenshotCapture.js'
 import { getLinuxKioskInfo } from '../utils/linuxCageKiosk.js'
@@ -319,8 +318,6 @@ import { useConfigStore } from "stores/configStore.ts";
 import { ref } from 'vue';
 import { showLocalVmQemuIssueDialog } from 'next-exam-shared/qemuLocalVmDialogs.js'
 import loggingBridge from "../utils/loggingBridge.js";
-
-function unhandledRejectionFunction(event: PromiseRejectionEvent) {
 import { StatusBar } from "@capacitor/status-bar";
 import {isElectronWindow, isIOS} from "../types/platform.js";
 import {router} from "../router/index.js";
