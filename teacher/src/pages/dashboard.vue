@@ -1077,7 +1077,7 @@
         </div>
         <div @mouseover="showDescription($t('submissionsview.buttondesc'))" @mouseout="hideDescription" class="btn btn-gray-dark control-button m-1 mt-0 ms-0 text-start" @click="showSubmissionsView = true">
             <img src="/src/assets/img/svg/dialog-ok-apply.svg" class="control-button-icon me-1" width="32" height="32" style="filter: invert(55%) sepia(40%) saturate(300%) hue-rotate(140deg) brightness(1.1)">
-            <div class="control-button-label">{{ $t('submissionsview.button') }}</div>
+            <div class="control-button-label">{{ $t('submissionsview.buttoncontrol') }}</div>
         </div>
         </div>
 

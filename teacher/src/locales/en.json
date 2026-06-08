@@ -362,6 +362,7 @@
     },
     "submissionsview": {
         "button": "Submissions Overview",
+        "buttoncontrol": "Check submissions",
         "buttondesc": "Show submissions of all students",
         "date": "Date",
         "file": "File",

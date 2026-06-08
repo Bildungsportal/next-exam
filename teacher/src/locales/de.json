@@ -362,6 +362,7 @@
     },
     "submissionsview": {
         "button": "Abgabenübersicht",
+        "buttoncontrol": "Abgaben prüfen",
         "buttondesc": "Abgaben aller Schüler:innen anzeigen",
         "date": "Datum",
         "file": "Datei",
