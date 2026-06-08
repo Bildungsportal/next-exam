@@ -48,7 +48,7 @@
   ],
   "dependencies": {
     "@capacitor/status-bar": "^8.0.2",
-    "@capacitor/device": "^8.0.0",
+    "@capacitor/device": "^8.0.2",
     "@jimp/jpeg": "^0.22.12",
     "@novnc/novnc": "^1.6.0",
     "@quasar/extras": "^1.16.4",
@@ -133,8 +133,8 @@
     "yaml": "^2.7.0"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.1.0",
-    "@capacitor/core": "^8.1.0",
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
     "@intlify/unplugin-vue-i18n": "^5.0.0",
     "@quasar/app-vite": "^2.1.0",
     "@types/node": "^20.5.9",
