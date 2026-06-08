@@ -861,7 +861,7 @@ export default {
                 this.setAttribute("src", "about:blank");
                 URL.revokeObjectURL(this.currentpreview);
             };
-            this.autoSchedulerService(document.querySelector("#preview"),"click", this._onPreviewClick);
+            this.autoEventListener(document.querySelector("#preview"), "click", this._onPreviewClick);
 
 
             this.wlanInfo = await signalBridge.invoke('get-wlan-info')
