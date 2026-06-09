@@ -151,13 +151,13 @@
         <div class="sidebar-info-strip">
         <div class="text-start infobutton d-flex align-items-start">
             <div class="flex-grow-1 min-w-0">{{$t('dashboard.name')}} <br><b> {{$route.params.servername}}</b></div>
-            <button type="button" class="sectionbutton-edit flex-shrink-0 ms-1 me-1" :title="$t('dashboard.online')" @click.stop="showinfo()">
+            <button type="button" class="sectionbutton-edit flex-shrink-0 ms-1 me-1" :title="$t('dashboard.online')" @click.stop="showinfo()" @mouseover="showDescription($t('dashboard.showcredentials'))" @mouseout="hideDescription">
                 <img src="/src/assets/img/svg/eye-fill.svg" alt="" width="22" height="22">
             </button>
         </div>
         <div class="text-start infobutton d-flex align-items-start">
             <div class="flex-grow-1 min-w-0">{{$t('dashboard.pin')}}<br><b> {{ serverstatus.pin }} </b></div>
-            <button type="button" class="sectionbutton-edit flex-shrink-0 ms-1 me-1" :title="$t('dashboard.pin')" @click.stop="editPin()">
+            <button type="button" class="sectionbutton-edit flex-shrink-0 ms-1 me-1" :title="$t('dashboard.pin')" @click.stop="editPin()" @mouseover="showDescription($t('dashboard.changepin'))" @mouseout="hideDescription">
                 <img src="/src/assets/img/svg/document-edit.svg" class="white" alt="" width="22" height="22">
             </button>
         </div>
@@ -1028,8 +1028,8 @@
                 </button>
                 <div class="setup-footer-right">
                     <div class="setup-footer-actions">
-                        <button id="okButton" class="btn btn-success" @click="hideSetup(); this.currentpreviewPath=null;">{{$t('general.ok')}}</button>
-                        <button id="cancelButton" class="btn btn-danger" @click="hideSetup(false); this.currentpreviewPath=null;">{{$t('dashboard.cancel')}}</button>
+                        <button id="okButton" class="btn btn-cyan" @click="hideSetup(); this.currentpreviewPath=null;">{{$t('general.ok')}}</button>
+                        <button id="cancelButton" class="btn btn-teal text-white" @click="hideSetup(false); this.currentpreviewPath=null;">{{$t('dashboard.cancel')}}</button>
                     </div>
                 </div>
             </div>
@@ -1252,7 +1252,7 @@
         <button type="button" class="btn btn-sm btn-gray studentslist-controls-btn" @click="studentsZoomOut" title="Zoom out">−</button>
         <button type="button" class="btn btn-sm btn-gray studentslist-controls-btn studentslist-controls-label" @click="studentsZoomReset" title="Zoom reset">{{ Math.round(studentsZoom * 100) }}%</button>
         <button type="button" class="btn btn-sm btn-gray studentslist-controls-btn" @click="studentsZoomIn" title="Zoom in">+</button>
-        <button type="button" class="btn btn-sm btn-gray studentslist-controls-btn" @click="sortStudentWidgets()" title="Sort">
+        <button type="button" class="btn btn-sm btn-gray studentslist-controls-btn" @click="sortStudentWidgets()" title="Sort" @mouseover="showDescription($t('dashboard.sortstudentwidgets'))" @mouseout="hideDescription">
             <img src="/src/assets/img/svg/view-sort-ascending-name.svg" class="" width="20" height="20" >
         </button>
     </div>
@@ -1695,7 +1695,7 @@ computed: {
                 `,
                 showCancelButton: true,
                 cancelButtonText: this.$t('dashboard.cancel'),
-                confirmButtonText: this.$t('dashboard.save'),
+                confirmButtonText: this.$t('general.ok'),
                 customClass: {
                     popup: 'my-popup',
                     title: 'my-title',
@@ -2366,7 +2366,7 @@ computed: {
             const ip = escape(student?.clientip ?? '?');
             const docs = student?.files ?? 0;
             const versionSuffix = this.isVersionMismatch(student) ? ` (->${escape(this.version)})` : '';
-            return `<b>${name}</b><br>Version: ${v}${versionSuffix}<br>IP: ${ip}<br>Documents: ${docs}`;
+            return `Name: ${name}<br>Version: ${v}${versionSuffix}<br>IP: ${ip}<br>Documents: ${docs}`;
         },
         //display student specific actions
         showStudentview(student) {
@@ -3861,13 +3861,6 @@ computed: {
     display: none; /* hidden by default */
    transition: 0.3s;
 }
-
-/* match swal2: green button with white label */
-#setupdiv #okButton.btn-success {
-    color: #fff;
-}
-
-
 
 
 

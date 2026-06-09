@@ -1114,9 +1114,11 @@ class IpcHandler {
 
             // Collect all IPv4 addresses
             Object.keys(interfaces).forEach((interfaceName) => {
+                // Filter out bridge (br*) and vpn (vpn*) interfaces by name
+                if (interfaceName.startsWith('br') || interfaceName.startsWith('vpn')) { return }
                 interfaces[interfaceName].forEach((iface) => {
-                    if (iface.family === 'IPv4' && 
-                        !iface.address.startsWith('127.') && 
+                    if (iface.family === 'IPv4' &&
+                        !iface.address.startsWith('127.') &&
                         !iface.address.startsWith('169.254.')) {
                         if (!this.availableInterfaces) {
                             this.availableInterfaces = [];
