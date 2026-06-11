@@ -206,7 +206,7 @@ input:focus::placeholder {
 }
 
 .studentwidget #image {
-    background-image:url('/src/assets/img/icons/security.png');
+    background-image:url('/img/icons/security.png');
 }
 
 

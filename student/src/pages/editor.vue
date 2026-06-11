@@ -17,115 +17,115 @@
         <div v-if="editor" class="m-2" id="editortoolbar" style="text-align:left;">
             <button :title="$t('editor.backup')" @click="saveContent(true, 'manual');"
                     class="invisible-button btn btn-outline-success p-1 me-1 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/document-save.svg" class="white" width="22" height="22"></button>
-            <!-- <button :title="$t('editor.print')" @click="sendExamToTeacher();" class="invisible-button btn btn-outline-success p-1 me-1 mb-1 btn-sm"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="22" ></button> -->
+                src="/img/svg/document-save.svg" class="white" width="22" height="22"></button>
+            <!-- <button :title="$t('editor.print')" @click="sendExamToTeacher();" class="invisible-button btn btn-outline-success p-1 me-1 mb-1 btn-sm"><img src="/img/svg/print.svg" class="white" width="22" height="22" ></button> -->
             <button :title="$t('editor.undo')" @click="editor.chain().focus().undo().run()"
                     class="invisible-button btn btn-outline-warning p-1 me-0 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/edit-undo.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/edit-undo.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.redo')" @click="editor.chain().focus().redo().run()"
                     class="invisible-button btn btn-outline-warning p-1 me-2 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/edit-redo.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/edit-redo.svg" class="white" width="22" height="22"></button>
 
             <button :title="$t('editor.copy')" @click="copySelection()"
                     class="invisible-button btn btn-outline-success p-1 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/edit-copy.svg" class="" width="22" height="22"></button>
+                src="/img/svg/edit-copy.svg" class="" width="22" height="22"></button>
             <button :title="$t('editor.cut')" @click="cutSelection()"
                     class="invisible-button btn btn-outline-success p-1 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/document-replace.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/document-replace.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.paste')" @click="pasteSelection()"
                     class="invisible-button btn btn-outline-success p-1 me-2 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/edit-paste.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/edit-paste.svg" class="white" width="22" height="22"></button>
 
 
             <button :title="$t('editor.clear')"
                     @click="clearFormatting()"
                     class="invisible-button btn btn-outline-warning p-1 me-2 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/draw-eraser.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/draw-eraser.svg" class="white" width="22" height="22"></button>
 
             <button :title="$t('editor.bold')" @click="editor.chain().focus().toggleBold().run()"
                     :class="{ 'is-active': editor.isActive('bold') }"
                     class="invisible-button btn btn-outline-success p-1 me-0 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/format-text-bold.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/format-text-bold.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.italic')" @click="editor.chain().focus().toggleItalic().run()"
                     :class="{ 'is-active': editor.isActive('italic') }"
                     class="invisible-button btn btn-outline-success p-1 me-0 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/format-text-italic.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/format-text-italic.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.underline')" @click="editor.chain().focus().toggleUnderline().run()"
                     :class="{ 'is-active': editor.isActive('underline') }"
                     class="invisible-button btn btn-outline-success p-1 me-2 mb-1 btn-sm "><img
-                src="/src/assets/img/svg/format-text-underline.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/format-text-underline.svg" class="white" width="22" height="22"></button>
 
             <!-- <button :title="$t('editor.heading1')" @click="editor.chain().focus().toggleHeading({ level: 1 }).run()"
                     :class="{ 'is-active': editor.isActive('heading', { level: 1 }) }"
                     class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/h1.svg" width="22" height="22"></button>
+                src="/img/svg/h1.svg" width="22" height="22"></button>
             <button :title="$t('editor.heading2')" @click="editor.chain().focus().toggleHeading({ level: 2 }).run()"
                     :class="{ 'is-active': editor.isActive('heading', { level: 2 }) }"
                     class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/h2.svg" width="22" height="22"></button> -->
+                src="/img/svg/h2.svg" width="22" height="22"></button> -->
             <button :title="$t('editor.heading3')" @click="editor.chain().focus().toggleHeading({ level: 3 }).run()"
                     :class="{ 'is-active': editor.isActive('heading', { level: 3 }) }"
                     class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/h3.svg" width="22" height="22"></button>
+                src="/img/svg/h3.svg" width="22" height="22"></button>
             <button :title="$t('editor.heading4')" @click="editor.chain().focus().toggleHeading({ level: 4 }).run()"
                     :class="{ 'is-active': editor.isActive('heading', { level: 4 }) }"
                     class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/h4.svg" width="22" height="22"></button>
+                src="/img/svg/h4.svg" width="22" height="22"></button>
             <button :title="$t('editor.heading5')" @click="editor.chain().focus().toggleHeading({ level: 5 }).run()"
                     :class="{ 'is-active': editor.isActive('heading', { level: 5 }) }"
                     class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/h5.svg" width="22" height="22"></button>
+                src="/img/svg/h5.svg" width="22" height="22"></button>
             <!-- <button :title="$t('editor.heading6')" @click="editor.chain().focus().toggleHeading({ level: 6 }).run()"
                     :class="{ 'is-active': editor.isActive('heading', { level: 6 }) }"
                     class="invisible-button btn btn-outline-secondary p-1 me-2 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/h6.svg" width="22" height="22"></button> -->
+                src="/img/svg/h6.svg" width="22" height="22"></button> -->
 
 
             <button :title="$t('editor.subscript')" @click="editor.chain().focus().toggleSubscript().run()"
                     :class="{ 'is-active': editor.isActive('subscript') }"
                     class="invisible-button btn btn-outline-success p-1 me-0 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/format-text-subscript.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/format-text-subscript.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.superscript')" @click="editor.chain().focus().toggleSuperscript().run()"
                     :class="{ 'is-active': editor.isActive('superscript') }"
                     class="invisible-button btn btn-outline-success p-1 me-2 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/format-text-superscript.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/format-text-superscript.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.bulletlist')" @click="editor.chain().focus().toggleBulletList().run()"
                     :class="{ 'is-active': editor.isActive('bulletList') }"
                     class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/format-list-unordered.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/format-list-unordered.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.list')" @click="editor.chain().focus().toggleOrderedList().run()"
                     :class="{ 'is-active': editor.isActive('orderedList') }"
                     class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/format-list-ordered.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/format-list-ordered.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.codeblock')" @click="editor.chain().focus().toggleCodeBlock().run()"
                     :class="{ 'is-active': editor.isActive('codeBlock') }"
                     class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/dialog-xml-editor.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/dialog-xml-editor.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.code')" @click="editor.chain().focus().toggleCode().run()"
                     :class="{ 'is-active': editor.isActive('code') }"
                     class="invisible-button btn btn-outline-secondary p-1 me-0 mb-1  btn-sm"><img
-                src="/src/assets/img/svg/code-context.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/code-context.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.blockquote')" @click="editor.chain().focus().toggleBlockquote().run()"
                     :class="{ 'is-active': editor.isActive('blockquote') }"
                     class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/format-text-blockquote.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/format-text-blockquote.svg" class="white" width="22" height="22"></button>
 
             <button :title="$t('editor.left')" @click="editor.chain().focus().setTextAlign('left').run()"
                     :class="{ 'is-active': editor.isActive({ textAlign: 'left' }) }"
                     class="invisible-button btn btn-outline-info  p-1 me-0 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/format-justify-left.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/format-justify-left.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.center')" @click="editor.chain().focus().setTextAlign('center').run()"
                     :class="{ 'is-active': editor.isActive({ textAlign: 'center' }) }"
                     class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm "><img
-                src="/src/assets/img/svg/format-justify-center.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/format-justify-center.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.right')" @click="editor.chain().focus().setTextAlign('right').run()"
                     :class="{ 'is-active': editor.isActive({ textAlign: 'right' }) }"
                     class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/format-justify-right.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/format-justify-right.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.justify')" @click="editor.chain().focus().setTextAlign('justify').run()" 
                     :class="{ 'is-active': editor.isActive({ textAlign: 'justify' }) }" 
                     class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img 
-                src="/src/assets/img/svg/format-justify-fill.svg" class="white" width="22" height="22" ></button>
+                src="/img/svg/format-justify-fill.svg" class="white" width="22" height="22" ></button>
 
 
 
@@ -141,61 +141,61 @@
 
             <button :title="$t('editor.specialchar')" @click="showInsertSpecial();this.LTdisable()"
                     class="invisible-button btn btn-outline-warning p-1 me-0 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/sign.svg" class="" width="22" height="22"></button>
+                src="/img/svg/sign.svg" class="" width="22" height="22"></button>
             <button :title="$t('editor.insertmug')" @click="showInsertMugshot();this.LTdisable()"
                     class="invisible-button btn btn-outline-warning p-1 me-2 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/person-fill.svg" class="" width="22" height="22"></button>
+                src="/img/svg/person-fill.svg" class="" width="22" height="22"></button>
             <button :title="$t('editor.linebreak')" @click="editor.chain().focus().setHardBreak().run()"
                     class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/key-enter.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/key-enter.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.line')" @click="editor.chain().focus().setHorizontalRule().run()"
                     class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/newline.svg" class="white" width="22" height="22"></button>
+                src="/img/svg/newline.svg" class="white" width="22" height="22"></button>
             <button :title="$t('editor.statsrule')" @click="editor.chain().focus().setStatsRule().run()"
                     class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/statsbreaker.svg" class="" width="22" height="22"></button>
+                src="/img/svg/statsbreaker.svg" class="" width="22" height="22"></button>
 
             <button :title="$t('editor.more')" id="more" @click="showMore();this.LTdisable()"
                     class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/view-more-horizontal-symbolic.svg" class="white" width="22" height="22">
+                src="/img/svg/view-more-horizontal-symbolic.svg" class="white" width="22" height="22">
             </button>
             <div id="moreoptions" style="display:none;">
                 <button :title="$t('editor.inserttable')"
                         @click="editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()"
                         class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm"><img
-                    src="/src/assets/img/svg/insert-table.svg" width="22" height="22"></button>
+                    src="/img/svg/insert-table.svg" width="22" height="22"></button>
                 <button :title="$t('editor.deletetable')" @click="editor.chain().focus().deleteTable().run()"
                         :disabled="!editor.can().deleteTable()"
                         class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm"><img
-                    src="/src/assets/img/svg/deletecell.svg" width="22" height="22"></button>
+                    src="/img/svg/deletecell.svg" width="22" height="22"></button>
                 <button :title="$t('editor.columnafter')" @click="editor.chain().focus().addColumnAfter().run()"
                         :disabled="!editor.can().addColumnAfter()"
                         class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm"><img
-                    src="/src/assets/img/svg/edit-table-insert-column-right.svg" width="22" height="22"></button>
+                    src="/img/svg/edit-table-insert-column-right.svg" width="22" height="22"></button>
                 <button :title="$t('editor.rowafter')" @click="editor.chain().focus().addRowAfter().run()"
                         :disabled="!editor.can().addRowAfter()"
                         class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm"><img
-                    src="/src/assets/img/svg/edit-table-insert-row-below.svg" width="22" height="22"></button>
+                    src="/img/svg/edit-table-insert-row-below.svg" width="22" height="22"></button>
                 <button :title="$t('editor.delcolumn')" @click="editor.chain().focus().deleteColumn().run()"
                         :disabled="!editor.can().deleteColumn()"
                         class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm"><img
-                    src="/src/assets/img/svg/edit-table-delete-column.svg" width="22" height="22"></button>
+                    src="/img/svg/edit-table-delete-column.svg" width="22" height="22"></button>
                 <button :title="$t('editor.delrow')" @click="editor.chain().focus().deleteRow().run()"
                         :disabled="!editor.can().deleteRow()"
                         class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm"><img
-                    src="/src/assets/img/svg/edit-table-delete-row.svg" width="22" height="22"></button>
+                    src="/img/svg/edit-table-delete-row.svg" width="22" height="22"></button>
                 <button :title="$t('editor.mergeorsplit')" @click="editor.chain().focus().mergeOrSplit().run()"
                         :disabled="!editor.can().mergeOrSplit()"
                         class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm"><img
-                    src="/src/assets/img/svg/edit-table-cell-merge.svg" width="22" height="22"></button>
+                    src="/img/svg/edit-table-cell-merge.svg" width="22" height="22"></button>
                 <button :title="$t('editor.headercolumn')" @click="editor.chain().focus().toggleHeaderColumn().run()"
                         :disabled="!editor.can().toggleHeaderColumn()"
                         class="invisible-button btn btn-outline-info p-1 me-0 mb-1 btn-sm"><img
-                    src="/src/assets/img/svg/table-header-left.svg" width="22" height="22"></button>
+                    src="/img/svg/table-header-left.svg" width="22" height="22"></button>
                 <button :title="$t('editor.headerrow')" @click="editor.chain().focus().toggleHeaderRow().run()"
                         :disabled="!editor.can().toggleHeaderRow()"
                         class="invisible-button btn btn-outline-info p-1 me-2 mb-1 btn-sm"><img
-                    src="/src/assets/img/svg/table-header-top.svg" width="22" height="22"></button>
+                    src="/img/svg/table-header-top.svg" width="22" height="22"></button>
             </div>
 
             <div id="specialcharsdiv" style="display:none">
@@ -277,18 +277,18 @@
 
                 <div :title="$t('editor.splitview')" @click="toggleSplitview()"
                      class="invisible-button btn btn-outline-warning p-0 ms-1 me-1 mb-0 btn-sm"><img
-                    src="/src/assets/img/svg/view-split-left-right.svg" class="white" width="22" height="22"></div>
+                    src="/img/svg/view-split-left-right.svg" class="white" width="22" height="22"></div>
 
                 <div v-if="!localLockdown" id="printfinalexam"
                      class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm pe-2 ps-1" 
                      @click="sendExamToTeacher(false, 'print')" :title="$t('editor.printTooltip')"><img
-                    src="/src/assets/img/svg/print.svg" class="white" width="22" height="22"
+                    src="/img/svg/print.svg" class="white" width="22" height="22"
                     style="vertical-align: top;"> {{ $t('editor.print') }}
                 </div>
                 <div v-if="!localLockdown" id="sendfinalexam"
                      class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm pe-2 ps-1 "
                      @click="sendExamToTeacher(false, 'send')" :title="$t('editor.sendfinalexam')"><img
-                    src="/src/assets/img/svg/document-send.svg" class="white" width="22" height="22"
+                    src="/img/svg/document-send.svg" class="white" width="22" height="22"
                     style="vertical-align: top;"> {{ $t('editor.finalsubmit') }}
                 </div>
 
@@ -297,39 +297,39 @@
                 <div id="getmaterialsbutton"
                      class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
                      @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img
-                    src="/src/assets/img/svg/games-solve.svg" class="white" width="22" height="22"
+                    src="/img/svg/games-solve.svg" class="white" width="22" height="22"
                     style="vertical-align: top;"> {{ $t('editor.materials') }}
                 </div>
 
                 <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
                     <div v-if="(file.filetype == 'htm')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
                          @click="selectedFile=file.filename; loadBase64file(file)"><img
-                        src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22"
+                        src="/img/svg/games-solve.svg" class="" width="22" height="22"
                         style="vertical-align: top;"> {{ file.filename }}
                     </div>
                     <div v-if="(file.filetype == 'docx')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
                          @click="selectedFile=file.filename; loadBase64file(file)"><img
-                        src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22"
+                        src="/img/svg/games-solve.svg" class="" width="22" height="22"
                         style="vertical-align: top;"> {{ file.filename }}
                     </div>
                     <div v-if="(file.filetype == 'odt')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
                          @click="selectedFile=file.filename; loadBase64file(file)"><img
-                        src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22"
+                        src="/img/svg/games-solve.svg" class="" width="22" height="22"
                         style="vertical-align: top;"> {{ file.filename }}
                     </div>
                     <div v-if="(file.filetype == 'pdf')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm"
                          @click="selectedFile=file.filename; loadBase64file(file)"><img
-                        src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22"
+                        src="/img/svg/eye-fill.svg" class="grey" width="22" height="22"
                         style="vertical-align: top;"> {{ file.filename }}
                     </div>
                     <div v-if="(file.filetype == 'audio')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm"
-                         @click="loadBase64file(file)"><img src="/src/assets/img/svg/im-google-talk.svg" class=""
+                         @click="loadBase64file(file)"><img src="/img/svg/im-google-talk.svg" class=""
                                                             width="22" height="22" style="vertical-align: top;">
                         {{ file.filename }}
                     </div>
                     <div v-if="(file.filetype == 'image')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm"
                          @click="selectedFile=file.filename; loadBase64file(file)"><img
-                        src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22"
+                        src="/img/svg/eye-fill.svg" class="grey" width="22" height="22"
                         style="vertical-align: top;"> {{ file.filename }}
                     </div>
                 </div>
@@ -339,14 +339,14 @@
                 <div v-if="allowedUrls.length !== 0" v-for="allowedUrl in allowedUrls  "
                      class="btn btn-outline-success p-0 pe-2 ps-1 me-1 mb-0 btn-sm allowed-url-button"
                      :title="getUrlDisplay(allowedUrl)" @click="showUrl(getUrlDisplay(allowedUrl))">
-                    <img src="/src/assets/img/svg/eye-fill.svg" class="grey" width="22" height="22"
+                    <img src="/img/svg/eye-fill.svg" class="grey" width="22" height="22"
                          style="vertical-align: top;"> {{ getUrlDisplay(allowedUrl) }}
                 </div>
 
 
                 <div
                     class="disabled-btn invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm text-muted">
-                    <img src="/src/assets/img/svg/edit-copy.svg" class="" width="22" height="22"
+                    <img src="/img/svg/edit-copy.svg" class="" width="22" height="22"
                          style="vertical-align: top;"> {{ $t('editor.localfiles') }}
                 </div>
 
@@ -357,35 +357,35 @@
                 <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
                  
 
-                    <div v-if="file.type == 'htm'" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.htm'}" @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ file.name }}<template v-if="!isActiveLocalHtmFile(file)"> ({{ formatHtmLocalFileAge(file) }})</template></div>
+                    <div v-if="file.type == 'htm'" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.htm'}" @click="selectedFile=file.name; loadHTML(file.name)"><img src="/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ file.name }}<template v-if="!isActiveLocalHtmFile(file)"> ({{ formatHtmLocalFileAge(file) }})</template></div>
 
 
                     <div v-if="(file.type == 'docx')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
                          @click="selectedFile=file.name; loadDOCX(file.name)"><img
-                        src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22"
+                        src="/img/svg/games-solve.svg" class="" width="22" height="22"
                         style="vertical-align: top;"> {{ file.name }}
                     </div>
 
                     <div v-if="(file.type == 'odt')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
                          @click="selectedFile=file.name; loadODT(file.name)"><img
-                        src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22"
+                        src="/img/svg/games-solve.svg" class="" width="22" height="22"
                         style="vertical-align: top;"> {{ file.name }}
                     </div>
 
                     <div v-if="(file.type == 'pdf')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm"
-                         @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/eye-fill.svg"
+                         @click="selectedFile=file.name; loadPDF(file.name)"><img src="/img/svg/eye-fill.svg"
                                                                                   class="white" width="22" height="22"
                                                                                   style="vertical-align: top;">
                         {{ file.name }}
                     </div>
                     <div v-if="(file.type == 'audio')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm"
-                         @click="playAudio(file.name)"><img src="/src/assets/img/svg/im-google-talk.svg" class=""
+                         @click="playAudio(file.name)"><img src="/img/svg/im-google-talk.svg" class=""
                                                             width="22" height="22" style="vertical-align: top;">
                         {{ file.name }}
                     </div>
                     <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm"
                          @click="selectedFile=file.name; loadImage(file.name)"><img
-                        src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22"
+                        src="/img/svg/eye-fill.svg" class="white" width="22" height="22"
                         style="vertical-align: top;"> {{ file.name }}
                     </div>
                 </div>
@@ -400,18 +400,18 @@
     <!-- mugshot preview start -->
     <div id="mugshotpreview">
         <div class="mugshot-container">
-            <img @click="insertMugshot('mug1')" id="mug1" src="/src/assets/img/mugshots/1.png" class="mugshot">
-            <img @click="insertMugshot('mug2')" id="mug2" src="/src/assets/img/mugshots/2.png" class="mugshot">
-            <img @click="insertMugshot('mug3')" id="mug3" src="/src/assets/img/mugshots/3.png" class="mugshot">
-            <img @click="insertMugshot('mug4')" id="mug4" src="/src/assets/img/mugshots/4.png" class="mugshot">
-            <img @click="insertMugshot('mug5')" id="mug5" src="/src/assets/img/mugshots/5.png" class="mugshot">
-            <img @click="insertMugshot('mug6')" id="mug6" src="/src/assets/img/mugshots/6.png" class="mugshot">
-            <img @click="insertMugshot('mug7')" id="mug7" src="/src/assets/img/mugshots/7.png" class="mugshot">
-            <img @click="insertMugshot('mug8')" id="mug8" src="/src/assets/img/mugshots/8.png" class="mugshot">
-            <img @click="insertMugshot('mug9')" id="mug9" src="/src/assets/img/mugshots/9.png" class="mugshot">
-            <img @click="insertMugshot('mug10')" id="mug10" src="/src/assets/img/mugshots/10.png" class="mugshot">
-            <img @click="insertMugshot('mug11')" id="mug11" src="/src/assets/img/mugshots/11.png" class="mugshot">
-            <img @click="insertMugshot('mug12')" id="mug12" src="/src/assets/img/mugshots/12.png" class="mugshot">
+            <img @click="insertMugshot('mug1')" id="mug1" src="/img/mugshots/1.png" class="mugshot">
+            <img @click="insertMugshot('mug2')" id="mug2" src="/img/mugshots/2.png" class="mugshot">
+            <img @click="insertMugshot('mug3')" id="mug3" src="/img/mugshots/3.png" class="mugshot">
+            <img @click="insertMugshot('mug4')" id="mug4" src="/img/mugshots/4.png" class="mugshot">
+            <img @click="insertMugshot('mug5')" id="mug5" src="/img/mugshots/5.png" class="mugshot">
+            <img @click="insertMugshot('mug6')" id="mug6" src="/img/mugshots/6.png" class="mugshot">
+            <img @click="insertMugshot('mug7')" id="mug7" src="/img/mugshots/7.png" class="mugshot">
+            <img @click="insertMugshot('mug8')" id="mug8" src="/img/mugshots/8.png" class="mugshot">
+            <img @click="insertMugshot('mug9')" id="mug9" src="/img/mugshots/9.png" class="mugshot">
+            <img @click="insertMugshot('mug10')" id="mug10" src="/img/mugshots/10.png" class="mugshot">
+            <img @click="insertMugshot('mug11')" id="mug11" src="/img/mugshots/11.png" class="mugshot">
+            <img @click="insertMugshot('mug12')" id="mug12" src="/img/mugshots/12.png" class="mugshot">
         </div>
     </div>
     <!-- mugshot preview end -->
@@ -424,7 +424,7 @@
                 <div class="mb-3 "> {{ $t('editor.leftkiosk') }} <br> {{ $t('editor.tellsomeone') }}</div>
                 <div v-if="focusLostMessage || focusLockMessage" class="mb-3 text-dark fw-bold" style="white-space: pre-line">{{ focusLostMessage || focusLockMessage }}</div>
                 <div v-if="focusLockReasonLine" class="mb-3 text-dark fw-bold">{{ focusLockReasonLine }}</div>
-                <img src="/src/assets/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32">
+                <img src="/img/svg/eye-slash-fill.svg" class=" me-2" width="32" height="32">
             </div>
             <div v-if="localLockdown" class="mt-2">
                 <div class="input-group">
@@ -606,7 +606,7 @@
                 <div class="" style="flex:1; text-align:right;"
                      @click="LTresetIgnorelist();LTcheckAllWordsAndHighlight(false);" title="Clear ignore list">
                     <span v-if="ignoreList.size > 0" class="text-mini"> ({{ ignoreList.size }}) ignored</span>
-                    <img class="white" width=20 height=20 src="/src/assets/img/svg/edit-delete.svg"
+                    <img class="white" width=20 height=20 src="/img/svg/edit-delete.svg"
                          style=" cursor: pointer; margin-left:3px; vertical-align: middle;">
                 </div>
             </div>
@@ -641,7 +641,7 @@
                     </div>
                     <div class="" style=" flex: 0; cursor: not-allowed;  text-align:right; "
                         @click="LTignoreWord(entry);LTcheckAllWordsAndHighlight(false);" title="ignore">
-                        <img class="grey" width=18 height=18 src="/src/assets/img/svg/eye-slash-fill.svg">
+                        <img class="grey" width=18 height=18 src="/img/svg/eye-slash-fill.svg">
                     </div>
                 </div>
 
@@ -672,8 +672,8 @@
         </div>
         <div class="statusbar-right">
             <span class="caret-context-label" :title="caretContextLabel">{{ caretContextLabel }}</span>
-            <img @click="zoomin(); LTupdateHighlights();" src="/src/assets/img/svg/zoom-in.svg" class="zoombutton">
-            <img @click="zoomout(); LTupdateHighlights();" src="/src/assets/img/svg/zoom-out.svg" class="zoombutton">
+            <img @click="zoomin(); LTupdateHighlights();" src="/img/svg/zoom-in.svg" class="zoombutton">
+            <img @click="zoomout(); LTupdateHighlights();" src="/img/svg/zoom-out.svg" class="zoombutton">
         </div>
     </div>
     <!-- EDITOR END -->
@@ -3567,11 +3567,11 @@ Other Styles
 }
 
 #ltcheck .eyeopen {
-    background-image: url('/src/assets/img/svg/eye-fill.svg');
+    background-image: url('/img/svg/eye-fill.svg');
 }
 
 #ltcheck .eyeclose {
-    background-image: url('/src/assets/img/svg/eye-slash-fill.svg');
+    background-image: url('/img/svg/eye-slash-fill.svg');
 }
 
 //mus integrate images this way otherwise they won't be integrated in the final build
@@ -3584,7 +3584,7 @@ Other Styles
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    background-image: url('/src/assets/img/svg/document-replace.svg');
+    background-image: url('/img/svg/document-replace.svg');
     background-repeat: no-repeat;
     background-position: center;
     background-size: 180px;
@@ -3596,24 +3596,24 @@ Other Styles
 }
 
 .splitzoomin {
-    background-image: url('/src/assets/img/svg/zoom-in.svg');
+    background-image: url('/img/svg/zoom-in.svg');
 
 }
 
 .splitzoomout {
-    background-image: url('/src/assets/img/svg/zoom-out.svg');
+    background-image: url('/img/svg/zoom-out.svg');
 }
 
 .splitinsert {
-    background-image: url('/src/assets/img/svg/edit-download-black.svg');
+    background-image: url('/img/svg/edit-download-black.svg');
 }
 
 .splitprint {
-    background-image: url('/src/assets/img/svg/print.svg');
+    background-image: url('/img/svg/print.svg');
 }
 
 .splitsend {
-    background-image: url('/src/assets/img/svg/document-send.svg');
+    background-image: url('/img/svg/document-send.svg');
 }
 
 #languagetool .ltscrollarea {

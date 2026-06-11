@@ -185,6 +185,8 @@ export default defineConfig(( ctx: any ) => {
       // polyfillModulePreload: true,
       // distDir
 
+      publicPath: '/',
+
       minify: true,
       showBuildSummary: false,
 

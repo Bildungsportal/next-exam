@@ -11,7 +11,7 @@
     <!-- Header START -->
     <div v-show="!isLoading" class="w-100 p-3 text-white bg-dark text-left" style="height: 66px; z-index: 1000;">
     <span class="text-white m-1 d-inline-flex align-items-center flex-wrap ms-1">
-        <img src='/src/assets/img/svg/speedometer.svg' class="white me-2" width="32" height="32">
+        <img src='/img/svg/speedometer.svg' class="white me-2" width="32" height="32">
         <span class="fs-4 align-middle me-2" @click="handleClick">Next-Exam</span>
         <span v-if="cageLauncherApps.length" class="d-inline-flex align-items-center flex-wrap gap-2 cage-launcher-group">
             <button v-for="app in cageLauncherApps" :key="app.path" type="button"
@@ -93,7 +93,7 @@
         <!-- SIDEBAR START -->
         <div class="p-3 text-white bg-dark h-100 student-sidebar" style="width: 240px; min-width: 240px;">
             <div class="btn btn-light ms-1 text-start infobutton nobutton">
-                <img src='/src/assets/img/svg/server.svg' class="me-2" width="16" height="16"> {{ $t('student.exams') }}
+                <img src='/img/svg/server.svg' class="me-2" width="16" height="16"> {{ $t('student.exams') }}
             </div>
             <br>
 
@@ -113,7 +113,7 @@
                      class="btn btn-success m-1 " :class="(token)? 'disabledexam':''" style="padding:0;">
                     <img id="biplogo"
                          style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; "
-                         src="/src/assets/img/login_students.jpg">
+                         src="/img/login_students.jpg">
                     <span v-if="bipUsername" id="biploginbuttonlabel">{{ bipUsername }}</span>
                     <span v-else id="biploginbuttonlabel">Logout</span>
                 </div>
@@ -121,7 +121,7 @@
                      style="padding:0;" :class="(token)? 'disabledexam':''">
                     <img id="biplogo"
                          style="width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; "
-                         src="/src/assets/img/login_students.jpg">
+                         src="/img/login_students.jpg">
                     <span v-if="bipUsername" id="biploginbuttonlabel">{{ bipUsername }}</span><span v-else
                                                                                                     id="biploginbuttonlabel">Login</span>
                 </div>
@@ -242,7 +242,7 @@
 
                         <div
                             style="display:flex; flex-direction: row; justify-content: space-between; padding:0px; margin:0px;">
-                            <img v-if="!server.reachable" src="/src/assets/img/svg/emblem-warning.svg"
+                            <img v-if="!server.reachable" src="/img/svg/emblem-warning.svg"
                                  :title="$t('student.unreachable')"
                                  style="width:20px;height:20px;vertical-align:top;cursor: help;position: absolute; margin-top:8px; margin-left:8px; ">
 
@@ -1626,22 +1626,22 @@ export default {
             }
             // capturePage path (macOS + Linux Cage) was already selected at init via setCageWindowCaptureFallback;
             // Win32 AssignedAccess and plain desktop use getDisplayMedia.
-            if (!isCageWindowCaptureFallback()) {
-                if (!hasActiveScreenshotStream()) {
-                    const ok = await ensureDisplayStreamAsync();
-                    if (!ok) {
-                        this.$swal.fire({ title: "Error", text: this.$t("student.screenshotpermission"), icon: 'error', showCancelButton: false });
-                        return;
-                    }
-                }
-                // Win AA kiosk auto-grants sources[0]=screen via main-process handler, so the picker-misclick
-                // heuristic does not apply; skip the check there.
-                const winKiosk = this.platformKiosk.runningInCage && this.platformKiosk.displayServer === 'windows';
-                if (!winKiosk && !isFullDesktopCaptureLikely() && !this.development) {
-                    this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
-                    return;
-                }
-            }
+            // if (!isCageWindowCaptureFallback()) {
+            //     if (!hasActiveScreenshotStream()) {
+            //         const ok = await ensureDisplayStreamAsync();
+            //         if (!ok) {
+            //             // this.$swal.fire({ title: "Error", text: this.$t("student.screenshotpermission"), icon: 'error', showCancelButton: false });
+            //             // return;
+            //         }
+            //     }
+            //     // Win AA kiosk auto-grants sources[0]=screen via main-process handler, so the picker-misclick
+            //     // heuristic does not apply; skip the check there.
+            //     const winKiosk = this.platformKiosk.runningInCage && this.platformKiosk.displayServer === 'windows';
+            //     if (!winKiosk && !isFullDesktopCaptureLikely() && !this.development) {
+            //         this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
+            //         return;
+            //     }
+            // }
             const displayInfo = await signalBridge.invoke('getinfoasync');
             if (displayInfo?.clientinfo?.multiMonitor && !this.development) {
                 this.$swal.fire({ title: "Error", text: this.$t("student.multimonitor"), icon: 'error', showCancelButton: false });
@@ -1674,6 +1674,7 @@ export default {
                     pin: this.pincode,
                     bipuserID: this.bipuserID+""
                 })
+                console.log(`student @ registerClient: ${JSON.stringify(IPCresponse, null, 2)}`)
                 if (IPCresponse) {
                     console.log(`student @ registerClient: ${IPCresponse.message}`)
                     if (IPCresponse.token) {
@@ -1706,12 +1707,13 @@ export default {
                 }
 
             signalBridge.on('updateReceived', (update) => {
-                loggingBridge.info("updateReceived, examMode: ", update.serverstatus.exammode, router);
                 loggingBridge.info("updateReceived: ", update);
+                const examPath = `/${update.serverstatus.examSections[update.serverstatus.activeSection].examtype}/${this.token}`;
+                loggingBridge.info(`router push to ${examPath}`);
                 if (update.serverstatus.exammode) {
                     router.push({
-                        path: '/math/csrf-cf20e998-3ba7-4867-bc3e-94609d665cd6'
-                    })
+                        path: examPath
+                    });
                 }
             });
         },
@@ -1879,6 +1881,7 @@ export default {
         signalBridge.removeAllListeners('localvm-compat-check-start');
         signalBridge.removeAllListeners('localvm-compat-check-end');
         signalBridge.removeAllListeners('qemu-not-available');
+        signalBridge.removeAllListeners('updateReceived');
     }
 }
 </script>
