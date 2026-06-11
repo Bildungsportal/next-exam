@@ -182,6 +182,7 @@ import {ref} from "vue";
 import {useConfigStore} from "../stores/configStore.ts";
 import {useInfoStore} from "../stores/infoStore.ts";
 import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
+import {isIOS} from "../types/platform.ts";
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -688,8 +689,10 @@ export default {
             if (!this.focus) this.entrytime = new Date().getTime();
 
             if (this.exammode !== prevExammode) this.injectCSS();
-            this.battery = 0; // await navigator.getBattery().then(battery => battery)
-                // .catch(error => { console.error('Error accessing the Battery API:', error); });
+
+            // TODO: check how to fix this for ios
+            this.battery = isIOS() ? 0 : await navigator.getBattery().then(battery => battery)
+                .catch(error => { console.error('Error accessing the Battery API:', error); });
 
             this.internetCheckCounter++;
             if (this.internetCheckCounter % 5 === 0) {
