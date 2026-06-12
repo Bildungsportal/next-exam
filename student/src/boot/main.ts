@@ -8,6 +8,7 @@ import LoggingBridge from "../utils/loggingBridge.js";
 import IosTaskDispatcher from "../utils/ios/iosTaskDispatcher.js";
 import {isIOS} from "../types/platform.js";
 import { ipcRenderer as capacitorIpcRenderer } from "../plugins/ipc-renderer.js";
+import IosUpdateListener from "../utils/ios/iosUpdateListener.js";
 
 // "async" is optional;
 // more info on params: https://v2.quasar.dev/quasar-cli-vite/boot-files
@@ -60,4 +61,5 @@ export default defineBoot(async ( { app, router } ) => {
     LoggingBridge.init(window);
     NavigationHandler.init(LoggingBridge, multicastclient, config, router);
     IosTaskDispatcher.init(LoggingBridge, multicastclient, NavigationHandler);
+    IosUpdateListener.init(multicastclient);
 })

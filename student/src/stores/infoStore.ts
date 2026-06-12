@@ -26,6 +26,7 @@ export const useInfoStore = defineStore("info", {
         wlanInfo: null as any,
         exammode: false as boolean,
         lockedSection: 1 as number,
+        token: "" as string
     }),
     actions: {
         // Poll wlan + host IP for ExamHeader network icons.
@@ -61,6 +62,7 @@ export const useInfoStore = defineStore("info", {
                 this.exammode = !!clientinfo.exammode;
                 this.lockedSection = clientinfo.lockedSection ?? 1;
                 this.online = !!clientinfo?.token;
+                this.token = clientinfo?.token;
             }
             await this.refreshNetworkInfo();
             return true

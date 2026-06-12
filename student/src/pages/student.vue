@@ -320,7 +320,6 @@ import { showLocalVmQemuIssueDialog } from 'next-exam-shared/qemuLocalVmDialogs.
 import loggingBridge from "../utils/loggingBridge.js";
 import { StatusBar } from "@capacitor/status-bar";
 import {isElectronWindow, isIOS} from "../types/platform.js";
-import {router} from "../router/index.js";
 
 function unhandledRejectionFunction(event: any) {
   const reason = event?.reason;
@@ -1705,17 +1704,6 @@ export default {
                         showCancelButton: false,
                     })
                 }
-
-            signalBridge.on('updateReceived', (update) => {
-                loggingBridge.info("updateReceived: ", update);
-                const examPath = `/${update.serverstatus.examSections[update.serverstatus.activeSection].examtype}/${this.token}`;
-                loggingBridge.info(`router push to ${examPath}`);
-                if (update.serverstatus.exammode) {
-                    router.push({
-                        path: examPath
-                    });
-                }
-            });
         },
         showCopyleft() {
             this.$swal.fire({
