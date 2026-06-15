@@ -2015,7 +2015,7 @@ computed: {
                         examEventBus.push('login', student)
                         this.getLatestBakFile(student.clientname).then(bakResult => {
                             if (bakResult.status === "success") {
-                                const fileName = bakResult.filepath.split('/').pop()
+                                const fileName = bakResult.filepath.split(/[/\\]/).pop()
                                 const filePath = bakResult.filepath
                                 swalQueued({
                                     customClass: {
@@ -2140,7 +2140,7 @@ computed: {
         async getSpecificSubmissionBase64(filepath) {
             const result = await ipcRenderer.invoke('getSpecificSubmissionBase64', filepath)
             if (result.status === "success") {
-                this.showPDFPreview({ filepath, filename: filepath.split('/').pop(), base64: result.submission })
+                this.showPDFPreview({ filepath, filename: filepath.split(/[/\\]/).pop(), base64: result.submission })
             }
             else {
                 this.$swal.fire({
@@ -3189,7 +3189,7 @@ computed: {
             
             if (bakResult.status === "success") {
                 // BAK file found - show dialog with option to send
-                const fileName = bakResult.filepath.split('/').pop()
+                const fileName = bakResult.filepath.split(/[/\\]/).pop()
                 const filePath = bakResult.filepath
                 
                 swalQueued({

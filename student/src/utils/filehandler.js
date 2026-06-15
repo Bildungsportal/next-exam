@@ -493,6 +493,10 @@ async function soundtest(context){
 export async function loadGGB(file, base64=false){
     let filename = file
     if (base64){filename = file.filename}
+    // currentFile must never contain a path (used as PDF filename on save) - fall back to clientname like the other loaders
+    if (/[/\\]/.test(filename) || filename.includes('..')) {
+        filename = this.clientname
+    }
 
     this.$swal.fire({
         title: this.$t("editor.replace"),
