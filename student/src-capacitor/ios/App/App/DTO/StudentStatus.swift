@@ -9,6 +9,7 @@ struct StudentStatus: Codable {
     var sendlog: Bool
     var focus: Bool
     var getmaterials: Bool
+    var kicked: Bool
 
     // ── Serialized form returned to JS / IPC callers ──────────────────────────
     var asDictionary: [String: Any] {
@@ -22,6 +23,7 @@ struct StudentStatus: Codable {
             dict["sendlog"]           = sendlog
             dict["focus"]             = focus
             dict["getmaterials"]      = getmaterials
+            dict["kicked"]            = kicked
 
             return dict
         }
