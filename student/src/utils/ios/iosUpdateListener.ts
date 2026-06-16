@@ -31,7 +31,8 @@ class IosUpdateListener {
             }
         });
 
-         signalBridge.on('endExam', (update) => {
+         signalBridge.on('endExam', () => {
+             loggingBridge.info("endExam received in update handler: ");
              router.push("/student");
          });
 

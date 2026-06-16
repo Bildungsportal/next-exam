@@ -4,8 +4,8 @@ struct Update: Codable {
     var sender: String
     var message: String
     var status: String
-    var serverstatus: ServerStatus
-    var studentstatus: StudentStatus
+    var serverstatus: ServerStatus? = nil
+    var studentstatus: StudentStatus? = nil
 
     // ── Serialized form returned to JS / IPC callers ──────────────────────────
     var asDictionary: [String: Any] {
@@ -13,8 +13,8 @@ struct Update: Codable {
             "sender": sender,
             "message": message,
             "status": status,
-            "serverstatus": serverstatus.asDictionary,
-            "studentstatus": studentstatus.asDictionary,
+            "serverstatus": serverstatus?.asDictionary ?? "",
+            "studentstatus": studentstatus?.asDictionary ?? "",
         ]
     }
 }

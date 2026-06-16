@@ -24,7 +24,6 @@
 
 import {isElectronWindow, isIOS} from '../types/platform.ts'
 import IosTaskDispatcher from './ios/iosTaskDispatcher.js'
-import loggingBridge from "./loggingBridge.js";
 
 // class wraps ipcRenderer methods with platform checks
 export class SignalBridge {
@@ -38,7 +37,7 @@ export class SignalBridge {
     // e.g. getinfoasync is needed to test checkhostip, therefore the empty object fallback of
     // Swift fallback is not enough
     pluginList = [
-        'checkhostip', 'setPreferredInterface', 'getinfoasync', 'register', 'updateReceived'
+        'checkhostip', 'setPreferredInterface', 'getinfoasync', 'register', 'updateReceived', 'endExam'
     ]
 
     // send forwards all params to electron or leaves hook for ios

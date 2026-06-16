@@ -149,7 +149,7 @@ final class CommunicationHandler {
                         mc.beaconsLost = 5
                     } else if message == "removed" {
                         self.log(.warn, "communicationhandler @ requestUpdate: Student registration not found!")
-                        self.kickStudent(serverstatus: updateDto.serverstatus)
+                        self.kickStudent()
                     } else {
                         self.log(.warn, "communicationhandler @ requestUpdate: \(mc.beaconsLost) Heartbeat lost..")
                         mc.beaconsLost += 1
@@ -158,7 +158,7 @@ final class CommunicationHandler {
                 } else if status == "success" {
                     mc.beaconsLost = 0
                     mc.clientinfo.printrequest = false
-                    self.processUpdatedServerstatus(serverstatus: updateDto.serverstatus, studentstatus: updateDto.studentstatus)
+                    self.processUpdatedServerstatus(serverstatus: updateDto.serverstatus!)
                 }
 
             } catch {
@@ -170,11 +170,11 @@ final class CommunicationHandler {
 
     // MARK: - Server Status Processing
 
-    private func processUpdatedServerstatus(serverstatus: ServerStatus, studentstatus: StudentStatus) {
+    private func processUpdatedServerstatus(serverstatus: ServerStatus) {
         guard let mc = multicastClient else { return }
         mc.serverstatus = serverstatus
 
-        let kicked = handleStudentStatusUpdates(serverstatus: serverstatus, studentstatus: studentstatus)
+        let kicked = handleStudentStatusUpdates(serverstatus: serverstatus, mc: mc)
         if kicked { return }
 
         handleGlobalServerStatus(serverstatus: serverstatus, mc: mc)
@@ -182,10 +182,10 @@ final class CommunicationHandler {
 
     /// Processes per-student commands from the teacher (kick).
     /// Returns true when the student was kicked (caller must stop processing).
-    private func handleStudentStatusUpdates(serverstatus: ServerStatus, studentstatus: StudentStatus) -> Bool {
+    private func handleStudentStatusUpdates(serverstatus: ServerStatus, mc: MulticastClientPlugin) -> Bool {
         // TODO: add other studentstatus updates other than kicked
-        if studentstatus.kicked {
-            kickStudent(serverstatus: serverstatus)
+        if mc.kicked {
+            kickStudent()
             return true
         }
         return false
@@ -197,17 +197,17 @@ final class CommunicationHandler {
         // Exam end
         if !serverstatus.exammode && mc.clientinfo.exammode {
             log(.info, "communicationhandler @ handleGlobalServerStatus: exammode deactivated")
-            endExam(serverstatus: serverstatus, mc: mc)
+            endExam(mc: mc)
         }
     }
 
 
     /// Tears down exam mode and notifies the renderer.
-    private func endExam(serverstatus: ServerStatus, mc: MulticastClientPlugin) {
+    private func endExam(mc: MulticastClientPlugin) {
         mc.clientinfo.exammode      = false
         mc.clientinfo.localLockdown = false
         log(.info, "communicationhandler @ endExam: ending exam")
-        IPCBridge.shared.send("endExam", ["serverstatus": serverstatus.asDictionary])
+        IPCBridge.shared.send("endExam")
     }
 
     // MARK: - Connection Management
@@ -223,12 +223,12 @@ final class CommunicationHandler {
         mc.clientinfo.localLockdown = false
     }
 
-    private func kickStudent(serverstatus: ServerStatus) {
+    private func kickStudent() {
         guard let mc = multicastClient else { return }
         log(.warn, "communicationhandler @ kickStudent: Student got kicked by Teacher")
         mc.kicked = false
         mc.beaconsLost = 0
-        endExam(serverstatus: serverstatus, mc: mc)
+        endExam(mc: mc)
         resetConnection()
     }
 

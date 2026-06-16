@@ -1,15 +1,14 @@
 import Foundation
 
 struct StudentStatus: Codable {
-    var group: String
-    var restorefocusstate: Bool
-    var printdenied: Bool
-    var delfolder: Bool
-    var sendexam: Bool
-    var sendlog: Bool
-    var focus: Bool
-    var getmaterials: Bool
-    var kicked: Bool
+    var group: String? = nil
+    var restorefocusstate: Bool? = nil
+    var printdenied: Bool? = nil
+    var delfolder: Bool? = nil
+    var sendexam: Bool? = nil
+    var sendlog: Bool? = nil
+    var focus: Bool? = nil
+    var getmaterials: Bool? = nil
 
     // ── Serialized form returned to JS / IPC callers ──────────────────────────
     var asDictionary: [String: Any] {
@@ -23,8 +22,6 @@ struct StudentStatus: Codable {
             dict["sendlog"]           = sendlog
             dict["focus"]             = focus
             dict["getmaterials"]      = getmaterials
-            dict["kicked"]            = kicked
-
             return dict
         }
 }
