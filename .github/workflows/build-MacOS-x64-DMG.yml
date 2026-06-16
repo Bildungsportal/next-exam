@@ -69,7 +69,6 @@ jobs:
           key: ${{ runner.os }}-node-t-x64-${{ hashFiles('./teacher/**/package-lock.json') }}
 
       - name: Teacher install dependencies
-        if: false # TEST: skip teacher to reach student helper step faster
         working-directory: ./teacher
         env:
           npm_config_arch: x64
@@ -82,7 +81,6 @@ jobs:
           mkdir dist
 
       - name: Teacher build
-        if: false # TEST: skip teacher to reach student helper step faster
         working-directory: ./teacher
         env:
           CSC_LINK: "file://../certificate.p12"
@@ -95,7 +93,6 @@ jobs:
         run: npm run build:mac:x64
 
       - name: Upload Teacher MacOS x64 DMG
-        if: false # TEST: skip teacher to reach student helper step faster
         uses: actions/upload-artifact@v4
         with:
           name: next-exam-teacher-macos-x64-dmg
