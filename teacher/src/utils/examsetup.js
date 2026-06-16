@@ -182,7 +182,7 @@ async function configureEduvidual(presetGroup) {
             const sebDiv    = document.getElementById('sebConfig');
 
             typeSelect.addEventListener('change', (e) => {
-                console.log('change');
+                //console.log('change');
                 if (e.target.value === 'url') {
                     urlDiv.style.display  = 'block';
                     sebDiv.style.display  = 'none';
