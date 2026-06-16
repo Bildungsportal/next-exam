@@ -153,6 +153,8 @@ export default {
             moodleDomain: null,
             moodleTestType: null,
             moodleTestId: null,
+            sebConfigHash: null,
+            sebBekHash: null,
 
             clientinfo: null,
             localfiles: null,
@@ -331,6 +333,8 @@ export default {
                 moodleTestId: this.moodleTestId,
                 moodleDomain: this.moodleDomain,
                 exammode: this.exammode,
+                sebConfigHash: this.sebConfigHash,
+                sebBekHash: this.sebBekHash,
             });
         },
 
@@ -363,11 +367,15 @@ export default {
             const nextUrl = eduConfig.url || null;
             const nextDomain = eduConfig.moodleDomain || null;
             const nextTestId = eduConfig.moodleTestId || null;
+            const nextSebConfigHash = eduConfig.sebConfigHash || null;
+            const nextSebBekHash = eduConfig.sebBekHash || null;
             const urlChanged = nextUrl !== this.url;
             if (urlChanged) this.url = nextUrl;
             if (nextDomain !== this.moodleDomain) this.moodleDomain = nextDomain;
             this.moodleTestType = null;
             if (nextTestId !== this.moodleTestId) this.moodleTestId = nextTestId;
+            if (nextSebConfigHash !== this.sebConfigHash) this.sebConfigHash = nextSebConfigHash;
+            if (nextSebBekHash !== this.sebBekHash) this.sebBekHash = nextSebBekHash;
             return urlChanged;
         },
 

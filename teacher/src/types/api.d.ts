@@ -38,7 +38,7 @@ export type Teacher = {
 
 export type Section = {
   examtype: string,
-  timelimit: number, // Remove?
+  timelimit: number,
   locked: boolean, // Remove?
   sectionname: string,
   startTs?: number,
@@ -100,6 +100,12 @@ export type EduvidualConfig = {
   url?: string,
   moodleDomain?: string | null,
   moodleTestId?: number | null,
+  sebConfigFile?: string | null,
+  sebConfigPassword?: string | null,
+  sebConfigBek?: string | null,
+  sebConfig?: string | null,
+  sebConfigHash?: string | null,
+  sebBekHash?: string | null,
 }
 
 export type RdpConfig = {

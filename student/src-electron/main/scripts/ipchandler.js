@@ -103,17 +103,21 @@ const detachEduvidualMoodleProofHeaders = (guestId) => {
 };
 
 /** Attach HMAC proof header on requests to moodleDomain (quizaccess_nextexam contract). */
-const attachEduvidualMoodleProofHeaders = (guest, { moodleDomain, moodleTestId, exammode }) => {
+const attachEduvidualMoodleProofHeaders = (guest, { moodleDomain, moodleTestId, exammode, sebConfigHash, sebBekHash }) => {
     if (!guest || guest.isDestroyed?.()) return false;
     detachEduvidualMoodleProofHeaders(guest.id);
     if (!exammode || !moodleDomain || moodleTestId == null || moodleTestId === '') return false;
 
     const proof = buildNextExamMoodleProof(moodleTestId);
     const host = String(moodleDomain).replace(/^https?:\/\//i, '').split('/')[0];
-    const filter = { urls: [`*://${host}/*`, `*://*.${host}/*`] };
+    const filter = { urls: !host.startsWith('localhost') ?
+            [`*://${host}/*`, `*://*.${host}/*`] :
+            [`http://${host}/*`, `https://${host}/*`] };
     const handler = (details, callback) => {
         details.requestHeaders[NEXT_EXAM_MOODLE_PROOF_HEADER] = proof;
         details.requestHeaders['X-Next-Exam-Client'] = '1';
+        if (sebConfigHash != null) details.requestHeaders['X-SafeExamBrowser-ConfigKeyHash'] = sebConfigHash;
+        if (sebBekHash != null) details.requestHeaders['X-SafeExamBrowser-RequestHash'] = sebBekHash;
         callback({ requestHeaders: details.requestHeaders });
     };
     guest.session.webRequest.onBeforeSendHeaders(filter, handler);
@@ -670,7 +674,7 @@ class IpcHandler {
             return true;
         });
 
-        ipcMain.handle('start-blocking-for-website-webview', (event, { guestId, mode, allowedDomain, baseUrl, blockSubdomains, blockSubfolders, moodleTestId, moodleDomain, formsUrl, exammode }) => {
+        ipcMain.handle('start-blocking-for-website-webview', (event, { guestId, mode, allowedDomain, baseUrl, blockSubdomains, blockSubfolders, moodleTestId, moodleDomain, formsUrl, exammode, sebConfigHash, sebBekHash }) => {
             const guest = webContents.fromId(Number(guestId));
             if (!guest || guest.isDestroyed?.()) return false;
 
@@ -758,7 +762,7 @@ class IpcHandler {
             });
 
             if (mode === 'eduvidual') {
-                attachEduvidualMoodleProofHeaders(guest, { moodleDomain, moodleTestId, exammode });
+                attachEduvidualMoodleProofHeaders(guest, { moodleDomain, moodleTestId, exammode, sebConfigHash, sebBekHash });
             }
 
             return true;

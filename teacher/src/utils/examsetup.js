@@ -7,6 +7,7 @@ import { DEFAULT_LOCAL_VM_DISPLAY_RESOLUTION,
     resolveLocalVmDisplayResolution,
 } from 'next-exam-shared/localVmDisplayResolutions.js';
 import { DEFAULT_EDITOR_EXAM_CONFIG } from 'next-exam-shared/editorExamConfig.js';
+import psl from 'psl';
 
 function ensureGroupsAndExamConfig(section) {
     const groupA = section.groupA || (section.groupA = { users: [], examInstructionFiles: [], allowedUrls: [], examConfig: {} });
@@ -125,6 +126,12 @@ async function configureEduvidual(presetGroup) {
     if (!groupB.examConfig) groupB.examConfig = {};
 
     const currentConfig = activeGroup === 'b' ? (groupB.examConfig.eduvidual || {}) : (groupA.examConfig.eduvidual || {});
+    
+    let url = undefined;
+    let sebConfigFile = undefined;
+    let sebConfigPassword = undefined;
+    let sebConfigBek = undefined;
+    let sebConfig = undefined;
 
     const result = await this.$swal.fire({
         customClass: {
@@ -137,25 +144,82 @@ async function configureEduvidual(presetGroup) {
         },
         title: this.$t("dashboard.eduvidualid"),
         icon: 'question',
-        input: 'url',
-        inputValue: currentConfig.url || '',
-        inputPlaceholder: 'https://www.eduvidual.at/mod/quiz/view.php?id=6153159',
         showCancelButton: true,
         cancelButtonText: this.$t("dashboard.cancel"),
-        html: `<div class="my-content">${this.$t("dashboard.eduvidualTestUrlHint")}</div>`,
-        inputValidator: (value) => {
-            if (!value || !isValidMoodleDomainName(value)) return this.$t("dashboard.moodleInvalidDomain");
-            const { testid } = extractDomainAndId(value);
-            if (!testid) return this.$t("dashboard.moodleInvalidId");
+        html: `
+            <div class="my-content" style="font-size: 1em;">
+                <select id="typeSelect" class="swal2-input">
+                    <option value="url" selected>URL</option>
+                    <option value="seb">SEB</option>
+                </select>
+                <div id="urlConfig">
+                    <div class="swal2-input-label">${this.$t("dashboard.eduvidualTestUrlHint")}</div>
+                    <input id="url" type="url" class="swal2-input my-custom-input" placeholder="https://www.eduvidual.at/mod/quiz/view.php?id=6153159" style="display: flex;">
+                </div>
+                <div id="sebConfig" style="display: none;">
+                    <div class="swal2-input-label" style="font-weight: bold;">${this.$t("dashboard.sebConfigHint")}</div>
+                    <div class="swal2-input-label">${this.$t("dashboard.sebConfigFileHint")}</div>
+                    <input id="sebConfigFile" type="file" class="swal2-file my-custom-input" style="display: flex;">
+                    <div class="swal2-input-label">${this.$t("dashboard.sebConfigPasswordHint")}</div>
+                    <input id="sebConfigPassword" type="text" class="swal2-input my-custom-input" placeholder="${this.$t("dashboard.sebConfigPasswordPlaceholer")}" style="display: flex;">
+                    <div class="swal2-input-label">${this.$t("dashboard.sebConfigBekHint")}</div>
+                    <input id="sebConfigBek" type="text" class="swal2-input my-custom-input" placeholder="${this.$t("dashboard.sebConfigBekPlaceholer")}" style="display: flex;">
+                </div>
+            </div>
+        `,
+        inputValidator: () => {
+            const type    = document.getElementById('typeSelect');
+            if (type.value === 'url') {
+                const urlValue = document.getElementById('url').value;
+                if (!urlValue || !isValidMoodleDomainName(urlValue)) return this.$t("dashboard.moodleInvalidDomain");
+                const {testid} = extractDomainAndId(urlValue);
+                if (!testid) return this.$t("dashboard.moodleInvalidId");
+            }
+        },
+        didOpen: () => {
+            const typeSelect    = document.getElementById('typeSelect');
+            const urlDiv    = document.getElementById('urlConfig');
+            const sebDiv    = document.getElementById('sebConfig');
+
+            typeSelect.addEventListener('change', (e) => {
+                console.log('change');
+                if (e.target.value === 'url') {
+                    urlDiv.style.display  = 'block';
+                    sebDiv.style.display  = 'none';
+                } else {
+                    urlDiv.style.display  = 'none';
+                    sebDiv.style.display  = 'block';
+                }
+            });
+        },
+        preConfirm: async () => {
+            url = document.getElementById('url').value;
+            sebConfigFile = document.getElementById('sebConfigFile').files;
+            sebConfigPassword = document.getElementById('sebConfigPassword').value;
+            sebConfigBek = document.getElementById('sebConfigBek').value;
+            
+            const password = sebConfigPassword !== "" ? sebConfigPassword : undefined;
+            const bek = sebConfigBek !== "" ? sebConfigBek : undefined;
+            const configFile = password != null ?
+                await readFileAsBuffer(sebConfigFile[0]) :
+                await readFileAsText(sebConfigFile[0]);
+            sebConfig = await window.ipcRenderer?.invoke?.('loadSEBConfig', configFile, password, bek);
+            if (sebConfig == null) {
+                this.$swal.showValidationMessage(this.$t("dashboard.sebConfigReadingFailed"));
+                return false;
+            }
+            url = sebConfig.sebConfig.startURL;
         }
     });
 
     if (!result.isConfirmed) return;
-    const url = String(result.value || '').trim();
     if (!url) return;
 
     const { moodledomain, testid } = extractDomainAndId(url);
     const nextConfig = { url, moodleDomain: moodledomain, moodleTestId: testid };
+    if (sebConfig != null) {
+        Object.assign(nextConfig, sebConfig);
+    }
 
     if (!hasGroups) {
         groupA.examConfig.eduvidual = nextConfig;
@@ -1696,7 +1760,7 @@ function extractDomainAndId(url) {
     var fullDomain = match ? match[2] : null;
 
     // Extract only the domain and TLD
-    var domainParts = fullDomain.split('.').slice(-2).join('.');
+    var domainParts = psl.get(fullDomain);
     var moodledomain = domainParts;
 
     var idRegex = /id=(\d+)/;
@@ -1950,6 +2014,28 @@ function readFileAsBase64(file) {
         };
         reader.onerror = reject;
         reader.readAsDataURL(file);
+    });
+}
+
+function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            resolve(reader.result);
+        };
+        reader.onerror = reject;
+        reader.readAsText(file);
+    });
+}
+
+function readFileAsBuffer(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            resolve(reader.result);
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
     });
 }
 

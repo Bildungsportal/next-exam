@@ -257,9 +257,9 @@ app.whenReady()
     syncClientDisplayInfo(multicastClient.clientinfo);
 
     nativeTheme.themeSource = 'light'  // prevent theme settings from being adopted from windows
-    session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions
+    session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform} mit SEB-Kompatibilitätsmodus`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
-   
+    
     // Kiosk (Linux cage OR Win32 AssignedAccess): no system picker available; auto-grant the
     // first source. Linux cage limits to windows (cage shows one window). Win32 grants screen.
     // Non-kiosk: useSystemPicker:true so the OS dialog appears as usual.

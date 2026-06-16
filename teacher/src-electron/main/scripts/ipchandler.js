@@ -52,6 +52,7 @@ import { enqueuePrintJob } from './printjobhandler.js'
 import { buildTeacherCombinedLatestPdf } from './getLatestCombinedPdf.js'
 import multiCastserver from './multicastserver.js'
 import i18n from '../../../src/locales/locales.js'
+import {loadSEBConfig} from "./sebintegration.js";
 
 const { t } = i18n.global
 
@@ -1881,6 +1882,14 @@ class IpcHandler {
         })
 
 
+        ipcMain.handle('loadSEBConfig', async (event, configFile, password, bek) => {
+            try {
+                return await loadSEBConfig(configFile, password, bek);
+            } catch (e) {
+                console.error(e);
+                return undefined;
+            }
+        });
 
     }
 

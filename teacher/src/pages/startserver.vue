@@ -280,6 +280,7 @@
 import log from 'electron-log/renderer';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {Exam} from "../types/api";
+import {extractDomainAndId} from '../utils/examsetup.js'
 
 
 // Capture unhandled promise rejections
@@ -551,10 +552,39 @@ export default {
                 this.bipData = data;
                 this.onlineExams.splice(0);
                 this.onlineExams.push(...(Array.isArray(data.exams) ? data.exams : []));
+
+                this.computeSebConfigForOnlineExams();
+                 
             })
             .catch(error => { console.error('startserver @ fetchBipExams:', error); });
         },
-
+        
+        computeSebConfigForOnlineExams() {
+            for (const [examkey, exam] of Object.entries(this.onlineExams)) {
+                for (let i = 1; i <= 4; i++) {
+                    if (exam.examSections[i].examtype === 'eduvidual') {
+                        for (let group of ['groupA', 'groupB']) {
+                            const config = exam.examSections[i][group].examConfig.eduvidual;
+                            if (config.sebConfigFile != null) {
+                                window.ipcRenderer?.invoke?.('loadSEBConfig', config.sebConfigFile, config.sebConfigPassword, config.sebConfigBek).then((sebConfig) => {
+                                    if (sebConfig != null) {
+                                        const url = sebConfig.sebConfig.startURL;
+                                        const {moodledomain, testid} = extractDomainAndId(url);
+                                        Object.assign(this.onlineExams[examkey].examSections[i][group].examConfig.eduvidual, {...sebConfig, url, moodleDomain: moodledomain, moodleTestId: testid});
+                                    } else {
+                                        let html = this.$t('startserver.bipExamSebConfigLoadingFailed') + `<br><br>${this.onlineExams[examkey].examName}`;
+                                        if (this.onlineExams[examkey].useExamSections) html += ' -> ' + this.onlineExams[examkey].examSections[i].sectionname;
+                                        if (this.onlineExams[examkey].examSections[i].groups) html += ' -> ' + this.$t('dashboard.' + group);
+                                        html += '<br><br>' + this.$t('startserver.bipExamSebConfigLoadingFailedReason');
+                                        this.$swal.fire({title: this.$t('startserver.bipExamSebConfigLoadingFailedTitle'), html: html, icon: 'error'});
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        },
 
         async setOnlineExam(exam){
             this.servername = exam.examName
