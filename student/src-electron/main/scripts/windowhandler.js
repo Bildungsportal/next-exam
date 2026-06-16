@@ -433,10 +433,13 @@ class WindowHandler {
                         this.examwindow.focus()
 
                         if (!platformDispatcher.skipElectronKiosk) {
-                            this.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
                             await enableRestrictions(this)
                             await this.sleep(1000)
-                            this.addBlurListener()
+                            // AAC owns stacking; screen-saver alwaysOnTop breaks simple fullscreen / notch
+                            if (!isAssessmentSessionActive()) {
+                                this.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
+                                this.addBlurListener()
+                            }
                         }
                     }
                     catch(e){ log.error("windowhandler @ did-finish-load: error in examwindow setup", e)}

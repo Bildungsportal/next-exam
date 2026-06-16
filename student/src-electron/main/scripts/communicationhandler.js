@@ -899,7 +899,7 @@ import {
             const win = WindowHandler.examwindow && !WindowHandler.examwindow.isDestroyed?.()
                 ? WindowHandler.examwindow
                 : WindowHandler.mainwindow;
-            try { win?.show?.(); win?.moveTop?.(); win?.focus?.(); } catch (e) {
+            try { win?.show?.(); win?.setSimpleFullScreen?.(true); win?.moveTop?.(); win?.focus?.(); } catch (e) {
                 log.warn('communicationhandler @ ensureAssessmentForExamStart: focus front window', e?.message || e);
             }
         }
@@ -1063,12 +1063,12 @@ import {
                     if (!platformDispatcher.skipElectronKiosk) {
                         if (platformDispatcher.platform === 'darwin') WindowHandler.examwindow.setSimpleFullScreen(true)
                         else WindowHandler.examwindow.setFullScreen(true)
-                        if (!isAssessmentSessionActive()) {
-                            WindowHandler.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
-                        }
                         await enableRestrictions(WindowHandler)
                         await this.sleep(2000)
-                        WindowHandler.addBlurListener()
+                        if (!isAssessmentSessionActive()) {
+                            WindowHandler.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
+                            WindowHandler.addBlurListener()
+                        }
                         await this.sleep(500)
                     }
                     WindowHandler.examwindow.moveTop()
