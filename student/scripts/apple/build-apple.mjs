@@ -16,7 +16,6 @@ dotenv.config({ path: envFile });
 // wifi-helper is a plain CLI. Sign each at its bundle/binary path with its own entitlements.
 const helperEntitlements = {
     'assessment-helper.app': path.join(projectRoot, 'scripts', 'entitlements.mac.assessment.plist'),
-    'wifi-helper': path.join(projectRoot, 'scripts', 'entitlements.mac.wifi.plist'),
 };
 
 function run(cmd, args, opts = {}) {
@@ -36,7 +35,7 @@ async function signHelper(helperPath, entitlementsPath, identity, adhoc) {
         await run('codesign', [
             '--force',
             '--options', 'runtime',
-            '--timestamp',
+            // '--timestamp', // TEST: disabled to confirm TSA network hang in CI
             '--entitlements', entitlementsPath,
             '-s', identity,
             helperPath,

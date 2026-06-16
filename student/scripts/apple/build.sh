@@ -31,9 +31,3 @@ cat > "$APP/Contents/Info.plist" <<EOF
 </dict></plist>
 EOF
 echo "Built: $APP"
-
-# wifi-helper stays a plain CLI (no restricted entitlement, no profile needed)
-swiftc "$DIR/wifi.swift" \
-  -o "$DIR/wifi-helper" \
-  -framework CoreWLAN
-echo "Built: $DIR/wifi-helper"
