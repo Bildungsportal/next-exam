@@ -12,7 +12,6 @@ class IosUpdateListener {
         loggingBridge.info("initializing iosUpdateListener");
         const infoStore = useInfoStore();
 
-        let lastPath = "";
         if(!isIOS()) {
             return;
         }
@@ -20,10 +19,15 @@ class IosUpdateListener {
 
         signalBridge.on('updateReceived', (update) => {
             loggingBridge.info("updateReceived in update handler: ", update);
-            const examPath = `/${update.serverstatus.examSections[update.serverstatus.activeSection].examtype}/${infoStore.token}`;
             if (update.serverstatus.exammode) {
-                if (lastPath !== examPath) {
-                    lastPath = examPath;
+                const examPath = `/${update.serverstatus.examSections[update.serverstatus.activeSection].examtype}/${infoStore.token}`;
+                const currentExamType = infoStore.examtype;
+                const newExamType = update.serverstatus.examSections[update.serverstatus.activeSection].examtype;
+
+                loggingBridge.info("updateReceived in update handler: lastPath and new examPath", currentExamType, newExamType);
+                if (currentExamType !== newExamType) {
+                    infoStore.exammode = update.serverstatus.exammode;
+                    infoStore.examtype = newExamType;
                     router.push({
                         path: examPath
                     });
@@ -34,6 +38,8 @@ class IosUpdateListener {
          signalBridge.on('endExam', () => {
              loggingBridge.info("endExam received in update handler: ");
              router.push("/student");
+             infoStore.examtype = "";
+             infoStore.exammode = false;
          });
 
 

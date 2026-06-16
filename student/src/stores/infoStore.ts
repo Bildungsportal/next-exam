@@ -49,6 +49,7 @@ export const useInfoStore = defineStore("info", {
                 let clientinfo = response.clientinfo
 
                 this.serverstatus = response.serverstatus;
+                console.log("updating examType from: ", this.examtype, "to: ", clientinfo.examtype);
                 this.examtype = clientinfo.examtype;
                 this.serverip = clientinfo.serverip;
                 this.servername = clientinfo.servername;
