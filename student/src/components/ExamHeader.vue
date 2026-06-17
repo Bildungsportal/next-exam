@@ -6,8 +6,13 @@
                 <img src="/src/assets/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style="float: left;" />
                 <button v-if="groups  && group === 'a'" type="button" class="header-item btn btn-info btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> A  </button>
                 <button v-if="groups  && group === 'b'" type="button" class="header-item btn btn-warning btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> B  </button>
-                <span class="fs-5 align-middle me-1" style="float: left;">{{clientname}} @ {{servername}} | {{pincode}}</span>
-                <span class="fs-5 align-middle me-4 teal" style="float: left;" >| {{$t('student.connected')}}</span>
+                <span class="fs-5 align-middle me-4 header-meta" style="float: left;">
+                    {{clientname}} @ {{servername}}
+                    <span class="header-sep" aria-hidden="true">·</span>
+                    {{pincode}}
+                    <span class="header-sep" aria-hidden="true">·</span>
+                    <span class="teal">{{$t('student.connected')}}</span>
+                </span>
                 <span v-if="kioskLauncherApps.length" class="kiosk-launcher-bar ms-1">
                     <button v-for="app in kioskLauncherApps" :key="app.path" type="button"
                             class="btn btn-outline-cyan btn-sm py-1 px-3 ms-2 kiosk-launcher-btn"
@@ -16,26 +21,31 @@
             </div>
             <div v-if="!online && !localLockdown" class="header-item">
                 <img src="/src/assets/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style=" float: left;" />
-                <span class="fs-5 align-middle me-1" style=" float: left;"> {{clientname}} </span>
-                <span class="fs-5 align-middle me-4 red" style="float: left;"> | {{ $t("student.disconnected") }} </span>
+                <span class="fs-5 align-middle me-4 header-meta" style="float: left;">
+                    {{clientname}}
+                    <span class="header-sep" aria-hidden="true">·</span>
+                    <span class="red">{{ $t("student.disconnected") }}</span>
+                </span>
             </div>
             <div v-if="localLockdown" class="header-item">
                 <img src="/src/assets/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style="float: left;" />
-                <span class="fs-5 align-middle me-1" style="float: left;">{{clientname}}</span>
-                <span v-if="localLockdown && exammode"  class="fs-5 align-middle me-4 green" style="float: left;" >| Lokal abgesichert</span>
-                <span v-if="localLockdown && !exammode"  class="fs-5 align-middle me-4 red" style="float: left;" >| nicht abgesichert</span>
+                <span class="fs-5 align-middle me-4 header-meta" style="float: left;">
+                    {{clientname}}
+                    <span class="header-sep" aria-hidden="true">·</span>
+                    <span v-if="localLockdown && exammode" class="green">Lokal abgesichert</span>
+                    <span v-if="localLockdown && !exammode" class="red">nicht abgesichert</span>
+                </span>
             </div>
             <div v-if="!online && !localLockdown && exammode" class="header-item btn btn-success p-1 me-1 btn-sm" @click="reconnect()"><img src="/src/assets/img/svg/gtk-convert.svg" class="" width="22" height="20"> {{ $t("editor.reconnect")}}</div>
             <div v-if="!online && !localLockdown && exammode" class="header-item btn btn-danger p-1 me-1 btn-sm"  @click="gracefullyExit()"><img src="/src/assets/img/svg/dialog-cancel.svg" class="" width="22" height="20"> {{ $t("editor.endexam")}} </div>
             <div v-if="localLockdown && exammode" class="header-item btn btn-danger p-1 pe-2 me-1 btn-sm"  @click="gracefullyExit()"><img src="/src/assets/img/svg/dialog-cancel.svg" class="" width="22" height="20"> {{ $t("editor.endexam") }}  </div>
         </div>
-        
-     
 
+        <div class="header-right">
         <!-- Exam sections: show all 4 section buttons and current section; if allowSectionSwitch, buttons trigger switch-exam-section IPC -->
-        <div v-if="serverstatus?.useExamSections" class="header-item me-2">
+        <div v-if="serverstatus?.useExamSections" class="header-sections me-2">
             <div v-for="n in 4" :key="n"
-                class="header-item btn btn-sm ms-1 p-0 pe-1 ps-1"
+                class="btn btn-sm ms-1 p-0 pe-1 ps-1"
                 :class="(lockedSection === n ? 'btn-teal' : 'btn-outline-secondary') + (!serverstatus?.allowSectionSwitch ? ' disabledbtn' : '') "
                 @click="switchExamSection(n)">
                 {{ serverstatus?.examSections?.[n]?.sectionname || n }}
@@ -104,6 +114,7 @@
             </div>
             <span ref="headerClock" class="fs-5 d-inline-block" style="width:90px;"></span>
             <div class="fs-5" >{{componentName}}</div>
+        </div>
         </div>
     </div>
   
@@ -337,6 +348,36 @@
     align-items: center;
     flex-shrink: 1;
     min-width: 0;
+}
+
+.header-right {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.header-sections {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.header-meta {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+}
+
+.header-sep {
+    font-weight: 900;
+    font-size: 1.25em;
+    line-height: 1;
+    padding: 0 0.45em;
+    color: #fff;
 }
 
 .header-item {
