@@ -282,6 +282,7 @@
         "sebConfigBekPlaceholer": "Browser Exam Key",
         "sebConfigFileHint": "Upload a configuration downloaded from Moodle or created with the SEB Configuration Tool:",
         "sebConfigHint": "With the Safe Exam Browser (SEB) compatibility mode, you can also run a Moodle quiz already configured for SEB using Next-Exam.",
+        "sebConfigNotSelected": "No SEB-Configuration selected.",
         "sebConfigPasswordHint": "If the configuration is encrypted, please enter the password:",
         "sebConfigPasswordPlaceholer": "Decryption password",
         "sebConfigReadingFailed": "Reading of SEB-Configuration failed.",

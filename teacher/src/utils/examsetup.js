@@ -193,22 +193,30 @@ async function configureEduvidual(presetGroup) {
             });
         },
         preConfirm: async () => {
-            url = document.getElementById('url').value;
-            sebConfigFile = document.getElementById('sebConfigFile').files;
-            sebConfigPassword = document.getElementById('sebConfigPassword').value;
-            sebConfigBek = document.getElementById('sebConfigBek').value;
-            
-            const password = sebConfigPassword !== "" ? sebConfigPassword : undefined;
-            const bek = sebConfigBek !== "" ? sebConfigBek : undefined;
-            const configFile = password != null ?
-                await readFileAsBuffer(sebConfigFile[0]) :
-                await readFileAsText(sebConfigFile[0]);
-            sebConfig = await window.ipcRenderer?.invoke?.('loadSEBConfig', configFile, password, bek);
-            if (sebConfig == null) {
-                this.$swal.showValidationMessage(this.$t("dashboard.sebConfigReadingFailed"));
-                return false;
+            const type = document.getElementById('typeSelect');
+            if (type.value === 'url') {
+                url = document.getElementById('url').value;
+            } else {
+                sebConfigFile = document.getElementById('sebConfigFile').files;
+                sebConfigPassword = document.getElementById('sebConfigPassword').value;
+                sebConfigBek = document.getElementById('sebConfigBek').value;
+    
+                if (sebConfigFile.length == 0) {
+                    this.$swal.showValidationMessage(this.$t("dashboard.sebConfigNotSelected"));
+                    return false;
+                }
+                const password = sebConfigPassword !== "" ? sebConfigPassword : undefined;
+                const bek = sebConfigBek !== "" ? sebConfigBek : undefined;
+                const configFile = password != null ?
+                    await readFileAsBuffer(sebConfigFile[0]) :
+                    await readFileAsText(sebConfigFile[0]);
+                sebConfig = await window.ipcRenderer?.invoke?.('loadSEBConfig', configFile, password, bek);
+                if (sebConfig == null) {
+                    this.$swal.showValidationMessage(this.$t("dashboard.sebConfigReadingFailed"));
+                    return false;
+                }
+                url = sebConfig.sebConfig.startURL;
             }
-            url = sebConfig.sebConfig.startURL;
         }
     });
 
