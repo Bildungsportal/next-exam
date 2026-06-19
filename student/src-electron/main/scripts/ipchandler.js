@@ -65,6 +65,7 @@ import {
     detectCageKioskDesktopInstalled,
     detectRunningInCage,
     needsCageKioskSetup,
+    resolveRunnableCageKioskInstallScript,
 } from './cageDetect.js';
 import {
     detectRunningInWindowsKiosk,
@@ -268,11 +269,12 @@ class IpcHandler {
                 return initiateWindowsKioskSetup(process.execPath, extraAppsFile, firewallRulesScript);
             }
             const source = process.env.APPIMAGE || process.execPath;
-            const script = app.isPackaged
+            const bundled = app.isPackaged
                 ? path.join(process.resourcesPath, 'linux', 'install-cage-kiosk.sh')
                 : path.join(process.cwd(), 'src-electron/resources/linux/install-cage-kiosk.sh');
-            if (!fs.existsSync(script)) {
-                return Promise.resolve({ ok: false, error: `install script not found: ${script}` });
+            const script = resolveRunnableCageKioskInstallScript(bundled);
+            if (!script) {
+                return Promise.resolve({ ok: false, error: `install script not found: ${bundled}` });
             }
             return new Promise((resolve) => {
                 const child = spawn('pkexec', ['/bin/sh', script, source], { env: process.env });

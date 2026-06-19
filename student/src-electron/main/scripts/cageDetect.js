@@ -1,5 +1,7 @@
 import { execSync } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
+import { chmodSync, copyFileSync, existsSync, mkdtempSync, readFileSync } from 'fs';
+import os from 'os';
+import path from 'path';
 
 export const CAGE_KIOSK_APPIMAGE = '/opt/next-exam/next-exam.AppImage';
 export const CAGE_KIOSK_DESKTOP = '/usr/share/applications/next-exam-kiosk.desktop';
@@ -39,6 +41,17 @@ export function detectCageKioskAppImageInstalled() {
 /** True when the kiosk .desktop entry exists. */
 export function detectCageKioskDesktopInstalled() {
     return existsSync(CAGE_KIOSK_DESKTOP);
+}
+
+/** AppImage squashfs is noexec; copy bundled script to a runnable temp path. */
+export function resolveRunnableCageKioskInstallScript(bundledPath) {
+    if (!existsSync(bundledPath)) return null;
+    if (!process.env.APPIMAGE) return bundledPath;
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'next-exam-cage-install-'));
+    const runnable = path.join(dir, 'install-cage-kiosk.sh');
+    copyFileSync(bundledPath, runnable);
+    chmodSync(runnable, 0o755);
+    return runnable;
 }
 
 /** Show install UI while cage, AppImage, or kiosk desktop entry is still missing. */

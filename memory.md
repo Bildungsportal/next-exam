@@ -39,7 +39,7 @@ RULE^kiosk^sharedFields^platformDispatcher win32 reuses linux cage field names (
 PATH^platform^dispatcher^teacher/src-electron/main/scripts/platformDispatcher.js used by teacher main startup logs
 
 # Linux cage
-PATH^linux^cageInstall^install-cage-kiosk.sh pkexec; needsCageKioskSetup=!(cage on PATH+AppImage+/opt/next-exam+desktop); UI if needsCageKioskSetup&&!runningInCage
+PATH^linux^cageInstall^install-cage-kiosk.sh pkexec; APPIMAGE mount=noexec→resolveRunnableCageKioskInstallScript copies to tmp; needsCageKioskSetup=!(cage on PATH+AppImage+/opt/next-exam+desktop); UI if needsCageKioskSetup&&!runningInCage
 TECH^linux^cage^platformDispatcher.runningInCage; lin.js appsToClose then skip gsettings; renderer linuxCageKiosk.js; quit-app; exit sidebar student.vue
 TECH^linux^cageScreenshot^registerClient skip stream+fullDesktop in Cage; capturePage IPC; useSystemPicker true initDisplayStreamOnce at scheduler
 RULE^kiosk^screenshotPath^Linux cage=capturePage window-only (electron-main setDisplayMediaRequestHandler types:['window']+useSystemPicker:false; setCageWindowCaptureFallback(true)); Win32 kiosk=normal getDisplayMedia full screen (types:['screen']+useSystemPicker:true); gate via runningInCage && displayServer!=='windows' (NOT runningInCage alone - that field is shared between both kiosk types)
