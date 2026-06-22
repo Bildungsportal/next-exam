@@ -28,6 +28,14 @@ function run(cmd, args) {
   });
 }
 
+// TSA via --timestamp can hang on GitHub Actions (same issue as assessment-helper pre-pack sign).
+function codesignArgs(identity, fullPath) {
+  const args = ['--force', '--options', 'runtime'];
+  if (process.env.GITHUB_ACTIONS !== 'true') args.push('--timestamp');
+  args.push('--preserve-metadata=identifier,entitlements,flags', '-s', identity, fullPath);
+  return args;
+}
+
 /** Sign native libs inside LanguageTool JARs before electron-builder applies the macOS app signature. */
 async function signLanguageToolJars(appOutDir, appName, identity) {
   const libsPath = path.join(
@@ -55,17 +63,10 @@ async function signLanguageToolJars(appOutDir, appName, identity) {
       if (!fs.existsSync(fullPath)) continue;
       const st = fs.statSync(fullPath);
       fs.chmodSync(fullPath, st.mode | 0o200);
-      console.log(`codesign --timestamp ${rel} in ${jarFile}...`);
-      await run('codesign', [
-        '--force',
-        '--options',
-        'runtime',
-        '--timestamp',
-        '--preserve-metadata=identifier,entitlements,flags',
-        '-s',
-        identity,
-        fullPath,
-      ]);
+      console.log(
+        `codesign${process.env.GITHUB_ACTIONS === 'true' ? '' : ' --timestamp'} ${rel} in ${jarFile}...`,
+      );
+      await run('codesign', codesignArgs(identity, fullPath));
       console.log(`SUCCESSFULLY SIGNED ${fullPath}`);
     }
     await execPromise(`jar cf "${path.join(libsPath, jarFile)}" -C "${unpackedDir}" .`);
