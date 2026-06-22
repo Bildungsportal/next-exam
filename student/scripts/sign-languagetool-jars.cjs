@@ -47,6 +47,7 @@ async function signLanguageToolJars(appOutDir, appName, identity) {
   console.log('SIGNING JAVA LIBRARIES............................................');
   for (const jarFile of jarFiles) {
     const unpackedDir = path.join(libsPath, `${jarFile}_unpacked`);
+    console.log(`Unpacking ${jarFile}...`);
     await execPromise(`mkdir -p "${unpackedDir}"`);
     await execPromise(`cd "${unpackedDir}" && jar xf "${path.join(libsPath, jarFile)}"`);
     for (const rel of filesToSign) {
@@ -54,6 +55,7 @@ async function signLanguageToolJars(appOutDir, appName, identity) {
       if (!fs.existsSync(fullPath)) continue;
       const st = fs.statSync(fullPath);
       fs.chmodSync(fullPath, st.mode | 0o200);
+      console.log(`codesign --timestamp ${rel} in ${jarFile}...`);
       await run('codesign', [
         '--force',
         '--options',
