@@ -3,30 +3,21 @@ const fs = require('fs');
 const { exec, spawn } = require('child_process');
 
 const jarFiles = ['hunspell.jar', 'grpc-netty-shaded.jar', 'jna.jar'];
-const filesToSignX64 = [
+const filesToSign = [
   'darwin-x86-64/libhunspell.dylib',
   'META-INF/native/libio_grpc_netty_shaded_netty_tcnative_osx_x86_64.jnilib',
   'com/sun/jna/darwin-x86-64/libjnidispatch.jnilib',
-];
-const filesToSignArm64 = [
   'darwin-aarch64/libhunspell.dylib',
   'META-INF/native/libio_grpc_netty_shaded_netty_tcnative_osx_aarch_64.jnilib',
   'com/sun/jna/darwin-aarch64/libjnidispatch.jnilib',
 ];
 
-const KEYCHAIN_PATHS = [
-  path.join(process.env.HOME, 'Library/Keychains/build.keychain-db'),
-  path.join(process.env.HOME, 'Library/Keychains/build.keychain'),
-];
+const CODESIGN_TIMEOUT_MS = 180000;
+const CODESIGN_MAX_ATTEMPTS = 3;
+const CODESIGN_RETRY_DELAY_MS = 60000;
 
-function normalizeMacArch(arch) {
-  if (arch === 'x64' || arch === 1 || arch === '1') return 'x64';
-  if (arch === 'arm64' || arch === 3 || arch === '3') return 'arm64';
-  return process.env.NXE_EB_MAC_ARCH === 'x64' ? 'x64' : 'arm64';
-}
-
-function filesToSignForArch(arch) {
-  return normalizeMacArch(arch) === 'x64' ? filesToSignX64 : filesToSignArm64;
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function execPromise(command) {
@@ -38,7 +29,7 @@ function execPromise(command) {
   });
 }
 
-function run(cmd, args, timeoutMs = 120000) {
+function run(cmd, args, timeoutMs = CODESIGN_TIMEOUT_MS) {
   return new Promise((resolve, reject) => {
     const p = spawn(cmd, args, { stdio: 'inherit' });
     const timer = setTimeout(() => {
@@ -53,48 +44,46 @@ function run(cmd, args, timeoutMs = 120000) {
   });
 }
 
-// TSA via --timestamp can hang on GitHub Actions (same issue as assessment-helper pre-pack sign).
-function codesignArgs(identity, keychain, fullPath) {
-  const args = ['--force', '--options', 'runtime'];
-  if (process.env.GITHUB_ACTIONS !== 'true') args.push('--timestamp');
-  if (keychain) args.push('--keychain', keychain);
-  args.push('--preserve-metadata=identifier,entitlements,flags', '-s', identity, fullPath);
-  return args;
+function codesignArgs(identity, fullPath) {
+  return [
+    '--force',
+    '--options',
+    'runtime',
+    '--timestamp',
+    '--preserve-metadata=identifier,entitlements,flags',
+    '-s',
+    identity,
+    fullPath,
+  ];
 }
 
-async function prepareCodesignKeychain() {
-  for (const keychain of KEYCHAIN_PATHS) {
-    if (!fs.existsSync(keychain)) continue;
-    await execPromise(`security list-keychains -d user -s "${keychain}"`);
-    await execPromise(`security default-keychain -s "${keychain}"`);
-    await execPromise(`security unlock-keychain -p "" "${keychain}"`);
-    await execPromise(`security set-keychain-settings -lut 21600 "${keychain}"`);
-    return keychain;
-  }
-  return null;
+function isRetryableCodesignError(error) {
+  const msg = String(error?.message || error);
+  return msg.includes('timed out');
 }
 
-/** Prefer keychain identity from imported CSC .p12 (same cert electron-builder uses for teacher). */
-async function resolveSigningIdentity(preferred) {
-  const keychain = await prepareCodesignKeychain();
-  if (keychain) {
-    const out = await execPromise(`security find-identity -v -p codesigning "${keychain}"`);
-    const line = out.split('\n').find((l) => l.includes('Developer ID Application:'));
-    const match = line?.match(/"([^"]+)"/);
-    if (match) {
-      console.log(`codesign identity from keychain: ${match[1]}`);
-      return { identity: match[1], keychain };
+async function codesignWithRetry(identity, fullPath, label) {
+  let lastError;
+  for (let attempt = 1; attempt <= CODESIGN_MAX_ATTEMPTS; attempt++) {
+    try {
+      console.log(`codesign --timestamp ${label} (attempt ${attempt}/${CODESIGN_MAX_ATTEMPTS})...`);
+      await run('codesign', codesignArgs(identity, fullPath));
+      console.log(`SUCCESSFULLY SIGNED ${fullPath}`);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableCodesignError(error) || attempt === CODESIGN_MAX_ATTEMPTS) break;
+      console.warn(
+        `codesign attempt ${attempt}/${CODESIGN_MAX_ATTEMPTS} timed out — retry in ${CODESIGN_RETRY_DELAY_MS / 1000}s…`,
+      );
+      await sleep(CODESIGN_RETRY_DELAY_MS);
     }
   }
-  if (preferred) {
-    console.log(`codesign identity from env: ${preferred}`);
-    return { identity: preferred, keychain };
-  }
-  throw new Error('No Developer ID Application identity found for LanguageTool jar signing');
+  throw lastError;
 }
 
 /** Sign native libs inside LanguageTool JARs before electron-builder applies the macOS app signature. */
-async function signLanguageToolJars(appOutDir, appName, preferredIdentity, arch) {
+async function signLanguageToolJars(appOutDir, appName, identity) {
   const libsPath = path.join(
     appOutDir,
     `${appName}.app`,
@@ -110,10 +99,6 @@ async function signLanguageToolJars(appOutDir, appName, preferredIdentity, arch)
     return;
   }
   console.log('SIGNING JAVA LIBRARIES............................................');
-  const macArch = normalizeMacArch(arch);
-  const filesToSign = filesToSignForArch(macArch);
-  const { identity, keychain } = await resolveSigningIdentity(preferredIdentity);
-  console.log(`Signing LanguageTool native libs for macOS ${macArch} only (${filesToSign.length} paths per jar)`);
   for (const jarFile of jarFiles) {
     const unpackedDir = path.join(libsPath, `${jarFile}_unpacked`);
     console.log(`Unpacking ${jarFile}...`);
@@ -124,11 +109,7 @@ async function signLanguageToolJars(appOutDir, appName, preferredIdentity, arch)
       if (!fs.existsSync(fullPath)) continue;
       const st = fs.statSync(fullPath);
       fs.chmodSync(fullPath, st.mode | 0o200);
-      console.log(
-        `codesign${process.env.GITHUB_ACTIONS === 'true' ? '' : ' --timestamp'} ${rel} in ${jarFile}...`,
-      );
-      await run('codesign', codesignArgs(identity, keychain, fullPath));
-      console.log(`SUCCESSFULLY SIGNED ${fullPath}`);
+      await codesignWithRetry(identity, fullPath, `${rel} in ${jarFile}`);
     }
     await execPromise(`jar cf "${path.join(libsPath, jarFile)}" -C "${unpackedDir}" .`);
     fs.rmSync(unpackedDir, { recursive: true, force: true });

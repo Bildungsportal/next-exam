@@ -64,7 +64,7 @@ export default async function afterPack(context) {
     }
 
     if (signEnabled && identity) {
-      await signLanguageToolJars(appPath, appName, identity, macArch);
+      await signLanguageToolJars(appPath, appName, identity);
     }
     // apple/* helpers: signed in notarize.cjs afterSign (after electron-builder; see resignAppleHelpers)
   }
