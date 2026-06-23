@@ -1,13 +1,118 @@
-name: Final Release Trigger
-on: 
-  workflow_dispatch:
+name: Final Release
+
+on:
+  workflow_call: { }
+  workflow_dispatch: { }
 
 # opt in to Node 24 runtime for js actions (default from 2026-06-16); pre-validate
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  dummy_job:
+  linux:
+    uses: ./.github/workflows/build-Linux-x64-AppImage.yml
+    secrets: inherit
+    with:
+      target_ref: 2.0.0
+  macos-arm64:
+    uses: ./.github/workflows/build-MacOS-arm64-DMG.yml
+    secrets: inherit
+    with:
+      target_ref: 2.0.0
+  
+  macos-x64:
+    needs: macos-arm64
+    uses: ./.github/workflows/build-MacOS-x64-DMG.yml
+    secrets: inherit
+    with:
+      target_ref: 2.0.0
+  
+  windows-msi:
+    uses: ./.github/workflows/build-Windows-x64-MSI.yml
+    secrets: inherit
+    with:
+      target_ref: 2.0.0
+  
+  windows-portable:
+    uses: ./.github/workflows/build-Windows-x64-Portable-EXE.yml
+    secrets: inherit
+    with:
+      target_ref: 2.0.0
+
+
+  release:
+    needs: [linux, macos-arm64, macos-x64, windows-msi, windows-portable]
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Workflow registriert."
+      - name: Checkout Private Repository
+        uses: actions/checkout@v4
+        with:
+            ref: 2.0.0
+            fetch-depth: 0
+          
+      - name: Read version from .env.production
+        id: version_reader
+        run: |
+          VERSION=$(grep '^VERSION=' student/.env.production | cut -d= -f2- | tr -d '"' | tr -d "'")
+          BUILD_NUMBER=$(grep '^BUILD_NUMBER=' student/.env.production | cut -d= -f2- | tr -d '"' | tr -d "'")
+          if [ -z "$VERSION" ] || [ -z "$BUILD_NUMBER" ]; then
+            echo "ERROR: VERSION or BUILD_NUMBER missing in student/.env.production" >&2
+            exit 1
+          fi
+          BUILD_VERSION="${VERSION}.${BUILD_NUMBER}"
+          echo "Detected version: $BUILD_VERSION"
+          NEW_TAG="v$BUILD_VERSION"
+          echo "Release tag: $NEW_TAG"
+          LAST_RELEASE_TAG=$(git tag --sort=-v:refname | grep "^v[0-9]" | head -n 1)
+          echo "Previous release tag: $LAST_RELEASE_TAG"
+          echo "new_release_tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
+          echo "last_release_tag=$LAST_RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Tag Release
+        id: tag_release
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch --tags --force
+          TAG="${{ steps.version_reader.outputs.new_release_tag }}"
+          echo "should_release=false" >> "$GITHUB_OUTPUT"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists. Aborting release."
+            exit 0
+          fi
+          git tag "$TAG"
+          git push origin "$TAG"
+          echo "should_release=true" >> "$GITHUB_OUTPUT"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_BiP_ORG_NEXT_EXAM }}
+
+      - name: Download artifacts
+        if: steps.tag_release.outputs.should_release == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          path: rel
+          merge-multiple: true
+
+      - name: Generate changelog
+        if: steps.tag_release.outputs.should_release == 'true'
+        id: changelog
+        uses: mikepenz/release-changelog-builder-action@v5
+        with:
+          mode: "COMMIT"
+          ignorePreReleases: true
+          fromTag: ${{ steps.version_reader.outputs.last_release_tag }}
+          toTag: ${{ steps.version_reader.outputs.new_release_tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create release
+        if: steps.tag_release.outputs.should_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: false
+          tag_name: ${{ steps.version_reader.outputs.new_release_tag }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          files: |
+            rel/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
