@@ -46,11 +46,9 @@ export const useInfoStore = defineStore("info", {
         async updateInfo(): Promise<boolean> {
             let response = await signalBridge.invoke('getinfoasync')
             if (response) {
-                let clientinfo = response.clientinfo
-
+                let clientinfo = response.clientinfo;
                 this.serverstatus = response.serverstatus;
-                console.log("updating examType from: ", this.examtype, "to: ", clientinfo.examtype);
-                this.examtype = clientinfo.examtype;
+                this.examtype = clientinfo.examtype === null ? this.examtype : clientinfo.examtype;
                 this.serverip = clientinfo.serverip;
                 this.servername = clientinfo.servername;
                 this.servertoken = clientinfo.servertoken;
@@ -66,7 +64,7 @@ export const useInfoStore = defineStore("info", {
                 this.token = clientinfo?.token;
             }
             await this.refreshNetworkInfo();
-            return true
+            return true;
         },
     },
 })
