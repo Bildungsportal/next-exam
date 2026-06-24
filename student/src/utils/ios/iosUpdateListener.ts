@@ -20,9 +20,9 @@ class IosUpdateListener {
         signalBridge.on('updateReceived', (update) => {
             loggingBridge.info("updateReceived in update handler: ", update);
             if (update.serverstatus.exammode) {
-                const examPath = `/${update.serverstatus.examSections[update.serverstatus.activeSection].examtype}/${infoStore.token}`;
+                const examPath = `/${update.serverstatus.examSections[infoStore.lockedSection].examtype}/${infoStore.token}`;
                 const currentExamType = infoStore.examtype;
-                const newExamType = update.serverstatus.examSections[update.serverstatus.activeSection].examtype;
+                const newExamType = update.serverstatus.examSections[infoStore.lockedSection].examtype;
 
                 loggingBridge.info("updateReceived in update handler: lastPath and new examPath", currentExamType, newExamType);
                 if (currentExamType !== newExamType) {
