@@ -74,13 +74,13 @@ class WindowHandler {
     }
 
     /** Load a hash route in the given BrowserWindow (packaged file or dev APP_URL). */
-    navigateHashRoute(win, hashRoute) {
+    async navigateHashRoute(win, hashRoute) {
         const hash = hashRoute.startsWith('#') ? hashRoute : `#${hashRoute}`
         if (app.isPackaged) {
-            win.loadFile(getRendererIndexPath(), { hash })
+            await win.loadFile(getRendererIndexPath(), { hash })
         } else {
             const base = (process.env.APP_URL || '').replace(/\/$/, '')
-            win.loadURL(`${base}/${hash}`)
+            await win.loadURL(`${base}/${hash}`)
         }
     }
 
@@ -94,7 +94,34 @@ class WindowHandler {
             log.debug('windowhandler @ navigateToExamRoute: notify renderer', e?.message)
         }
         await this.sleep(1000)
-        this.navigateHashRoute(win, hashRoute)
+        await this.navigateHashRoute(win, hashRoute)
+    }
+
+    /** applyElectronKioskMode + restrictions after exam route finished loading */
+    async applyExamWindowLockdown(win) {
+        if (!win || win.isDestroyed?.()) return;
+        if (this.config.showdevtools) { win.webContents.openDevTools() }
+        if (this.config.development) return;
+        try {
+            win.removeMenu()
+            platformDispatcher.applyElectronKioskMode(win);
+
+            await this.sleep(500)
+            win.moveTop()
+            win.focus()
+
+            if (!platformDispatcher.skipElectronKiosk) {
+                await enableRestrictions(this)
+                await this.sleep(1000)
+                // AAC owns stacking; screen-saver alwaysOnTop breaks simple fullscreen / notch
+                if (!isAssessmentSessionActive()) {
+                    win.setAlwaysOnTop(true, "screen-saver", 1)
+                    this.addBlurListener()
+                }
+            }
+        } catch (e) {
+            log.error('windowhandler @ applyExamWindowLockdown:', e)
+        }
     }
 
     /** Drop exam-only BrowserViews/listeners before leaving exam routes. */
@@ -403,6 +430,7 @@ class WindowHandler {
             try {
                 this.examwindow.show();
                 this.examwindow.focus();
+                await this.applyExamWindowLockdown(this.examwindow);
             } catch (e) {
                 log.debug('windowhandler @ createExamWindow: focus existing examwindow', e?.message);
             }
@@ -417,35 +445,6 @@ class WindowHandler {
         this._examWindowCreating = true;
         try {
         this.examwindow = this.mainwindow
-
-
-            // Electron 39: ready-to-show fires AFTER show() is called, so use did-finish-load instead
-            this.examwindow.webContents.once('did-finish-load', async () => {
-                if (!this.examwindow) return;
-                if (this.config.showdevtools) { this.examwindow.webContents.openDevTools()  }
-                if (!this.config.development) {
-                    try {
-                        this.examwindow.removeMenu()
-                        platformDispatcher.applyElectronKioskMode(this.examwindow);
-
-                        await this.sleep(500)
-                        this.examwindow.moveTop()
-                        this.examwindow.focus()
-
-                        if (!platformDispatcher.skipElectronKiosk) {
-                            await enableRestrictions(this)
-                            await this.sleep(1000)
-                            // AAC owns stacking; screen-saver alwaysOnTop breaks simple fullscreen / notch
-                            if (!isAssessmentSessionActive()) {
-                                this.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
-                                this.addBlurListener()
-                            }
-                        }
-                    }
-                    catch(e){ log.error("windowhandler @ did-finish-load: error in examwindow setup", e)}
-                }
-            })
-
 
             this.examwindow.serverstatus = serverstatus //we keep it there to make it accessable via examwindow in ipcHandler
             this.examwindow.menuHeight = 94   // start position for the content view
@@ -469,6 +468,7 @@ class WindowHandler {
                     return
                 }
                 await this.navigateToExamRoute(this.examwindow, `/${examtype}/${token}/`)
+                await this.applyExamWindowLockdown(this.examwindow)
                 // Define the MainContentPage view
                 let contentView = new BrowserView({
                     webPreferences: {
@@ -515,6 +515,7 @@ class WindowHandler {
             // this is the normal exam mode (editor, math, eduvidual, website, forms, activesheets, localvm)
             else {
                 await this.navigateToExamRoute(this.examwindow, `/${examtype}/${token}/`)
+                await this.applyExamWindowLockdown(this.examwindow)
             }
 
 
@@ -713,7 +714,7 @@ class WindowHandler {
             minWidth: 850,
             minHeight: 600,
            // resizable: false, // prevents resizing
-            fullscreenable: false, // prevents fullscreen mode - important for macOS: when the mainwindow is fullscreen on macOS the kiosk mode does not take effect on the examwindow - electron bug (needs example code): >> https://github.com/electron/electron/issues/44755
+            fullscreenable: platformDispatcher.platform !== 'darwin', // macOS kiosk bug if true; Linux/Win need it for exam fullscreen
             show: true,
             //visibleOnAllWorkspaces: true,
             

@@ -144,7 +144,8 @@ class PlatformDispatcher {
       win.setSimpleFullScreen(true);
       return;
     }
-    win.setKiosk(true);
+  // Linux/Win: match startExam reconnect path — setKiosk fails when fullscreenable is false
+    win.setFullScreen(true);
   }
 
   _whichDesktopName() {

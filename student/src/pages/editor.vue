@@ -2528,7 +2528,7 @@ export default {
 
         // Detect platform using navigator.platform (available in renderer process)
         this.isMac = navigator.platform.toLowerCase().includes('mac');
-        this.applyEditorLayoutCss();
+        this.syncEditorVisualSettings();
         this.createEditor(); // this initializes the editor
         this.getExamMaterials()
         setTimeout(() => {
