@@ -17,7 +17,7 @@
 
 'use strict'
 import crypto from 'node:crypto'
-import {disableRestrictions, enableRestrictions} from './platformrestrictions.js';
+import { disableRestrictions, enableRestrictions, killWinKioskExamApps } from './platformrestrictions.js';
 import fs from 'fs' 
 import archiver from 'archiver'   // causes severe race conditions with electron's own versions - always keep the same version as electron
 import extract from 'extract-zip'
@@ -1060,7 +1060,9 @@ import {
                 if (!(await this.ensureAssessmentForExamStart())) return;
                 this.multicastClient.clientinfo.exammode = true
                 if (!this.config.development) {
-                    if (!platformDispatcher.skipElectronKiosk) {
+                    if (platformDispatcher.skipElectronKiosk) {
+                        await killWinKioskExamApps()
+                    } else {
                         if (platformDispatcher.platform === 'darwin') WindowHandler.examwindow.setSimpleFullScreen(true)
                         else WindowHandler.examwindow.setFullScreen(true)
                         await enableRestrictions(WindowHandler)

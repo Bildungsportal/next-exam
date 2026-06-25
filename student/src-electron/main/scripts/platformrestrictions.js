@@ -41,7 +41,7 @@ import log from 'electron-log';
 import { SchedulerService } from './schedulerservice.ts';
 import platformDispatcher from './platformDispatcher.js';
 import { enableLinuxRestrictions, disableLinuxRestrictions } from './restrictions/lin.js';
-import { enableWindowsRestrictions, disableWindowsRestrictions } from './restrictions/win.js';
+import { enableWindowsRestrictions, disableWindowsRestrictions, killWindowsAppsToClose } from './restrictions/win.js';
 import { enableMacRestrictions, disableMacRestrictions, toggleMacOSLockdown as toggleMacOSLockdownImpl } from './restrictions/mac.js';
 import { stopAssessmentSession } from './assessmentSession.js';
 
@@ -171,6 +171,14 @@ export const appsToClose = [
 
 
 
+
+/** Win AA kiosk: kill appsToClose only (no explorer, shortcuts, or clipboard hooks). */
+export async function killWinKioskExamApps() {
+    if (config.development) return;
+    if (platformDispatcher.platform !== 'win32' || !platformDispatcher.skipElectronKiosk) return;
+    log.info('platformrestrictions @ killWinKioskExamApps: killing appsToClose in Assigned Access session');
+    await killWindowsAppsToClose(appsToClose);
+}
 
 export async function enableRestrictions(winhandler) {
     if (config.development) { return; }

@@ -18,7 +18,7 @@
 import fs from 'fs';
 import { app, BrowserWindow, BrowserView, dialog, screen} from 'electron'
 import { join } from 'path'
-import {disableRestrictions, enableRestrictions} from './platformrestrictions.js';
+import { disableRestrictions, enableRestrictions, killWinKioskExamApps } from './platformrestrictions.js';
 import log from 'electron-log'
 import {SchedulerService} from './schedulerservice.ts'
 import platformDispatcher from './platformDispatcher.js';
@@ -110,7 +110,9 @@ class WindowHandler {
             win.moveTop()
             win.focus()
 
-            if (!platformDispatcher.skipElectronKiosk) {
+            if (platformDispatcher.skipElectronKiosk) {
+                await killWinKioskExamApps()
+            } else {
                 await enableRestrictions(this)
                 await this.sleep(1000)
                 // AAC owns stacking; screen-saver alwaysOnTop breaks simple fullscreen / notch
