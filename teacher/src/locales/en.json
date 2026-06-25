@@ -436,6 +436,8 @@
         "title": "Exam Protocol"
     },
     "general": {
+        "endRunningExamFirst": "Please end the running exam first.",
+        "examRunningTitle": "Exam running",
         "offline": "No Network Connection",
         "ok": "OK",
         "slist": "Active Exams",

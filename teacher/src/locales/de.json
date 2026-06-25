@@ -436,6 +436,8 @@
         "title": "Prüfungsprotokoll"
     },
     "general": {
+        "endRunningExamFirst": "Bitte beenden Sie zuerst die laufende Prüfung.",
+        "examRunningTitle": "Prüfung läuft",
         "offline": "Keine Netzwerkverbindung",
         "ok": "OK",
         "slist": "Aktive Prüfungen",
