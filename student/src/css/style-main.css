@@ -282,3 +282,8 @@ input:focus::placeholder {
     from { opacity: 0; }
     to   { opacity: 1; }
 }
+
+/* PDF/web preview content width — single default for all exam views */
+#preview {
+    --nx-preview-content-width: 100%;
+}
