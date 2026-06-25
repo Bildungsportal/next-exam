@@ -118,6 +118,9 @@
   import {useInfoStore} from "../stores/infoStore.ts";
   import {useConfigStore} from "../stores/configStore.ts";
   import { loadWinKioskLauncherApps } from '../utils/kioskLauncher.js'
+  import { switchExamSectionFiles } from '../utils/switchExamSection.ts'
+  import {isIOS} from "../types/platform.ts";
+  import iosUpdateListener from "../utils/ios/iosUpdateListener.ts";
 
   // signalBridge instance centralizes ipc calls with platform checks
   const signalBridge = new SignalBridge(window);
@@ -137,7 +140,7 @@
     setup() {
       const configStore = useConfigStore();
       const infoStore = useInfoStore();
-      const { hostip } = storeToRefs(configStore);
+      const { hostip, examdirectory } = storeToRefs(configStore);
       const {
         groups, group, examtype, servername, clientname, serverstatus, pincode,
         localLockdown, online, battery, entryTime, componentName, wlanInfo,
@@ -145,7 +148,7 @@
       } = storeToRefs(infoStore);
 
       return {
-        hostip, groups, group, examtype, servername, clientname, serverstatus, pincode,
+        hostip, examdirectory, groups, group, examtype, servername, clientname, serverstatus, pincode,
         localLockdown, online, battery, entryTime, componentName, wlanInfo, exammode, lockedSection,
       };
     },
@@ -299,10 +302,14 @@
           showCancelButton: true,
           confirmButtonText: 'Ok',
           cancelButtonText: this.$t('editor.cancel'),
-        }).then( (result) => {
+        }).then( async (result) => {
           if (result.isConfirmed) {
-            console.log(`switchExamSection: calling switch-exam-section`)
-            signalBridge.invoke('switch-exam-section', sectionNumber);
+            console.log(`switchExamSection: running file ops then calling switch-exam-section`)
+            await switchExamSectionFiles(this.examdirectory, this.lockedSection, sectionNumber);
+            await signalBridge.invoke('switch-exam-section', sectionNumber);
+            if (isIOS()) {
+                iosUpdateListener.
+            }
           }
           else {
             if (this.serverstatus.examSections[this.lockedSection].examtype == 'microsoft365'){

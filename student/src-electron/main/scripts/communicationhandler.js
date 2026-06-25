@@ -42,7 +42,7 @@ import qemuService from './qemuService.js';
 import { checkQemuAvailability } from '../../../../shared/qemuAvailability.js';
 import { pickLocalVmGroupConfig } from '../../../../shared/localVmDisplayResolutions.js';
 import { stopProxy } from './vncproxy.js';
-import { switchExamSection } from './switchExamSection.js';
+import { switchExamSectionFiles } from '../../../src/utils/switchExamSection.ts';
 import {
     buildLocalSubmissionSigningSecret,
     deriveSigningP12,
@@ -50,6 +50,7 @@ import {
     SUBMISSION_SIGN_MODE_BIP,
     SUBMISSION_SIGN_MODE_LOCAL,
 } from '../../../../shared/submissionPdfSign.js';
+import config from "../config.js";
 
 
 
@@ -595,7 +596,8 @@ import {
             if (serverstatus.useExamSections){
                 if (!serverstatus.allowSectionSwitch){
                     if (serverstatus.lockedSection !== this.multicastClient.clientinfo.lockedSection){
-                        switchExamSection(this, serverstatus, serverstatus.lockedSection);
+                        switchExamSectionFiles(config.examdirectory, this.multicastClient.clientinfo.lockedSection, serverstatus.lockedSection)
+                            .then(this.startExam(serverstatus));
                     }
                 }
             }
@@ -935,6 +937,7 @@ import {
      * @param serverstatus contains information about exammode, examtype, and other settings from the teacher instance
      */
     async startExam(serverstatus){
+        log.info('communicationhandler @ startExam: starting exam');
         if (this._startExamRunning) {
             log.info('communicationhandler @ startExam: already running, skip duplicate');
             return;

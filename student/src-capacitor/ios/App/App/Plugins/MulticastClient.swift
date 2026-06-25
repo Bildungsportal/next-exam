@@ -139,6 +139,15 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
             }
         }
         
+        IPCBridge.shared.handle("switch-exam-section") { [weak self] payload async throws -> Any? in
+            guard let self else { throw IPCError.noHandler("not initialized") }
+            guard let sectionNumber = payload as? Int else {
+                throw IPCError.invalidPayload("Expected section number")
+            }
+            await switchExamSection(multicastClient: self, serverstatus: self.serverstatus, newSectionNumber: sectionNumber)
+            return ["status": "success"]
+        }
+
         CommunicationHandler.shared.initialize(multicastClient: self)
     }
     

@@ -47,6 +47,8 @@ final class CommunicationHandler {
     // MARK: - Heartbeat Loop
 
     func requestUpdate() {
+        log(.info, "communicationhandler @ requestUpdate: Starting to request update")
+
         guard let mc = multicastClient else { return }
 
         timer += 1

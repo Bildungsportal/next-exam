@@ -39,7 +39,6 @@ import { isAssessmentSessionActive } from './assessmentSession.js';
 import { updateSystemTray } from './traymenu.js';
 import { ensureNetworkOrReset } from './testpermissionsMac.js';
 import { getWlanInfo } from './getwlaninfo.js';
-import { switchExamSection } from './switchExamSection.js';
 import { startProxy, stopProxy } from './vncproxy.js';
 import qemuService from './qemuService.js';
 import {
@@ -1511,13 +1510,20 @@ class IpcHandler {
             };
         })
 
-        // Student-initiated section switch when allowSectionSwitch is true; always uses current serverstatus and section number
+        // Student-initiated section switch; file ops happen in renderer via @capacitor/filesystem before this IPC call
         ipcMain.handle('switch-exam-section', async (event, sectionNumber) => {
             const serverstatus = this.WindowHandler.examwindow?.serverstatus;
             if (!serverstatus?.useExamSections || !serverstatus?.allowSectionSwitch) return;
             if (this.multicastClient.clientinfo.lockedSection === sectionNumber) return;
             log.info(`ipchandler @ switch-exam-section: switching to section ${sectionNumber}`)
-            await switchExamSection(this.CommunicationHandler, serverstatus, sectionNumber);
+            this.multicastClient.clientinfo.examtype = serverstatus.examSections[sectionNumber].examtype;
+            this.multicastClient.clientinfo.lockedSection = sectionNumber;
+            await new Promise(r => setTimeout(r, 2000));
+            if (this.WindowHandler.examwindow) {
+                this.WindowHandler.teardownExamChrome(this.WindowHandler.mainwindow);
+                this.WindowHandler.examwindow = null;
+                this.CommunicationHandler.startExam(serverstatus);
+            }
         })
 
         /**
