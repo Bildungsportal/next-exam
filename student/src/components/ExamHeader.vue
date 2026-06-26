@@ -308,7 +308,7 @@
             await switchExamSectionFiles(this.examdirectory, this.lockedSection, sectionNumber);
             await signalBridge.invoke('switch-exam-section', sectionNumber);
             if (isIOS()) {
-                iosUpdateListener.
+                iosUpdateListener.handleUpdateReceived(true, sectionNumber);
             }
           }
           else {
