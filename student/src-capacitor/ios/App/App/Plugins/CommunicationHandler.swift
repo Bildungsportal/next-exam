@@ -190,6 +190,9 @@ final class CommunicationHandler {
             kickStudent()
             return true
         }
+        if mc.getMaterials {
+            IPCBridge.shared.send("getmaterials")
+        }
         return false
     }
 

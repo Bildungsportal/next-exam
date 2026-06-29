@@ -27,6 +27,7 @@ import i18n from "../../locales/locales.js";
 import path from "path";
 import mammoth from "mammoth";
 import config from "../config.js"
+import loggingBridge from "../loggingBridge.js";
 
 class IosTaskDispatcher {
 
@@ -66,6 +67,8 @@ class IosTaskDispatcher {
              * @returns {Boolean} true if the exam was submitted successfully, false otherwise
              */
             case 'finalsubmit':
+                return
+            case 'fileerror':
                 return
 
             /**

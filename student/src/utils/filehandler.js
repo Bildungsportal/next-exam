@@ -4,6 +4,8 @@ import mammoth from 'mammoth';
 import {SignalBridge} from './signalBridge.js';
 import {odtToTiptapHtml} from './odtToTiptapHtml.js';
 import { resolveEditorExamConfig, resolveGroupKey } from 'next-exam-shared/editorExamConfig.js';
+import {examApiFetch} from "../../../shared/examApiFetch.js";
+import log from "electron-log";
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -549,10 +551,11 @@ export async function loadGGB(file, base64=false){
 /**
  * fetch exam materials in base64 from teacher
  */
-export async function getExamMaterials(){
-    let examMaterials = await signalBridge.invoke('getExamMaterials')
-    
+export async function getExamMaterials(infoStore){
+    let examMaterials = fetchExamMaterials(infoStore)
+    console.log('filehandler @ getExamMaterials: got materials:', examMaterials)
     if (examMaterials){
+
         this.examMaterials = examMaterials.materials
         let allowedUrls = examMaterials.allowedUrls || [];                                         // ensure array
         let currentUrls = this.allowedUrls || [];
@@ -610,6 +613,34 @@ export async function getExamMaterials(){
     else{
         this.examMaterials = []
         this.allowedUrls = []
+    }
+
+    function fetchExamMaterials(infoStore) {
+
+        let payload = {
+            group: infoStore.group,
+            lockedSection: infoStore.lockedsection,
+        }
+
+        let examMaterials = false
+        if (infoStore.locallockdown) {
+            return false
+        }
+        else{
+            // Fetch request with the corresponding options
+            examMaterials = examApiFetch(`https://${serverip}:${this.config.serverApiPort}/server/data/getexammaterials/${infoStore.servername}`, {
+                method: "POST",
+                body: JSON.stringify(payload),
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${infoStore.token}` },
+            })
+                .then(response => response.json()) // Receive response as JSON
+                .then(data => {
+                    // log.info("ipchandler @ getExamMaterials: received data", data)
+                    return data
+                })
+                .catch(err => log.error(`ipchandler @ getExamMaterials: ${err}`));
+            return examMaterials
+        }
     }
 }
 
