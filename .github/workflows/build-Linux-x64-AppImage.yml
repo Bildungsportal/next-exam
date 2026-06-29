@@ -65,7 +65,7 @@ jobs:
         with:
           name: next-exam-teacher-linux-x64-appimage
           path: ./teacher/dist/electron/Packaged/Next-Exam-Teacher*x86_64.AppImage
-          retention-days: 5
+          retention-days: 14
           
           
       - name: Student cache dependencies
@@ -97,4 +97,4 @@ jobs:
         with:
           name: next-exam-student-linux-x64-appimage
           path: ./student/dist/electron/Packaged/Next-Exam-Student*x86_64.AppImage
-          retention-days: 5
+          retention-days: 14

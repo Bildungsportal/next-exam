@@ -67,7 +67,7 @@ jobs:
         with:
           name: next-exam-teacher-windows-x64-portable-exe
           path: ./teacher/dist/electron/Packaged/Next-Exam-Teacher*x64.exe
-          retention-days: 5
+          retention-days: 14
 
       - name: Student cache dependencies
         uses: actions/cache@v4
@@ -95,4 +95,4 @@ jobs:
         with:
           name: next-exam-student-windows-x64-portable-exe
           path: ./student/dist/electron/Packaged/Next-Exam-Student*x64.exe
-          retention-days: 5
+          retention-days: 14

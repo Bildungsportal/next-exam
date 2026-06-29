@@ -71,7 +71,7 @@ jobs:
         with:
           name: next-exam-teacher-windows-x64-msi
           path: ./teacher/dist/electron/Packaged/Next-Exam-Teacher*x64.msi
-          retention-days: 5
+          retention-days: 14
           
           
       - name: Student cache dependencies
@@ -100,4 +100,4 @@ jobs:
         with:
           name: next-exam-student-windows-x64-msi
           path: ./student/dist/electron/Packaged/Next-Exam-Student*x64.msi
-          retention-days: 5
+          retention-days: 14
