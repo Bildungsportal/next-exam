@@ -182,7 +182,7 @@
                 <div v-if="!bipToken" class="input-group  mb-1">
                     <span class="input-group-text col-3" style="width:135px;"
                           id="inputGroup-sizing-lg">{{ $t("student.username") }}</span>
-                    <input ref="userInput" v-model="username" @input="onUsernameInput" @paste.prevent @drop.prevent type="text"
+                    <input ref="userInput" :value="username" @input="onUsernameInput" @paste.prevent @drop.prevent type="text"
                            required="required" maxlength="25" class="form-control" id="user" placeholder=""
                            style="width:200px;max-width:200px;min-width:135px;">
                 </div>
@@ -344,12 +344,8 @@ export default {
 
     setup() {
       const configStore = useConfigStore();
-      let username = "";
-      let pincode = "";
-      if(configStore.development) {
-        username = "thomas";
-        pincode = "1111";
-      }
+      const username = ref(configStore.development ? "thomas" : "");
+      const pincode = ref(configStore.development ? "1111" : "");
       let development = ref(configStore.development);
       let version = ref(configStore.version);
       let serverApiPort = ref(configStore.serverApiPort);
@@ -471,11 +467,18 @@ export default {
 
 
     methods: {
-        // Force lowercase while typing so reconnects match regardless of caps lock.
-        onUsernameInput() {
-            const normalized = normalizeStudentClientName(this.username);
-            if (normalized !== this.username) {
+        // Lowercase on input; :value not v-model so v-model cannot overwrite from DOM after normalize.
+        onUsernameInput(event) {
+            const el = event.target;
+            const normalized = normalizeStudentClientName(el.value);
+            if (this.username !== normalized) {
                 this.username = normalized;
+            }
+            if (el.value !== normalized) {
+                const pos = el.selectionStart;
+                el.value = normalized;
+                const nextPos = pos != null ? Math.min(pos, normalized.length) : normalized.length;
+                el.setSelectionRange(nextPos, nextPos);
             }
         },
 
@@ -693,7 +696,7 @@ export default {
                 if (result.isConfirmed) {
                     await signalBridge.invoke('setPreferredInterface', result.value);
                     const updated = await signalBridge.invoke('checkhostip');
-                    this.safeAssign('hostip', updated);
+                    this.safeAssignHostip(updated);
                 }
                 this.activeDialog = false;
                 void this.maybeShowWinKioskSessionInfo();
@@ -1147,6 +1150,30 @@ export default {
             }
         },
 
+        // checkhostip returns a new object each poll — compare fields, not reference
+        safeAssignHostip(newHostip) {
+            const cur = this.hostip;
+            if (!cur && !newHostip) return;
+            const curIp = cur && typeof cur === 'object' ? cur.hostip : cur;
+            const newIp = newHostip && typeof newHostip === 'object' ? newHostip.hostip : newHostip;
+            if (curIp !== newIp) {
+                this.hostip = newHostip;
+                return;
+            }
+            if (typeof cur !== 'object' || typeof newHostip !== 'object') return;
+            if ((cur.interface || '') !== (newHostip.interface || '')) {
+                this.hostip = newHostip;
+                return;
+            }
+            if ((cur.preferredInterface || '') !== (newHostip.preferredInterface || '')) {
+                this.hostip = newHostip;
+                return;
+            }
+            if (JSON.stringify(cur.availableInterfaces || []) !== JSON.stringify(newHostip.availableInterfaces || [])) {
+                this.hostip = newHostip;
+            }
+        },
+
         /**
          * Helper: Compares two server objects based on relevant properties
          * Ignores timestamp as it constantly changes
@@ -1406,7 +1433,7 @@ export default {
              * If not we exit here
              */
             const newHostip = await signalBridge.invoke('checkhostip');
-            this.safeAssign('hostip', newHostip);
+            this.safeAssignHostip(newHostip);
             const hasIp = this.hostip && (typeof this.hostip === 'object' ? this.hostip.hostip : this.hostip);
             if (!hasIp) return;
             if (this.hostip?.availableInterfaces?.length > 1 && !this.hostip?.preferredInterface) {
