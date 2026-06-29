@@ -22,7 +22,9 @@ import { join } from 'path'
 import path from 'path'
 import { fileURLToPath } from 'node:url'
 import log from 'electron-log'
+import i18n from '../../../src/locales/locales.js'
 
+const { t } = i18n.global
 const __dirname = import.meta.dirname
 
 // Base path for public assets (icons, etc.): packaged = app.asar.unpacked/public, dev = project public
@@ -324,11 +326,11 @@ class WindowHandler {
                 // do not close a running exam by accident 
                 log.info("windowhandler @ close: do not close running exam this way"); e.preventDefault(); 
                 dialog.showMessageBoxSync(this.mainwindow, {
-                    type: 'info', 
-                    buttons: ['OK'], // Single button only
+                    type: 'info',
+                    buttons: [t('general.ok')],
                     defaultId: 0,
-                    title: 'Exam running',
-                    message: 'Please end the running exam first!'
+                    title: t('general.examRunningTitle'),
+                    message: t('general.endRunningExamFirst')
                 });
                 return
             }

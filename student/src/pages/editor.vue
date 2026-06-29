@@ -465,7 +465,7 @@
 
     <!-- NORMAL VIEW START -->
     <!-- PDF Preview Container -->
-    <div v-if="!splitview" id="preview" class="p-4 editor-preview-overlay" style="--nx-preview-top-offset: 60px; --nx-preview-content-width: 90%;">
+    <div v-if="!splitview" id="preview" class="p-4 editor-preview-overlay" style="--nx-preview-top-offset: 60px;">
         <WebviewPane
             id="webview"
             :src="urlForWebview"

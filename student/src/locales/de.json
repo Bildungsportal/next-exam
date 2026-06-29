@@ -340,7 +340,7 @@
         "winKioskSetupLater": "Später",
         "winKioskSetupRoot": "Dafür sind Administrator-Rechte erforderlich (UAC-Abfrage).",
         "winKioskSetupSuccess": "Windows Kiosk-Modus eingerichtet!",
-        "winKioskSetupSuccessHint": "Melde dich ab und wähle am Anmeldebildschirm den Benutzer „next-exam-kiosk“ um die abgesicherte Prüfungsumgebung zu starten.",
+        "winKioskSetupSuccessHint": "Melde dich ab und wähle am Anmeldebildschirm den Benutzer „next-exam-kiosk“ (kein Passwort nötig), um die abgesicherte Prüfungsumgebung zu starten.",
         "winKioskSetupSuccessSource": "Kopiert von: {appDir} ({launchExe}) → C:\\NextExam\\",
         "winKioskSetupText": "Next-Exam kann auf diesem Windows-PC als abgesicherter Kiosk-Modus eingerichtet werden (separater Benutzer, USB-Sticks blockiert, Profil wird nach jeder Prüfung gelöscht).",
         "winKioskSetupTitle": "Windows Kiosk-Modus",

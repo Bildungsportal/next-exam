@@ -1,0 +1,92 @@
+name: prerelease ios
+
+on:
+  workflow_call: { }
+  workflow_dispatch: { }
+
+# opt in to Node 24 runtime for js actions (default from 2026-06-16); pre-validate
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  ios:
+    uses: ./.github/workflows/build-iOS-arm64-IPA.yml
+    secrets: inherit
+    with:
+      prerelease: true
+
+
+  release:
+    needs: [ios]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Private Repository
+        uses: actions/checkout@v4
+        with:
+          # Checkout des Repos, in dem die electron-builder.yml liegt
+          repository: BiP-org/next-exam 
+          ref: main
+          token: ${{ secrets.PAT_BiP_ORG_NEXT_EXAM }}
+          # Fetch-depth 0 ist wichtig, um alle Tags zu holen
+          fetch-depth: 0 
+          
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: rel
+          merge-multiple: true
+
+      # Lese VERSION + BUILD_NUMBER aus committed .env.production (gleiche Quelle wie der Build)
+      - name: Read version from .env.production
+        id: version_reader
+        run: |
+          VERSION=$(grep '^VERSION=' student/.env.production | cut -d= -f2- | tr -d '"' | tr -d "'")
+          BUILD_NUMBER=$(grep '^BUILD_NUMBER=' student/.env.production | cut -d= -f2- | tr -d '"' | tr -d "'")
+          if [ -z "$VERSION" ] || [ -z "$BUILD_NUMBER" ]; then
+            echo "ERROR: VERSION or BUILD_NUMBER missing in student/.env.production" >&2
+            exit 1
+          fi
+          BUILD_VERSION="${VERSION}.${BUILD_NUMBER}"
+          NEW_TAG="pre${BUILD_VERSION}"
+          echo "Gelesene Version: $BUILD_VERSION"
+          echo "Neuer Tag: $NEW_TAG"
+
+          # Letzter echter Release-Tag (v-prefix) als Startpunkt für das Changelog
+          LAST_RELEASE_TAG=$(git tag --sort=-v:refname | grep "^v[0-9]" | head -n 1)
+          echo "Letzter Release-Tag für Changelog: $LAST_RELEASE_TAG"
+
+          echo "new_prerelease_tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
+          echo "last_release_tag=$LAST_RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Tag Release
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.version_reader.outputs.new_prerelease_tag }}
+          git push origin ${{ steps.version_reader.outputs.new_prerelease_tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_BiP_ORG_NEXT_EXAM }}
+
+      - name: Generate changelog
+        id: changelog
+        uses: mikepenz/release-changelog-builder-action@v5
+        with:
+          mode: "COMMIT"
+          ignorePreReleases: false
+          # Verwende den letzten echten Release-Tag als Startpunkt
+          fromTag: ${{ steps.version_reader.outputs.last_release_tag }}
+          # Endpunkt: neuer Pre-Release-Tag
+          toTag: ${{ steps.version_reader.outputs.new_prerelease_tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          tag_name: ${{ steps.version_reader.outputs.new_prerelease_tag }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          files: |
+            rel/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

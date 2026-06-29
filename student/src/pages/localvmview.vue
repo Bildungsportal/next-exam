@@ -36,7 +36,7 @@
         <div
             id="preview"
             class="fadeinfast p-4"
-            style="--nx-preview-chrome-top: 80px; --nx-preview-top-offset: 0px; --nx-preview-content-width: 90%;"
+            style="--nx-preview-chrome-top: 80px; --nx-preview-top-offset: 0px;"
         >
             <WebviewPane
                 id="webview"

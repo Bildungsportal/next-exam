@@ -11,28 +11,24 @@ import platformDispatcher from '../platformDispatcher.js';
 
 const __dirname = import.meta.dirname;
 
+// Never kill these via appsToClose substring match (AA kiosk + normal exam).
+const WIN_APPS_KILL_SKIP = new Set(['explorer', 'powershell', 'reg', 'whoami', 'netsh', 'cmd']);
+
 /**
- * Enable Windows-specific restrictions (shortcuts, close apps, kill explorer).
- * @param {object} winhandler - must have winhandler.examwindow
+ * Kill appsToClose processes by name (safe for Win Assigned Access — no explorer/AA internals).
  * @param {string[]} appsToClose - app names to kill
  */
-export async function enableWindowsRestrictions(winhandler, appsToClose) {
-    if (platformDispatcher.skipElectronKiosk) return;
-    try {
-        const publicBase = platformDispatcher.publicBase;
-        const executable1 = join(publicBase, 'disable-shortcuts.exe');
-        childProcess.execFile(executable1, [], { detached: true, stdio: 'ignore', shell: false, windowsHide: true });
-        log.info("platformrestrictions @ enableRestrictions: windows shortcuts disabled");
-    } catch (err) { log.error(`platformrestrictions @ enableRestrictions (win shortcuts): ${err}`); }
-
+export async function killWindowsAppsToClose(appsToClose) {
     try {
         for (const app of appsToClose) {
+            const stem = String(app).replace(/\.exe$/i, '').trim().toLowerCase();
+            if (!stem || WIN_APPS_KILL_SKIP.has(stem)) continue;
             const escapedApp = app.replace(/'/g, "''");
             const command = `powershell -NoProfile -Command "$appName = '${escapedApp}'; try { $procs = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -ilike ('*' + $appName + '*') }; if ($procs -and $procs.Count -gt 0) { $procs | Stop-Process -Force -ErrorAction SilentlyContinue; Write-Output 'killed' } } catch { }"`;
             await new Promise((resolveApp) => {
                 childProcess.exec(command, (error, stdout, stderr) => {
                     if (!error && stdout && stdout.trim().includes('killed')) {
-                        log.info(`platformrestrictions @ enableRestrictions: closed ${app}`);
+                        log.info(`platformrestrictions @ killWindowsAppsToClose: closed ${app}`);
                     }
                     resolveApp();
                 });
@@ -41,6 +37,22 @@ export async function enableWindowsRestrictions(winhandler, appsToClose) {
     } catch (err) {
         // silently ignore errors
     }
+}
+
+/**
+ * Enable Windows-specific restrictions (shortcuts, close apps, kill explorer).
+ * @param {object} winhandler - must have winhandler.examwindow
+ * @param {string[]} appsToClose - app names to kill
+ */
+export async function enableWindowsRestrictions(winhandler, appsToClose) {
+    await killWindowsAppsToClose(appsToClose);
+    if (platformDispatcher.skipElectronKiosk) return;
+    try {
+        const publicBase = platformDispatcher.publicBase;
+        const executable1 = join(publicBase, 'disable-shortcuts.exe');
+        childProcess.execFile(executable1, [], { detached: true, stdio: 'ignore', shell: false, windowsHide: true });
+        log.info("platformrestrictions @ enableRestrictions: windows shortcuts disabled");
+    } catch (err) { log.error(`platformrestrictions @ enableRestrictions (win shortcuts): ${err}`); }
 
     if (!winhandler) {
         log.warn(`platformrestrictions @ enableRestrictions: winhandler is not provided - skipping explorer.exe kill`);

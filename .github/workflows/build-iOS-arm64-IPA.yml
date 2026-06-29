@@ -1,0 +1,223 @@
+name: Build Quasar iOS App
+
+on:
+  workflow_call:
+    inputs:
+      prerelease:
+        type: boolean
+        required: false
+        default: false
+  workflow_dispatch: {}
+
+env:
+  NODE_VERSION: '24'
+  XCODE_SCHEME: 'App'
+  XCODE_WORKSPACE: 'src-capacitor/ios/App/App.xcworkspace'
+  ARCHIVE_PATH: '${{ github.workspace }}/build/App.xcarchive'
+  EXPORT_PATH: '${{ github.workspace }}/build/ipa'
+
+jobs:
+  build-ios:
+    name: Build iOS App
+    runs-on: macos-15-intel
+    steps:
+      - name: Checkout This Repository
+        if: ${{ inputs.prerelease == false }}
+        uses: actions/checkout@v4
+
+      - name: Checkout Private Repository
+        if: ${{ inputs.prerelease == true }}
+        uses: actions/checkout@v4
+        with:
+          repository: BiP-org/next-exam
+          ref: main
+          token: ${{ secrets.PAT_BiP_ORG_NEXT_EXAM }}
+
+      # ── Node Setup ─────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.14.0'
+          cache: 'npm'
+          cache-dependency-path: |
+            student/package-lock.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Student cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./student/.npm
+            ./student/node_modules
+          key: ${{ runner.os }}-node-s-x64-${{ hashFiles('./student/**/package-lock.json') }}
+
+      - name: Cache node-gyp
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/node-gyp
+            ~/.npm/_libvips
+          key: ${{ runner.os }}-gyp-x64-${{ hashFiles('student/package-lock.json') }}
+
+      # ── Cache CocoaPods ────────────────────
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: student/src-capacitor/ios/App/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('src-capacitor/ios/App/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Student install dependencies
+        working-directory: ./student
+        env:
+          npm_config_arch: x64
+          npm_config_target_arch: x64
+          npm_config_platform: darwin
+        run: |
+          npm install
+          # Force reinstall electron with correct architecture if needed
+          ELECTRON_ARCH=x64 npm install electron@38.1.2 --force
+          mkdir dist
+
+      # ── Build Quasar ───────────────────────
+      - name: Build Quasar app (Capacitor mode)
+        working-directory: ./student
+        run: quasar build -m capacitor -T ios --skip-pkg
+        env:
+          NODE_ENV: production
+          # Add your environment variables here:
+          # VITE_API_URL: ${{ secrets.API_URL }}
+
+      # ── Capacitor Sync ─────────────────────
+      - name: Capacitor sync iOS
+        working-directory: ./student
+        run: |
+          cd src-capacitor
+          npx cap sync ios
+
+      # ── CocoaPods ──────────────────────────
+      - name: Install CocoaPods dependencies
+        working-directory: ./student
+        run: |
+          cd src-capacitor/ios/App
+          pod install --repo-update
+
+      # ── Code Signing ───────────────────────
+      - name: Import Apple Distribution Certificate
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.P12_BASE64_APPLE_IOS }}
+          p12-password: ${{ secrets.P12_PASSWORD_APPLE_IOS }}
+          keychain-password: ${{ secrets.P12_PASSWORD_APPLE }} # TODO Verify
+
+      - name: Install Provisioning Profile
+        working-directory: ./student
+        run: |
+          PP_PATH="$RUNNER_TEMP/scripts/apple/nextexamstudent.provisionprofile"
+          echo -n "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > "$PP_PATH"
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+
+          PP_UUID=$(grep -a -A1 'UUID' "$PP_PATH" | grep -o '[-A-Za-z0-9]\{36\}')
+          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$PP_UUID".mobileprovision
+
+          echo "PP_UUID=$PP_UUID" >> $GITHUB_ENV
+          echo "Installed provisioning profile: $PP_UUID"
+
+      # ── Export Options ─────────────────────
+      - name: Create ExportOptions.plist
+        working-directory: ./student
+        run: |
+          cat > $RUNNER_TEMP/ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+            "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>${{ secrets.TEAMID }}</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${{ secrets.IOS_BUNDLE_ID }}</key>
+              <string>${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+
+      # ── Xcode Build ────────────────────────
+      - name: Set app version & build number
+        working-directory: ./student
+        run: |
+          BUILD_NUMBER=${{ github.run_number }}
+          APP_VERSION=$(node -p "require('./package.json').version")
+
+          /usr/libexec/PlistBuddy \
+            -c "Set :CFBundleShortVersionString $APP_VERSION" \
+            -c "Set :CFBundleVersion $BUILD_NUMBER" \
+            src-capacitor/ios/App/App/Info.plist
+
+          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
+          echo "Building version $APP_VERSION ($BUILD_NUMBER)"
+
+      - name: Build & Archive iOS app
+        working-directory: ./student
+        run: |
+          xcodebuild \
+            -workspace "${{ env.XCODE_WORKSPACE }}" \
+            -scheme "${{ env.XCODE_SCHEME }}" \
+            -configuration Release \
+            -archivePath "${{ env.ARCHIVE_PATH }}" \
+            -destination "generic/platform=iOS" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="iPhone Distribution" \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+            PROVISIONING_PROFILE="$PP_UUID" \
+            PROVISIONING_PROFILE_SPECIFIER="${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}" \
+            PRODUCT_BUNDLE_IDENTIFIER="${{ secrets.IOS_BUNDLE_ID }}" \
+            archive \
+            | xcpretty --color
+
+      - name: Export IPA
+        working-directory: ./student
+        run: |
+          xcodebuild \
+            -exportArchive \
+            -archivePath "${{ env.ARCHIVE_PATH }}" \
+            -exportPath "${{ env.EXPORT_PATH }}" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            | xcpretty --color
+
+      # ── Artifacts ──────────────────────────
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-exam-student-ios
+          path: ${{ env.EXPORT_PATH }}/*.ipa
+          retention-days: 5
+          if-no-files-found: error
+
+      - name: Upload dSYMs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-exam-student-ios-dsyms
+          path: ${{ env.ARCHIVE_PATH }}/dSYMs/
+          retention-days: 5
+
