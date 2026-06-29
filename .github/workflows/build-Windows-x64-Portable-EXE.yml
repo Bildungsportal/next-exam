@@ -40,7 +40,6 @@ jobs:
         with:
           node-version: '24.14.0'
 
-      # --- faster CI: teacher portable skipped; for release uncomment teacher block below ---
       - name: Teacher cache dependencies
         uses: actions/cache@v4
         with:

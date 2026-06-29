@@ -14,9 +14,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
-  # TEMP: entire MSI workflow disabled — remove `if: false` on job to re-enable
   build:
-    if: false
     runs-on: windows-2025-vs2026
     steps:
       - name: Checkout This Repository
