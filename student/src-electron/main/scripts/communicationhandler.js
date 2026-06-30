@@ -89,7 +89,7 @@ import {
         const examWin = WindowHandler?.examwindow;
         if (examWin && !this.config?.development) {
             examWin.moveTop();
-            platformDispatcher.applyElectronKioskMode(examWin);
+            WindowHandler.applyElectronKioskMode(examWin);
             examWin.show();
             examWin.focus();
         }
@@ -542,7 +542,7 @@ import {
             clearClientFocusLock(this.multicastClient.clientinfo);
             this.multicastClient.clientinfo.focus = true;
             if (WindowHandler.examwindow && !this.config.development){ 
-                platformDispatcher.applyElectronKioskMode(WindowHandler.examwindow);
+                WindowHandler.applyElectronKioskMode(WindowHandler.examwindow);
                 WindowHandler.examwindow.focus();
             }
         }
@@ -1063,8 +1063,7 @@ import {
                     if (platformDispatcher.skipElectronKiosk) {
                         await killWinKioskExamApps()
                     } else {
-                        if (platformDispatcher.platform === 'darwin') WindowHandler.examwindow.setSimpleFullScreen(true)
-                        else WindowHandler.examwindow.setFullScreen(true)
+                        WindowHandler.applyElectronKioskMode(WindowHandler.examwindow)
                         await enableRestrictions(WindowHandler)
                         await this.sleep(2000)
                         if (!isAssessmentSessionActive()) {

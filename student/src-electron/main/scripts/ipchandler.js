@@ -1018,7 +1018,7 @@ class IpcHandler {
             else {
                 log.warn(`ipchandler @ focuslost: focuslost event was triggered - locking down`)
                 this.WindowHandler.examwindow.moveTop();
-                platformDispatcher.applyElectronKioskMode(this.WindowHandler.examwindow);
+                this.WindowHandler.applyElectronKioskMode(this.WindowHandler.examwindow);
                 this.WindowHandler.examwindow.show();  
                 this.WindowHandler.examwindow.focus();    // we keep focus on the window.. no matter what
     
@@ -1040,7 +1040,7 @@ class IpcHandler {
             const examWin = this.WindowHandler?.examwindow;
             if (examWin && !this.config.development) {
                 examWin.moveTop();
-                platformDispatcher.applyElectronKioskMode(examWin);
+                this.WindowHandler.applyElectronKioskMode(examWin);
                 examWin.show();
                 examWin.focus();
             }
@@ -1069,7 +1069,7 @@ class IpcHandler {
 
             if (this.WindowHandler?.examwindow && !this.config.development) {
                 this.WindowHandler.examwindow.moveTop();
-                platformDispatcher.applyElectronKioskMode(this.WindowHandler.examwindow);
+                this.WindowHandler.applyElectronKioskMode(this.WindowHandler.examwindow);
                 this.WindowHandler.examwindow.show();
                 this.WindowHandler.examwindow.focus();
             }
