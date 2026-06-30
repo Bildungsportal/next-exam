@@ -114,9 +114,9 @@
                         v-for="exam of previousLocalExams"
                         :key="`local-main-${exam.examName}`"
                         class="bip-exam-card bip-exam-card-local"
-                        :class="{ 'bg-cyan-transparent': servername === exam.examName, 'cursornotallowed': exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion }"
-                        @click="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? '' : setPreviousExam(exam)"
-                        :title="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? $t('startserver.incompatible') : ''"
+                        :class="{ 'bg-cyan-transparent': servername === exam.examName, 'cursornotallowed': !isExamVersionCompatible(exam) }"
+                        @click="isExamVersionCompatible(exam) ? setPreviousExam(exam) : ''"
+                        :title="!isExamVersionCompatible(exam) ? $t('startserver.incompatible') : ''"
                     >
                         <!-- Name -->
                         <div class="bip-exam-card-head">
@@ -201,8 +201,9 @@
                         v-for="exam of onlineExams"
                         :key="`bip-main-${exam.id}-${exam.examName}`"
                         class="bip-exam-card bip-exam-card-bip"
-                        :class="{ 'bip-exam-card-active': servername === exam.examName }"
-                        @click="setOnlineExam(exam)"
+                        :class="{ 'bip-exam-card-active': servername === exam.examName, 'cursornotallowed': !isExamVersionCompatible(exam) }"
+                        @click="isExamVersionCompatible(exam) ? setOnlineExam(exam) : ''"
+                        :title="!isExamVersionCompatible(exam) ? $t('startserver.incompatible') : ''"
                     >
                         <!-- Name + PIN -->
                         <div class="bip-exam-card-head">
@@ -386,6 +387,13 @@ export default {
     },
 
     methods: {
+        // True when exam nextexamVersion major matches the running teacher build.
+        isExamVersionCompatible(exam) {
+            const examVersion = exam?.nextexamVersion;
+            if (!examVersion || !this.version) return false;
+            return examVersion.slice(0, 3) === this.version.slice(0, 3);
+        },
+
         formatUnixDate(value) {
             if (!value) return "";
             // If timestamp is in seconds (10 digits), multiply by 1000
@@ -587,6 +595,10 @@ export default {
         },
 
         async setOnlineExam(exam){
+            if (!this.isExamVersionCompatible(exam)) {
+                this.status(this.$t('startserver.incompatible'));
+                return;
+            }
             this.servername = exam.examName
 
             this.selectedExam = { ...exam, bip: true }  // mark as bip exam for consistent tab-based start logic
@@ -854,6 +866,10 @@ export default {
 
         /** Sets the exam name field to the clicked exam directory name. */
         async setPreviousExam(exam){
+            if (!this.isExamVersionCompatible(exam)) {
+                this.status(this.$t('startserver.incompatible'));
+                return;
+            }
             this.servername = exam.examName
             this.selectedExam = exam
 
@@ -876,6 +892,17 @@ export default {
                         this.backupdir = ''
                         this.bipNameConflict = true
                         if (examstart) examstart.classList.add('disabledstart')
+                        if (examPasswordDiv) examPasswordDiv.disabled = false
+                        return
+                    }
+
+                    if (!this.isExamVersionCompatible(previousExam)) {
+                        this.bipNameConflict = false
+                        this.backupdir = previousExam.backupdirectory || ''
+                        if (examstart) {
+                            examstart.innerHTML = this.$t("startserver.resume")
+                            examstart.classList.add('disabledstart')
+                        }
                         if (examPasswordDiv) examPasswordDiv.disabled = false
                         return
                     }
@@ -1003,8 +1030,8 @@ export default {
            
 
                 // check if the exam is compatible with the current version
-                if (this.selectedExam && this.selectedExam.nextexamVersion && this.selectedExam.nextexamVersion.slice(0, 3) !== this.version.slice(0, 3) || (this.selectedExam && !this.selectedExam.nextexamVersion)){
-                    this.status(this.$t("startserver.incompatible")); 
+                if (this.selectedExam && !this.isExamVersionCompatible(this.selectedExam)) {
+                    this.status(this.$t("startserver.incompatible"));
                     return;
                 }
 

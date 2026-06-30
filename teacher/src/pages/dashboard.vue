@@ -1067,10 +1067,6 @@
             <img src="/src/assets/img/svg/folder-open.svg" class="control-button-icon me-1" width="32" height="32">
             <div class="control-button-label">{{$t('dashboard.workfolder')}}</div>
         </div>
-        <div v-if="bipToken && serverstatus.bip" @mouseover="showDescription($t('dashboard.bipinfo'))" @mouseout="hideDescription" class="btn control-button m-1 mt-0 ms-0 text-start" :class="bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'" @click="toggleBipStatus">
-            <img src="/src/assets/img/svg/globe.svg" class="control-button-icon me-1" width="32" height="32">
-            <div class="control-button-label">BiP-Status {{bipStatus}}</div>
-        </div>
         <div @mouseover="showDescription($t('examlog.buttondesc'))" @mouseout="hideDescription" class="btn btn-gray-dark control-button m-1 mt-0 ms-0 text-start" @click="showExamLog = true">
             <img src="/src/assets/img/icons/log.png" class="white control-button-icon me-1" width="32" height="32">
             <div class="control-button-label">{{ $t('examlog.button') }}</div>
@@ -1078,6 +1074,10 @@
         <div @mouseover="showDescription($t('submissionsview.buttondesc'))" @mouseout="hideDescription" class="btn btn-gray-dark control-button m-1 mt-0 ms-0 text-start" @click="showSubmissionsView = true">
             <img src="/src/assets/img/svg/dialog-ok-apply.svg" class="control-button-icon me-1" width="32" height="32" style="filter: invert(55%) sepia(40%) saturate(300%) hue-rotate(140deg) brightness(1.1)">
             <div class="control-button-label">{{ $t('submissionsview.buttoncontrol') }}</div>
+        </div>
+        <div v-if="bipToken && serverstatus.bip" @mouseover="showDescription($t('dashboard.bipinfo'))" @mouseout="hideDescription" class="btn control-button control-button-bip-access m-1 mt-0 ms-0 text-start" :class="bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'" @click="toggleBipStatus">
+            <img src="/src/assets/img/svg/globe.svg" class="control-button-icon me-1" width="32" height="32">
+            <div class="control-button-label">{{ bipJoinStatusLabel() }}</div>
         </div>
         </div>
 
@@ -2839,6 +2839,13 @@ computed: {
 
 
 
+        // Localized label for BiP exam join permission (open = students may connect)
+        bipJoinStatusLabel(status = this.bipStatus) {
+            return status === 'open'
+                ? this.$t('dashboard.bipAccessOpen')
+                : this.$t('dashboard.bipAccessClosed');
+        },
+
         showBipInfo(){
             let message = "Bildungsportal"
             let html = `
@@ -2846,9 +2853,9 @@ computed: {
                 <div><b>Bip-Token: </b>${this.bipToken}</div>
                 <div><b>Bip-Username: </b>${this.bipUsername}</div>
                 <div><b>Bip-UserID: </b>${this.bipuserID}</div><br>
-                <div><b>Bip-Exam-Status: </b></div>
-                <button id="fbtnA" class="swal2-button btn ${this.bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'} mt-2" style="width: 100px; height: 42px;">
-                    ${this.bipStatus}
+                <div><b>${this.$t('dashboard.bipAccessPopupLabel')}: </b></div>
+                <button id="fbtnA" class="swal2-button btn ${this.bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'} mt-2" style="min-width: 100px; height: 42px;">
+                    ${this.bipJoinStatusLabel()}
                 </button>
             </div>
             `
@@ -2869,7 +2876,7 @@ computed: {
                             
                             btnA.classList.remove(oldClass);
                             btnA.classList.add(newClass);
-                            btnA.textContent = newStatus;
+                            btnA.textContent = this.bipJoinStatusLabel(newStatus);
 
                             //call api and update bip data
                             if (this.bipToken && this.serverstatus.bip) {
@@ -3325,6 +3332,16 @@ computed: {
     gap: 4px;
     z-index: 1000;
    
+}
+
+.control-buttons-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.control-button-bip-access {
+    margin-left: auto;
 }
 
 .control-button {
