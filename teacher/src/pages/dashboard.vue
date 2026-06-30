@@ -2850,7 +2850,6 @@ computed: {
             let message = "Bildungsportal"
             let html = `
             <div style="font-size:0.9em; text-align:left">
-                <div><b>Bip-Token: </b>${this.bipToken}</div>
                 <div><b>Bip-Username: </b>${this.bipUsername}</div>
                 <div><b>Bip-UserID: </b>${this.bipuserID}</div><br>
                 <div><b>${this.$t('dashboard.bipAccessPopupLabel')}: </b></div>
