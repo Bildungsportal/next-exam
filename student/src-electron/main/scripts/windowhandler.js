@@ -97,6 +97,28 @@ class WindowHandler {
         await this.navigateHashRoute(win, hashRoute)
     }
 
+    /** Platform-aware fullscreen for exam/screenlock windows (not Win-AA shell). */
+    applyElectronKioskMode(win) {
+        if (!win || win.isDestroyed?.()) return;
+        if (platformDispatcher.skipElectronKiosk) return;
+        if (platformDispatcher.platform === 'darwin') {
+            win.setSimpleFullScreen(true);
+            return;
+        }
+        win.setFullScreen(true);
+    }
+
+    /** Inverse of applyElectronKioskMode when leaving exam routes. */
+    releaseElectronKioskMode(win) {
+        if (!win || win.isDestroyed?.()) return;
+        if (platformDispatcher.skipElectronKiosk) return;
+        if (platformDispatcher.platform === 'darwin') {
+            win.setSimpleFullScreen(false);
+            return;
+        }
+        win.setFullScreen(false);
+    }
+
     /** applyElectronKioskMode + restrictions after exam route finished loading */
     async applyExamWindowLockdown(win) {
         if (!win || win.isDestroyed?.()) return;
@@ -104,7 +126,7 @@ class WindowHandler {
         if (this.config.development) return;
         try {
             win.removeMenu()
-            platformDispatcher.applyElectronKioskMode(win);
+            this.applyElectronKioskMode(win);
 
             await this.sleep(500)
             win.moveTop()
@@ -123,6 +145,20 @@ class WindowHandler {
             }
         } catch (e) {
             log.error('windowhandler @ applyExamWindowLockdown:', e)
+        }
+    }
+
+    /** Undo applyExamWindowLockdown fullscreen / alwaysOnTop before leaving exam routes. */
+    releaseExamWindowLockdown(win) {
+        if (!win || win.isDestroyed?.()) return;
+        if (this.config?.development) return;
+        try {
+            if (!platformDispatcher.skipElectronKiosk) {
+                win.setAlwaysOnTop(false);
+            }
+            this.releaseElectronKioskMode(win);
+        } catch (e) {
+            log.error('windowhandler @ releaseExamWindowLockdown:', e);
         }
     }
 
@@ -195,6 +231,7 @@ class WindowHandler {
             return
         }
         log.info('windowhandler @ returnToStudentView: navigating to student home')
+        this.releaseExamWindowLockdown(win)
         this.teardownExamChrome(win)
         this.navigateHashRoute(win, '/')
     }
@@ -383,7 +420,7 @@ class WindowHandler {
             
             screenlockWindow.removeMenu() 
             screenlockWindow.setMinimizable(false)
-            platformDispatcher.applyElectronKioskMode(screenlockWindow)
+            this.applyElectronKioskMode(screenlockWindow)
             screenlockWindow.setAlwaysOnTop(true, "pop-up-menu", 1)   //above exam window (pop-up-menu, 0)
             screenlockWindow.show()
             screenlockWindow.moveTop();
@@ -929,7 +966,7 @@ class WindowHandler {
         winhandler.multicastClient.clientinfo.focus = false   //inform the teacher
         
         winhandler.examwindow.moveTop();
-        platformDispatcher.applyElectronKioskMode(winhandler.examwindow);
+        winhandler.applyElectronKioskMode(winhandler.examwindow);
         winhandler.examwindow.show();  
         winhandler.examwindow.focus();    // we keep focus on the window.. no matter what
 

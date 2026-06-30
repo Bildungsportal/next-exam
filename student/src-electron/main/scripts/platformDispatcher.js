@@ -134,20 +134,6 @@ class PlatformDispatcher {
     return process.ios === true || process.env.IOS === 'true';
   }
 
-  /** Electron kiosk flag only when OS is not already in Assigned Access / cage shell. */
-  applyElectronKioskMode(win) {
-    if (!win || win.isDestroyed?.()) return;
-    if (this.skipElectronKiosk) return;
-    // macOS: AAC assessment mode handles the lockdown; we only want a borderless fullscreen
-    // (simple fullscreen = no separate Space, no notch/camera safe-area inset, no menu bar).
-    if (this.platform === 'darwin') {
-      win.setSimpleFullScreen(true);
-      return;
-    }
-  // Linux/Win: match startExam reconnect path — setKiosk fails when fullscreenable is false
-    win.setFullScreen(true);
-  }
-
   _whichDesktopName() {
     if (this.platform === 'win32') {
       return "explorer.exe";
