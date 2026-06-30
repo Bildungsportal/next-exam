@@ -25,8 +25,7 @@ export const useInfoStore = defineStore("info", {
         componentName: "" as string,
         wlanInfo: null as any,
         exammode: false as boolean,
-        lockedSection: 1 as number,
-        token: "" as string
+        lockedSection: 1 as number
     }),
     actions: {
         // Poll wlan + host IP for ExamHeader network icons.

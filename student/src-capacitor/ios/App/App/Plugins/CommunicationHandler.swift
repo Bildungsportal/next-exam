@@ -160,7 +160,7 @@ final class CommunicationHandler {
                 } else if status == "success" {
                     mc.beaconsLost = 0
                     mc.clientinfo.printrequest = false
-                    self.processUpdatedServerstatus(serverstatus: updateDto.serverstatus!)
+                    self.processUpdatedServerstatus(updateDto: updateDto)
                 }
 
             } catch {
@@ -172,25 +172,25 @@ final class CommunicationHandler {
 
     // MARK: - Server Status Processing
 
-    private func processUpdatedServerstatus(serverstatus: ServerStatus) {
+    private func processUpdatedServerstatus(updateDto: Update) {
         guard let mc = multicastClient else { return }
-        mc.serverstatus = serverstatus
+        mc.serverstatus = updateDto.serverstatus!
 
-        let kicked = handleStudentStatusUpdates(serverstatus: serverstatus, mc: mc)
+        let kicked = handleStudentStatusUpdates(studentStatus: updateDto.studentstatus!, mc: mc)
         if kicked { return }
 
-        handleGlobalServerStatus(serverstatus: serverstatus, mc: mc)
+        handleGlobalServerStatus(serverstatus: updateDto.serverstatus!, mc: mc)
     }
 
     /// Processes per-student commands from the teacher (kick).
     /// Returns true when the student was kicked (caller must stop processing).
-    private func handleStudentStatusUpdates(serverstatus: ServerStatus, mc: MulticastClientPlugin) -> Bool {
+    private func handleStudentStatusUpdates(studentStatus: StudentStatus, mc: MulticastClientPlugin) -> Bool {
         // TODO: add other studentstatus updates other than kicked
         if mc.kicked {
             kickStudent()
             return true
         }
-        if mc.getMaterials {
+        if studentStatus.getmaterials != nil && studentStatus.getmaterials! {
             IPCBridge.shared.send("getmaterials")
         }
         return false

@@ -243,7 +243,7 @@ export default {
       let entrytime = ref(infoStore.entryTime);
 
       return { development, serverApiPort, electron, hostip,
-        examtype, servername, serverip, token, clientname, serverstatus, pincode, localLockdown, online, battery, wlanInfo, entrytime, infoStore};
+        examtype, servername, serverip, token, clientname, serverstatus, pincode, localLockdown, online, battery, wlanInfo, entrytime};
     },
 
     data() {
@@ -345,10 +345,13 @@ export default {
             })
         });
 
-        this.getExamMaterials(this.infoStore)
+        let examMaterials = await this.getExamMaterials()
+        this.examMaterials = examMaterials.materials;
+        this.allowedUrls = examMaterials.allowedUrls;
+        console.log("geogebra @ getmaterials: get materials request done, set materials: ", this.examMaterials, examMaterials);
         signalBridge.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
             console.log("geogebra @ getmaterials: get materials request received")
-            this.getExamMaterials(this.infoStore)
+            this.getExamMaterials()
         });
 
         this._stopExammodeWatch = this.$watch('exammode', () => {
