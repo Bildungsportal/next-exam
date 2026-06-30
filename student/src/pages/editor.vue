@@ -2472,7 +2472,7 @@ export default {
             event.stopPropagation();
         },
 
-        /** Keys whose OS auto-repeat looks like scripted timing — exclude from typingRhythm statistics */
+        /** Non-text keys that break rhythm stats when tapped in bursts (held keys use e.repeat instead) */
         isTypingRhythmExemptKey(e) {
             const code = e.code;
             if (code === 'Backspace' || code === 'Delete' || code === 'Space') return true;
@@ -2485,7 +2485,7 @@ export default {
 
         handleTypingRhythmKeydown(e) {
             if (e.isComposing) return;
-            if (this.isTypingRhythmExemptKey(e)) {
+            if (e.repeat || this.isTypingRhythmExemptKey(e)) {
                 const s = this.typingRhythm;
                 s.deltas = [];
                 s.lastTs = 0;
