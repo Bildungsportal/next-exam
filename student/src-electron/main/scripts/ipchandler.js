@@ -50,7 +50,7 @@ import {
 } from '../../../../shared/qemuAvailability.js';
 import { pickLocalVmGroupConfig } from '../../../../shared/localVmDisplayResolutions.js';
 import { getVMFindings } from './vmDetection.js';
-import { decryptExamFileBytes, decryptExamFileAllLayers, encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
+import { decryptExamFileBytes, decryptExamFileAllLayers, decryptExamFileAllLayersAsync, encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
 import { examApiFetch } from '../../../../shared/examApiFetch.js';
 import { normalizeStudentClientName } from '../../../../shared/normalizeStudentClientName.js';
 import { buildNextExamMoodleProof } from '../../../../shared/buildNextExamMoodleProof.js';
@@ -1907,9 +1907,8 @@ class IpcHandler {
          * ASYNC GET BACKUP FILE from examdirectory
          * @param filename filename without
          */ 
-        ipcMain.handle('getbackupfile', (event, filename) => {   
+        ipcMain.handle('getbackupfile', async (event, filename) => {   
             log.info(`ipchandler @ getbackupfile: Request received for filename: ${filename}`)
-            const workdir = path.join(config.examdirectory,"/")
             if (!filename) {
                 log.warn(`ipchandler @ getbackupfile: no filename provided`); 
                 return false;
@@ -1921,12 +1920,8 @@ class IpcHandler {
             }
             log.info(`ipchandler @ getbackupfile: Full file path: ${filepath}`)
             try {
-                if (!fs.existsSync(filepath)){
-                    log.warn(`ipchandler @ getbackupfile: backup file not found: ${filepath}`); 
-                    return false;
-                }
-                log.info(`ipchandler @ getbackupfile: backup file exists, reading content`)
-                let raw = fs.readFileSync(filepath);
+                log.info(`ipchandler @ getbackupfile: reading backup file`)
+                let raw = await fs.promises.readFile(filepath);
                 if (isExamFileEncryptedBytes(raw)) {
                     const pw = resolveExamDecryptPassword(this.multicastClient);
                     if (!pw) {
@@ -1935,7 +1930,7 @@ class IpcHandler {
                     }
                     try {
                         log.info(`ipchandler @ getbackupfile: decrypted read ${filename}`);
-                        raw = decryptExamFileAllLayers(raw, pw);
+                        raw = await decryptExamFileAllLayersAsync(raw, pw);
                     } catch (e) {
                         log.error(`ipchandler @ getbackupfile: decrypt failed ${e?.message || e}`);
                         return false;
@@ -1946,6 +1941,10 @@ class IpcHandler {
                 return data
             }
             catch (err) {
+                if (err?.code === 'ENOENT') {
+                    log.warn(`ipchandler @ getbackupfile: backup file not found: ${filepath}`); 
+                    return false;
+                }
                 log.error(`ipchandler @ getbackupfile: Error reading backup file: ${err}`); 
                 log.error(`ipchandler @ getbackupfile: Error stack: ${err.stack}`)
                 return false

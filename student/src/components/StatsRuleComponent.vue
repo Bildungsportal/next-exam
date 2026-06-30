@@ -11,11 +11,11 @@
 <script>
 import { NodeViewWrapper, nodeViewProps } from '@tiptap/vue-3'
 
-// Section starts at doc pos 1, or after the latest statsRule or pageBreak before this marker.
+// Section starts at doc pos 1, or after the latest statsRule before this marker.
 function findSectionStart(doc, statsPos) {
   let start = 1
   doc.nodesBetween(1, statsPos, (node, pos) => {
-    if (node.type.name === 'statsRule' || node.type.name === 'pageBreak') {
+    if (node.type.name === 'statsRule') {
       start = pos + node.nodeSize
     }
   })

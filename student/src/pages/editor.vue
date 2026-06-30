@@ -1077,13 +1077,24 @@ export default {
         async waitForEditorReady(maxAttempts = 50, delayMs = 100) {
             for (let attempts = 0; attempts < maxAttempts; attempts++) {
                 if (this.editor && this.editor.isEditable !== undefined && this.editor.commands) {
-                    await this.sleep(delayMs);
                     return true;
                 }
                 await this.sleep(delayMs);
             }
             console.error(`editor @ waitForEditorReady: Editor not ready after ${maxAttempts} attempts`);
             return false;
+        },
+
+        // Attach paste/drop/keydown guards once ProseMirror DOM exists.
+        async attachEditorInputGuards() {
+            if (!await this.waitForEditorReady()) return;
+            this.editorcontentcontainer = document.getElementById('editorcontent');
+            this.editorContent = this.editorcontentcontainer?.querySelector('.ProseMirror');
+            if (!this.editorContent) return;
+            this.autoEventListener(this.editorContent, 'paste', this.handlePaste, true);
+            this.autoEventListener(this.editorContent, 'drop', this.handleDrop, true);
+            this.typingRhythmKeydownListener = this.handleTypingRhythmKeydown.bind(this);
+            this.autoEventListener(this.editorContent, 'keydown', this.typingRhythmKeydownListener, true);
         },
 
         // Silent import of teacher template (no replace dialog); runs only after backup was skipped or absent.
@@ -2431,8 +2442,10 @@ export default {
             const backupfileName = filename ? filename : this.clientname + ".htm";
             console.log(`editor @ loadBackupFile: Checking for backup file: ${backupfileName}`);
             try {
-                const backupfileContent = await signalBridge.invoke('getbackupfile', backupfileName);
-                const ready = await this.waitForEditorReady();
+                const [backupfileContent, ready] = await Promise.all([
+                    signalBridge.invoke('getbackupfile', backupfileName),
+                    this.waitForEditorReady(),
+                ]);
                 if (!ready) return;
 
                 if (backupfileContent) {
@@ -2530,6 +2543,8 @@ export default {
         this.isMac = navigator.platform.toLowerCase().includes('mac');
         this.syncEditorVisualSettings();
         this.createEditor(); // this initializes the editor
+        this.loadBackupFile()
+        this.attachEditorInputGuards()
         this.getExamMaterials()
         setTimeout(() => {
             signalBridge.invoke('prewarmSubmissionSigningP12').catch(() => {})
@@ -2672,19 +2687,6 @@ export default {
         // get wlan info and host ip for internet check
         this.wlanInfo = await signalBridge.invoke('get-wlan-info')
         this.hostip = await signalBridge.invoke('checkhostip')
-        // prevent paste in editor - need to wait for editor to be initialized
-        this.sleep(1000).then(() => {
-            this.editorContent = this.editorcontentcontainer.querySelector('.ProseMirror');
-            if (this.editorContent) {
-                this.autoEventListener(this.editorContent,'paste', this.handlePaste, true);
-                this.autoEventListener(this.editorContent,'drop', this.handleDrop, true);
-                this.typingRhythmKeydownListener = this.handleTypingRhythmKeydown.bind(this);
-                this.autoEventListener(this.editorContent,'keydown', this.typingRhythmKeydownListener, true);
-            }
-            console.log(`editor @ mounted: Calling loadBackupFile`)
-            this.loadBackupFile()
-        })
-
 
     },
 
