@@ -1,6 +1,13 @@
 <template>
 
     <div id="apphead" class="bg-dark">
+        <div v-if="showSectionSwitchOverlay" class="section-switch-backdrop">
+            <div class="section-switch-card">
+                <div class="section-switch-spinner" aria-hidden="true"></div>
+                <div class="section-switch-text">{{ $t('editor.switchingSection') }}</div>
+            </div>
+        </div>
+
         <div class="header-left">
             <div v-if="online && !localLockdown" class="header-item">
                 <img src="/src/assets/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style="float: left;" />
@@ -152,12 +159,13 @@
       const {
         groups, group, examtype, servername, clientname, serverstatus, pincode,
         localLockdown, online, battery, entryTime, componentName, wlanInfo,
-        exammode, lockedSection,
+        exammode, lockedSection, switchingToSection,
       } = storeToRefs(infoStore);
 
       return {
         hostip, groups, group, examtype, servername, clientname, serverstatus, pincode,
         localLockdown, online, battery, entryTime, componentName, wlanInfo, exammode, lockedSection,
+        switchingToSection,
       };
     },
     data() {
@@ -166,10 +174,14 @@
         _nxHeaderResizeObs: null,
         _clockInterval: null,
         _entrytimeMs: 0,
+        _sectionSwitchOverlayTimer: null,
         kioskLauncherApps: [],
       };
     },
     computed: {
+      showSectionSwitchOverlay() {
+        return this.switchingToSection != null;
+      },
       warning() {
         return this.wlanInfo?.message === 'nopermissions' ? this.$t('student.wlanNopermissionsText') : null;
       },
@@ -236,10 +248,20 @@
       window.addEventListener('resize', this._nxSetHeaderHeightVar);
       this.$nextTick(() => this.tickHeaderClock());
       loadWinKioskLauncherApps(signalBridge).then((apps) => { this.kioskLauncherApps = apps; });
+      this._onSwitchingExamSection = (_event, sectionNumber) => {
+        useInfoStore().beginSectionSwitch(Number(sectionNumber) || 1);
+      };
+      signalBridge.on('switching-exam-section', this._onSwitchingExamSection);
       useInfoStore().updateInfo();
       this.autoSchedulerService(() => useInfoStore().updateInfo(), 5000);
+      this._scheduleEndSectionSwitchOverlay();
     },
     beforeUnmount() {
+      if (this._sectionSwitchOverlayTimer) {
+        clearTimeout(this._sectionSwitchOverlayTimer);
+        this._sectionSwitchOverlayTimer = null;
+      }
+      signalBridge.removeAllListeners('switching-exam-section');
       if (this._clockInterval) {
         this._clockInterval.removeEventListener('action', this.tickHeaderClock);
         this._clockInterval.stop();
@@ -262,7 +284,13 @@
         } else if (!newMessage) {
           this.lastShownMessage = null;
         }
-      }
+      },
+      lockedSection() {
+        this._scheduleEndSectionSwitchOverlay();
+      },
+      switchingToSection() {
+        this._scheduleEndSectionSwitchOverlay();
+      },
     },
     methods: {
       // Update clock DOM only — no reactive state, avoids header re-render each tick.
@@ -313,7 +341,15 @@
         }).then( (result) => {
           if (result.isConfirmed) {
             console.log(`switchExamSection: calling switch-exam-section`)
-            signalBridge.invoke('switch-exam-section', sectionNumber);
+            const infoStore = useInfoStore();
+            infoStore.beginSectionSwitch(sectionNumber);
+            signalBridge.invoke('switch-exam-section', sectionNumber)
+              .finally(() => {
+                this._scheduleEndSectionSwitchOverlay();
+                setTimeout(() => {
+                  if (infoStore.switchingToSection === sectionNumber) infoStore.endSectionSwitchOverlay();
+                }, 12000);
+              });
           }
           else {
             if (this.serverstatus.examSections[this.lockedSection].examtype == 'microsoft365'){
@@ -321,7 +357,21 @@
             }
           }
         });
-      }
+      },
+      // Hide overlay after min display once lockedSection matches the switch target.
+      _scheduleEndSectionSwitchOverlay() {
+        const infoStore = useInfoStore();
+        const target = infoStore.switchingToSection;
+        if (target == null || this.lockedSection !== target) return;
+        if (this._sectionSwitchOverlayTimer) clearTimeout(this._sectionSwitchOverlayTimer);
+        const minMs = 450;
+        const elapsed = Date.now() - (infoStore.switchingStartedAt || 0);
+        const delay = Math.max(0, minMs - elapsed);
+        this._sectionSwitchOverlayTimer = setTimeout(() => {
+          this._sectionSwitchOverlayTimer = null;
+          infoStore.endSectionSwitchOverlay();
+        }, delay);
+      },
     },
   }
 </script>
@@ -413,6 +463,46 @@
     font-size: 0.68rem;
     line-height: 1.15;
     color: #fff;
+}
+
+.section-switch-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.38);
+    z-index: 200001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.section-switch-card {
+    background: rgba(33, 37, 41, 0.94);
+    border-radius: 10px;
+    padding: 22px 28px;
+    text-align: center;
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.section-switch-spinner {
+    width: 28px;
+    height: 28px;
+    margin: 0 auto;
+    border: 3px solid rgba(255, 255, 255, 0.25);
+    border-top-color: #0aa2c0;
+    border-radius: 50%;
+    animation: section-switch-spin 0.85s linear infinite;
+}
+
+@keyframes section-switch-spin {
+    to { transform: rotate(360deg); }
+}
+
+.section-switch-text {
+    margin-top: 12px;
+    font-size: 0.95rem;
+    opacity: 0.92;
 }
 
 </style>

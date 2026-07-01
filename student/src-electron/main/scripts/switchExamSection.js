@@ -20,6 +20,10 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
     }
     switchExamSection._running = true;
     try {
+    const examWin = WindowHandler.mainWin();
+    if (examWin?.webContents && !examWin.isDestroyed?.()) {
+        examWin.webContents.send('switching-exam-section', newSectionNumber);
+    }
     const currentLockedSection = multicastClient.clientinfo.lockedSection; // Current section number (source for saving)
     const previousExamtype = multicastClient.clientinfo.examtype;
     const newLockedSection = newSectionNumber; // New section number (source for loading)
@@ -133,7 +137,6 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
     /**
      *  Actually SWITCH EXAM SECTION
      */
-    const examWin = WindowHandler.mainWin();
     if (!examWin || examWin.isDestroyed?.()) {
         log.warn('switchExamSection: no mainwindow for reroute');
         return;

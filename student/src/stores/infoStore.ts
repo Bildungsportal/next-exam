@@ -26,6 +26,8 @@ export const useInfoStore = defineStore("info", {
         wlanInfo: null as any,
         exammode: false as boolean,
         lockedSection: 1 as number,
+        switchingToSection: null as number | null,
+        switchingStartedAt: 0 as number,
     }),
     actions: {
         // Poll wlan + host IP for ExamHeader network icons.
@@ -64,6 +66,15 @@ export const useInfoStore = defineStore("info", {
             }
             await this.refreshNetworkInfo();
             return true
+        },
+        // Brief section-switch overlay until target lockedSection is active.
+        beginSectionSwitch(sectionNumber: number): void {
+            this.switchingToSection = sectionNumber;
+            this.switchingStartedAt = Date.now();
+        },
+        endSectionSwitchOverlay(): void {
+            this.switchingToSection = null;
+            this.switchingStartedAt = 0;
         },
     },
 })
