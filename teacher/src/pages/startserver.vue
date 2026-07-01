@@ -141,7 +141,7 @@
                             </span>
                             <span v-if="exam.examSections && exam.examSections[exam.activeSection] && exam.examSections[exam.activeSection].groups" class="badge bip-type-sus">A/B</span>
                             <span v-if="exam.screenslocked" class="badge bg-danger-subtle text-danger border border-danger-subtle">gesperrt</span>
-                            <span v-if="exam.useExamSections" class="badge bg-secondary">§ {{ exam.activeSection }}/{{ exam.lockedSection }}</span>
+                            <span v-if="exam.useExamSections" class="badge bg-secondary" :title="exam.allowSectionSwitch ? $t('startserver.sectionByStudent') : $t('startserver.sectionByTeacher')">§ {{ exam.allowSectionSwitch ? 'S' : 'T' }}</span>
                             <span v-if="exam.pin" class="badge bg-secondary-subtle text-secondary bip-status-pill ms-auto">{{ exam.pin }}</span>
                         </div>
                     </div>
@@ -228,7 +228,7 @@
                             </span>
                             <span v-if="exam.examSections && exam.examSections[exam.activeSection] && exam.examSections[exam.activeSection].groups" class="badge bip-type-sus">A/B</span>
                             <span v-if="exam.screenslocked" class="badge bg-danger-subtle text-danger border border-danger-subtle">gesperrt</span>
-                            <span v-if="exam.useExamSections" class="badge bip-type-sus">§ {{ exam.activeSection }}/4</span>
+                            <span v-if="exam.useExamSections" class="badge bip-type-sus" :title="exam.allowSectionSwitch ? $t('startserver.sectionByStudent') : $t('startserver.sectionByTeacher')">§ {{ exam.allowSectionSwitch ? 'S' : 'T' }}</span>
                             <span v-if="exam.examStudents && exam.examStudents.length" class="badge bip-type-sus">{{ exam.examStudents.length }} SuS</span>
                             <span v-if="exam.pin" class="badge bg-secondary-subtle text-secondary bip-status-pill ms-auto">{{ exam.pin }}</span>
                         </div>
