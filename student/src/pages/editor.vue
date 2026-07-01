@@ -795,6 +795,7 @@ import { examApiFetch } from 'next-exam-shared/examApiFetch.js'
 import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
+    applyFocusLostFromIpc,
     resolveLockedSection,
     formatFocusLostTime,
 } from '../utils/examFetchInfoSync.js'
@@ -2209,7 +2210,11 @@ export default {
             });
         },
         async sendFocuslost(ctrlalt = false, options = {}) {
-            const { instantBlock = false, forceBackendLock = false, message = '' } = options;
+            const { instantBlock = false, forceBackendLock = false, message = '', source = 'unknown' } = options;
+            console.warn(
+                `editor @ sendFocuslost: source=${source} ctrlalt=${ctrlalt} hidden=${document.hidden} visibility=${document.visibilityState} swal=${document.body.classList.contains('swal2-shown')}`
+            );
+            console.trace('editor @ sendFocuslost stack');
             if (!forceBackendLock && await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             if (message) this.focusLostMessage = message;
             if (instantBlock && !this.development) {
@@ -2266,12 +2271,12 @@ export default {
         },
         handleCtrlAlt(event) {
             if (event.ctrlKey && event.altKey) {
-                this.sendFocuslost(true);
+                this.sendFocuslost(true, { source: 'ctrlalt' });
             }   // too much to prevent switching to tty or windows logon screen?
         },
         handleVisibilityChange() {
             if (document.hidden) {
-                this.sendFocuslost();
+                this.sendFocuslost(false, { source: 'visibilitychange' });
             }
         },
 
@@ -2541,7 +2546,12 @@ export default {
                 s.lastLogTs = now;
                 console.log('editor @ typingRhythm: suspicious typing rhythm', { meanMs: mean, stdevMs: stdev, deltasMs: [...s.deltas] });
                 if (this.focus) {
-                    this.sendFocuslost(false, { instantBlock: true, forceBackendLock: true, message: 'Automatisierte Texteingabe erkannt\nDieser Computer ist möglicherweise kompromittiert' });
+                    this.sendFocuslost(false, {
+                        instantBlock: true,
+                        forceBackendLock: true,
+                        source: 'typingRhythm',
+                        message: 'Automatisierte Texteingabe erkannt\nDieser Computer ist möglicherweise kompromittiert',
+                    });
                 }
             }
         },
@@ -2556,10 +2566,11 @@ export default {
         this.isMac = navigator.platform.toLowerCase().includes('mac');
         this.syncEditorVisualSettings();
         this.createEditor(); // this initializes the editor
+        // Backup/template Swal must finish before mouseleave/visibility guards — Swal focus trap triggers false positives.
         if (this.$route.query.restore === '1') {
-            this.loadBackupFileSilent();
+            await this.loadBackupFileSilent();
         } else {
-            this.loadBackupFile();
+            await this.loadBackupFile();
         }
         this.attachEditorInputGuards()
         this.getExamMaterials()
@@ -2696,7 +2707,8 @@ export default {
 
         // block editor on escape
         if (!this.development) {
-            attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
+            this._onFocusLostMouseleave = () => this.sendFocuslost(false, { source: 'mouseleave' });
+            attachExamMouseleaveGuardBoolean(signalBridge, this.development, this._onFocusLostMouseleave);
             this.autoEventListener(window,'visibilitychange', this.handleVisibilityChange);
         }
 
@@ -2716,7 +2728,7 @@ export default {
          *   REMOVE EVENT LISTENERS
          */
 
-        document.body.removeEventListener('mouseleave', this.sendFocuslost);
+        document.body.removeEventListener('mouseleave', this._onFocusLostMouseleave);
 
         this.stopSplitResize()
 
