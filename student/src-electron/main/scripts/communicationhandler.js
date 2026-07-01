@@ -584,7 +584,7 @@ import {
     }
 
     async handleExamSections(serverstatus){
-        if (WindowHandler.examwindow){
+        if (this.multicastClient.clientinfo.exammode && WindowHandler.examwindow){
             if (serverstatus.allowSectionSwitch !== WindowHandler.examwindow.serverstatus.allowSectionSwitch){
                 log.info("communicationhandler @ processUpdatedServerstatus: permission to switch exam section changed");
                 WindowHandler.examwindow.serverstatus.allowSectionSwitch = serverstatus.allowSectionSwitch;
@@ -594,8 +594,10 @@ import {
         if (serverstatus.exammode && this.multicastClient.clientinfo.exammode){
             if (serverstatus.useExamSections){
                 if (!serverstatus.allowSectionSwitch){
-                    if (serverstatus.lockedSection !== this.multicastClient.clientinfo.lockedSection){
-                        await switchExamSection(this, serverstatus, serverstatus.lockedSection);
+                    const serverSection = Number(serverstatus.lockedSection || 1);
+                    const clientSection = Number(this.multicastClient.clientinfo.lockedSection || 1);
+                    if (serverSection !== clientSection){
+                        await switchExamSection(this, serverstatus, serverSection);
                     }
                 }
             }
@@ -924,6 +926,98 @@ import {
         });
     }
 
+    /** Stop LocalVM + VNC proxy when leaving a localvm section (section switch, not full endExam). */
+    async stopLocalVmIfActive() {
+        const localVmActive = this.multicastClient.clientinfo.examtype === 'localvm'
+            || this.multicastClient.clientinfo.localVMState === 'running';
+        if (!localVmActive) return;
+        stopProxy();
+        try {
+            log.info('communicationhandler @ stopLocalVmIfActive: requesting VM shutdown');
+            await qemuService.stopVmAsync({ graceful: true, shutdownTimeoutMs: 8000, killTimeoutMs: 8000 });
+        } catch (e) {
+            log.warn('communicationhandler @ stopLocalVmIfActive: graceful shutdown failed, killing VM');
+            await qemuService.stopVmAsync({ graceful: false, killTimeoutMs: 8000 });
+        }
+        try {
+            await qemuService.killAllLocalQemu(this.config.workdirectory);
+        } catch (e) {
+            log.warn('communicationhandler @ stopLocalVmIfActive: killAllLocalQemu sweep', e);
+        }
+        this.multicastClient.clientinfo.localVMHost = null;
+        this.multicastClient.clientinfo.localVMState = null;
+    }
+
+    /** QEMU preflight + start for LocalVM; sectionSwitch keeps exammode on recoverable failures. */
+    async bootLocalVmExamSection(serverstatus, effectiveSection, { sectionSwitch = false } = {}) {
+        if (this.localVmStartState !== 'idle') {
+            log.info(`communicationhandler @ bootLocalVmExamSection: suppressed (state=${this.localVmStartState})`);
+            return sectionSwitch;
+        }
+        this.localVmStartState = 'starting';
+        if (!sectionSwitch) this.notifyLocalVmCompatCheckStart();
+        let qemuOk = false;
+        try {
+            qemuOk = await this.ensureQemuAvailableForLocalVm();
+        } finally {
+            if (!qemuOk && !sectionSwitch) this.notifyLocalVmCompatCheckEnd();
+        }
+        if (!qemuOk) {
+            if (!sectionSwitch) this.multicastClient.clientinfo.exammode = false;
+            this.localVmStartState = sectionSwitch ? 'idle' : 'blocked';
+            return sectionSwitch;
+        }
+        try {
+            let preflight = null;
+            try {
+                preflight = await this.preflightLocalVm(serverstatus, effectiveSection);
+            } catch (e) {
+                log.error('communicationhandler @ bootLocalVmExamSection: preflightLocalVm failed', e);
+                this.multicastClient.clientinfo.localVMState = 'error';
+                if (!sectionSwitch) this.multicastClient.clientinfo.exammode = false;
+                this.localVmStartState = sectionSwitch ? 'idle' : 'blocked';
+                return sectionSwitch;
+            }
+            if (!preflight?.allowStart) {
+                if (!sectionSwitch) this.multicastClient.clientinfo.exammode = false;
+                this.localVmStartState = sectionSwitch ? 'idle' : 'blocked';
+                return sectionSwitch;
+            }
+            try {
+                await qemuService.startHeadless({
+                    workdirectory: this.config.workdirectory,
+                    examdirectory: this.config.examdirectory,
+                    qcow2Name: preflight.qcow2Name,
+                    vncDisplay: ':1',
+                    overlayName: preflight.overlayName,
+                    blockInternet: preflight.blockInternet,
+                    forceFreshOverlay: true,
+                    displayWidth: preflight.displayWidth,
+                    displayHeight: preflight.displayHeight,
+                });
+                this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
+                this.multicastClient.clientinfo.localVMPort = Number(preflight.vncPort) || 5901;
+                this.multicastClient.clientinfo.localVMState = 'running';
+            } catch (e) {
+                log.error('communicationhandler @ bootLocalVmExamSection: qemu start failed', e);
+                this.multicastClient.clientinfo.localVMHost = null;
+                this.multicastClient.clientinfo.localVMState = 'error';
+                if (!sectionSwitch) this.multicastClient.clientinfo.exammode = false;
+                this.localVmStartState = sectionSwitch ? 'idle' : 'blocked';
+                if (e?.code === 'virt-disabled') {
+                    try { WindowHandler.mainwindow?.webContents?.send('qemu-not-available', { reason: 'virt-disabled' }); }
+                    catch (err) { log.debug('communicationhandler @ bootLocalVmExamSection: virt-disabled notify failed', err?.message); }
+                }
+                return sectionSwitch;
+            }
+            this.localVmStartState = 'idle';
+            return true;
+        } catch (e) {
+            this.localVmStartState = sectionSwitch ? 'idle' : 'blocked';
+            throw e;
+        }
+    }
+
     /** Re-route mainwindow to another exam section while exammode is already active. */
     async rerouteExamSection(serverstatus) {
         const displays = screen.getAllDisplays();
@@ -932,6 +1026,14 @@ import {
         const effectiveSection = this.multicastClient.clientinfo.lockedSection;
         const examtype = serverstatus.examSections[effectiveSection].examtype;
         log.info(`communicationhandler @ rerouteExamSection: section ${effectiveSection} examtype ${examtype}`);
+        if (examtype === 'localvm') {
+            const canRoute = await this.bootLocalVmExamSection(serverstatus, effectiveSection, { sectionSwitch: true });
+            if (!canRoute) {
+                log.warn('communicationhandler @ rerouteExamSection: localvm boot blocked');
+                return;
+            }
+        }
+        if (!(await this.ensureAssessmentForExamStart())) return;
         await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
         this.multicastClient.clientinfo.examtype = examtype;
         this.multicastClient.clientinfo.exammode = true;
@@ -975,84 +1077,16 @@ import {
                 log.warn('communicationhandler @ startExam: localvm requested but exammode already active');
                 return;
             }
-            if (this.localVmStartState !== 'idle') {
-                log.info(`communicationhandler @ startExam: localvm start suppressed (state=${this.localVmStartState})`);
-                return;
-            }
-            this.localVmStartState = 'starting';
-            this.notifyLocalVmCompatCheckStart();
-            let qemuOk = false;
-            try {
-                qemuOk = await this.ensureQemuAvailableForLocalVm();
-            } finally {
-                if (!qemuOk) {
-                    this.notifyLocalVmCompatCheckEnd();
-                }
-            }
-            if (!qemuOk) {
-                this.multicastClient.clientinfo.exammode = false;
-                // 'blocked' (not 'idle') so next 5s server poll does not re-trigger startExam -> re-spawn qemu-not-available dialog every cycle; reset to 'idle' happens when teacher turns exammode off (see processUpdatedServerstatus)
+            const bootOk = await this.bootLocalVmExamSection(serverstatus, effectiveSection);
+            if (!bootOk) return;
+            if (!(await this.ensureAssessmentForExamStart())) {
                 this.localVmStartState = 'blocked';
                 return;
             }
-            try {                
-                let preflight = null;
-                try {
-                    preflight = await this.preflightLocalVm(serverstatus, effectiveSection);
-                } catch (e) {
-                    log.error('communicationhandler @ startExam: preflightLocalVm failed', e);
-                    this.multicastClient.clientinfo.localVMState = 'error';
-                    this.multicastClient.clientinfo.exammode = false;
-                    this.localVmStartState = 'blocked';
-                    return;
-                }
-                if (!preflight?.allowStart) {
-                    this.multicastClient.clientinfo.exammode = false;
-                    this.localVmStartState = 'blocked';
-                    return;
-                }
-                try {
-                    await qemuService.startHeadless({
-                        workdirectory: this.config.workdirectory,
-                        examdirectory: this.config.examdirectory,
-                        qcow2Name: preflight.qcow2Name,
-                        vncDisplay: ':1',
-                        overlayName: preflight.overlayName,
-                        blockInternet: preflight.blockInternet,
-                        forceFreshOverlay: true,
-                        displayWidth: preflight.displayWidth,
-                        displayHeight: preflight.displayHeight,
-                    });
-                    this.multicastClient.clientinfo.localVMHost = '127.0.0.1';
-                    this.multicastClient.clientinfo.localVMPort = Number(preflight.vncPort) || 5901;
-                    this.multicastClient.clientinfo.localVMState = 'running';
-                } catch (e) {
-                    log.error('communicationhandler @ startExam: qemu start failed', e);
-                    this.multicastClient.clientinfo.localVMHost = null;
-                    this.multicastClient.clientinfo.localVMState = 'error';
-                    this.multicastClient.clientinfo.exammode = false;
-                    this.localVmStartState = 'blocked';
-                    // CPU virtualization off in BIOS/UEFI -> tell the user instead of a silent "error" state
-                    if (e?.code === 'virt-disabled') {
-                        try { WindowHandler.mainwindow?.webContents?.send('qemu-not-available', { reason: 'virt-disabled' }); }
-                        catch (err) { log.debug('communicationhandler @ startExam: virt-disabled notify failed', err?.message); }
-                    }
-                    return;
-                }
-
-                if (!(await this.ensureAssessmentForExamStart())) {
-                    this.localVmStartState = 'blocked';
-                    return;
-                }
-                log.info("communicationhandler @ startExam: creating exam window")
-                await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
-                this.multicastClient.clientinfo.examtype = examtype;
-                this.multicastClient.clientinfo.exammode = true;
-                this.localVmStartState = 'idle';
-            } catch (e) {
-                this.localVmStartState = 'blocked';
-                throw e;
-            }
+            log.info("communicationhandler @ startExam: creating exam window")
+            await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+            this.multicastClient.clientinfo.examtype = examtype;
+            this.multicastClient.clientinfo.exammode = true;
             return;
         }
 

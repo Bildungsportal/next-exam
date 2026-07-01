@@ -1531,8 +1531,9 @@ class IpcHandler {
 
         // Student-initiated section switch when allowSectionSwitch is true; always uses current serverstatus and section number
         ipcMain.handle('switch-exam-section', async (event, sectionNumber) => {
-            const serverstatus = this.WindowHandler.examwindow?.serverstatus;
+            const serverstatus = this.multicastClient.serverstatus;
             if (!serverstatus?.useExamSections || !serverstatus?.allowSectionSwitch) return;
+            if (!this.multicastClient.clientinfo.exammode) return;
             if (this.multicastClient.clientinfo.lockedSection === sectionNumber) return;
             log.info(`ipchandler @ switch-exam-section: switching to section ${sectionNumber}`)
             await switchExamSection(this.CommunicationHandler, serverstatus, sectionNumber);

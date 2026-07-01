@@ -582,7 +582,8 @@ class WindowHandler {
                 // This prevents navigation when clicking links in PDFs displayed in the examheader
                 // Webview/BrowserView blocking is handled separately via IPC in ipchandler.js or mode-specific handlers below
             const examTypesWithPdfInHeader = ["forms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math", "localvm"];
-            if (examTypesWithPdfInHeader.includes(serverstatus.examSections[serverstatus.lockedSection].examtype)) {
+            const effectiveSection = serverstatus.allowSectionSwitch ? this.multicastClient.clientinfo.lockedSection : serverstatus.lockedSection;
+            if (examTypesWithPdfInHeader.includes(serverstatus.examSections[effectiveSection].examtype)) {
                 win.webContents.on('will-navigate', (event, url) => {
                     event.preventDefault(); // Prevent navigation away from the Vue app (e.g. from PDF links in examheader)
                 });
@@ -602,7 +603,6 @@ class WindowHandler {
             /***************************
              *  Microsoft Excel/Word
              ***************************/
-            let effectiveSection = serverstatus.allowSectionSwitch ? this.multicastClient.clientinfo.lockedSection : serverstatus.lockedSection;
             if ( serverstatus.examSections[effectiveSection].examtype === "microsoft365"){
                 const browserView = this.getMs365BrowserView(this.examwindow);
                 if (!browserView) return;

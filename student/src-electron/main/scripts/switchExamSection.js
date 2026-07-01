@@ -10,9 +10,18 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
         log.warn('switchExamSection: already running, skip duplicate');
         return;
     }
+    if (!multicastClient.clientinfo.exammode) {
+        log.warn('switchExamSection: not in exammode, skip');
+        return;
+    }
+    if (!serverstatus?.examSections?.[newSectionNumber]) {
+        log.warn(`switchExamSection: invalid section ${newSectionNumber}`);
+        return;
+    }
     switchExamSection._running = true;
     try {
     const currentLockedSection = multicastClient.clientinfo.lockedSection; // Current section number (source for saving)
+    const previousExamtype = multicastClient.clientinfo.examtype;
     const newLockedSection = newSectionNumber; // New section number (source for loading)
     const examDir = config.examdirectory;
 
@@ -118,22 +127,27 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
     /**
      *  Actually SWITCH EXAM SECTION
      */
-    //close exam window or relead the new exam section in the same window
-    if (WindowHandler.examwindow){
-            // destroy devtools window - if you don't next-exam will crash silently on reload and section switch
-            if (config.development){
-                webContents.getAllWebContents().forEach(wc => {
-                    if (wc.hostWebContents?.id === WindowHandler.examwindow.webContents.id && wc.isDevToolsOpened?.()){
-                        log.info("switchExamSection: destroying devtools window")
-                        wc.closeDevTools()
-                    }
-                })
-            }
-            WindowHandler.removeBlurListener()
-            WindowHandler.teardownExamChrome(WindowHandler.mainwindow)
-            WindowHandler.examwindow = null
-            await CommunicationHandler.rerouteExamSection(serverstatus)
+    const examWin = WindowHandler.examwindow || WindowHandler.mainwindow;
+    if (!examWin || examWin.isDestroyed?.()) {
+        log.warn('switchExamSection: no mainwindow for reroute');
+        return;
     }
+    if (previousExamtype === 'localvm' || multicastClient.clientinfo.localVMState === 'running') {
+        await CommunicationHandler.stopLocalVmIfActive();
+    }
+    // destroy devtools window - if you don't next-exam will crash silently on reload and section switch
+    if (config.development){
+        webContents.getAllWebContents().forEach(wc => {
+            if (wc.hostWebContents?.id === examWin.webContents.id && wc.isDevToolsOpened?.()){
+                log.info("switchExamSection: destroying devtools window")
+                wc.closeDevTools()
+            }
+        })
+    }
+    WindowHandler.removeBlurListener()
+    WindowHandler.teardownExamChrome(WindowHandler.mainwindow)
+    WindowHandler.examwindow = null
+    await CommunicationHandler.rerouteExamSection(serverstatus)
     } finally {
         switchExamSection._running = false;
     }
