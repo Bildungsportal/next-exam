@@ -1231,6 +1231,7 @@ import {
         }
 
         WindowHandler.removeBlurListener();
+        // WindowHandler.logWindowListenerCounts('after endExam');
       
         if (this.multicastClient.clientinfo.exammode){
             this.multicastClient.clientinfo.exammode = false

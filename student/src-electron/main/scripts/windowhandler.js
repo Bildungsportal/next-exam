@@ -536,6 +536,7 @@ class WindowHandler {
         } catch (e) {
             log.debug('windowhandler @ rerouteToExamSection: focus', e?.message);
         }
+        // this.logWindowListenerCounts('after section switch');
     }
 
     async loadExamRouteAndGuards(win, examtype, token, serverstatus) {
@@ -959,6 +960,33 @@ class WindowHandler {
             this._examBlurHandler = null;
             log.info("windowhandler @ removeBlurListener: removing blur listener")
         }
+    }
+
+    /** TEMP: log EventEmitter listener counts on main window (leak hunt after exam end / section switch). */
+    logWindowListenerCounts(label = 'post-exam') {
+        const win = this.mainWin();
+        if (!win) {
+            log.info(`[listener-leak-debug] total=0 ${label}: no mainwindow`);
+            return;
+        }
+        const summarize = (emitter) => {
+            if (!emitter?.eventNames) return { total: 0, byEvent: {} };
+            const byEvent = Object.fromEntries(
+                emitter.eventNames().map((ev) => [ev, emitter.listenerCount(ev)])
+            );
+            const total = Object.values(byEvent).reduce((sum, n) => sum + n, 0);
+            return { total, byEvent };
+        };
+        const mainwindow = summarize(win);
+        const webContents = summarize(win.webContents);
+        const browserViews = (win.getBrowserViews?.() || []).map((bv, i) => ({
+            index: i,
+            ...summarize(bv.webContents),
+        }));
+        const grandTotal = mainwindow.total + webContents.total
+            + browserViews.reduce((sum, bv) => sum + bv.total, 0);
+        const payload = { mainwindow, webContents, browserViews };
+        log.info(`[listener-leak-debug] total=${grandTotal} ${label}: ${JSON.stringify(payload)}`);
     }
     // implementing a sleep (wait) function
     sleep(ms) {
