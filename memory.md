@@ -69,7 +69,8 @@ BUG^print^swal2MultiPage^body.swal2-shown setzt im @media print "[aria-hidden=tr
 
 # Exam schema
 RULE^exam^sectionSchema^mode config only group.examConfig.{editor|website|eduvidual|forms|rdp|localvm|activeSheets|microsoft365}; section has examtype+sectionname+timelimit+locked+startTs+groups only
-RULE^student^sectionSwitch^switchExamSection: exammode gate; teardown+rerouteExamSection; localvm stop via stopLocalVmIfActive; teacher push when !allowSectionSwitch; student IPC uses multicastClient.serverstatus
+RULE^student^sectionSwitch^switchExamSection: teardownExamChrome+rerouteToExamSection; keep examwindow+blur; no createExamWindow re-bind
+RULE^student^examWin^listeners^close once on mainwindow; app-command once; blur idempotent; teardown clears route listeners only
 RULE^student^examWindow^examwindow always mainwindow; endExam closeExamWindowSafely→returnToStudentView #/; teardownExamChrome BrowserViews+listeners; switchExamSection teardown+rerouteExamSection; routeSuperseded aborts stale createExamWindow
 PATH^shared^editorExamConfig^shared/editorExamConfig.js DEFAULT_EDITOR_EXAM_CONFIG+resolveEditorExamConfig+resolveGroupKey
 RULE^student^clientname^trim+lowercase canonical id; shared/normalizeStudentClientName.js; student.vue @input+register; teacher control.js registerclient+workdir rename case-only mismatch

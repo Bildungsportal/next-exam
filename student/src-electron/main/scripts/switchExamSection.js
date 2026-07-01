@@ -144,9 +144,7 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
             }
         })
     }
-    WindowHandler.removeBlurListener()
     WindowHandler.teardownExamChrome(WindowHandler.mainwindow)
-    WindowHandler.examwindow = null
     await CommunicationHandler.rerouteExamSection(serverstatus)
     } finally {
         switchExamSection._running = false;

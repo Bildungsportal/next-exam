@@ -66,6 +66,8 @@ class WindowHandler {
       this.cageExitWarningOpen = false
       this.minimizeWarningOpen = false  // track if minimize warning dialog is open
       this.ms365BrowserView = null
+      this._examBlurHandler = null
+      this._examAppCommandBound = false
     }
 
     init (mc, config) {
@@ -182,7 +184,21 @@ class WindowHandler {
         win.webContents?.removeAllListeners('will-navigate')
         win.webContents?.removeAllListeners('new-window')
         win.webContents?.setWindowOpenHandler?.(() => ({ action: 'allow' }))
+        win.removeAllListeners('enter-full-screen')
+        win.removeAllListeners('resize')
         this.ms365BrowserView = null
+    }
+
+    /** Block browser-back/forward mouse buttons once per exam session on mainwindow. */
+    bindExamAppCommandOnce(win) {
+        if (this._examAppCommandBound || !win || win.isDestroyed?.()) return;
+        this._examAppCommandBound = true;
+        win.on('app-command', (e, cmd) => {
+            if (cmd === 'browser-backward' || cmd === 'browser-forward') {
+                log.warn("no navigation allowed")
+                e.preventDefault();
+            }
+        });
     }
 
     /** MS365 Office BrowserView (Electron 41: use getBrowserViews, not getBrowserView(0)). */
@@ -468,16 +484,9 @@ class WindowHandler {
             log.warn('windowhandler @ createExamWindow: no mainwindow');
             return;
         }
-        // examwindow = mainwindow alias once routed into exam — not a second window
         if (this.examwindow && !this.examwindow.isDestroyed?.()) {
-            log.warn('windowhandler @ createExamWindow: mainwindow already routed to exam, skip duplicate');
-            try {
-                win.show();
-                win.focus();
-                await this.applyExamWindowLockdown(win);
-            } catch (e) {
-                log.debug('windowhandler @ createExamWindow: focus mainwindow', e?.message);
-            }
+            log.info('windowhandler @ createExamWindow: already in exam — reroute section');
+            await this.rerouteToExamSection(examtype, token, serverstatus);
             return;
         }
         // just to be sure we check some important vars here
@@ -487,24 +496,43 @@ class WindowHandler {
         }
 
         this.examwindow = win
+        this.bindExamAppCommandOnce(win)
+        this.examwindow.serverstatus = serverstatus
+        this.examwindow.menuHeight = 94
 
-            this.examwindow.serverstatus = serverstatus //we keep it there to make it accessable via examwindow in ipcHandler
-            this.examwindow.menuHeight = 94   // start position for the content view
+        const routeSuperseded = () => this.examwindow !== win;
+        await this.loadExamRouteAndGuards(win, examtype, token, serverstatus, routeSuperseded);
+        if (routeSuperseded()) return;
+        await this.applyExamWindowLockdown(win);
+    }
 
-            const routeSuperseded = () => this.examwindow !== win;
+    /** Section switch while exammode stays on — teardown route chrome only, keep blur/lockdown listeners. */
+    async rerouteToExamSection(examtype, token, serverstatus) {
+        const win = this.examwindow || this.mainwindow;
+        if (!win || win.isDestroyed?.()) {
+            log.warn('windowhandler @ rerouteToExamSection: no window');
+            return;
+        }
+        if (!this.examwindow) this.examwindow = win;
+        this.teardownExamChrome(win);
+        win.serverstatus = serverstatus;
+        const routeSuperseded = () => this.examwindow !== win;
+        await this.loadExamRouteAndGuards(win, examtype, token, serverstatus, routeSuperseded);
+        if (routeSuperseded()) return;
+        try {
+            win.show();
+            win.focus();
+        } catch (e) {
+            log.debug('windowhandler @ rerouteToExamSection: focus', e?.message);
+        }
+    }
 
-
-            /**
-             * Microsoft 365 emebeds its editor in an iframe with active Content Security Policy (CSP)
-             * The only way to be able to inject code is to load it directly in the main window <embed> <iframe> or even <webview> offers no workaround
-             * therefore we use "BrowserView" in order to display two pages in one window: on top > exam header, on bottom > office
-             */
-
-            if (examtype === "microsoft365"  ) { //external page
+    async loadExamRouteAndGuards(win, examtype, token, serverstatus, routeSuperseded) {
+            if (examtype === "microsoft365"  ) {
                 log.info("starting microsoft365 exam...")
                 let urlview = this.multicastClient.clientinfo.msofficeshare
-                if (!urlview) {// we wait for the next update tick - msofficeshare needs to be set ! (could happen when a student connects later then exam mode is set but his share url needs some time)
-                    log.warn("windowhandler @ createExamWindow: no url for microsoft365 was set yet - waiting for next update tick")
+                if (!urlview) {
+                    log.warn("windowhandler @ loadExamRouteAndGuards: no url for microsoft365 was set yet - waiting for next update tick")
                     disableRestrictions()
                     this.multicastClient.clientinfo.exammode = false
                     this.multicastClient.clientinfo.focus = true
@@ -513,9 +541,6 @@ class WindowHandler {
                 }
                 await this.navigateToExamRoute(win, `/${examtype}/${token}/`)
                 if (routeSuperseded()) return;
-                await this.applyExamWindowLockdown(win)
-                if (routeSuperseded()) return;
-                // Define the MainContentPage view
                 let contentView = new BrowserView({
                     webPreferences: {
                         spellcheck: false,
@@ -525,70 +550,51 @@ class WindowHandler {
 
                 contentView.setBounds({
                     x: 0,
-                    y: this.examwindow.menuHeight,
-                    width: this.examwindow.getBounds().width,
-                    height: this.examwindow.getBounds().height - this.examwindow.menuHeight
+                    y: win.menuHeight,
+                    width: win.getBounds().width,
+                    height: win.getBounds().height - win.menuHeight
                 });
                 contentView.setAutoResize({ width: true, height: true, horizontal: true, vertical: true });
                 contentView.webContents.loadURL(urlview);
                 if (this.config.showdevtools) {       contentView.webContents.openDevTools() }
 
-                this.examwindow.addBrowserView(contentView);
+                win.addBrowserView(contentView);
                 this.ms365BrowserView = contentView
 
-                this.examwindow.on('enter-full-screen', () => {
-                    this.examwindow.setBrowserView(contentView);
-
-                    let newBounds = this.examwindow.getBounds();
+                win.on('enter-full-screen', () => {
+                    win.setBrowserView(contentView);
+                    let newBounds = win.getBounds();
                     contentView.setBounds({
                         x: 0,
-                        y: this.examwindow.menuHeight,
+                        y: win.menuHeight,
                         width: newBounds.width,
-                        height: newBounds.height - this.examwindow.menuHeight
+                        height: newBounds.height - win.menuHeight
                     });
                 });
 
-                this.examwindow.on('resize', () => {
-                    let newBounds = this.examwindow.getBounds();
+                win.on('resize', () => {
+                    let newBounds = win.getBounds();
                     contentView.setBounds({
                         x: 0,
-                        y: this.examwindow.menuHeight,
+                        y: win.menuHeight,
                         width: newBounds.width,
-                        height: newBounds.height - this.examwindow.menuHeight
+                        height: newBounds.height - win.menuHeight
                     });
                 });
-            }
-            // this is the normal exam mode (editor, math, eduvidual, website, forms, activesheets, localvm)
-            else {
+            } else {
                 await this.navigateToExamRoute(win, `/${examtype}/${token}/`)
                 if (routeSuperseded()) return;
-                await this.applyExamWindowLockdown(win)
-                if (routeSuperseded()) return;
             }
-
-
 
             if (routeSuperseded()) return;
 
-            /**
-             * Handle special NAVIGATION situations
-             */
-
-
-            /***************************
-             *  Forms, Website, Eduvidual, Editor, RDP, Microsoft365
-             ***************************/
-                // Block navigation on examwindow.webContents level for all modes that can display PDFs in examheader
-                // This prevents navigation when clicking links in PDFs displayed in the examheader
-                // Webview/BrowserView blocking is handled separately via IPC in ipchandler.js or mode-specific handlers below
             const examTypesWithPdfInHeader = ["forms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math", "localvm"];
             const effectiveSection = serverstatus.allowSectionSwitch ? this.multicastClient.clientinfo.lockedSection : serverstatus.lockedSection;
             if (examTypesWithPdfInHeader.includes(serverstatus.examSections[effectiveSection].examtype)) {
                 win.webContents.on('will-navigate', (event, url) => {
-                    event.preventDefault(); // Prevent navigation away from the Vue app (e.g. from PDF links in examheader)
+                    event.preventDefault();
                 });
 
-                // Prevent new windows from opening in the examwindow
                 win.webContents.on('new-window', (event, url) => {
                     log.warn("windowhandler @ examwindow: blocked new-window", url);
                     event.preventDefault();
@@ -600,14 +606,10 @@ class WindowHandler {
                 });
             }
 
-            /***************************
-             *  Microsoft Excel/Word
-             ***************************/
             if ( serverstatus.examSections[effectiveSection].examtype === "microsoft365"){
-                const browserView = this.getMs365BrowserView(this.examwindow);
+                const browserView = this.getMs365BrowserView(win);
                 if (!browserView) return;
 
-                // if the user wants to navigate away from this page
                 browserView.webContents.on('will-navigate', (event, url) => {
                     if (url !== this.multicastClient.clientinfo.msofficeshare ) {
                         log.warn("do not navigate away from this test.. ")
@@ -615,15 +617,12 @@ class WindowHandler {
                     }
                 })
 
-                // if a new window should open triggered by window.open()
-                browserView.webContents.on('new-window', (event, _) => { event.preventDefault();   }); // Prevent the new window from opening
+                browserView.webContents.on('new-window', (event, _) => { event.preventDefault();   });
 
-                // if a new window should open triggered by target="_blank"
-                browserView.webContents.setWindowOpenHandler(({ _ }) => { return { action: 'deny' };   }); // Prevent the new window from opening
+                browserView.webContents.setWindowOpenHandler(({ _ }) => { return { action: 'deny' };   });
 
                 let executeCode =  `
                     function lock(){
-                        // 'WACDialogOuterContainer','WACDialogInnerContainer','WACDialogPanel',
                         const hideusByID = ['ShowHideEquationToolsPane','LinkGroup','GraphicsEditor','InsertTableOfContentsInInsertTab','InsertOnlinevideo','Picture','Ribbon-PictureMenuMLRDropdown','InsertAddInFlyout','Designer','Editor','FarPane','Help','InsertAppsForOffice','FileMenuLauncherContainer','Help-wrapper','Review-wrapper','Header','FarPeripheralControlsContainer','BusinessBar']
                         for (entry of hideusByID) {
                             let element = document.getElementById(entry)
@@ -633,7 +632,7 @@ class WindowHandler {
                             }
                         }
 
-                        let buttonAppsOverflow = document.getElementsByName('Add-Ins')[0];  // this button is redrawn on resize (doesn't happen in exam mode but still there must be a cleaner way - inserting css before it appears is not working)
+                        let buttonAppsOverflow = document.getElementsByName('Add-Ins')[0];
                         if (buttonAppsOverflow){ buttonAppsOverflow.style.display = "none" }
 
                         let elements = document.querySelectorAll('[aria-label="Suchen"]');
@@ -657,7 +656,7 @@ class WindowHandler {
                         elements = document.querySelectorAll('[data-unique-id="Pictures_MLR"]');
                         elements.forEach(element => { element.style.display = 'none'; });  
                     }
-                    lock()  //for some reason excel delays that call.. doesnt happen on page finish load
+                    lock()
                     `
 
                 let schedulerInstance = null
@@ -665,7 +664,6 @@ class WindowHandler {
                 schedulerInstance = new SchedulerService(this.lockCallback, 400)
                 this.lockScheduler = schedulerInstance
                 schedulerInstance.start()
-                // Wait until the webContents is fully loaded  // this is not working reliably because the page is loaded in many steps and the ui elements are not available yet
                 browserView.webContents.on('did-finish-load', async () => {
                     browserView.webContents.mainFrame.frames.filter((frame) => {
                         if (frame) {
@@ -674,20 +672,6 @@ class WindowHandler {
                     })
                 });
             }
-
-            this.examwindow.on('app-command', (e, cmd) => {
-                // 'browser-backward' und 'browser-forward' sind die Befehle, die beim Klick auf die Maustasten gesendet werden
-                if (cmd === 'browser-backward' || cmd === 'browser-forward') {
-                    log.warn("no navigation allowed")
-                    e.preventDefault(); // Verhindern Sie das Standardverhalten
-                }
-            });
-
-            this.examwindow.on('close', async  (e) => {   // exam runs in mainwindow — never close/destroy; endExam calls returnToStudentView
-                if (this.multicastClient.clientinfo.exammode) {
-                    if (!this.config.development) { e.preventDefault(); }
-                }
-            });
     }
 
 
@@ -780,7 +764,11 @@ class WindowHandler {
         this.installVueJsDevTools();
 
         // Register event handlers before loading
-        this.mainwindow.on('close', async  (e) => {   // ask before closing
+        this.mainwindow.on('close', async  (e) => {   // ask before closing / block close during exammode
+            if (!this.config.development && this.multicastClient?.clientinfo?.exammode) {
+                e.preventDefault();
+                return;
+            }
             if (!this.config.development && !this.mainwindow.allowexit) {  // allowexit ist ein override vom context menu oder screenshot test. dieser kann die app schliessen
                 if (platformDispatcher.runningInCage) {
                     e.preventDefault();
@@ -951,13 +939,17 @@ class WindowHandler {
             log.warn('windowhandler @ addBlurListener: no window to attach blur listener');
             return;
         }
+        if (this._examBlurHandler) return;
         log.info('windowhandler @ addBlurListener: Setting Blur Event for mainwindow')
-        win.addListener('blur', () => this.blurevent(this))
+        this._examBlurHandler = () => this.blurevent(this);
+        win.addListener('blur', this._examBlurHandler);
     }
     //removes blur listener when leaving exam mode
     removeBlurListener(){
-        if (this.examwindow){
-            this.examwindow.removeAllListeners('blur')
+        const win = this.examwindow || this.mainwindow;
+        if (win && this._examBlurHandler) {
+            win.removeListener('blur', this._examBlurHandler);
+            this._examBlurHandler = null;
             log.info("windowhandler @ removeBlurListener: removing blur listener")
         }
     }

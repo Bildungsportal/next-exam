@@ -1020,9 +1020,6 @@ import {
 
     /** Re-route mainwindow to another exam section while exammode is already active. */
     async rerouteExamSection(serverstatus) {
-        const displays = screen.getAllDisplays();
-        let primary = screen.getPrimaryDisplay();
-        if (!primary || !primary.id) primary = displays[0];
         const effectiveSection = this.multicastClient.clientinfo.lockedSection;
         const examtype = serverstatus.examSections[effectiveSection].examtype;
         log.info(`communicationhandler @ rerouteExamSection: section ${effectiveSection} examtype ${examtype}`);
@@ -1034,7 +1031,7 @@ import {
             }
         }
         if (!(await this.ensureAssessmentForExamStart())) return;
-        await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+        await WindowHandler.rerouteToExamSection(examtype, this.multicastClient.clientinfo.token, serverstatus);
         this.multicastClient.clientinfo.examtype = examtype;
         this.multicastClient.clientinfo.exammode = true;
     }
