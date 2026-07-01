@@ -470,7 +470,7 @@ import {
             return;
         }
 
-        this.handleExamSections(serverstatus);
+        await this.handleExamSections(serverstatus);
         this.handleGlobalServerStatus(serverstatus);
     }
 
@@ -583,7 +583,7 @@ import {
         return false;
     }
 
-    handleExamSections(serverstatus){
+    async handleExamSections(serverstatus){
         if (WindowHandler.examwindow){
             if (serverstatus.allowSectionSwitch !== WindowHandler.examwindow.serverstatus.allowSectionSwitch){
                 log.info("communicationhandler @ processUpdatedServerstatus: permission to switch exam section changed");
@@ -595,7 +595,7 @@ import {
             if (serverstatus.useExamSections){
                 if (!serverstatus.allowSectionSwitch){
                     if (serverstatus.lockedSection !== this.multicastClient.clientinfo.lockedSection){
-                        switchExamSection(this, serverstatus, serverstatus.lockedSection);
+                        await switchExamSection(this, serverstatus, serverstatus.lockedSection);
                     }
                 }
             }
@@ -912,7 +912,6 @@ import {
         await stopAssessmentSession();
         WindowHandler.returnToStudentView()
         WindowHandler.examwindow = null;
-        WindowHandler._examWindowCreating = false;
         this.multicastClient.clientinfo.exammode = false;
         this.multicastClient.clientinfo.focus = true;
         const parent = WindowHandler.mainwindow && !WindowHandler.mainwindow.isDestroyed?.()
@@ -925,6 +924,19 @@ import {
             message: i18n.global.t('student.assessmentFailedMessage'),
             detail: detail ? String(detail) : undefined,
         });
+    }
+
+    /** Re-route mainwindow to another exam section while exammode is already active. */
+    async rerouteExamSection(serverstatus) {
+        const displays = screen.getAllDisplays();
+        let primary = screen.getPrimaryDisplay();
+        if (!primary || !primary.id) primary = displays[0];
+        const effectiveSection = this.multicastClient.clientinfo.lockedSection;
+        const examtype = serverstatus.examSections[effectiveSection].examtype;
+        this.multicastClient.clientinfo.examtype = examtype;
+        this.multicastClient.clientinfo.exammode = true;
+        log.info(`communicationhandler @ rerouteExamSection: section ${effectiveSection} examtype ${examtype}`);
+        await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
     }
 
     /**
@@ -1037,7 +1049,7 @@ import {
                 this.multicastClient.clientinfo.exammode = true
                 this.multicastClient.clientinfo.examtype = examtype
                 log.info("communicationhandler @ startExam: creating exam window")
-                WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+                await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
                 this.localVmStartState = 'idle';
             } catch (e) {
                 this.localVmStartState = 'blocked';
@@ -1051,7 +1063,7 @@ import {
             this.multicastClient.clientinfo.exammode = true
             log.info("communicationhandler @ startExam: creating exam window")
             this.multicastClient.clientinfo.examtype = examtype
-            WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+            await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
         }
         else if (WindowHandler.examwindow){  //reconnect into active exam session with exam window already open
             log.error("communicationhandler @ startExam: found existing Examwindow..")
@@ -1068,7 +1080,7 @@ import {
                         await this.sleep(2000)
                         if (!isAssessmentSessionActive()) {
                             WindowHandler.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
-                            WindowHandler.addBlurListener()
+                            WindowHandler.addBlurListener(WindowHandler.examwindow || WindowHandler.mainwindow)
                         }
                         await this.sleep(500)
                     }

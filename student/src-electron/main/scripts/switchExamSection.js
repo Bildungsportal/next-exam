@@ -6,7 +6,12 @@ import multicastClient from './multicastclient.js';
 import { webContents } from 'electron';
 
 export async function switchExamSection(CommunicationHandler, serverstatus, newSectionNumber){
-
+    if (switchExamSection._running) {
+        log.warn('switchExamSection: already running, skip duplicate');
+        return;
+    }
+    switchExamSection._running = true;
+    try {
     const currentLockedSection = multicastClient.clientinfo.lockedSection; // Current section number (source for saving)
     const newLockedSection = newSectionNumber; // New section number (source for loading)
     const examDir = config.examdirectory;
@@ -124,8 +129,12 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
                     }
                 })
             }
+            WindowHandler.removeBlurListener()
             WindowHandler.teardownExamChrome(WindowHandler.mainwindow)
             WindowHandler.examwindow = null
-            CommunicationHandler.startExam(serverstatus)
+            await CommunicationHandler.rerouteExamSection(serverstatus)
+    }
+    } finally {
+        switchExamSection._running = false;
     }
 }

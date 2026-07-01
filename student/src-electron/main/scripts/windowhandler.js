@@ -129,6 +129,7 @@ class WindowHandler {
             this.applyElectronKioskMode(win);
 
             await this.sleep(500)
+            if (!win || win.isDestroyed?.() || this.examwindow !== win) return;
             win.moveTop()
             win.focus()
 
@@ -137,10 +138,11 @@ class WindowHandler {
             } else {
                 await enableRestrictions(this)
                 await this.sleep(1000)
+                if (!win || win.isDestroyed?.() || this.examwindow !== win) return;
                 // AAC owns stacking; screen-saver alwaysOnTop breaks simple fullscreen / notch
                 if (!isAssessmentSessionActive()) {
                     win.setAlwaysOnTop(true, "screen-saver", 1)
-                    this.addBlurListener()
+                    this.addBlurListener(win)
                 }
             }
         } catch (e) {
@@ -458,20 +460,23 @@ class WindowHandler {
 
 
     /**
-     * Examwindow
-     * @param examtype eduvidual, math, language
-     * @param token student token
-     * @param serverstatus the serverstatus object containing info about spellcheck language etc.
+     * Route mainwindow into exam mode (examwindow is only an alias — no separate BrowserWindow).
      */
     async createExamWindow(examtype, token, serverstatus, primarydisplay) {
-        if (this._examWindowCreating || (this.examwindow && !this.examwindow.isDestroyed?.())) {
-            log.warn('windowhandler @ createExamWindow: examwindow already exists, skip duplicate create');
+        const win = this.mainwindow && !this.mainwindow.isDestroyed?.() ? this.mainwindow : null;
+        if (!win) {
+            log.warn('windowhandler @ createExamWindow: no mainwindow');
+            return;
+        }
+        // examwindow = mainwindow alias once routed into exam — not a second window
+        if (this.examwindow && !this.examwindow.isDestroyed?.()) {
+            log.warn('windowhandler @ createExamWindow: mainwindow already routed to exam, skip duplicate');
             try {
-                this.examwindow.show();
-                this.examwindow.focus();
-                await this.applyExamWindowLockdown(this.examwindow);
+                win.show();
+                win.focus();
+                await this.applyExamWindowLockdown(win);
             } catch (e) {
-                log.debug('windowhandler @ createExamWindow: focus existing examwindow', e?.message);
+                log.debug('windowhandler @ createExamWindow: focus mainwindow', e?.message);
             }
             return;
         }
@@ -481,12 +486,12 @@ class WindowHandler {
             examtype = "editor";
         }
 
-        this._examWindowCreating = true;
-        try {
-        this.examwindow = this.mainwindow
+        this.examwindow = win
 
             this.examwindow.serverstatus = serverstatus //we keep it there to make it accessable via examwindow in ipcHandler
             this.examwindow.menuHeight = 94   // start position for the content view
+
+            const routeSuperseded = () => this.examwindow !== win;
 
 
             /**
@@ -506,8 +511,10 @@ class WindowHandler {
                     this.examwindow = null
                     return
                 }
-                await this.navigateToExamRoute(this.examwindow, `/${examtype}/${token}/`)
-                await this.applyExamWindowLockdown(this.examwindow)
+                await this.navigateToExamRoute(win, `/${examtype}/${token}/`)
+                if (routeSuperseded()) return;
+                await this.applyExamWindowLockdown(win)
+                if (routeSuperseded()) return;
                 // Define the MainContentPage view
                 let contentView = new BrowserView({
                     webPreferences: {
@@ -553,11 +560,15 @@ class WindowHandler {
             }
             // this is the normal exam mode (editor, math, eduvidual, website, forms, activesheets, localvm)
             else {
-                await this.navigateToExamRoute(this.examwindow, `/${examtype}/${token}/`)
-                await this.applyExamWindowLockdown(this.examwindow)
+                await this.navigateToExamRoute(win, `/${examtype}/${token}/`)
+                if (routeSuperseded()) return;
+                await this.applyExamWindowLockdown(win)
+                if (routeSuperseded()) return;
             }
 
 
+
+            if (routeSuperseded()) return;
 
             /**
              * Handle special NAVIGATION situations
@@ -572,17 +583,17 @@ class WindowHandler {
                 // Webview/BrowserView blocking is handled separately via IPC in ipchandler.js or mode-specific handlers below
             const examTypesWithPdfInHeader = ["forms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math", "localvm"];
             if (examTypesWithPdfInHeader.includes(serverstatus.examSections[serverstatus.lockedSection].examtype)) {
-                this.examwindow.webContents.on('will-navigate', (event, url) => {
+                win.webContents.on('will-navigate', (event, url) => {
                     event.preventDefault(); // Prevent navigation away from the Vue app (e.g. from PDF links in examheader)
                 });
 
                 // Prevent new windows from opening in the examwindow
-                this.examwindow.webContents.on('new-window', (event, url) => {
+                win.webContents.on('new-window', (event, url) => {
                     log.warn("windowhandler @ examwindow: blocked new-window", url);
                     event.preventDefault();
                 });
 
-                this.examwindow.webContents.setWindowOpenHandler(({ url }) => {
+                win.webContents.setWindowOpenHandler(({ url }) => {
                     log.warn("windowhandler @ examwindow: blocked setWindowOpenHandler", url);
                     return { action: 'deny' };
                 });
@@ -677,9 +688,6 @@ class WindowHandler {
                     if (!this.config.development) { e.preventDefault(); }
                 }
             });
-        } finally {
-            this._examWindowCreating = false;
-        }
     }
 
 
@@ -922,7 +930,16 @@ class WindowHandler {
     }
 
     //adds blur listener when entering exammode   // blur event isnt fired on macos MISSIONCONTROL (which cant be deactivated anymore) - damn you apple!
-    addBlurListener(window = "examwindow"){
+    addBlurListener(win = this.examwindow || this.mainwindow) {
+        if (win === 'screenlock') {
+            log.info('windowhandler @ addBlurListener: Setting Blur Event for screenlock windows')
+            for (const screenlockwindow of this.screenlockwindows) {
+                if (screenlockwindow && !screenlockwindow.isDestroyed?.()) {
+                    screenlockwindow.addListener('blur', () => this.blureventScreenlock(this))
+                }
+            }
+            return;
+        }
         if (platformDispatcher.runningInCage) {
             return;
         }
@@ -930,16 +947,12 @@ class WindowHandler {
         if (isAssessmentSessionActive()) {
             return;
         }
-        if (window === "examwindow"){ 
-            log.info(`windowhandler @ addBlurListener: Setting Blur Event for ${window}`)
-            this.examwindow.addListener('blur', () => this.blurevent(this)) 
+        if (!win || win.isDestroyed?.()) {
+            log.warn('windowhandler @ addBlurListener: no window to attach blur listener');
+            return;
         }
-        else if (window === "screenlock") {
-            log.info(`windowhandler @ addBlurListener: Setting Blur Event for ${window}window`)
-            for (let screenlockwindow of this.screenlockwindows){
-                screenlockwindow.addListener('blur', () => this.blureventScreenlock(this))   
-            }
-        }
+        log.info('windowhandler @ addBlurListener: Setting Blur Event for mainwindow')
+        win.addListener('blur', () => this.blurevent(this))
     }
     //removes blur listener when leaving exam mode
     removeBlurListener(){

@@ -69,8 +69,8 @@ BUG^print^swal2MultiPage^body.swal2-shown setzt im @media print "[aria-hidden=tr
 
 # Exam schema
 RULE^exam^sectionSchema^mode config only group.examConfig.{editor|website|eduvidual|forms|rdp|localvm|activeSheets|microsoft365}; section has examtype+sectionname+timelimit+locked+startTs+groups only
-RULE^student^sectionSwitch^switchExamSection.js must not sendBase64PDFtoTeacher nor sendToTeacher; only local examDir↔section folder swap+reload exam window
-RULE^student^examWindow^examwindow always mainwindow; endExam closeExamWindowSafely→returnToStudentView #/; teardownExamChrome BrowserViews+listeners; switchExamSection teardown+startExam never close/destroy window
+RULE^student^sectionSwitch^switchExamSection teardown+rerouteExamSection (not startExam — mutex); local examDir↔section folder swap only
+RULE^student^examWindow^examwindow always mainwindow; endExam closeExamWindowSafely→returnToStudentView #/; teardownExamChrome BrowserViews+listeners; switchExamSection teardown+await startExam; routeSuperseded aborts stale createExamWindow
 PATH^shared^editorExamConfig^shared/editorExamConfig.js DEFAULT_EDITOR_EXAM_CONFIG+resolveEditorExamConfig+resolveGroupKey
 RULE^student^clientname^trim+lowercase canonical id; shared/normalizeStudentClientName.js; student.vue @input+register; teacher control.js registerclient+workdir rename case-only mismatch
 RULE^student^registerExamMismatch^client exammode=true and !serverstatus.exammode→deny+t(control.exammismatchregistration); registerSecurePayload requires !examServerList[servername] before processSecurePayload (empty sessionRef→Wrong PIN)
@@ -83,7 +83,7 @@ PATH^examlog^settings^examLogSettings.js snapshot on examstart→event.settings;
 BUG^examlog^dupSubmission^dashboard mounted stacked ipcRenderer.on('submission'); rule: removeListener before on; examEventBus.push dedupe ≤1ms same type+student
 
 # Student exam lifecycle (load, focus, security)
-TECH^student^examWin^dup startExam race: processUpdatedServerstatus+5s poll before clientinfo.exammode; gate with _startExamRunning+localVmStartState early+_examWindowCreating
+TECH^student^examWin^dup startExam race: processUpdatedServerstatus+5s poll before clientinfo.exammode; gate with _startExamRunning+localVmStartState early+examwindow alias set
 TECH^student^examWinReuse^createExamWindow: examwindow=mainwindow for all examtypes except microsoft365 (own BrowserWindow); mainwindow webPreferences MUST keep webviewTag:true else eduvidual/website <webview> not upgraded (shadowRoot null + no page load)^windowhandler.js
 TECH^student^examHeaderClock^ExamHeader :entrytime ms; tickHeaderClock updates ref headerClock textContent+title (no reactive tick)
 IPC^student^focusLock^main sets clientinfo.focusLockReason+focusLockMessage; examwindow webContents.send('focusLock'); editor listens+overlay; i18n editor.focusLockReason_<code>
