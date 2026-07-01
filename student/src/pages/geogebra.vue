@@ -389,6 +389,7 @@ export default {
             try {
                 await loadGgbDeployScript()
                 await this.initGeoGebra('suite')
+                await this.loadBackupGgbIfPresent()
             } catch (e) {
                 console.error('geogebra @ mounted: GeoGebra bootstrap failed', e)
             }
@@ -769,6 +770,19 @@ export default {
                 }
                 else {return; }
             });
+        },
+
+         // Silent restore of clientname.ggb when present in examDir (e.g. after section switch).
+        async loadBackupGgbIfPresent() {
+            for (let i = 0; i < 50 && !this.ggbReady; i++) {
+                await new Promise((r) => setTimeout(r, 100));
+            }
+            if (!this.ggbReady || !window.ggbApplet) return;
+            const filename = `${this.clientname}.ggb`;
+            const loadResult = await signalBridge.invoke('loadGGB', filename);
+            if (loadResult?.status !== 'success' || !loadResult.content) return;
+            window.ggbApplet.setBase64(loadResult.content);
+            this.currentFile = filename;
         },
 
          /** Saves Content as GGB */

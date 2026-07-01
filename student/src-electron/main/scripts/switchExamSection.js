@@ -40,9 +40,15 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
 
 
 
-    //wait 1 second and cleanup NEXT-EXAM-STUDENT-WORKDIR
-    await CommunicationHandler.sleep(2000);
+    if (previousExamtype === 'editor' || previousExamtype === 'math') {
+        const examWin = WindowHandler.mainWin();
+        if (examWin && !examWin.isDestroyed()) {
+            examWin.webContents.send('save', 'auto');
+        }
+    }
 
+    //wait before file copy so auto-save can finish
+    await CommunicationHandler.sleep(2000);
 
     // update examtype in clientinfo
     multicastClient.clientinfo.examtype = serverstatus.examSections[newLockedSection].examtype
