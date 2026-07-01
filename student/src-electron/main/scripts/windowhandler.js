@@ -85,7 +85,7 @@ class WindowHandler {
         return w;
     }
 
-    /** Load a hash route in the given BrowserWindow (packaged file or dev APP_URL). */
+    clearExamRoute() {
         this.examServerstatus = null;
     }
 
