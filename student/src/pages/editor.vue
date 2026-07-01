@@ -1387,6 +1387,8 @@ export default {
                 this.lockedSection = sectionIndex;
                 this.syncEditorLanguageSettings();
                 this.syncEditorVisualSettings();
+                this.loadBackupFile();
+                this.loadFilelist();
             } else if (serverstatusChanged) {
                 this.syncEditorLanguageSettings();
                 this.syncEditorVisualSettings();
@@ -2585,6 +2587,10 @@ export default {
             //console.log("editor @ loadfilelist: Reload Files event received ")
             this.loadFilelist()
         });
+        signalBridge.on('section-switched', () => {
+            this.loadBackupFile();
+            this.loadFilelist();
+        });
         signalBridge.on('fileerror', (event, msg) => {
             console.log('editor @ fileerror: ', msg.message);
 
@@ -2708,6 +2714,7 @@ export default {
         signalBridge.removeAllListeners('denied')
         signalBridge.removeAllListeners('backup')
         signalBridge.removeAllListeners('loadfilelist')
+        signalBridge.removeAllListeners('section-switched')
         this.editor.destroy()
     },
 }
