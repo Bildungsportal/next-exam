@@ -60,8 +60,6 @@ class WindowHandler {
       this.config = null
       this.multicastClient = null
       this.examServerstatus = null
-      this._examRouteGen = 0
-      this._examRouted = false
     
       this.exitWarningOpen = false  // track if exit warning dialog is open
       this.exitQuestionOpen = false  // track if exit question dialog is open
@@ -87,24 +85,8 @@ class WindowHandler {
         return w;
     }
 
-    /** Mainwindow while exammode is active — sole exam UI target. */
-    examUiWindow() {
-        if (!this.inExamMode()) return null;
-        return this.mainWin();
-    }
-
-    nextRouteGen() {
-        return ++this._examRouteGen;
-    }
-
-    isRouteCurrent(routeGen) {
-        return routeGen === this._examRouteGen;
-    }
-
-    clearExamRoute() {
-        this._examRouted = false;
+    /** Load a hash route in the given BrowserWindow (packaged file or dev APP_URL). */
         this.examServerstatus = null;
-        this._examRouteGen++;
     }
 
     /** Load a hash route in the given BrowserWindow (packaged file or dev APP_URL). */
@@ -154,7 +136,7 @@ class WindowHandler {
     }
 
     /** applyElectronKioskMode + restrictions after exam route finished loading */
-    async applyExamWindowLockdown(win, routeGen) {
+    async applyExamWindowLockdown(win) {
         if (!win || win.isDestroyed?.()) return;
         if (this.config.showdevtools) { win.webContents.openDevTools() }
         if (this.config.development) return;
@@ -163,7 +145,7 @@ class WindowHandler {
             this.applyElectronKioskMode(win);
 
             await this.sleep(500)
-            if (!win || win.isDestroyed?.() || !this.isRouteCurrent(routeGen)) return;
+            if (!win || win.isDestroyed?.()) return;
             win.moveTop()
             win.focus()
 
@@ -172,7 +154,7 @@ class WindowHandler {
             } else {
                 await enableRestrictions(this)
                 await this.sleep(1000)
-                if (!win || win.isDestroyed?.() || !this.isRouteCurrent(routeGen)) return;
+                if (!win || win.isDestroyed?.()) return;
                 // AAC owns stacking; screen-saver alwaysOnTop breaks simple fullscreen / notch
                 if (!isAssessmentSessionActive()) {
                     win.setAlwaysOnTop(true, "screen-saver", 1)
@@ -517,7 +499,7 @@ class WindowHandler {
             log.warn('windowhandler @ createExamWindow: no mainwindow');
             return;
         }
-        if (this._examRouted) {
+        if (this.examServerstatus) {
             log.info('windowhandler @ createExamWindow: already routed — reroute section');
             await this.rerouteToExamSection(examtype, token, serverstatus);
             return;
@@ -528,16 +510,13 @@ class WindowHandler {
             examtype = "editor";
         }
 
-        this._examRouted = true
         this.bindExamAppCommandOnce(win)
         this.examServerstatus = serverstatus
         win.menuHeight = 94
 
-        const routeGen = this.nextRouteGen();
-        const routeSuperseded = () => !this.isRouteCurrent(routeGen);
-        await this.loadExamRouteAndGuards(win, examtype, token, serverstatus, routeSuperseded);
-        if (routeSuperseded()) return;
-        await this.applyExamWindowLockdown(win, routeGen);
+        await this.loadExamRouteAndGuards(win, examtype, token, serverstatus);
+        if (!this.examServerstatus) return;
+        await this.applyExamWindowLockdown(win);
     }
 
     /** Section switch while exammode stays on — teardown route chrome only, keep blur/lockdown listeners. */
@@ -547,13 +526,10 @@ class WindowHandler {
             log.warn('windowhandler @ rerouteToExamSection: no window');
             return;
         }
-        this._examRouted = true;
         this.teardownExamChrome(win);
         this.examServerstatus = serverstatus;
-        const routeGen = this.nextRouteGen();
-        const routeSuperseded = () => !this.isRouteCurrent(routeGen);
-        await this.loadExamRouteAndGuards(win, examtype, token, serverstatus, routeSuperseded);
-        if (routeSuperseded()) return;
+        await this.loadExamRouteAndGuards(win, examtype, token, serverstatus);
+        if (!this.examServerstatus) return;
         try {
             win.show();
             win.focus();
@@ -562,7 +538,7 @@ class WindowHandler {
         }
     }
 
-    async loadExamRouteAndGuards(win, examtype, token, serverstatus, routeSuperseded) {
+    async loadExamRouteAndGuards(win, examtype, token, serverstatus) {
             if (examtype === "microsoft365"  ) {
                 log.info("starting microsoft365 exam...")
                 let urlview = this.multicastClient.clientinfo.msofficeshare
@@ -575,7 +551,6 @@ class WindowHandler {
                     return
                 }
                 await this.navigateToExamRoute(win, `/${examtype}/${token}/`)
-                if (routeSuperseded()) return;
                 let contentView = new BrowserView({
                     webPreferences: {
                         spellcheck: false,
@@ -618,10 +593,7 @@ class WindowHandler {
                 });
             } else {
                 await this.navigateToExamRoute(win, `/${examtype}/${token}/`)
-                if (routeSuperseded()) return;
             }
-
-            if (routeSuperseded()) return;
 
             const examTypesWithPdfInHeader = ["forms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math", "localvm"];
             const effectiveSection = serverstatus.allowSectionSwitch ? this.multicastClient.clientinfo.lockedSection : serverstatus.lockedSection;

@@ -86,7 +86,7 @@ import {
         log.warn(`communicationhandler @ applySecurityFocusLost: forcing lockdown (reason=${reason})`);
         const ci = this.multicastClient?.clientinfo;
         if (ci) setClientFocusLock(ci, reason, message);
-        const examWin = WindowHandler?.examUiWindow();
+        const examWin = WindowHandler.inExamMode() ? WindowHandler.mainWin() : null;
         if (examWin && !this.config?.development) {
             examWin.moveTop();
             WindowHandler.applyElectronKioskMode(examWin);
@@ -479,8 +479,8 @@ import {
             return false;
         }
 
-        if (studentstatus.printdenied) {
-            WindowHandler.examUiWindow()?.webContents?.send('denied');
+        if (studentstatus.printdenied && this.multicastClient.clientinfo.exammode) {
+            WindowHandler.mainWin()?.webContents?.send('denied');
         }
 
         if (studentstatus.sendexam === true){
@@ -505,7 +505,9 @@ import {
                 }
             } catch (error) { 
                 delfolder = false;
-                WindowHandler.examUiWindow()?.webContents?.send('fileerror', error);
+                if (this.multicastClient.clientinfo.exammode) {
+                    WindowHandler.mainWin()?.webContents?.send('fileerror', error);
+                }
                 log.error(`communicationhandler @ processUpdatedServerstatus: Can not delete directory - ${error} `);
             }
 
@@ -526,7 +528,9 @@ import {
                     });
                 }
             }
-            WindowHandler.examUiWindow()?.webContents?.send('loadfilelist');
+            if (this.multicastClient.clientinfo.exammode) {
+                WindowHandler.mainWin()?.webContents?.send('loadfilelist');
+            }
         }
 
         if (studentstatus.focus === false){
@@ -537,7 +541,7 @@ import {
             log.info("communicationhandler @ processUpdatedServerstatus: restoring focus state for student");
             clearClientFocusLock(this.multicastClient.clientinfo);
             this.multicastClient.clientinfo.focus = true;
-            const examWin = WindowHandler.examUiWindow();
+            const examWin = WindowHandler.mainWin();
             if (examWin && !this.config.development){
                 WindowHandler.applyElectronKioskMode(examWin);
                 examWin.focus();
@@ -561,7 +565,9 @@ import {
             this.requestFileFromServer(studentstatus.files);
         }
         if (studentstatus.getmaterials === true){
-            WindowHandler.examUiWindow()?.webContents?.send('getmaterials');
+            if (this.multicastClient.clientinfo.exammode) {
+                WindowHandler.mainWin()?.webContents?.send('getmaterials');
+            }
         }
         
         this.multicastClient.clientinfo.msofficeshare = studentstatus.msofficeshare;
@@ -569,7 +575,9 @@ import {
         if (studentstatus.group){
             if (this.multicastClient.clientinfo.group !== studentstatus.group){
                 this.multicastClient.clientinfo.group = studentstatus.group;
-                WindowHandler.examUiWindow()?.webContents?.send('getmaterials');
+                if (this.multicastClient.clientinfo.exammode) {
+                WindowHandler.mainWin()?.webContents?.send('getmaterials');
+            }
             }
         }
 
@@ -608,7 +616,9 @@ import {
             else if (groupA.includes(clientname)) this.multicastClient.clientinfo.group = 'a';
             else this.multicastClient.clientinfo.group = 'a';
             if (this.multicastClient.clientinfo.group !== prevGroup) {
-                WindowHandler.examUiWindow()?.webContents?.send('getmaterials');
+                if (this.multicastClient.clientinfo.exammode) {
+                WindowHandler.mainWin()?.webContents?.send('getmaterials');
+            }
             }
         } else {
             this.multicastClient.clientinfo.groups = false;
@@ -723,9 +733,12 @@ import {
         if (saveReason !== 'auto') log.info("communicationhandler @ getBase64PDF: getting base64 encoded pdf")
         const traceTiming = saveReason === 'previewSigned' || saveReason === 'directsend'
         const t0 = traceTiming ? Date.now() : 0
-        const examWin = WindowHandler.examUiWindow();
-        if (!examWin) {
+        if (!this.multicastClient.clientinfo.exammode) {
             return { sender: 'client', message: 'not in exam mode', status: 'error' };
+        }
+        const examWin = WindowHandler.mainWin();
+        if (!examWin) {
+            return { sender: 'client', message: 'no mainwindow', status: 'error' };
         }
 
         // Wait for any ongoing print operation to finish (max 30 seconds)
@@ -1198,16 +1211,32 @@ import {
         const localVmExam = this.multicastClient.clientinfo.examtype === 'localvm'
             || this.multicastClient.clientinfo.localVMState === 'running';
         this.clearBipSiteInfo()
+
+        if (WindowHandler.examServerstatus) {
+            try {
+                const examWin = WindowHandler.mainWin();
+                if (this.config.development || this.config.showdevtools){
+                    const allWebContents = webContents.getAllWebContents()
+                    for (const wc of allWebContents) {
+                        if (examWin && wc.hostWebContents?.id === examWin.webContents.id && wc.isDevToolsOpened?.()){
+                            log.info("communicationhandler @ endExam: destroying devtools window")
+                            wc.closeDevTools()
+                        }
+                    }
+                    await this.sleep(1000)
+                }
+                this.closeExamWindowSafely()
+            }
+            catch(e){ log.error('communicationhandler @ endExam: ',e)}
+        }
+
         WindowHandler.removeBlurListener();
       
-        //only disable restrictions if not in exam mode ( seriosuly.. how could this ever happen? )
         if (this.multicastClient.clientinfo.exammode){
             this.multicastClient.clientinfo.exammode = false
             disableRestrictions()
         }
 
-        // macOS: assessment (AAC) mode must always be stopped when the exam ends - even if exammode was
-        // already false (e.g. connection lost path where disableRestrictions is skipped). idempotent no-op if no session is active.
         await stopAssessmentSession()
 
         // delete students work on students pc (makes sense if exam is written on school property)
@@ -1222,26 +1251,6 @@ import {
         }
 
 
-        if (WindowHandler._examRouted) {
-            try {
-                const examWin = WindowHandler.mainWin();
-                // destroy devtools window
-                if (this.config.development || this.config.showdevtools){
-                    const allWebContents = webContents.getAllWebContents()
-                    for (const wc of allWebContents) {
-                        if (examWin && wc.hostWebContents?.id === examWin.webContents.id && wc.isDevToolsOpened?.()){
-                            log.info("communicationhandler @ endExam: destroying devtools window")
-                            wc.closeDevTools()                                                 // Close DevTools of the WebView (also when detached)
-                        }
-                    }
-                    // Wait for all DevTools to be closed before closing the exam window
-                    await this.sleep(1000)                                                       // ensure all closeDevTools() calls are completed
-                }
-                // always try to close the exam window safely after devtools handling
-                this.closeExamWindowSafely()
-            }
-            catch(e){ log.error('communicationhandler @ endExam: ',e)}
-        }
         
         this.multicastClient.clientinfo.msofficeshare = false
         this.multicastClient.clientinfo.focus = true
@@ -1278,11 +1287,9 @@ import {
 
 
     
-    /**
-     * Closes examwindow only when no printToPDF operation is running
-     */
+    /** Leave exam route on mainwindow when no printToPDF is running. */
     closeExamWindowSafely(){
-        if (!WindowHandler._examRouted) return;
+        if (!WindowHandler.examServerstatus) return;
 
         if (IpcHandler.isPrintingPdf){
             log.warn("communicationhandler @ closeExamWindowSafely: printToPDF in progress - retry in 1s")
@@ -1361,11 +1368,13 @@ import {
                         await this.encryptExamdirectoryFiles();
                     })
                     .then(() => {
-                        if (backupfile) {
-                            WindowHandler.examUiWindow()?.webContents?.send('backup', backupfile);
+                        if (backupfile && this.multicastClient.clientinfo.exammode) {
+                            WindowHandler.mainWin()?.webContents?.send('backup', backupfile);
                             log.warn("CommunicationHandler @ requestFileFromServer: Trigger Replace Event");
                         }
-                        WindowHandler.examUiWindow()?.webContents?.send('loadfilelist');
+                        if (this.multicastClient.clientinfo.exammode) {
+                WindowHandler.mainWin()?.webContents?.send('loadfilelist');
+            }
                     })
                     .catch(err => {
                         log.error(err);
@@ -1381,7 +1390,7 @@ import {
 
     async sendExamToTeacher(){
         //send save trigger to exam window
-        const examWin = WindowHandler.examUiWindow();
+        const examWin = this.multicastClient.clientinfo.exammode ? WindowHandler.mainWin() : null;
         if (examWin){
             // localvm has no renderer-side save flow; send ZIP directly
             if (this.multicastClient?.clientinfo?.examtype === 'localvm') {

@@ -1017,7 +1017,7 @@ class IpcHandler {
             // } 
             else {
                 log.warn(`ipchandler @ focuslost: focuslost event was triggered - locking down`)
-                const examWin = this.WindowHandler.examUiWindow();
+                const examWin = this.WindowHandler.mainWin();
                 if (examWin) {
                     examWin.moveTop();
                     this.WindowHandler.applyElectronKioskMode(examWin);
@@ -1040,7 +1040,7 @@ class IpcHandler {
             const message = payload?.message || '';
             log.warn(`ipchandler @ securityFocusLost: forcing lockdown (reason=${reason})`);
 
-            const examWin = this.WindowHandler?.examUiWindow();
+            const examWin = this.WindowHandler?.mainWin();
             if (examWin && !this.config.development) {
                 examWin.moveTop();
                 this.WindowHandler.applyElectronKioskMode(examWin);
@@ -1070,7 +1070,7 @@ class IpcHandler {
             clearClientFocusLock(this.multicastClient.clientinfo);
             this.multicastClient.clientinfo.focus = true;
 
-            const examWin = this.WindowHandler?.examUiWindow();
+            const examWin = this.WindowHandler?.mainWin();
             if (examWin && !this.config.development) {
                 examWin.moveTop();
                 this.WindowHandler.applyElectronKioskMode(examWin);
@@ -1340,7 +1340,7 @@ class IpcHandler {
                 return
             }
 
-            const examWindow = this.WindowHandler.examUiWindow();
+            const examWindow = this.WindowHandler.mainWin();
             if (examWindow){
                 const options = { // define print options
                     margins: {top:0.5, right:0, bottom:0.5, left:0 },
@@ -1711,7 +1711,9 @@ class IpcHandler {
                     return  { sender: "client", message:t("data.filestored") , status:"success" }
                 }
                 catch(err){
-                    this.WindowHandler.examUiWindow()?.webContents?.send('fileerror', err)  
+                    if (this.multicastClient.clientinfo.exammode) {
+                        this.WindowHandler.mainWin()?.webContents?.send('fileerror', err)
+                    }  
                  
                     log.error(`ipchandler @ saveGGB: ${err}`)
                     return { sender: "client", message:err , status:"error" }

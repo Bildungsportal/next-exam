@@ -71,7 +71,7 @@ BUG^print^swal2MultiPage^body.swal2-shown setzt im @media print "[aria-hidden=tr
 RULE^exam^sectionSchema^mode config only group.examConfig.{editor|website|eduvidual|forms|rdp|localvm|activeSheets|microsoft365}; section has examtype+sectionname+timelimit+locked+startTs+groups only
 RULE^student^sectionSwitch^switchExamSection: teardownExamChrome+rerouteToExamSection; keep examwindow+blur; no createExamWindow re-bind
 RULE^student^examWin^listeners^close once on mainwindow; app-command once; blur idempotent; teardown clears route listeners only
-RULE^student^examWin^state: clientinfo.exammode+mainwindow; WindowHandler.examUiWindow/mainWin/_examRouted/examServerstatus; no examwindow property
+RULE^student^examWin^state: clientinfo.exammode+mainwindow via mainWin/inExamMode; examServerstatus for IPC cache
 PATH^shared^editorExamConfig^shared/editorExamConfig.js DEFAULT_EDITOR_EXAM_CONFIG+resolveEditorExamConfig+resolveGroupKey
 RULE^student^clientname^trim+lowercase canonical id; shared/normalizeStudentClientName.js; student.vue @input+register; teacher control.js registerclient+workdir rename case-only mismatch
 RULE^student^registerExamMismatch^client exammode=true and !serverstatus.exammode→deny+t(control.exammismatchregistration); registerSecurePayload requires !examServerList[servername] before processSecurePayload (empty sessionRef→Wrong PIN)
