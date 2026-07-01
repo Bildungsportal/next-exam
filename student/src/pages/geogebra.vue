@@ -177,6 +177,8 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
     resolveLockedSection,
+    formatFocusLostTime,
+    applyFocusLostFromIpc,
 } from '../utils/examFetchInfoSync.js'
 import {ref} from "vue";
 import {useConfigStore} from "../stores/configStore.ts";
@@ -478,9 +480,7 @@ export default {
         async sendFocuslost(ctrlalt = false){
             if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             let response = await signalBridge.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
-            if (response && !this.development && !response.focus) {  //immediately block frontend
-                this.focus = false
-            }
+            applyFocusLostFromIpc(this, response, this.development);
         },
 
 
@@ -488,10 +488,7 @@ export default {
 
 
 
-        formatTime(unixTime) {
-            const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
-            return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed
-        },
+        formatTime: formatFocusLostTime,
 
 
         async loadFilelist(){
@@ -684,8 +681,6 @@ export default {
             if (sectionIndex !== this.lockedSection) this.lockedSection = sectionIndex;
 
             if (this.pincode !== '0000') this.localLockdown = false;
-
-            if (!this.focus) this.entrytime = new Date().getTime();
 
             if (this.exammode !== prevExammode) this.injectCSS();
             this.battery = await navigator.getBattery().then(battery => battery)

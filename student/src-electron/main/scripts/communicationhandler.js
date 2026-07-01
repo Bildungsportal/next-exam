@@ -74,6 +74,7 @@ import {
         this.lastExamWriteSaveReason = 'n/a' // updated on successful examdir writes; sent with ZIP to teacher /receive
         this.localVmStartState = 'idle' // idle|starting|blocked
         this._startExamRunning = false
+        this._endExamRunning = false
         this.updateScheduler = new SchedulerService(this.requestUpdate.bind(this), 5000)
         this.updateScheduler.start()
     }
@@ -653,15 +654,8 @@ import {
         if (serverstatus.exammode && !this.multicastClient.clientinfo.exammode) {
             const lockedSection = Number(serverstatus.lockedSection || 1);
             const examtype = serverstatus?.examSections?.[lockedSection]?.examtype;
-            if (this._startExamRunning) {
-                log.info('communicationhandler @ processUpdatedServerstatus: startExam already running, skip duplicate');
-            } else if (WindowHandler.examServerstatus) {
-                log.warn('communicationhandler @ processUpdatedServerstatus: exammode desync — route active, restoring exammode');
-                this.multicastClient.clientinfo.exammode = true;
-                if (!this.multicastClient.clientinfo.examtype && examtype) {
-                    this.multicastClient.clientinfo.examtype = examtype;
-                }
-            } else if (examtype === 'localvm' && this.localVmStartState !== 'idle') {
+            // startExam guards _endExamRunning/_startExamRunning itself; only the localvm state needs a pre-check here
+            if (examtype === 'localvm' && this.localVmStartState !== 'idle') {
                 log.info(`communicationhandler @ processUpdatedServerstatus: localvm start suppressed (state=${this.localVmStartState})`);
             } else {
                 log.info("communicationhandler @ processUpdatedServerstatus: exammode activated");
@@ -1057,8 +1051,11 @@ import {
      * @param serverstatus contains information about exammode, examtype, and other settings from the teacher instance
      */
     async startExam(serverstatus){
+        if (this._endExamRunning) {
+            log.debug('communicationhandler @ startExam: endExam still running, defer');
+            return;
+        }
         if (this._startExamRunning) {
-            log.info('communicationhandler @ startExam: already running, skip for now');
             return;
         }
         this._startExamRunning = true;
@@ -1212,6 +1209,12 @@ import {
     }
 
     async endExam(serverstatus){
+        if (this._endExamRunning) {
+            log.debug('communicationhandler @ endExam: already running');
+            return;
+        }
+        this._endExamRunning = true;
+        try {
         const localVmExam = this.multicastClient.clientinfo.examtype === 'localvm'
             || this.multicastClient.clientinfo.localVMState === 'running';
         this.clearBipSiteInfo()
@@ -1229,7 +1232,7 @@ import {
                     }
                     await this.sleep(1000)
                 }
-                this.closeExamWindowSafely()
+                await this.closeExamWindowSafely()
             }
             catch(e){ log.error('communicationhandler @ endExam: ',e)}
         }
@@ -1283,6 +1286,9 @@ import {
         }
         // ask student to quit app after finishing exam
         await WindowHandler.showExitQuestion()
+        } finally {
+            this._endExamRunning = false;
+        }
     }
 
 
@@ -1293,13 +1299,18 @@ import {
 
     
     /** Leave exam route on mainwindow when no printToPDF is running. */
-    closeExamWindowSafely(){
+    async closeExamWindowSafely(){
         if (!WindowHandler.examServerstatus) return;
 
-        if (IpcHandler.isPrintingPdf){
-            log.warn("communicationhandler @ closeExamWindowSafely: printToPDF in progress - retry in 1s")
-            setTimeout(() => { this.closeExamWindowSafely() }, 1000)
-            return
+        const maxWaitMs = 60000;
+        const t0 = Date.now();
+        while (IpcHandler.isPrintingPdf) {
+            if (Date.now() - t0 > maxWaitMs) {
+                log.warn('communicationhandler @ closeExamWindowSafely: printToPDF timeout, leaving exam route anyway');
+                break;
+            }
+            log.warn('communicationhandler @ closeExamWindowSafely: printToPDF in progress — waiting');
+            await this.sleep(1000);
         }
 
         try {

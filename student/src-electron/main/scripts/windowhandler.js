@@ -499,10 +499,14 @@ class WindowHandler {
             log.warn('windowhandler @ createExamWindow: no mainwindow');
             return;
         }
-        if (this.examServerstatus) {
+        if (this.examServerstatus && this.inExamMode()) {
             log.info('windowhandler @ createExamWindow: already routed — reroute section');
             await this.rerouteToExamSection(examtype, token, serverstatus);
             return;
+        }
+        if (this.examServerstatus) {
+            log.warn('windowhandler @ createExamWindow: stale exam route — clearing before fresh start');
+            this.returnToStudentView();
         }
         // just to be sure we check some important vars here
         if (examtype !== "rdp" && examtype !== "website" &&  examtype !== "forms" && examtype !== "eduvidual" && examtype !== "editor" && examtype !== "math" && examtype !== "microsoft365" && examtype !== "activesheets" && examtype !== "localvm" || !token){  // for now.. we probably should stop everything here

@@ -108,6 +108,7 @@ import {SignalBridge} from '../utils/signalBridge.js';
 import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
+    applyFocusLostFromIpc,
 } from '../utils/examFetchInfoSync.js';
 import {ref} from "vue";
 import {useConfigStore} from "../stores/configStore.ts";
@@ -527,9 +528,6 @@ export default {
                     this.teardownRfb();
                 }
             }
-            if (prevFocus && !this.focus) {
-                this.entrytime = new Date().getTime();
-            }
             this.lastFocusState = !!this.focus;
         },
 
@@ -549,9 +547,7 @@ export default {
         async sendFocuslost() {
             if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             const response = await signalBridge.invoke('focuslost');
-            if (!this.development && response && !response.focus) {
-                this.focus = false;
-            }
+            applyFocusLostFromIpc(this, response, this.development);
         },
 
         async fetchInfo() {

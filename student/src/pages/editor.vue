@@ -796,6 +796,7 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
     resolveLockedSection,
+    formatFocusLostTime,
 } from '../utils/examFetchInfoSync.js'
 import { resolveEditorExamConfig, DEFAULT_EDITOR_EXAM_CONFIG } from 'next-exam-shared/editorExamConfig.js'
 import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
@@ -2212,6 +2213,7 @@ export default {
             if (!forceBackendLock && await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             if (message) this.focusLostMessage = message;
             if (instantBlock && !this.development) {
+                if (this.focus) this.entrytime = Date.now();
                 this.focus = false;
                 const editorcontentcontainer = document.getElementById('editorcontent');
                 const editableDiv = editorcontentcontainer?.firstElementChild;
@@ -2223,6 +2225,7 @@ export default {
                 : await signalBridge.invoke('focuslost', ctrlalt); // refocus, go back to kiosk, inform teacher
 
             if (forceBackendLock) {
+                if (this.focus) this.entrytime = Date.now();
                 this.focus = false;
                 const editorcontentcontainer = document.getElementById('editorcontent');
                 const editableDiv = editorcontentcontainer?.firstElementChild;
@@ -2230,8 +2233,8 @@ export default {
                 return;
             }
 
-            if (response && !this.development && !response.focus) { // immediately block frontend
-                this.focus = false;
+            applyFocusLostFromIpc(this, response, this.development);
+            if (!this.development && response && !response.focus) {
                 const editorcontentcontainer = document.getElementById('editorcontent');
                 const editableDiv = editorcontentcontainer?.firstElementChild;
                 if (editableDiv) editableDiv.blur(); // remove text cursor (caret)
@@ -2273,13 +2276,7 @@ export default {
         },
 
 
-        formatTime(unixTime) {
-            const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
-            const hours = String(date.getHours()).padStart(2, '0'); // Get hours and pad with leading zero
-            const minutes = String(date.getMinutes()).padStart(2, '0'); // Get minutes and pad with leading zero
-            const seconds = String(date.getSeconds()).padStart(2, '0'); // Get seconds and pad with leading zero
-            return `${hours}:${minutes}:${seconds}`; // Return as HH:MM:SS
-        },
+        formatTime: formatFocusLostTime,
 
         async startLanguageTool(options = {}) {
             const {silent = false, force = false} = options;

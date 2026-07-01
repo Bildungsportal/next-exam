@@ -152,6 +152,8 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
     resolveLockedSection,
+    formatFocusLostTime,
+    applyFocusLostFromIpc,
 } from '../utils/examFetchInfoSync.js'
 import {ref} from "vue";
 import {useConfigStore} from "../stores/configStore.ts";
@@ -439,9 +441,7 @@ export default {
             if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             if (isElectronWindow(window)) {
                 let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
-                if (!this.development && !response.focus) {  //immediately block frontend
-                    this.focus = false
-                }
+                applyFocusLostFromIpc(this, response, this.development);
             }
         },
         async tryUnlockLocalLockdown() {
@@ -488,10 +488,7 @@ export default {
             }
         },
 
-        formatTime(unixTime) {
-            const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
-            return date.toLocaleTimeString('en-US', {hour12: false}); // Adjust locale and options as needed
-        },
+        formatTime: formatFocusLostTime,
 
         // Apply forms examConfig for locked section; returns true if main webview URL changed.
         applyFormsConfigFromSection(sectionIndex) {
@@ -521,8 +518,6 @@ export default {
             if (urlChanged && this.$refs.wvmain) {
                 this.$refs.wvmain.setAttribute('src', this.formsUrlComputed);
             }
-
-            if (!this.focus) this.entrytime = new Date().getTime();
 
             this.battery = await navigator.getBattery().then(battery => battery)
                 .catch(error => { console.error('Error accessing the Battery API:', error); });
