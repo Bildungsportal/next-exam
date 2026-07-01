@@ -83,7 +83,7 @@ PATH^examlog^settings^examLogSettings.js snapshot on examstart→event.settings;
 BUG^examlog^dupSubmission^dashboard mounted stacked ipcRenderer.on('submission'); rule: removeListener before on; examEventBus.push dedupe ≤1ms same type+student
 
 # Student exam lifecycle (load, focus, security)
-TECH^student^examWin^dup startExam race: processUpdatedServerstatus+5s poll before clientinfo.exammode; gate with _startExamRunning+localVmStartState early+examwindow alias set
+TECH^student^examWin^re-lock: clientinfo.exammode=true only after createExamWindow; handleGlobalServerStatus start/end on exammode flag only; createExamWindow duplicate→focus+lockdown; _startExamRunning+routeSuperseded
 TECH^student^examWinReuse^createExamWindow: examwindow=mainwindow for all examtypes except microsoft365 (own BrowserWindow); mainwindow webPreferences MUST keep webviewTag:true else eduvidual/website <webview> not upgraded (shadowRoot null + no page load)^windowhandler.js
 TECH^student^examHeaderClock^ExamHeader :entrytime ms; tickHeaderClock updates ref headerClock textContent+title (no reactive tick)
 IPC^student^focusLock^main sets clientinfo.focusLockReason+focusLockMessage; examwindow webContents.send('focusLock'); editor listens+overlay; i18n editor.focusLockReason_<code>

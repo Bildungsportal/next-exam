@@ -645,20 +645,18 @@ import {
             }
         }
         
-        if (serverstatus.exammode && !this.multicastClient.clientinfo.exammode){
+        if (serverstatus.exammode && !this.multicastClient.clientinfo.exammode) {
             const lockedSection = Number(serverstatus.lockedSection || 1);
             const examtype = serverstatus?.examSections?.[lockedSection]?.examtype;
             if (this._startExamRunning) {
                 log.info('communicationhandler @ processUpdatedServerstatus: startExam already running, skip duplicate');
-                return;
-            }
-            if (examtype === 'localvm' && this.localVmStartState !== 'idle') {
+            } else if (examtype === 'localvm' && this.localVmStartState !== 'idle') {
                 log.info(`communicationhandler @ processUpdatedServerstatus: localvm start suppressed (state=${this.localVmStartState})`);
-                return;
+            } else {
+                log.info("communicationhandler @ processUpdatedServerstatus: exammode activated");
+                this.killScreenlock();
+                this.startExam(serverstatus);
             }
-            log.info("communicationhandler @ processUpdatedServerstatus: exammode activated");
-            this.killScreenlock();
-            this.startExam(serverstatus);
         }
         else if (!serverstatus.exammode && this.multicastClient.clientinfo.exammode){
             log.info("communicationhandler @ processUpdatedServerstatus: exammode deactivated");
@@ -933,10 +931,10 @@ import {
         if (!primary || !primary.id) primary = displays[0];
         const effectiveSection = this.multicastClient.clientinfo.lockedSection;
         const examtype = serverstatus.examSections[effectiveSection].examtype;
-        this.multicastClient.clientinfo.examtype = examtype;
-        this.multicastClient.clientinfo.exammode = true;
         log.info(`communicationhandler @ rerouteExamSection: section ${effectiveSection} examtype ${examtype}`);
         await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+        this.multicastClient.clientinfo.examtype = examtype;
+        this.multicastClient.clientinfo.exammode = true;
     }
 
     /**
@@ -973,8 +971,8 @@ import {
 
         // LocalVM must run preflight BEFORE exammode and BEFORE opening the exam window.
         if (examtype === 'localvm') {
-            if (WindowHandler.examwindow) {
-                log.warn('communicationhandler @ startExam: localvm requested but examwindow already exists');
+            if (this.multicastClient.clientinfo.exammode) {
+                log.warn('communicationhandler @ startExam: localvm requested but exammode already active');
                 return;
             }
             if (this.localVmStartState !== 'idle') {
@@ -1046,10 +1044,10 @@ import {
                     this.localVmStartState = 'blocked';
                     return;
                 }
-                this.multicastClient.clientinfo.exammode = true
-                this.multicastClient.clientinfo.examtype = examtype
                 log.info("communicationhandler @ startExam: creating exam window")
                 await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+                this.multicastClient.clientinfo.examtype = examtype;
+                this.multicastClient.clientinfo.exammode = true;
                 this.localVmStartState = 'idle';
             } catch (e) {
                 this.localVmStartState = 'blocked';
@@ -1058,47 +1056,11 @@ import {
             return;
         }
 
-        if (!WindowHandler.examwindow){
-            if (!(await this.ensureAssessmentForExamStart())) return;
-            this.multicastClient.clientinfo.exammode = true
-            log.info("communicationhandler @ startExam: creating exam window")
-            this.multicastClient.clientinfo.examtype = examtype
-            await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
-        }
-        else if (WindowHandler.examwindow){  //reconnect into active exam session with exam window already open
-            log.error("communicationhandler @ startExam: found existing Examwindow..")
-            try {  // switch existing window back to exam mode
-                WindowHandler.examwindow.show()
-                if (!(await this.ensureAssessmentForExamStart())) return;
-                this.multicastClient.clientinfo.exammode = true
-                if (!this.config.development) {
-                    if (platformDispatcher.skipElectronKiosk) {
-                        await killWinKioskExamApps()
-                    } else {
-                        WindowHandler.applyElectronKioskMode(WindowHandler.examwindow)
-                        await enableRestrictions(WindowHandler)
-                        await this.sleep(2000)
-                        if (!isAssessmentSessionActive()) {
-                            WindowHandler.examwindow.setAlwaysOnTop(true, "screen-saver", 1)
-                            WindowHandler.addBlurListener(WindowHandler.examwindow || WindowHandler.mainwindow)
-                        }
-                        await this.sleep(500)
-                    }
-                    WindowHandler.examwindow.moveTop()
-                    WindowHandler.examwindow.focus()
-                }
-            }
-            catch (e) { //examwindow variable is still set but the window is not managable anymore (manually closed in dev mode?)
-                log.error("communicationhandler @ startExam: no functional examwindow found.. resetting")
-                
-                disableRestrictions(WindowHandler.examwindow)  //examwindow is given but not used in disableRestrictions
-                WindowHandler.examwindow = null;
-                this.multicastClient.clientinfo.exammode = false
-                this.multicastClient.clientinfo.focus = true
-                this.multicastClient.clientinfo.token = false
-                return  // in that case.. we are finished here !
-            }
-        }
+        if (!(await this.ensureAssessmentForExamStart())) return;
+        log.info("communicationhandler @ startExam: creating exam window")
+        await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
+        this.multicastClient.clientinfo.examtype = examtype;
+        this.multicastClient.clientinfo.exammode = true;
         } finally {
             this._startExamRunning = false;
         }
