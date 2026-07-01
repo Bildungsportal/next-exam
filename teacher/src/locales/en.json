@@ -506,6 +506,8 @@
         "pwdinfo": "Students cannot leave Exam Mode without this password, even after a connection loss.",
         "pwdmismatch": "Passwords do not match",
         "resume": "Resume Exam",
+        "sectionByStudent": "Section chosen by student",
+        "sectionByTeacher": "Section chosen by teacher",
         "select": "Select Workdirectory",
         "selectinterface": "Select Network Interface",
         "selectinterfaceinfo": "Please select a preferred network interface!",

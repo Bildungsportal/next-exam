@@ -506,6 +506,8 @@
         "pwdinfo": "Schüler:innen können den Exam Mode ohne dieses Passwort auch bei Verbindungsverlust nicht verlassen.",
         "pwdmismatch": "Passwörter stimmen nicht überein",
         "resume": "Prüfung fortsetzen",
+        "sectionByStudent": "Abschnitt durch Schüler",
+        "sectionByTeacher": "Abschnitt durch Lehrer",
         "select": "Arbeitsverzeichnis wählen",
         "selectinterface": "Netzwerk-Schnittstelle wählen",
         "selectinterfaceinfo": "Bitte wählen Sie eine bevorzugte Netzwerkschnittstelle aus!",
