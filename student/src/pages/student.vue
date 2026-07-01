@@ -1117,6 +1117,17 @@ export default {
         },
 
 
+        // Restore name/pin inputs from main-process clientinfo after remount while still connected.
+        syncLoginFieldsFromClientinfo() {
+            if (!this.token || this.token === '0000') return;
+            const name = this.clientinfo?.name;
+            const pin = this.clientinfo?.pin;
+            if (name && this.username !== name) this.username = name;
+            if (pin != null && pin !== '' && String(this.pincode) !== String(pin)) {
+                this.pincode = String(pin);
+            }
+        },
+
         clearUser() {
             this.username = ""
         },
@@ -1317,6 +1328,7 @@ export default {
 
 
             applyClientinfoFromFetch(this, getinfo.clientinfo);
+            this.syncLoginFieldsFromClientinfo();
             applyServerstatusFromFetch(this, getinfo.serverstatus || null);
 
             if (getinfo.clientinfo.exammode) {
