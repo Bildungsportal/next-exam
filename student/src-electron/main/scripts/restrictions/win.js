@@ -60,7 +60,8 @@ export async function enableWindowsRestrictions(winhandler, appsToClose) {
         let retryCount = 0;
         const maxRetries = 100;
         const killExplorerWhenWindowExists = () => {
-            if (winhandler.examwindow && !winhandler.examwindow.isDestroyed?.()) {
+            const win = winhandler.mainWin();
+            if (win) {
                 try {
                     childProcess.exec('taskkill /f /im explorer.exe', (error, stdout, stderr) => {
                         if (!error && stdout) log.info(`platformrestrictions @ enableRestrictions: closed explorer.exe`);

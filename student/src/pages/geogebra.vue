@@ -177,6 +177,8 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
     resolveLockedSection,
+    formatFocusLostTime,
+    applyFocusLostFromIpc,
 } from '../utils/examFetchInfoSync.js'
 import {ref} from "vue";
 import {useConfigStore} from "../stores/configStore.ts";
@@ -387,6 +389,7 @@ export default {
             try {
                 await loadGgbDeployScript()
                 await this.initGeoGebra('suite')
+                await this.loadBackupGgbIfPresent()
             } catch (e) {
                 console.error('geogebra @ mounted: GeoGebra bootstrap failed', e)
             }
@@ -478,9 +481,7 @@ export default {
         async sendFocuslost(ctrlalt = false){
             if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             let response = await signalBridge.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
-            if (response && !this.development && !response.focus) {  //immediately block frontend
-                this.focus = false
-            }
+            applyFocusLostFromIpc(this, response, this.development);
         },
 
 
@@ -488,10 +489,7 @@ export default {
 
 
 
-        formatTime(unixTime) {
-            const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
-            return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed
-        },
+        formatTime: formatFocusLostTime,
 
 
         async loadFilelist(){
@@ -685,8 +683,6 @@ export default {
 
             if (this.pincode !== '0000') this.localLockdown = false;
 
-            if (!this.focus) this.entrytime = new Date().getTime();
-
             if (this.exammode !== prevExammode) this.injectCSS();
             this.battery = await navigator.getBattery().then(battery => battery)
                 .catch(error => { console.error('Error accessing the Battery API:', error); });
@@ -774,6 +770,19 @@ export default {
                 }
                 else {return; }
             });
+        },
+
+         // Silent restore of clientname.ggb when present in examDir (e.g. after section switch).
+        async loadBackupGgbIfPresent() {
+            for (let i = 0; i < 50 && !this.ggbReady; i++) {
+                await new Promise((r) => setTimeout(r, 100));
+            }
+            if (!this.ggbReady || !window.ggbApplet) return;
+            const filename = `${this.clientname}.ggb`;
+            const loadResult = await signalBridge.invoke('loadGGB', filename);
+            if (loadResult?.status !== 'success' || !loadResult.content) return;
+            window.ggbApplet.setBase64(loadResult.content);
+            this.currentFile = filename;
         },
 
          /** Saves Content as GGB */

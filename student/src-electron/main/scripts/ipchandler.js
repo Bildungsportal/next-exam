@@ -50,7 +50,7 @@ import {
 } from '../../../../shared/qemuAvailability.js';
 import { pickLocalVmGroupConfig } from '../../../../shared/localVmDisplayResolutions.js';
 import { getVMFindings } from './vmDetection.js';
-import { decryptExamFileBytes, decryptExamFileAllLayers, encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
+import { decryptExamFileBytes, decryptExamFileAllLayers, decryptExamFileAllLayersAsync, encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
 import { examApiFetch } from '../../../../shared/examApiFetch.js';
 import { normalizeStudentClientName } from '../../../../shared/normalizeStudentClientName.js';
 import { buildNextExamMoodleProof } from '../../../../shared/buildNextExamMoodleProof.js';
@@ -1017,12 +1017,15 @@ class IpcHandler {
             // } 
             else {
                 log.warn(`ipchandler @ focuslost: focuslost event was triggered - locking down`)
-                this.WindowHandler.examwindow.moveTop();
-                platformDispatcher.applyElectronKioskMode(this.WindowHandler.examwindow);
-                this.WindowHandler.examwindow.show();  
-                this.WindowHandler.examwindow.focus();    // we keep focus on the window.. no matter what
+                const examWin = this.WindowHandler.mainWin();
+                if (examWin) {
+                    examWin.moveTop();
+                    this.WindowHandler.applyElectronKioskMode(examWin);
+                    examWin.show();
+                    examWin.focus();
+                }
     
-                this.multicastClient.clientinfo.focus = false; // block everything and inform teacher  (probably an overkill on mouseleave - needs testing)
+                this.multicastClient.clientinfo.focus = false;
                 answer = { sender: "client", focus: false }
             }
            
@@ -1037,10 +1040,10 @@ class IpcHandler {
             const message = payload?.message || '';
             log.warn(`ipchandler @ securityFocusLost: forcing lockdown (reason=${reason})`);
 
-            const examWin = this.WindowHandler?.examwindow;
+            const examWin = this.WindowHandler?.mainWin();
             if (examWin && !this.config.development) {
                 examWin.moveTop();
-                platformDispatcher.applyElectronKioskMode(examWin);
+                this.WindowHandler.applyElectronKioskMode(examWin);
                 examWin.show();
                 examWin.focus();
             }
@@ -1067,11 +1070,12 @@ class IpcHandler {
             clearClientFocusLock(this.multicastClient.clientinfo);
             this.multicastClient.clientinfo.focus = true;
 
-            if (this.WindowHandler?.examwindow && !this.config.development) {
-                this.WindowHandler.examwindow.moveTop();
-                platformDispatcher.applyElectronKioskMode(this.WindowHandler.examwindow);
-                this.WindowHandler.examwindow.show();
-                this.WindowHandler.examwindow.focus();
+            const examWin = this.WindowHandler?.mainWin();
+            if (examWin && !this.config.development) {
+                examWin.moveTop();
+                this.WindowHandler.applyElectronKioskMode(examWin);
+                examWin.show();
+                examWin.focus();
             }
 
             return { ok: true };
@@ -1098,7 +1102,7 @@ class IpcHandler {
         */ 
         ipcMain.on('restrictions', () => {  
             //this also stops the clearClipboard interval
-            disableRestrictions(this.WindowHandler.examwindow) 
+            disableRestrictions(this.WindowHandler.mainWin()) 
         } )
 
 
@@ -1336,7 +1340,8 @@ class IpcHandler {
                 return
             }
 
-            if (this.WindowHandler.examwindow){
+            const examWindow = this.WindowHandler.mainWin();
+            if (examWindow){
                 const options = { // define print options
                     margins: {top:0.5, right:0, bottom:0.5, left:0 },
                     pageSize: 'A4',
@@ -1384,8 +1389,7 @@ class IpcHandler {
                 } 
                 catch(err) { log.error(`ipchandler @ printpdf: ${err.message}`);  }
 
-                const examWindow = this.WindowHandler.examwindow
-                const webContents = examWindow?.webContents
+                const webContents = examWindow.webContents
                 const ch = this.CommunicationHandler
 
                 if (!webContents){
@@ -1531,8 +1535,9 @@ class IpcHandler {
 
         // Student-initiated section switch when allowSectionSwitch is true; always uses current serverstatus and section number
         ipcMain.handle('switch-exam-section', async (event, sectionNumber) => {
-            const serverstatus = this.WindowHandler.examwindow?.serverstatus;
+            const serverstatus = this.multicastClient.serverstatus;
             if (!serverstatus?.useExamSections || !serverstatus?.allowSectionSwitch) return;
+            if (!this.multicastClient.clientinfo.exammode) return;
             if (this.multicastClient.clientinfo.lockedSection === sectionNumber) return;
             log.info(`ipchandler @ switch-exam-section: switching to section ${sectionNumber}`)
             await switchExamSection(this.CommunicationHandler, serverstatus, sectionNumber);
@@ -1554,7 +1559,7 @@ class IpcHandler {
          * Update menu height dynamically when header content changes
          */
         ipcMain.on('update-menu-height', (event, height) => {
-            const mainWindow = this.WindowHandler.examwindow || this.WindowHandler.mainwindow;
+            const mainWindow = this.WindowHandler.mainWin();
             if (mainWindow && height > 0) {
                 mainWindow.menuHeight = height;
                 const newBounds = mainWindow.getBounds();
@@ -1706,7 +1711,9 @@ class IpcHandler {
                     return  { sender: "client", message:t("data.filestored") , status:"success" }
                 }
                 catch(err){
-                    this.WindowHandler.examwindow.webContents.send('fileerror', err)  
+                    if (this.multicastClient.clientinfo.exammode) {
+                        this.WindowHandler.mainWin()?.webContents?.send('fileerror', err)
+                    }  
                  
                     log.error(`ipchandler @ saveGGB: ${err}`)
                     return { sender: "client", message:err , status:"error" }
@@ -1907,9 +1914,8 @@ class IpcHandler {
          * ASYNC GET BACKUP FILE from examdirectory
          * @param filename filename without
          */ 
-        ipcMain.handle('getbackupfile', (event, filename) => {   
+        ipcMain.handle('getbackupfile', async (event, filename) => {   
             log.info(`ipchandler @ getbackupfile: Request received for filename: ${filename}`)
-            const workdir = path.join(config.examdirectory,"/")
             if (!filename) {
                 log.warn(`ipchandler @ getbackupfile: no filename provided`); 
                 return false;
@@ -1921,12 +1927,8 @@ class IpcHandler {
             }
             log.info(`ipchandler @ getbackupfile: Full file path: ${filepath}`)
             try {
-                if (!fs.existsSync(filepath)){
-                    log.warn(`ipchandler @ getbackupfile: backup file not found: ${filepath}`); 
-                    return false;
-                }
-                log.info(`ipchandler @ getbackupfile: backup file exists, reading content`)
-                let raw = fs.readFileSync(filepath);
+                log.info(`ipchandler @ getbackupfile: reading backup file`)
+                let raw = await fs.promises.readFile(filepath);
                 if (isExamFileEncryptedBytes(raw)) {
                     const pw = resolveExamDecryptPassword(this.multicastClient);
                     if (!pw) {
@@ -1935,7 +1937,7 @@ class IpcHandler {
                     }
                     try {
                         log.info(`ipchandler @ getbackupfile: decrypted read ${filename}`);
-                        raw = decryptExamFileAllLayers(raw, pw);
+                        raw = await decryptExamFileAllLayersAsync(raw, pw);
                     } catch (e) {
                         log.error(`ipchandler @ getbackupfile: decrypt failed ${e?.message || e}`);
                         return false;
@@ -1946,6 +1948,10 @@ class IpcHandler {
                 return data
             }
             catch (err) {
+                if (err?.code === 'ENOENT') {
+                    log.warn(`ipchandler @ getbackupfile: backup file not found: ${filepath}`); 
+                    return false;
+                }
                 log.error(`ipchandler @ getbackupfile: Error reading backup file: ${err}`); 
                 log.error(`ipchandler @ getbackupfile: Error stack: ${err.stack}`)
                 return false

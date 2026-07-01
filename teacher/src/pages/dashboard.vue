@@ -212,20 +212,24 @@
                         </select>
                     </div>
 
-                    <div class="mt-2" style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <button type="button"
-                                class="btn btn-sm"
-                                :class="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool ? 'btn-teal' : 'btn-outline-secondary'"
-                                @click="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool ? setEditorExamConfigPatch({ languagetool: false, languagetoolhost: null, languagetoolport: null, suggestions: false }) : setEditorExamConfigPatch({ languagetool: true })">
-                            LanguageTool
-                        </button>
-                        <button v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool"
-                                type="button"
-                                class="btn btn-sm"
-                                :class="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.suggestions ? 'btn-teal' : 'btn-outline-secondary'"
-                                @click="setEditorExamConfigPatch({ suggestions: !serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.suggestions })">
-                            {{ $t('dashboard.suggest') }}
-                        </button>
+                    <div class="mt-2">
+                        <div class="form-check form-switch m-0">
+                            <input id="sidebar-languagetool"
+                                   class="form-check-input"
+                                   type="checkbox"
+                                   :checked="!!serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool"
+                                   @change="$event.target.checked ? setEditorExamConfigPatch({ languagetool: true }) : setEditorExamConfigPatch({ languagetool: false, languagetoolhost: null, languagetoolport: null, suggestions: false })">
+                            <label class="form-check-label" for="sidebar-languagetool">LanguageTool</label>
+                        </div>
+                        <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool"
+                             class="form-check form-switch m-0 mt-1">
+                            <input id="sidebar-lt-suggestions"
+                                   class="form-check-input"
+                                   type="checkbox"
+                                   :checked="!!serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.suggestions"
+                                   @change="setEditorExamConfigPatch({ suggestions: $event.target.checked })">
+                            <label class="form-check-label" for="sidebar-lt-suggestions">{{ $t('dashboard.suggest') }}</label>
+                        </div>
                     </div>
 
                     <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool" class="mt-2">
@@ -1067,10 +1071,6 @@
             <img src="/src/assets/img/svg/folder-open.svg" class="control-button-icon me-1" width="32" height="32">
             <div class="control-button-label">{{$t('dashboard.workfolder')}}</div>
         </div>
-        <div v-if="bipToken && serverstatus.bip" @mouseover="showDescription($t('dashboard.bipinfo'))" @mouseout="hideDescription" class="btn control-button m-1 mt-0 ms-0 text-start" :class="bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'" @click="toggleBipStatus">
-            <img src="/src/assets/img/svg/globe.svg" class="control-button-icon me-1" width="32" height="32">
-            <div class="control-button-label">BiP-Status {{bipStatus}}</div>
-        </div>
         <div @mouseover="showDescription($t('examlog.buttondesc'))" @mouseout="hideDescription" class="btn btn-gray-dark control-button m-1 mt-0 ms-0 text-start" @click="showExamLog = true">
             <img src="/src/assets/img/icons/log.png" class="white control-button-icon me-1" width="32" height="32">
             <div class="control-button-label">{{ $t('examlog.button') }}</div>
@@ -1078,6 +1078,10 @@
         <div @mouseover="showDescription($t('submissionsview.buttondesc'))" @mouseout="hideDescription" class="btn btn-gray-dark control-button m-1 mt-0 ms-0 text-start" @click="showSubmissionsView = true">
             <img src="/src/assets/img/svg/dialog-ok-apply.svg" class="control-button-icon me-1" width="32" height="32" style="filter: invert(55%) sepia(40%) saturate(300%) hue-rotate(140deg) brightness(1.1)">
             <div class="control-button-label">{{ $t('submissionsview.buttoncontrol') }}</div>
+        </div>
+        <div v-if="bipToken && serverstatus.bip" @mouseover="showDescription($t('dashboard.bipinfo'))" @mouseout="hideDescription" class="btn control-button control-button-bip-access m-1 mt-0 ms-0 text-start" :class="bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'" @click="toggleBipStatus">
+            <img src="/src/assets/img/svg/globe.svg" class="control-button-icon me-1" width="32" height="32">
+            <div class="control-button-label">{{ bipJoinStatusLabel() }}</div>
         </div>
         </div>
 
@@ -2839,16 +2843,22 @@ computed: {
 
 
 
+        // Localized label for BiP exam join permission (open = students may connect)
+        bipJoinStatusLabel(status = this.bipStatus) {
+            return status === 'open'
+                ? this.$t('dashboard.bipAccessOpen')
+                : this.$t('dashboard.bipAccessClosed');
+        },
+
         showBipInfo(){
             let message = "Bildungsportal"
             let html = `
             <div style="font-size:0.9em; text-align:left">
-                <div><b>Bip-Token: </b>${this.bipToken}</div>
                 <div><b>Bip-Username: </b>${this.bipUsername}</div>
                 <div><b>Bip-UserID: </b>${this.bipuserID}</div><br>
-                <div><b>Bip-Exam-Status: </b></div>
-                <button id="fbtnA" class="swal2-button btn ${this.bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'} mt-2" style="width: 100px; height: 42px;">
-                    ${this.bipStatus}
+                <div><b>${this.$t('dashboard.bipAccessPopupLabel')}: </b></div>
+                <button id="fbtnA" class="swal2-button btn ${this.bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'} mt-2" style="min-width: 100px; height: 42px;">
+                    ${this.bipJoinStatusLabel()}
                 </button>
             </div>
             `
@@ -2869,7 +2879,7 @@ computed: {
                             
                             btnA.classList.remove(oldClass);
                             btnA.classList.add(newClass);
-                            btnA.textContent = newStatus;
+                            btnA.textContent = this.bipJoinStatusLabel(newStatus);
 
                             //call api and update bip data
                             if (this.bipToken && this.serverstatus.bip) {
@@ -3327,6 +3337,16 @@ computed: {
    
 }
 
+.control-buttons-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.control-button-bip-access {
+    margin-left: auto;
+}
+
 .control-button {
     width: 128px;
     height: 62px;
@@ -3740,11 +3760,13 @@ computed: {
     border: none;
 }
 
-/* Teal accents for setup switches/checkboxes */
-#setupdiv .form-check-input {
+/* Teal accents for setup + sidebar switches/checkboxes */
+#setupdiv .form-check-input,
+.sidebar-root .form-check-input {
     accent-color: var(--bs-teal, #20c997);
 }
-#setupdiv .form-check-input:disabled {
+#setupdiv .form-check-input:disabled,
+.sidebar-root .form-check-input:disabled {
     accent-color: rgba(0,0,0,0.25);
 }
 
@@ -3760,11 +3782,13 @@ computed: {
 }
 
 /* Bootstrap switches ignore accent-color in some cases; force teal when checked */
-#setupdiv .form-check-input:checked {
+#setupdiv .form-check-input:checked,
+.sidebar-root .form-check-input:checked {
     background-color: var(--bs-teal, #20c997);
     border-color: var(--bs-teal, #20c997);
 }
-#setupdiv .form-check-input:focus {
+#setupdiv .form-check-input:focus,
+.sidebar-root .form-check-input:focus {
     box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--bs-teal, #20c997) 25%, transparent);
     border-color: var(--bs-teal, #20c997);
 }

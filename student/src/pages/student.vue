@@ -1798,16 +1798,14 @@ export default {
             await this.maybeOfferCageKioskSetup();
         }
 
-        // Focus username input field when component is mounted
+        await this.fetchInfo();
+
+        // Focus username only when not on BiP and not already connected to a teacher
         this.$nextTick(() => {
-            if (this.$refs.userInput && !this.bipToken) {
+            if (this.$refs.userInput && !this.bipToken && !this.token) {
                 this.$refs.userInput.focus();
             }
-
         });
-
-        // Fetch info asynchronously without blocking
-        this.fetchInfo();
 
         this.fetchinterval = this.autoSchedulerService(this.fetchInfo, 4000)
 

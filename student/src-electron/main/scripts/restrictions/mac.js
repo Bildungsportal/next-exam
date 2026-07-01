@@ -19,14 +19,14 @@ let currentWinhandler = null;
 /** Single handler for all macOS restriction signals: log and re-focus exam window / inform teacher. */
 function onMacRestrictionSignal(signalName) {
     log.info(`platformrestrictions @ mac: ${signalName} detected`);
-    if (!currentWinhandler?.examwindow?.isDestroyed?.()) {
-        if (currentWinhandler.multicastClient?.clientinfo) currentWinhandler.multicastClient.clientinfo.focus = false; // inform the teacher
-        currentWinhandler.examwindow.moveTop();
-        currentWinhandler.examwindow.setSimpleFullScreen(true);
-        currentWinhandler.examwindow.show();
-        currentWinhandler.examwindow.focus();
-        // toggleMacOSLockdown(true); // disabled: AAC assessment mode replaces defaults lockdown
-    }
+    if (!currentWinhandler?.mainWin?.()) return;
+    const win = currentWinhandler.mainWin();
+    if (currentWinhandler.multicastClient?.clientinfo) currentWinhandler.multicastClient.clientinfo.focus = false;
+    win.moveTop();
+    win.setSimpleFullScreen(true);
+    win.show();
+    win.focus();
+    // toggleMacOSLockdown(true); // disabled: AAC assessment mode replaces defaults lockdown
 }
 
 const lockScreenHandler = () => onMacRestrictionSignal('lock-screen');
@@ -47,7 +47,7 @@ export async function enableMacRestrictions(winhandler, appsToClose) {
             new TouchBarSpacer({ size: 'flexible' }),
         ]
     });
-    winhandler.examwindow?.setTouchBar(touchBar);
+    winhandler.mainWin()?.setTouchBar(touchBar);
     currentWinhandler = winhandler;
 
     childProcess.exec('pbcopy < /dev/null');

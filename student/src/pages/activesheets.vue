@@ -139,6 +139,8 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
     resolveLockedSection,
+    formatFocusLostTime,
+    applyFocusLostFromIpc,
 } from '../utils/examFetchInfoSync.js'
 import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
 import {ref} from "vue";
@@ -323,9 +325,7 @@ export default {
         async sendFocuslost(){
             if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
-            if (!this.development && !response.focus){  //immediately block frontend
-                this.focus = false 
-            }  
+            applyFocusLostFromIpc(this, response, this.development);
         },
 
 
@@ -482,10 +482,7 @@ export default {
                 });
             }
         },
-        formatTime(unixTime) {
-            const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
-            return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed
-        },  
+        formatTime: formatFocusLostTime,
         // Reload active-sheet PDF only when section/group/filename actually changes (not every fetchInfo poll).
         maybeReloadActiveSheetPdf() {
             const key = activeSheetLoadKey(this.serverstatus, this.clientinfo, this.lockedSection);
@@ -507,8 +504,6 @@ export default {
             const sectionIndex = resolveLockedSection(this.serverstatus, this.clientinfo);
             const sectionChanged = sectionIndex !== this.lockedSection;
             if (sectionChanged) this.lockedSection = sectionIndex;
-
-            if (!this.focus) this.entrytime = new Date().getTime();
 
             const groupChanged = prevClientinfo != null && getinfo.clientinfo?.group !== prevGroup;
             if (sectionChanged || serverstatusChanged || groupChanged) {

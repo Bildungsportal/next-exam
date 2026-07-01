@@ -229,7 +229,24 @@ function downloadFile(file){
 
 
 // send a file from dashboard explorer to specific student
+const EXPLORER_NON_STUDENT_ROOT_DIRS = new Set(['ABGABE', 'logfiles', 'screenshots', 'activesheets'])
+
+/** Map explorer file path to student token via first segment under exam workdir (clientname folder). */
+function resolveStudentTokenFromExplorerFile(file, workdirectory, studentlist) {
+    if (!file?.path || !workdirectory || !Array.isArray(studentlist)) return ''
+    const norm = (s) => String(s).replace(/\\/g, '/').replace(/\/+$/, '')
+    const fp = norm(file.path)
+    const root = norm(workdirectory)
+    if (fp !== root && !fp.startsWith(`${root}/`)) return ''
+    const rel = fp === root ? '' : fp.slice(root.length + 1)
+    const folderName = rel.split('/')[0]
+    if (!folderName || EXPLORER_NON_STUDENT_ROOT_DIRS.has(folderName)) return ''
+    const student = studentlist.find((s) => String(s.clientname || '').toLowerCase() === folderName.toLowerCase())
+    return student?.token || ''
+}
+
 function dashboardExplorerSendFile(file){
+    const preselectedToken = resolveStudentTokenFromExplorerFile(file, this.workdirectory, this.studentlist)
     const inputOptions = new Promise((resolve) => {  // prepare input options for radio buttons
         let connectedStudents = {}
         this.studentlist.forEach( (student) => { connectedStudents[student.token]=student.clientname });
@@ -249,6 +266,7 @@ function dashboardExplorerSendFile(file){
         icon: 'success',
         showCancelButton: true,
         inputOptions: inputOptions,
+        inputValue: preselectedToken,
         inputValidator: (value) => { if (!value) { return this.$t("dashboard.chooserequire") } },
     })
     .then((input) => {

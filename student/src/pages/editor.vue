@@ -796,6 +796,7 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
     resolveLockedSection,
+    formatFocusLostTime,
 } from '../utils/examFetchInfoSync.js'
 import { resolveEditorExamConfig, DEFAULT_EDITOR_EXAM_CONFIG } from 'next-exam-shared/editorExamConfig.js'
 import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
@@ -1077,13 +1078,24 @@ export default {
         async waitForEditorReady(maxAttempts = 50, delayMs = 100) {
             for (let attempts = 0; attempts < maxAttempts; attempts++) {
                 if (this.editor && this.editor.isEditable !== undefined && this.editor.commands) {
-                    await this.sleep(delayMs);
                     return true;
                 }
                 await this.sleep(delayMs);
             }
             console.error(`editor @ waitForEditorReady: Editor not ready after ${maxAttempts} attempts`);
             return false;
+        },
+
+        // Attach paste/drop/keydown guards once ProseMirror DOM exists.
+        async attachEditorInputGuards() {
+            if (!await this.waitForEditorReady()) return;
+            this.editorcontentcontainer = document.getElementById('editorcontent');
+            this.editorContent = this.editorcontentcontainer?.querySelector('.ProseMirror');
+            if (!this.editorContent) return;
+            this.autoEventListener(this.editorContent, 'paste', this.handlePaste, true);
+            this.autoEventListener(this.editorContent, 'drop', this.handleDrop, true);
+            this.typingRhythmKeydownListener = this.handleTypingRhythmKeydown.bind(this);
+            this.autoEventListener(this.editorContent, 'keydown', this.typingRhythmKeydownListener, true);
         },
 
         // Silent import of teacher template (no replace dialog); runs only after backup was skipped or absent.
@@ -2201,6 +2213,7 @@ export default {
             if (!forceBackendLock && await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             if (message) this.focusLostMessage = message;
             if (instantBlock && !this.development) {
+                if (this.focus) this.entrytime = Date.now();
                 this.focus = false;
                 const editorcontentcontainer = document.getElementById('editorcontent');
                 const editableDiv = editorcontentcontainer?.firstElementChild;
@@ -2212,6 +2225,7 @@ export default {
                 : await signalBridge.invoke('focuslost', ctrlalt); // refocus, go back to kiosk, inform teacher
 
             if (forceBackendLock) {
+                if (this.focus) this.entrytime = Date.now();
                 this.focus = false;
                 const editorcontentcontainer = document.getElementById('editorcontent');
                 const editableDiv = editorcontentcontainer?.firstElementChild;
@@ -2219,8 +2233,8 @@ export default {
                 return;
             }
 
-            if (response && !this.development && !response.focus) { // immediately block frontend
-                this.focus = false;
+            applyFocusLostFromIpc(this, response, this.development);
+            if (!this.development && response && !response.focus) {
                 const editorcontentcontainer = document.getElementById('editorcontent');
                 const editableDiv = editorcontentcontainer?.firstElementChild;
                 if (editableDiv) editableDiv.blur(); // remove text cursor (caret)
@@ -2262,13 +2276,7 @@ export default {
         },
 
 
-        formatTime(unixTime) {
-            const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
-            const hours = String(date.getHours()).padStart(2, '0'); // Get hours and pad with leading zero
-            const minutes = String(date.getMinutes()).padStart(2, '0'); // Get minutes and pad with leading zero
-            const seconds = String(date.getSeconds()).padStart(2, '0'); // Get seconds and pad with leading zero
-            return `${hours}:${minutes}:${seconds}`; // Return as HH:MM:SS
-        },
+        formatTime: formatFocusLostTime,
 
         async startLanguageTool(options = {}) {
             const {silent = false, force = false} = options;
@@ -2425,14 +2433,32 @@ export default {
             });
         },
         
+        // Silent restore of clientname.htm after exam-section switch (no confirm dialog).
+        async loadBackupFileSilent(filename = false) {
+            const backupfileName = filename ? filename : `${this.clientname}.htm`;
+            try {
+                const [backupfileContent, ready] = await Promise.all([
+                    signalBridge.invoke('getbackupfile', backupfileName),
+                    this.waitForEditorReady(),
+                ]);
+                if (!ready || !backupfileContent) return;
+                this.editor.commands.clearContent(true);
+                this.editor.commands.insertContent(backupfileContent);
+            } catch (error) {
+                console.error(`editor @ loadBackupFileSilent: ${error}`);
+            }
+        },
+
         async loadBackupFile(filename = false) {
             // check if there is an htm backup in the exam directory and load it
             // This must run early to read the file before editor overwrites it after 20 seconds
             const backupfileName = filename ? filename : this.clientname + ".htm";
             console.log(`editor @ loadBackupFile: Checking for backup file: ${backupfileName}`);
             try {
-                const backupfileContent = await signalBridge.invoke('getbackupfile', backupfileName);
-                const ready = await this.waitForEditorReady();
+                const [backupfileContent, ready] = await Promise.all([
+                    signalBridge.invoke('getbackupfile', backupfileName),
+                    this.waitForEditorReady(),
+                ]);
                 if (!ready) return;
 
                 if (backupfileContent) {
@@ -2472,7 +2498,7 @@ export default {
             event.stopPropagation();
         },
 
-        /** Keys whose OS auto-repeat looks like scripted timing — exclude from typingRhythm statistics */
+        /** Non-text keys that break rhythm stats when tapped in bursts (held keys use e.repeat instead) */
         isTypingRhythmExemptKey(e) {
             const code = e.code;
             if (code === 'Backspace' || code === 'Delete' || code === 'Space') return true;
@@ -2485,7 +2511,7 @@ export default {
 
         handleTypingRhythmKeydown(e) {
             if (e.isComposing) return;
-            if (this.isTypingRhythmExemptKey(e)) {
+            if (e.repeat || this.isTypingRhythmExemptKey(e)) {
                 const s = this.typingRhythm;
                 s.deltas = [];
                 s.lastTs = 0;
@@ -2530,6 +2556,12 @@ export default {
         this.isMac = navigator.platform.toLowerCase().includes('mac');
         this.syncEditorVisualSettings();
         this.createEditor(); // this initializes the editor
+        if (this.$route.query.restore === '1') {
+            this.loadBackupFileSilent();
+        } else {
+            this.loadBackupFile();
+        }
+        this.attachEditorInputGuards()
         this.getExamMaterials()
         setTimeout(() => {
             signalBridge.invoke('prewarmSubmissionSigningP12').catch(() => {})
@@ -2672,19 +2704,6 @@ export default {
         // get wlan info and host ip for internet check
         this.wlanInfo = await signalBridge.invoke('get-wlan-info')
         this.hostip = await signalBridge.invoke('checkhostip')
-        // prevent paste in editor - need to wait for editor to be initialized
-        this.sleep(1000).then(() => {
-            this.editorContent = this.editorcontentcontainer.querySelector('.ProseMirror');
-            if (this.editorContent) {
-                this.autoEventListener(this.editorContent,'paste', this.handlePaste, true);
-                this.autoEventListener(this.editorContent,'drop', this.handleDrop, true);
-                this.typingRhythmKeydownListener = this.handleTypingRhythmKeydown.bind(this);
-                this.autoEventListener(this.editorContent,'keydown', this.typingRhythmKeydownListener, true);
-            }
-            console.log(`editor @ mounted: Calling loadBackupFile`)
-            this.loadBackupFile()
-        })
-
 
     },
 
