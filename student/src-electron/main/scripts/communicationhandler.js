@@ -655,6 +655,12 @@ import {
             const examtype = serverstatus?.examSections?.[lockedSection]?.examtype;
             if (this._startExamRunning) {
                 log.info('communicationhandler @ processUpdatedServerstatus: startExam already running, skip duplicate');
+            } else if (WindowHandler.examServerstatus) {
+                log.warn('communicationhandler @ processUpdatedServerstatus: exammode desync — route active, restoring exammode');
+                this.multicastClient.clientinfo.exammode = true;
+                if (!this.multicastClient.clientinfo.examtype && examtype) {
+                    this.multicastClient.clientinfo.examtype = examtype;
+                }
             } else if (examtype === 'localvm' && this.localVmStartState !== 'idle') {
                 log.info(`communicationhandler @ processUpdatedServerstatus: localvm start suppressed (state=${this.localVmStartState})`);
             } else {
@@ -1052,54 +1058,52 @@ import {
      */
     async startExam(serverstatus){
         if (this._startExamRunning) {
-            log.info('communicationhandler @ startExam: already running, skip duplicate');
+            log.info('communicationhandler @ startExam: already running, skip for now');
             return;
         }
         this._startExamRunning = true;
         try {
-        // check if any dialog is open and log warning
-        if (WindowHandler.exitWarningOpen || WindowHandler.exitQuestionOpen || WindowHandler.minimizeWarningOpen) {
-            log.warn("communicationhandler @ startExam: Dialog is still open - exam will start anyway")
-        }
-  
-        let displays = screen.getAllDisplays()
-        let primary = screen.getPrimaryDisplay()
-       
-        if (!primary || primary === "" || !primary.id){ primary = displays[0] }       
+            // check if any dialog is open and log warning
+            if (WindowHandler.exitWarningOpen || WindowHandler.exitQuestionOpen || WindowHandler.minimizeWarningOpen) {
+                log.warn("communicationhandler @ startExam: Dialog is still open - exam will start anyway")
+            }
+    
+            let displays = screen.getAllDisplays()
+            let primary = screen.getPrimaryDisplay()
+        
+            if (!primary || primary === "" || !primary.id){ primary = displays[0] }       
 
-        // when allowSectionSwitch: client chooses section, clientinfo.lockedSection is authoritative; do not overwrite with server
-        if (!serverstatus.allowSectionSwitch || !this.multicastClient.clientinfo.lockedSection) {
-            this.multicastClient.clientinfo.lockedSection = serverstatus.lockedSection;
-        }
-        const effectiveSection = this.multicastClient.clientinfo.lockedSection;
+            // when allowSectionSwitch: client chooses section, clientinfo.lockedSection is authoritative; do not overwrite with server
+            if (!serverstatus.allowSectionSwitch || !this.multicastClient.clientinfo.lockedSection) {
+                this.multicastClient.clientinfo.lockedSection = serverstatus.lockedSection;
+            }
+            const effectiveSection = this.multicastClient.clientinfo.lockedSection;
 
-        const examtype = serverstatus.examSections[effectiveSection].examtype;
+            const examtype = serverstatus.examSections[effectiveSection].examtype;
 
-        // LocalVM must run preflight BEFORE exammode and BEFORE opening the exam window.
-        if (examtype === 'localvm') {
-            if (this.multicastClient.clientinfo.exammode) {
-                log.warn('communicationhandler @ startExam: localvm requested but exammode already active');
+            // LocalVM must run preflight BEFORE exammode and BEFORE opening the exam window.
+            if (examtype === 'localvm') {
+                if (this.multicastClient.clientinfo.exammode) {
+                    log.warn('communicationhandler @ startExam: localvm requested but exammode already active');
+                    return;
+                }
+                const bootOk = await this.bootLocalVmExamSection(serverstatus, effectiveSection);
+                if (!bootOk) return;
+                if (!(await this.ensureAssessmentForExamStart())) {
+                    this.localVmStartState = 'blocked';
+                    return;
+                }
+                log.info("communicationhandler @ startExam: initializing localvm exam")
+                await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus);
                 return;
             }
-            const bootOk = await this.bootLocalVmExamSection(serverstatus, effectiveSection);
-            if (!bootOk) return;
-            if (!(await this.ensureAssessmentForExamStart())) {
-                this.localVmStartState = 'blocked';
-                return;
-            }
-            log.info("communicationhandler @ startExam: creating exam window")
-            await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
-            this.multicastClient.clientinfo.examtype = examtype;
-            this.multicastClient.clientinfo.exammode = true;
-            return;
-        }
 
-        if (!(await this.ensureAssessmentForExamStart())) return;
-        log.info("communicationhandler @ startExam: creating exam window")
-        await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus, primary);
-        this.multicastClient.clientinfo.examtype = examtype;
-        this.multicastClient.clientinfo.exammode = true;
-        } finally {
+            if (!(await this.ensureAssessmentForExamStart())) return;
+
+            log.info("communicationhandler @ startExam: initializing exam")
+            await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus);  // does not create a new window, but loads the exam route into the existing main window
+        } 
+        finally {
             this._startExamRunning = false;
         }
     }

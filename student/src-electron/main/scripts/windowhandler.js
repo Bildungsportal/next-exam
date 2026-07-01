@@ -493,7 +493,7 @@ class WindowHandler {
     /**
      * Route mainwindow into exam mode (single BrowserWindow — state via clientinfo.exammode).
      */
-    async createExamWindow(examtype, token, serverstatus, primarydisplay) {
+    async createExamWindow(examtype, token, serverstatus) {
         const win = this.mainWin();
         if (!win) {
             log.warn('windowhandler @ createExamWindow: no mainwindow');
@@ -516,6 +516,9 @@ class WindowHandler {
 
         await this.loadExamRouteAndGuards(win, examtype, token, serverstatus);
         if (!this.examServerstatus) return;
+        // exammode once route is live — lockdown can still run (slow on Windows); teacher section switch keys off exammode
+        this.multicastClient.clientinfo.examtype = examtype;
+        this.multicastClient.clientinfo.exammode = true;
         await this.applyExamWindowLockdown(win);
     }
 
