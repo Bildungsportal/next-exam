@@ -351,11 +351,6 @@ export default {
             this.getExamMaterials()
         });
 
-        signalBridge.on('section-switched', () => {
-            this.loadBackupGgbIfPresent();
-            this.loadFilelist();
-        });
-
         this._stopExammodeWatch = this.$watch('exammode', () => {
             this.injectCSS()
         })
@@ -684,11 +679,7 @@ export default {
             applyServerstatusFromFetch(this, getinfo.serverstatus);
 
             const sectionIndex = resolveLockedSection(this.serverstatus, this.clientinfo);
-            if (sectionIndex !== this.lockedSection) {
-                this.lockedSection = sectionIndex;
-                this.loadBackupGgbIfPresent();
-                this.loadFilelist();
-            }
+            if (sectionIndex !== this.lockedSection) this.lockedSection = sectionIndex;
 
             if (this.pincode !== '0000') this.localLockdown = false;
 
@@ -912,7 +903,6 @@ export default {
         signalBridge.removeAllListeners('getmaterials')
         signalBridge.removeAllListeners('fileerror')
         signalBridge.removeAllListeners('save')
-        signalBridge.removeAllListeners('section-switched')
         
         
         // Clean up preview click listener

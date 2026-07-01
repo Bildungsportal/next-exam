@@ -152,11 +152,6 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
     }
     WindowHandler.teardownExamChrome(WindowHandler.mainwindow)
     await CommunicationHandler.rerouteExamSection(serverstatus)
-    try {
-        examWin.webContents.send('section-switched');
-    } catch (e) {
-        log.debug('switchExamSection: section-switched notify', e?.message);
-    }
     } finally {
         switchExamSection._running = false;
     }

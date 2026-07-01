@@ -50,16 +50,16 @@ if (userAgent.indexOf(' electron/') > -1) {
 const routes = [ // to load a specific view just replace the component at path: /
     { path: '/',                    name:"index",        component: student,      beforeEnter: []          },    // default component "student"
     { path: '/student',             name:"student",      component: student,      beforeEnter: []          },
-    { path: '/editor/:token',       name:"editor",       component: editor,       beforeEnter: [fetchInfo] },
-    { path: '/math/:token',         name:"math",         component: geogebra,     beforeEnter: [fetchInfo] },
-    { path: '/forms/:token',        name:"forms",        component: forms,        beforeEnter: [fetchInfo] },
-    { path: '/eduvidual/:token',    name:"eduvidual",    component: eduvidual,    beforeEnter: [fetchInfo] },
-    { path: '/website/:token',      name:"website",      component: website,      beforeEnter: [fetchInfo] },
-    { path: '/activesheets/:token', name:"activesheets", component: activesheets, beforeEnter: [fetchInfo] },
-    { path: '/microsoft365/:token', name:"microsoft365", component: microsoft365, beforeEnter: [fetchInfo] },
+    { path: '/editor/:token/:section',       name:"editor",       component: editor,       beforeEnter: [fetchInfo] },
+    { path: '/math/:token/:section',         name:"math",         component: geogebra,     beforeEnter: [fetchInfo] },
+    { path: '/forms/:token/:section',        name:"forms",        component: forms,        beforeEnter: [fetchInfo] },
+    { path: '/eduvidual/:token/:section',    name:"eduvidual",    component: eduvidual,    beforeEnter: [fetchInfo] },
+    { path: '/website/:token/:section',      name:"website",      component: website,      beforeEnter: [fetchInfo] },
+    { path: '/activesheets/:token/:section', name:"activesheets", component: activesheets, beforeEnter: [fetchInfo] },
+    { path: '/microsoft365/:token/:section', name:"microsoft365", component: microsoft365, beforeEnter: [fetchInfo] },
     { path: '/lock',                name:"lock",         component: lock },
-    { path: '/rdp/:token',          name:"rdp",          component: rdpview,      beforeEnter: [fetchInfo] },
-    { path: '/localvm/:token',      name:"localvm",      component: localvmview,  beforeEnter: [fetchInfo] },
+    { path: '/rdp/:token/:section',          name:"rdp",          component: rdpview,      beforeEnter: [fetchInfo] },
+    { path: '/localvm/:token/:section',      name:"localvm",      component: localvmview,  beforeEnter: [fetchInfo] },
     { path: '/:pathMatch(.*)*',     name:"404",          component: notfound },  
 ]
 

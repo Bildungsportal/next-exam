@@ -89,6 +89,14 @@ class WindowHandler {
         this.examServerstatus = null;
     }
 
+    /** Hash path includes lockedSection so section switches remount the exam page. */
+    buildExamHashRoute(examtype, token, serverstatus) {
+        const section = serverstatus?.allowSectionSwitch
+            ? (this.multicastClient.clientinfo.lockedSection ?? serverstatus?.lockedSection ?? 1)
+            : (serverstatus?.lockedSection ?? 1);
+        return `/${examtype}/${token}/${section}`;
+    }
+
     /** Load a hash route in the given BrowserWindow (packaged file or dev APP_URL). */
     async navigateHashRoute(win, hashRoute) {
         const hash = hashRoute.startsWith('#') ? hashRoute : `#${hashRoute}`
@@ -558,7 +566,7 @@ class WindowHandler {
                     this.clearExamRoute()
                     return
                 }
-                await this.navigateToExamRoute(win, `/${examtype}/${token}/`)
+                await this.navigateToExamRoute(win, this.buildExamHashRoute(examtype, token, serverstatus))
                 let contentView = new BrowserView({
                     webPreferences: {
                         spellcheck: false,
@@ -600,7 +608,7 @@ class WindowHandler {
                     });
                 });
             } else {
-                await this.navigateToExamRoute(win, `/${examtype}/${token}/`)
+                await this.navigateToExamRoute(win, this.buildExamHashRoute(examtype, token, serverstatus))
             }
 
             const examTypesWithPdfInHeader = ["forms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math", "localvm"];
