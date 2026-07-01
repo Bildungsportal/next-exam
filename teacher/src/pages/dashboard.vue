@@ -212,20 +212,24 @@
                         </select>
                     </div>
 
-                    <div class="mt-2" style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <button type="button"
-                                class="btn btn-sm"
-                                :class="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool ? 'btn-teal' : 'btn-outline-secondary'"
-                                @click="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool ? setEditorExamConfigPatch({ languagetool: false, languagetoolhost: null, languagetoolport: null, suggestions: false }) : setEditorExamConfigPatch({ languagetool: true })">
-                            LanguageTool
-                        </button>
-                        <button v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool"
-                                type="button"
-                                class="btn btn-sm"
-                                :class="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.suggestions ? 'btn-teal' : 'btn-outline-secondary'"
-                                @click="setEditorExamConfigPatch({ suggestions: !serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.suggestions })">
-                            {{ $t('dashboard.suggest') }}
-                        </button>
+                    <div class="mt-2">
+                        <div class="form-check form-switch m-0">
+                            <input id="sidebar-languagetool"
+                                   class="form-check-input"
+                                   type="checkbox"
+                                   :checked="!!serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool"
+                                   @change="$event.target.checked ? setEditorExamConfigPatch({ languagetool: true }) : setEditorExamConfigPatch({ languagetool: false, languagetoolhost: null, languagetoolport: null, suggestions: false })">
+                            <label class="form-check-label" for="sidebar-languagetool">LanguageTool</label>
+                        </div>
+                        <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool"
+                             class="form-check form-switch m-0 mt-1">
+                            <input id="sidebar-lt-suggestions"
+                                   class="form-check-input"
+                                   type="checkbox"
+                                   :checked="!!serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.suggestions"
+                                   @change="setEditorExamConfigPatch({ suggestions: $event.target.checked })">
+                            <label class="form-check-label" for="sidebar-lt-suggestions">{{ $t('dashboard.suggest') }}</label>
+                        </div>
                     </div>
 
                     <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool" class="mt-2">
@@ -3756,11 +3760,13 @@ computed: {
     border: none;
 }
 
-/* Teal accents for setup switches/checkboxes */
-#setupdiv .form-check-input {
+/* Teal accents for setup + sidebar switches/checkboxes */
+#setupdiv .form-check-input,
+.sidebar-root .form-check-input {
     accent-color: var(--bs-teal, #20c997);
 }
-#setupdiv .form-check-input:disabled {
+#setupdiv .form-check-input:disabled,
+.sidebar-root .form-check-input:disabled {
     accent-color: rgba(0,0,0,0.25);
 }
 
@@ -3776,11 +3782,13 @@ computed: {
 }
 
 /* Bootstrap switches ignore accent-color in some cases; force teal when checked */
-#setupdiv .form-check-input:checked {
+#setupdiv .form-check-input:checked,
+.sidebar-root .form-check-input:checked {
     background-color: var(--bs-teal, #20c997);
     border-color: var(--bs-teal, #20c997);
 }
-#setupdiv .form-check-input:focus {
+#setupdiv .form-check-input:focus,
+.sidebar-root .form-check-input:focus {
     box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--bs-teal, #20c997) 25%, transparent);
     border-color: var(--bs-teal, #20c997);
 }
