@@ -90,11 +90,15 @@ class WindowHandler {
     }
 
     /** Hash path includes lockedSection so section switches remount the exam page. */
-    buildExamHashRoute(examtype, token, serverstatus) {
+    buildExamHashRoute(examtype, token, serverstatus, { sectionSwitch = false } = {}) {
         const section = serverstatus?.allowSectionSwitch
             ? (this.multicastClient.clientinfo.lockedSection ?? serverstatus?.lockedSection ?? 1)
             : (serverstatus?.lockedSection ?? 1);
-        return `/${examtype}/${token}/${section}`;
+        const path = `/${examtype}/${token}/${section}`;
+        if (sectionSwitch && serverstatus?.useExamSections) {
+            return `${path}?restore=1`;
+        }
+        return path;
     }
 
     /** Load a hash route in the given BrowserWindow (packaged file or dev APP_URL). */
@@ -543,7 +547,7 @@ class WindowHandler {
         }
         this.teardownExamChrome(win);
         this.examServerstatus = serverstatus;
-        await this.loadExamRouteAndGuards(win, examtype, token, serverstatus);
+        await this.loadExamRouteAndGuards(win, examtype, token, serverstatus, { sectionSwitch: true });
         if (!this.examServerstatus) return;
         try {
             win.show();
@@ -554,7 +558,7 @@ class WindowHandler {
         // this.logWindowListenerCounts('after section switch');
     }
 
-    async loadExamRouteAndGuards(win, examtype, token, serverstatus) {
+    async loadExamRouteAndGuards(win, examtype, token, serverstatus, options = {}) {
             if (examtype === "microsoft365"  ) {
                 log.info("starting microsoft365 exam...")
                 let urlview = this.multicastClient.clientinfo.msofficeshare
@@ -566,7 +570,7 @@ class WindowHandler {
                     this.clearExamRoute()
                     return
                 }
-                await this.navigateToExamRoute(win, this.buildExamHashRoute(examtype, token, serverstatus))
+                await this.navigateToExamRoute(win, this.buildExamHashRoute(examtype, token, serverstatus, options))
                 let contentView = new BrowserView({
                     webPreferences: {
                         spellcheck: false,
@@ -608,7 +612,7 @@ class WindowHandler {
                     });
                 });
             } else {
-                await this.navigateToExamRoute(win, this.buildExamHashRoute(examtype, token, serverstatus))
+                await this.navigateToExamRoute(win, this.buildExamHashRoute(examtype, token, serverstatus, options))
             }
 
             const examTypesWithPdfInHeader = ["forms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math", "localvm"];

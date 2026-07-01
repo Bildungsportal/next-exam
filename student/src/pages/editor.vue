@@ -2433,6 +2433,22 @@ export default {
             });
         },
         
+        // Silent restore of clientname.htm after exam-section switch (no confirm dialog).
+        async loadBackupFileSilent(filename = false) {
+            const backupfileName = filename ? filename : `${this.clientname}.htm`;
+            try {
+                const [backupfileContent, ready] = await Promise.all([
+                    signalBridge.invoke('getbackupfile', backupfileName),
+                    this.waitForEditorReady(),
+                ]);
+                if (!ready || !backupfileContent) return;
+                this.editor.commands.clearContent(true);
+                this.editor.commands.insertContent(backupfileContent);
+            } catch (error) {
+                console.error(`editor @ loadBackupFileSilent: ${error}`);
+            }
+        },
+
         async loadBackupFile(filename = false) {
             // check if there is an htm backup in the exam directory and load it
             // This must run early to read the file before editor overwrites it after 20 seconds
@@ -2540,7 +2556,11 @@ export default {
         this.isMac = navigator.platform.toLowerCase().includes('mac');
         this.syncEditorVisualSettings();
         this.createEditor(); // this initializes the editor
-        this.loadBackupFile()
+        if (this.$route.query.restore === '1') {
+            this.loadBackupFileSilent();
+        } else {
+            this.loadBackupFile();
+        }
         this.attachEditorInputGuards()
         this.getExamMaterials()
         setTimeout(() => {
