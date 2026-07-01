@@ -22,11 +22,11 @@ function handleRendererCrash(log, windowHandler, webContents, details, prefix) {
   const crashedWindow = allWindows.find(win => win.webContents.id === webContents.id);
   if (crashedWindow) {
     log.error(`${prefix}: Window title: ${crashedWindow.getTitle()}`);
-    if (crashedWindow === windowHandler.examwindow) {
-      log.warn(`${prefix}: Exam window crashed, attempting to close gracefully`);
+    if (crashedWindow === windowHandler.mainWin() && windowHandler.inExamMode()) {
+      log.warn(`${prefix}: Exam mainwindow crashed, attempting to close gracefully`);
       try {
         if (!crashedWindow.isDestroyed()) crashedWindow.destroy();
-        windowHandler.examwindow = null;
+        windowHandler.clearExamRoute();
       } catch (err) {
         log.error(`${prefix}: Error closing exam window:`, err);
       }

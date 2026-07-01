@@ -1017,12 +1017,15 @@ class IpcHandler {
             // } 
             else {
                 log.warn(`ipchandler @ focuslost: focuslost event was triggered - locking down`)
-                this.WindowHandler.examwindow.moveTop();
-                this.WindowHandler.applyElectronKioskMode(this.WindowHandler.examwindow);
-                this.WindowHandler.examwindow.show();  
-                this.WindowHandler.examwindow.focus();    // we keep focus on the window.. no matter what
+                const examWin = this.WindowHandler.examUiWindow();
+                if (examWin) {
+                    examWin.moveTop();
+                    this.WindowHandler.applyElectronKioskMode(examWin);
+                    examWin.show();
+                    examWin.focus();
+                }
     
-                this.multicastClient.clientinfo.focus = false; // block everything and inform teacher  (probably an overkill on mouseleave - needs testing)
+                this.multicastClient.clientinfo.focus = false;
                 answer = { sender: "client", focus: false }
             }
            
@@ -1037,7 +1040,7 @@ class IpcHandler {
             const message = payload?.message || '';
             log.warn(`ipchandler @ securityFocusLost: forcing lockdown (reason=${reason})`);
 
-            const examWin = this.WindowHandler?.examwindow;
+            const examWin = this.WindowHandler?.examUiWindow();
             if (examWin && !this.config.development) {
                 examWin.moveTop();
                 this.WindowHandler.applyElectronKioskMode(examWin);
@@ -1067,11 +1070,12 @@ class IpcHandler {
             clearClientFocusLock(this.multicastClient.clientinfo);
             this.multicastClient.clientinfo.focus = true;
 
-            if (this.WindowHandler?.examwindow && !this.config.development) {
-                this.WindowHandler.examwindow.moveTop();
-                this.WindowHandler.applyElectronKioskMode(this.WindowHandler.examwindow);
-                this.WindowHandler.examwindow.show();
-                this.WindowHandler.examwindow.focus();
+            const examWin = this.WindowHandler?.examUiWindow();
+            if (examWin && !this.config.development) {
+                examWin.moveTop();
+                this.WindowHandler.applyElectronKioskMode(examWin);
+                examWin.show();
+                examWin.focus();
             }
 
             return { ok: true };
@@ -1098,7 +1102,7 @@ class IpcHandler {
         */ 
         ipcMain.on('restrictions', () => {  
             //this also stops the clearClipboard interval
-            disableRestrictions(this.WindowHandler.examwindow) 
+            disableRestrictions(this.WindowHandler.mainWin()) 
         } )
 
 
@@ -1336,7 +1340,8 @@ class IpcHandler {
                 return
             }
 
-            if (this.WindowHandler.examwindow){
+            const examWindow = this.WindowHandler.examUiWindow();
+            if (examWindow){
                 const options = { // define print options
                     margins: {top:0.5, right:0, bottom:0.5, left:0 },
                     pageSize: 'A4',
@@ -1384,8 +1389,7 @@ class IpcHandler {
                 } 
                 catch(err) { log.error(`ipchandler @ printpdf: ${err.message}`);  }
 
-                const examWindow = this.WindowHandler.examwindow
-                const webContents = examWindow?.webContents
+                const webContents = examWindow.webContents
                 const ch = this.CommunicationHandler
 
                 if (!webContents){
@@ -1555,7 +1559,7 @@ class IpcHandler {
          * Update menu height dynamically when header content changes
          */
         ipcMain.on('update-menu-height', (event, height) => {
-            const mainWindow = this.WindowHandler.examwindow || this.WindowHandler.mainwindow;
+            const mainWindow = this.WindowHandler.mainWin();
             if (mainWindow && height > 0) {
                 mainWindow.menuHeight = height;
                 const newBounds = mainWindow.getBounds();
@@ -1707,7 +1711,7 @@ class IpcHandler {
                     return  { sender: "client", message:t("data.filestored") , status:"success" }
                 }
                 catch(err){
-                    this.WindowHandler.examwindow.webContents.send('fileerror', err)  
+                    this.WindowHandler.examUiWindow()?.webContents?.send('fileerror', err)  
                  
                     log.error(`ipchandler @ saveGGB: ${err}`)
                     return { sender: "client", message:err , status:"error" }

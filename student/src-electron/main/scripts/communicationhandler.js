@@ -86,7 +86,7 @@ import {
         log.warn(`communicationhandler @ applySecurityFocusLost: forcing lockdown (reason=${reason})`);
         const ci = this.multicastClient?.clientinfo;
         if (ci) setClientFocusLock(ci, reason, message);
-        const examWin = WindowHandler?.examwindow;
+        const examWin = WindowHandler?.examUiWindow();
         if (examWin && !this.config?.development) {
             examWin.moveTop();
             WindowHandler.applyElectronKioskMode(examWin);
@@ -479,8 +479,8 @@ import {
             return false;
         }
 
-        if (studentstatus.printdenied && WindowHandler.examwindow) {
-            WindowHandler.examwindow.webContents.send('denied');
+        if (studentstatus.printdenied) {
+            WindowHandler.examUiWindow()?.webContents?.send('denied');
         }
 
         if (studentstatus.sendexam === true){
@@ -505,9 +505,7 @@ import {
                 }
             } catch (error) { 
                 delfolder = false;
-                if (WindowHandler.examwindow) {
-                    WindowHandler.examwindow.webContents.send('fileerror', error);
-                }
+                WindowHandler.examUiWindow()?.webContents?.send('fileerror', error);
                 log.error(`communicationhandler @ processUpdatedServerstatus: Can not delete directory - ${error} `);
             }
 
@@ -528,9 +526,7 @@ import {
                     });
                 }
             }
-            if (WindowHandler.examwindow) {
-                WindowHandler.examwindow.webContents.send('loadfilelist');
-            }
+            WindowHandler.examUiWindow()?.webContents?.send('loadfilelist');
         }
 
         if (studentstatus.focus === false){
@@ -541,9 +537,10 @@ import {
             log.info("communicationhandler @ processUpdatedServerstatus: restoring focus state for student");
             clearClientFocusLock(this.multicastClient.clientinfo);
             this.multicastClient.clientinfo.focus = true;
-            if (WindowHandler.examwindow && !this.config.development){ 
-                WindowHandler.applyElectronKioskMode(WindowHandler.examwindow);
-                WindowHandler.examwindow.focus();
+            const examWin = WindowHandler.examUiWindow();
+            if (examWin && !this.config.development){
+                WindowHandler.applyElectronKioskMode(examWin);
+                examWin.focus();
             }
         }
         if (studentstatus.activatePrivateSpellcheck === true && this.multicastClient.clientinfo.privateSpellcheck.activated === false){
@@ -564,9 +561,7 @@ import {
             this.requestFileFromServer(studentstatus.files);
         }
         if (studentstatus.getmaterials === true){
-            if (WindowHandler.examwindow){  
-                WindowHandler.examwindow.webContents.send('getmaterials');
-            }
+            WindowHandler.examUiWindow()?.webContents?.send('getmaterials');
         }
         
         this.multicastClient.clientinfo.msofficeshare = studentstatus.msofficeshare;
@@ -574,9 +569,7 @@ import {
         if (studentstatus.group){
             if (this.multicastClient.clientinfo.group !== studentstatus.group){
                 this.multicastClient.clientinfo.group = studentstatus.group;
-                if (WindowHandler.examwindow){  
-                    WindowHandler.examwindow.webContents.send('getmaterials');
-                }
+                WindowHandler.examUiWindow()?.webContents?.send('getmaterials');
             }
         }
 
@@ -584,10 +577,10 @@ import {
     }
 
     async handleExamSections(serverstatus){
-        if (this.multicastClient.clientinfo.exammode && WindowHandler.examwindow){
-            if (serverstatus.allowSectionSwitch !== WindowHandler.examwindow.serverstatus.allowSectionSwitch){
+        if (this.multicastClient.clientinfo.exammode && WindowHandler.examServerstatus) {
+            if (serverstatus.allowSectionSwitch !== WindowHandler.examServerstatus.allowSectionSwitch) {
                 log.info("communicationhandler @ processUpdatedServerstatus: permission to switch exam section changed");
-                WindowHandler.examwindow.serverstatus.allowSectionSwitch = serverstatus.allowSectionSwitch;
+                WindowHandler.examServerstatus.allowSectionSwitch = serverstatus.allowSectionSwitch;
             }
         }
 
@@ -614,8 +607,8 @@ import {
             if (groupB.includes(clientname)) this.multicastClient.clientinfo.group = 'b';
             else if (groupA.includes(clientname)) this.multicastClient.clientinfo.group = 'a';
             else this.multicastClient.clientinfo.group = 'a';
-            if (this.multicastClient.clientinfo.group !== prevGroup && WindowHandler.examwindow) {
-                WindowHandler.examwindow.webContents.send('getmaterials');
+            if (this.multicastClient.clientinfo.group !== prevGroup) {
+                WindowHandler.examUiWindow()?.webContents?.send('getmaterials');
             }
         } else {
             this.multicastClient.clientinfo.groups = false;
@@ -730,6 +723,10 @@ import {
         if (saveReason !== 'auto') log.info("communicationhandler @ getBase64PDF: getting base64 encoded pdf")
         const traceTiming = saveReason === 'previewSigned' || saveReason === 'directsend'
         const t0 = traceTiming ? Date.now() : 0
+        const examWin = WindowHandler.examUiWindow();
+        if (!examWin) {
+            return { sender: 'client', message: 'not in exam mode', status: 'error' };
+        }
 
         // Wait for any ongoing print operation to finish (max 30 seconds)
         let waitCount = 0;
@@ -768,7 +765,7 @@ import {
         }
         
         // set the title of the exam window and therefore the document title
-        await WindowHandler.examwindow.webContents.executeJavaScript(`document.title = "${this.multicastClient.clientinfo.name} - ${this.multicastClient.clientinfo.servername} - Version ${submissionnumber}"`);
+        await examWin.webContents.executeJavaScript(`document.title = "${this.multicastClient.clientinfo.name} - ${this.multicastClient.clientinfo.servername} - Version ${submissionnumber}"`);
 
         // pageMode='fullpage': Chromium-Header aus; gleicher Header-String als DOM-Overlay (verbraucht keinen margin) - nur 1. Druckseite
         // <span class=date> ist Chromium-headerTemplate-Magic -> im DOM-Kontext durch ein gerendertes Datum ersetzen
@@ -781,7 +778,7 @@ import {
                 .replace(/margin-(left|right|top):\s*\d+px;?/g, '')
             // Wrapper: 85% breit zentriert, top 30px (visuell auf PDF-Inhalt der mit zoom 8/9 skaliert ist abgestimmt)
             const overlayHtml = JSON.stringify(`<div id="__fullpageHeaderOverlay__" style="position:absolute;top:30px;left:50%;transform:translateX(-50%);width:85%;z-index:2147483647;pointer-events:none;">${overlayInner}</div>`)
-            await WindowHandler.examwindow.webContents.executeJavaScript(`(()=>{const o=document.getElementById('__fullpageHeaderOverlay__');if(o)o.remove();document.body.insertAdjacentHTML('afterbegin', ${overlayHtml});})()`)
+            await examWin.webContents.executeJavaScript(`(()=>{const o=document.getElementById('__fullpageHeaderOverlay__');if(o)o.remove();document.body.insertAdjacentHTML('afterbegin', ${overlayHtml});})()`)
         }
 
         // Set lock before starting PDF generation
@@ -789,7 +786,7 @@ import {
 
         try {
             const tPrint = traceTiming ? Date.now() : 0
-            const data = await WindowHandler.examwindow.webContents.printToPDF(options);
+            const data = await examWin.webContents.printToPDF(options);
             if (traceTiming) {
                 log.info(`communicationhandler @ getBase64PDF: printToPDF ${Date.now() - tPrint}ms (${saveReason})`)
             }
@@ -833,7 +830,7 @@ import {
             IpcHandler.isPrintingPdf = false;
             if (isFullpage) {
                 try {
-                    await WindowHandler.examwindow?.webContents?.executeJavaScript(`(()=>{const o=document.getElementById('__fullpageHeaderOverlay__');if(o)o.remove();})()`)
+                    await examWin.webContents.executeJavaScript(`(()=>{const o=document.getElementById('__fullpageHeaderOverlay__');if(o)o.remove();})()`)
                 } catch (e) { /* exam window may be gone */ }
             }
         }
@@ -896,9 +893,7 @@ import {
         // is already open+front here. Soft nudge in case AAC briefly shows the empty main-app screen
         // on begin(); no steal:true since Next-Exam already holds focus.
         if (process.platform === 'darwin') {
-            const win = WindowHandler.examwindow && !WindowHandler.examwindow.isDestroyed?.()
-                ? WindowHandler.examwindow
-                : WindowHandler.mainwindow;
+            const win = WindowHandler.mainWin();
             try { win?.show?.(); win?.setSimpleFullScreen?.(true); win?.moveTop?.(); win?.focus?.(); } catch (e) {
                 log.warn('communicationhandler @ ensureAssessmentForExamStart: focus front window', e?.message || e);
             }
@@ -911,7 +906,6 @@ import {
         log.error('communicationhandler @ abortExamModeStart:', detail);
         await stopAssessmentSession();
         WindowHandler.returnToStudentView()
-        WindowHandler.examwindow = null;
         this.multicastClient.clientinfo.exammode = false;
         this.multicastClient.clientinfo.focus = true;
         const parent = WindowHandler.mainwindow && !WindowHandler.mainwindow.isDestroyed?.()
@@ -1228,13 +1222,14 @@ import {
         }
 
 
-        if (WindowHandler.examwindow){ // in some edge cases in development this is set but still unusable - use try/catch   
-            try { 
+        if (WindowHandler._examRouted) {
+            try {
+                const examWin = WindowHandler.mainWin();
                 // destroy devtools window
                 if (this.config.development || this.config.showdevtools){
-                    const allWebContents = webContents.getAllWebContents()                        // all WebViews of the child
+                    const allWebContents = webContents.getAllWebContents()
                     for (const wc of allWebContents) {
-                        if (WindowHandler.examwindow && wc.hostWebContents?.id === WindowHandler.examwindow.webContents.id && wc.isDevToolsOpened?.()){
+                        if (examWin && wc.hostWebContents?.id === examWin.webContents.id && wc.isDevToolsOpened?.()){
                             log.info("communicationhandler @ endExam: destroying devtools window")
                             wc.closeDevTools()                                                 // Close DevTools of the WebView (also when detached)
                         }
@@ -1287,21 +1282,18 @@ import {
      * Closes examwindow only when no printToPDF operation is running
      */
     closeExamWindowSafely(){
-        const examWin = WindowHandler.examwindow
-        if (!examWin){ return }
+        if (!WindowHandler._examRouted) return;
 
         if (IpcHandler.isPrintingPdf){
             log.warn("communicationhandler @ closeExamWindowSafely: printToPDF in progress - retry in 1s")
-            setTimeout(() => { this.closeExamWindowSafely() }, 1000) // retry until printing is finished
+            setTimeout(() => { this.closeExamWindowSafely() }, 1000)
             return
         }
 
         try {
             WindowHandler.returnToStudentView()
         } catch (e){
-            log.error("communicationhandler @ closeExamWindowSafely: error while closing examwindow", e)
-        } finally {
-            WindowHandler.examwindow = null
+            log.error("communicationhandler @ closeExamWindowSafely: error while leaving exam route", e)
         }
     }
 
@@ -1369,11 +1361,11 @@ import {
                         await this.encryptExamdirectoryFiles();
                     })
                     .then(() => {
-                        if (backupfile && WindowHandler.examwindow) {
-                            WindowHandler.examwindow.webContents.send('backup', backupfile);
+                        if (backupfile) {
+                            WindowHandler.examUiWindow()?.webContents?.send('backup', backupfile);
                             log.warn("CommunicationHandler @ requestFileFromServer: Trigger Replace Event");
                         }
-                        if (WindowHandler.examwindow) {  WindowHandler.examwindow.webContents.send('loadfilelist');   }
+                        WindowHandler.examUiWindow()?.webContents?.send('loadfilelist');
                     })
                     .catch(err => {
                         log.error(err);
@@ -1389,14 +1381,15 @@ import {
 
     async sendExamToTeacher(){
         //send save trigger to exam window
-        if (WindowHandler.examwindow){  //there is a running exam - save current work first!
+        const examWin = WindowHandler.examUiWindow();
+        if (examWin){
             // localvm has no renderer-side save flow; send ZIP directly
             if (this.multicastClient?.clientinfo?.examtype === 'localvm') {
                 this.sendToTeacher()
                 return
             }
             try {
-                WindowHandler.examwindow.webContents.send('save','teacherrequest')   //trigger, why  (teacherrequest will also trigger sendToTeacher() but only after saving the pdf is complete)
+                examWin.webContents.send('save','teacherrequest')
             }
             catch(err){ 
                 log.error(`Communication handler @ sendExamToTeacher: Could not save students work. Is exammode active?`)

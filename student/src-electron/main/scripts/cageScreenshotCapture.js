@@ -20,9 +20,7 @@ function frameFromNativeImage(image) {
 
 /** Captures the active Next-Exam window via webContents.capturePage. */
 export async function captureActiveWindowScreenshot(WindowHandler, multicastClient) {
-    const examWin = WindowHandler?.examwindow;
-    const useExam = examWin && !examWin.isDestroyed() && multicastClient?.clientinfo?.exammode;
-    const win = useExam ? examWin : WindowHandler?.mainwindow;
+    const win = WindowHandler?.mainWin();
     if (!win || win.isDestroyed()) {
         log.warn('cageScreenshotCapture @ captureActiveWindowScreenshot: no target window');
         return null;

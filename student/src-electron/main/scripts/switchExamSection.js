@@ -127,7 +127,7 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
     /**
      *  Actually SWITCH EXAM SECTION
      */
-    const examWin = WindowHandler.examwindow || WindowHandler.mainwindow;
+    const examWin = WindowHandler.mainWin();
     if (!examWin || examWin.isDestroyed?.()) {
         log.warn('switchExamSection: no mainwindow for reroute');
         return;

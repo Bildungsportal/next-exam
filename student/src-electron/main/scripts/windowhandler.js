@@ -56,10 +56,12 @@ class WindowHandler {
     constructor () {
       this.screenlockwindows = []
       this.mainwindow = null
-      this.examwindow = null
       this.bipwindow = null
       this.config = null
       this.multicastClient = null
+      this.examServerstatus = null
+      this._examRouteGen = 0
+      this._examRouted = false
     
       this.exitWarningOpen = false  // track if exit warning dialog is open
       this.exitQuestionOpen = false  // track if exit question dialog is open
@@ -73,6 +75,36 @@ class WindowHandler {
     init (mc, config) {
         this.multicastClient = mc
         this.config = config
+    }
+
+    inExamMode() {
+        return !!this.multicastClient?.clientinfo?.exammode;
+    }
+
+    mainWin() {
+        const w = this.mainwindow;
+        if (!w || w.isDestroyed?.()) return null;
+        return w;
+    }
+
+    /** Mainwindow while exammode is active — sole exam UI target. */
+    examUiWindow() {
+        if (!this.inExamMode()) return null;
+        return this.mainWin();
+    }
+
+    nextRouteGen() {
+        return ++this._examRouteGen;
+    }
+
+    isRouteCurrent(routeGen) {
+        return routeGen === this._examRouteGen;
+    }
+
+    clearExamRoute() {
+        this._examRouted = false;
+        this.examServerstatus = null;
+        this._examRouteGen++;
     }
 
     /** Load a hash route in the given BrowserWindow (packaged file or dev APP_URL). */
@@ -122,7 +154,7 @@ class WindowHandler {
     }
 
     /** applyElectronKioskMode + restrictions after exam route finished loading */
-    async applyExamWindowLockdown(win) {
+    async applyExamWindowLockdown(win, routeGen) {
         if (!win || win.isDestroyed?.()) return;
         if (this.config.showdevtools) { win.webContents.openDevTools() }
         if (this.config.development) return;
@@ -131,7 +163,7 @@ class WindowHandler {
             this.applyElectronKioskMode(win);
 
             await this.sleep(500)
-            if (!win || win.isDestroyed?.() || this.examwindow !== win) return;
+            if (!win || win.isDestroyed?.() || !this.isRouteCurrent(routeGen)) return;
             win.moveTop()
             win.focus()
 
@@ -140,7 +172,7 @@ class WindowHandler {
             } else {
                 await enableRestrictions(this)
                 await this.sleep(1000)
-                if (!win || win.isDestroyed?.() || this.examwindow !== win) return;
+                if (!win || win.isDestroyed?.() || !this.isRouteCurrent(routeGen)) return;
                 // AAC owns stacking; screen-saver alwaysOnTop breaks simple fullscreen / notch
                 if (!isAssessmentSessionActive()) {
                     win.setAlwaysOnTop(true, "screen-saver", 1)
@@ -202,7 +234,7 @@ class WindowHandler {
     }
 
     /** MS365 Office BrowserView (Electron 41: use getBrowserViews, not getBrowserView(0)). */
-    getMs365BrowserView(win = this.examwindow || this.mainwindow) {
+    getMs365BrowserView(win = this.mainWin()) {
         if (this.ms365BrowserView?.webContents && !this.ms365BrowserView.webContents.isDestroyed?.()) {
             return this.ms365BrowserView
         }
@@ -214,7 +246,7 @@ class WindowHandler {
 
     /** Hide MS365 BrowserView so PDF/material preview in the Vue layer is visible. */
     collapseMs365BrowserView() {
-        const win = this.examwindow || this.mainwindow
+        const win = this.mainWin()
         const contentView = this.getMs365BrowserView(win)
         if (!contentView) {
             log.warn('windowhandler @ collapseMs365BrowserView: no BrowserView')
@@ -226,7 +258,7 @@ class WindowHandler {
 
     /** Restore MS365 BrowserView below the exam toolbar after preview close. */
     restoreMs365BrowserView() {
-        const win = this.examwindow || this.mainwindow
+        const win = this.mainWin()
         if (!win || win.isDestroyed?.()) return
         const contentView = this.getMs365BrowserView(win)
         if (!contentView) return
@@ -251,6 +283,7 @@ class WindowHandler {
         log.info('windowhandler @ returnToStudentView: navigating to student home')
         this.releaseExamWindowLockdown(win)
         this.teardownExamChrome(win)
+        this.clearExamRoute()
         this.navigateHashRoute(win, '/')
     }
 
@@ -476,16 +509,16 @@ class WindowHandler {
 
 
     /**
-     * Route mainwindow into exam mode (examwindow is only an alias — no separate BrowserWindow).
+     * Route mainwindow into exam mode (single BrowserWindow — state via clientinfo.exammode).
      */
     async createExamWindow(examtype, token, serverstatus, primarydisplay) {
-        const win = this.mainwindow && !this.mainwindow.isDestroyed?.() ? this.mainwindow : null;
+        const win = this.mainWin();
         if (!win) {
             log.warn('windowhandler @ createExamWindow: no mainwindow');
             return;
         }
-        if (this.examwindow && !this.examwindow.isDestroyed?.()) {
-            log.info('windowhandler @ createExamWindow: already in exam — reroute section');
+        if (this._examRouted) {
+            log.info('windowhandler @ createExamWindow: already routed — reroute section');
             await this.rerouteToExamSection(examtype, token, serverstatus);
             return;
         }
@@ -495,28 +528,30 @@ class WindowHandler {
             examtype = "editor";
         }
 
-        this.examwindow = win
+        this._examRouted = true
         this.bindExamAppCommandOnce(win)
-        this.examwindow.serverstatus = serverstatus
-        this.examwindow.menuHeight = 94
+        this.examServerstatus = serverstatus
+        win.menuHeight = 94
 
-        const routeSuperseded = () => this.examwindow !== win;
+        const routeGen = this.nextRouteGen();
+        const routeSuperseded = () => !this.isRouteCurrent(routeGen);
         await this.loadExamRouteAndGuards(win, examtype, token, serverstatus, routeSuperseded);
         if (routeSuperseded()) return;
-        await this.applyExamWindowLockdown(win);
+        await this.applyExamWindowLockdown(win, routeGen);
     }
 
     /** Section switch while exammode stays on — teardown route chrome only, keep blur/lockdown listeners. */
     async rerouteToExamSection(examtype, token, serverstatus) {
-        const win = this.examwindow || this.mainwindow;
-        if (!win || win.isDestroyed?.()) {
+        const win = this.mainWin();
+        if (!win) {
             log.warn('windowhandler @ rerouteToExamSection: no window');
             return;
         }
-        if (!this.examwindow) this.examwindow = win;
+        this._examRouted = true;
         this.teardownExamChrome(win);
-        win.serverstatus = serverstatus;
-        const routeSuperseded = () => this.examwindow !== win;
+        this.examServerstatus = serverstatus;
+        const routeGen = this.nextRouteGen();
+        const routeSuperseded = () => !this.isRouteCurrent(routeGen);
         await this.loadExamRouteAndGuards(win, examtype, token, serverstatus, routeSuperseded);
         if (routeSuperseded()) return;
         try {
@@ -536,7 +571,7 @@ class WindowHandler {
                     disableRestrictions()
                     this.multicastClient.clientinfo.exammode = false
                     this.multicastClient.clientinfo.focus = true
-                    this.examwindow = null
+                    this.clearExamRoute()
                     return
                 }
                 await this.navigateToExamRoute(win, `/${examtype}/${token}/`)
@@ -918,7 +953,7 @@ class WindowHandler {
     }
 
     //adds blur listener when entering exammode   // blur event isnt fired on macos MISSIONCONTROL (which cant be deactivated anymore) - damn you apple!
-    addBlurListener(win = this.examwindow || this.mainwindow) {
+    addBlurListener(win = this.mainWin()) {
         if (win === 'screenlock') {
             log.info('windowhandler @ addBlurListener: Setting Blur Event for screenlock windows')
             for (const screenlockwindow of this.screenlockwindows) {
@@ -946,7 +981,7 @@ class WindowHandler {
     }
     //removes blur listener when leaving exam mode
     removeBlurListener(){
-        const win = this.examwindow || this.mainwindow;
+        const win = this.mainWin();
         if (win && this._examBlurHandler) {
             win.removeListener('blur', this._examBlurHandler);
             this._examBlurHandler = null;
@@ -969,11 +1004,13 @@ class WindowHandler {
         if (hasActiveScreenlock || winhandler.multicastClient?.clientinfo?.screenlock) { return }// do nothing if screenlockwindow stole focus // do not trigger an infinite loop between exam window and screenlock window (stealing each others focus because screenlockwindow appears above exam window and will capture a klick and therefore steal focus)
 
         winhandler.multicastClient.clientinfo.focus = false   //inform the teacher
-        
-        winhandler.examwindow.moveTop();
-        winhandler.applyElectronKioskMode(winhandler.examwindow);
-        winhandler.examwindow.show();  
-        winhandler.examwindow.focus();    // we keep focus on the window.. no matter what
+
+        const win = winhandler.mainWin();
+        if (!win) return;
+        win.moveTop();
+        winhandler.applyElectronKioskMode(win);
+        win.show();
+        win.focus();
 
         //turn volume up ^^
         // if (process.platform === 'win32') { spawn('powershell', ['Set-VolumeLevel -Level 100; Set-VolumeMute -Mute $false']); }
