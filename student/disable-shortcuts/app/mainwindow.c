@@ -7,7 +7,9 @@
 #include "shared.h"
 #include "stdafx.h"
 
-#define FLASH_TIMER_ID 1
+#define INTERCEPT_FLASH_TIMER_ID 1
+#define INTERCEPT_FLASH_MS 180
+#define INTERCEPT_FLASH_BACKGROUND RGB(72, 28, 28)
 #define TEXT_COLOR RGB(255, 255, 255)
 #define BACKGROUND_COLOR RGB(33, 37, 41)
 #define PADDING_TOP 20
@@ -19,6 +21,7 @@
 
 static HFONT hFont;
 static HPEN hPen;
+static BOOL s_interceptFlashActive;
 
 static void DrawExplanationText(HDC hdc, RECT *rect, UINT format) {
   HINSTANCE hInstance = GetModuleHandle(NULL);
@@ -37,11 +40,17 @@ static void OnPaint(HWND hwnd) {
   PAINTSTRUCT ps;
   HDC hdc = BeginPaint(hwnd, &ps);
 
-  RECT rect;
-  GetClientRect(hwnd, &rect);
+  RECT client;
+  GetClientRect(hwnd, &client);
+  COLORREF bg =
+      s_interceptFlashActive ? INTERCEPT_FLASH_BACKGROUND : BACKGROUND_COLOR;
+  HBRUSH bgBrush = CreateSolidBrush(bg);
+  FillRect(hdc, &client, bgBrush);
+  DeleteObject(bgBrush);
 
+  RECT rect = client;
   rect.top += PADDING_TOP;
-  rect.left = PADDING_LEFT;
+  rect.left += PADDING_LEFT;
   rect.bottom -= PADDING_BOTTOM;
   rect.right -= PADDING_RIGHT;
   DrawExplanationText(hdc, &rect, DT_TOP | DT_LEFT | DT_NOCLIP);
@@ -49,24 +58,21 @@ static void OnPaint(HWND hwnd) {
   EndPaint(hwnd, &ps);
 }
 
+// Clears the brief client-area flash after an intercepted key.
 static void OnTimer(HWND hwnd, UINT_PTR uTimerID) {
-  KillTimer(hwnd, uTimerID);
-
-  FLASHWINFO flashinfo = {sizeof(FLASHWINFO)};
-  flashinfo.hwnd = hwnd;
-  flashinfo.dwFlags = FLASHW_STOP;
-  flashinfo.uCount = 0;
-  FlashWindowEx(&flashinfo);
+  if (uTimerID != INTERCEPT_FLASH_TIMER_ID)
+    return;
+  KillTimer(hwnd, INTERCEPT_FLASH_TIMER_ID);
+  s_interceptFlashActive = FALSE;
+  InvalidateRect(hwnd, NULL, FALSE);
 }
 
+// Shows a short background tint so a blocked shortcut or injected key is visible in the window.
 static void OnKeypressIntercepted(HWND hwnd) {
-  FLASHWINFO flashinfo = {sizeof(FLASHWINFO)};
-  flashinfo.hwnd = hwnd;
-  flashinfo.dwFlags = FLASHW_ALL;
-  flashinfo.uCount = 1;
-  flashinfo.dwTimeout = 1;
-  FlashWindowEx(&flashinfo);
-  SetTimer(hwnd, FLASH_TIMER_ID, 1000, NULL);
+  s_interceptFlashActive = TRUE;
+  InvalidateRect(hwnd, NULL, FALSE);
+  KillTimer(hwnd, INTERCEPT_FLASH_TIMER_ID);
+  SetTimer(hwnd, INTERCEPT_FLASH_TIMER_ID, INTERCEPT_FLASH_MS, NULL);
 }
 
 static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam,
@@ -81,11 +87,15 @@ static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam,
     OnTimer(hwnd, wParam);
     break;
 
+  case WM_ERASEBKGND:
+    return 1;
+
   case WM_PAINT:
     OnPaint(hwnd);
     break;
 
   case WM_DESTROY:
+    KillTimer(hwnd, INTERCEPT_FLASH_TIMER_ID);
     PostQuitMessage(0);
     break;
 

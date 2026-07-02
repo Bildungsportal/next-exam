@@ -1,192 +1,125 @@
-require('dotenv').config();
-const { notarize } = require('@electron/notarize');
-const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const { spawn } = require('child_process');
+// electron-builder afterSign cwd is dist/, not student/ — load .env from project root
+const projectRoot = path.join(__dirname, '..');
+const envPath = fs.existsSync(path.join(projectRoot, '.env'))
+  ? path.join(projectRoot, '.env')
+  : path.join(projectRoot, '.env.production');
+require('dotenv').config({ path: envPath, override: true });
+const { notarize } = require('@electron/notarize');
+const { exec } = require('child_process');
 
-const { spawn } = require('child_process'); 
+const assessmentEntitlements = path.join(projectRoot, 'scripts', 'entitlements.mac.assessment.plist');
 
-
-// Funktion zum Ausführen eines Befehls als Promise
 function execPromise(command) {
   return new Promise((resolve, reject) => {
     exec(command, (error, stdout, stderr) => {
-      if (error) {
-        reject(stderr);
-      } else {
-        resolve(stdout);
-      }
+      if (error) reject(stderr || error);
+      else resolve(stdout);
     });
   });
 }
 
-// Funktion zum Löschen eines Verzeichnisses rekursiv
-function deleteDirectory(directoryPath) {
-  if (fs.existsSync(directoryPath)) {
-    fs.rmSync(directoryPath, { recursive: true, force: true });
-    console.log(`Deleted directory: ${directoryPath}`);
+// Re-sign apple/* helpers after electron-builder deep-sign (it overwrites afterpack with entitlementsInherit).
+function codesignHelper(helperPath, identity, entitlementsPath, identifier) {
+  return new Promise((resolve, reject) => {
+    const args = [
+      '--force',
+      '--options', 'runtime',
+      '--timestamp',
+      '--entitlements', entitlementsPath,
+      '-s', identity,
+    ];
+    if (identifier) args.push('--identifier', identifier);
+    args.push(helperPath);
+    const p = spawn('codesign', args, { stdio: 'inherit' });
+    p.on('error', reject);
+    p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(`codesign ${path.basename(helperPath)} failed (${code})`))));
+  });
+}
+
+async function resignAppleHelpers(appBundlePath) {
+  const identity = (process.env.SHAID || process.env.CSC_NAME || '').trim();
+  if (!identity || process.env.SIGN === 'false') return;
+  const bundleId = process.env.MAC_BUNDLE_ID || 'com.nextexam.student';
+  const mainEntitlements = path.join(path.dirname(assessmentEntitlements), 'entitlements.mac.plist');
+  const helpers = [
+    { name: 'assessment-helper.app', entitlements: assessmentEntitlements, identifier: bundleId },
+  ];
+  let anyReSigned = false;
+  for (const { name, entitlements, identifier } of helpers) {
+    const helperPath = path.join(appBundlePath, 'Contents', 'Resources', 'apple', name);
+    if (!fs.existsSync(helperPath) || !fs.existsSync(entitlements)) continue;
+    await codesignHelper(helperPath, identity, entitlements, identifier);
+    console.log(`Re-signed ${name} (${path.basename(entitlements)})`);
+    anyReSigned = true;
+  }
+  // Re-signing helpers invalidates sealed resources of the outer .app; re-sign the bundle to update hashes.
+  if (anyReSigned) {
+    await codesignHelper(appBundlePath, identity, mainEntitlements, bundleId);
+    console.log(`Re-signed outer .app bundle to seal updated helper hashes`);
   }
 }
 
+exports.resignAppleHelpers = resignAppleHelpers;
+
 exports.default = async function notarizing(context) {
-  console.log('--------------------------------');
-  console.info('Starting signing all JAVA LIBRARIES and notarization process for Next-Exam-Student ');
-  console.log('--------------------------------');
-    
   const { electronPlatformName, appOutDir } = context;
 
   if (electronPlatformName !== 'darwin') {
-    console.log("Skipping for this platform");
+    console.log('Skipping notarization for this platform');
     return;
   }
 
   const appName = context.packager.appInfo.productFilename;
-  const appPath = path.join(appOutDir, `${appName}.app`, 'Contents', 'Resources', 'app.asar.unpacked', 'public', 'LanguageTool', 'libs');
-
-  // Liste der JAR-Dateien
-  const jarFiles = [
-    'hunspell.jar',
-    'grpc-netty-shaded.jar',
-    'jna.jar'
-  ];
-
-  // Den Pfad zur Entitlements-Datei erstellen
-  const entitlementsPath = path.resolve(__dirname, 'entitlements.mac.plist');
-
-
-  console.log(`SIGNING JAVA LIBRARIES............................................`); // log
-
-
-  const ID = (process.env.SHAID || process.env.CSC_NAME || '').trim();
-  if (!ID) { throw new Error('Signing identity (SHAID/CSC_NAME) fehlt! Bitte sicherstellen, dass SHAID im Workflow-Env gesetzt ist.');}
-  
-  const run = (cmd, args) => new Promise((resolve, reject) => {
-    const p = spawn(cmd, args, { stdio: 'inherit' });
-    p.on('exit', c => c === 0 ? resolve() : reject(new Error(`${cmd} ${args.join(' ')} failed (${c})`)));
-  });
-
-  for (const jarFile of jarFiles) {
-    const unpackedDir = path.join(appPath, `${jarFile}_unpacked`); 
-
-    // Erstelle das Verzeichnis für die Entpackung
-    await execPromise(`mkdir -p "${unpackedDir}"`);
-    console.log(`Created directory: ${unpackedDir}`);
-
-    // Entpacke die JAR-Datei
-    await execPromise(`cd "${unpackedDir}" && jar xf "${path.join(appPath, jarFile)}"`);
-    console.log(`Successfully unpacked ${jarFile} into ${unpackedDir}`);
-
-
-
-
-    const filesToSign = [
-      'darwin-x86-64/libhunspell.dylib',
-      'META-INF/native/libio_grpc_netty_shaded_netty_tcnative_osx_x86_64.jnilib',
-      'com/sun/jna/darwin-x86-64/libjnidispatch.jnilib',
-      'darwin-aarch64/libhunspell.dylib',
-      'META-INF/native/libio_grpc_netty_shaded_netty_tcnative_osx_aarch_64.jnilib',
-      'com/sun/jna/darwin-aarch64/libjnidispatch.jnilib'
-    ]; // fixed list
-    
-
-
-    for (const rel of filesToSign) {
-      const fullPath = path.join(unpackedDir, rel);
-      if (!fs.existsSync(fullPath)) continue;
-      const st = fs.statSync(fullPath);
-      fs.chmodSync(fullPath, st.mode | 0o200);
-      await run('codesign', [
-        '--force',
-        '--options', 'runtime',
-        '--timestamp',
-        '--preserve-metadata=identifier,entitlements,flags',
-        '-s', ID,
-        fullPath,
-      ]);
-      console.log(`SUCCESSFULLY SIGNED ${fullPath}`);
-    }
-    
-
-
-
-
-
-
-
-
-    // JAR-Datei neu verpacken
-    try {
-      await execPromise(`jar cf "${path.join(appPath, jarFile)}" -C "${unpackedDir}" .`);
-      console.log(`Successfully repacked ${jarFile}`);
-    } catch (error) {
-      console.error(`Error repacking ${jarFile}:`, error);
-      throw new Error(`Repacking failed for ${jarFile}`);
-    }
-
-    deleteDirectory(unpackedDir);  // Löschen des _unpacked-Verzeichnisses
-  }
-
-
-
-
-
-
-
-  // **Neu-Signieren der gesamten App** nach der Modifikation der Dateien
   const appBundlePath = path.join(appOutDir, `${appName}.app`);
   if (!fs.existsSync(appBundlePath)) {
-    console.error(`appBundle does not exist:`, appBundlePath);
     throw new Error(`appBundle does not exist ${appBundlePath}`);
   }
 
-  try {
-    const st = fs.statSync(appBundlePath);
-    fs.chmodSync(appBundlePath, st.mode | 0o200);
-    await run('codesign', [
-        '--deep',
-        '--force',
-        '--options', 'runtime',
-        '--entitlements', entitlementsPath,
-        '-s', ID,
-        appBundlePath,
-    ]);
-    console.log(`Successfully re-signed the entire app: ${appBundlePath}`);
-  } catch (error) {
-    console.error(`Error re-signing the app:`, error);
-    throw new Error(`Re-signing failed for ${appBundlePath}`);
+  // Helpers must be signed after electron-builder (afterpack signing is overwritten by entitlementsInherit).
+  await resignAppleHelpers(appBundlePath);
+
+  // JAR signing runs in afterpack.js before electron-builder signs the .app (avoids broken re-sign with profile)
+  if (process.env.NOTARIZE === 'false') {
+    console.log('Skipping notarization (NOTARIZE=false)');
+    return;
   }
 
-  try {
-    await execPromise(`codesign -vvv --deep --strict ${appBundlePath}`);
-  } catch (error) {
-    console.error(`Validating failed:`, error);
-    throw new Error(`Validating failed ${appBundlePath}`);
-  }
-
-
-
-
-
-
-
-
-
-  // Notarization-Prozess starten
   console.log('--------------------------------');
-  console.log("Notarizing Next-Exam-Student");
+  console.log('Notarizing Next-Exam-Student');
   console.log('--------------------------------');
 
-  try {
-    await notarize({
-      tool: 'notarytool',
-      teamId: process.env.TEAMID,
-      appBundleId: 'com.nextexam-student.app',
-      appPath: appBundlePath,
-      appleId: process.env.APPLEID,
-      appleIdPassword: process.env.APPLEIDPASS,
-    });
-    console.log("Notarization successful!");
-  } catch (error) {
-    console.error("Failed to notarize:", error);
+  const notarizeOpts = {
+    tool: 'notarytool',
+    teamId: process.env.TEAMID,
+    appBundleId: process.env.MAC_BUNDLE_ID || 'com.nextexam.student',
+    appPath: appBundlePath,
+    appleId: process.env.APPLEID,
+    appleIdPassword: process.env.APPLEIDPASS,
+  };
+  const maxAttempts = 3;
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      await notarize(notarizeOpts);
+      lastError = null;
+      break;
+    } catch (error) {
+      lastError = error;
+      const msg = String(error?.message || error);
+      const retryable = msg.includes('timed out') || msg.includes('-1001');
+      if (!retryable || attempt === maxAttempts) break;
+      console.warn(`Notarize attempt ${attempt}/${maxAttempts} timed out — retry in 60s…`);
+      await new Promise((r) => setTimeout(r, 60000));
+    }
   }
+  if (lastError) {
+    console.error('Failed to notarize:', lastError);
+    throw lastError;
+  }
+  console.log('Notarization successful!');
+  await execPromise(`xcrun stapler staple "${appBundlePath}"`);
+  console.log(`Stapled notarization ticket: ${appBundlePath}`);
 };

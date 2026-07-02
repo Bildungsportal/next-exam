@@ -1,0 +1,14 @@
+@import '../../node_modules/bootstrap/scss/functions';
+@import '../../node_modules/bootstrap/scss/variables';
+@import '../../node_modules/bootstrap/scss/variables-dark';
+@import '../../../shared/css/nxe-bootstrap-config.scss';
+@import '../../node_modules/bootstrap/scss/bootstrap';
+@import '../../node_modules/sweetalert2/dist/sweetalert2.css';
+@import './style-main.css';
+@import '../../../shared/css/nxe-theme.scss';
+
+#description {
+    background-color: $teal-600;
+    border-color: $teal-700;
+    color: $white;
+}

@@ -1,0 +1,2 @@
+  warning: could not transcribe student/public/attention.wav: Video transcription requires faster-whisper. Run: pip install 'graphifyy[video]'
+[]

@@ -1,0 +1,22 @@
+ 
+
+#das baut eine jre mit den modulen die für languagtool relevant sind (ca 40mb statt 200)
+
+Linux:
+jlink --module-path /usr/lib/jvm/java-1.11.0-openjdk-amd64/jmods/ --add-modules java.base,jdk.httpserver,java.xml,java.naming,java.desktop --strip-debug --compress=2 --output minimaljre
+
+
+Windows
+PS C:\Program Files\OpenLogic\jdk-11.0.23.9-hotspot\bin> .\jlink.exe --module-path jmods --add-modules java.base,jdk.httpserver,java.xml,java.naming,java.desktop --strip-debug --compress=2 --output 'C:\Users\admin\Desktop\minimal-jre\'
+
+
+macos
+jlink --module-path $JAVA_HOME/jmods --add-modules java.base,jdk.httpserver,java.xml,java.naming,java.desktop --strip-debug --compress=2 --output minimaljre
+
+macos arm64  (hier die jdk 11 aarch64 runterladen und dann als JAVA_HOME das entpackte aarch64 verzeichnis nehmen (auf einem x64 mac))
+https://adoptium.net/de/download/
+
+
+
+hint:
+auf macos müssen für languagetool alle binaries entpackt und einzeln signiert werden - daher das komplexe sign script in notarize

@@ -5,16 +5,44 @@ import { createRequire } from 'module';
 import JavaScriptObfuscator from 'javascript-obfuscator';
 import { transform } from 'esbuild';
 import bytenode from 'bytenode';
+import dotenv from 'dotenv';
+import fsSync from 'fs';
 
 const require = createRequire(import.meta.url);
+
+const envFile = fsSync.existsSync('./.env') ? './.env' : './.env.production';
+dotenv.config({ path: envFile });
+
+if (process.env.OBFUSCATE_MAIN === 'false') {
+  // obfuscation disabled via OBFUSCATE_MAIN env var
+  console.log('⚠️ Skipping main process obfuscation (OBFUSCATE_MAIN=false).');
+  process.exit(0);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const projectRoot = path.resolve(path.dirname(__filename), '..');
 const configPath = path.join(projectRoot, 'obfuscator.config.json');
-const distMainDir = path.join(projectRoot, 'dist', 'main');
-const entryPath = path.join(distMainDir, 'main.mjs');
-const obfuscatedEntryPath = path.join(distMainDir, 'main.obf.cjs');
-const bytecodePath = path.join(distMainDir, 'main.jsc');
+
+const getArgValue = (argv, name) => {
+  const prefix = `--${name}=`;
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (typeof a !== 'string') continue;
+    if (a.startsWith(prefix)) return a.slice(prefix.length);
+    if (a === `--${name}`) return argv[i + 1];
+  }
+  return null;
+};
+
+const appDir =
+  getArgValue(process.argv, 'app-dir') ||
+  process.env.NX_PROTECT_APP_DIR ||
+  path.join(projectRoot, 'dist', 'electron', 'UnPackaged');
+
+const distMainDir = appDir;
+const entryPath = path.join(distMainDir, 'electron-main.js');
+const obfuscatedEntryPath = path.join(distMainDir, 'electron-main.obf.cjs');
+const bytecodePath = path.join(distMainDir, 'electron-main.jsc');
 
 const ensurePaths = async () => {
   const configExists = await fs
@@ -81,6 +109,8 @@ const createObfuscatedCjs = async () => {
   let fixedCjsCode = cjsCode.replace(/const\s+__dirname\s*=\s*import_meta\.dirname\s*;/g, '');
   // Also handle cases where it's used in other contexts (shouldn't happen, but just in case)
   fixedCjsCode = fixedCjsCode.replace(/import_meta\.dirname/g, '__dirname');
+  // Fix import.meta.url transformation: esbuild uses import_meta.url, which is undefined in CJS.
+  fixedCjsCode = fixedCjsCode.replace(/import_meta\.url/g, "require('url').pathToFileURL(__filename).href");
   const result = JavaScriptObfuscator.obfuscate(fixedCjsCode, config);
   await fs.writeFile(obfuscatedEntryPath, result.getObfuscatedCode(), 'utf8');
 };
@@ -146,10 +176,10 @@ const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-require(path.join(__dirname, 'main.jsc'));
+require(path.join(__dirname, 'electron-main.jsc'));
 `;
   await fs.writeFile(entryPath, loaderSource, 'utf8');
-  await fs.rm(path.join(distMainDir, 'main.mjs.map'), { force: true });
+  await fs.rm(path.join(distMainDir, 'electron-main.js.map'), { force: true });
 };
 
 await ensurePaths();

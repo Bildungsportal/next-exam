@@ -1,0 +1,2397 @@
+{
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/postcss.config.js": {
+    "mtime": 1773909624.6178398,
+    "ast_hash": "dd7e57c004b452654bc0190390b5ca33",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/types.d.ts": {
+    "mtime": 1773396334.5359647,
+    "ast_hash": "1c19df34eaaeb6584fb03a89a525e391",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/quasar.config.ts": {
+    "mtime": 1778510506.8151808,
+    "ast_hash": "63986a0a153eaacb242c10f87c95c9e7",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/deployggb.js": {
+    "mtime": 1777405324.4266841,
+    "ast_hash": "b633e2dd3ac7a168d4eeaa10b55eca98",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/web3d.nocache.mjs": {
+    "mtime": 1777405324.425774,
+    "ast_hash": "fa1338d4573771a76755f5e2860d417c",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/sworker-locked.js": {
+    "mtime": 1777405324.425774,
+    "ast_hash": "db7e3d6972cad62a7ea51bca2a4af95a",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/web3d.nocache.js": {
+    "mtime": 1777405324.425774,
+    "ast_hash": "1f859cfcf92161353677ecf76116e19a",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/0C7057AD68C986E5B1859BFB332A1012.cache.js": {
+    "mtime": 1777405324.3277752,
+    "ast_hash": "97ed448af7fe13e49f5d29200816db37",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/deferredjs/0C7057AD68C986E5B1859BFB332A1012/9.cache.js": {
+    "mtime": 1777405324.364775,
+    "ast_hash": "318f110817c7d80bfaaadd1ba9b1b6d4",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/deferredjs/0C7057AD68C986E5B1859BFB332A1012/4.cache.js": {
+    "mtime": 1777405324.361775,
+    "ast_hash": "eafe0ee58eaf94cad7083e5e3d46a7e2",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/deferredjs/0C7057AD68C986E5B1859BFB332A1012/6.cache.js": {
+    "mtime": 1777405324.3627748,
+    "ast_hash": "b6bc9a10fed3b7575cad105e3de6bb3a",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/deferredjs/0C7057AD68C986E5B1859BFB332A1012/2.cache.js": {
+    "mtime": 1777405324.360775,
+    "ast_hash": "6e7661b1254f22c83d51627ee74578dc",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/deferredjs/0C7057AD68C986E5B1859BFB332A1012/14.cache.js": {
+    "mtime": 1777405324.3347752,
+    "ast_hash": "f87dc8cd22833995fa61e083324704e1",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/deferredjs/0C7057AD68C986E5B1859BFB332A1012/12.cache.js": {
+    "mtime": 1777405324.3307753,
+    "ast_hash": "4a2afe02064d22c85556acda9a69daaf",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/deferredjs/0C7057AD68C986E5B1859BFB332A1012/5.cache.js": {
+    "mtime": 1777405324.3627748,
+    "ast_hash": "d9f968ead286921b542d7995cbe85eea",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/deferredjs/0C7057AD68C986E5B1859BFB332A1012/11.cache.js": {
+    "mtime": 1777405324.3288887,
+    "ast_hash": "30bf97338f4ffe2065cb8a50fd36d988",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/deferredjs/0C7057AD68C986E5B1859BFB332A1012/3.cache.js": {
+    "mtime": 1777405324.360775,
+    "ast_hash": "0beb7ca6c9839df5ab04243c8ea516b1",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/deferredjs/0C7057AD68C986E5B1859BFB332A1012/10.cache.js": {
+    "mtime": 1777405324.3288887,
+    "ast_hash": "35f5e9f43b5106a8985c5ee5ee8a488c",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/deferredjs/0C7057AD68C986E5B1859BFB332A1012/7.cache.js": {
+    "mtime": 1777405324.3627748,
+    "ast_hash": "b6c90a6e8cad4a380ed91532be47b5ad",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/deferredjs/0C7057AD68C986E5B1859BFB332A1012/1.cache.js": {
+    "mtime": 1777405324.3284647,
+    "ast_hash": "3ea3ad165313b1a72eb715522eb002d7",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/deferredjs/0C7057AD68C986E5B1859BFB332A1012/13.cache.js": {
+    "mtime": 1777405324.3347752,
+    "ast_hash": "f2b6176aa8b95e7e978970e05efddfeb",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/deferredjs/0C7057AD68C986E5B1859BFB332A1012/8.cache.js": {
+    "mtime": 1777405324.3637748,
+    "ast_hash": "74ac06b17860bf9949241eea49e32fa7",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/maths/jlm_special.js": {
+    "mtime": 1777405324.3704765,
+    "ast_hash": "b39a4bce89c57414692dc8370370482b",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/maths/jlm_rsfs10.js": {
+    "mtime": 1777405324.3704765,
+    "ast_hash": "2b7acb5a01543972c48615159129e462",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/maths/jlm_cmbsy10.js": {
+    "mtime": 1777405324.3700366,
+    "ast_hash": "e97ec841a66e6996cf584e466bc46d1e",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/maths/jlm_stmary10.js": {
+    "mtime": 1777405324.3704765,
+    "ast_hash": "02a8c567ac92859f50c4aeb888964348",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/maths/jlm_msam10.js": {
+    "mtime": 1777405324.3704765,
+    "ast_hash": "1e5dc50c7b7748a755ce355afc082107",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/maths/jlm_msbm10.js": {
+    "mtime": 1777405324.3704765,
+    "ast_hash": "d484fe3edec890c5c313c4b6fe22a3ff",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/maths/optional/jlm_dsrom10.js": {
+    "mtime": 1777405324.3704765,
+    "ast_hash": "f22bbf07ee636fcd08a21f7054e70334",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/latin/jlm_jlmsb10.js": {
+    "mtime": 1777405324.3689454,
+    "ast_hash": "86c1ec0122b4db91ec3366ddab761af3",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/latin/jlm_jlmi10.js": {
+    "mtime": 1777405324.3689454,
+    "ast_hash": "9e11f75894b42ad4b21b36b9a7bf6fc4",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/latin/jlm_jlmbx10.js": {
+    "mtime": 1777405324.3689454,
+    "ast_hash": "f0805caec99c1123d1aec8738ec5e7c5",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/latin/jlm_jlmr10.js": {
+    "mtime": 1777405324.3689454,
+    "ast_hash": "960c4ec13c4d11286f6fa4f296deb126",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/latin/jlm_jlmbi10.js": {
+    "mtime": 1777405324.3689454,
+    "ast_hash": "6a87f3feddf646bb4bf56423ff256013",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/latin/jlm_jlmsi10.js": {
+    "mtime": 1777405324.3689454,
+    "ast_hash": "4a2fec4a98e6ae35920cf22a3cb074be",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/latin/jlm_jlmss10.js": {
+    "mtime": 1777405324.3689454,
+    "ast_hash": "540bf2a1c940549f1eac2a88386cf97e",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/latin/jlm_jlmsbi10.js": {
+    "mtime": 1777405324.3689454,
+    "ast_hash": "f5c927ce05b7d1026fa1946d8270e696",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/latin/jlm_cmr10.js": {
+    "mtime": 1777405324.3677747,
+    "ast_hash": "34cac466829f704d94f9b4e0758a9640",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/latin/jlm_jlmtt10.js": {
+    "mtime": 1777405324.3689454,
+    "ast_hash": "e5853d4ed387be744134fa4d6c0b145d",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/latin/optional/jlm_cmssbx10.js": {
+    "mtime": 1777405324.369367,
+    "ast_hash": "5ddc1681c8c34cda4fe17bc4327b4f84",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/latin/optional/jlm_cmti10.js": {
+    "mtime": 1777405324.369367,
+    "ast_hash": "81ae638a905cbd3eb318a49a824c3363",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/latin/optional/jlm_cmtt10.js": {
+    "mtime": 1777405324.369367,
+    "ast_hash": "47674bd24cdae434485f39c802bd47cd",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/latin/optional/jlm_cmssi10.js": {
+    "mtime": 1777405324.369367,
+    "ast_hash": "c8e46a83948ef2a56b34a5aab501274e",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/latin/optional/jlm_cmbxti10.js": {
+    "mtime": 1777405324.369367,
+    "ast_hash": "7edf116227f76090d814acd06233a234",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/latin/optional/jlm_cmbx10.js": {
+    "mtime": 1777405324.3689454,
+    "ast_hash": "6b0337b3fd0bb1bc0e5deb4b26929347",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/euler/jlm_eufb10.js": {
+    "mtime": 1777405324.3667748,
+    "ast_hash": "890e838e93331c9f4c27de1f0ff835fb",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/euler/jlm_eufm10.js": {
+    "mtime": 1777405324.3667748,
+    "ast_hash": "df3cb72cc06caf99d37d5360ae8d5f07",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/base/jlm_cmmi10.js": {
+    "mtime": 1777405324.3652394,
+    "ast_hash": "bcd52a7bb72c909d36794ffb65d1d583",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/base/jlm_cmmib10.js": {
+    "mtime": 1777405324.3654077,
+    "ast_hash": "6e8b84f6601151ff1c51fda3cf2447c0",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/cyrillic/jlm_wntt10.js": {
+    "mtime": 1777405324.3657749,
+    "ast_hash": "451ec68214ecfcd19458b458d5f989b0",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/cyrillic/jlm_wnssi10.js": {
+    "mtime": 1777405324.3657749,
+    "ast_hash": "49e24d395a36714c1e0af0bf93b2928b",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/cyrillic/jlm_wnr10.js": {
+    "mtime": 1777405324.3657749,
+    "ast_hash": "5c84484a6b3528f5f0d4b3568aede77f",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/cyrillic/jlm_wnss10.js": {
+    "mtime": 1777405324.3657749,
+    "ast_hash": "7cd6cee6d00f3c852e6c3a4cc873ad4d",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/cyrillic/jlm_wnbxti10.js": {
+    "mtime": 1777405324.3657546,
+    "ast_hash": "b890cecb3cd748bb1c369a1fafa57f66",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/cyrillic/jlm_wnti10.js": {
+    "mtime": 1777405324.3657749,
+    "ast_hash": "6bbb4f77ead36a3eb2e0533ab2ce3934",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/cyrillic/jlm_wnbx10.js": {
+    "mtime": 1777405324.3654077,
+    "ast_hash": "8671f54e7305c233e7491d0f039097c2",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/cyrillic/jlm_wnssbx10.js": {
+    "mtime": 1777405324.3657749,
+    "ast_hash": "88106fb517d7971bd83a559853a33608",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/greek/jlm_fcsropg.js": {
+    "mtime": 1777405324.3677747,
+    "ast_hash": "401e10d3e6aa51e7916cc1561ed660a7",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/greek/jlm_fcmbpg.js": {
+    "mtime": 1777405324.3675363,
+    "ast_hash": "01cde86a67f59ef9a21219721244b30b",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/greek/jlm_fcsbpg.js": {
+    "mtime": 1777405324.3677747,
+    "ast_hash": "48e6e0d05cfabb9a3fc2b05a4d4803d3",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/greek/jlm_fcmbipg.js": {
+    "mtime": 1777405324.3667748,
+    "ast_hash": "37d5e3ba38ec5ca127df104fa4cfcfb1",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/greek/jlm_fcmrpg.js": {
+    "mtime": 1777405324.3675363,
+    "ast_hash": "3b8d607a1305575b84306853537b24a0",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/greek/jlm_fctrpg.js": {
+    "mtime": 1777405324.3677747,
+    "ast_hash": "96f569bd55d80b11627fd81ad3435173",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/greek/jlm_fcmripg.js": {
+    "mtime": 1777405324.3675363,
+    "ast_hash": "87069081457d741d343fe5360b401369",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/fonts/greek/jlm_fcsrpg.js": {
+    "mtime": 1777405324.3677747,
+    "ast_hash": "838fc0b411cf0d3c7576318024ecb17d",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_lt.js": {
+    "mtime": 1777405324.4017744,
+    "ast_hash": "d5ad8211b7059aaff14fedfb47884c9e",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_bs.js": {
+    "mtime": 1777405324.3787746,
+    "ast_hash": "8d3e4c3d9e48e1eac652874fffefab38",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_id.js": {
+    "mtime": 1777405324.3957744,
+    "ast_hash": "22d2adf519e4d55cc46d97ce8010914e",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/canvas2pdf.min.js": {
+    "mtime": 1777405324.3717747,
+    "ast_hash": "98fc553cfacb877c2b122dfc693f59e7",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_he.js": {
+    "mtime": 1777405324.3927746,
+    "ast_hash": "7445b80c3eb8eab715a5be3d449c9822",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_en-AU.js": {
+    "mtime": 1777405324.3847747,
+    "ast_hash": "aeac0b07e6af0e11c7b1119908d3c7fd",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_it.js": {
+    "mtime": 1777405324.3967745,
+    "ast_hash": "46710bff3e8a89715e66e96fec6d55cd",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_hu.js": {
+    "mtime": 1777405324.3947744,
+    "ast_hash": "359372b143799df0f5f89c13d68a7be3",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/whammy.min.js": {
+    "mtime": 1777405324.4247742,
+    "ast_hash": "1f8a31855b36fa88bc8c8e76160b92d7",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/gifshot.min.js": {
+    "mtime": 1777405324.3717747,
+    "ast_hash": "3b8993d56efe12d4dfd158e2ab786955",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_fa.js": {
+    "mtime": 1777405324.3897746,
+    "ast_hash": "c9617179a5a855da9387fc8e626d72ba",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_ko.js": {
+    "mtime": 1777405324.4007745,
+    "ast_hash": "3a453bda54b6175754cef2979606c65c",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_fr.js": {
+    "mtime": 1777405324.3917744,
+    "ast_hash": "efca1173f85d3fd1c6c54e79009a75c3",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_as.js": {
+    "mtime": 1777405324.3757746,
+    "ast_hash": "4a4764e5d05935991523bd711e15373f",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/whammy.js": {
+    "mtime": 1777405324.4247742,
+    "ast_hash": "a4f2adb8a38579597b8f654bbc82f35c",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_sq.js": {
+    "mtime": 1777405324.4157743,
+    "ast_hash": "51463f52efbc04bd1f14f33bb2f8f25c",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_cs.js": {
+    "mtime": 1777405324.3807747,
+    "ast_hash": "cad4990e2b338a6f23a0a8acbcad5b37",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_el.js": {
+    "mtime": 1777405324.3837745,
+    "ast_hash": "db29d4549f5190910a49151e8e8c256c",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_hr.js": {
+    "mtime": 1777405324.3937745,
+    "ast_hash": "a2e5ef10d5561d5f1b4427ce2e05ce4d",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_af.js": {
+    "mtime": 1777405324.3717747,
+    "ast_hash": "a9ecd5cb494ddf6feb8d1ee7d91900d8",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_es-ES.js": {
+    "mtime": 1777405324.3867745,
+    "ast_hash": "f8d07f61e23e07568bcda2a361b37476",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_mn-Mong.js": {
+    "mtime": 1777405324.4047744,
+    "ast_hash": "9dc57093a63c13032420522955553c01",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_gl.js": {
+    "mtime": 1777405324.3917744,
+    "ast_hash": "8832e9df5d5d2621ab33ee3bc221f4ee",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/canvas-to-svg.umd.min.js": {
+    "mtime": 1777405324.3715637,
+    "ast_hash": "987e139e89ae91baee79c1c2e5063e40",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_kn.js": {
+    "mtime": 1777405324.4007745,
+    "ast_hash": "6279c2e05e98ba160ad190cd3519dbb8",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_ca.js": {
+    "mtime": 1777405324.3797746,
+    "ast_hash": "e4bdbdc7186bdca98997bd152b9043ec",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_bn.js": {
+    "mtime": 1777405324.3777747,
+    "ast_hash": "7b5e2a3b278b7cbf69fbee478e45a6fb",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_sl.js": {
+    "mtime": 1777405324.4147742,
+    "ast_hash": "109cf55ddcb28ac24ae9efe44beb5126",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_ug.js": {
+    "mtime": 1777405324.4207742,
+    "ast_hash": "0cbeb99709540271ec9e6363438923d2",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_sr.js": {
+    "mtime": 1777405324.4157743,
+    "ast_hash": "f13fc28e01a8b9c35d22927ea198c570",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_cy.js": {
+    "mtime": 1777405324.3807747,
+    "ast_hash": "7232024b252b76e4350164f94a7fba2e",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_sv.js": {
+    "mtime": 1777405324.4167743,
+    "ast_hash": "b38ba90eabb14772ccf1545e9f332b13",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_ru.js": {
+    "mtime": 1777405324.4127743,
+    "ast_hash": "afd87e8d59f90fc9f9b834b3ea4d66be",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_mk.js": {
+    "mtime": 1777405324.4027743,
+    "ast_hash": "0060ac6c302fcf709d5c870f5ce41ef7",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_zh-CN.js": {
+    "mtime": 1777405324.4247742,
+    "ast_hash": "c00143473ad3ba9e958a966c19c59a50",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_th.js": {
+    "mtime": 1777405324.4187741,
+    "ast_hash": "87ee6e29bd67bc56aeb3f53dfc5cd7f3",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_az.js": {
+    "mtime": 1777405324.3767748,
+    "ast_hash": "5399effcdf0c629c64091c41aee36ba8",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_en-GB.js": {
+    "mtime": 1777405324.3847747,
+    "ast_hash": "2f919f2fd4073159ea36951474d219e3",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_am.js": {
+    "mtime": 1777405324.3727748,
+    "ast_hash": "b67dd458e64eedab61f8ef3ba80758f4",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_ms.js": {
+    "mtime": 1777405324.4067743,
+    "ast_hash": "ad982f31904fbcb487055a4327e506cf",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_nl.js": {
+    "mtime": 1777405324.4087744,
+    "ast_hash": "17026faac8eb7ec6ddb9665024fb801e",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_ja.js": {
+    "mtime": 1777405324.3977745,
+    "ast_hash": "464d56dff44891071d9c776034d936f0",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_sk.js": {
+    "mtime": 1777405324.4147742,
+    "ast_hash": "73fa68c05211795183d92e1b87cf76a4",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_ka.js": {
+    "mtime": 1777405324.3987744,
+    "ast_hash": "49d367a2a5859dd3eaa7aef6dca2f6e5",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_hi.js": {
+    "mtime": 1777405324.3937745,
+    "ast_hash": "06fda1e3c74445080858a53385235aea",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_ta.js": {
+    "mtime": 1777405324.4177742,
+    "ast_hash": "c42970ab5da0ae28874da209e8e5ffbf",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_ar-MA.js": {
+    "mtime": 1777405324.3737748,
+    "ast_hash": "2abf9ac71c554f4cc2e4cd1a87f86d35",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_ar-SY.js": {
+    "mtime": 1777405324.3737748,
+    "ast_hash": "14c9465d9608f130c2ea86247e79103d",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_km.js": {
+    "mtime": 1777405324.3997743,
+    "ast_hash": "92781f3573a8c5f1bcf84f3a213d0d30",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_nn.js": {
+    "mtime": 1777405324.4097743,
+    "ast_hash": "7fc490e354c684720ae78d2c2b1684e1",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_mn.js": {
+    "mtime": 1777405324.4057744,
+    "ast_hash": "d94bda24e50f1c208380871bfa2f1a71",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_zh-TW.js": {
+    "mtime": 1777405324.4247742,
+    "ast_hash": "27c4e61f0db6fc1697001674e00ea1aa",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_ne.js": {
+    "mtime": 1777405324.4077744,
+    "ast_hash": "d08b62baf8ed71a29230cbef9dddd76d",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_es-UY.js": {
+    "mtime": 1777405324.3867745,
+    "ast_hash": "9dec09c0526c57be7d45ed5067003425",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_de.js": {
+    "mtime": 1777405324.3827746,
+    "ast_hash": "42d8eff221b6fc9cb761b5ae261a94e2",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_et.js": {
+    "mtime": 1777405324.3887746,
+    "ast_hash": "161320652488fa09beca81b5ff043df1",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_pt-PT.js": {
+    "mtime": 1777405324.4107742,
+    "ast_hash": "71aea40d1be46bb9b8a31d7c02c8fd96",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_tr.js": {
+    "mtime": 1777405324.4197743,
+    "ast_hash": "abcdfb86e132b3a4fe70a722e0ee79be",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_ro.js": {
+    "mtime": 1777405324.4117744,
+    "ast_hash": "fd938e64d8078eb0f6f4c7069be5c04a",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/RobotoSerif.js": {
+    "mtime": 1777405324.3715637,
+    "ast_hash": "191ff3f315aefe20e8f85f123111b3da",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/Roboto.js": {
+    "mtime": 1777405324.3710115,
+    "ast_hash": "899cbd6a9e114f7f4c1171608471ed0a",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_eo.js": {
+    "mtime": 1777405324.3857746,
+    "ast_hash": "d4b302b63b54d2ec9fee9c65b9c16bfa",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_pt.js": {
+    "mtime": 1777405324.4117744,
+    "ast_hash": "f1b47b4d20aecd73b492469e2baea4f9",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_tg.js": {
+    "mtime": 1777405324.4177742,
+    "ast_hash": "7f98156dd36d7264bf17cf7867710137",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_en.js": {
+    "mtime": 1777405324.3857746,
+    "ast_hash": "1ac04625945583e5943457f90e99efad",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_nl-NL.js": {
+    "mtime": 1777405324.4087744,
+    "ast_hash": "661ec7aaeaed9da45c1b76590fc4ec72",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_uz.js": {
+    "mtime": 1777405324.4217741,
+    "ast_hash": "cb02ba74f59ccae00825928e1979f4b8",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_nb.js": {
+    "mtime": 1777405324.4077744,
+    "ast_hash": "6883820cc8567ac4f7388b4ef291fc56",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_fi.js": {
+    "mtime": 1777405324.3897746,
+    "ast_hash": "930bf85e11a2089f4d1dc3a775ed5b6c",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_mr.js": {
+    "mtime": 1777405324.4057744,
+    "ast_hash": "80e67dc9413bb5bd5b8d22f936126110",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_pl.js": {
+    "mtime": 1777405324.4107742,
+    "ast_hash": "68202286f8d04b37eb20d23dbdcb1825",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_fil.js": {
+    "mtime": 1777405324.3907745,
+    "ast_hash": "b0fb4270ea1d8866511bd1d4364fb17c",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_da.js": {
+    "mtime": 1777405324.3817747,
+    "ast_hash": "9df311086de6b8d66cc0912b49bb4ecf",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_lv.js": {
+    "mtime": 1777405324.4027743,
+    "ast_hash": "987d26485594544f5655bf3a1449e58e",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_is.js": {
+    "mtime": 1777405324.3967745,
+    "ast_hash": "4e48a43d85a220cbc7eb5c5d6091f2c4",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_eu.js": {
+    "mtime": 1777405324.3887746,
+    "ast_hash": "121da4c13e6fd370fba42f9eafd546a0",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_es.js": {
+    "mtime": 1777405324.3877745,
+    "ast_hash": "878813317aa8520e33ffbd72224f04c8",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_de-AT.js": {
+    "mtime": 1777405324.3827746,
+    "ast_hash": "48640c2af3ecbde60450c0664ff34c52",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_vi.js": {
+    "mtime": 1777405324.422774,
+    "ast_hash": "f0bf17c39b8b416051c23d4388fdb624",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_ar.js": {
+    "mtime": 1777405324.3757746,
+    "ast_hash": "bae95f191d7f1eb777f76cb0deef95e9",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_si.js": {
+    "mtime": 1777405324.4137743,
+    "ast_hash": "2b677b23262c5cd67fa519195734c143",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_bg.js": {
+    "mtime": 1777405324.3777747,
+    "ast_hash": "58f2c27632d52573c94dda777e2a5f53",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_ar-TN.js": {
+    "mtime": 1777405324.3747747,
+    "ast_hash": "f5b2d4706f764757bf6a28167bc18d30",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_kk.js": {
+    "mtime": 1777405324.3997743,
+    "ast_hash": "2195605bb2cd82cb5c677ac24617d7ba",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_ml.js": {
+    "mtime": 1777405324.4037745,
+    "ast_hash": "dcfe5c287216ed5e6d1c1d26d872a746",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_xh.js": {
+    "mtime": 1777405324.422774,
+    "ast_hash": "61dd01aa5c1492594302c4e27fb6313c",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_uk.js": {
+    "mtime": 1777405324.4217741,
+    "ast_hash": "3c2a55a4578dd36ec6260645f0529f69",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/webfont.js": {
+    "mtime": 1777405324.4247742,
+    "ast_hash": "d27e907d3d0ba8fd4b7014540bd7a52f",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_ca-XV.js": {
+    "mtime": 1777405324.3797746,
+    "ast_hash": "0bc3727ad49e84af489a5455d6ac39c8",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/canvas2pdf.js": {
+    "mtime": 1777405324.3717747,
+    "ast_hash": "f283a63a433e7e5a342ae35699b87031",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_yi.js": {
+    "mtime": 1777405324.4237742,
+    "ast_hash": "c0fa4ff00b66c603fb88435d8202672c",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/js/properties_keys_hy.js": {
+    "mtime": 1777405324.3957744,
+    "ast_hash": "4901967c5c34b9b9911d5fd3a71af566",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/scripts/prebuild.js": {
+    "mtime": 1773909624.6928399,
+    "ast_hash": "2dae87f4835ec0b8d8754b4c2bc23eed",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/scripts/afterpack.js": {
+    "mtime": 1773396334.509685,
+    "ast_hash": "f1e018b81e7e86a9391a1a54b4f8b258",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/scripts/injectkeys.py": {
+    "mtime": 1777405324.4266841,
+    "ast_hash": "42b5f78c962ef0397acd031d215a20f6",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/scripts/protect-main.mjs": {
+    "mtime": 1773909624.69384,
+    "ast_hash": "eac5f1693615c70856427c6d88a80c57",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/App.vue": {
+    "mtime": 1779101245.250566,
+    "ast_hash": "525b3a07e1bef3aded004ebbba1f14f6",
+    "semantic_hash": "525b3a07e1bef3aded004ebbba1f14f6"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/env.d.ts": {
+    "mtime": 1779101245.2723892,
+    "ast_hash": "d1ad6e5c732572e3c87b24a7f38b2964",
+    "semantic_hash": "d1ad6e5c732572e3c87b24a7f38b2964"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/inflator.js": {
+    "mtime": 1779101245.273052,
+    "ast_hash": "97b6c730a4d9ebc139918257bf95cec3",
+    "semantic_hash": "97b6c730a4d9ebc139918257bf95cec3"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/base64.js": {
+    "mtime": 1779101245.27267,
+    "ast_hash": "3d4def46db2e6193d951f7273dcd8e11",
+    "semantic_hash": "3d4def46db2e6193d951f7273dcd8e11"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/websock.js": {
+    "mtime": 1779101245.2740726,
+    "ast_hash": "be5914f4bc36bc2173b3ed9c062a6b36",
+    "semantic_hash": "be5914f4bc36bc2173b3ed9c062a6b36"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/display.js": {
+    "mtime": 1779996018.7528942,
+    "ast_hash": "f2339970018bd5365247398f8fcf6ebc",
+    "semantic_hash": "f2339970018bd5365247398f8fcf6ebc"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/rfb.js": {
+    "mtime": 1779996018.7530837,
+    "ast_hash": "4fd78cfa59837b70aa80f9253a83007f",
+    "semantic_hash": "4fd78cfa59837b70aa80f9253a83007f"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/ra2.js": {
+    "mtime": 1779101245.2734938,
+    "ast_hash": "ce86183688501548c7ea88301eb4766f",
+    "semantic_hash": "ce86183688501548c7ea88301eb4766f"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/deflator.js": {
+    "mtime": 1779101245.273052,
+    "ast_hash": "ba81ce1eab3d1ff37b10e6c6765e7b28",
+    "semantic_hash": "ba81ce1eab3d1ff37b10e6c6765e7b28"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/encodings.js": {
+    "mtime": 1779101245.273052,
+    "ast_hash": "a898eb8c71eadcbbd0bf4cc49f6f678c",
+    "semantic_hash": "a898eb8c71eadcbbd0bf4cc49f6f678c"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/decoders/h264.js": {
+    "mtime": 1779101245.2730362,
+    "ast_hash": "d62a2fc15d76609a7a8ccfc8490f7085",
+    "semantic_hash": "d62a2fc15d76609a7a8ccfc8490f7085"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/decoders/tight.js": {
+    "mtime": 1779101245.273052,
+    "ast_hash": "35488572b9190086c031b6c8ac8dadc5",
+    "semantic_hash": "35488572b9190086c031b6c8ac8dadc5"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/decoders/hextile.js": {
+    "mtime": 1779101245.2730362,
+    "ast_hash": "05856e51bacecd9ea63fbfe88b192da8",
+    "semantic_hash": "05856e51bacecd9ea63fbfe88b192da8"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/decoders/rre.js": {
+    "mtime": 1779101245.273052,
+    "ast_hash": "abfa7625cdf6e24b691f0a189b478938",
+    "semantic_hash": "abfa7625cdf6e24b691f0a189b478938"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/decoders/jpeg.js": {
+    "mtime": 1779101245.2730362,
+    "ast_hash": "eadaa8bc84ea1827c2de9302dea9b058",
+    "semantic_hash": "eadaa8bc84ea1827c2de9302dea9b058"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/decoders/zrle.js": {
+    "mtime": 1779101245.273052,
+    "ast_hash": "5ba0016e05bfd5ed81a516b77a59579f",
+    "semantic_hash": "5ba0016e05bfd5ed81a516b77a59579f"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/decoders/zlib.js": {
+    "mtime": 1779101245.273052,
+    "ast_hash": "b9d65a29812dabda6860928862cfa17e",
+    "semantic_hash": "b9d65a29812dabda6860928862cfa17e"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/decoders/copyrect.js": {
+    "mtime": 1779101245.2727766,
+    "ast_hash": "52ed3706a08a6122bb51a78b02f7c604",
+    "semantic_hash": "52ed3706a08a6122bb51a78b02f7c604"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/decoders/raw.js": {
+    "mtime": 1779101245.2730362,
+    "ast_hash": "7c7175c8db245c8f0d94e0b3190d4fff",
+    "semantic_hash": "7c7175c8db245c8f0d94e0b3190d4fff"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/decoders/tightpng.js": {
+    "mtime": 1779101245.273052,
+    "ast_hash": "0ec5853f7f164783a5b2138609bf7351",
+    "semantic_hash": "0ec5853f7f164783a5b2138609bf7351"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/util/int.js": {
+    "mtime": 1779101245.2740726,
+    "ast_hash": "1b75c3dd4ee794ec957e0cf3b321f6c4",
+    "semantic_hash": "1b75c3dd4ee794ec957e0cf3b321f6c4"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/util/logging.js": {
+    "mtime": 1779101245.2740726,
+    "ast_hash": "82120249cbbeb0c03d9f7699b4d55725",
+    "semantic_hash": "82120249cbbeb0c03d9f7699b4d55725"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/util/element.js": {
+    "mtime": 1779101245.273997,
+    "ast_hash": "816e73a336c25893f7d1205777745ebb",
+    "semantic_hash": "816e73a336c25893f7d1205777745ebb"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/util/events.js": {
+    "mtime": 1779101245.273997,
+    "ast_hash": "0ecbefa345ac1565da112bd9a5a8d3ee",
+    "semantic_hash": "0ecbefa345ac1565da112bd9a5a8d3ee"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/util/cursor.js": {
+    "mtime": 1779101245.273997,
+    "ast_hash": "199767d5ffa8c5b12719448de6c7b8e6",
+    "semantic_hash": "199767d5ffa8c5b12719448de6c7b8e6"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/util/eventtarget.js": {
+    "mtime": 1779101245.2740726,
+    "ast_hash": "0e184a383c235de9c264ebd2459c5049",
+    "semantic_hash": "0e184a383c235de9c264ebd2459c5049"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/util/browser.js": {
+    "mtime": 1779101245.2734938,
+    "ast_hash": "700538e4ee204a2abefd77d5e350262c",
+    "semantic_hash": "700538e4ee204a2abefd77d5e350262c"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/util/strings.js": {
+    "mtime": 1779101245.2740726,
+    "ast_hash": "78aea84c0608a1fc7fef277641b624d8",
+    "semantic_hash": "78aea84c0608a1fc7fef277641b624d8"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/input/keyboard.js": {
+    "mtime": 1779101245.2734938,
+    "ast_hash": "9ad924f48b602f8215d8e03877eb1b41",
+    "semantic_hash": "9ad924f48b602f8215d8e03877eb1b41"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/input/util.js": {
+    "mtime": 1779101245.2734938,
+    "ast_hash": "197517211845ff4b787ff9dd772b6da0",
+    "semantic_hash": "197517211845ff4b787ff9dd772b6da0"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/input/keysym.js": {
+    "mtime": 1779101245.2734938,
+    "ast_hash": "794320e63055f76de6eed85c4b429b17",
+    "semantic_hash": "794320e63055f76de6eed85c4b429b17"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/input/fixedkeys.js": {
+    "mtime": 1779101245.2734938,
+    "ast_hash": "d3c22124ca46108f8c42020dd4734e49",
+    "semantic_hash": "d3c22124ca46108f8c42020dd4734e49"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/input/xtscancodes.js": {
+    "mtime": 1779101245.2734938,
+    "ast_hash": "1695b6d649777a322baab728718d6f84",
+    "semantic_hash": "1695b6d649777a322baab728718d6f84"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/input/keysymdef.js": {
+    "mtime": 1779101245.2734938,
+    "ast_hash": "22951cb9304796b40c8bdc4e2713fb38",
+    "semantic_hash": "22951cb9304796b40c8bdc4e2713fb38"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/input/gesturehandler.js": {
+    "mtime": 1779101245.2734938,
+    "ast_hash": "ebec87ab59c867783b5cf47d8f1174c6",
+    "semantic_hash": "ebec87ab59c867783b5cf47d8f1174c6"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/input/vkeys.js": {
+    "mtime": 1779101245.2734938,
+    "ast_hash": "12c72ad4a62cdfe00d81ef79cfb1b788",
+    "semantic_hash": "12c72ad4a62cdfe00d81ef79cfb1b788"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/input/domkeytable.js": {
+    "mtime": 1779101245.273052,
+    "ast_hash": "acd00975f2679ff242c82e1f3c9701b2",
+    "semantic_hash": "acd00975f2679ff242c82e1f3c9701b2"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/crypto/md5.js": {
+    "mtime": 1779101245.2727766,
+    "ast_hash": "1eb7e46e4157d6b9ece9a91c61530ff8",
+    "semantic_hash": "1eb7e46e4157d6b9ece9a91c61530ff8"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/crypto/rsa.js": {
+    "mtime": 1779101245.2727766,
+    "ast_hash": "e5de3d6ab46fee8564cc82af87e7bc47",
+    "semantic_hash": "e5de3d6ab46fee8564cc82af87e7bc47"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/crypto/crypto.js": {
+    "mtime": 1779101245.2727766,
+    "ast_hash": "ad3de47b599f4bddaa2cb068c52f7243",
+    "semantic_hash": "ad3de47b599f4bddaa2cb068c52f7243"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/crypto/des.js": {
+    "mtime": 1779101245.2727766,
+    "ast_hash": "bd4af4911c0ecf1fb38d66221ac175ad",
+    "semantic_hash": "bd4af4911c0ecf1fb38d66221ac175ad"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/crypto/dh.js": {
+    "mtime": 1779101245.2727766,
+    "ast_hash": "8ed2f6d89e60660d59db6408dabdd72c",
+    "semantic_hash": "8ed2f6d89e60660d59db6408dabdd72c"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/crypto/aes.js": {
+    "mtime": 1779101245.2727423,
+    "ast_hash": "135b47dce21965dea2fd49cd1c4724a3",
+    "semantic_hash": "135b47dce21965dea2fd49cd1c4724a3"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/novnc-core/crypto/bigint.js": {
+    "mtime": 1779101245.2727766,
+    "ast_hash": "cb8231d12f8d8bbf678f9458cb920cc0",
+    "semantic_hash": "cb8231d12f8d8bbf678f9458cb920cc0"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/vendor/pako/lib/utils/common.js": {
+    "mtime": 1779101245.2761137,
+    "ast_hash": "10a00ab2d4b11b5edfa6593c180e4afa",
+    "semantic_hash": "10a00ab2d4b11b5edfa6593c180e4afa"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/vendor/pako/lib/zlib/trees.js": {
+    "mtime": 1779101245.2761786,
+    "ast_hash": "af8a0e96d538082055a90485311b53be",
+    "semantic_hash": "af8a0e96d538082055a90485311b53be"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/vendor/pako/lib/zlib/inftrees.js": {
+    "mtime": 1779101245.2761786,
+    "ast_hash": "eb5a85c9a5a880ac841d7fb0d8bc7712",
+    "semantic_hash": "eb5a85c9a5a880ac841d7fb0d8bc7712"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/vendor/pako/lib/zlib/inflate.js": {
+    "mtime": 1779101245.2761786,
+    "ast_hash": "414a10ca0e16b396c588e9411fbc4c1f",
+    "semantic_hash": "414a10ca0e16b396c588e9411fbc4c1f"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/vendor/pako/lib/zlib/gzheader.js": {
+    "mtime": 1779101245.2761786,
+    "ast_hash": "fa798c0680da2abe4749590232d42dad",
+    "semantic_hash": "fa798c0680da2abe4749590232d42dad"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/vendor/pako/lib/zlib/messages.js": {
+    "mtime": 1779101245.2761786,
+    "ast_hash": "1d0a31193651e846a58ec27140d07d6b",
+    "semantic_hash": "1d0a31193651e846a58ec27140d07d6b"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/vendor/pako/lib/zlib/adler32.js": {
+    "mtime": 1779101245.2761137,
+    "ast_hash": "2734038dfca93983d4599c060a7bb781",
+    "semantic_hash": "2734038dfca93983d4599c060a7bb781"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/vendor/pako/lib/zlib/constants.js": {
+    "mtime": 1779101245.2761786,
+    "ast_hash": "d537a792b53b4dd0ad6871fc2ade7099",
+    "semantic_hash": "d537a792b53b4dd0ad6871fc2ade7099"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/vendor/pako/lib/zlib/inffast.js": {
+    "mtime": 1779101245.2761786,
+    "ast_hash": "d6e3eb661d6664808eddd7b698e9af4a",
+    "semantic_hash": "d6e3eb661d6664808eddd7b698e9af4a"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/vendor/pako/lib/zlib/zstream.js": {
+    "mtime": 1779101245.2761786,
+    "ast_hash": "3204baca498ca8d941ffa4a0cc8215ff",
+    "semantic_hash": "3204baca498ca8d941ffa4a0cc8215ff"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/vendor/pako/lib/zlib/crc32.js": {
+    "mtime": 1779101245.2761786,
+    "ast_hash": "84d1ad47824c275a6dabcbe5f072b969",
+    "semantic_hash": "84d1ad47824c275a6dabcbe5f072b969"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/vendor/pako/lib/zlib/deflate.js": {
+    "mtime": 1779101245.2761786,
+    "ast_hash": "d5668ce6533137bc869686b129d64044",
+    "semantic_hash": "d5668ce6533137bc869686b129d64044"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/utils/schedulerservice.js": {
+    "mtime": 1779101245.2756543,
+    "ast_hash": "ac5501c53d4c2384410193fee268a405",
+    "semantic_hash": "ac5501c53d4c2384410193fee268a405"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/utils/screenshotCapture.js": {
+    "mtime": 1779996018.7548625,
+    "ast_hash": "c13f66ae39ed11f631f3db7951725dad",
+    "semantic_hash": "c13f66ae39ed11f631f3db7951725dad"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/utils/commonMethods.js": {
+    "mtime": 1779996018.7544835,
+    "ast_hash": "55c8b62568eaa34d46e5c7bf40894867",
+    "semantic_hash": "55c8b62568eaa34d46e5c7bf40894867"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/utils/languagetool.js": {
+    "mtime": 1780301640.510354,
+    "ast_hash": "ca29365ead9513f05b49deda86756d94",
+    "semantic_hash": "ca29365ead9513f05b49deda86756d94"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/utils/signalBridge.js": {
+    "mtime": 1779101245.2759788,
+    "ast_hash": "3016f42fac2caed7d447aeb958cffb9b",
+    "semantic_hash": "3016f42fac2caed7d447aeb958cffb9b"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/utils/filehandler.js": {
+    "mtime": 1779996018.7545955,
+    "ast_hash": "ce852a62986c8aca1bf3ec66867af41a",
+    "semantic_hash": "ce852a62986c8aca1bf3ec66867af41a"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/utils/ios/iosTaskDispatcher.js": {
+    "mtime": 1779101245.275463,
+    "ast_hash": "0ff553dca9670204e6e01bdd49d2a0aa",
+    "semantic_hash": "0ff553dca9670204e6e01bdd49d2a0aa"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/pages/lock.vue": {
+    "mtime": 1779101245.2748077,
+    "ast_hash": "cffd8194d592f19850ac9ba8f9fa50be",
+    "semantic_hash": "cffd8194d592f19850ac9ba8f9fa50be"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/pages/geogebra.vue": {
+    "mtime": 1780321293.081687,
+    "ast_hash": "bf5c67296f47be1810a15ced332e388c",
+    "semantic_hash": "bf5c67296f47be1810a15ced332e388c"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/pages/eduvidual.vue": {
+    "mtime": 1780321293.081687,
+    "ast_hash": "0a1563285b337d763f4c08024e804c4e",
+    "semantic_hash": "0a1563285b337d763f4c08024e804c4e"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/pages/notfound.vue": {
+    "mtime": 1779101245.2748077,
+    "ast_hash": "2e1f44ad95ae08551613591df64070fa",
+    "semantic_hash": "2e1f44ad95ae08551613591df64070fa"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/pages/website.vue": {
+    "mtime": 1779996018.7543716,
+    "ast_hash": "fc53676e58a22679304b5df51bf9bcd5",
+    "semantic_hash": "fc53676e58a22679304b5df51bf9bcd5"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/pages/forms.vue": {
+    "mtime": 1779996018.7537417,
+    "ast_hash": "9857233a1db3265203455676e7cd2e25",
+    "semantic_hash": "9857233a1db3265203455676e7cd2e25"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/pages/editor.vue": {
+    "mtime": 1780321293.081687,
+    "ast_hash": "be5ee47680e70592c3cefe915e854f93",
+    "semantic_hash": "be5ee47680e70592c3cefe915e854f93"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/pages/activesheets.vue": {
+    "mtime": 1780321293.0799625,
+    "ast_hash": "6c9ea12851024b962170e50254dbd06a",
+    "semantic_hash": "6c9ea12851024b962170e50254dbd06a"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/pages/localvmview.vue": {
+    "mtime": 1779996018.753973,
+    "ast_hash": "0b72b5038ccf4956b944c44684ff2cd8",
+    "semantic_hash": "0b72b5038ccf4956b944c44684ff2cd8"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/pages/microsoft365.vue": {
+    "mtime": 1779996018.754056,
+    "ast_hash": "c1a0fc6fd97b20d175a55d231eb8be65",
+    "semantic_hash": "c1a0fc6fd97b20d175a55d231eb8be65"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/pages/student.vue": {
+    "mtime": 1780321293.0819623,
+    "ast_hash": "42a20ad6ef82290dd063cf0ed9a9de63",
+    "semantic_hash": "42a20ad6ef82290dd063cf0ed9a9de63"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/pages/rdpview.vue": {
+    "mtime": 1779996018.7541351,
+    "ast_hash": "7ee84a2280b7974138611eddc7c6c2c6",
+    "semantic_hash": "7ee84a2280b7974138611eddc7c6c2c6"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/types/api.d.ts": {
+    "mtime": 1779101245.2752297,
+    "ast_hash": "fa7c37a5dd15ac263c3851212b5752fc",
+    "semantic_hash": "fa7c37a5dd15ac263c3851212b5752fc"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/types/platform.ts": {
+    "mtime": 1779101245.2753985,
+    "ast_hash": "6b50de4c4de5efaed6a9bfccc4f08c10",
+    "semantic_hash": "6b50de4c4de5efaed6a9bfccc4f08c10"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/locales/locales.ts": {
+    "mtime": 1779101245.27267,
+    "ast_hash": "b09e830b1eab14c47e7076511891ecc2",
+    "semantic_hash": "b09e830b1eab14c47e7076511891ecc2"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/boot/main.ts": {
+    "mtime": 1780321293.0799625,
+    "ast_hash": "728c886ccdbe8308845f7a38f94256bf",
+    "semantic_hash": "728c886ccdbe8308845f7a38f94256bf"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/router/index.ts": {
+    "mtime": 1780321293.0819623,
+    "ast_hash": "f31df9b85ef35512cce9f2aec3db6794",
+    "semantic_hash": "f31df9b85ef35512cce9f2aec3db6794"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/components/SmilieReplacer.ts": {
+    "mtime": 1779101245.267965,
+    "ast_hash": "c641893e59abeccf2bcc573107783eaa",
+    "semantic_hash": "c641893e59abeccf2bcc573107783eaa"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/components/statsRule.ts": {
+    "mtime": 1779996018.752621,
+    "ast_hash": "aab124304d6bc1eb144f6fa5479f27bf",
+    "semantic_hash": "aab124304d6bc1eb144f6fa5479f27bf"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/components/StatsRuleComponent.vue": {
+    "mtime": 1779996018.7525887,
+    "ast_hash": "bb468fb8cf236ef35b97a0fca39dfa72",
+    "semantic_hash": "bb468fb8cf236ef35b97a0fca39dfa72"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/components/PdfRenderer.vue": {
+    "mtime": 1780028509.4998946,
+    "ast_hash": "91e6aa74c728e8105463245a4449352e",
+    "semantic_hash": "91e6aa74c728e8105463245a4449352e"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/components/PdfviewPaneRendered.vue": {
+    "mtime": 1779997280.981664,
+    "ast_hash": "44b970d5fe7fdb6eda3d9a5748dca478",
+    "semantic_hash": "44b970d5fe7fdb6eda3d9a5748dca478"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/components/CodeBlockComponent.vue": {
+    "mtime": 1779101245.2670527,
+    "ast_hash": "afd3a8545a9e0aa3c207b0dcd805c12d",
+    "semantic_hash": "afd3a8545a9e0aa3c207b0dcd805c12d"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/components/WebviewPane.vue": {
+    "mtime": 1779101245.267965,
+    "ast_hash": "2623325e8c4d350a8fd2fa00fdc23913",
+    "semantic_hash": "2623325e8c4d350a8fd2fa00fdc23913"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/components/ExamHeader.vue": {
+    "mtime": 1780321293.0799625,
+    "ast_hash": "1006f186bb8a9a2e82d89c4bc34756cc",
+    "semantic_hash": "1006f186bb8a9a2e82d89c4bc34756cc"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/electron-preload.ts": {
+    "mtime": 1779101245.2480547,
+    "ast_hash": "efb195ca1dfe22e38af7140969c9f438",
+    "semantic_hash": "efb195ca1dfe22e38af7140969c9f438"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/electron-main.js": {
+    "mtime": 1780321293.0792298,
+    "ast_hash": "7d1266134dc9fdefb8b9f01a66753c4a",
+    "semantic_hash": "7d1266134dc9fdefb8b9f01a66753c4a"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/config.js": {
+    "mtime": 1780317724.3360138,
+    "ast_hash": "341fff3a7cd013d759ee33f2195dd18c",
+    "semantic_hash": "341fff3a7cd013d759ee33f2195dd18c"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/communicationhandler.js": {
+    "mtime": 1780321293.0792298,
+    "ast_hash": "e80cdd747de3dc587237c7f7664c55ca",
+    "semantic_hash": "e80cdd747de3dc587237c7f7664c55ca"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/qemuService.js": {
+    "mtime": 1779996018.7513475,
+    "ast_hash": "0ddd28c8f9f659610ec2c9ac6456eb82",
+    "semantic_hash": "0ddd28c8f9f659610ec2c9ac6456eb82"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/schedulerservice.ts": {
+    "mtime": 1779101245.2497437,
+    "ast_hash": "fdeb4b4db51292953378572478189094",
+    "semantic_hash": "fdeb4b4db51292953378572478189094"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/webFilter.js": {
+    "mtime": 1779101245.2497437,
+    "ast_hash": "7b824a628e521a8fc2e7aab32dd541d2",
+    "semantic_hash": "7b824a628e521a8fc2e7aab32dd541d2"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/vncproxy.js": {
+    "mtime": 1779996018.7517192,
+    "ast_hash": "c30ed3993912abf48f7f7a0ffa68a8b7",
+    "semantic_hash": "c30ed3993912abf48f7f7a0ffa68a8b7"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/examFileCrypto.js": {
+    "mtime": 1779996018.7507632,
+    "ast_hash": "66c243449c3f4ebc1e5c8f2de385d4d0",
+    "semantic_hash": "66c243449c3f4ebc1e5c8f2de385d4d0"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/remoteCheck.js": {
+    "mtime": 1779101245.2490547,
+    "ast_hash": "d7ce3e4e6d919e5bd7c9e74c9fc235f2",
+    "semantic_hash": "d7ce3e4e6d919e5bd7c9e74c9fc235f2"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/multicastclient.js": {
+    "mtime": 1779996018.7511153,
+    "ast_hash": "70976f63e3ca99a352fea2ec78852053",
+    "semantic_hash": "70976f63e3ca99a352fea2ec78852053"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/platformrestrictions.js": {
+    "mtime": 1780321293.0792298,
+    "ast_hash": "e97e290d6623a2ba2f61b21d721faf68",
+    "semantic_hash": "e97e290d6623a2ba2f61b21d721faf68"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/jre-handler.js": {
+    "mtime": 1779996018.7510638,
+    "ast_hash": "55bff86bf82dbace15f75a9bb540db31",
+    "semantic_hash": "55bff86bf82dbace15f75a9bb540db31"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/switchExamSection.js": {
+    "mtime": 1780045924.7670884,
+    "ast_hash": "9b9a03e8a4db99d1aa3506ac80a666ba",
+    "semantic_hash": "9b9a03e8a4db99d1aa3506ac80a666ba"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/ipchandler.js": {
+    "mtime": 1780301640.510354,
+    "ast_hash": "983cd8603122aaaa8df14968e38981d4",
+    "semantic_hash": "983cd8603122aaaa8df14968e38981d4"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/networkActiveProcesses.js": {
+    "mtime": 1779996018.7511683,
+    "ast_hash": "356cd18aaa54168b15939d8abb7e41a3",
+    "semantic_hash": "356cd18aaa54168b15939d8abb7e41a3"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/platformDispatcher.js": {
+    "mtime": 1779996018.7512264,
+    "ast_hash": "8ae5a702667e4c650a5644aa482f4fb9",
+    "semantic_hash": "8ae5a702667e4c650a5644aa482f4fb9"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/windowhandler.js": {
+    "mtime": 1780321293.0799625,
+    "ast_hash": "2f0db3a95bb0019a15b27ee9524ff544",
+    "semantic_hash": "2f0db3a95bb0019a15b27ee9524ff544"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/vmDetection.js": {
+    "mtime": 1779101245.2497437,
+    "ast_hash": "de386caaa97dacdaf1b9a4999018b2ec",
+    "semantic_hash": "de386caaa97dacdaf1b9a4999018b2ec"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/lt-server.js": {
+    "mtime": 1779101245.2487195,
+    "ast_hash": "bee411658c5ebed749bfb61df7a94ca0",
+    "semantic_hash": "bee411658c5ebed749bfb61df7a94ca0"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/checkparent.js": {
+    "mtime": 1779101245.2483919,
+    "ast_hash": "fbb52fbea768f7c1ff85ed585da1bec7",
+    "semantic_hash": "fbb52fbea768f7c1ff85ed585da1bec7"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/testpermissionsMac.js": {
+    "mtime": 1779996018.7516234,
+    "ast_hash": "43f8bdffcb7b6a9d2737d988ffa04bb8",
+    "semantic_hash": "43f8bdffcb7b6a9d2737d988ffa04bb8"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/traymenu.js": {
+    "mtime": 1779996018.7516656,
+    "ast_hash": "a7ab70f3598f57c01027f7b6ee51ff69",
+    "semantic_hash": "a7ab70f3598f57c01027f7b6ee51ff69"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/getwlaninfo.js": {
+    "mtime": 1780321293.0792298,
+    "ast_hash": "fc7fe06b3e6363ba9e5d322e7b3cdf47",
+    "semantic_hash": "fc7fe06b3e6363ba9e5d322e7b3cdf47"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/errorHandling.js": {
+    "mtime": 1779996018.7507324,
+    "ast_hash": "f4ad09ffbe56bb857dc17bf7a354469d",
+    "semantic_hash": "f4ad09ffbe56bb857dc17bf7a354469d"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/examWebdavServer.js": {
+    "mtime": 1779339737.790216,
+    "ast_hash": "574a12b241656ab4ac21fa0226fae3a6",
+    "semantic_hash": "574a12b241656ab4ac21fa0226fae3a6"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/restrictions/mac.js": {
+    "mtime": 1780321293.0799625,
+    "ast_hash": "d6c2ef8f2e4b4da2d9c28873dca5e366",
+    "semantic_hash": "d6c2ef8f2e4b4da2d9c28873dca5e366"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/restrictions/win.js": {
+    "mtime": 1779996018.7515793,
+    "ast_hash": "b0563787ca399505f176ac791e14cdea",
+    "semantic_hash": "b0563787ca399505f176ac791e14cdea"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/restrictions/lin.js": {
+    "mtime": 1780321293.0792298,
+    "ast_hash": "80578703281ca6358299ea57c5676483",
+    "semantic_hash": "80578703281ca6358299ea57c5676483"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/remotecheck/remoteWin.js": {
+    "mtime": 1779996018.7514021,
+    "ast_hash": "5bd53e3829730df8e7a4ffa3ce9d97c7",
+    "semantic_hash": "5bd53e3829730df8e7a4ffa3ce9d97c7"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/remotecheck/remoteMac.js": {
+    "mtime": 1779996018.7514021,
+    "ast_hash": "c7c43fd8726c02bf4d3a987e995ebb86",
+    "semantic_hash": "c7c43fd8726c02bf4d3a987e995ebb86"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/remotecheck/remoteLin.js": {
+    "mtime": 1779996018.7514021,
+    "ast_hash": "9573c9013e8f0328d47f50084698fd4f",
+    "semantic_hash": "9573c9013e8f0328d47f50084698fd4f"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/preload/scripts/simplevmdetect.js": {
+    "mtime": 1779101245.2503393,
+    "ast_hash": "08c3e9398647f2baff30135bd1bff849",
+    "semantic_hash": "08c3e9398647f2baff30135bd1bff849"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/types.d.ts": {
+    "mtime": 1773396334.564084,
+    "ast_hash": "1c19df34eaaeb6584fb03a89a525e391",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/quasar.config.ts": {
+    "mtime": 1778510507.4631581,
+    "ast_hash": "c3cad101f6fbd29eef1a1968664ed57f",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/scripts/prebuild.js": {
+    "mtime": 1777405324.4363985,
+    "ast_hash": "248502faf660e8506eb18e273f574f80",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/scripts/afterpack.js": {
+    "mtime": 1773396334.5445323,
+    "ast_hash": "aac0738328da3a10a369d574602a7f69",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/scripts/beforepack.js": {
+    "mtime": 1777405324.4363985,
+    "ast_hash": "dc6d60090b752be680671bd2400d05a6",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/scripts/protect-main.mjs": {
+    "mtime": 1777405324.4363985,
+    "ast_hash": "3b435c07670989d09cb44520f8f8b116",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/scripts/qemu/download-winfsp.mjs": {
+    "mtime": 1778250974.1223183,
+    "ast_hash": "7c6841539f8d40c1639db1f406a62e11",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/App.vue": {
+    "mtime": 1779101245.6513693,
+    "ast_hash": "f2322e69ad7be9ebcecb5a47be3f70a8",
+    "semantic_hash": "f2322e69ad7be9ebcecb5a47be3f70a8"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/env.d.ts": {
+    "mtime": 1779101245.6675384,
+    "ast_hash": "d1ad6e5c732572e3c87b24a7f38b2964",
+    "semantic_hash": "d1ad6e5c732572e3c87b24a7f38b2964"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/utils/encryptionPassword.js": {
+    "mtime": 1779996018.988303,
+    "ast_hash": "25414de91f894b3c07e5bdae92bd13d7",
+    "semantic_hash": "25414de91f894b3c07e5bdae92bd13d7"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/utils/schedulerservice.js": {
+    "mtime": 1779101245.6693494,
+    "ast_hash": "ac5501c53d4c2384410193fee268a405",
+    "semantic_hash": "ac5501c53d4c2384410193fee268a405"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/utils/exammanagement.js": {
+    "mtime": 1780321293.0819623,
+    "ast_hash": "0b189dda7dc18dd5dcc80d60f29e87d8",
+    "semantic_hash": "0b189dda7dc18dd5dcc80d60f29e87d8"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/utils/studentPresence.js": {
+    "mtime": 1779101245.6693494,
+    "ast_hash": "ac054c80fe79e1996d418d00f6bb93a9",
+    "semantic_hash": "ac054c80fe79e1996d418d00f6bb93a9"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/utils/dragndrop.js": {
+    "mtime": 1779101245.669078,
+    "ast_hash": "19ea55c25df5f64d31d92aa17052dbff",
+    "semantic_hash": "19ea55c25df5f64d31d92aa17052dbff"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/utils/swalQueue.js": {
+    "mtime": 1779101245.6693494,
+    "ast_hash": "0297e81e94055c7ddf5e470ca1f82478",
+    "semantic_hash": "0297e81e94055c7ddf5e470ca1f82478"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/utils/examsetup.js": {
+    "mtime": 1780050359.6074276,
+    "ast_hash": "3a3e2fc89be351cb3151bf1b9abdcaa1",
+    "semantic_hash": "3a3e2fc89be351cb3151bf1b9abdcaa1"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/utils/filemanager.js": {
+    "mtime": 1780049075.1648073,
+    "ast_hash": "8201fbe28aeb5cfd75f5bd39c6274db1",
+    "semantic_hash": "8201fbe28aeb5cfd75f5bd39c6274db1"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/utils/examEventBus.js": {
+    "mtime": 1779996018.9883447,
+    "ast_hash": "729ad2b61c0c86078bdfc7d747524978",
+    "semantic_hash": "729ad2b61c0c86078bdfc7d747524978"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/pages/notfound.vue": {
+    "mtime": 1779101245.6687975,
+    "ast_hash": "a24ae3af91172e18452cf6340981f7af",
+    "semantic_hash": "a24ae3af91172e18452cf6340981f7af"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/pages/SystemPrintPdf.vue": {
+    "mtime": 1779101245.6681232,
+    "ast_hash": "635fec86f59f08e1291fe9716feb56fe",
+    "semantic_hash": "635fec86f59f08e1291fe9716feb56fe"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/pages/startserver.vue": {
+    "mtime": 1779996018.9881694,
+    "ast_hash": "6356540cb8fbb523cbd0efdf778acd17",
+    "semantic_hash": "6356540cb8fbb523cbd0efdf778acd17"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/pages/dashboard.vue": {
+    "mtime": 1780049068.6409316,
+    "ast_hash": "9e3a5b0e3722ecce228fa6eb5809d743",
+    "semantic_hash": "9e3a5b0e3722ecce228fa6eb5809d743"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/types/api.d.ts": {
+    "mtime": 1779996018.9882753,
+    "ast_hash": "bc22f5f45ed8e82be5a940d20a3d81fb",
+    "semantic_hash": "bc22f5f45ed8e82be5a940d20a3d81fb"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/types/platform.ts": {
+    "mtime": 1779101245.669078,
+    "ast_hash": "4c980600b0be80ee21352e5570c0ee6f",
+    "semantic_hash": "4c980600b0be80ee21352e5570c0ee6f"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/locales/locales.js": {
+    "mtime": 1779101245.6678686,
+    "ast_hash": "be4610fb64953299c39caed454f07c20",
+    "semantic_hash": "be4610fb64953299c39caed454f07c20"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/msalutils/authConfigShared.ts": {
+    "mtime": 1779101245.6681232,
+    "ast_hash": "3f12bcecd002689d1bdbe51f4c892b56",
+    "semantic_hash": "3f12bcecd002689d1bdbe51f4c892b56"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/msalutils/onedrive.js": {
+    "mtime": 1779996018.9875891,
+    "ast_hash": "4089bffeb48f195655e082faabe0a9b2",
+    "semantic_hash": "4089bffeb48f195655e082faabe0a9b2"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/msalutils/authConfig.ts": {
+    "mtime": 1779101245.6678686,
+    "ast_hash": "08678b8ffdd602c0fc94e9bab1aa1fbe",
+    "semantic_hash": "08678b8ffdd602c0fc94e9bab1aa1fbe"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/boot/main.ts": {
+    "mtime": 1780321293.0819623,
+    "ast_hash": "86b04e244b1620416e03f00f823d421b",
+    "semantic_hash": "86b04e244b1620416e03f00f823d421b"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/router/index.js": {
+    "mtime": 1779996018.9882216,
+    "ast_hash": "f88ba8263a6d925cd62d760697b47537",
+    "semantic_hash": "f88ba8263a6d925cd62d760697b47537"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/components/materialsList.vue": {
+    "mtime": 1779996018.987301,
+    "ast_hash": "4700d5680fc51ac783ab13fd82c8b1aa",
+    "semantic_hash": "4700d5680fc51ac783ab13fd82c8b1aa"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/components/SubmissionsView.vue": {
+    "mtime": 1779101245.663473,
+    "ast_hash": "fc38c8153359bd6eb518f0b715c74bbf",
+    "semantic_hash": "fc38c8153359bd6eb518f0b715c74bbf"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/components/ExamLog.vue": {
+    "mtime": 1779996018.9869747,
+    "ast_hash": "747db873fe60639cf2d0d9aa38971329",
+    "semantic_hash": "747db873fe60639cf2d0d9aa38971329"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/components/PdfRenderer.vue": {
+    "mtime": 1779996018.9870384,
+    "ast_hash": "1861559cf1b52df0b5d65cd704af8661",
+    "semantic_hash": "1861559cf1b52df0b5d65cd704af8661"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/components/PdfviewPaneRendered.vue": {
+    "mtime": 1780037172.6276271,
+    "ast_hash": "1cffbe33e98c0701c94861564f1f71e4",
+    "semantic_hash": "1cffbe33e98c0701c94861564f1f71e4"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/components/StudentView.vue": {
+    "mtime": 1779996018.9872444,
+    "ast_hash": "04519370c71d20c7fe96a9cdbbbd334b",
+    "semantic_hash": "04519370c71d20c7fe96a9cdbbbd334b"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/components/DashboardExplorer.vue": {
+    "mtime": 1780048968.4585123,
+    "ast_hash": "edb7856817cde9dece9de6f5b99bbc36",
+    "semantic_hash": "edb7856817cde9dece9de6f5b99bbc36"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/components/WebviewPane.vue": {
+    "mtime": 1780049066.8792975,
+    "ast_hash": "2668a7581a8bea9b29bc4890e96e617f",
+    "semantic_hash": "2668a7581a8bea9b29bc4890e96e617f"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/electron-preload.ts": {
+    "mtime": 1779101245.6503549,
+    "ast_hash": "ca6a413ae253d29ef8a763b9d95a18d8",
+    "semantic_hash": "ca6a413ae253d29ef8a763b9d95a18d8"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/electron-main.js": {
+    "mtime": 1779996018.9858794,
+    "ast_hash": "931678a4316cd1a8aa97b6c2ee395e05",
+    "semantic_hash": "931678a4316cd1a8aa97b6c2ee395e05"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/main/config.js": {
+    "mtime": 1780316883.040486,
+    "ast_hash": "81c1daf668c83c26b187c4be32c8f014",
+    "semantic_hash": "81c1daf668c83c26b187c4be32c8f014"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/main/scripts/qemuService.js": {
+    "mtime": 1779996018.986199,
+    "ast_hash": "d5824030d1462c74f7fc420ecc8f361d",
+    "semantic_hash": "d5824030d1462c74f7fc420ecc8f361d"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/main/scripts/schedulerservice.ts": {
+    "mtime": 1779101245.65071,
+    "ast_hash": "fdeb4b4db51292953378572478189094",
+    "semantic_hash": "fdeb4b4db51292953378572478189094"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/main/scripts/examFileCrypto.js": {
+    "mtime": 1779996018.9858794,
+    "ast_hash": "023187de14f61c7615b54030d323a1ac",
+    "semantic_hash": "023187de14f61c7615b54030d323a1ac"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/main/scripts/multicastclient.js": {
+    "mtime": 1779101245.65071,
+    "ast_hash": "a1e1ed9658854777a2565f3912e6615a",
+    "semantic_hash": "a1e1ed9658854777a2565f3912e6615a"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/main/scripts/ipchandler.js": {
+    "mtime": 1779996018.986199,
+    "ast_hash": "2d7e018c1460cee94a2c348e268a5227",
+    "semantic_hash": "2d7e018c1460cee94a2c348e268a5227"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/main/scripts/platformDispatcher.js": {
+    "mtime": 1779101245.65071,
+    "ast_hash": "8ec41470b8243ed9a2b00750009fb3a9",
+    "semantic_hash": "8ec41470b8243ed9a2b00750009fb3a9"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/main/scripts/multicastserver.js": {
+    "mtime": 1779101245.65071,
+    "ast_hash": "cb00dde44b897f16a8e4fd6fbbb0ae06",
+    "semantic_hash": "cb00dde44b897f16a8e4fd6fbbb0ae06"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/main/scripts/windowhandler.js": {
+    "mtime": 1779996018.9863646,
+    "ast_hash": "9b7e1ebab889d78c7634d5f26b1309cd",
+    "semantic_hash": "9b7e1ebab889d78c7634d5f26b1309cd"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/main/scripts/printjobhandler.js": {
+    "mtime": 1779101245.65071,
+    "ast_hash": "f8b0a307566ee52719330ea551007f8d",
+    "semantic_hash": "f8b0a307566ee52719330ea551007f8d"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/main/scripts/examFileCryptoContext.js": {
+    "mtime": 1779996018.9858794,
+    "ast_hash": "5d505a04e146d9499c65ec8487a3d978",
+    "semantic_hash": "5d505a04e146d9499c65ec8487a3d978"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/server/src/server.js": {
+    "mtime": 1779101245.6513693,
+    "ast_hash": "0012b92fea13389d13835855c24c580a",
+    "semantic_hash": "0012b92fea13389d13835855c24c580a"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/server/src/routes/serverroutes.js": {
+    "mtime": 1779996018.9866617,
+    "ast_hash": "21ed15f1934e36b4a46c0c14d5a984ca",
+    "semantic_hash": "21ed15f1934e36b4a46c0c14d5a984ca"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/server/src/routes/server/control.js": {
+    "mtime": 1779996018.9865036,
+    "ast_hash": "a6704d8fa8626d84175873f2ba1f6170",
+    "semantic_hash": "a6704d8fa8626d84175873f2ba1f6170"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/server/src/routes/server/data.js": {
+    "mtime": 1779996018.9866118,
+    "ast_hash": "178a5b420580443df0762f750a26a986",
+    "semantic_hash": "178a5b420580443df0762f750a26a986"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/README.md": {
+    "mtime": 1773396333.5770996,
+    "ast_hash": "b7598da76d4688111aa38495176cd71a",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/memory.md": {
+    "mtime": 1778512840.6500223,
+    "ast_hash": "7127dd2e9b2f0d9c352c4c66b6fa2eed",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/CLAUDE.md": {
+    "mtime": 1778487601.6827548,
+    "ast_hash": "91baf21634c0298e5122f34371828154",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/index.html": {
+    "mtime": 1773909624.61584,
+    "ast_hash": "4c7ed7d55bd40e2fac4715a85191c0f5",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/splash.html": {
+    "mtime": 1773396334.509685,
+    "ast_hash": "5f0a2e67f021912d6a2550e05d3bc36d",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/GeoGebra.html": {
+    "mtime": 1777405324.3071063,
+    "ast_hash": "5214be6fe44cae1eba75b943836e833f",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/html/windowslive.html": {
+    "mtime": 1777405324.3710115,
+    "ast_hash": "bde560ef73d6e643c27609ae600a2cde",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/html/ggtcallback.html": {
+    "mtime": 1777405324.3704765,
+    "ast_hash": "7d5d434e6da1cfb7407f438d9148b3c3",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/index.html": {
+    "mtime": 1773909624.72284,
+    "ast_hash": "eba536fe5bf69e792c46842d4be9994b",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/quickstart.pdf": {
+    "mtime": 1773396333.5826063,
+    "ast_hash": "59cf76db738d22ccc036512aec3c1948",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/demo.pdf": {
+    "mtime": 1773909624.61884,
+    "ast_hash": "e1118121df68ac766eb1c2a803972068",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/quickstart.png": {
+    "mtime": 1773396333.5836065,
+    "ast_hash": "4b1073c0cf0f82ef689d99c3c4e186f7",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_main.png": {
+    "mtime": 1773396333.5816064,
+    "ast_hash": "29e85f9a99b44c7574367771db96633b",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_bip_open.png": {
+    "mtime": 1773396333.5786064,
+    "ast_hash": "e3cb63646dd20747e1f2e811a65adc67",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_play_audio.png": {
+    "mtime": 1773396333.5816064,
+    "ast_hash": "b8b150e13723ff2ed9edb0e2db379919",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/student_replace_content_bak.png": {
+    "mtime": 1773396333.5826063,
+    "ast_hash": "b4a467aa36e4b1203d1d43021c3d91c2",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/06-02 Screenshotupdate.png": {
+    "mtime": 1773396333.5783777,
+    "ast_hash": "bb6424c5b9576d1b1cf6f2f5ab0cf95f",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_config_main.png": {
+    "mtime": 1773396333.5796063,
+    "ast_hash": "9a588e2b146bf23e9670113614091f15",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_bip_connected.png": {
+    "mtime": 1773396333.5786064,
+    "ast_hash": "18435ff0c20edf57e9f2700a7db32a0f",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_mslogin.png": {
+    "mtime": 1773396333.5796063,
+    "ast_hash": "65da91ba3dc7a410a786187af68b28f5",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_sitzplan.png": {
+    "mtime": 1773396333.5796063,
+    "ast_hash": "2525c9b5d34f536a014012bacebe6124",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_rdpconfig.png": {
+    "mtime": 1773396333.5796063,
+    "ast_hash": "c62985d93f3fa2d9c2423e9a80f96b83",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/02 Exam Informationen.png": {
+    "mtime": 1773396333.5783777,
+    "ast_hash": "f8466f2a308d36cde59c6829e43e61a8",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_combined_pdf.png": {
+    "mtime": 1773396333.5806065,
+    "ast_hash": "16a34973c4c31fcf185b90a6652d6f15",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_log.png": {
+    "mtime": 1773396333.5816064,
+    "ast_hash": "5143d960b4195e5a3a5f777b4e8a2146",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_maintoolbar.png": {
+    "mtime": 1773396333.5816064,
+    "ast_hash": "37619b7faa10842fdbefc73f01f45c69",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_erweitert.png": {
+    "mtime": 1773396333.5796063,
+    "ast_hash": "07d0fe7a329fc892339307ea26569f65",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_config_eduvidual.png": {
+    "mtime": 1773396333.5786064,
+    "ast_hash": "e72ab26e1359d3bca8d9526ae0e4af82",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/06-01 automatische Abgabe.png": {
+    "mtime": 1773396333.5783777,
+    "ast_hash": "719e511d1232f0ed0a905b773d9ab9ac",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_examsections.png": {
+    "mtime": 1773396333.5806065,
+    "ast_hash": "d820589ea536ee5ae04a66a52e1cd470",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_bip_news.png": {
+    "mtime": 1773396333.5786064,
+    "ast_hash": "c760dfd0492b3316d6643c2eae940c08",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_bip_closed.png": {
+    "mtime": 1773396333.5783777,
+    "ast_hash": "ddbc0871d6b810912747cb70b3a20182",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_student_submissionfolder.png": {
+    "mtime": 1773396333.5806065,
+    "ast_hash": "521059a086a89513d9a5daa001d95293",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_filebuttons.png": {
+    "mtime": 1773396333.5816064,
+    "ast_hash": "28a9e0b54f103a86c397f895ec7ec232",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_bip_exams.png": {
+    "mtime": 1773396333.5786064,
+    "ast_hash": "ddff93e6ef322277b6eb9c8b76fa549a",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_groupmaterials.png": {
+    "mtime": 1773396333.5816064,
+    "ast_hash": "a92b1f3651ae3a1e6114143cd15318b7",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_bip_connect.png": {
+    "mtime": 1773396333.5786064,
+    "ast_hash": "cd213e7b62a76c7ae16758fd1507edc5",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_filemanager.png": {
+    "mtime": 1773396333.5816064,
+    "ast_hash": "5b4a2f5deb42ab7d12af29b29e10af0e",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_local_exams.png": {
+    "mtime": 1773396333.5796063,
+    "ast_hash": "2c4f80ecb9975fd453f68c04111351bc",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_msselect.png": {
+    "mtime": 1773396333.5796063,
+    "ast_hash": "ee54e3e92978c8fc8af704bbfbee1974",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_student_start.png": {
+    "mtime": 1773396333.5806065,
+    "ast_hash": "6f202c81c6aed12be84946404e1545f6",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_maintoolbar_red.png": {
+    "mtime": 1773396333.5816064,
+    "ast_hash": "fe7cf83617d6ab8ae752ce42a5c43f54",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/06 Exam Einstellungen.png": {
+    "mtime": 1773396333.5783777,
+    "ast_hash": "f22686ebfd2f307bb67546f7e5b124bb",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_config_math.png": {
+    "mtime": 1773396333.5796063,
+    "ast_hash": "5d83eda035e255fbae87848db96e842b",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_msfile.png": {
+    "mtime": 1773396333.5796063,
+    "ast_hash": "47d29412a049071dd8eac45f479c0352",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_workfolder.png": {
+    "mtime": 1773396333.5826063,
+    "ast_hash": "375bfff5383be1466ebeaca41eac33a2",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/03 Examformate.png": {
+    "mtime": 1773396333.5783777,
+    "ast_hash": "5c58a6b6a95a25dc928c86ec90d654ba",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_startexam.png": {
+    "mtime": 1773396333.5796063,
+    "ast_hash": "5d3e9c1687a4b62bf8ef3ba2071976e6",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_start_exam.png": {
+    "mtime": 1773396333.5796063,
+    "ast_hash": "088345276c420753a97e8fed23e3be59",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_dashboard.png": {
+    "mtime": 1773396333.5806065,
+    "ast_hash": "89cbe74af0c43f7fa59846714479eb1e",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_student_exam_header.png": {
+    "mtime": 1773396333.5796063,
+    "ast_hash": "a33c73aeeda9748d5a93a579334d246c",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_send_bak.png": {
+    "mtime": 1773396333.5796063,
+    "ast_hash": "c4e9cf08f72a77a0f3d6d7010b3e3faa",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_student_widget_badges.png": {
+    "mtime": 1773396333.5806065,
+    "ast_hash": "f2c34ccb916fa7cee3c49b75f884d5b6",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/01 Exam anlegen.png": {
+    "mtime": 1773396333.5782146,
+    "ast_hash": "565792568f8bae8d67d6a4d659b65c34",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_configure.png": {
+    "mtime": 1773396333.5806065,
+    "ast_hash": "a4407beccf48b6c7780283c899bd726a",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_archived_folder.png": {
+    "mtime": 1773396333.5806065,
+    "ast_hash": "5e6063213d927919402e13f4fbfba876",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_sidebar.png": {
+    "mtime": 1773396333.5816064,
+    "ast_hash": "88777424024fe26a14b5e872642aec44",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/icon.png": {
+    "mtime": 1773396333.5826063,
+    "ast_hash": "e900a46b61a2951e55418c9486755001",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/07 Symbolleiste.png": {
+    "mtime": 1773396333.5783777,
+    "ast_hash": "de35436d569bd385f3d5746108b36860",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_lang_switch.png": {
+    "mtime": 1773396333.5796063,
+    "ast_hash": "09c8566cb51804829b1cc06b7154d2b1",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_exam_info.png": {
+    "mtime": 1773396333.5806065,
+    "ast_hash": "5ff60334da695fe6418db0ad54a7451a",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_config_website.png": {
+    "mtime": 1773396333.5796063,
+    "ast_hash": "ab46207c83a6324e953f80fed5a27565",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/05 Zahnradsymbol.png": {
+    "mtime": 1773396333.5783777,
+    "ast_hash": "c4e9a1c2ccbc4395f8a29dc618d18d90",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_config_forms.png": {
+    "mtime": 1773396333.5796063,
+    "ast_hash": "b2b4c08e0fe19cd4dc328f5aa9b04ad7",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_student_widget.png": {
+    "mtime": 1773396333.5806065,
+    "ast_hash": "08b27a7952be9a3b3fbe37e5e67e0c55",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_exitexam.png": {
+    "mtime": 1773396333.5806065,
+    "ast_hash": "694059d842bd6b37f9788fcc9cce663c",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/04 Sprachen Einstellungen.png": {
+    "mtime": 1773396333.5783777,
+    "ast_hash": "083d7aaa3c56767b3ed0c6169e4faaf8",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_config_exammode.png": {
+    "mtime": 1773396333.5806065,
+    "ast_hash": "22ace13052860d36c36a7b806816be57",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_sectionname.png": {
+    "mtime": 1773396333.5816064,
+    "ast_hash": "99c3753f7fd662913d0192f4fd5d951a",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_student_view.png": {
+    "mtime": 1773396333.5816064,
+    "ast_hash": "d685a6fb0d5847020759b324fbb7e6c9",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_student_editor_toolbar.png": {
+    "mtime": 1773396333.5796063,
+    "ast_hash": "28a2affc43d03b4e77dec7c6bf8b73cf",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_config_editor.png": {
+    "mtime": 1773396333.5786064,
+    "ast_hash": "f2bdd5dc33502f1de18649cbce43d338",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/info/documentation/img/hb_teacher_upload_materials.png": {
+    "mtime": 1773396333.5816064,
+    "ast_hash": "f38d5c8b78e79dabc125a86b99b7a325",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/osos.svg": {
+    "mtime": 1773909624.6928399,
+    "ast_hash": "94233f72ea826cba4e98fb3eec1b8083",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/BMB_Logo_srgb.png": {
+    "mtime": 1773909624.6178398,
+    "ast_hash": "ac66e2c9312d618889f58881177803d6",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/icons/icon-student-checkbox.svg": {
+    "mtime": 1773909624.6928399,
+    "ast_hash": "7ce38ee19365a9dec8ae5ec29a94bc0f",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/icons/icon-student.svg": {
+    "mtime": 1773909624.6928399,
+    "ast_hash": "a7c6427295127f417685ce6fd90610e4",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/icons/256x256.png": {
+    "mtime": 1773909624.6928399,
+    "ast_hash": "e0f2b7017c37f5acd1d915ed9b676478",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/icons/icon24x24.png": {
+    "mtime": 1773909624.6928399,
+    "ast_hash": "3cd3719ba656b27908e02881f03f4ad2",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/icons/icon.png": {
+    "mtime": 1773909624.6928399,
+    "ast_hash": "97643e2965cf23e6c9407c8c53e66d48",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/icons/icon-checkmark.png": {
+    "mtime": 1773909624.6928399,
+    "ast_hash": "53afaefeaaf7c948459a1dea289a765d",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/GeoGebra/HTML5/5.0/web3d/clear.cache.gif": {
+    "mtime": 1777405324.3277752,
+    "ast_hash": "6d22e4f2d2057c6e8d6fab098e76e80f",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/public/osos.svg": {
+    "mtime": 1773909624.72584,
+    "ast_hash": "94233f72ea826cba4e98fb3eec1b8083",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/public/BMB_Logo_srgb.png": {
+    "mtime": 1773909624.724394,
+    "ast_hash": "ac66e2c9312d618889f58881177803d6",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/public/user-black.svg": {
+    "mtime": 1773909624.726639,
+    "ast_hash": "06dae973ccb1582482fa65f567c3fcb7",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/public/person-lines-fill.svg": {
+    "mtime": 1773909624.726448,
+    "ast_hash": "453a36128864af699814af1b0a0e0e5c",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/public/user-red.svg": {
+    "mtime": 1773909624.726639,
+    "ast_hash": "1014c8bf4f43384760deca8f5c637151",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/public/icons/icon-teacher-checkbox.svg": {
+    "mtime": 1773909624.7257173,
+    "ast_hash": "3165863bfe96db49d0333228a99db1e4",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/public/icons/icon-teacher.svg": {
+    "mtime": 1773909624.7257173,
+    "ast_hash": "a11664d621894e8196e64196cb827729",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/public/icons/256x256.png": {
+    "mtime": 1773909624.7257173,
+    "ast_hash": "5a239018bf6646af9eba44e6cc371271",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/public/icons/icon.png": {
+    "mtime": 1773909624.7257173,
+    "ast_hash": "478c82c9c4d8cff183212496a3ec9397",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/public/icons/icon-checkmark.png": {
+    "mtime": 1773909624.7257173,
+    "ast_hash": "53afaefeaaf7c948459a1dea289a765d",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/public/attention.wav": {
+    "mtime": 1773396334.0007985,
+    "ast_hash": "0f743fdc38e3826e223695df3cabd45f",
+    "semantic_hash": ""
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/locales/de.json": {
+    "mtime": 1780321293.0799625,
+    "ast_hash": "978ed95e124b92003b33a68915485c1d",
+    "semantic_hash": "978ed95e124b92003b33a68915485c1d"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/locales/en.json": {
+    "mtime": 1780321293.0799625,
+    "ast_hash": "55ebc17f0a3f5b2d6d112a4115f66ddd",
+    "semantic_hash": "55ebc17f0a3f5b2d6d112a4115f66ddd"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/utils/examFetchInfoSync.js": {
+    "mtime": 1779996018.7545326,
+    "ast_hash": "64c64cb13b4709baea515d1519ca35fb",
+    "semantic_hash": "64c64cb13b4709baea515d1519ca35fb"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/utils/kioskLauncher.js": {
+    "mtime": 1779996018.7546315,
+    "ast_hash": "628f7d132b8aad5de61214d0693c7834",
+    "semantic_hash": "628f7d132b8aad5de61214d0693c7834"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/utils/linuxCageKiosk.js": {
+    "mtime": 1780321293.0819623,
+    "ast_hash": "26e8eba99846c83b934f30114b1bcd75",
+    "semantic_hash": "26e8eba99846c83b934f30114b1bcd75"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src/utils/odtToTiptapHtml.js": {
+    "mtime": 1779996018.7547886,
+    "ast_hash": "d30a7fa7644e6eae0331f37c5c388e10",
+    "semantic_hash": "d30a7fa7644e6eae0331f37c5c388e10"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/assessmentSession.js": {
+    "mtime": 1780321293.0792298,
+    "ast_hash": "b30895c2f75d40019b416a9da249100a",
+    "semantic_hash": "b30895c2f75d40019b416a9da249100a"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/cageDetect.js": {
+    "mtime": 1779996018.7504814,
+    "ast_hash": "467da10e9f1cc07a82bf9e4ef7c03c25",
+    "semantic_hash": "467da10e9f1cc07a82bf9e4ef7c03c25"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/cageScreenshotCapture.js": {
+    "mtime": 1779996018.7504814,
+    "ast_hash": "bf41f73c960e37d6a9ef6236e5a1c172",
+    "semantic_hash": "bf41f73c960e37d6a9ef6236e5a1c172"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/displayInfo.js": {
+    "mtime": 1779996018.7506728,
+    "ast_hash": "d2f8c744990fb6b070c321ab3f1a362d",
+    "semantic_hash": "d2f8c744990fb6b070c321ab3f1a362d"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/focusLockState.js": {
+    "mtime": 1779996018.7507865,
+    "ast_hash": "d829278ad1527d67668bffc46592b414",
+    "semantic_hash": "d829278ad1527d67668bffc46592b414"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/main/scripts/win/windowsKioskSetup.js": {
+    "mtime": 1780044855.1565304,
+    "ast_hash": "fa67ccf91c5a6b48567ba9db561bbfec",
+    "semantic_hash": "fa67ccf91c5a6b48567ba9db561bbfec"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/resources/linux/install-cage-kiosk.sh": {
+    "mtime": 1779996018.752033,
+    "ast_hash": "9eb9a5661e22014b96bab823abb5dd7c",
+    "semantic_hash": "9eb9a5661e22014b96bab823abb5dd7c"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/student/src-electron/resources/win32/install-windows-kiosk.ps1": {
+    "mtime": 1780044877.3304274,
+    "ast_hash": "a6444201efaeead67f29f3f0c8373a23",
+    "semantic_hash": "a6444201efaeead67f29f3f0c8373a23"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/components/ActivesheetsFieldLayer.vue": {
+    "mtime": 1779996018.9868379,
+    "ast_hash": "3bf308e61fcd4589de51d712934fdfdd",
+    "semantic_hash": "3bf308e61fcd4589de51d712934fdfdd"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/components/StudentEditorTimelineDiffViewer.vue": {
+    "mtime": 1779996018.9871907,
+    "ast_hash": "85a09c72e6892bc0810e2a196251aba0",
+    "semantic_hash": "85a09c72e6892bc0810e2a196251aba0"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/locales/de.json": {
+    "mtime": 1780321293.0819623,
+    "ast_hash": "1fe2ab2ff943d008efc8cfeb3d9e4009",
+    "semantic_hash": "1fe2ab2ff943d008efc8cfeb3d9e4009"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/locales/en.json": {
+    "mtime": 1780321293.0819623,
+    "ast_hash": "0a3c88adf562493635043ae40a0cb8f3",
+    "semantic_hash": "0a3c88adf562493635043ae40a0cb8f3"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/utils/examLogSettings.js": {
+    "mtime": 1779996018.9883738,
+    "ast_hash": "ecaa85688a0d34b0381fb41f9dde1347",
+    "semantic_hash": "ecaa85688a0d34b0381fb41f9dde1347"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/utils/studentEditorTimeline.js": {
+    "mtime": 1779996018.9888496,
+    "ast_hash": "6a09642eafb83d1297566f62a28fc310",
+    "semantic_hash": "6a09642eafb83d1297566f62a28fc310"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src/utils/submissionPdfPreview.js": {
+    "mtime": 1779996018.9888828,
+    "ast_hash": "48f6a56bf198133cc669cd22758390a4",
+    "semantic_hash": "48f6a56bf198133cc669cd22758390a4"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/main/applyCliOverrides.js": {
+    "mtime": 1779996018.9858794,
+    "ast_hash": "7b4602cbdbdb356a1e191cee757a1b12",
+    "semantic_hash": "7b4602cbdbdb356a1e191cee757a1b12"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/main/scripts/getLatestCombinedPdf.js": {
+    "mtime": 1779996018.9860246,
+    "ast_hash": "b3b4a787a5b9c007006f5497347c5fde",
+    "semantic_hash": "b3b4a787a5b9c007006f5497347c5fde"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/teacher/src-electron/server/src/utils/safePaths.js": {
+    "mtime": 1779996018.9866998,
+    "ast_hash": "bbb1e128bb9dc8f40589f3745b3b33af",
+    "semantic_hash": "bbb1e128bb9dc8f40589f3745b3b33af"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/activesheetsFormData.js": {
+    "mtime": 1779996018.679812,
+    "ast_hash": "6fd2efd39ba978d9a64829fa9baf0870",
+    "semantic_hash": "6fd2efd39ba978d9a64829fa9baf0870"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/buildNextExamMoodleProof.js": {
+    "mtime": 1779996018.679812,
+    "ast_hash": "e82473ae1f41c70dd313a3a1e443e6d2",
+    "semantic_hash": "e82473ae1f41c70dd313a3a1e443e6d2"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/editorExamConfig.js": {
+    "mtime": 1779996018.6800554,
+    "ast_hash": "d60cb14fd9f65a804f80c9f47c406f86",
+    "semantic_hash": "d60cb14fd9f65a804f80c9f47c406f86"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/examApiFetch.js": {
+    "mtime": 1779996018.6805546,
+    "ast_hash": "7296f7be0fc13961ab85407e176a517d",
+    "semantic_hash": "7296f7be0fc13961ab85407e176a517d"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/localVmDisplayResolutions.js": {
+    "mtime": 1779996018.6805823,
+    "ast_hash": "71998273a605d3ae489165b3add17bb5",
+    "semantic_hash": "71998273a605d3ae489165b3add17bb5"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/nextExamApiSecret.js": {
+    "mtime": 1779996018.6806045,
+    "ast_hash": "218dcf203d69c1269827b74421f4f32d",
+    "semantic_hash": "218dcf203d69c1269827b74421f4f32d"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/nextExamMoodleProofSecret.js": {
+    "mtime": 1779996018.6806254,
+    "ast_hash": "fd8533f677a6d33acb4742f5f3ad02b6",
+    "semantic_hash": "fd8533f677a6d33acb4742f5f3ad02b6"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/normalizeStudentClientName.js": {
+    "mtime": 1779996018.6806254,
+    "ast_hash": "0aef8d57d6fcd085fc61ed0e34e5a688",
+    "semantic_hash": "0aef8d57d6fcd085fc61ed0e34e5a688"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/package.json": {
+    "mtime": 1779996018.6827488,
+    "ast_hash": "1984a4ac541cb49d182d09fa7c61f72a",
+    "semantic_hash": "1984a4ac541cb49d182d09fa7c61f72a"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/pdfPageAnnotationsMixin.js": {
+    "mtime": 1779996018.68279,
+    "ast_hash": "632f835a322bee148531c4b43f0e843f",
+    "semantic_hash": "632f835a322bee148531c4b43f0e843f"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/pdfparser/constructPathArgs.js": {
+    "mtime": 1779996018.68279,
+    "ast_hash": "aa4ec5e4ae48424489d21e8bf82df26b",
+    "semantic_hash": "aa4ec5e4ae48424489d21e8bf82df26b"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/pdfparser/index.js": {
+    "mtime": 1779996018.702094,
+    "ast_hash": "522aa1fc3d182d1eefc3b979fcaede44",
+    "semantic_hash": "522aa1fc3d182d1eefc3b979fcaede44"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/pdfparser/pdfOverlayFonts.js": {
+    "mtime": 1779996018.7021317,
+    "ast_hash": "c6c7cc1f9b4533c28c8713037c9d4d92",
+    "semantic_hash": "c6c7cc1f9b4533c28c8713037c9d4d92"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/pdfparser/shared/filters.js": {
+    "mtime": 1780046549.5458155,
+    "ast_hash": "d2a2016bdd409c2dff64aa28b030f17d",
+    "semantic_hash": "d2a2016bdd409c2dff64aa28b030f17d"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/pdfparser/shared/fonts.js": {
+    "mtime": 1780046550.7951753,
+    "ast_hash": "07bf5b86e8a37187702cff9709b367f5",
+    "semantic_hash": "07bf5b86e8a37187702cff9709b367f5"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/pdfparser/v5/detectors.js": {
+    "mtime": 1780046547.5011022,
+    "ast_hash": "ae9b6677f3350cdd97d25237612b1bcf",
+    "semantic_hash": "ae9b6677f3350cdd97d25237612b1bcf"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/pdfparser/v5/index.js": {
+    "mtime": 1780046536.9400666,
+    "ast_hash": "ebd43c8dbf954136156dd20aa9fd79bb",
+    "semantic_hash": "ebd43c8dbf954136156dd20aa9fd79bb"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/qemuAvailability.js": {
+    "mtime": 1779996018.702566,
+    "ast_hash": "5996c9e067091ad9cdfb39313256af27",
+    "semantic_hash": "5996c9e067091ad9cdfb39313256af27"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/qemuHostArgs.js": {
+    "mtime": 1779996018.702631,
+    "ast_hash": "9da390123c68538238e2842764f6c833",
+    "semantic_hash": "9da390123c68538238e2842764f6c833"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/qemuInstallInfo.js": {
+    "mtime": 1779996018.7026684,
+    "ast_hash": "5eee975ca1d5729f988dd04ded6d8a60",
+    "semantic_hash": "5eee975ca1d5729f988dd04ded6d8a60"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/qemuLocalVmDialogs.js": {
+    "mtime": 1779996018.7026956,
+    "ast_hash": "08f3b3e0120d0313367cfd0d6221f5ca",
+    "semantic_hash": "08f3b3e0120d0313367cfd0d6221f5ca"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/qemuMissingWarningHtml.js": {
+    "mtime": 1779996018.7026956,
+    "ast_hash": "2f39a721679d63321b7d926f5741dc54",
+    "semantic_hash": "2f39a721679d63321b7d926f5741dc54"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/qemuQcow2Copy.js": {
+    "mtime": 1779996018.7027557,
+    "ast_hash": "1c39d932837df2db81131b67b93a6430",
+    "semantic_hash": "1c39d932837df2db81131b67b93a6430"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/qemuWinPlatform.js": {
+    "mtime": 1779996018.7027857,
+    "ast_hash": "9092f827d588a2fb05732dbf3b3071a1",
+    "semantic_hash": "9092f827d588a2fb05732dbf3b3071a1"
+  },
+  "/home/valueerror/STUFF/DEV/00-Next-Exam-DEV/next-exam/shared/submissionPdfSign.js": {
+    "mtime": 1780000803.092893,
+    "ast_hash": "c48c0813d65b5db7e727719d6f420636",
+    "semantic_hash": "c48c0813d65b5db7e727719d6f420636"
+  }
+}

@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend">
+
+    <settings pass="windowsPE">
+
+
+        <component name="Microsoft-Windows-International-Core-WinPE"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS"
+                   xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+
+            <SetupUILanguage>
+                <UILanguage>en-US</UILanguage>
+            </SetupUILanguage>
+
+            <InputLocale>de-AT</InputLocale>
+            <SystemLocale>de-AT</SystemLocale>
+            <UILanguage>en-US</UILanguage>
+            <UserLocale>de-AT</UserLocale>
+
+        </component>
+
+
+        <!-- Driver (VirtIO Disk) -->
+        <component name="Microsoft-Windows-PnpCustomizationsWinPE"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS"
+                   xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+
+            <DriverPaths>
+                <PathAndCredentials wcm:action="add" wcm:keyValue="1">
+                    <Path>D:\viostor\w11\amd64</Path>
+                </PathAndCredentials>
+                <PathAndCredentials wcm:action="add" wcm:keyValue="2">
+                    <Path>E:\viostor\w11\amd64</Path>
+                </PathAndCredentials>
+                <PathAndCredentials wcm:action="add" wcm:keyValue="3">
+                    <Path>F:\viostor\w11\amd64</Path>
+                </PathAndCredentials>
+                <PathAndCredentials wcm:action="add" wcm:keyValue="4">
+                    <Path>D:\NetKVM\w11\amd64</Path>
+                </PathAndCredentials>
+                <PathAndCredentials wcm:action="add" wcm:keyValue="5">
+                    <Path>E:\NetKVM\w11\amd64</Path>
+                </PathAndCredentials>
+                <PathAndCredentials wcm:action="add" wcm:keyValue="6">
+                    <Path>F:\NetKVM\w11\amd64</Path>
+                </PathAndCredentials>
+            </DriverPaths>
+
+        </component>
+
+        <!-- Setup -->
+        <component name="Microsoft-Windows-Setup"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS">
+
+            <DiskConfiguration>
+                <Disk wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+                    <DiskID>0</DiskID>
+                    <WillWipeDisk>true</WillWipeDisk>
+
+                    <CreatePartitions>
+                        <CreatePartition wcm:action="add">
+                            <Order>1</Order>
+                            <Type>Primary</Type>
+                            <Extend>true</Extend>
+                        </CreatePartition>
+                    </CreatePartitions>
+
+                    <ModifyPartitions>
+                        <ModifyPartition wcm:action="add">
+                            <Order>1</Order>
+                            <PartitionID>1</PartitionID>
+                            <Format>NTFS</Format>
+                            <Active>true</Active>
+                            <Label>Windows</Label>
+                        </ModifyPartition>
+                    </ModifyPartitions>
+                </Disk>
+            </DiskConfiguration>
+
+            <ImageInstall>
+                <OSImage>
+                    <InstallTo>
+                        <DiskID>0</DiskID>
+                        <PartitionID>1</PartitionID>
+                    </InstallTo>
+                </OSImage>
+            </ImageInstall>
+
+            <UserData>
+                <AcceptEula>true</AcceptEula>
+                <FullName>admin</FullName>
+                <Organization>home</Organization>
+            </UserData>
+
+            <RunSynchronous>
+                <RunSynchronousCommand wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+                    <Order>1</Order>
+                    <Path>reg add HKLM\System\Setup\LabConfig /v BypassTPMCheck /t REG_DWORD /d 1 /f</Path>
+                </RunSynchronousCommand>
+                <RunSynchronousCommand wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+                    <Order>2</Order>
+                    <Path>reg add HKLM\System\Setup\LabConfig /v BypassSecureBootCheck /t REG_DWORD /d 1 /f</Path>
+                </RunSynchronousCommand>
+                <RunSynchronousCommand wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+                    <Order>3</Order>
+                    <Path>reg add HKLM\System\Setup\LabConfig /v BypassRAMCheck /t REG_DWORD /d 1 /f</Path>
+                </RunSynchronousCommand>
+                <RunSynchronousCommand wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+                    <Order>4</Order>
+                    <Path>reg add HKLM\System\Setup\LabConfig /v BypassCPUCheck /t REG_DWORD /d 1 /f</Path>
+                </RunSynchronousCommand>
+            </RunSynchronous>
+
+        </component>
+
+    </settings>
+
+    <settings pass="specialize">
+
+        <!-- Driver (VirtIO Network) -->
+        <component name="Microsoft-Windows-PnpCustomizationsNonWinPE"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS"
+                   xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+
+            <DriverPaths>
+                <PathAndCredentials wcm:action="add" wcm:keyValue="1">
+                    <Path>D:\NetKVM\w11\amd64</Path>
+                </PathAndCredentials>
+                <PathAndCredentials wcm:action="add" wcm:keyValue="2">
+                    <Path>E:\NetKVM\w11\amd64</Path>
+                </PathAndCredentials>
+                <PathAndCredentials wcm:action="add" wcm:keyValue="3">
+                    <Path>F:\NetKVM\w11\amd64</Path>
+                </PathAndCredentials>
+                <PathAndCredentials wcm:action="add" wcm:keyValue="4">
+                    <Path>D:\viogpudo\w11\amd64</Path>
+                </PathAndCredentials>
+                <PathAndCredentials wcm:action="add" wcm:keyValue="5">
+                    <Path>E:\viogpudo\w11\amd64</Path>
+                </PathAndCredentials>
+                <PathAndCredentials wcm:action="add" wcm:keyValue="6">
+                    <Path>F:\viogpudo\w11\amd64</Path>
+                </PathAndCredentials>
+            </DriverPaths>
+
+        </component>
+
+    </settings>
+
+    <settings pass="oobeSystem">
+
+        <component name="Microsoft-Windows-Shell-Setup"
+                   processorArchitecture="amd64"
+                   publicKeyToken="31bf3856ad364e35"
+                   language="neutral"
+                   versionScope="nonSxS">
+
+            <UserAccounts>
+                <LocalAccounts>
+                    <LocalAccount wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+                        <Name>admin</Name>
+                        <Group>Administrators</Group>
+                        <Password>
+                            <Value>admin</Value>
+                            <PlainText>true</PlainText>
+                        </Password>
+                    </LocalAccount>
+                </LocalAccounts>
+            </UserAccounts>
+
+            <AutoLogon>
+                <Username>admin</Username>
+                <Enabled>true</Enabled>
+                <LogonCount>999</LogonCount>
+                <Password>
+                    <Value>admin</Value>
+                    <PlainText>true</PlainText>
+                </Password>
+            </AutoLogon>
+
+            <OOBE>
+                <HideEULAPage>true</HideEULAPage>
+                <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
+                <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+                <SkipMachineOOBE>true</SkipMachineOOBE>
+                <SkipUserOOBE>true</SkipUserOOBE>
+                <ProtectYourPC>3</ProtectYourPC>
+            </OOBE>
+
+            <TimeZone>W. Europe Standard Time</TimeZone>
+            <ComputerName>WIN11VM</ComputerName>
+
+            <FirstLogonCommands>
+                <SynchronousCommand wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+                    <Order>1</Order>
+                    <CommandLine>powershell -NoProfile -ExecutionPolicy Bypass -Command "$vers=@('w11','w10','2k25'); foreach($c in 68..90){$r=[char]$c+':'; foreach($v in $vers){$p=Join-Path $r ('viogpudo\'+$v+'\amd64'); if(Test-Path (Join-Path $p 'viogpudo.inf')){pnputil /add-driver ($p+'\*.inf') /subdirs /install | Out-Null}}}"</CommandLine>
+                    <Description>Install VirtIO GPU (viogpudo) from virtio-win ISO</Description>
+                </SynchronousCommand>
+                <SynchronousCommand wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+                    <Order>2</Order>
+                    <CommandLine>powershell -NoProfile -ExecutionPolicy Bypass -Command "$v='HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects'; New-Item $v -Force|Out-Null; Set-ItemProperty $v VisualFXSetting 2 -Type DWord; Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize' EnableTransparency 0 -Type DWord -EA 0; Set-ItemProperty 'HKCU:\Control Panel\Desktop' DragFullWindows 0; Set-ItemProperty 'HKCU:\Control Panel\Desktop\WindowMetrics' MinAnimate 0; Set-ItemProperty 'HKCU:\Control Panel\Mouse' MouseTrails 0; Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Accessibility' AnimationEffects 0 -Type DWord -EA 0; @('ListviewAlphaSelect','TaskbarAnimations','TaskbarMn')|%{Set-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' $_ 0 -Type DWord -EA 0}; powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c | Out-Null"</CommandLine>
+                    <Description>Best-performance visuals and high-performance power plan</Description>
+                </SynchronousCommand>
+                <SynchronousCommand wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+                    <Order>3</Order>
+                    <CommandLine>cmd /c reg add "HKCU\Control Panel\Desktop" /v Wallpaper /t REG_SZ /d "" /f &amp; reg add "HKCU\Control Panel\Desktop" /v WallpaperStyle /t REG_SZ /d "0" /f &amp; reg add "HKCU\Control Panel\Colors" /v Background /t REG_SZ /d "50 70 90" /f &amp; reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v Wallpaper /t REG_SZ /d "" /f</CommandLine>
+                    <Description>Solid color background (no wallpaper image)</Description>
+                </SynchronousCommand>
+                <SynchronousCommand wcm:action="add" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+                    <Order>4</Order>
+                    <CommandLine>powershell -NoProfile -ExecutionPolicy Bypass -Command "foreach($d in 'D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'){if(Test-Path ($d+':\setup-rclone.cmd')){Start-Process cmd -ArgumentList '/c',($d+':\setup-rclone.cmd') -Wait -Verb RunAs; exit}}"</CommandLine>
+                    <Description>Install WinFsp and setup rclone mount</Description>
+                </SynchronousCommand>
+            </FirstLogonCommands>
+
+        </component>
+
+    </settings>
+
+</unattend>

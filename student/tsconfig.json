@@ -1,17 +1,20 @@
 {
+  "extends": "./.quasar/tsconfig.json",
   "compilerOptions": {
     "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "node",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "importHelpers": true,
     "jsx": "preserve",
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "sourceMap": true,
     "baseUrl": "./",
-    "strict": true,
     "paths": {},
     "allowSyntheticDefaultImports": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    // Disable everything for now to just get tooltips and not everything marked red
+    "strict": false,
+    "noCheck": true
   }
 }
