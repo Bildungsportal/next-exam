@@ -27,6 +27,9 @@
                 </button>
             </li>
             <li>
+                <button type="button" class="btn btn-light pdf-tool-btn pdf-tool-btn--text" :class="{ active: tool === 'text' }" @click.stop="setTool('text')" :title="$t('editor.pdfAnnotationText')">T</button>
+            </li>
+            <li>
                 <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'delete' }" @click.stop="setTool('delete')" title="Delete">
                     ✕
                 </button>
@@ -42,10 +45,11 @@
                 :key="pageIndex"
                 class="pdf-page-wrapper"
                 :style="{ width: page.width + 'px', height: page.height + 'px' }"
-                @mousedown="enableAnnotations && tool !== 'delete' ? startDraw($event, pageIndex) : null"
+                @mousedown="enableAnnotations && tool !== 'delete' && tool !== 'text' ? startDraw($event, pageIndex) : null"
                 @mousemove="enableAnnotations && isDrawing ? updateDraw($event, pageIndex) : null"
                 @mouseup="enableAnnotations && isDrawing ? finishDraw($event, pageIndex) : null"
                 @mouseleave="enableAnnotations && isDrawing ? cancelDraw() : null"
+                @click="enableAnnotations && tool === 'text' ? placeTextAnnotation($event, pageIndex) : null"
             >
                 <img :src="page.imgSrc" class="pdf-bg-image" />
 
@@ -234,6 +238,28 @@
                             :style="{ pointerEvents: 'all', cursor: tool === 'delete' ? 'pointer' : 'default' }"
                         />
                     </svg>
+                    <div
+                        v-for="ann in textForPage(pageIndex)"
+                        :key="ann.id"
+                        class="ann ann-text"
+                        :style="textAnnotationStyle(ann)"
+                        @click.stop="tool === 'delete' ? deleteAnnotation(ann.id) : (tool === 'text' ? startEditText(ann.id) : null)"
+                    >
+                        <textarea
+                            v-if="editingTextId === ann.id"
+                            :id="'ann-text-input-' + ann.id"
+                            v-model="ann.text"
+                            class="ann-text-input"
+                            rows="1"
+                            @blur="finishTextEdit(ann.id)"
+                            @input="syncTextAnnotationInputSize($event.target, pageIndex)"
+                            @focus="syncTextAnnotationInputSize($event.target, pageIndex)"
+                            @mousedown.stop
+                            @click.stop
+                            @keydown.stop
+                        />
+                        <span v-else class="ann-text-display">{{ ann.text }}</span>
+                    </div>
                     <div v-if="currentDraft && currentDraft.pageIndex === pageIndex" class="draft" :style="draftStyle"></div>
                     <svg v-if="draftLine && draftLine.pageIndex === pageIndex" class="draft-line" :style="{ position: 'absolute', left: 0, top: 0, width: page.width + 'px', height: page.height + 'px' }">
                         <line :x1="draftLine.x1" :y1="draftLine.y1" :x2="draftLine.x2" :y2="draftLine.y2" stroke="rgba(220,53,69,0.95)" stroke-width="3" stroke-linecap="round" />
@@ -704,9 +730,51 @@ export default {
     position: absolute;
 }
 
+.ann-text-display {
+    display: inline-block;
+    font-size: 14px;
+    line-height: 1.3;
+    color: #111;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 2px 4px;
+    border-radius: 2px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.ann-text-input {
+    box-sizing: border-box;
+    display: block;
+    font-size: 14px;
+    line-height: 1.3;
+    color: #111;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(13, 110, 253, 0.5);
+    border-radius: 2px;
+    padding: 2px 4px;
+    resize: none;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-width: 80px;
+}
+
+.pdf-tool-btn--text {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
 @media print {
     .pdf-annotation-toolbar {
         display: none !important;
+    }
+
+    .ann-text-input,
+    .ann-text-display {
+        border: none !important;
+        background: transparent !important;
+        outline: none !important;
+        box-shadow: none !important;
     }
 }
 </style>

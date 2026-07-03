@@ -1103,6 +1103,14 @@ export default {
         overflow: visible !important;
 
     }
+
+    :deep(.ann-text-input),
+    :deep(.ann-text-display) {
+        border: none !important;
+        background: transparent !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
  
 
     html, body, .activesheets-root, .activesheets-body {

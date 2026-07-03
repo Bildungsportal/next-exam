@@ -14,6 +14,7 @@ export const pdfPageAnnotationsMixin = {
             draftPenPath: null, // { pageIndex, points: [{x,y},...] } während Stift-Zeichnen
             annotations: [],
             annotationUndoStack: [],
+            editingTextId: null,
         };
     },
     computed: {
@@ -53,6 +54,9 @@ export const pdfPageAnnotationsMixin = {
         penForPage(pageIndex) {
             return this.annotations.filter((a) => a.pageIndex === pageIndex && a.kind === 'pen');
         },
+        textForPage(pageIndex) {
+            return this.annotations.filter((a) => a.pageIndex === pageIndex && a.kind === 'text');
+        },
         // SVG-polyline points string aus {x,y}[] array
         penPointsAttr(points) {
             return (points || []).map((p) => `${p.x},${p.y}`).join(' ');
@@ -72,6 +76,76 @@ export const pdfPageAnnotationsMixin = {
                 zIndex: 20,
             };
         },
+        textAnnotationStyle(ann) {
+            return {
+                position: 'absolute',
+                left: `${ann.x}px`,
+                top: `${ann.y}px`,
+                zIndex: 25,
+                pointerEvents: 'auto',
+                cursor: this.tool === 'delete' ? 'pointer' : 'text',
+            };
+        },
+        // Hidden mirror for text annotation width/height measurement.
+        getTextAnnotationMeasureMirror(el) {
+            let mirror = document.getElementById('__annTextMeasure__');
+            if (!mirror) {
+                mirror = document.createElement('div');
+                mirror.id = '__annTextMeasure__';
+                mirror.setAttribute('aria-hidden', 'true');
+                mirror.style.cssText = 'position:absolute;visibility:hidden;top:-9999px;left:-9999px;white-space:pre;';
+                document.body.appendChild(mirror);
+            }
+            const cs = getComputedStyle(el);
+            mirror.style.font = cs.font;
+            mirror.style.fontSize = cs.fontSize;
+            mirror.style.fontFamily = cs.fontFamily;
+            mirror.style.lineHeight = cs.lineHeight;
+            mirror.style.padding = cs.padding;
+            mirror.style.border = cs.border;
+            mirror.style.boxSizing = cs.boxSizing;
+            return mirror;
+        },
+        // Grow textarea with typed content; cap width at remaining page space.
+        syncTextAnnotationInputSize(el, pageIndex) {
+            if (!el) return;
+            const pageW = this.parsedPages?.[pageIndex]?.width;
+            const ann = this.annotations.find((a) => a.id === this.editingTextId);
+            const maxW = pageW && ann ? Math.max(80, pageW - ann.x - 8) : 320;
+            const mirror = this.getTextAnnotationMeasureMirror(el);
+            const cs = getComputedStyle(el);
+            const lineHeight = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.3;
+            const padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0)
+                + (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+            const lines = String(el.value ?? '').split('\n');
+            const measureLines = lines.length ? lines : [''];
+
+            mirror.style.whiteSpace = 'pre';
+            mirror.style.width = 'auto';
+            let contentW = 80;
+            for (const line of measureLines) {
+                mirror.textContent = line || ' ';
+                contentW = Math.max(contentW, mirror.offsetWidth + 4);
+            }
+            const width = Math.min(maxW, contentW);
+            const atMaxWidth = contentW >= maxW - 1;
+
+            // While width still grows: height = explicit line breaks only (no wrap jitter).
+            let height;
+            if (!atMaxWidth) {
+                height = Math.ceil(measureLines.length * lineHeight + padY);
+            } else {
+                mirror.style.whiteSpace = 'pre-wrap';
+                mirror.style.wordBreak = 'break-word';
+                mirror.style.width = `${width}px`;
+                mirror.textContent = el.value || ' ';
+                height = Math.ceil(mirror.offsetHeight);
+            }
+
+            el.style.maxWidth = `${maxW}px`;
+            el.style.width = `${width}px`;
+            el.style.height = `${height}px`;
+        },
         deleteAnnotation(id) {
             this.pushAnnotationUndoSnapshot();
             this.annotations = this.annotations.filter((a) => a.id !== id);
@@ -89,7 +163,7 @@ export const pdfPageAnnotationsMixin = {
             return { x, y };
         },
         startDraw(event, pageIndex) {
-            if (this.tool === 'delete') return;
+            if (this.tool === 'delete' || this.tool === 'text') return;
             event.preventDefault();
             event.stopPropagation();
             const { x, y } = this.getRelativePoint(event);
@@ -226,8 +300,67 @@ export const pdfPageAnnotationsMixin = {
             this.draftLine = null;
             this.draftPenPath = null;
         },
+        // Click-to-place free text annotation (activesheet / preview).
+        placeTextAnnotation(event, pageIndex) {
+            if (this.tool !== 'text') return;
+            if (event.target.closest('.ann-text') || event.target.closest('.input-overlay')) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const { x, y } = this.getRelativePoint(event);
+            this.pushAnnotationUndoSnapshot();
+            const id = `ann_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+            this.annotations.push({
+                id,
+                kind: 'text',
+                pageIndex,
+                x,
+                y,
+                text: '',
+                fontSize: 14,
+                color: '#111111',
+            });
+            this.editingTextId = id;
+            this.notifyAnnotationsChanged();
+            this.$nextTick(() => {
+                const el = document.getElementById(`ann-text-input-${id}`);
+                if (el) {
+                    el.focus();
+                    this.syncTextAnnotationInputSize(el, pageIndex);
+                }
+            });
+        },
+        startEditText(id) {
+            if (this.tool !== 'text') return;
+            const ann = this.annotations.find((a) => a.id === id);
+            this.editingTextId = id;
+            this.$nextTick(() => {
+                const el = document.getElementById(`ann-text-input-${id}`);
+                if (el) {
+                    el.focus();
+                    if (typeof el.select === 'function') el.select();
+                    if (ann) this.syncTextAnnotationInputSize(el, ann.pageIndex);
+                }
+            });
+        },
+        finishTextEdit(id) {
+            if (this.editingTextId !== id) return;
+            const ann = this.annotations.find((a) => a.id === id);
+            if (!ann) {
+                this.editingTextId = null;
+                return;
+            }
+            const text = String(ann.text ?? '').trim();
+            if (!text) {
+                this.annotations = this.annotations.filter((a) => a.id !== id);
+            } else {
+                ann.text = text;
+            }
+            this.editingTextId = null;
+            this.notifyAnnotationsChanged();
+        },
         resetAnnotations() {
             this.cancelDraw();
+            this.editingTextId = null;
             this.annotations = [];
             this.annotationUndoStack = [];
         },
