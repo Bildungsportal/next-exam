@@ -304,13 +304,15 @@ import {
         this.multicastClient.clientinfo.isRunningInCage = platformDispatcher.runningInCage;
         this.multicastClient.clientinfo.isAssessmentMode = isAssessmentSessionActive();
 
-        this.timer++   // we use timer to time loops with different intervals without introducing new unneccesary schedulers
+       
         if (this.timer % 20 === 0 ){  // run every 20*5 (updateloop) seconds
             await updateRemoteAssistant(this.multicastClient.clientinfo, {
                 logTag: 'communicationhandler',
                 applySecurityFocusLost: (reason) => this.applySecurityFocusLost(reason),
             });
         }
+
+        this.timer++   // we use timer to time loops with different intervals without introducing new unneccesary schedulers
 
         if (this.multicastClient.clientinfo.localLockdown
             && (this.multicastClient.clientinfo.serverip === '127.0.0.1' || this.multicastClient.clientinfo.servername === 'localhost')) {

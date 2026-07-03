@@ -34,6 +34,7 @@ const SYSTEM_CRITICAL_NAMES = new Set([
     'dbus-daemon', 'dbus-broker', 'networkmanager', 'wpa_supplicant', 'avahi-daemon',
     'cupsd', 'sshd', 'pipewire', 'pipewire-pulse', 'pulseaudio',
     'xorg', 'wayland', 'gnome-shell', 'plasmashell', 'kwin_x11', 'kwin_wayland', 'kdeconnectd',
+    'mainthread', // Node/Electron dev on Linux: ps comm shows V8 main thread name, not a separate app
     // windows — OS / shell
     'svchost', 'svchost.exe', 'lsass', 'lsass.exe', 'services', 'services.exe',
     'wininit', 'wininit.exe', 'csrss', 'csrss.exe', 'winlogon', 'winlogon.exe',
