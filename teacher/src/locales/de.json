@@ -461,6 +461,7 @@
         "page": "Seite",
         "pages": "Seiten",
         "previewEmbedFallback": "Vorschau über den System-PDF-Viewer (Seitenbilder nicht verfügbar).",
+        "pdfAnnotationText": "Text hinzufügen",
         "save": "Speichern",
         "saveCorrection": "Korrektur speichern",
         "saveCorrectionTemplate": "Als Korrekturvorlage speichern",

@@ -461,6 +461,7 @@
         "page": "Page",
         "pages": "Pages",
         "previewEmbedFallback": "Preview via system PDF viewer (page images unavailable).",
+        "pdfAnnotationText": "Add text",
         "save": "Save",
         "saveCorrection": "Save correction",
         "saveCorrectionTemplate": "Save as correction template",

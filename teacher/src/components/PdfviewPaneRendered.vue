@@ -33,8 +33,8 @@
                     <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'highlight-green' }" @click.stop="setTool('highlight-green')" title="Highlight green">
                         <span class="tool-swatch tool-swatch--green"></span>
                     </button>
-                    <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'highlight-blue' }" @click.stop="setTool('highlight-blue')" title="Highlight blue">
-                        <span class="tool-swatch tool-swatch--blue"></span>
+                    <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'highlight-red' }" @click.stop="setTool('highlight-red')" title="Highlight red">
+                        <span class="tool-swatch tool-swatch--red"></span>
                     </button>
                     <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'underline-red' }" @click.stop="setTool('underline-red')" title="Underline red">
                         <span class="tool-underline tool-underline--red"></span>
@@ -42,6 +42,7 @@
                     <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'pen-red' }" @click.stop="setTool('pen-red')" title="Pen red">
                         <img src="/src/assets/img/svg/document-edit.svg" class="white">
                     </button>
+                    <button type="button" class="btn btn-light pdf-tool-btn pdf-tool-btn--text" :class="{ active: tool === 'text' }" @click.stop="setTool('text')" :title="$t('pdf.pdfAnnotationText')">T</button>
                     <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'delete' }" @click.stop="setTool('delete')" title="Delete">
                         ✕
                     </button>
@@ -106,10 +107,11 @@
             <div
                 class="pdf-page-wrapper"
                 :style="{ width: page.width + 'px', height: page.height + 'px', transform: `scale(${zoom})` }"
-                @mousedown="tool !== 'delete' ? startDraw($event, pageIndex) : null"
+                @mousedown="tool !== 'delete' && tool !== 'text' ? startDraw($event, pageIndex) : null"
                 @mousemove="isDrawing ? updateDraw($event, pageIndex) : null"
                 @mouseup="isDrawing ? finishDraw($event, pageIndex) : null"
                 @mouseleave="isDrawing ? cancelDraw() : null"
+                @click="tool === 'text' ? placeTextAnnotation($event, pageIndex) : null"
             >
                 <img :src="page.imgSrc" class="pdf-bg-image" draggable="false" />
 
@@ -146,7 +148,7 @@
                         :y1="ann.y1"
                         :x2="ann.x2"
                         :y2="ann.y2"
-                        stroke="rgba(220,53,69,0.95)"
+                        :stroke="annotationInkStroke"
                         stroke-width="3"
                         stroke-linecap="round"
                         @click.stop="tool === 'delete' ? deleteAnnotation(ann.id) : null"
@@ -163,7 +165,7 @@
                     <polyline
                         :points="penPointsAttr(ann.points)"
                         fill="none"
-                        stroke="rgba(220,53,69,0.95)"
+                        :stroke="annotationInkStroke"
                         stroke-width="2"
                         stroke-linecap="round"
                         stroke-linejoin="round"
@@ -172,12 +174,35 @@
                     />
                 </svg>
 
+                <div
+                    v-for="ann in textForPage(pageIndex)"
+                    :key="ann.id"
+                    class="ann ann-text"
+                    :style="textAnnotationStyle(ann)"
+                    @click.stop="tool === 'delete' ? deleteAnnotation(ann.id) : (tool === 'text' ? startEditText(ann.id) : null)"
+                >
+                    <textarea
+                        v-if="editingTextId === ann.id"
+                        :id="'ann-text-input-' + ann.id"
+                        v-model="ann.text"
+                        class="ann-text-input"
+                        rows="1"
+                        @blur="finishTextEdit(ann.id)"
+                        @input="syncTextAnnotationInputSize($event.target, pageIndex)"
+                        @focus="syncTextAnnotationInputSize($event.target, pageIndex)"
+                        @mousedown.stop
+                        @click.stop
+                        @keydown.stop
+                    />
+                    <span v-else class="ann-text-display">{{ ann.text }}</span>
+                </div>
+
                 <div v-if="currentDraft && currentDraft.pageIndex === pageIndex" class="draft" :style="draftStyle"></div>
                 <svg v-if="draftLine && draftLine.pageIndex === pageIndex" class="draft-line" :style="{ position:'absolute', left:0, top:0, width: page.width + 'px', height: page.height + 'px' }">
-                    <line :x1="draftLine.x1" :y1="draftLine.y1" :x2="draftLine.x2" :y2="draftLine.y2" stroke="rgba(220,53,69,0.95)" stroke-width="3" stroke-linecap="round" />
+                    <line :x1="draftLine.x1" :y1="draftLine.y1" :x2="draftLine.x2" :y2="draftLine.y2" :stroke="annotationInkStroke" stroke-width="3" stroke-linecap="round" />
                 </svg>
                 <svg v-if="draftPenPath && draftPenPath.pageIndex === pageIndex" class="draft-pen" :style="{ position:'absolute', left:0, top:0, width: page.width + 'px', height: page.height + 'px', pointerEvents: 'none' }">
-                    <polyline :points="penPointsAttr(draftPenPath.points)" fill="none" stroke="rgba(220,53,69,0.95)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    <polyline :points="penPointsAttr(draftPenPath.points)" fill="none" :stroke="annotationInkStroke" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
             </div>
             </div>
@@ -214,6 +239,9 @@
                 zoom: 1,
                 showMismatchOverlay: false,
                 dismissedMismatchIds: [],
+                // Teacher correction ink is always red (unlike student activesheet blue).
+                annotationInkColor: '#dc3545',
+                annotationInkStroke: 'rgba(220,53,69,0.95)',
             }
         },
         computed: {
@@ -410,7 +438,7 @@
     }
     .tool-swatch--yellow { background: rgba(255, 255, 0, 1); }
     .tool-swatch--green  { background: rgba(0, 255, 90, 0.95); }
-    .tool-swatch--blue   { background: rgba(0, 170, 255, 0.95); }
+    .tool-swatch--red    { background: rgba(220, 53, 69, 0.95); }
 
     .tool-underline {
         width: 18px;
@@ -532,8 +560,46 @@
     .draft {
         position: absolute;
     }
+    .ann.highlight {
+        mix-blend-mode: multiply;
+        z-index: 20;
+    }
     .ann-underline {
         z-index: 21;
+    }
+
+    .ann-text-display {
+        display: inline-block;
+        font-size: 14px;
+        line-height: 1.3;
+        color: #dc3545;
+        background: rgba(255, 255, 255, 0.85);
+        padding: 2px 4px;
+        border-radius: 2px;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .ann-text-input {
+        box-sizing: border-box;
+        display: block;
+        font-size: 14px;
+        line-height: 1.3;
+        color: #dc3545;
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid rgba(220, 53, 69, 0.5);
+        border-radius: 2px;
+        padding: 2px 4px;
+        resize: none;
+        overflow: hidden;
+        white-space: pre-wrap;
+        word-break: break-word;
+        min-width: 80px;
+    }
+
+    .pdf-tool-btn--text {
+        font-weight: 700;
+        font-size: 1rem;
     }
 
     .unstyled{
@@ -582,6 +648,13 @@
         .pdf-page-wrapper { transform: none !important; margin: 0 !important; box-shadow: none !important; }
         .pdf-page-layout { width: auto !important; height: auto !important; margin: 0 !important; overflow: hidden !important; break-inside: avoid; page-break-inside: avoid; }
         .pdf-page-layout + .pdf-page-layout { break-before: page; page-break-before: always; }
+        .ann-text-input,
+        .ann-text-display {
+            border: none !important;
+            background: transparent !important;
+            outline: none !important;
+            box-shadow: none !important;
+        }
     }
 </style>
 

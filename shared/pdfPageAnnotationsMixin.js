@@ -284,7 +284,9 @@ export const pdfPageAnnotationsMixin = {
                     ? 'rgba(0,255,90,0.28)'
                     : this.tool === 'highlight-blue'
                         ? 'rgba(0,170,255,0.26)'
-                        : 'rgba(255,255,0,0.32)';
+                        : this.tool === 'highlight-red'
+                            ? 'rgba(220,53,69,0.28)'
+                            : 'rgba(255,255,0,0.32)';
                 this.annotations.push({
                     id: `ann_${Date.now()}_${Math.random().toString(16).slice(2)}`,
                     kind: 'highlight',

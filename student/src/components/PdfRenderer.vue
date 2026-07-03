@@ -214,7 +214,7 @@
                             :y1="ann.y1"
                             :x2="ann.x2"
                             :y2="ann.y2"
-                            stroke="rgba(220,53,69,0.95)"
+                            :stroke="annotationInkStroke"
                             stroke-width="3"
                             stroke-linecap="round"
                             @click.stop="tool === 'delete' ? deleteAnnotation(ann.id) : null"
@@ -262,7 +262,7 @@
                     </div>
                     <div v-if="currentDraft && currentDraft.pageIndex === pageIndex" class="draft" :style="draftStyle"></div>
                     <svg v-if="draftLine && draftLine.pageIndex === pageIndex" class="draft-line" :style="{ position: 'absolute', left: 0, top: 0, width: page.width + 'px', height: page.height + 'px' }">
-                        <line :x1="draftLine.x1" :y1="draftLine.y1" :x2="draftLine.x2" :y2="draftLine.y2" stroke="rgba(220,53,69,0.95)" stroke-width="3" stroke-linecap="round" />
+                        <line :x1="draftLine.x1" :y1="draftLine.y1" :x2="draftLine.x2" :y2="draftLine.y2" :stroke="annotationInkStroke" stroke-width="3" stroke-linecap="round" />
                     </svg>
                     <svg v-if="draftPenPath && draftPenPath.pageIndex === pageIndex" class="draft-pen" :style="{ position: 'absolute', left: 0, top: 0, width: page.width + 'px', height: page.height + 'px', pointerEvents: 'none' }">
                         <polyline :points="penPointsAttr(draftPenPath.points)" fill="none" :stroke="annotationInkStroke" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -700,6 +700,15 @@ export default {
 .pdf-tool-btn.active {
     border: 2px solid rgba(13, 110, 253, 0.35) !important;
     background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Bootstrap dims active buttons via filter; keep swatch colors visible. */
+.pdf-annotation-toolbar .btn:active,
+.pdf-annotation-toolbar .btn.active,
+.pdf-annotation-toolbar .pdf-tool-btn:active,
+.pdf-annotation-toolbar .pdf-tool-btn.active {
+    filter: none !important;
 }
 
 .tool-swatch {
@@ -717,7 +726,7 @@ export default {
 .tool-underline {
     width: 16px;
     height: 0;
-    border-top: 3px solid rgba(220, 53, 69, 0.95);
+    border-top: 3px solid rgba(10, 36, 114, 0.95);
     display: inline-block;
     border-radius: 2px;
 }
