@@ -46,7 +46,10 @@ const SYSTEM_CRITICAL_NAMES = new Set([
     'licenseservice', 'licenseservice.exe',
     'codemeter', 'codemeter.exe', 'mdnsresponder', 'mdnsresponder.exe',
     // windows — common school dev/build background (not remote-access)
+    // IncrediBuild distributed-build suite (Xoreax): buildservice=Agent, coordservice=Coordinator, restservice=REST
     'buildservice', 'buildservice.exe',
+    'coordservice', 'coordservice.exe',
+    'restservice', 'restservice.exe',
     'httpd', 'httpd.exe',
     // macOS
     'launchd', 'mdnsresponder', 'syslogd', 'configd', 'kernel_task',
