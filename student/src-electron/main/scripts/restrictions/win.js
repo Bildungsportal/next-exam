@@ -40,12 +40,10 @@ export async function killWindowsAppsToClose(appsToClose) {
 }
 
 /**
- * Enable Windows-specific restrictions (shortcuts, close apps, kill explorer).
+ * Enable Windows-specific restrictions (shortcuts, kill explorer).
  * @param {object} winhandler - must have winhandler.examwindow
- * @param {string[]} appsToClose - app names to kill
  */
-export async function enableWindowsRestrictions(winhandler, appsToClose) {
-    await killWindowsAppsToClose(appsToClose);
+export async function enableWindowsRestrictions(winhandler) {
     if (platformDispatcher.skipElectronKiosk) return;
     try {
         const publicBase = platformDispatcher.publicBase;

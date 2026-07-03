@@ -40,7 +40,6 @@ import { updateSystemTray } from './main/scripts/traymenu.js'
 import JreHandler from './main/scripts/jre-handler.js';
 import { checkParentProcess } from './main/scripts/checkparent.js';
 
-// toggleMacOSLockdown disabled while macOS Automatic Assessment mode is active
 import { stopProxy } from './main/scripts/vncproxy.js';
 import { stopAssessmentSession } from './main/scripts/assessmentSession.js';
 import { initErrorHandling } from './main/scripts/errorHandling.js';

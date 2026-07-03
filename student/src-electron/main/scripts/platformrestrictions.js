@@ -40,9 +40,9 @@ import config from '../config.js';
 import log from 'electron-log';
 import { SchedulerService } from './schedulerservice.ts';
 import platformDispatcher from './platformDispatcher.js';
-import { enableLinuxRestrictions, disableLinuxRestrictions } from './restrictions/lin.js';
+import { enableLinuxRestrictions, disableLinuxRestrictions, killLinuxAppsToClose } from './restrictions/lin.js';
 import { enableWindowsRestrictions, disableWindowsRestrictions, killWindowsAppsToClose } from './restrictions/win.js';
-import { enableMacRestrictions, disableMacRestrictions, toggleMacOSLockdown as toggleMacOSLockdownImpl } from './restrictions/mac.js';
+import { killMacAppsToClose, clearMacClipboard } from './restrictions/mac.js';
 import { stopAssessmentSession } from './assessmentSession.js';
 
 let clipboardInterval;
@@ -177,18 +177,30 @@ export const appsToClose = [
 
 
 
+/** Kill appsToClose on the current platform (default list). Safe to call without full enableRestrictions. */
+export async function killAppsToClose(apps = appsToClose) {
+    if (config.development) return;
+    log.info('platformrestrictions @ killAppsToClose: killing appsToClose list');
+    const p = platformDispatcher.platform;
+    if (p === 'win32') await killWindowsAppsToClose(apps);
+    else if (p === 'darwin') await killMacAppsToClose(apps);
+    else if (p === 'linux') await killLinuxAppsToClose(apps);
+}
+
 /** Win AA kiosk: kill appsToClose only (no explorer, shortcuts, or clipboard hooks). */
 export async function killWinKioskExamApps() {
     if (config.development) return;
     if (platformDispatcher.platform !== 'win32' || !platformDispatcher.skipElectronKiosk) return;
     log.info('platformrestrictions @ killWinKioskExamApps: killing appsToClose in Assigned Access session');
-    await killWindowsAppsToClose(appsToClose);
+    await killAppsToClose();
 }
 
 export async function enableRestrictions(winhandler) {
     if (config.development) { return; }
 
     log.info("platformrestrictions @ enableRestrictions: enabling platform restrictions");
+
+    await killAppsToClose();
 
     globalShortcut.register('CommandOrControl+V', () => { console.log('no clipboard'); });
     globalShortcut.register('CommandOrControl+Shift+V', () => { console.log('no clipboard'); });
@@ -200,15 +212,15 @@ export async function enableRestrictions(winhandler) {
     clipboardInterval.start();
 
     if (platformDispatcher.platform === 'linux') {
-        enableLinuxRestrictions(configStore, appsToClose);
+        enableLinuxRestrictions(configStore);
     }
 
     if (platformDispatcher.platform === 'win32') {
-        await enableWindowsRestrictions(winhandler, appsToClose);
+        await enableWindowsRestrictions(winhandler);
     }
 
     if (platformDispatcher.platform === 'darwin') {
-        await enableMacRestrictions(winhandler, appsToClose);
+        clearMacClipboard();
     }
 }
 
@@ -235,14 +247,4 @@ export async function disableRestrictions() {
     if (platformDispatcher.platform === 'win32') {
         disableWindowsRestrictions();
     }
-
-    if (platformDispatcher.platform === 'darwin') {
-        disableMacRestrictions();
-    }
 }
-
-function toggleMacOSLockdown(enable) {
-    toggleMacOSLockdownImpl(enable);
-}
-
-export {  toggleMacOSLockdown };
