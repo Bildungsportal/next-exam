@@ -229,6 +229,8 @@
             currentpreviewBase64: { type: String, default: '' },
             currentpreviewType: { type: String, default: 'pdf' },
             activesheetsCorrection: { type: Object, default: null },
+            servername: { type: String, default: '' },
+            servertoken: { type: String, default: '' },
         },
         data() {
             return {
@@ -250,6 +252,11 @@
             },
             correctedPdfMode() {
                 return /-korrigiert\.pdf$/i.test(this.currentpreviewPath || '');
+            },
+            annotationsSidecarPath() {
+                const p = String(this.currentpreviewPath || '').replace(/\\/g, '/');
+                if (!p.includes('/ABGABE/') || !/\.pdf$/i.test(p) || /-korrigiert\.pdf$/i.test(p)) return '';
+                return this.currentpreviewPath.replace(/\.pdf$/i, '.annotations.json');
             },
             toolingVisible() {
                 return this.parsedPages.length > 0 || this.embedFallback;
@@ -295,6 +302,51 @@
             undoCorrection() {
                 this.undoAnnotation();
             },
+            onAnnotationsChange() {
+                this.queueSaveAnnotations();
+            },
+            sidecarBytesToUtf8(raw) {
+                if (raw?.type === 'Buffer' && Array.isArray(raw.data)) {
+                    return new TextDecoder().decode(new Uint8Array(raw.data));
+                }
+                return new TextDecoder().decode(raw instanceof Uint8Array ? raw : new Uint8Array(raw));
+            },
+            async loadAnnotations() {
+                const filepath = this.annotationsSidecarPath;
+                if (!filepath) return;
+                try {
+                    const res = await window.ipcRenderer.invoke('readTeacherWorkdirFile', {
+                        servername: this.servername,
+                        servertoken: this.servertoken,
+                        filepath,
+                    });
+                    if (res?.status !== 'success' || res.data == null) return;
+                    const parsed = JSON.parse(this.sidecarBytesToUtf8(res.data));
+                    this.annotations = Array.isArray(parsed?.annotations) ? parsed.annotations : [];
+                    this.annotationUndoStack = [];
+                } catch (e) {
+                    log.warn('PdfviewPaneRendered: loadAnnotations failed', e);
+                }
+            },
+            queueSaveAnnotations() {
+                if (!this.annotationsSidecarPath) return;
+                if (this._annSaveTimer) clearTimeout(this._annSaveTimer);
+                this._annSaveTimer = setTimeout(() => this.saveAnnotations(), 250);
+            },
+            async saveAnnotations() {
+                const filepath = this.annotationsSidecarPath;
+                if (!filepath) return;
+                try {
+                    await window.ipcRenderer.invoke('writeTeacherAbgabeAnnotations', {
+                        servername: this.servername,
+                        servertoken: this.servertoken,
+                        filepath,
+                        utf8: JSON.stringify({ version: 1, annotations: this.annotations }),
+                    });
+                } catch (e) {
+                    log.warn('PdfviewPaneRendered: saveAnnotations failed', e);
+                }
+            },
             async applySrc(nextSrc) {
                 if (!nextSrc) {
                     this.cancelDraw();
@@ -316,6 +368,10 @@
                     this.resetAnnotations();
                     return;
                 }
+                this.resetAnnotations();
+                this.showMismatchOverlay = false;
+                this.dismissedMismatchIds = [];
+                await this.loadAnnotations();
                 await this.renderPdfFromUrl(nextSrc, this.currentpreviewBase64);
             },
 

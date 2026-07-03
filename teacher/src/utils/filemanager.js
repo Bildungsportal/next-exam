@@ -87,11 +87,10 @@ async function loadActivesheetsCorrectionContext(vm, pdfFilepath) {
     if (!String(pdfFilepath || '').replace(/\\/g, '/').includes('/ABGABE/')) return;
     if (/-korrigiert\.pdf$/i.test(pdfFilepath)) return; // bereits korrigierte Ausgabe nicht erneut als korrigierbar markieren
     const section = vm.serverstatus?.examSections?.[vm.serverstatus.activeSection];
-    if (!section || section.examtype !== 'activesheets') return;
+    if (!section) return;
 
     const groupKey = resolveSubmissionStudentGroup(vm, pdfFilepath) === 'B' ? 'groupB' : 'groupA';
     const activeSheets = section[groupKey]?.examConfig?.activeSheets;
-    if (!activeSheets?.filecontent) return;
 
     let submissionFormData = null;
     let templateFormData = null;
@@ -106,7 +105,8 @@ async function loadActivesheetsCorrectionContext(vm, pdfFilepath) {
         submissionFormData = parseActivesheetsFormDataJson(workdirBytesToUtf8(htmRaw));
     }
 
-    const templatePath = activesheetsCorrectionTemplatePath(vm.workdirectory, activeSheets.filename);
+    const templatePdfName = activeSheets?.filename || pdfFilepath.split(/[/\\]/).pop();
+    const templatePath = activesheetsCorrectionTemplatePath(vm.workdirectory, templatePdfName);
     const tplRaw = await readWorkdirFileForDashboard(vm, templatePath, { optional: true });
     if (tplRaw == null) {
         log.warn('filemanager @ loadActivesheetsCorrectionContext: no autocorrect template found');
@@ -116,10 +116,10 @@ async function loadActivesheetsCorrectionContext(vm, pdfFilepath) {
     }
 
     let baseParsedPages = [];
-    const customFields = activeSheets.customFields ? JSON.parse(JSON.stringify(activeSheets.customFields)) : [];
-    const blacklist = activeSheets.blacklist ? [...activeSheets.blacklist] : [];
+    const customFields = activeSheets?.customFields ? JSON.parse(JSON.stringify(activeSheets.customFields)) : [];
+    const blacklist = activeSheets?.blacklist ? [...activeSheets.blacklist] : [];
 
-    if (templateFormData) {
+    if (templateFormData && activeSheets?.filecontent) {
         try {
             await ensurePdfOverlayFontsReady();
             baseParsedPages = await parsePdfToPages(base64ToUint8Array(activeSheets.filecontent));
@@ -810,6 +810,7 @@ async function discardActivesheetsCorrectedPdf() {
             return;
         }
         if (this.showExplorer && this.currentdirectory) this.loadFilelist(this.currentdirectory);
+        this.showSubmissionsView = false;
         this.hidepreview();
     } catch (err) {
         log.error('filemanager @ discardActivesheetsCorrectedPdf:', err);

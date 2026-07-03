@@ -1306,6 +1306,8 @@
                 :currentpreviewBase64=currentpreviewBase64
                 :currentpreviewType="currentpreviewType"
                 :activesheets-correction="activesheetsCorrection"
+                :servername="servername"
+                :servertoken="servertoken"
                 @close="hidepreview"
                 @printBase64="printBase64"
                 @downloadFile="downloadFile"
