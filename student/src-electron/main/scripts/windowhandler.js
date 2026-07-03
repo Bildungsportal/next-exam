@@ -162,7 +162,7 @@ class WindowHandler {
             win.focus()
 
             if (platformDispatcher.skipElectronKiosk) {
-                await killWinKioskExamApps()
+                await killWinKioskExamApps(this.multicastClient?.clientinfo)
             } else {
                 await enableRestrictions(this)
                 await this.sleep(1000)

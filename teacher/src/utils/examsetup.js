@@ -969,7 +969,7 @@ async function promptLocalVmBootMode(vm, diskName) {
 }
 
 /** Boot qcow2; mode dialog then loader (reopens disk picker when presetGroup set). */
-async function bootLocalVmDisk(vm, { ipc, diskName, presetGroup = null }) {
+async function bootLocalVmDisk(vm, { ipc, diskName, presetGroup = null, displayResolution = null }) {
     const mode = await promptLocalVmBootMode(vm, diskName);
     if (!mode) {
         if (presetGroup != null) {
@@ -992,7 +992,7 @@ async function bootLocalVmDisk(vm, { ipc, diskName, presetGroup = null }) {
     } catch (e) {}
 
     try {
-        const bootRes = await ipc.invoke('qemu-boot-disk', { qcow2Name: diskName, useOverlay });
+        const bootRes = await ipc.invoke('qemu-boot-disk', { qcow2Name: diskName, useOverlay, displayResolution });
         try { vm.$swal.close(); } catch (e) {}
         if (bootRes?.qemuMissing) {
             await showQemuMissingWarning(vm, bootRes);
@@ -1497,7 +1497,10 @@ async function configureLocalVM(presetGroup){
                 const enc = btn.getAttribute('data-qemu-boot');
                 const diskName = enc ? decodeURIComponent(enc) : '';
                 if (!diskName) return;
-                await bootLocalVmDisk(this, { ipc, diskName, presetGroup });
+                const displayResolution = resolveLocalVmDisplayResolution(
+                    document.getElementById('qemuDisplayResolution')?.value
+                ).id;
+                await bootLocalVmDisk(this, { ipc, diskName, presetGroup, displayResolution });
             });
             const browseBtn = document.getElementById('qemuBrowseBtn');
             browseBtn?.addEventListener('click', async () => {

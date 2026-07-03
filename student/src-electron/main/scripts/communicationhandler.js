@@ -31,8 +31,7 @@ import log from 'electron-log';
 import {SchedulerService} from './schedulerservice.ts'
 import platformDispatcher from './platformDispatcher.js';
 import { encryptExamFileBytes, isExamFileEncryptedBytes } from './examFileCrypto.js';
-import { runRemoteCheck } from './remoteCheck.js'
-import { logNetworkActiveProcesses, findNonLanguageToolOn8088 } from './networkActiveProcesses.js'
+import { updateRemoteAssistant } from './remoteAssistantScan.js'
 import { getVMFindings } from './vmDetection.js'
 import { examApiFetch } from '../../../../shared/examApiFetch.js'
 import languageToolServer from './lt-server.js';
@@ -305,68 +304,15 @@ import {
         this.multicastClient.clientinfo.isRunningInCage = platformDispatcher.runningInCage;
         this.multicastClient.clientinfo.isAssessmentMode = isAssessmentSessionActive();
 
-        this.timer++   // we use timer to time loops with different intervals without introducing new unneccesary schedulers
+       
         if (this.timer % 20 === 0 ){  // run every 20*5 (updateloop) seconds
-
-            // run both detectors in parallel on the same tick:
-            // (1) runRemoteCheck = static keyword/port match against appsToClose
-            // (2) networkActiveProcesses = algorithmic detection of any network-active app
-            // merge process names into one keywords list so the teacher also sees apps we don't know by name
-            const [keywordHit, netScan, ltFakes] = await Promise.all([
-                runRemoteCheck(process.platform),
-                logNetworkActiveProcesses({ mode: 'both' }).catch((err) => {
-                    log.warn(`communicationhandler @ requestUpdate: networkActiveProcesses scan failed: ${err.message}`);
-                    return { processes: [] };
-                }),
-                findNonLanguageToolOn8088().catch((err) => {
-                    log.warn(`communicationhandler @ requestUpdate: port 8088 check failed: ${err.message}`);
-                    return [];
-                }),
-            ]);
-
-            if (ltFakes.length) {
-                const occupantSummary = ltFakes.map((o) => `${o.name}(pid=${o.pid})`).join(', ');
-                log.warn(
-                    `communicationhandler @ requestUpdate: non-LanguageTool listener on port 8088: ${occupantSummary}`
-                );
-                if (this.multicastClient.clientinfo.exammode ) {
-                    this.applySecurityFocusLost('ltPort8088');
-                }
-                const ra = this.multicastClient.clientinfo.remoteassistant || { keywords: [], ports: [] };
-                this.multicastClient.clientinfo.remoteassistant = { ...ra, languagetoolFake: true };
-            } else if (this.multicastClient.clientinfo.remoteassistant?.languagetoolFake) {
-                const ra = { ...this.multicastClient.clientinfo.remoteassistant };
-                delete ra.languagetoolFake;
-                if (!ra.keywords?.length && !ra.ports?.length) {
-                    delete this.multicastClient.clientinfo.remoteassistant;
-                } else {
-                    this.multicastClient.clientinfo.remoteassistant = ra;
-                }
-            }
-
-            const algorithmicNames = [...new Set(netScan.processes.map((p) => p.name))];
-            const keywordHits = keywordHit ? keywordHit.keywords : [];
-            const mergedKeywords = [...new Set([...keywordHits, ...algorithmicNames])];
-
-            if (mergedKeywords.length || (keywordHit && keywordHit.ports.length)) {
-                if (keywordHit) {
-                    log.warn('main @ ready: Possible remote assistance detected');
-                    for (const keyword of keywordHit.keywords) {
-                        log.warn(`main @ ready: Keyword ${keyword} detected`);
-                    }
-                    for (const port of keywordHit.ports) {
-                        log.warn(`main @ ready: Port ${port} detected`);
-                    }
-                }
-                const ra = this.multicastClient.clientinfo.remoteassistant || { keywords: [], ports: [] };
-                this.multicastClient.clientinfo.remoteassistant = {
-                    ...ra,
-                    keywords: mergedKeywords,
-                    ports: keywordHit ? keywordHit.ports : (ra.ports || []),
-                };
-            }
-
+            await updateRemoteAssistant(this.multicastClient.clientinfo, {
+                logTag: 'communicationhandler',
+                applySecurityFocusLost: (reason) => this.applySecurityFocusLost(reason),
+            });
         }
+
+        this.timer++   // we use timer to time loops with different intervals without introducing new unneccesary schedulers
 
         if (this.multicastClient.clientinfo.localLockdown
             && (this.multicastClient.clientinfo.serverip === '127.0.0.1' || this.multicastClient.clientinfo.servername === 'localhost')) {
@@ -729,7 +675,7 @@ import {
     //get base64 pdf from editor
     // ATTENTION: there is a similar method in ipchandler.js that also generates a pdf but stores it as file in the exam directory
     // pageMode='fullpage' => margins 0 + Chromium-Header aus; gleicher Header-String wird als HTML-Overlay injiziert (activesheets 1:1 PDF-Seite)
-    async getBase64PDF(submissionnumber, sectionname, printBackground=false, saveReason, pageMode){
+    async getBase64PDF(submissionnumber, sectionname, printBackground=false, saveReason, pageMode, screenZoom=1){
         if (saveReason !== 'auto') log.info("communicationhandler @ getBase64PDF: getting base64 encoded pdf")
         const traceTiming = saveReason === 'previewSigned' || saveReason === 'directsend'
         const t0 = traceTiming ? Date.now() : 0
@@ -794,6 +740,13 @@ import {
             await examWin.webContents.executeJavaScript(`(()=>{const o=document.getElementById('__fullpageHeaderOverlay__');if(o)o.remove();document.body.insertAdjacentHTML('afterbegin', ${overlayHtml});})()`)
         }
 
+        // #content CSS zoom compounds with activesheets print scale (8/9); compensate without resetting screen zoom.
+        const contentZoom = Math.max(0.5, Math.min(2.5, Number(screenZoom) || 1))
+        if (isFullpage && contentZoom !== 1) {
+            const printZoom = `calc((8 / 9) / ${contentZoom})`
+            await examWin.webContents.executeJavaScript(`(()=>{let s=document.getElementById('__nxPrintZoomCompensate__');if(!s){s=document.createElement('style');s.id='__nxPrintZoomCompensate__';document.head.appendChild(s);}s.textContent='@media print{#content .pdf-overlay-root,.pdf-overlay-root{zoom:${printZoom} !important;}}';})()`)
+        }
+
         // Set lock before starting PDF generation
         IpcHandler.isPrintingPdf = true;
 
@@ -843,7 +796,7 @@ import {
             IpcHandler.isPrintingPdf = false;
             if (isFullpage) {
                 try {
-                    await examWin.webContents.executeJavaScript(`(()=>{const o=document.getElementById('__fullpageHeaderOverlay__');if(o)o.remove();})()`)
+                    await examWin.webContents.executeJavaScript(`(()=>{const o=document.getElementById('__fullpageHeaderOverlay__');if(o)o.remove();const s=document.getElementById('__nxPrintZoomCompensate__');if(s)s.remove();})()`)
                 } catch (e) { /* exam window may be gone */ }
             }
         }

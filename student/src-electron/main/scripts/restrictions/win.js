@@ -24,7 +24,7 @@ export async function killWindowsAppsToClose(appsToClose) {
             const stem = String(app).replace(/\.exe$/i, '').trim().toLowerCase();
             if (!stem || WIN_APPS_KILL_SKIP.has(stem)) continue;
             const escapedApp = app.replace(/'/g, "''");
-            const command = `powershell -NoProfile -Command "$appName = '${escapedApp}'; try { $procs = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -ilike ('*' + $appName + '*') }; if ($procs -and $procs.Count -gt 0) { $procs | Stop-Process -Force -ErrorAction SilentlyContinue; Write-Output 'killed' } } catch { }"`;
+            const command = `powershell -NoProfile -Command "$appName = '${escapedApp}'; try { $procs = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -ilike ('*' + $appName + '*') }); if ($procs.Count -gt 0) { $procs | Stop-Process -Force -ErrorAction SilentlyContinue; Write-Output 'killed' } } catch { }"`;
             await new Promise((resolveApp) => {
                 childProcess.exec(command, (error, stdout, stderr) => {
                     if (!error && stdout && stdout.trim().includes('killed')) {
@@ -40,12 +40,10 @@ export async function killWindowsAppsToClose(appsToClose) {
 }
 
 /**
- * Enable Windows-specific restrictions (shortcuts, close apps, kill explorer).
+ * Enable Windows-specific restrictions (shortcuts, kill explorer).
  * @param {object} winhandler - must have winhandler.examwindow
- * @param {string[]} appsToClose - app names to kill
  */
-export async function enableWindowsRestrictions(winhandler, appsToClose) {
-    await killWindowsAppsToClose(appsToClose);
+export async function enableWindowsRestrictions(winhandler) {
     if (platformDispatcher.skipElectronKiosk) return;
     try {
         const publicBase = platformDispatcher.publicBase;

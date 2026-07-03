@@ -192,6 +192,77 @@ class IpcHandler {
         this.WindowHandler = null
         this.isPrintingPdf = false // flag to prevent closing window while printing
     }
+
+    // Resolves target PDF paths under the exam directory; returns null after replying fileerror on reject.
+    resolveExamPdfWriteTargets(args, event) {
+        let pdffilename = `${this.multicastClient.clientinfo.name}.pdf`
+        if (args.filename) {
+            pdffilename = `${args.filename}.pdf`
+        }
+        const pdffilepath = resolveWritablePathUnderExamDir(this.config.examdirectory, pdffilename, ['.pdf'])
+        if (!pdffilepath) {
+            log.warn(`ipchandler @ printpdf: rejected unsafe pdf filename (${pdffilename})`)
+            event.reply('fileerror', { sender: 'client', message: 'invalid pdf filename', status: 'error' })
+            return null
+        }
+        const alternatefilename = `${path.basename(pdffilename, '.pdf')}-aux.pdf`
+        const alternatebackupfilename = `${path.basename(pdffilename, '.pdf')}-old.pdf`
+        const alternatepath = resolveWritablePathUnderExamDir(this.config.examdirectory, alternatefilename, ['.pdf'])
+        if (!alternatepath) {
+            log.warn(`ipchandler @ printpdf: rejected alternate pdf path (${alternatefilename})`)
+            event.reply('fileerror', { sender: 'client', message: 'invalid alternate pdf path', status: 'error' })
+            return null
+        }
+        try {
+            const files = fs.readdirSync(this.config.examdirectory)
+            files.forEach(file => {
+                if (file === alternatefilename) {
+                    const newPath = resolveWritablePathUnderExamDir(this.config.examdirectory, alternatebackupfilename, ['.pdf'])
+                    if (newPath) {
+                        fs.renameSync(alternatepath, newPath)
+                    }
+                }
+            })
+        } catch (err) {
+            log.error(`ipchandler @ printpdf: ${err.message}`)
+        }
+        return { pdffilename, pdffilepath, alternatefilename, alternatepath }
+    }
+
+    // Encrypts and writes pre-rendered PDF bytes to the exam directory (main path, then -aux fallback).
+    writeExamPdfBuffer(pdfBuf, targets, saveReason, event, args) {
+        const ch = this.CommunicationHandler
+        const { pdffilename, pdffilepath, alternatefilename, alternatepath } = targets
+        const pw = resolveExamDecryptPassword(this.multicastClient)
+        const out = encryptExamFileBytesUnlessAlready(pdfBuf, pw)
+        if (pw) logSaveInfoUnlessAuto(saveReason, `ipchandler @ printpdf: encrypted write ${pdffilename} saveReason=${saveReason}`)
+        else logSaveInfoUnlessAuto(saveReason, `ipchandler @ printpdf: plaintext write ${pdffilename} saveReason=${saveReason}`)
+        fs.writeFile(pdffilepath, out, (err) => {
+            if (err) {
+                log.warn(`ipchandler @ printpdf: ${err.message} - writing file as: ${alternatepath} `)
+                try { if (fs.existsSync(alternatepath)) { fs.unlinkSync(alternatepath) } }
+                catch (unlinkErr) { log.error(`ipchandler @ printpdf (alternativer Pfad): ${unlinkErr.message}`) }
+                if (pw) logSaveInfoUnlessAuto(saveReason, `ipchandler @ printpdf: encrypted write ${alternatefilename} saveReason=${saveReason}`)
+                else logSaveInfoUnlessAuto(saveReason, `ipchandler @ printpdf: plaintext write ${alternatefilename} saveReason=${saveReason}`)
+                fs.writeFile(alternatepath, out, (altErr) => {
+                    if (altErr) {
+                        log.error(altErr.message)
+                        log.error('ipchandler @ printpdf: giving up')
+                        event.reply('fileerror', { sender: 'client', message: altErr.message, status: 'error' })
+                    } else {
+                        if (ch) ch.lastExamWriteSaveReason = saveReason
+                        if (args.reason === 'teacherrequest') { this.CommunicationHandler.sendToTeacher() }
+                        event.reply('loadfilelist')
+                    }
+                })
+            } else {
+                if (ch) ch.lastExamWriteSaveReason = saveReason
+                if (args.reason === 'teacherrequest') { this.CommunicationHandler.sendToTeacher() }
+                event.reply('loadfilelist')
+            }
+        })
+    }
+
     init (mc, config, wh, ch) {
         this.multicastClient = mc
         this.config = config
@@ -1303,7 +1374,7 @@ class IpcHandler {
             logSaveInfoUnlessAuto(saveReason, "ipchandler @ getPDFbase64: getting base64 encoded pdf")
             this.multicastClient.clientinfo.submissionnumber = args.submissionnumber+1 // clientinfo keeps track of submissions for automated submissionnumbers at section change - but this obviously happens after manual submit
             // pageMode='fullpage' => activesheets: A4 ohne Margins/Header/Footer + Header als HTML-Overlay
-            let result = await this.CommunicationHandler.getBase64PDF(args.submissionnumber, args.sectionname, args.printBackground, saveReason, args.pageMode)   // why the hell is this function located in communicationhandler.js and not in ipchandler.js ? FIXME !
+            let result = await this.CommunicationHandler.getBase64PDF(args.submissionnumber, args.sectionname, args.printBackground, saveReason, args.pageMode, args.screenZoom)   // why the hell is this function located in communicationhandler.js and not in ipchandler.js ? FIXME !
             return result
         })
 
@@ -1335,122 +1406,65 @@ class IpcHandler {
                 return
             }
 
+            const targets = this.resolveExamPdfWriteTargets(args, event)
+            if (!targets) return
+
+            // Pre-rendered PDF from getBase64PDF — write only, no second printToPDF.
+            if (typeof args.base64pdf === 'string' && args.base64pdf.length > 0) {
+                try {
+                    try { if (fs.existsSync(targets.pdffilepath)) { fs.unlinkSync(targets.pdffilepath) } }
+                    catch (err) { log.error(`ipchandler @ printpdf: ${err.message}`) }
+                    this.writeExamPdfBuffer(Buffer.from(args.base64pdf, 'base64'), targets, saveReason, event, args)
+                } catch (error) {
+                    log.error(`ipchandler @ printpdf: ${error.message}`)
+                    event.reply('fileerror', { sender: 'client', message: error.message, status: 'error' })
+                }
+                return
+            }
+
             if (this.isPrintingPdf){
                 log.warn("ipchandler @ printpdf: print already in progress - skipping new request")
                 return
             }
 
             const examWindow = this.WindowHandler.mainWin();
-            if (examWindow){
-                const options = { // define print options
-                    margins: {top:0.5, right:0, bottom:0.5, left:0 },
-                    pageSize: 'A4',
-                    printBackground: false,
-                    printSelectionOnly: false,
-                    landscape: args.landscape,
-                    displayHeaderFooter:true,
-                    footerTemplate: "<div style='height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-bottom:10px;'><span class=pageNumber></span>|<span class=totalPages></span></div>",
-                    headerTemplate: `<div style='display: inline-block; height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-left: 30px; margin-top:10px;'><span style="float:left;">${args.servername}</span><span style="float:left;">&nbsp;|&nbsp; </span><span class=date style="float:left;"></span><span style="float:right;">${args.clientname}</span></div>`,
-                    preferCSSPageSize: false
-                }
+            if (!examWindow) return
 
-                let pdffilename = `${this.multicastClient.clientinfo.name}.pdf`  // default filename = clientname.pdf
-                if (args.filename){  // in case of manual backup the user can set a custom filename
-                    pdffilename = `${args.filename}.pdf`
-                    
-                }
-                const pdffilepath = resolveWritablePathUnderExamDir(this.config.examdirectory, pdffilename, ['.pdf']);  // path points to the current exam directory
-                if (!pdffilepath) {
-                    log.warn(`ipchandler @ printpdf: rejected unsafe pdf filename (${pdffilename})`);
-                    event.reply("fileerror", { sender: "client", message: "invalid pdf filename", status: "error" } );
-                    return;
-                }
-                const alternatefilename = `${path.basename(pdffilename, '.pdf')}-aux.pdf`    //thomas.pdf-aux.pdf 
-                const alternatebackupfilename = `${path.basename(pdffilename, '.pdf')}-old.pdf`;   //thomas.pdf-old.pdf
-                const alternatepath = resolveWritablePathUnderExamDir(this.config.examdirectory, alternatefilename, ['.pdf']);  // if something goes wrong we try to write a different file
-                if (!alternatepath) {
-                    log.warn(`ipchandler @ printpdf: rejected alternate pdf path (${alternatefilename})`);
-                    event.reply("fileerror", { sender: "client", message: "invalid alternate pdf path", status: "error" } );
-                    return;
-                }
-
-
-                // aux files are files created if the main pdffilepath is not writeable (opened on windows) 
-                try {  // always check for old aux files and rename them
-                    const files = fs.readdirSync(this.config.examdirectory);
-                    files.forEach(file => {
-                        if (file === alternatefilename) {
-                            const newPath = resolveWritablePathUnderExamDir(this.config.examdirectory, alternatebackupfilename, ['.pdf']);
-                            if (newPath) {
-                                fs.renameSync(alternatepath, newPath);
-                            }
-                        }
-                    });
-                } 
-                catch(err) { log.error(`ipchandler @ printpdf: ${err.message}`);  }
-
-                const webContents = examWindow.webContents
-                const ch = this.CommunicationHandler
-
-                if (!webContents){
-                    log.error("ipchandler @ printpdf: no webContents found for examwindow")
-                    event.reply("fileerror", { sender: "client", message:"no webContents found for examwindow" , status:"error" } )
-                    return
-                }
-
-                this.isPrintingPdf = true
-
-                // set the title of the exam window and therefore the document title for PDF metadata
-                const pdfTitle = args.filename ? args.filename : `${this.multicastClient.clientinfo.name} - ${args.servername || this.multicastClient.clientinfo.servername || ''}`
-                // escape quotes and special characters for JavaScript string
-                const escapedTitle = pdfTitle.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "\\'")
-                webContents.executeJavaScript(`document.title = "${escapedTitle}"`).then(() => {
-                    // print the exam window to pdf
-                    return webContents.printToPDF(options)
-                }).then(data => {
-                    // delete the old pdf file if it exists
-                    try { if (fs.existsSync(pdffilepath)) { fs.unlinkSync(pdffilepath); }}
-                    catch(err) { log.error(`ipchandler @ printpdf: ${err.message}`);  }
-                    // write the pdf to the exam directory
-                    const pw = resolveExamDecryptPassword(this.multicastClient);
-                    const out = encryptExamFileBytesUnlessAlready(Buffer.from(data), pw);
-                    if (pw) logSaveInfoUnlessAuto(saveReason, `ipchandler @ printpdf: encrypted write ${pdffilename} saveReason=${saveReason}`);
-                    else logSaveInfoUnlessAuto(saveReason, `ipchandler @ printpdf: plaintext write ${pdffilename} saveReason=${saveReason}`);
-                    fs.writeFile(pdffilepath, out, (err) => { 
-                        if (err) {
-                            log.warn(`ipchandler @ printpdf: ${err.message} - writing file as: ${alternatepath} `); 
-                            // delete the old aux file if it exists
-                            try { if (fs.existsSync(alternatepath)) { fs.unlinkSync(alternatepath); } }
-                            catch (err) { log.error(`ipchandler @ printpdf (alternativer Pfad): ${err.message}`); }
-                            // write the pdf to the alternate path
-                            if (pw) logSaveInfoUnlessAuto(saveReason, `ipchandler @ printpdf: encrypted write ${alternatefilename} saveReason=${saveReason}`);
-                            else logSaveInfoUnlessAuto(saveReason, `ipchandler @ printpdf: plaintext write ${alternatefilename} saveReason=${saveReason}`);
-                            fs.writeFile(alternatepath, out, (err) => { 
-                                if (err) {
-                                    log.error(err.message);
-                                    log.error("ipchandler @ printpdf: giving up"); 
-                                    event.reply("fileerror", { sender: "client", message:err.message , status:"error" } )
-                                }
-                                else { // log.info("ipchandler @ printpdf: success!");
-                                    if (ch) ch.lastExamWriteSaveReason = saveReason
-                                    if (args.reason === "teacherrequest") { this.CommunicationHandler.sendToTeacher() }
-                                    event.reply("loadfilelist")
-                                }
-                            }); 
-                        }
-                        else { // log.info("ipchandler @ printpdf: success!");
-                            if (ch) ch.lastExamWriteSaveReason = saveReason
-                            if (args.reason === "teacherrequest") { this.CommunicationHandler.sendToTeacher() }
-                            event.reply("loadfilelist")   //make sure students see the new file immediately
-                        }
-                    } ); 
-                }).catch(error => { 
-                    log.error(`ipchandler @ printpdf: ${error.message}`)
-                    event.reply("fileerror", { sender: "client", message:error.message , status:"error" } )
-                }).finally(() => {
-                    this.isPrintingPdf = false
-                });
+            const options = { // editor legacy: render HTML via printToPDF
+                margins: {top:0.5, right:0, bottom:0.5, left:0 },
+                pageSize: 'A4',
+                printBackground: false,
+                printSelectionOnly: false,
+                landscape: args.landscape,
+                displayHeaderFooter:true,
+                footerTemplate: "<div style='height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-bottom:10px;'><span class=pageNumber></span>|<span class=totalPages></span></div>",
+                headerTemplate: `<div style='display: inline-block; height:12px; font-size:10px; text-align: right; width:100%; margin-right: 30px;margin-left: 30px; margin-top:10px;'><span style="float:left;">${args.servername}</span><span style="float:left;">&nbsp;|&nbsp; </span><span class=date style="float:left;"></span><span style="float:right;">${args.clientname}</span></div>`,
+                preferCSSPageSize: false
             }
+
+            const webContents = examWindow.webContents
+            if (!webContents){
+                log.error("ipchandler @ printpdf: no webContents found for examwindow")
+                event.reply("fileerror", { sender: "client", message:"no webContents found for examwindow" , status:"error" } )
+                return
+            }
+
+            this.isPrintingPdf = true
+
+            const pdfTitle = args.filename ? args.filename : `${this.multicastClient.clientinfo.name} - ${args.servername || this.multicastClient.clientinfo.servername || ''}`
+            const escapedTitle = pdfTitle.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "\\'")
+            webContents.executeJavaScript(`document.title = "${escapedTitle}"`).then(() => {
+                return webContents.printToPDF(options)
+            }).then(data => {
+                try { if (fs.existsSync(targets.pdffilepath)) { fs.unlinkSync(targets.pdffilepath); }}
+                catch(err) { log.error(`ipchandler @ printpdf: ${err.message}`);  }
+                this.writeExamPdfBuffer(Buffer.from(data), targets, saveReason, event, args)
+            }).catch(error => { 
+                log.error(`ipchandler @ printpdf: ${error.message}`)
+                event.reply("fileerror", { sender: "client", message:error.message , status:"error" } )
+            }).finally(() => {
+                this.isPrintingPdf = false
+            });
         })
 
         /**

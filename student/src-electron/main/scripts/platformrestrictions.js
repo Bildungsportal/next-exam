@@ -40,10 +40,12 @@ import config from '../config.js';
 import log from 'electron-log';
 import { SchedulerService } from './schedulerservice.ts';
 import platformDispatcher from './platformDispatcher.js';
-import { enableLinuxRestrictions, disableLinuxRestrictions } from './restrictions/lin.js';
+import { enableLinuxRestrictions, disableLinuxRestrictions, killLinuxAppsToClose } from './restrictions/lin.js';
 import { enableWindowsRestrictions, disableWindowsRestrictions, killWindowsAppsToClose } from './restrictions/win.js';
-import { enableMacRestrictions, disableMacRestrictions, toggleMacOSLockdown as toggleMacOSLockdownImpl } from './restrictions/mac.js';
+import { killMacAppsToClose, clearMacClipboard } from './restrictions/mac.js';
+import { updateRemoteAssistant } from './remoteAssistantScan.js';
 import { stopAssessmentSession } from './assessmentSession.js';
+import { appsToClose } from './appsToClose.js';
 
 let clipboardInterval;
 let configStore = {
@@ -52,142 +54,34 @@ let configStore = {
     macos: {}
 };
 
-// Single source of truth for "apps that should not run during an exam".
-// Used by (1) platformrestrictions for killing (pgrep/pkill/Get-Process) and
-// (2) remotecheck/* for detection+reporting to the teacher when killing fails (no root).
-// Matching on all consumers is case-insensitive substring on process name/cmdline,
-// EXCEPT macOS pkill -f which is case-sensitive -> TitleCase duplicates are intentional.
-// Sorted alphabetically (case-insensitive).
-export const appsToClose = [
-    'anydesk',
-    'brave',
-    'ChatGPT',
-    'chatgpt',
-    'chrome',
-    'chrome-remote-desktop',
-    'chromeremotedesktop',
-    'chromium',
-    'claude',
-    'Claude',
-
-    'discord',
-    'Discord',
-    'dropbox',
-    'Dropbox',
-    'dwagent',
-    'DWAgent',
-    'element-desktop',
-    'Element',
-    'firefox',
-    'Firefox',
-    'g2comm',
-    'GeoGebra',
-    'google-chrome',
-    'Google Chrome',
-    'gpt4all',
-    'Grammarly',
-    'librewolf',
-    'lmstudio',
-    'LM Studio',
-    'logmein',
-    'LogMeIn',
-    'megasync',
-    'MEGAsync',
-    'Microsoft Edge',
-    'Microsoft Teams',
-    'ms-teams',
-    'ms-teams_modulehost',
-    'ms-teamsupdate',
-    'msteams',
-    'msteams_autostarter',
-    'msedge',
-    'mstsc',
-    'NAV',
-    'nextcloud',
-    'Nextcloud',
-    'nomachine',
-    'NoMachine',
-    'NortonSecurity',
-    'ollama',
-    'Ollama',
-    'onedrive',
-    'OneDrive',
-    'opera',
-    'parallels',
-    'Parallels',
-    'parsec',
-    'Parsec',
-    'pcvisit',
-    'perplexity',
-    'Perplexity',
-    'realvnc',
-    'RealVNC',
-    'remoteutilities',
-    'rustdesk',
-    'RustDesk',
-    'safari',
-    'screenconnect',
-    'ScreenConnect',
-    'signal-desktop',
-    'Signal',
-    'skype',
-    'skypeforlinux',
-    'Skype',
-    'slack',
-    'Slack',
-    'splashtop',
-    'Splashtop',
-    'steam',
-    'Steam',
-    'steamwebhelper',
-    'SteamWebHelper',
-    'support 15',
-    'syncthing',
-    'Teams',
-    'teams',
-    'teamviewer',
-    'TeamViewer',
-    'telegram-desktop',
-    'Telegram',
-    'tigervnc',
-    'tor-browser',
-    'Tor Browser',
-    'viber',
-    'Viber',
-    'vivaldi',
-    'Vivaldi',
-    'vncviewer',
-    'waterfox',
-    'webex',
-    'Webex',
-    'whatsapp',
-    'WhatsApp',
-    'windsurf',
-    'Windsurf',
-    'zoho',
-    'Zoho',
-    'zoom',
-    'zoom.us',
-    'Zoom'
-];
-
-
-
-
-
+/** Kill appsToClose on the current platform (default list). Safe to call without full enableRestrictions. */
+export async function killAppsToClose(apps = appsToClose, clientinfo) {
+    if (config.development) return;
+    log.info('platformrestrictions @ killAppsToClose: killing appsToClose list');
+    const p = platformDispatcher.platform;
+    if (p === 'win32') await killWindowsAppsToClose(apps);
+    else if (p === 'darwin') await killMacAppsToClose(apps);
+    else if (p === 'linux') await killLinuxAppsToClose(apps);
+    if (clientinfo) {
+        await updateRemoteAssistant(clientinfo, { logTag: 'platformrestrictions' });
+    }
+}
 
 /** Win AA kiosk: kill appsToClose only (no explorer, shortcuts, or clipboard hooks). */
-export async function killWinKioskExamApps() {
+export async function killWinKioskExamApps(clientinfo) {
     if (config.development) return;
     if (platformDispatcher.platform !== 'win32' || !platformDispatcher.skipElectronKiosk) return;
     log.info('platformrestrictions @ killWinKioskExamApps: killing appsToClose in Assigned Access session');
-    await killWindowsAppsToClose(appsToClose);
+    await killAppsToClose(appsToClose, clientinfo);
 }
 
 export async function enableRestrictions(winhandler) {
     if (config.development) { return; }
 
     log.info("platformrestrictions @ enableRestrictions: enabling platform restrictions");
+
+    const clientinfo = winhandler?.multicastClient?.clientinfo;
+    await killAppsToClose(appsToClose, clientinfo);
 
     globalShortcut.register('CommandOrControl+V', () => { console.log('no clipboard'); });
     globalShortcut.register('CommandOrControl+Shift+V', () => { console.log('no clipboard'); });
@@ -199,15 +93,15 @@ export async function enableRestrictions(winhandler) {
     clipboardInterval.start();
 
     if (platformDispatcher.platform === 'linux') {
-        enableLinuxRestrictions(configStore, appsToClose);
+        enableLinuxRestrictions(configStore);
     }
 
     if (platformDispatcher.platform === 'win32') {
-        await enableWindowsRestrictions(winhandler, appsToClose);
+        await enableWindowsRestrictions(winhandler);
     }
 
     if (platformDispatcher.platform === 'darwin') {
-        await enableMacRestrictions(winhandler, appsToClose);
+        clearMacClipboard();
     }
 }
 
@@ -234,14 +128,4 @@ export async function disableRestrictions() {
     if (platformDispatcher.platform === 'win32') {
         disableWindowsRestrictions();
     }
-
-    if (platformDispatcher.platform === 'darwin') {
-        disableMacRestrictions();
-    }
 }
-
-function toggleMacOSLockdown(enable) {
-    toggleMacOSLockdownImpl(enable);
-}
-
-export {  toggleMacOSLockdown };

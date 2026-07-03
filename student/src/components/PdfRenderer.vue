@@ -1,5 +1,40 @@
 <template>
     <div id="pdfrenderer" class="pdf-overlay-root">
+        <ul v-if="enableAnnotations && parsedPages.length > 0" class="pdf-annotation-toolbar">
+            <li>
+                <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'highlight-yellow' }" @click.stop="setTool('highlight-yellow')" title="Highlight yellow">
+                    <span class="tool-swatch tool-swatch--yellow"></span>
+                </button>
+            </li>
+            <li>
+                <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'highlight-green' }" @click.stop="setTool('highlight-green')" title="Highlight green">
+                    <span class="tool-swatch tool-swatch--green"></span>
+                </button>
+            </li>
+            <li>
+                <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'highlight-blue' }" @click.stop="setTool('highlight-blue')" title="Highlight blue">
+                    <span class="tool-swatch tool-swatch--blue"></span>
+                </button>
+            </li>
+            <li>
+                <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'underline-red' }" @click.stop="setTool('underline-red')" title="Underline red">
+                    <span class="tool-underline tool-underline--red"></span>
+                </button>
+            </li>
+            <li>
+                <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'pen-red' }" @click.stop="setTool('pen-red')" title="Pen red">
+                    <img src="/src/assets/img/svg/document-edit.svg" class="white">
+                </button>
+            </li>
+            <li>
+                <button type="button" class="btn btn-light pdf-tool-btn pdf-tool-btn--text" :class="{ active: tool === 'text' }" @click.stop="setTool('text')" :title="$t('editor.pdfAnnotationText')">T</button>
+            </li>
+            <li>
+                <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'delete' }" @click.stop="setTool('delete')" title="Delete">
+                    ✕
+                </button>
+            </li>
+        </ul>
         <div v-if="effectiveLoading" class="overlay">
             <div class="spinner"></div>
             <p>Loading PDF...</p>
@@ -10,6 +45,11 @@
                 :key="pageIndex"
                 class="pdf-page-wrapper"
                 :style="{ width: page.width + 'px', height: page.height + 'px' }"
+                @mousedown="enableAnnotations && tool !== 'delete' && tool !== 'text' ? startDraw($event, pageIndex) : null"
+                @mousemove="enableAnnotations && isDrawing ? updateDraw($event, pageIndex) : null"
+                @mouseup="enableAnnotations && isDrawing ? finishDraw($event, pageIndex) : null"
+                @mouseleave="enableAnnotations && isDrawing ? cancelDraw() : null"
+                @click="enableAnnotations && tool === 'text' ? placeTextAnnotation($event, pageIndex) : null"
             >
                 <img :src="page.imgSrc" class="pdf-bg-image" />
 
@@ -154,6 +194,80 @@
                         :id="customField.id"
                     />
                 </div>
+
+                <template v-if="enableAnnotations">
+                    <div
+                        v-for="ann in annotationsForPage(pageIndex)"
+                        :key="ann.id"
+                        :class="['ann', ann.kind]"
+                        :style="annotationStyle(ann)"
+                        @click.stop="tool === 'delete' ? deleteAnnotation(ann.id) : null"
+                    ></div>
+                    <svg
+                        v-for="ann in underlineForPage(pageIndex)"
+                        :key="ann.id"
+                        class="ann-underline"
+                        :style="{ position: 'absolute', left: 0, top: 0, width: page.width + 'px', height: page.height + 'px', pointerEvents: 'none', zIndex: 21 }"
+                    >
+                        <line
+                            :x1="ann.x1"
+                            :y1="ann.y1"
+                            :x2="ann.x2"
+                            :y2="ann.y2"
+                            :stroke="annotationInkStroke"
+                            stroke-width="3"
+                            stroke-linecap="round"
+                            @click.stop="tool === 'delete' ? deleteAnnotation(ann.id) : null"
+                            :style="{ pointerEvents: 'all', cursor: tool === 'delete' ? 'pointer' : 'default' }"
+                        />
+                    </svg>
+                    <svg
+                        v-for="ann in penForPage(pageIndex)"
+                        :key="ann.id"
+                        class="ann-pen"
+                        :style="{ position: 'absolute', left: 0, top: 0, width: page.width + 'px', height: page.height + 'px', pointerEvents: 'none', zIndex: 22 }"
+                    >
+                        <polyline
+                            :points="penPointsAttr(ann.points)"
+                            fill="none"
+                            :stroke="annotationInkStroke"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            @click.stop="tool === 'delete' ? deleteAnnotation(ann.id) : null"
+                            :style="{ pointerEvents: 'all', cursor: tool === 'delete' ? 'pointer' : 'default' }"
+                        />
+                    </svg>
+                    <div
+                        v-for="ann in textForPage(pageIndex)"
+                        :key="ann.id"
+                        class="ann ann-text"
+                        :style="textAnnotationStyle(ann)"
+                        @click.stop="tool === 'delete' ? deleteAnnotation(ann.id) : (tool === 'text' ? startEditText(ann.id) : null)"
+                    >
+                        <textarea
+                            v-if="editingTextId === ann.id"
+                            :id="'ann-text-input-' + ann.id"
+                            v-model="ann.text"
+                            class="ann-text-input"
+                            rows="1"
+                            @blur="finishTextEdit(ann.id)"
+                            @input="syncTextAnnotationInputSize($event.target, pageIndex)"
+                            @focus="syncTextAnnotationInputSize($event.target, pageIndex)"
+                            @mousedown.stop
+                            @click.stop
+                            @keydown.stop
+                        />
+                        <span v-else class="ann-text-display">{{ ann.text }}</span>
+                    </div>
+                    <div v-if="currentDraft && currentDraft.pageIndex === pageIndex" class="draft" :style="draftStyle"></div>
+                    <svg v-if="draftLine && draftLine.pageIndex === pageIndex" class="draft-line" :style="{ position: 'absolute', left: 0, top: 0, width: page.width + 'px', height: page.height + 'px' }">
+                        <line :x1="draftLine.x1" :y1="draftLine.y1" :x2="draftLine.x2" :y2="draftLine.y2" :stroke="annotationInkStroke" stroke-width="3" stroke-linecap="round" />
+                    </svg>
+                    <svg v-if="draftPenPath && draftPenPath.pageIndex === pageIndex" class="draft-pen" :style="{ position: 'absolute', left: 0, top: 0, width: page.width + 'px', height: page.height + 'px', pointerEvents: 'none' }">
+                        <polyline :points="penPointsAttr(draftPenPath.points)" fill="none" :stroke="annotationInkStroke" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </template>
             </div>
         </div>
         <div v-else class="pdf-empty-state">
@@ -164,10 +278,15 @@
 
 <script>
 import { parsePdfToPages, ensurePdfOverlayFontsReady } from 'next-exam-shared/pdfparser/index.js';
+import { pdfPageAnnotationsMixin } from 'next-exam-shared/pdfPageAnnotationsMixin.js';
+import { SignalBridge } from '../utils/signalBridge.js';
 import Swal from 'sweetalert2';
+
+const signalBridge = new SignalBridge(window);
 
 export default {
     name: 'PdfOverlay',
+    mixins: [pdfPageAnnotationsMixin],
     props: {
         pdfBase64: {
             type: String,
@@ -184,6 +303,18 @@ export default {
         blacklist: {
             type: Array,
             default: () => []
+        },
+        enableAnnotations: {
+            type: Boolean,
+            default: false
+        },
+        annotationsKey: {
+            type: String,
+            default: ''
+        },
+        contentZoom: {
+            type: Number,
+            default: 1
         }
     },
     data() {
@@ -191,7 +322,10 @@ export default {
             parsedPages: [],
             isParsing: false,
             warningShown: false,
-            localBlacklist: []
+            localBlacklist: [],
+            zoom: 1,
+            _saveTimer: null,
+            _loadedAnnotationsKey: null,
         };
     },
     computed: {
@@ -204,6 +338,19 @@ export default {
             immediate: true,
             handler(newData) {
                 this.processPdf(newData);
+            }
+        },
+        contentZoom: {
+            immediate: true,
+            handler(v) {
+                this.zoom = v || 1;
+            }
+        },
+        annotationsKey: {
+            immediate: true,
+            handler(key) {
+                if (!this.enableAnnotations) return;
+                this.loadAnnotationsForKey(key);
             }
         },
         blacklist: {
@@ -224,11 +371,46 @@ export default {
             immediate: false
         }
     },
+    beforeUnmount() {
+        if (this._saveTimer) clearTimeout(this._saveTimer);
+    },
     methods: {
+        onAnnotationsChange() {
+            this.queueSaveAnnotations();
+        },
+        queueSaveAnnotations() {
+            if (!this.enableAnnotations || !this._loadedAnnotationsKey) return;
+            if (this._saveTimer) clearTimeout(this._saveTimer);
+            this._saveTimer = setTimeout(() => this.saveAnnotations(), 250);
+        },
+        async loadAnnotationsForKey(key) {
+            this._loadedAnnotationsKey = key || null;
+            this.resetAnnotations();
+            if (!key) return;
+            try {
+                const raw = await signalBridge.invoke('readPdfAnnotations', key);
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                this.annotations = Array.isArray(parsed?.annotations) ? parsed.annotations : [];
+            } catch (e) {
+                console.warn('PdfOverlay: loadAnnotations failed', e);
+                this.annotations = [];
+            }
+        },
+        async saveAnnotations() {
+            if (!this._loadedAnnotationsKey) return;
+            try {
+                const payload = JSON.stringify({ version: 1, annotations: this.annotations }, null, 2);
+                await signalBridge.invoke('writePdfAnnotations', this._loadedAnnotationsKey, payload);
+            } catch (e) {
+                console.warn('PdfOverlay: saveAnnotations failed', e);
+            }
+        },
         async processPdf(base64Data) {
             if (!base64Data) {
                 this.parsedPages = [];
                 this.warningShown = false;
+                if (this.enableAnnotations) this.resetAnnotations();
                 return;
             }
             this.isParsing = true;
@@ -475,6 +657,134 @@ export default {
     background-color: rgba(255, 255, 255, 0.95);
     border: 2px solid #0d6efd;
     outline: none;
+}
+
+.pdf-annotation-toolbar {
+    position: fixed;
+    left: var(--nx-annotation-toolbar-left, 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1200;
+    list-style: none;
+    margin: 0;
+    padding: 6px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.pdf-annotation-toolbar li {
+    margin: 0;
+    padding: 0;
+}
+
+.pdf-tool-btn {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pdf-tool-btn img {
+    width: 18px;
+    height: 18px;
+}
+
+.pdf-tool-btn.active {
+    border: 2px solid rgba(13, 110, 253, 0.35) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Bootstrap dims active buttons via filter; keep swatch colors visible. */
+.pdf-annotation-toolbar .btn:active,
+.pdf-annotation-toolbar .btn.active,
+.pdf-annotation-toolbar .pdf-tool-btn:active,
+.pdf-annotation-toolbar .pdf-tool-btn.active {
+    filter: none !important;
+}
+
+.tool-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(0, 0, 0, 0.25);
+    display: inline-block;
+}
+
+.tool-swatch--yellow { background: rgba(255, 255, 0, 1); }
+.tool-swatch--green { background: rgba(0, 255, 90, 0.95); }
+.tool-swatch--blue { background: rgba(0, 170, 255, 0.95); }
+
+.tool-underline {
+    width: 16px;
+    height: 0;
+    border-top: 3px solid rgba(10, 36, 114, 0.95);
+    display: inline-block;
+    border-radius: 2px;
+}
+
+.ann.highlight {
+    mix-blend-mode: multiply;
+}
+
+.draft {
+    position: absolute;
+}
+
+.ann-text-display {
+    display: inline-block;
+    font-size: 14px;
+    line-height: 1.3;
+    color: #0a2472;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 2px 4px;
+    border-radius: 2px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.ann-text-input {
+    box-sizing: border-box;
+    display: block;
+    font-size: 14px;
+    line-height: 1.3;
+    color: #0a2472;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(13, 110, 253, 0.5);
+    border-radius: 2px;
+    padding: 2px 4px;
+    resize: none;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-width: 80px;
+}
+
+.pdf-tool-btn--text {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+@media print {
+    .pdf-annotation-toolbar {
+        display: none !important;
+    }
+
+    .ann-text-input,
+    .ann-text-display {
+        border: none !important;
+        background: transparent !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
 }
 </style>
 

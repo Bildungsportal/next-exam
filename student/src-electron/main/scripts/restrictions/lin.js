@@ -118,25 +118,28 @@ function logGsettingsValue(schema, key, phase) {
 }
 
 /**
- * Enable Linux-specific restrictions (KDE/GNOME, close apps, clipboard).
- * @param {object} configStore - shared store (configStore.ts.linux.numberOfDesktops)
- * @param {string[]} appsToClose - app names to kill
+ * Kill appsToClose processes via pgrep/pkill.
+ * @param {string[]} apps
+ * @returns {Promise<void>}
  */
-export function enableLinuxRestrictions(configStore, appsToClose) {
-    try {
-        appsToClose.forEach(app => {
-            childProcess.exec(`pgrep -i "${app}"`, (pgrepError, stdout) => {
-                if (!pgrepError && stdout && stdout.trim()) {
-                    childProcess.exec(`pgrep -i "${app}" | xargs -r kill -9`, (killError) => {
-                        if (!killError) log.info(`platformrestrictions @ enableRestrictions: closed ${app}`);
-                    });
-                }
+export function killLinuxAppsToClose(apps) {
+    const jobs = apps.map((app) => new Promise((resolve) => {
+        childProcess.exec(`pgrep -i "${app}"`, (pgrepError, stdout) => {
+            if (pgrepError || !stdout?.trim()) return resolve();
+            childProcess.exec(`pgrep -i "${app}" | xargs -r kill -9`, (killError) => {
+                if (!killError) log.info(`platformrestrictions @ killLinuxAppsToClose: closed ${app}`);
+                resolve();
             });
         });
-    } catch (err) {
-        // silently ignore errors
-    }
+    }));
+    return Promise.all(jobs);
+}
 
+/**
+ * Enable Linux-specific restrictions (KDE/GNOME, clipboard).
+ * @param {object} configStore - shared store (configStore.ts.linux.numberOfDesktops)
+ */
+export function enableLinuxRestrictions(configStore) {
     if (platformDispatcher.runningInCage) {
         return;
     }

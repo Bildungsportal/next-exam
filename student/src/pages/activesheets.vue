@@ -108,6 +108,9 @@
             :pdf-base64="pdfBase64"
             :custom-fields="customFields"
             :blacklist="blacklist"
+            enable-annotations
+            :content-zoom="zoom"
+            :annotations-key="activesheetAnnotationsKey"
         />
     
         </div>
@@ -238,12 +241,36 @@ export default {
             if (this.zoom < ACTIVESHEETS_ZOOM_MAX) this.zoom = Math.min(ACTIVESHEETS_ZOOM_MAX, this.zoom + 0.1)
             const el = document.getElementById(`content`)
             if (el) el.style.zoom = this.zoom
+            this.syncAnnotationToolbarDock()
         },
         zoomout() {
             if (this.zoom > ACTIVESHEETS_ZOOM_MIN) this.zoom = Math.max(ACTIVESHEETS_ZOOM_MIN, this.zoom - 0.1)
             const el = document.getElementById(`content`)
             if (el) el.style.zoom = this.zoom
+            this.syncAnnotationToolbarDock()
         },
+
+        // Shared getPDFbase64 args for activesheets (fullpage + backgrounds).
+        activesheetsPdfInvokeArgs(reason) {
+            return {
+                landscape: false,
+                servername: this.servername,
+                clientname: this.clientname,
+                submissionnumber: this.submissionnumber,
+                sectionname: this.serverstatus.examSections[this.lockedSection].sectionname,
+                printBackground: true,
+                pageMode: 'fullpage',
+                screenZoom: this.zoom,
+                reason,
+            }
+        },
+
+        // Optional preview hide before capture; screen zoom stays unchanged (compensated in getBase64PDF).
+        async withActivesheetsPdfCapture(fn, { hidePreview = false } = {}) {
+            if (hidePreview) this.hidepreview()
+            return fn()
+        },
+
         getUrlDisplay(allowedUrl) {
             return typeof allowedUrl === 'object' ? allowedUrl.url : allowedUrl;
         },
@@ -267,6 +294,7 @@ export default {
                 if (this.splitview) {
                     preview.style.display = '';
                     if (this._onPreviewClick) preview.removeEventListener("click", this._onPreviewClick);
+                    this.$nextTick(() => this.syncAnnotationToolbarDock());
                     return;
                 }
 
@@ -276,6 +304,7 @@ export default {
                 preview.style.display = 'none';
                 URL.revokeObjectURL(this.currentpreview);
                 if (this._onPreviewClick) this.autoEventListener(preview,"click", this._onPreviewClick);
+                this.$nextTick(() => this.syncAnnotationToolbarDock());
             });
         },
 
@@ -302,6 +331,7 @@ export default {
             const maxPct = 100 - (minRightPx / rect.width) * 100;
             const clamped = Math.min(Math.max(pct, minPct), maxPct);
             this.splitLeftPct = Math.min(80, Math.max(20, Math.round(clamped * 10) / 10));
+            this.syncAnnotationToolbarDock();
         },
 
         stopSplitResize() {
@@ -309,6 +339,25 @@ export default {
             window.removeEventListener('pointermove', this.onSplitResizeMove);
             window.removeEventListener('pointerup', this.stopSplitResize);
             window.removeEventListener('pointercancel', this.stopSplitResize);
+            this.syncAnnotationToolbarDock();
+        },
+
+        // Pin activesheet annotation toolbar to #content left edge (split boundary in splitview).
+        syncAnnotationToolbarDock() {
+            const root = document.querySelector('.activesheets-body');
+            if (!root) return;
+            if (!this.splitview) {
+                root.style.removeProperty('--nx-annotation-toolbar-left');
+                return;
+            }
+            const apply = () => {
+                const content = document.getElementById('content');
+                if (!content) return;
+                const left = Math.round(content.getBoundingClientRect().left + 8);
+                root.style.setProperty('--nx-annotation-toolbar-left', `${left}px`);
+            };
+            if (typeof requestAnimationFrame === 'function') requestAnimationFrame(apply);
+            else apply();
         },
         loadBase64file(file){
             this.webviewVisible = false
@@ -614,21 +663,27 @@ export default {
                 reason: why
             });
 
-            // SAVE AS PDF - inform mainprocess to save webcontent as pdf
-            // For activesheets, we need to generate PDF from the filled form
-            // We'll use getPDFbase64 to render the current view
-            if (this.currentpreviewBase64) {
-                // If we have a preview PDF, use it
-                signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: this.currentpreviewBase64 })  
-            } else {
-                // Otherwise generate from current view
-                let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true, reason: why, pageMode: 'fullpage'})
-                if (response?.status == "success") {
-                    signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })
+            if (!this.serverstatus?.examSections?.[this.lockedSection]) {
+                console.error('activesheets @ saveContent: Invalid section data')
+                return
+            }
+
+            // One render via getPDFbase64; printpdf writes the buffer to disk (no second printToPDF).
+            await this.withActivesheetsPdfCapture(async () => {
+                const response = await signalBridge.invoke('getPDFbase64', this.activesheetsPdfInvokeArgs(why))
+                if (response?.status === 'success') {
+                    signalBridge.send('printpdf', {
+                        filename: filename || false,
+                        landscape: false,
+                        servername: this.servername,
+                        clientname: this.clientname,
+                        reason: why,
+                        base64pdf: response.base64pdf,
+                    })
                 } else {
                     this.showPdfGenerationError(response)
                 }
-            }
+            })
             this.loadFilelist()
         },
 
@@ -705,28 +760,15 @@ export default {
                 console.error('activesheets @ sendExamToTeacher: Invalid section data');
                 return;
             }
-            // Ensure printToPDF captures only the form content (no preview overlay, no zoom).
-            const prevZoom = this.zoom
-            this.hidepreview()
-            const contentEl = document.getElementById('content')
-            if (contentEl) contentEl.style.zoom = 1
-            const pdfArgs = {
-                landscape: false,
-                servername: this.servername,
-                clientname: this.clientname,
-                submissionnumber: this.submissionnumber,
-                sectionname: this.serverstatus.examSections[this.lockedSection].sectionname,
-                printBackground: true,
-                pageMode: 'fullpage', // margins 0 + Header als DOM-Overlay (siehe communicationhandler.getBase64PDF)
-            }
-            try {
+            const reason = type === 'print' ? 'print' : 'previewSigned'
+            await this.withActivesheetsPdfCapture(async () => {
+                const response = await signalBridge.invoke('getPDFbase64', this.activesheetsPdfInvokeArgs(reason))
+                if (response?.status !== 'success') {
+                    this.showPdfGenerationError(response)
+                    return
+                }
+                this.currentpreviewBase64 = response.base64pdf
                 if (type === 'print') {
-                    const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'print' })
-                    if (response?.status !== 'success') {
-                        this.showPdfGenerationError(response)
-                        return
-                    }
-                    this.currentpreviewBase64 = response.base64pdf
                     this.loadPDF({
                         filename: `${this.clientname}.pdf`,
                         filetype: "pdf",
@@ -734,16 +776,6 @@ export default {
                     }, true, 100, true, type)
                     return
                 }
-
-                // SWAL temporaer disabled - body.swal2-shown kills multi-page printToPDF
-                // await this.waitUntilSigningSwalPainted()
-                let response
-                response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
-                if (response?.status !== 'success') {
-                    this.showPdfGenerationError(response)
-                    return
-                }
-                this.currentpreviewBase64 = response.base64pdf
                 if (directsend) {
                     return this.printBase64(false, 'directsend')
                 }
@@ -752,10 +784,7 @@ export default {
                     filetype: "pdf",
                     filecontent: response.dataUrl
                 }, true, 100, true, type)
-            } finally {
-                const restoreEl = document.getElementById('content')
-                if (restoreEl) restoreEl.style.zoom = prevZoom
-            }
+            }, { hidePreview: true })
         },
 
         waitUntilSigningSwalPainted() {
@@ -795,6 +824,10 @@ export default {
         },
     },
     computed: {
+        activesheetAnnotationsKey() {
+            if (!this.clientname) return '';
+            return `activesheet-${this.clientname}`;
+        },
     },
     watch: {
         examMaterials: {
@@ -805,7 +838,13 @@ export default {
                 }
             },
             immediate: false
-        }
+        },
+        splitview() {
+            this.$nextTick(() => this.syncAnnotationToolbarDock());
+        },
+        splitLeftPct() {
+            this.$nextTick(() => this.syncAnnotationToolbarDock());
+        },
     },
     mounted() {
         console.log("activesheets @ mounted")
@@ -817,6 +856,8 @@ export default {
 
             const content = document.getElementById(`content`)
             if (content) content.style.zoom = this.zoom
+            this.syncAnnotationToolbarDock()
+            this.autoEventListener(window, 'resize', this.syncAnnotationToolbarDock)
 
             this.autoSchedulerService(this.fetchInfo, 5000);
             this.autoSchedulerService(this.loadFilelist, 20000);
@@ -926,6 +967,7 @@ export default {
     width: 100%;
     overscroll-behavior: contain;
     background-color: #eee;
+    border-radius: 0px;
 }
 
 /* Keep PdfviewPaneRendered internal scrolling intact. */
@@ -1049,7 +1091,7 @@ export default {
 
 
     #webview, #apphead, #focuswarning, .focus-container, #preview, #pdfembed, #toolbar, #statusbar, .pdfview-pane-rendered,
-    .embed-container.pdfview-pane-rendered , .zoombutton, #preview, .pdf-overlay-root   {
+    .embed-container.pdfview-pane-rendered , .zoombutton, #preview, .pdf-annotation-toolbar {
         display: none !important;
     }
 
@@ -1092,6 +1134,14 @@ export default {
         position: absolute !important;
         overflow: visible !important;
 
+    }
+
+    :deep(.ann-text-input),
+    :deep(.ann-text-display) {
+        border: none !important;
+        background: transparent !important;
+        outline: none !important;
+        box-shadow: none !important;
     }
  
 

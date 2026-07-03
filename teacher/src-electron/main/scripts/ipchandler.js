@@ -569,8 +569,8 @@ class IpcHandler {
         })
 
         ipcMain.handle('qemu-boot-disk', async (_event, payload = {}) => {
-            const { qcow2Name, useOverlay } = payload || {};
-            log.info(`ipchandler @ qemu-boot-disk: qcow2=${qcow2Name} useOverlay=${!!useOverlay}`);
+            const { qcow2Name, useOverlay, displayResolution } = payload || {};
+            log.info(`ipchandler @ qemu-boot-disk: qcow2=${qcow2Name} useOverlay=${!!useOverlay} display=${displayResolution || '-'}`);
             try {
                 log.info('ipchandler @ qemu-boot-disk: deep QEMU check…');
                 const avail = await checkQemuAvailability();
@@ -582,6 +582,7 @@ class IpcHandler {
                     workdirectory: config.workdirectory,
                     qcow2Name,
                     useOverlay: useOverlay === true,
+                    displayResolution,
                 })
             } catch (e) {
                 log.error('ipchandler @ qemu-boot-disk', e)
@@ -1246,6 +1247,39 @@ class IpcHandler {
                 return { status: 'success', sender: 'server', filepath: absTarget }
             } catch (err) {
                 log.error('ipchandler @ overwriteTeacherAbgabePdf:', err)
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+        })
+
+        /** Persists teacher correction annotations as sidecar JSON next to ABGABE submission PDFs. */
+        ipcMain.handle('writeTeacherAbgabeAnnotations', async (_event, payload = {}) => {
+            const servername = payload?.servername
+            const servertoken = payload?.servertoken
+            const filepath = payload?.filepath
+            const utf8 = payload?.utf8
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer || servertoken !== mcServer.serverinfo?.servertoken) {
+                return { status: 'error', sender: 'server', message: t('data.tokennotvalid') }
+            }
+            if (!filepath || typeof filepath !== 'string' || typeof utf8 !== 'string') {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            if (!path.basename(filepath).endsWith('.annotations.json')) {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            const examRoot = path.resolve(path.join(this.config.workdirectory, mcServer.serverinfo.servername))
+            const absTarget = path.resolve(filepath)
+            const rel = path.relative(examRoot, absTarget).replace(/\\/g, '/')
+            if (rel.startsWith('..') || path.isAbsolute(rel) || !rel.includes('ABGABE/')) {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            try {
+                JSON.parse(utf8)
+                await fs.promises.mkdir(path.dirname(absTarget), { recursive: true })
+                await fs.promises.writeFile(absTarget, utf8, 'utf8')
+                return { status: 'success', sender: 'server' }
+            } catch (err) {
+                log.error('ipchandler @ writeTeacherAbgabeAnnotations:', err)
                 return { status: 'error', sender: 'server', message: t('data.fileerror') }
             }
         })

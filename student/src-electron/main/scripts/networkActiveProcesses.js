@@ -27,21 +27,32 @@ const LT_DEFAULT_PORT = 8088;
 // therefore escape PID-tree exclusion.
 const NEXT_EXAM_CMDLINE_MARKERS = ['vncproxy-helper.cjs'];
 
-// Minimal allowlist; goal: never break the OS. Compared against the executable basename, case-insensitive.
+// Minimal allowlist; OS-critical + benign Windows/school-background (basename match, case-insensitive).
 const SYSTEM_CRITICAL_NAMES = new Set([
     // linux
     'systemd', 'systemd-resolved', 'systemd-networkd', 'systemd-timesyncd',
     'dbus-daemon', 'dbus-broker', 'networkmanager', 'wpa_supplicant', 'avahi-daemon',
     'cupsd', 'sshd', 'pipewire', 'pipewire-pulse', 'pulseaudio',
     'xorg', 'wayland', 'gnome-shell', 'plasmashell', 'kwin_x11', 'kwin_wayland', 'kdeconnectd',
-    // windows
+    'mainthread', // Node/Electron dev on Linux: ps comm shows V8 main thread name, not a separate app
+    // windows — OS / shell
     'svchost', 'svchost.exe', 'lsass', 'lsass.exe', 'services', 'services.exe',
     'wininit', 'wininit.exe', 'csrss', 'csrss.exe', 'winlogon', 'winlogon.exe',
     'dwm', 'dwm.exe', 'smss', 'smss.exe', 'registry', 'system',
     'fontdrvhost', 'fontdrvhost.exe', 'sgrmbroker', 'sgrmbroker.exe',
     'spoolsv', 'spoolsv.exe', 'jhi_service', 'jhi_service.exe',
     'smartscreen', 'smartscreen.exe', 'searchapp', 'searchapp.exe',
+    'startmenuexperiencehost', 'startmenuexperiencehost.exe',
+    'shellexperiencehost', 'shellexperiencehost.exe',
+    'licenseservice', 'licenseservice.exe',
+    'msedgewebview2', 'msedgewebview2.exe',
     'codemeter', 'codemeter.exe', 'mdnsresponder', 'mdnsresponder.exe',
+    // windows — common school dev/build background (not remote-access)
+    // IncrediBuild distributed-build suite (Xoreax): buildservice=Agent, coordservice=Coordinator, restservice=REST
+    'buildservice', 'buildservice.exe',
+    'coordservice', 'coordservice.exe',
+    'restservice', 'restservice.exe',
+    'httpd', 'httpd.exe',
     // macOS
     'launchd', 'mdnsresponder', 'syslogd', 'configd', 'kernel_task',
     'windowserver', 'loginwindow', 'coreaudiod', 'trustd', 'symptomsd'
