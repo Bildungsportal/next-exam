@@ -43,6 +43,7 @@ import platformDispatcher from './platformDispatcher.js';
 import { enableLinuxRestrictions, disableLinuxRestrictions, killLinuxAppsToClose } from './restrictions/lin.js';
 import { enableWindowsRestrictions, disableWindowsRestrictions, killWindowsAppsToClose } from './restrictions/win.js';
 import { killMacAppsToClose, clearMacClipboard } from './restrictions/mac.js';
+import { updateRemoteAssistant } from './remoteAssistantScan.js';
 import { stopAssessmentSession } from './assessmentSession.js';
 
 let clipboardInterval;
@@ -178,21 +179,24 @@ export const appsToClose = [
 
 
 /** Kill appsToClose on the current platform (default list). Safe to call without full enableRestrictions. */
-export async function killAppsToClose(apps = appsToClose) {
+export async function killAppsToClose(apps = appsToClose, clientinfo) {
     if (config.development) return;
     log.info('platformrestrictions @ killAppsToClose: killing appsToClose list');
     const p = platformDispatcher.platform;
     if (p === 'win32') await killWindowsAppsToClose(apps);
     else if (p === 'darwin') await killMacAppsToClose(apps);
     else if (p === 'linux') await killLinuxAppsToClose(apps);
+    if (clientinfo) {
+        await updateRemoteAssistant(clientinfo, { logTag: 'platformrestrictions' });
+    }
 }
 
 /** Win AA kiosk: kill appsToClose only (no explorer, shortcuts, or clipboard hooks). */
-export async function killWinKioskExamApps() {
+export async function killWinKioskExamApps(clientinfo) {
     if (config.development) return;
     if (platformDispatcher.platform !== 'win32' || !platformDispatcher.skipElectronKiosk) return;
     log.info('platformrestrictions @ killWinKioskExamApps: killing appsToClose in Assigned Access session');
-    await killAppsToClose();
+    await killAppsToClose(appsToClose, clientinfo);
 }
 
 export async function enableRestrictions(winhandler) {
@@ -200,7 +204,8 @@ export async function enableRestrictions(winhandler) {
 
     log.info("platformrestrictions @ enableRestrictions: enabling platform restrictions");
 
-    await killAppsToClose();
+    const clientinfo = winhandler?.multicastClient?.clientinfo;
+    await killAppsToClose(appsToClose, clientinfo);
 
     globalShortcut.register('CommandOrControl+V', () => { console.log('no clipboard'); });
     globalShortcut.register('CommandOrControl+Shift+V', () => { console.log('no clipboard'); });
