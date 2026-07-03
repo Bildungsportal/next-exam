@@ -45,6 +45,7 @@ import { enableWindowsRestrictions, disableWindowsRestrictions, killWindowsAppsT
 import { killMacAppsToClose, clearMacClipboard } from './restrictions/mac.js';
 import { updateRemoteAssistant } from './remoteAssistantScan.js';
 import { stopAssessmentSession } from './assessmentSession.js';
+import { appsToClose } from './appsToClose.js';
 
 let clipboardInterval;
 let configStore = {
@@ -52,131 +53,6 @@ let configStore = {
     windows: {},
     macos: {}
 };
-
-// Single source of truth for "apps that should not run during an exam".
-// Used by (1) platformrestrictions for killing (pgrep/pkill/Get-Process) and
-// (2) remotecheck/* for detection+reporting to the teacher when killing fails (no root).
-// Matching on all consumers is case-insensitive substring on process name/cmdline,
-// EXCEPT macOS pkill -f which is case-sensitive -> TitleCase duplicates are intentional.
-// Sorted alphabetically (case-insensitive).
-export const appsToClose = [
-    'anydesk',
-    'brave',
-    'ChatGPT',
-    'chatgpt',
-    'chrome',
-    'chrome-remote-desktop',
-    'chromeremotedesktop',
-    'chromium',
-    'claude',
-    'Claude',
-
-    'discord',
-    'Discord',
-    'dropbox',
-    'Dropbox',
-    'dwagent',
-    'DWAgent',
-    'element-desktop',
-    'Element',
-    'firefox',
-    'Firefox',
-    'g2comm',
-    'GeoGebra',
-    'google-chrome',
-    'Google Chrome',
-    'gpt4all',
-    'Grammarly',
-    'librewolf',
-    'lmstudio',
-    'LM Studio',
-    'logmein',
-    'LogMeIn',
-    'megasync',
-    'MEGAsync',
-    'Microsoft Edge',
-    'Microsoft Teams',
-    'ms-teams',
-    'ms-teams_modulehost',
-    'ms-teamsupdate',
-    'msteams',
-    'msteams_autostarter',
-    'msedge',
-    'msedgewebview2',
-    'mstsc',
-    'NAV',
-    'nextcloud',
-    'Nextcloud',
-    'nomachine',
-    'NoMachine',
-    'NortonSecurity',
-    'ollama',
-    'Ollama',
-    'onedrive',
-    'OneDrive',
-    'opera',
-    'parallels',
-    'Parallels',
-    'parsec',
-    'Parsec',
-    'pcvisit',
-    'perplexity',
-    'Perplexity',
-    'realvnc',
-    'RealVNC',
-    'remoteutilities',
-    'rustdesk',
-    'RustDesk',
-    'safari',
-    'screenconnect',
-    'ScreenConnect',
-    'signal-desktop',
-    'Signal',
-    'skype',
-    'skypeforlinux',
-    'Skype',
-    'slack',
-    'Slack',
-    'splashtop',
-    'Splashtop',
-    'steam',
-    'Steam',
-    'steamwebhelper',
-    'SteamWebHelper',
-    'support 15',
-    'syncthing',
-    'Teams',
-    'teams',
-    'teamviewer',
-    'TeamViewer',
-    'telegram-desktop',
-    'Telegram',
-    'tigervnc',
-    'tor-browser',
-    'Tor Browser',
-    'viber',
-    'Viber',
-    'vivaldi',
-    'Vivaldi',
-    'vncviewer',
-    'waterfox',
-    'webex',
-    'Webex',
-    'whatsapp',
-    'WhatsApp',
-    'windsurf',
-    'Windsurf',
-    'zoho',
-    'Zoho',
-    'zoom',
-    'zoom.us',
-    'Zoom'
-];
-
-
-
-
-
 
 /** Kill appsToClose on the current platform (default list). Safe to call without full enableRestrictions. */
 export async function killAppsToClose(apps = appsToClose, clientinfo) {

@@ -1,6 +1,6 @@
 import { exec } from 'child_process'
 import { promisify } from 'util'
-import { appsToClose } from '../platformrestrictions.js'
+import { appsToClose } from '../appsToClose.js'
 
 const execAsync = promisify(exec)
 
