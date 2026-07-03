@@ -108,6 +108,9 @@
             :pdf-base64="pdfBase64"
             :custom-fields="customFields"
             :blacklist="blacklist"
+            enable-annotations
+            :content-zoom="zoom"
+            :annotations-key="activesheetAnnotationsKey"
         />
     
         </div>
@@ -255,22 +258,15 @@ export default {
                 sectionname: this.serverstatus.examSections[this.lockedSection].sectionname,
                 printBackground: true,
                 pageMode: 'fullpage',
+                screenZoom: this.zoom,
                 reason,
             }
         },
 
-        // Resets zoom for capture; optionally hides preview (submission only — @media print hides it during render).
+        // Optional preview hide before capture; screen zoom stays unchanged (compensated in getBase64PDF).
         async withActivesheetsPdfCapture(fn, { hidePreview = false } = {}) {
-            const prevZoom = this.zoom
             if (hidePreview) this.hidepreview()
-            const contentEl = document.getElementById('content')
-            if (contentEl) contentEl.style.zoom = 1
-            try {
-                return await fn()
-            } finally {
-                const restoreEl = document.getElementById('content')
-                if (restoreEl) restoreEl.style.zoom = prevZoom
-            }
+            return fn()
         },
 
         getUrlDisplay(allowedUrl) {
@@ -804,6 +800,10 @@ export default {
         },
     },
     computed: {
+        activesheetAnnotationsKey() {
+            if (!this.clientname) return '';
+            return `activesheet-${this.clientname}`;
+        },
     },
     watch: {
         examMaterials: {
@@ -1059,7 +1059,7 @@ export default {
 
 
     #webview, #apphead, #focuswarning, .focus-container, #preview, #pdfembed, #toolbar, #statusbar, .pdfview-pane-rendered,
-    .embed-container.pdfview-pane-rendered , .zoombutton, #preview, .pdf-overlay-root   {
+    .embed-container.pdfview-pane-rendered , .zoombutton, #preview, .pdf-annotation-toolbar {
         display: none !important;
     }
 

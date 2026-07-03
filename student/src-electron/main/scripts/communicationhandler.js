@@ -675,7 +675,7 @@ import {
     //get base64 pdf from editor
     // ATTENTION: there is a similar method in ipchandler.js that also generates a pdf but stores it as file in the exam directory
     // pageMode='fullpage' => margins 0 + Chromium-Header aus; gleicher Header-String wird als HTML-Overlay injiziert (activesheets 1:1 PDF-Seite)
-    async getBase64PDF(submissionnumber, sectionname, printBackground=false, saveReason, pageMode){
+    async getBase64PDF(submissionnumber, sectionname, printBackground=false, saveReason, pageMode, screenZoom=1){
         if (saveReason !== 'auto') log.info("communicationhandler @ getBase64PDF: getting base64 encoded pdf")
         const traceTiming = saveReason === 'previewSigned' || saveReason === 'directsend'
         const t0 = traceTiming ? Date.now() : 0
@@ -740,6 +740,13 @@ import {
             await examWin.webContents.executeJavaScript(`(()=>{const o=document.getElementById('__fullpageHeaderOverlay__');if(o)o.remove();document.body.insertAdjacentHTML('afterbegin', ${overlayHtml});})()`)
         }
 
+        // #content CSS zoom compounds with activesheets print scale (8/9); compensate without resetting screen zoom.
+        const contentZoom = Math.max(0.5, Math.min(2.5, Number(screenZoom) || 1))
+        if (isFullpage && contentZoom !== 1) {
+            const printZoom = `calc((8 / 9) / ${contentZoom})`
+            await examWin.webContents.executeJavaScript(`(()=>{let s=document.getElementById('__nxPrintZoomCompensate__');if(!s){s=document.createElement('style');s.id='__nxPrintZoomCompensate__';document.head.appendChild(s);}s.textContent='@media print{#content .pdf-overlay-root,.pdf-overlay-root{zoom:${printZoom} !important;}}';})()`)
+        }
+
         // Set lock before starting PDF generation
         IpcHandler.isPrintingPdf = true;
 
@@ -789,7 +796,7 @@ import {
             IpcHandler.isPrintingPdf = false;
             if (isFullpage) {
                 try {
-                    await examWin.webContents.executeJavaScript(`(()=>{const o=document.getElementById('__fullpageHeaderOverlay__');if(o)o.remove();})()`)
+                    await examWin.webContents.executeJavaScript(`(()=>{const o=document.getElementById('__fullpageHeaderOverlay__');if(o)o.remove();const s=document.getElementById('__nxPrintZoomCompensate__');if(s)s.remove();})()`)
                 } catch (e) { /* exam window may be gone */ }
             }
         }
