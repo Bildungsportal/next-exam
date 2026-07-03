@@ -60,9 +60,7 @@ IPC^win32^kioskExitCodes^ps1 exit 10/11/12/13; UAC -EncodedCommand+exitFile; MDM
 IPC^student^kioskShared^get-linux-kiosk-info + install-linux-cage-kiosk channel names kept; win32 routes to windowsKioskSetup; displayServer='windows' on win32 so showCageKioskInstallBtn gate works^student ipchandler.js
 
 # Security / API auth
-RULE^api^appSecret^shared/nextExamApiSecret.js (edit before release); header x-next-exam-app-secret; teacher serverroutes middleware timingSafeEqual; skip OPTIONS+/control/oauth+/control/msauth; renderer import examApiFetch from next-exam-shared/examApiFetch.js; electron main import ../../../../shared/examApiFetch.js; student data calls add Authorization Bearer
 IPC^student^controlBearer^POST /server/control/update|updatescreenshot|submission/:srv|printjob/:srv require Authorization Bearer=registered student token; exempt GET pong+GET serverlist (pre-register); registerclient PIN; oauth+msauth
-TECH^moodle^proof^shared/nextExamMoodleProofSecret.js+buildNextExamMoodleProof.js HMAC-SHA256 hex(secret, quizId|UTC YYYY-MM-DD); header X-Next-Exam-Moodle-Proof+X-Next-Exam-Client:1; eduvidual guest webRequest ipchandler attach/detach; exammode required
 TECH^exam^fileCrypto^NXE1 v1 AES-256-GCM+scrypt; key=serverstatus.encryptionPassword (64 hex auto); examPassword=human exit only
 TECH^submissionSign^pades^auto always; bip=userprivateaccesskey; local=sha256(pin|token|timeMs); rewritePdfForPlainSignpdf before plainAddPlaceholder; HIDDEN_SIG_WIDGET_RECT to suppress widget line; visible stamp last page center; printBackground:false on signed export (else gray bands)^shared/submissionPdfSign.js
 BUG^print^swal2MultiPage^body.swal2-shown setzt im @media print "[aria-hidden=true] { display:none }" auf alle body-children → killt multi-page print bei activesheets previewSigned. Fix in activesheets.vue @media print: body.swal2-shown > [aria-hidden="true"] { display:block !important }
@@ -93,7 +91,7 @@ PATH^student^examFetchInfoSync^student/src/utils/examFetchInfoSync.js applyClien
 RULE^student^typingRhythm^editor.vue isTypingRhythmExemptKey clears deltas for Backspace Delete Space Enter NumpadEnter (OS key-repeat)
 RULE^student^appsToClose^single source of truth in student/src-electron/main/scripts/platformrestrictions.js (exported); consumed by restrictions/{lin,win,mac}.js (kill) + remotecheck/remote{Lin,Win,Mac}.js (detect+report via clientinfo.remoteassistant); macOS TitleCase duplicates intentional; never add bare 'vnc' (would kill vncproxy-helper)
 RULE^student^screenshotStream^resetConnection must not stop getDisplayMedia stream; upload-fail pause must not stopSharedStream; stopSharedStream clears initAttempted; ensureDisplayStreamAsync re-acquires on Connect after track loss
-PATH^student^netScan^networkActiveProcesses.js scans non-loopback TCP established + TCP LISTEN; excludes next-exam subtree + LT pid + LT cmdline markers + sys-critical allowlist
+PATH^student^netScan^networkActiveProcesses.js scans non-loopback TCP established + TCP LISTEN; excludes next-exam subtree + LT pid + LT cmdline markers + sys-critical allowlist (incl startmenuexperiencehost, licenseservice, buildservice, httpd on win)
 RULE^student^vncproxyHelper^spawn vncproxy-helper.cjs with ELECTRON_RUN_AS_NODE=1 (packaged electron else hits requestSingleInstanceLock and exits 0 without listening)
 TECH^student^previewWebview^applyPreviewWebviewHostLayout(splitview); WebviewPane host no Vue inline style (re-render wiped 80vw); inner nx-webview-pane-fill; setZoomFactor dom-ready+try/catch
 RULE^student^webviewHostDisplay^never set <webview> host display:block; overrides Electron :host{display:flex} so internal iframe(flex:1) collapses (content not full height). Use display:flex + flex:1 1 0 to fill; CSS cannot pierce webview shadow DOM so no iframe-height JS hack^eduvidual.vue #webviewmain
@@ -107,7 +105,7 @@ TECH^pdfparser^clozeWidth^extractClozeFields scans showText ops→glyphRunsByY m
 
 # LocalVM (QEMU)
 PATH^localvm^qemu^shared/qemuHostArgs.js+qemuLocalVmDialogs.js+qemuAvailability.js; teacher qemuService.js+examsetup; student communicationhandler+ipchandler
-RULE^localvm^teacherBoot^killExistingQemuInstances+400ms before spawn; detached stdio=ignore (piped stderr freezes WHPX guest); useOverlay=true → teacher-boot.overlay.qcow2 fresh each boot
+RULE^localvm^teacherBoot^killExistingQemuInstances+400ms before spawn; detached stdio=ignore (piped stderr freezes WHPX guest); useOverlay=true → teacher-boot.overlay.qcow2 fresh each boot; bootDisk uses getQemuHeadlessVgaArgs(EDID xres/yres) NOT bare -vga virtio else win 640x480; displayResolution from setup dropdown via qemu-boot-disk (default 1920x1080)
 RULE^localvm^display^presets 1920x1080,1680x1050,1440x900,1280x700,1024x768; default 1920x1080; examConfig.localvm.displayResolution→EDID xres/yres; teacher must re-save LocalVM once
 RULE^localvm^gpu^standard viogpudo+virtio-vga; autounattend FirstLogon pnputil; do not diagnose choppy VNC as missing GPU; FB cursor lag in VNC stream not missing viogpu
 RULE^localvm^rclone^setup-rclone runs at FirstLogon; failure usually in mount-rclone autostart not setup

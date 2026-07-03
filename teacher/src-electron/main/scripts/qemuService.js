@@ -25,11 +25,13 @@ import {
     getQemuSmpArgs,
     getQemuTeacherDisplayArgs,
     getQemuTeacherVgaArgs,
+    getQemuHeadlessVgaArgs,
     getQemuUsbTabletArgs,
     getQemuVirtioDiskDriveArg,
     getQemuUefiInstallExtras,
     getQemuLegacyBootOrderArgs,
 } from '../../../../shared/qemuHostArgs.js';
+import { resolveLocalVmDisplayResolution } from '../../../../shared/localVmDisplayResolutions.js';
 
 const DEFAULTS = {
     isoUrl: 'https://software-static.download.prss.microsoft.com/dbazure/888969d5-f34g-4e03-ac9d-1f9786c66749/26100.1.240331-1435.ge_release_CLIENT_IOT_LTSC_EVAL_x64FRE_en-us.iso',
@@ -497,8 +499,8 @@ async function installDefaultVm({ workdirectory, onProgress = null }) {
 }
 
 // Teacher boot: optional overlay qcow2 (immutable preview, same idea as student exam VM).
-async function bootDisk({ workdirectory, qcow2Name, useOverlay = false }) {
-    log.info(`qemuService @ bootDisk: qcow2=${qcow2Name} useOverlay=${!!useOverlay} workdirectory=${workdirectory}`);
+async function bootDisk({ workdirectory, qcow2Name, useOverlay = false, displayResolution = null }) {
+    log.info(`qemuService @ bootDisk: qcow2=${qcow2Name} useOverlay=${!!useOverlay} display=${displayResolution || '-'} workdirectory=${workdirectory}`);
     const qemuDir = getQemuDir(workdirectory);
     await ensureDir(qemuDir);
     const filename = path.basename(String(qcow2Name || ''));
@@ -528,6 +530,8 @@ async function bootDisk({ workdirectory, qcow2Name, useOverlay = false }) {
         }
         drivePath = overlayPath;
     }
+    // EDID-Auflösung wie beim Student erzwingt gesetzte Res statt 640x480 VGA-Fallback.
+    const display = resolveLocalVmDisplayResolution(displayResolution);
     const args = [
         ...getQemuAccelArgs(),
         ...getQemuTeacherBootMemoryArg(),
@@ -536,7 +540,7 @@ async function bootDisk({ workdirectory, qcow2Name, useOverlay = false }) {
         '-cpu', getQemuCpuArg({ profile: 'runtime' }),
         ...getQemuVirtioDiskDriveArg(drivePath),
         ...getQemuLegacyBootOrderArgs(),
-        ...getQemuTeacherVgaArgs(),
+        ...getQemuHeadlessVgaArgs({ width: display.width, height: display.height }),
         ...getQemuTeacherDisplayArgs(),
         ...getQemuUsbTabletArgs(),
     ];

@@ -2295,7 +2295,7 @@ computed: {
       
         async showDescription(description, info=false, isHtml=false) {
             if (info) {
-                description += ' | ';
+                description += '  ';
                 // remoteassistant: keywords and ports
                 if (info.keywords?.length > 0) {
                     
@@ -2309,14 +2309,14 @@ computed: {
                 const vm = info.vmFindings;
                 const webgl = info.webglFindings;
                 if (vm?.isVM && vm?.reasons?.length > 0) {
-                    description += ' ||' + this.$t('dashboard.vmFindingsBackend') + '|';
-                    description += vm.reasons.map(r => '• ' + r).join('|');
-                    if (vm.vendor) description += '|' + this.$t('dashboard.vmFindingsVendor') + ': ' + vm.vendor;
+                    description += ' || ' + this.$t('dashboard.vmFindingsBackend') + ' ';
+                    description += vm.reasons.map(r => ' • ' + r).join(' ');
+                    if (vm.vendor) description += ' | ' + this.$t('dashboard.vmFindingsVendor') + ': ' + vm.vendor;
                 }
                 if (webgl?.detected) {
-                    description += ' ||' + this.$t('dashboard.vmFindingsWebgl');
-                    if (webgl.vendor) description += '|• Vendor: ' + webgl.vendor;
-                    if (webgl.renderer) description += '|• Renderer: ' + webgl.renderer;
+                    description += ' || ' + this.$t('dashboard.vmFindingsWebgl');
+                    if (webgl.vendor) description += ' • Vendor: ' + webgl.vendor;
+                    if (webgl.renderer) description += ' • Renderer: ' + webgl.renderer;
                 }
             }
             this.currentDescription = isHtml ? description : description.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');

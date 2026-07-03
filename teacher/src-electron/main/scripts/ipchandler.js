@@ -569,8 +569,8 @@ class IpcHandler {
         })
 
         ipcMain.handle('qemu-boot-disk', async (_event, payload = {}) => {
-            const { qcow2Name, useOverlay } = payload || {};
-            log.info(`ipchandler @ qemu-boot-disk: qcow2=${qcow2Name} useOverlay=${!!useOverlay}`);
+            const { qcow2Name, useOverlay, displayResolution } = payload || {};
+            log.info(`ipchandler @ qemu-boot-disk: qcow2=${qcow2Name} useOverlay=${!!useOverlay} display=${displayResolution || '-'}`);
             try {
                 log.info('ipchandler @ qemu-boot-disk: deep QEMU check…');
                 const avail = await checkQemuAvailability();
@@ -582,6 +582,7 @@ class IpcHandler {
                     workdirectory: config.workdirectory,
                     qcow2Name,
                     useOverlay: useOverlay === true,
+                    displayResolution,
                 })
             } catch (e) {
                 log.error('ipchandler @ qemu-boot-disk', e)

@@ -101,6 +101,7 @@ export const appsToClose = [
     'msteams',
     'msteams_autostarter',
     'msedge',
+    'msedgewebview2',
     'mstsc',
     'NAV',
     'nextcloud',
