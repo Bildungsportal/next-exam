@@ -19,6 +19,12 @@
                 </button>
             </li>
 
+            <li v-if="correctedPdfMode" class="nav-item ms-2">
+                <button type="button" class="btn btn-sm btn-outline-danger" @click.stop="$emit('discard-correction')">
+                    {{ $t('pdf.discardCorrection') }}
+                </button>
+            </li>
+
             <template v-if="correctionMode">
                 <li class="nav-item ms-2">
                     <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'highlight-yellow' }" @click.stop="setTool('highlight-yellow')" title="Highlight yellow">
@@ -213,6 +219,9 @@
         computed: {
             correctionMode() {
                 return !!this.activesheetsCorrection;
+            },
+            correctedPdfMode() {
+                return /-korrigiert\.pdf$/i.test(this.currentpreviewPath || '');
             },
             toolingVisible() {
                 return this.parsedPages.length > 0 || this.embedFallback;

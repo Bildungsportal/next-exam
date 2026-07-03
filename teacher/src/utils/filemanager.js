@@ -783,6 +783,40 @@ async function saveActivesheetsCorrectionTemplate(formData) {
     }
 }
  
+// Deletes the open -korrigiert.pdf and closes preview so the original submission can be corrected again.
+async function discardActivesheetsCorrectedPdf() {
+    if (!this.currentpreviewPath || !/-korrigiert\.pdf$/i.test(this.currentpreviewPath)) return;
+    const result = await this.$swal.fire({
+        customClass: {
+            popup: 'my-popup',
+            title: 'my-title',
+            content: 'my-content',
+            actions: 'my-swal2-actions',
+        },
+        title: this.$t('dashboard.sure'),
+        html: `<div class="my-content">${this.$t('pdf.correctionDiscardConfirm')}</div>`,
+        icon: 'warning',
+        showCancelButton: true,
+        cancelButtonText: this.$t('dashboard.cancel'),
+    });
+    if (!result.isConfirmed) return;
+    try {
+        const res = await window.ipcRenderer.invoke('deleteWorkdirItem', {
+            servername: this.servername,
+            filepath: this.currentpreviewPath,
+        });
+        if (res?.status !== 'success') {
+            await this.$swal.fire({ icon: 'error', text: res?.message || 'Delete failed' });
+            return;
+        }
+        if (this.showExplorer && this.currentdirectory) this.loadFilelist(this.currentdirectory);
+        this.hidepreview();
+    } catch (err) {
+        log.error('filemanager @ discardActivesheetsCorrectedPdf:', err);
+        await this.$swal.fire({ icon: 'error', text: String(err?.message || err) });
+    }
+}
+
 async function saveActivesheetsCorrectedPdf() {
     if (!this.currentpreviewPath) return;
     try {
@@ -815,4 +849,4 @@ async function saveActivesheetsCorrectedPdf() {
     }
 }
 
-export {loadFilelist, getLatest, processPrintrequest, loadImage, showPDFPreview, loadTextFile, loadHtmlFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate, saveActivesheetsCorrectedPdf, base64ToUint8Array}
+export {loadFilelist, getLatest, processPrintrequest, loadImage, showPDFPreview, loadTextFile, loadHtmlFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate, saveActivesheetsCorrectedPdf, discardActivesheetsCorrectedPdf, base64ToUint8Array}
