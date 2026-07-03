@@ -38,6 +38,7 @@
             <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'pen-red' }" @click.stop="setTool('pen-red')" title="Pen red">
             <img src="/src/assets/img/svg/document-edit.svg" class="white">
             </button>
+            <button type="button" class="btn btn-light pdf-tool-btn pdf-tool-btn--text" :class="{ active: tool === 'text' }" @click.stop="setTool('text')" :title="$t('editor.pdfAnnotationText')">T</button>
             <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'delete' }" @click.stop="setTool('delete')" title="Delete">
             ✕
             </button>
@@ -74,10 +75,11 @@
         <div
             class="pdf-page-wrapper"
             :style="{ width: page.width + 'px', height: page.height + 'px', transform: `scale(${zoom})` }"
-            @mousedown="tool !== 'delete' ? startDraw($event, pageIndex) : null"
+            @mousedown="tool !== 'delete' && tool !== 'text' ? startDraw($event, pageIndex) : null"
             @mousemove="isDrawing ? updateDraw($event, pageIndex) : null"
             @mouseup="isDrawing ? finishDraw($event, pageIndex) : null"
             @mouseleave="isDrawing ? cancelDraw() : null"
+            @click="tool === 'text' ? placeTextAnnotation($event, pageIndex) : null"
         >
         <img :src="page.imgSrc" class="pdf-bg-image" draggable="false" />
 
@@ -118,7 +120,7 @@
                 <polyline
                 :points="penPointsAttr(ann.points)"
                 fill="none"
-                stroke="rgba(220,53,69,0.95)"
+                :stroke="annotationInkStroke"
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -126,6 +128,28 @@
                 :style="{ pointerEvents: 'all', cursor: tool === 'delete' ? 'pointer' : 'default' }"
                 />
             </svg>
+            <div
+                v-for="ann in textForPage(pageIndex)"
+                :key="ann.id"
+                class="ann ann-text"
+                :style="textAnnotationStyle(ann)"
+                @click.stop="tool === 'delete' ? deleteAnnotation(ann.id) : (tool === 'text' ? startEditText(ann.id) : null)"
+            >
+                <textarea
+                    v-if="editingTextId === ann.id"
+                    :id="'ann-text-input-' + ann.id"
+                    v-model="ann.text"
+                    class="ann-text-input"
+                    rows="1"
+                    @blur="finishTextEdit(ann.id)"
+                    @input="syncTextAnnotationInputSize($event.target, pageIndex)"
+                    @focus="syncTextAnnotationInputSize($event.target, pageIndex)"
+                    @mousedown.stop
+                    @click.stop
+                    @keydown.stop
+                />
+                <span v-else class="ann-text-display">{{ ann.text }}</span>
+            </div>
             </template>
 
             <div v-if="currentDraft && currentDraft.pageIndex === pageIndex" class="draft" :style="draftStyle"></div>
@@ -133,7 +157,7 @@
             <line :x1="draftLine.x1" :y1="draftLine.y1" :x2="draftLine.x2" :y2="draftLine.y2" stroke="rgba(220,53,69,0.95)" stroke-width="3" stroke-linecap="round" />
             </svg>
             <svg v-if="draftPenPath && draftPenPath.pageIndex === pageIndex" class="draft-pen" :style="{ position:'absolute', left:0, top:0, width: page.width + 'px', height: page.height + 'px', pointerEvents: 'none' }">
-            <polyline :points="penPointsAttr(draftPenPath.points)" fill="none" stroke="rgba(220,53,69,0.95)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <polyline :points="penPointsAttr(draftPenPath.points)" fill="none" :stroke="annotationInkStroke" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
         </div>
         </div>
@@ -521,6 +545,40 @@
     z-index: 21;
     }
 
+    .ann-text-display {
+    display: inline-block;
+    font-size: 14px;
+    line-height: 1.3;
+    color: #0a2472;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 2px 4px;
+    border-radius: 2px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    }
+
+    .ann-text-input {
+    box-sizing: border-box;
+    display: block;
+    font-size: 14px;
+    line-height: 1.3;
+    color: #0a2472;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(13, 110, 253, 0.5);
+    border-radius: 2px;
+    padding: 2px 4px;
+    resize: none;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-width: 80px;
+    }
+
+    .pdf-tool-btn--text {
+    font-weight: 700;
+    font-size: 1rem;
+    }
+
     .unstyled{
     box-shadow: none !important;
     padding: 10px !important;
@@ -563,6 +621,14 @@
     @media print {
         .pdfview-pane-rendered {
             display: none !important;
+        }
+
+        .ann-text-input,
+        .ann-text-display {
+            border: none !important;
+            background: transparent !important;
+            outline: none !important;
+            box-shadow: none !important;
         }
     }
 

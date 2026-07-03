@@ -230,7 +230,7 @@
                         <polyline
                             :points="penPointsAttr(ann.points)"
                             fill="none"
-                            stroke="rgba(220,53,69,0.95)"
+                            :stroke="annotationInkStroke"
                             stroke-width="2"
                             stroke-linecap="round"
                             stroke-linejoin="round"
@@ -265,7 +265,7 @@
                         <line :x1="draftLine.x1" :y1="draftLine.y1" :x2="draftLine.x2" :y2="draftLine.y2" stroke="rgba(220,53,69,0.95)" stroke-width="3" stroke-linecap="round" />
                     </svg>
                     <svg v-if="draftPenPath && draftPenPath.pageIndex === pageIndex" class="draft-pen" :style="{ position: 'absolute', left: 0, top: 0, width: page.width + 'px', height: page.height + 'px', pointerEvents: 'none' }">
-                        <polyline :points="penPointsAttr(draftPenPath.points)" fill="none" stroke="rgba(220,53,69,0.95)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <polyline :points="penPointsAttr(draftPenPath.points)" fill="none" :stroke="annotationInkStroke" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                 </template>
             </div>
@@ -661,7 +661,7 @@ export default {
 
 .pdf-annotation-toolbar {
     position: fixed;
-    left: 8px;
+    left: var(--nx-annotation-toolbar-left, 8px);
     top: 50%;
     transform: translateY(-50%);
     z-index: 1200;
@@ -734,7 +734,7 @@ export default {
     display: inline-block;
     font-size: 14px;
     line-height: 1.3;
-    color: #111;
+    color: #0a2472;
     background: rgba(255, 255, 255, 0.85);
     padding: 2px 4px;
     border-radius: 2px;
@@ -747,7 +747,7 @@ export default {
     display: block;
     font-size: 14px;
     line-height: 1.3;
-    color: #111;
+    color: #0a2472;
     background: rgba(255, 255, 255, 0.95);
     border: 1px solid rgba(13, 110, 253, 0.5);
     border-radius: 2px;

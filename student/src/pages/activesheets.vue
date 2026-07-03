@@ -241,11 +241,13 @@ export default {
             if (this.zoom < ACTIVESHEETS_ZOOM_MAX) this.zoom = Math.min(ACTIVESHEETS_ZOOM_MAX, this.zoom + 0.1)
             const el = document.getElementById(`content`)
             if (el) el.style.zoom = this.zoom
+            this.syncAnnotationToolbarDock()
         },
         zoomout() {
             if (this.zoom > ACTIVESHEETS_ZOOM_MIN) this.zoom = Math.max(ACTIVESHEETS_ZOOM_MIN, this.zoom - 0.1)
             const el = document.getElementById(`content`)
             if (el) el.style.zoom = this.zoom
+            this.syncAnnotationToolbarDock()
         },
 
         // Shared getPDFbase64 args for activesheets (fullpage + backgrounds).
@@ -292,6 +294,7 @@ export default {
                 if (this.splitview) {
                     preview.style.display = '';
                     if (this._onPreviewClick) preview.removeEventListener("click", this._onPreviewClick);
+                    this.$nextTick(() => this.syncAnnotationToolbarDock());
                     return;
                 }
 
@@ -301,6 +304,7 @@ export default {
                 preview.style.display = 'none';
                 URL.revokeObjectURL(this.currentpreview);
                 if (this._onPreviewClick) this.autoEventListener(preview,"click", this._onPreviewClick);
+                this.$nextTick(() => this.syncAnnotationToolbarDock());
             });
         },
 
@@ -327,6 +331,7 @@ export default {
             const maxPct = 100 - (minRightPx / rect.width) * 100;
             const clamped = Math.min(Math.max(pct, minPct), maxPct);
             this.splitLeftPct = Math.min(80, Math.max(20, Math.round(clamped * 10) / 10));
+            this.syncAnnotationToolbarDock();
         },
 
         stopSplitResize() {
@@ -334,6 +339,25 @@ export default {
             window.removeEventListener('pointermove', this.onSplitResizeMove);
             window.removeEventListener('pointerup', this.stopSplitResize);
             window.removeEventListener('pointercancel', this.stopSplitResize);
+            this.syncAnnotationToolbarDock();
+        },
+
+        // Pin activesheet annotation toolbar to #content left edge (split boundary in splitview).
+        syncAnnotationToolbarDock() {
+            const root = document.querySelector('.activesheets-body');
+            if (!root) return;
+            if (!this.splitview) {
+                root.style.removeProperty('--nx-annotation-toolbar-left');
+                return;
+            }
+            const apply = () => {
+                const content = document.getElementById('content');
+                if (!content) return;
+                const left = Math.round(content.getBoundingClientRect().left + 8);
+                root.style.setProperty('--nx-annotation-toolbar-left', `${left}px`);
+            };
+            if (typeof requestAnimationFrame === 'function') requestAnimationFrame(apply);
+            else apply();
         },
         loadBase64file(file){
             this.webviewVisible = false
@@ -814,7 +838,13 @@ export default {
                 }
             },
             immediate: false
-        }
+        },
+        splitview() {
+            this.$nextTick(() => this.syncAnnotationToolbarDock());
+        },
+        splitLeftPct() {
+            this.$nextTick(() => this.syncAnnotationToolbarDock());
+        },
     },
     mounted() {
         console.log("activesheets @ mounted")
@@ -826,6 +856,8 @@ export default {
 
             const content = document.getElementById(`content`)
             if (content) content.style.zoom = this.zoom
+            this.syncAnnotationToolbarDock()
+            this.autoEventListener(window, 'resize', this.syncAnnotationToolbarDock)
 
             this.autoSchedulerService(this.fetchInfo, 5000);
             this.autoSchedulerService(this.loadFilelist, 20000);

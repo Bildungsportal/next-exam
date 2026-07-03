@@ -3,10 +3,16 @@
  *    - onAnnotationsChange(): called after each push/delete (e.g. student queueSave)
  *    - onAnnotationUndoRestore(prev): called after successful undoAnnotation
  */
+/** Ink color for pen strokes and free-text annotations (activesheet + preview). */
+export const ANNOTATION_INK_COLOR = '#0a2472';
+export const ANNOTATION_INK_STROKE = 'rgba(10, 36, 114, 0.95)';
+
 export const pdfPageAnnotationsMixin = {
     data() {
         return {
             tool: 'highlight-yellow',
+            annotationInkColor: ANNOTATION_INK_COLOR,
+            annotationInkStroke: ANNOTATION_INK_STROKE,
             isDrawing: false,
             drawStart: null,
             currentDraft: null,
@@ -317,7 +323,7 @@ export const pdfPageAnnotationsMixin = {
                 y,
                 text: '',
                 fontSize: 14,
-                color: '#111111',
+                color: this.annotationInkColor,
             });
             this.editingTextId = id;
             this.notifyAnnotationsChanged();
