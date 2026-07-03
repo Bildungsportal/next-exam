@@ -89,7 +89,7 @@ IPC^student^focusLock^main sets clientinfo.focusLockReason+focusLockMessage; exa
 RULE^student^pin^noFetchSync^applyClientinfoFromFetch must not set vm.pincode; lobby=user input; exam=router params from register mirror
 PATH^student^examFetchInfoSync^student/src/utils/examFetchInfoSync.js applyClientinfoFromFetch+applyServerstatusFromFetch; serverstatus compare JSON replacer activeSheets→filename+len+checksum not filecontent
 RULE^student^typingRhythm^editor.vue isTypingRhythmExemptKey clears deltas for Backspace Delete Space Enter NumpadEnter (OS key-repeat)
-RULE^student^appsToClose^leaf student/src-electron/main/scripts/appsToClose.js; killAppsToClose+remotecheck import direct; platformrestrictions internal only
+RULE^student^appsToClose^leaf appsToClose.js; kill=substring win; remotecheck=exact stem (+multi-word cmd on unix)
 RULE^student^screenshotStream^resetConnection must not stop getDisplayMedia stream; upload-fail pause must not stopSharedStream; stopSharedStream clears initAttempted; ensureDisplayStreamAsync re-acquires on Connect after track loss
 PATH^student^netScan^networkActiveProcesses.js scans non-loopback TCP established + TCP LISTEN; excludes next-exam subtree + LT + sys-critical allowlist
 PATH^student^remoteAssistant^updateRemoteAssistant in remoteAssistantScan.js; requestUpdate every 100s; after killAppsToClose if clientinfo passed; clears remoteassistant when scan empty

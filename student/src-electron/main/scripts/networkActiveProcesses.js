@@ -44,6 +44,7 @@ const SYSTEM_CRITICAL_NAMES = new Set([
     'startmenuexperiencehost', 'startmenuexperiencehost.exe',
     'shellexperiencehost', 'shellexperiencehost.exe',
     'licenseservice', 'licenseservice.exe',
+    'msedgewebview2', 'msedgewebview2.exe',
     'codemeter', 'codemeter.exe', 'mdnsresponder', 'mdnsresponder.exe',
     // windows — common school dev/build background (not remote-access)
     // IncrediBuild distributed-build suite (Xoreax): buildservice=Agent, coordservice=Coordinator, restservice=REST

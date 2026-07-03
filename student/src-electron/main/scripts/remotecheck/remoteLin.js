@@ -1,10 +1,11 @@
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import { appsToClose } from '../appsToClose.js'
+import { findKeywordHits, parsePsRows } from './processKeywords.js'
 
 const execAsync = promisify(exec)
 
-// derived from appsToClose (single source of truth); lowercase + deduped for substring match against ps output
+// derived from appsToClose (single source of truth); lowercase + deduped; exact stem + multi-word cmd match via processKeywords.js
 const suspiciousKeywords = [...new Set(appsToClose.map((k) => k.toLowerCase()))]
 
 const suspiciousPorts = [
@@ -13,24 +14,14 @@ const suspiciousPorts = [
 ]
 
 async function checkProcesses() {
-  const foundKeywords = []
-
   try {
-    const { stdout } = await execAsync('ps aux', { 
+    const { stdout } = await execAsync('ps aux', {
       encoding: 'utf8',
       timeout: 3000,  // 3 second timeout
       maxBuffer: 1024 * 1024 * 2  // 2MB buffer
     })
-    
-    const out = stdout.toLowerCase()
-    
-    for (const keyword of suspiciousKeywords) {
-      if (out.includes(keyword)) {
-        foundKeywords.push(keyword)
-      }
-    }
-    
-    return foundKeywords
+    const { stems, cmdLines } = parsePsRows(stdout)
+    return findKeywordHits(stems, suspiciousKeywords, cmdLines)
   } catch (error) {
     return []  // Return empty on error/timeout
   }
@@ -40,23 +31,21 @@ async function checkPorts() {
   const foundPorts = []
 
   try {
-    const { stdout } = await execAsync('lsof -i -n -P', { 
+    const { stdout } = await execAsync('lsof -i -n -P', {
       encoding: 'utf8',
       timeout: 3000,  // 3 second timeout
       maxBuffer: 1024 * 1024 * 2  // 2MB buffer
     })
-    
-    const out = stdout.toLowerCase()
-    
+
     for (const port of suspiciousPorts) {
       // Match exact port number: :PORT followed by space, ->, (, or end of line
       // This prevents matching :53 inside :535543
       const portRegex = new RegExp(`:${port}(?:\\s|->|\\(|$)`, 'i');
-      if (portRegex.test(out)) {
+      if (portRegex.test(stdout)) {
         foundPorts.push(port)
       }
     }
-    
+
     return foundPorts
   } catch (error) {
     return []  // Return empty on error/timeout
@@ -70,11 +59,11 @@ export async function runRemoteCheck() {
       checkProcesses(),
       checkPorts()
     ])
-    
-    if (foundKeywords.length === 0 && foundPorts.length === 0) { 
+
+    if (foundKeywords.length === 0 && foundPorts.length === 0) {
       return false
     }
-    
+
     return { // Return found keywords and ports
       keywords: foundKeywords,
       ports: foundPorts,
