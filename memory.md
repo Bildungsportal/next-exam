@@ -101,6 +101,7 @@ TECH^student^displayInfo^clientinfo.displayCount+multiMonitor via displayInfo.sy
 # PDF parser
 PATH^pdfparser^root^shared/pdfparser/ (v5+shared); renderer import next-exam-shared/pdfparser/index.js (quasar alias next-exam-shared->shared/)
 PATH^pdfparser^fonts^shared/pdfparser/fonts/; pdfOverlayFonts.css+pdfOverlayFonts.js; ArialMT→liberation-sans; TimesNewRomanPSMT→liberation-serif
+RULE^pdfparser^boxTypeHeight^determineBoxType: cssH>35→textarea else text; SINGLE_LINE_TEXTAREA_MAX_HEIGHT=30 downgrades; isTableCell no longer forces text — tall TCs stay textarea
 RULE^pdfparser^isClozeField^all clozeFields.push set isClozeField:true; filterDegenerateInteractiveFields exempts isClozeField (like checkbox/deselect) so narrow markers ("__10__" 2-underscore math worksheets) survive 22px minW gate; underscore push allows ≥6px
 TECH^pdfparser^clozeWidth^extractClozeFields scans showText ops→glyphRunsByY map per item (x0,y0); when glyphRun.str.length>item.str.length pdfjs collapsed whitespace→switch text+measureSubstringWidth to advances*fontSize/1000
 
@@ -123,6 +124,7 @@ PATH^teacher^showPDFPreview^teacher/src/utils/filemanager.js: single entry for P
 PATH^pdfAnnotations^mixin^shared/pdfPageAnnotationsMixin.js (both student+teacher import via next-exam-shared); state+draw+undo+resetAnnotations+cancelDraw. Tools: highlight-yellow/green/blue (kind:highlight box), underline-red (kind:underline line), pen-red (kind:pen freehand polyline via draftPenPath.points). Hooks: onAnnotationsChange() (student=>queueSave) + onAnnotationUndoRestore(prev). Toolbar+render+mouse-events bleiben inline in jeweiligem PdfviewPaneRendered.vue
 RULE^teacher^submissionPreviewPath^submission preview muss filepath mitgeben (loadActivesheetsCorrectionContext filtert /ABGABE/+examtype=activesheets) sonst kein annotation toolbar+kein autocorrect button im PdfviewPaneRendered
 TECH^print^activesheetsScale^pdfparser rendert page CSS-px=PDF-pt*1.5; Chromium printToPDF mappt 1pt=96/72=1.333px → wrapper 12% breiter als A4. activesheets nutzt pageMode='fullpage' (margins 0+kein header/footer) + :deep(.pdf-overlay-root){zoom:calc(8/9)} im @media print für 1:1 PDF-Seite ↔ A4-Druckseite
+TECH^print^activesheetsPdf^activesheets: one render getBase64PDF(fullpage+printBackground); printpdf writes args.base64pdf only; editor backup still printpdf→printToPDF legacy
 TECH^print^activesheetsHeader^pageMode='fullpage' margins 0+chromium header/footer off; getBase64PDF injiziert headerTemplate als #__fullpageHeaderOverlay__ div (position:absolute top:0) per executeJavaScript vor printToPDF, finally-Block entfernt es → Wrapper bleibt 1:1, Header ueberdeckt obere ~14px der 1. Druckseite, kein neuer Header-String
 IPC^student^getPDFbase64^args.pageMode='fullpage' (optional) => margins 0+displayHeaderFooter false+DOM overlay header; default behält editor-Verhalten (top/bottom 0.5"+header/footer)
 PATH^student^odtTiptap^student/src/utils/odtToTiptapHtml.js+filehandler loadODT+editor.vue materials+localfiles

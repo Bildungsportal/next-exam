@@ -41,6 +41,7 @@
             <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'delete' }" @click.stop="setTool('delete')" title="Delete">
             ✕
             </button>
+            <span class="pdf-annotation-hint">{{ $t('editor.pdfAnnotationsNotStored') }}</span>
         </li>
 
         <li v-show="toolbar.showZoom && !isSubmissionPreview" class="nav-item ms-2">
@@ -375,6 +376,14 @@
     height: 20px !important;
     margin: 0 !important;
     padding: 0 !important;
+    }
+
+    .pdf-annotation-hint {
+    margin-left: 8px;
+    font-size: 0.78rem;
+    color: rgba(108, 117, 125, 0.85);
+    white-space: nowrap;
+    user-select: none;
     }
 
     .pdf-tool-btn.active {

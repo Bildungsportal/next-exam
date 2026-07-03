@@ -244,6 +244,35 @@ export default {
             const el = document.getElementById(`content`)
             if (el) el.style.zoom = this.zoom
         },
+
+        // Shared getPDFbase64 args for activesheets (fullpage + backgrounds).
+        activesheetsPdfInvokeArgs(reason) {
+            return {
+                landscape: false,
+                servername: this.servername,
+                clientname: this.clientname,
+                submissionnumber: this.submissionnumber,
+                sectionname: this.serverstatus.examSections[this.lockedSection].sectionname,
+                printBackground: true,
+                pageMode: 'fullpage',
+                reason,
+            }
+        },
+
+        // Resets zoom for capture; optionally hides preview (submission only — @media print hides it during render).
+        async withActivesheetsPdfCapture(fn, { hidePreview = false } = {}) {
+            const prevZoom = this.zoom
+            if (hidePreview) this.hidepreview()
+            const contentEl = document.getElementById('content')
+            if (contentEl) contentEl.style.zoom = 1
+            try {
+                return await fn()
+            } finally {
+                const restoreEl = document.getElementById('content')
+                if (restoreEl) restoreEl.style.zoom = prevZoom
+            }
+        },
+
         getUrlDisplay(allowedUrl) {
             return typeof allowedUrl === 'object' ? allowedUrl.url : allowedUrl;
         },
@@ -614,21 +643,27 @@ export default {
                 reason: why
             });
 
-            // SAVE AS PDF - inform mainprocess to save webcontent as pdf
-            // For activesheets, we need to generate PDF from the filled form
-            // We'll use getPDFbase64 to render the current view
-            if (this.currentpreviewBase64) {
-                // If we have a preview PDF, use it
-                signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: this.currentpreviewBase64 })  
-            } else {
-                // Otherwise generate from current view
-                let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true, reason: why, pageMode: 'fullpage'})
-                if (response?.status == "success") {
-                    signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })
+            if (!this.serverstatus?.examSections?.[this.lockedSection]) {
+                console.error('activesheets @ saveContent: Invalid section data')
+                return
+            }
+
+            // One render via getPDFbase64; printpdf writes the buffer to disk (no second printToPDF).
+            await this.withActivesheetsPdfCapture(async () => {
+                const response = await signalBridge.invoke('getPDFbase64', this.activesheetsPdfInvokeArgs(why))
+                if (response?.status === 'success') {
+                    signalBridge.send('printpdf', {
+                        filename: filename || false,
+                        landscape: false,
+                        servername: this.servername,
+                        clientname: this.clientname,
+                        reason: why,
+                        base64pdf: response.base64pdf,
+                    })
                 } else {
                     this.showPdfGenerationError(response)
                 }
-            }
+            })
             this.loadFilelist()
         },
 
@@ -705,28 +740,15 @@ export default {
                 console.error('activesheets @ sendExamToTeacher: Invalid section data');
                 return;
             }
-            // Ensure printToPDF captures only the form content (no preview overlay, no zoom).
-            const prevZoom = this.zoom
-            this.hidepreview()
-            const contentEl = document.getElementById('content')
-            if (contentEl) contentEl.style.zoom = 1
-            const pdfArgs = {
-                landscape: false,
-                servername: this.servername,
-                clientname: this.clientname,
-                submissionnumber: this.submissionnumber,
-                sectionname: this.serverstatus.examSections[this.lockedSection].sectionname,
-                printBackground: true,
-                pageMode: 'fullpage', // margins 0 + Header als DOM-Overlay (siehe communicationhandler.getBase64PDF)
-            }
-            try {
+            const reason = type === 'print' ? 'print' : 'previewSigned'
+            await this.withActivesheetsPdfCapture(async () => {
+                const response = await signalBridge.invoke('getPDFbase64', this.activesheetsPdfInvokeArgs(reason))
+                if (response?.status !== 'success') {
+                    this.showPdfGenerationError(response)
+                    return
+                }
+                this.currentpreviewBase64 = response.base64pdf
                 if (type === 'print') {
-                    const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'print' })
-                    if (response?.status !== 'success') {
-                        this.showPdfGenerationError(response)
-                        return
-                    }
-                    this.currentpreviewBase64 = response.base64pdf
                     this.loadPDF({
                         filename: `${this.clientname}.pdf`,
                         filetype: "pdf",
@@ -734,16 +756,6 @@ export default {
                     }, true, 100, true, type)
                     return
                 }
-
-                // SWAL temporaer disabled - body.swal2-shown kills multi-page printToPDF
-                // await this.waitUntilSigningSwalPainted()
-                let response
-                response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
-                if (response?.status !== 'success') {
-                    this.showPdfGenerationError(response)
-                    return
-                }
-                this.currentpreviewBase64 = response.base64pdf
                 if (directsend) {
                     return this.printBase64(false, 'directsend')
                 }
@@ -752,10 +764,7 @@ export default {
                     filetype: "pdf",
                     filecontent: response.dataUrl
                 }, true, 100, true, type)
-            } finally {
-                const restoreEl = document.getElementById('content')
-                if (restoreEl) restoreEl.style.zoom = prevZoom
-            }
+            }, { hidePreview: true })
         },
 
         waitUntilSigningSwalPainted() {
@@ -926,6 +935,7 @@ export default {
     width: 100%;
     overscroll-behavior: contain;
     background-color: #eee;
+    border-radius: 0px;
 }
 
 /* Keep PdfviewPaneRendered internal scrolling intact. */

@@ -123,6 +123,7 @@
         "more": "more",
         "noPdfToSend": "No PDF available to send. Please try submitting again.",
         "paste": "paste",
+        "pdfAnnotationsNotStored": "Annotations are not stored in the document",
         "pdfBusyTimeout": "PDF creation blocked (timeout). Please wait and try again.",
         "pdfGenerationFailed": "Could not create PDF.",
         "pdfSigningFailed": "Could not sign PDF.",

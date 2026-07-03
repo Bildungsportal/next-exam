@@ -123,6 +123,7 @@
         "more": "mehr",
         "noPdfToSend": "Keine PDF zum Senden vorhanden. Bitte erneut abgeben.",
         "paste": "einfügen",
+        "pdfAnnotationsNotStored": "Markierungen werden nicht im Dokument gespeichert",
         "pdfBusyTimeout": "PDF-Erstellung blockiert (Timeout). Bitte kurz warten und erneut versuchen.",
         "pdfGenerationFailed": "PDF konnte nicht erstellt werden.",
         "pdfSigningFailed": "PDF konnte nicht signiert werden.",
