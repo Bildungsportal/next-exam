@@ -182,7 +182,7 @@
                 <div v-if="!bipToken" class="input-group  mb-1">
                     <span class="input-group-text col-3" style="width:135px;"
                           id="inputGroup-sizing-lg">{{ $t("student.username") }}</span>
-                    <input ref="userInput" :value="username" @input="onUsernameInput" @paste.prevent @drop.prevent type="text"
+                    <input ref="userInput" :value="username" @input="onUsernameInput" @focus="onUsernameFocus" @paste.prevent @drop.prevent type="text"
                            required="required" maxlength="25" class="form-control" id="user" placeholder=""
                            style="width:200px;max-width:200px;min-width:135px;">
                 </div>
@@ -480,6 +480,17 @@ export default {
                 const nextPos = pos != null ? Math.min(pos, normalized.length) : normalized.length;
                 el.setSelectionRange(nextPos, nextPos);
             }
+        },
+
+        // Windows selects all on focus; caret at end stops spurious empty input from clearing :value binding
+        onUsernameFocus(event) {
+            const el = event.target;
+            const len = (el.value || this.username || '').length;
+            if (len === 0) return;
+            requestAnimationFrame(() => {
+                if (document.activeElement !== el) return;
+                try { el.setSelectionRange(len, len); } catch (_) {}
+            });
         },
 
         async showQemuMissingWarning(payload = {}) {
@@ -1117,12 +1128,14 @@ export default {
         },
 
 
-        // Restore name/pin inputs from main-process clientinfo after remount while still connected.
+        // Restore name/pin from main-process clientinfo after remount (name persists after kick; pin only when connected).
         syncLoginFieldsFromClientinfo() {
-            if (!this.token || this.token === '0000') return;
             const name = this.clientinfo?.name;
+            if (name && name !== 'DemoUser' && this.username !== name) {
+                this.username = name;
+            }
+            if (!this.token || this.token === '0000') return;
             const pin = this.clientinfo?.pin;
-            if (name && this.username !== name) this.username = name;
             if (pin != null && pin !== '' && String(this.pincode) !== String(pin)) {
                 this.pincode = String(pin);
             }
@@ -1813,11 +1826,6 @@ export default {
             const el = this.$refs.userInput;
             if (!el || this.bipToken || this.token) return;
             el.focus();
-            // Windows selects all on focus; caret at end avoids :value + select-all clearing the field
-            const len = (this.username || '').length;
-            if (len > 0) {
-                try { el.setSelectionRange(len, len); } catch (_) {}
-            }
         });
 
         this.fetchinterval = this.autoSchedulerService(this.fetchInfo, 4000)
