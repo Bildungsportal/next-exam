@@ -56,6 +56,9 @@ import {loadSEBConfig} from "./sebintegration.js";
 
 const { t } = i18n.global
 
+// server-level dirs under workdir/<server>/ that are not student submission folders (lowercase compare)
+const NON_STUDENT_ROOT_DIRS = new Set(['uploads', 'activesheets'])
+
 /** Zip a folder for dashboard explorer download (same behaviour as data.js zipDirectory). */
 function zipExplorerDirectory(sourceDir, outPath) {
     const archive = archiver('zip', { zlib: { level: 9 } })
@@ -1489,7 +1492,7 @@ class IpcHandler {
                     .map(dirent => dirent.name)
 
                 for (const studentName of folders) { // iterate over directory names
-                    if (studentName.toUpperCase() === 'UPLOADS') { // ignore UPLOADS directory
+                    if (NON_STUDENT_ROOT_DIRS.has(studentName.toLowerCase())) { // ignore server-level non-student dirs (UPLOADS, activesheets, ...)
                         continue
                     }
                     
