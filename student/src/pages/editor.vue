@@ -1043,7 +1043,7 @@ export default {
                     : (allowSwitch
                         ? (this.clientinfo?.lockedSection ?? this.lockedSection ?? status.activeSection ?? 0)
                         : (status.lockedSection ?? status.activeSection ?? 0)));
-            const section = status.examSections?.[sectionIndex] || status.examSections?.[1] || null;
+            const section = status.examSections?.[sectionIndex] ?? null;
             const groupKey = section && section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA';
             return resolveEditorExamConfig(section, groupKey);
         },
@@ -1060,7 +1060,7 @@ export default {
                     : (allowSwitch
                         ? (this.clientinfo?.lockedSection ?? this.lockedSection ?? status.activeSection ?? 0)
                         : (status.lockedSection ?? status.activeSection ?? 0)));
-            const section = status.examSections?.[sectionIndex] || status.examSections?.[1] || null;
+            const section = status.examSections?.[sectionIndex] ?? null;
             if (!section || section.examtype !== 'editor') return null;
             const groupKey = section.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA';
             const tmpl = section[groupKey]?.examConfig?.editor?.editorTemplate;
@@ -1101,7 +1101,7 @@ export default {
 
         // Silent import of teacher template (no replace dialog); runs only after backup was skipped or absent.
         async autoLoadEditorTemplateIfConfigured() {
-            const file = this.getEditorTemplateFromExamConfig();
+            const file = this.getEditorTemplateFromExamConfig(this.lockedSection);
             if (!file) return;
             console.log(`editor @ autoLoadEditorTemplateIfConfigured: Loading template ${file.filename}`);
             this.webviewVisible = false;
@@ -2446,9 +2446,13 @@ export default {
                     signalBridge.invoke('getbackupfile', backupfileName),
                     this.waitForEditorReady(),
                 ]);
-                if (!ready || !backupfileContent) return;
-                this.editor.commands.clearContent(true);
-                this.editor.commands.insertContent(backupfileContent);
+                if (!ready) return;
+                if (backupfileContent) {
+                    this.editor.commands.clearContent(true);
+                    this.editor.commands.insertContent(backupfileContent);
+                    return;
+                }
+                await this.autoLoadEditorTemplateIfConfigured();
             } catch (error) {
                 console.error(`editor @ loadBackupFileSilent: ${error}`);
             }
@@ -2564,6 +2568,7 @@ export default {
 
         // Detect platform using navigator.platform (available in renderer process)
         this.isMac = navigator.platform.toLowerCase().includes('mac');
+        await this.fetchInfo();
         this.syncEditorVisualSettings();
         this.createEditor(); // this initializes the editor
         // Backup/template Swal must finish before mouseleave/visibility guards — Swal focus trap triggers false positives.
