@@ -1331,10 +1331,6 @@ export default {
             this.syncLoginFieldsFromClientinfo();
             applyServerstatusFromFetch(this, getinfo.serverstatus || null);
 
-            if (getinfo.clientinfo.exammode) {
-                return;
-            }  // do not stress ui updates if exammode is active
-
             // Only set token if changed
             const newToken = this.clientinfo.token;
             if (this.token !== newToken) {
@@ -1814,8 +1810,13 @@ export default {
 
         // Focus username only when not on BiP and not already connected to a teacher
         this.$nextTick(() => {
-            if (this.$refs.userInput && !this.bipToken && !this.token) {
-                this.$refs.userInput.focus();
+            const el = this.$refs.userInput;
+            if (!el || this.bipToken || this.token) return;
+            el.focus();
+            // Windows selects all on focus; caret at end avoids :value + select-all clearing the field
+            const len = (this.username || '').length;
+            if (len > 0) {
+                try { el.setSelectionRange(len, len); } catch (_) {}
             }
         });
 

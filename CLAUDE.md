@@ -6,6 +6,17 @@ Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-s
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
 
+## Agent coding — non-negotiable (HARD STOP)
+
+> **Every agent that writes or edits code MUST obey this. Always. No exceptions. No "while I'm here". No "might be useful later".**
+
+1. **Only necessary code.** Every added or changed line must be **required** to satisfy the user's request. Nothing speculative, nothing extra.
+2. **Minimal diff.** Touch as few lines as possible. Prefer the **smallest** edit that solves the problem. A 5-line fix beats a 100-line rewrite.
+3. **No overengineering.** No extra abstractions, helpers, files, wrappers, refactors, config knobs, defensive error handling, or drive-by "improvements" the user did not ask for.
+4. **Before you finish:** For each changed line ask: *required for this request?* If no → delete. *Would a senior engineer call this overbuilt?* If yes → simplify.
+
+§2 and §3 spell out how; **this rule wins when in doubt.**
+
 ## 0. Compact replies (token budget)
 
 > **HARD STOP — caveman mode is ALWAYS ON. Default, every reply, no trigger needed.**
@@ -41,7 +52,7 @@ Before implementing:
 
 ## 2. Simplicity First
 
-**Minimum code that solves the problem. Nothing speculative.**
+**Minimum code that solves the problem. Nothing speculative. Mandatory for all code edits (see HARD STOP above).**
 
 - No features beyond what was asked.
 - No abstractions for single-use code.
@@ -54,7 +65,7 @@ Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, sim
 
 ## 3. Surgical Changes
 
-**Touch only what you must. Clean up only your own mess.**
+**Touch only what you must. Clean up only your own mess. Smallest possible diff — mandatory (see HARD STOP above).**
 
 When editing existing code:
 - Don't "improve" adjacent code, comments, or formatting.
