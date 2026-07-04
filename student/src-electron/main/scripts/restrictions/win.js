@@ -14,6 +14,7 @@ const __dirname = import.meta.dirname;
 // Never kill these via appsToClose substring match (AA kiosk + normal exam).
 const WIN_APPS_KILL_SKIP = new Set(['explorer', 'powershell', 'reg', 'whoami', 'netsh', 'cmd']);
 
+
 /** Kill appsToClose processes by name — one process scan, kill matches only. */
 export async function killWindowsAppsToClose(appsToClose) {
     const stems = [...new Set(appsToClose
