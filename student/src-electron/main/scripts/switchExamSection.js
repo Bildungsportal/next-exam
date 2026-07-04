@@ -44,7 +44,7 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
 
 
 
-    if (previousExamtype === 'editor' || previousExamtype === 'math') {
+    if (previousExamtype === 'editor' || previousExamtype === 'math' || previousExamtype === 'activesheets') {
         const examWin = WindowHandler.mainWin();
         if (examWin && !examWin.isDestroyed()) {
             examWin.webContents.send('save', 'auto');

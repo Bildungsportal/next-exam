@@ -6,11 +6,12 @@
 /** Ink color for pen strokes and free-text annotations (activesheet + preview). */
 export const ANNOTATION_INK_COLOR = '#0a2472';
 export const ANNOTATION_INK_STROKE = 'rgba(10, 36, 114, 0.95)';
+const DRAW_ANNOTATION_TOOLS = new Set(['highlight-yellow', 'highlight-green', 'highlight-blue', 'highlight-red', 'underline-red', 'pen-red']);
 
 export const pdfPageAnnotationsMixin = {
     data() {
         return {
-            tool: 'highlight-yellow',
+            tool: null,
             annotationInkColor: ANNOTATION_INK_COLOR,
             annotationInkStroke: ANNOTATION_INK_STROKE,
             isDrawing: false,
@@ -169,7 +170,7 @@ export const pdfPageAnnotationsMixin = {
             return { x, y };
         },
         startDraw(event, pageIndex) {
-            if (this.tool === 'delete' || this.tool === 'text') return;
+            if (!DRAW_ANNOTATION_TOOLS.has(this.tool)) return;
             event.preventDefault();
             event.stopPropagation();
             const { x, y } = this.getRelativePoint(event);

@@ -386,26 +386,34 @@ export default {
             this.localfiles = filelist;
         },
         
+        // Wait until PdfOverlay rendered interactive fields (same readiness as backup restore).
+        async waitForActivesheetsInputsReady(maxAttempts = 100, delayMs = 100) {
+            for (let attempts = 0; attempts < maxAttempts; attempts++) {
+                if (document.querySelectorAll('.interactive-input').length > 0) {
+                    await this.sleep(100);
+                    return true;
+                }
+                await this.sleep(delayMs);
+            }
+            console.error(`activesheets @ waitForActivesheetsInputsReady: inputs not ready after ${maxAttempts} attempts`);
+            return false;
+        },
+
         // Silent restore of clientname.htm after exam-section switch (no confirm dialog).
         async loadBackupFileSilent(filename = false) {
             const backupfileName = filename ? filename : `${this.clientname}.htm`;
             try {
-                const backupfileContent = await signalBridge.invoke('getbackupfile', backupfileName);
-                if (!backupfileContent) return;
+                const [backupfileContent, ready] = await Promise.all([
+                    signalBridge.invoke('getbackupfile', backupfileName),
+                    this.waitForActivesheetsInputsReady(),
+                ]);
+                if (!ready || !backupfileContent) return;
                 try {
                     JSON.parse(backupfileContent);
                 } catch {
                     return;
                 }
-                for (let attempts = 0; attempts < 50; attempts++) {
-                    const hasInputs = document.querySelectorAll('.interactive-input').length > 0;
-                    if (hasInputs || !this.isLoading) {
-                        await this.sleep(100);
-                        await this.loadBAK(backupfileName, true, true);
-                        return;
-                    }
-                    await this.sleep(100);
-                }
+                await this.loadBAK(backupfileName, true, true);
             } catch (error) {
                 console.error(`activesheets @ loadBackupFileSilent: ${error}`);
             }
@@ -429,19 +437,13 @@ export default {
                     }
                     
                     console.log(`activesheets @ loadBackupFile: Backup file found with valid JSON, waiting for PDF renderer to be ready before showing dialog`)
-                    // Wait for PDF renderer to be fully initialized before showing dialog
                     const waitForPdfRenderer = async () => {
-                        let attempts = 0
-                        const maxAttempts = 50 // 5 seconds max wait
-                        
-                        while (attempts < maxAttempts) {
-                            // Check if PDF renderer is ready by looking for interactive inputs
-                            const hasInputs = document.querySelectorAll('.interactive-input').length > 0
-                            if (hasInputs || !this.isLoading) {
-                                console.log(`activesheets @ loadBackupFile: PDF renderer ready, showing dialog`)
-                                // Wait one more frame to ensure DOM is ready
-                                await this.sleep(100)
-                                this.$swal.fire({
+                        if (!await this.waitForActivesheetsInputsReady()) {
+                            console.error(`activesheets @ loadBackupFile: PDF renderer not ready`)
+                            return
+                        }
+                        console.log(`activesheets @ loadBackupFile: PDF renderer ready, showing dialog`)
+                        this.$swal.fire({
                                     title: this.$t("editor.backupfound"),
                                     html:  `${this.$t("editor.replacecontent1")} <b>${backupfileName}</b> ${this.$t("editor.replacecontent2")}`,
                                     icon: "question",
@@ -463,12 +465,6 @@ export default {
                                 .catch((error) => {
                                     console.error(`activesheets @ loadBackupFile: Error showing dialog: ${error}`)
                                 })
-                                return
-                            }
-                            attempts++
-                            await this.sleep(100)
-                        }
-                        console.error(`activesheets @ loadBackupFile: PDF renderer not ready after ${maxAttempts} attempts`)
                     }
                     waitForPdfRenderer()
                 } else {
@@ -939,7 +935,7 @@ export default {
             this.loadFilelist()
             await this.getExamMaterials()
 
-            this.loadPdfParserHtml()
+            await this.loadPdfParserHtml()
 
             if (this.$route.query.restore === '1') {
                 await this.loadBackupFileSilent();
