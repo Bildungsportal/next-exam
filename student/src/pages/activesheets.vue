@@ -386,6 +386,31 @@ export default {
             this.localfiles = filelist;
         },
         
+        // Silent restore of clientname.htm after exam-section switch (no confirm dialog).
+        async loadBackupFileSilent(filename = false) {
+            const backupfileName = filename ? filename : `${this.clientname}.htm`;
+            try {
+                const backupfileContent = await signalBridge.invoke('getbackupfile', backupfileName);
+                if (!backupfileContent) return;
+                try {
+                    JSON.parse(backupfileContent);
+                } catch {
+                    return;
+                }
+                for (let attempts = 0; attempts < 50; attempts++) {
+                    const hasInputs = document.querySelectorAll('.interactive-input').length > 0;
+                    if (hasInputs || !this.isLoading) {
+                        await this.sleep(100);
+                        await this.loadBAK(backupfileName, true, true);
+                        return;
+                    }
+                    await this.sleep(100);
+                }
+            } catch (error) {
+                console.error(`activesheets @ loadBackupFileSilent: ${error}`);
+            }
+        },
+
         async loadBackupFile(filename=false){
             // check if there is an htm backup in the exam directory and load it
             // This must run early to read the file before it gets overwritten
@@ -453,7 +478,7 @@ export default {
                 console.error(`activesheets @ loadBackupFile: Error loading backup file: ${error}`)
             }
         },
-        async loadBAK(filename, skipDialog=false) {
+        async loadBAK(filename, skipDialog = false, silent = false) {
             try {
                 // Show confirmation dialog before loading (unless skipDialog is true)
                 if (!skipDialog) {
@@ -477,11 +502,13 @@ export default {
                 
                 if (!bakContent) {
                     console.warn('activesheets @ loadBAK: No content found in .htm file');
-                    this.$swal.fire({
-                        title: this.$t('editor.error') || 'Fehler',
-                        text: this.$t('editor.backupnotfound') || 'Backup-Datei konnte nicht gelesen werden',
-                        icon: 'error'
-                    });
+                    if (!silent) {
+                        this.$swal.fire({
+                            title: this.$t('editor.error') || 'Fehler',
+                            text: this.$t('editor.backupnotfound') || 'Backup-Datei konnte nicht gelesen werden',
+                            icon: 'error'
+                        });
+                    }
                     return;
                 }
                 
@@ -514,21 +541,25 @@ export default {
                 });
                 
                 console.log('activesheets @ loadBAK: Successfully loaded form data from', filename);
-                
-                this.$swal.fire({
-                    title: this.$t('editor.success') || 'Erfolg',
-                    text: this.$t('editor.backuploaded') || 'Backup erfolgreich geladen',
-                    icon: 'success',
-                    timer: 2000,
-                    timerProgressBar: true
-                });
+
+                if (!silent) {
+                    this.$swal.fire({
+                        title: this.$t('editor.success') || 'Erfolg',
+                        text: this.$t('editor.backuploaded') || 'Backup erfolgreich geladen',
+                        icon: 'success',
+                        timer: 2000,
+                        timerProgressBar: true
+                    });
+                }
             } catch (error) {
                 console.error('activesheets @ loadBAK: Error loading .htm file:', error);
-                this.$swal.fire({
-                    title: this.$t('editor.error') || 'Fehler',
-                    text: this.$t('editor.backuperror') || 'Fehler beim Laden der Backup-Datei',
-                    icon: 'error'
-                });
+                if (!silent) {
+                    this.$swal.fire({
+                        title: this.$t('editor.error') || 'Fehler',
+                        text: this.$t('editor.backuperror') || 'Fehler beim Laden der Backup-Datei',
+                        icon: 'error'
+                    });
+                }
             }
         },
         formatTime: formatFocusLostTime,
@@ -910,8 +941,11 @@ export default {
 
             this.loadPdfParserHtml()
 
-            console.log(`activesheets @ mounted: Calling loadBackupFile`)
-            this.loadBackupFile()
+            if (this.$route.query.restore === '1') {
+                await this.loadBackupFileSilent();
+            } else {
+                this.loadBackupFile();
+            }
             setTimeout(() => {
                 signalBridge.invoke('prewarmSubmissionSigningP12').catch(() => {})
             }, 400)

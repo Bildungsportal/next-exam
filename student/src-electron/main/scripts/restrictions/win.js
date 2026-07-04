@@ -14,29 +14,23 @@ const __dirname = import.meta.dirname;
 // Never kill these via appsToClose substring match (AA kiosk + normal exam).
 const WIN_APPS_KILL_SKIP = new Set(['explorer', 'powershell', 'reg', 'whoami', 'netsh', 'cmd']);
 
-/**
- * Kill appsToClose processes by name (safe for Win Assigned Access — no explorer/AA internals).
- * @param {string[]} appsToClose - app names to kill
- */
+/** Kill appsToClose processes by name — one process scan, kill matches only. */
 export async function killWindowsAppsToClose(appsToClose) {
-    try {
-        for (const app of appsToClose) {
-            const stem = String(app).replace(/\.exe$/i, '').trim().toLowerCase();
-            if (!stem || WIN_APPS_KILL_SKIP.has(stem)) continue;
-            const escapedApp = app.replace(/'/g, "''");
-            const command = `powershell -NoProfile -Command "$appName = '${escapedApp}'; try { $procs = @(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -ilike ('*' + $appName + '*') }); if ($procs.Count -gt 0) { $procs | Stop-Process -Force -ErrorAction SilentlyContinue; Write-Output 'killed' } } catch { }"`;
-            await new Promise((resolveApp) => {
-                childProcess.exec(command, (error, stdout, stderr) => {
-                    if (!error && stdout && stdout.trim().includes('killed')) {
-                        log.info(`platformrestrictions @ killWindowsAppsToClose: closed ${app}`);
-                    }
-                    resolveApp();
-                });
-            });
-        }
-    } catch (err) {
-        // silently ignore errors
-    }
+    const stems = [...new Set(appsToClose
+        .map((app) => String(app).replace(/\.exe$/i, '').trim().toLowerCase())
+        .filter((stem) => stem && !WIN_APPS_KILL_SKIP.has(stem)))];
+    if (stems.length === 0) return;
+
+    const needles = stems.map((s) => `'${s.replace(/'/g, "''")}'`).join(',');
+    const command = `powershell -NoProfile -Command "$needles=@(${needles});Get-Process -EA SilentlyContinue|ForEach-Object{$pn=$_.ProcessName.ToLower();foreach($n in $needles){if($pn -like ('*'+$n+'*')){Stop-Process -Id $_.Id -Force -EA SilentlyContinue;Write-Output $_.ProcessName;break}}}"`;
+
+    await new Promise((resolve) => {
+        childProcess.exec(command, (_error, stdout) => {
+            const killed = stdout?.trim();
+            if (killed) log.info(`platformrestrictions @ killWindowsAppsToClose: closed ${killed.replace(/\r?\n/g, ', ')}`);
+            resolve();
+        });
+    });
 }
 
 /** Kill explorer.exe during exam lockdown (normal Win session, not Assigned Access). */
