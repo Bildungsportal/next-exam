@@ -147,31 +147,36 @@ class WindowHandler {
         win.setFullScreen(false);
     }
 
+    /** Fullscreen + always-on-top + focus before slow platform restrictions run. */
+    raiseExamWindowToFront(win) {
+        if (!win || win.isDestroyed?.()) return;
+        this.applyElectronKioskMode(win);
+        // AAC owns stacking; screen-saver alwaysOnTop breaks simple fullscreen / notch
+        if (!platformDispatcher.skipElectronKiosk && !isAssessmentSessionActive()) {
+            win.setAlwaysOnTop(true, 'screen-saver', 1);
+        }
+        win.show();
+        win.moveTop();
+        win.focus();
+    }
+
     /** applyElectronKioskMode + restrictions after exam route finished loading */
     async applyExamWindowLockdown(win) {
         if (!win || win.isDestroyed?.()) return;
         if (this.config.showdevtools) { win.webContents.openDevTools() }
         if (this.config.development) return;
         try {
-            win.removeMenu()
-            this.applyElectronKioskMode(win);
-
-            await this.sleep(500)
+            win.removeMenu();
+            this.raiseExamWindowToFront(win);
             if (!win || win.isDestroyed?.()) return;
-            win.moveTop()
-            win.focus()
 
             if (platformDispatcher.skipElectronKiosk) {
-                await killWinKioskExamApps(this.multicastClient?.clientinfo)
+                await killWinKioskExamApps(this.multicastClient?.clientinfo);
             } else {
-                await enableRestrictions(this)
-                await this.sleep(1000)
-                if (!win || win.isDestroyed?.()) return;
-                // AAC owns stacking; screen-saver alwaysOnTop breaks simple fullscreen / notch
                 if (!isAssessmentSessionActive()) {
-                    win.setAlwaysOnTop(true, "screen-saver", 1)
-                    this.addBlurListener(win)
+                    this.addBlurListener(win);
                 }
+                await enableRestrictions(this);
             }
         } catch (e) {
             log.error('windowhandler @ applyExamWindowLockdown:', e)

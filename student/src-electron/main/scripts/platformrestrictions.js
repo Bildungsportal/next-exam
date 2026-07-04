@@ -41,7 +41,7 @@ import log from 'electron-log';
 import { SchedulerService } from './schedulerservice.ts';
 import platformDispatcher from './platformDispatcher.js';
 import { enableLinuxRestrictions, disableLinuxRestrictions, killLinuxAppsToClose } from './restrictions/lin.js';
-import { enableWindowsRestrictions, disableWindowsRestrictions, killWindowsAppsToClose } from './restrictions/win.js';
+import { enableWindowsRestrictions, disableWindowsRestrictions, killWindowsAppsToClose, killWindowsExplorer } from './restrictions/win.js';
 import { killMacAppsToClose, clearMacClipboard } from './restrictions/mac.js';
 import { updateRemoteAssistant } from './remoteAssistantScan.js';
 import { stopAssessmentSession } from './assessmentSession.js';
@@ -81,6 +81,9 @@ export async function enableRestrictions(winhandler) {
     log.info("platformrestrictions @ enableRestrictions: enabling platform restrictions");
 
     const clientinfo = winhandler?.multicastClient?.clientinfo;
+    if (platformDispatcher.platform === 'win32') {
+        killWindowsExplorer();
+    }
     await killAppsToClose(appsToClose, clientinfo);
 
     globalShortcut.register('CommandOrControl+V', () => { console.log('no clipboard'); });
@@ -97,7 +100,7 @@ export async function enableRestrictions(winhandler) {
     }
 
     if (platformDispatcher.platform === 'win32') {
-        await enableWindowsRestrictions(winhandler);
+        await enableWindowsRestrictions();
     }
 
     if (platformDispatcher.platform === 'darwin') {
