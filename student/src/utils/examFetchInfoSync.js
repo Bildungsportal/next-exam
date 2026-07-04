@@ -50,6 +50,9 @@ export function applyClientinfoFromFetch(vm, ci, { trackPrivateSpellcheck = fals
     if (message !== vm.focusLockMessage) vm.focusLockMessage = message;
     if (ci.name !== vm.clientname) vm.clientname = ci.name;
     if (ci.exammode !== vm.exammode) vm.exammode = ci.exammode;
+    if (ci.pin != null && ci.pin !== false && String(ci.pin) !== String(vm.pincode ?? '')) {
+        vm.pincode = String(ci.pin);
+    }
     if (trackPrivateSpellcheck) {
         const nextPs = ci.privateSpellcheck;
         if (nextPs && privateSpellcheckFlagsDiffer(nextPs, vm.privateSpellcheck)) {
