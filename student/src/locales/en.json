@@ -123,6 +123,8 @@
         "more": "more",
         "noPdfToSend": "No PDF available to send. Please try submitting again.",
         "paste": "paste",
+        "pdfAnnotationClearTool": "Deselect tool",
+        "pdfAnnotationDelete": "Delete annotation",
         "pdfAnnotationText": "Add text",
         "pdfAnnotationsNotStored": "Annotations are not stored in the document",
         "pdfBusyTimeout": "PDF creation blocked (timeout). Please wait and try again.",

@@ -123,6 +123,8 @@
         "more": "mehr",
         "noPdfToSend": "Keine PDF zum Senden vorhanden. Bitte erneut abgeben.",
         "paste": "einfügen",
+        "pdfAnnotationClearTool": "Werkzeug abwählen",
+        "pdfAnnotationDelete": "Markierung löschen",
         "pdfAnnotationText": "Text hinzufügen",
         "pdfAnnotationsNotStored": "Markierungen werden nicht im Dokument gespeichert",
         "pdfBusyTimeout": "PDF-Erstellung blockiert (Timeout). Bitte kurz warten und erneut versuchen.",

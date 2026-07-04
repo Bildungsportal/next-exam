@@ -2,6 +2,9 @@
     <div id="pdfrenderer" class="pdf-overlay-root">
         <ul v-if="enableAnnotations && parsedPages.length > 0" class="pdf-annotation-toolbar">
             <li>
+                <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === null }" @click.stop="setTool(null)" :title="$t('editor.pdfAnnotationClearTool')">✕</button>
+            </li>
+            <li>
                 <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'highlight-yellow' }" @click.stop="setTool('highlight-yellow')" title="Highlight yellow">
                     <span class="tool-swatch tool-swatch--yellow"></span>
                 </button>
@@ -30,8 +33,8 @@
                 <button type="button" class="btn btn-light pdf-tool-btn pdf-tool-btn--text" :class="{ active: tool === 'text' }" @click.stop="setTool('text')" :title="$t('editor.pdfAnnotationText')">T</button>
             </li>
             <li>
-                <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'delete' }" @click.stop="setTool('delete')" title="Delete">
-                    ✕
+                <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'delete' }" @click.stop="setTool('delete')" :title="$t('editor.pdfAnnotationDelete')">
+                    <img src="/src/assets/img/svg/edit-delete.svg" alt="">
                 </button>
             </li>
         </ul>

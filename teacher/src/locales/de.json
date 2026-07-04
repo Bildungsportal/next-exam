@@ -461,6 +461,8 @@
         "page": "Seite",
         "pages": "Seiten",
         "previewEmbedFallback": "Vorschau über den System-PDF-Viewer (Seitenbilder nicht verfügbar).",
+        "pdfAnnotationClearTool": "Werkzeug abwählen",
+        "pdfAnnotationDelete": "Markierung löschen",
         "pdfAnnotationText": "Text hinzufügen",
         "save": "Speichern",
         "saveCorrection": "Korrektur speichern",

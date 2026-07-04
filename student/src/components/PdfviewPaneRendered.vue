@@ -39,9 +39,10 @@
             <img src="/src/assets/img/svg/document-edit.svg" class="white">
             </button>
             <button type="button" class="btn btn-light pdf-tool-btn pdf-tool-btn--text" :class="{ active: tool === 'text' }" @click.stop="setTool('text')" :title="$t('editor.pdfAnnotationText')">T</button>
-            <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'delete' }" @click.stop="setTool('delete')" title="Delete">
-            ✕
+            <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'delete' }" @click.stop="setTool('delete')" :title="$t('editor.pdfAnnotationDelete')">
+            <img src="/src/assets/img/svg/edit-delete.svg" alt="">
             </button>
+            <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === null }" @click.stop="setTool(null)" :title="$t('editor.pdfAnnotationClearTool')">✕</button>
             <span class="pdf-annotation-hint">{{ $t('editor.pdfAnnotationsNotStored') }}</span>
         </li>
 

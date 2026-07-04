@@ -461,6 +461,8 @@
         "page": "Page",
         "pages": "Pages",
         "previewEmbedFallback": "Preview via system PDF viewer (page images unavailable).",
+        "pdfAnnotationClearTool": "Deselect tool",
+        "pdfAnnotationDelete": "Delete annotation",
         "pdfAnnotationText": "Add text",
         "save": "Save",
         "saveCorrection": "Save correction",

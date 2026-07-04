@@ -50,6 +50,7 @@ export const pdfPageAnnotationsMixin = {
             return true;
         },
         setTool(tool) {
+            if (tool !== this.tool) this.cancelDraw();
             this.tool = tool;
         },
         annotationsForPage(pageIndex) {
