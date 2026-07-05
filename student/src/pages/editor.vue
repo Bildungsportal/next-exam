@@ -2737,6 +2737,7 @@ export default {
 
         this.stopSplitResize()
 
+        signalBridge.removeAllListeners('focusLock')
         signalBridge.removeAllListeners('getmaterials')
         signalBridge.removeAllListeners('finalsubmit')
         signalBridge.removeAllListeners('submitexam')

@@ -414,7 +414,8 @@ export default {
     },
     beforeUnmount() {
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
-        
+        signalBridge.removeAllListeners('getmaterials');
+
         // Clean up webview event listeners (blocking is handled in backend, but we still clean up local listeners)
         const webview = document.getElementById('webviewmain');
         if (webview) {
