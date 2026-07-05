@@ -2615,7 +2615,7 @@ export default {
         });
         signalBridge.on('backup', (event, filename) => {
             console.log("editor @ backup: Replace event received ")
-            this.loadBackupFileSilent(filename)
+            this.loadHTML(filename)
         });
         signalBridge.on('loadfilelist', () => {
             //console.log("editor @ loadfilelist: Reload Files event received ")
