@@ -334,19 +334,20 @@
 
 <style scoped>
     .pdf-toolbar {
-    position: absolute;
-    left: 0;
-    right: 0;
+    position: relative;
+    flex-shrink: 0;
     z-index: 2000;
     pointer-events: auto;
     font-size: 1.1rem;
-    height: 45px;
+    min-height: 45px;
+    height: auto;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    align-content: flex-start;
+    row-gap: 2px;
     gap: 2px !important;
     padding: 0 8px;
-    top: var(--nx-preview-top-offset, 0px);
-    /* Fill .embed-container only; content width is set on that wrapper. */
     width: 100%;
     box-sizing: border-box;
     }
@@ -461,13 +462,11 @@
     user-select: none;
     }
     .render-overlay {
-    position: absolute;
-    top: calc(40px + var(--nx-preview-top-offset, 0px));
-    left: 0;
-    right: 0;
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
     width: 100%;
     box-sizing: border-box;
-    bottom: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -488,9 +487,9 @@
 
     .pdf-scroll-container {
     position: relative;
-    top: calc(40px + var(--nx-preview-top-offset, 0px));
+    flex: 1 1 auto;
+    min-height: 0;
     width: 100%;
-    height: calc(100% - 40px - var(--nx-preview-top-offset, 0px));
     overflow: auto;
     padding: 16px;
     background: rgba(33, 37, 41, 0.92);
@@ -615,7 +614,9 @@
     margin-right: auto;
     height: 100%;
     display: flex;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: stretch;
+    padding-top: var(--nx-preview-top-offset, 0px);
     box-sizing: border-box;
     }
 
