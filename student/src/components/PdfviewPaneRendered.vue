@@ -336,6 +336,7 @@
     .pdf-toolbar {
     position: relative;
     flex-shrink: 0;
+    container-type: inline-size;
     z-index: 2000;
     pointer-events: auto;
     font-size: 1.1rem;
@@ -410,6 +411,12 @@
     color: rgba(108, 117, 125, 0.85);
     white-space: nowrap;
     user-select: none;
+    }
+
+    @container (max-width: 720px) {
+    .pdf-annotation-hint {
+        display: none;
+    }
     }
 
     .pdf-tool-btn.active {
