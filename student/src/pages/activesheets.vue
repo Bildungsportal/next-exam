@@ -432,8 +432,13 @@ export default {
                     try {
                         JSON.parse(backupfileContent);
                     } catch (parseError) {
-                        console.warn(`activesheets @ loadBackupFile: Backup file content is not valid JSON, skipping: ${parseError.message}`);
-                        return; // Don't show dialog if content is not valid JSON
+                        console.warn(`activesheets @ loadBackupFile: Backup file content is not valid JSON: ${parseError.message}`);
+                        this.$swal.fire({
+                            title: this.$t('editor.error') || 'Fehler',
+                            text: this.$t('editor.backupnotjson') || 'Die Datei ist kein gültiges Activesheets-Backup (JSON erwartet).',
+                            icon: 'warning'
+                        });
+                        return;
                     }
                     
                     console.log(`activesheets @ loadBackupFile: Backup file found with valid JSON, waiting for PDF renderer to be ready before showing dialog`)
@@ -476,26 +481,8 @@ export default {
         },
         async loadBAK(filename, skipDialog = false, silent = false) {
             try {
-                // Show confirmation dialog before loading (unless skipDialog is true)
-                if (!skipDialog) {
-                    const result = await this.$swal.fire({
-                        title: this.$t('editor.backupfound') || 'Backup gefunden',
-                        html: `${this.$t('editor.replacecontent1') || 'Do you really want to replace the current input with the saved values from'} <b>${filename}</b> ${this.$t('editor.replacecontent2') || '?'}`,
-                        icon: "question",
-                        showCancelButton: true,
-                        cancelButtonText: this.$t("editor.cancel") || "Abbrechen",
-                        confirmButtonText: this.$t("editor.replace") || "Ersetzen",
-                        reverseButtons: true
-                    });
-                    
-                    if (!result.isConfirmed) {
-                        return; // User cancelled
-                    }
-                }
-                
-                // Read the .htm file via IPC
                 const bakContent = await signalBridge.invoke('getbackupfile', filename);
-                
+
                 if (!bakContent) {
                     console.warn('activesheets @ loadBAK: No content found in .htm file');
                     if (!silent) {
@@ -507,9 +494,36 @@ export default {
                     }
                     return;
                 }
-                
-                // Parse JSON
-                const formData = JSON.parse(bakContent);
+
+                let formData;
+                try {
+                    formData = JSON.parse(bakContent);
+                } catch {
+                    console.warn(`activesheets @ loadBAK: ${filename} is not valid JSON (activesheets backup format required)`);
+                    if (!silent) {
+                        this.$swal.fire({
+                            title: this.$t('editor.error') || 'Fehler',
+                            text: this.$t('editor.backupnotjson') || 'Die Datei ist kein gültiges Activesheets-Backup (JSON erwartet).',
+                            icon: 'warning'
+                        });
+                    }
+                    return;
+                }
+
+                if (!skipDialog) {
+                    const result = await this.$swal.fire({
+                        title: this.$t('editor.replace') || 'Ersetzen',
+                        html: `${this.$t('editor.replacecontent1')} <b>${filename}</b> ${this.$t('editor.replacecontent2')}`,
+                        icon: "question",
+                        showCancelButton: true,
+                        cancelButtonText: this.$t("editor.cancel") || "Abbrechen",
+                        reverseButtons: true
+                    });
+
+                    if (!result.isConfirmed) {
+                        return;
+                    }
+                }
                 
                 // Apply values to input fields based on their IDs
                 // Text inputs
@@ -958,6 +972,7 @@ export default {
         signalBridge.removeAllListeners('submitexam');
         signalBridge.removeAllListeners('save');
         signalBridge.removeAllListeners('denied');
+        signalBridge.removeAllListeners('backup');
         this.stopSplitResize()
     },
     

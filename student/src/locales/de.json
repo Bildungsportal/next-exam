@@ -31,6 +31,7 @@
         "backupfound": "Backup gefunden",
         "backuploaded": "Backup erfolgreich geladen",
         "backupnotfound": "Backup-Datei konnte nicht gelesen werden",
+        "backupnotjson": "Die Datei ist kein gültiges Activesheets-Backup (JSON erwartet).",
         "bildungsportal": "Bildungsportal",
         "blockquote": "Zitat",
         "bold": "fett",
