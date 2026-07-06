@@ -730,7 +730,7 @@ import {
         // <span class=date> ist Chromium-headerTemplate-Magic -> im DOM-Kontext durch ein gerendertes Datum ersetzen
         if (isFullpage) {
             const now = new Date()
-            const dStr = `${String(now.getDate()).padStart(2,'0')}.${String(now.getMonth()+1).padStart(2,'0')}.${now.getFullYear()}`
+            const dStr = `${String(now.getDate()).padStart(2,'0')}.${String(now.getMonth()+1).padStart(2,'0')}.${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
             // Datum-magic ersetzen + margins/top aus dem Editor-Template raus (Wrapper-div positioniert)
             const overlayInner = headerTemplate
                 .replace(/<span class=date[^>]*><\/span>/, `<span style="float:left;">${dStr}</span>`)

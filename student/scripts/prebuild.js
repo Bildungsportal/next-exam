@@ -73,8 +73,6 @@ fs.writeFileSync(configJsPath, configJsContent);
 
 
 
-
-
 const buildVersion = (process.env.VERSION || '2.0.0') + '.' + (process.env.BUILD_NUMBER || '1');
 const filename = `${process.env.PRODUCT_NAME || 'Next-Exam-Student'}_${process.env.VERSION}.${process.env.BUILD_NUMBER}_${buildDate}`;
 

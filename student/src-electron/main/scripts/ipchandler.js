@@ -37,7 +37,6 @@ import languageToolServer from './lt-server';
 import platformDispatcher from './platformDispatcher.js';
 import { isAssessmentSessionActive } from './assessmentSession.js';
 import { updateSystemTray } from './traymenu.js';
-import { ensureNetworkOrReset } from './testpermissionsMac.js';
 import { getWlanInfo } from './getwlaninfo.js';
 import { switchExamSection } from './switchExamSection.js';
 import { startProxy, stopProxy } from './vncproxy.js';
@@ -1536,6 +1535,20 @@ class IpcHandler {
             }   
         })
 
+        // Ping teacher HTTPS API from main process (examApiFetch sends app secret; avoids renderer CORS).
+        ipcMain.handle('pingexamserver', async (event, { serverip } = {}) => {
+            if (!serverip) return { ok: false };
+            try {
+                const response = await examApiFetch(
+                    `https://${serverip}:${this.config.serverApiPort}/server/control/pong`,
+                    { method: 'GET', signal: AbortSignal.timeout(4000) }
+                );
+                return { ok: response.ok };
+            } catch {
+                return { ok: false };
+            }
+        });
+
         // Screenshot config for frontend scheduler (serverip, port, clientinfo, interval)
         ipcMain.handle('getScreenshotConfig', async () => {
             const ci = this.multicastClient.clientinfo;
@@ -1673,22 +1686,8 @@ class IpcHandler {
                 let errorMessage = error.message;
                 if (error.name === 'AbortError') { errorMessage = "The request timed out";   }
                 log.error(`ipchandler @ register: ${errorMessage}`);
-             
-                // on macos the permission settings in rare cases mess up the ability to fetch the teacher api 
-                // check for network permissions on macOS and reset them if needed
-                if (process.platform === "darwin"){    
-                    let response = await ensureNetworkOrReset(serverip, this.config.serverApiPort); 
-                    if (response && response === "reset") {   // quit the app if the user wants to reset the permissions
-                        app.quit();
-                        return
-                    }
-                }
-                
-                // show warning message if the user does not want to reset the permissions
                 event.returnValue = { sender: "client", message: t("student.networkError"), status: "error" };
-                return;  
-                    
-                
+                return;
             });
         })
 

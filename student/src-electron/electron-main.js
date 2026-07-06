@@ -138,7 +138,7 @@ app.on('second-instance', () => {
     log.warn("main @ singleinstance: prevented second start of next-exam. Restoring existing Next-Exam window.")
     if (WindowHandler.mainwindow) {
         if (WindowHandler.mainwindow.isMinimized() || !WindowHandler.mainwindow.isVisible()) {
-            WindowHandler.mainwindow.show()
+            WindowHandler.showFromTray()
             WindowHandler.mainwindow.restore()
         } 
         WindowHandler.mainwindow.focus() // Focus on the main window if the user tried to open another

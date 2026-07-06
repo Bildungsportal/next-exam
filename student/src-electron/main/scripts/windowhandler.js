@@ -147,6 +147,18 @@ class WindowHandler {
         win.setFullScreen(false);
     }
 
+    /** Hide main window to tray; on macOS also remove dock icon. */
+    hideToTray() {
+        this.mainwindow.hide();
+        if (platformDispatcher.platform === 'darwin') app.dock.hide();
+    }
+
+    /** Show main window from tray; on macOS restore dock icon. */
+    showFromTray() {
+        if (platformDispatcher.platform === 'darwin') app.dock.show();
+        this.mainwindow.show();
+    }
+
     /** Fullscreen + always-on-top + focus before slow platform restrictions run. */
     raiseExamWindowToFront(win) {
         if (!win || win.isDestroyed?.()) return;
@@ -818,7 +830,7 @@ class WindowHandler {
                     e.preventDefault();
                     await this.showMinimizeWarning()
                     log.warn(`windowhandler @ createMainWindow: Minimizing Next-Exam to Systemtray`)  
-                    this.mainwindow.hide();
+                    this.hideToTray();
                     return;
                 }
             }
