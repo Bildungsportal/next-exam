@@ -15,9 +15,9 @@
 
         <!-- toolbar start -->
         <div v-if="editor" class="m-2" id="editortoolbar" style="text-align:left;">
-            <button :title="$t('editor.backup')" @click="saveContent(true, 'manual');"
+            <button :title="$t('editor.saveCopyAs')" @click="saveContent(true, 'manual');"
                     class="invisible-button btn btn-outline-success p-1 me-1 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/document-save.svg" class="white" width="22" height="22"></button>
+                src="/src/assets/img/svg/document-save-as.svg" class="" width="22" height="22"></button>
             <!-- <button :title="$t('editor.print')" @click="sendExamToTeacher();" class="invisible-button btn btn-outline-success p-1 me-1 mb-1 btn-sm"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="22" ></button> -->
             <button :title="$t('editor.undo')" @click="editor.chain().focus().undo().run()"
                     class="invisible-button btn btn-outline-warning p-1 me-0 mb-1 btn-sm"><img
@@ -295,9 +295,9 @@
 
                 <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
                 <div id="getmaterialsbutton"
-                     class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
+                     class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 ms-2 mb-0 btn-sm"
                      @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img
-                    src="/src/assets/img/svg/games-solve.svg" class="white" width="22" height="22"
+                    src="/src/assets/img/svg/gtk-convert.svg" class="white" width="22" height="22"
                     style="vertical-align: top;"> {{ $t('editor.materials') }}
                 </div>
 
@@ -1731,7 +1731,7 @@ export default {
 
             if (why === "manual") {
                 await this.$swal({
-                    title: this.$t("math.filename"),
+                    title: this.$t("editor.saveCopyAs"),
                     icon: "question",
                     input: 'text',
                     inputPlaceholder: 'Type here...',

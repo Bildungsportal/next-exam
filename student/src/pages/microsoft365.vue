@@ -17,9 +17,9 @@
             </button>
 
 
-            <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
+            <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 ms-2 mb-0 btn-sm"
                  @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img
-                src="/src/assets/img/svg/games-solve.svg" class="white" width="22" height="22"
+                src="/src/assets/img/svg/gtk-convert.svg" class="white" width="22" height="22"
                 style="vertical-align: top;"> {{ $t('editor.materials') }}
             </div>
 
