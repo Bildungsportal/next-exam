@@ -125,26 +125,42 @@ class WindowHandler {
         await this.navigateHashRoute(win, hashRoute)
     }
 
-    /** Platform-aware fullscreen for exam/screenlock windows (not Win-AA shell). */
-    applyElectronKioskMode(win) {
+    /** Win/Linux without Cage/AA: Electron setKiosk; macOS AAC/Cage/AA shells skip this. */
+    _shouldUseElectronSetKiosk() {
+        const p = platformDispatcher.platform;
+        return p !== 'darwin' && !platformDispatcher.skipElectronKiosk && !platformDispatcher.runningInCage;
+    }
+
+    /** Platform-aware exam lockdown (setKiosk on Win/Linux; simpleFullscreen on macOS). */
+    applyElectronKioskMode(win, { fullscreenOnly = false } = {}) {
         if (!win || win.isDestroyed?.()) return;
         if (platformDispatcher.skipElectronKiosk) return;
         if (platformDispatcher.platform === 'darwin') {
             win.setSimpleFullScreen(true);
             return;
         }
-        win.setFullScreen(true);
+        if (platformDispatcher.runningInCage) return;
+        if (fullscreenOnly || !this._shouldUseElectronSetKiosk()) {
+            win.setFullScreen(true);
+            return;
+        }
+        win.setKiosk(true);
     }
 
     /** Inverse of applyElectronKioskMode when leaving exam routes. */
-    releaseElectronKioskMode(win) {
+    releaseElectronKioskMode(win, { fullscreenOnly = false } = {}) {
         if (!win || win.isDestroyed?.()) return;
         if (platformDispatcher.skipElectronKiosk) return;
         if (platformDispatcher.platform === 'darwin') {
             win.setSimpleFullScreen(false);
             return;
         }
-        win.setFullScreen(false);
+        if (platformDispatcher.runningInCage) return;
+        if (fullscreenOnly || !this._shouldUseElectronSetKiosk()) {
+            win.setFullScreen(false);
+            return;
+        }
+        win.setKiosk(false);
     }
 
     /** Hide main window to tray; on macOS also remove dock icon. */
@@ -482,7 +498,7 @@ class WindowHandler {
             
             screenlockWindow.removeMenu() 
             screenlockWindow.setMinimizable(false)
-            this.applyElectronKioskMode(screenlockWindow)
+            this.applyElectronKioskMode(screenlockWindow, { fullscreenOnly: true })
             screenlockWindow.setAlwaysOnTop(true, "pop-up-menu", 1)   //above exam window (pop-up-menu, 0)
             screenlockWindow.show()
             screenlockWindow.moveTop();
