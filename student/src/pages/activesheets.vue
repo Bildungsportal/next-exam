@@ -398,6 +398,22 @@ export default {
             return false;
         },
 
+        // Backup .htm only — awaited by main before section file shuffle.
+        async saveSectionSwitchBackup() {
+            const ready = await this.waitForActivesheetsInputsReady();
+            if (!ready) return false;
+            const formData = collectActivesheetsFormData(
+                document.getElementById('pdfrenderer'),
+                this.activeSheetPdfFilename || 'unknown.pdf'
+            );
+            const result = await signalBridge.invoke('writeExamHtmBackupSync', {
+                filename: this.clientname,
+                content: JSON.stringify(formData, null, 2),
+                reason: 'sectionswitch',
+            });
+            return result?.status === 'success';
+        },
+
         // Silent restore of clientname.htm after exam-section switch (no confirm dialog).
         async loadBackupFileSilent(filename = false) {
             const backupfileName = filename ? filename : `${this.clientname}.htm`;
@@ -595,7 +611,8 @@ export default {
             if (sectionChanged) this.lockedSection = sectionIndex;
 
             const groupChanged = prevClientinfo != null && getinfo.clientinfo?.group !== prevGroup;
-            if (sectionChanged || serverstatusChanged || groupChanged) {
+            const deferSectionReload = useInfoStore().switchingToSection != null;
+            if ((sectionChanged || serverstatusChanged || groupChanged) && !deferSectionReload) {
                 this.maybeReloadActiveSheetPdf();
             }
 
@@ -652,7 +669,9 @@ export default {
         },
         
         /** Converts the Active Sheet PDF View into a multipage PDF */
-        async saveContent(backup, why) {     
+        async saveContent(backup, why) {
+            if (why === 'auto' && useInfoStore().switchingToSection != null) return;
+
             let filename = false  // this is set manually... otherwise use clientname
             if (why === "manual"){
                 await this.$swal({
@@ -920,8 +939,18 @@ export default {
             signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
                 console.log("activesheets @ save: Teacher saverequest received")
                 this.saveContent(true, why) 
-            }); 
-            
+            });
+            this._onSaveForSectionSwitch = async () => {
+                let ok = false;
+                try {
+                    ok = await this.saveSectionSwitchBackup();
+                } catch (e) {
+                    console.error('activesheets @ save-for-section-switch:', e);
+                }
+                signalBridge.send('section-switch-save-done', ok);
+            };
+            signalBridge.on('save-for-section-switch', this._onSaveForSectionSwitch);
+
             signalBridge.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
                 this.printdenied(why)
             });
@@ -970,6 +999,7 @@ export default {
         signalBridge.removeAllListeners('finalsubmit');
         signalBridge.removeAllListeners('submitexam');
         signalBridge.removeAllListeners('save');
+        signalBridge.removeAllListeners('save-for-section-switch');
         signalBridge.removeAllListeners('denied');
         signalBridge.removeAllListeners('backup');
         this.stopSplitResize()

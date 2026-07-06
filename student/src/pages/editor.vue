@@ -1726,6 +1726,7 @@ export default {
 
         /** Converts the Editor View into a multipage PDF */
         async saveContent(backup, why) {
+            if (why === 'auto' && useInfoStore().switchingToSection != null) return;
 
             let filename = this.currentFile  // this can be set manually... otherwise currentFile is used (clientname unless you load another file)
 
@@ -2420,6 +2421,19 @@ export default {
             });
         },
         
+        // Backup .htm only — awaited by main before section file shuffle.
+        async saveSectionSwitchBackup() {
+            if (!this.editor) return false;
+            const ready = await this.waitForEditorReady();
+            if (!ready) return false;
+            const result = await signalBridge.invoke('writeExamHtmBackupSync', {
+                filename: this.currentFile,
+                content: this.editor.getHTML(),
+                reason: 'sectionswitch',
+            });
+            return result?.status === 'success';
+        },
+
         // Silent restore of clientname.htm after exam-section switch (no confirm dialog).
         async loadBackupFileSilent(filename = false) {
             const backupfileName = filename ? filename : `${this.clientname}.htm`;
@@ -2592,6 +2606,16 @@ export default {
             console.log("editor @ save: Teacher saverequest received")
             this.saveContent(true, why)
         });
+        this._onSaveForSectionSwitch = async () => {
+            let ok = false;
+            try {
+                ok = await this.saveSectionSwitchBackup();
+            } catch (e) {
+                console.error('editor @ save-for-section-switch:', e);
+            }
+            signalBridge.send('section-switch-save-done', ok);
+        };
+        signalBridge.on('save-for-section-switch', this._onSaveForSectionSwitch);
         signalBridge.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
             this.printdenied(why)
         });
@@ -2725,6 +2749,7 @@ export default {
         signalBridge.removeAllListeners('submitexam')
         signalBridge.removeAllListeners('fileerror')
         signalBridge.removeAllListeners('save')
+        signalBridge.removeAllListeners('save-for-section-switch');
         signalBridge.removeAllListeners('denied')
         signalBridge.removeAllListeners('backup')
         signalBridge.removeAllListeners('loadfilelist')

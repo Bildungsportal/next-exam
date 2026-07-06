@@ -1,11 +1,39 @@
 import log from 'electron-log';
 import fs from 'fs';
+import { webContents, ipcMain } from 'electron';
 import WindowHandler from './windowhandler.js';
 import config from '../config.js';
 import multicastClient from './multicastclient.js';
-import { webContents } from 'electron';
 
-export async function switchExamSection(CommunicationHandler, serverstatus, newSectionNumber){
+const SECTION_SAVE_TIMEOUT_MS = 10000;
+const NEEDS_BACKUP_SAVE = ['editor', 'math', 'activesheets'];
+
+/** True while save → shuffle → reroute pipeline is running (blocks stray examDir writes). */
+export function isSectionSwitchRunning() {
+    return !!switchExamSection._running;
+}
+
+/** Ask renderer to flush .htm/.ggb backup; resolves when write finished or timed out. */
+function awaitRendererBackup(webContents, previousExamtype) {
+    if (!NEEDS_BACKUP_SAVE.includes(previousExamtype)) return Promise.resolve(true);
+    if (!webContents || webContents.isDestroyed?.()) return Promise.resolve(false);
+    return new Promise((resolve) => {
+        const onDone = (_event, ok) => {
+            clearTimeout(timer);
+            ipcMain.removeListener('section-switch-save-done', onDone);
+            resolve(ok !== false);
+        };
+        const timer = setTimeout(() => {
+            ipcMain.removeListener('section-switch-save-done', onDone);
+            log.warn('switchExamSection: backup save timed out');
+            resolve(false);
+        }, SECTION_SAVE_TIMEOUT_MS);
+        ipcMain.once('section-switch-save-done', onDone);
+        webContents.send('save-for-section-switch', previousExamtype);
+    });
+}
+
+export async function switchExamSection(CommunicationHandler, serverstatus, newSectionNumber) {
     if (switchExamSection._running) {
         log.warn('switchExamSection: already running, skip duplicate');
         return;
@@ -18,143 +46,73 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
         log.warn(`switchExamSection: invalid section ${newSectionNumber}`);
         return;
     }
+
     switchExamSection._running = true;
-    try {
     const examWin = WindowHandler.mainWin();
-    if (examWin?.webContents && !examWin.isDestroyed?.()) {
-        examWin.webContents.send('switching-exam-section', newSectionNumber);
-    }
-    const currentLockedSection = multicastClient.clientinfo.lockedSection; // Current section number (source for saving)
-    const previousExamtype = multicastClient.clientinfo.examtype;
-    const newLockedSection = newSectionNumber; // New section number (source for loading)
+    const fromSection = multicastClient.clientinfo.lockedSection;
+    const fromExamtype = multicastClient.clientinfo.examtype;
+    const toSection = newSectionNumber;
     const examDir = config.examdirectory;
 
-    log.warn(`switchExamSection: changing section to ${newLockedSection } ${serverstatus.examSections[newLockedSection].sectionname} , Examtype: ${serverstatus.examSections[newLockedSection].examtype}` )
-
-    // Disabled: section switch must not submit to teacher — only explicit student submit actions may upload.
-    // if (multicastClient.clientinfo.examtype === "editor"){
-    //     log.info("switchExamSection: sending exam to teacher (final submit)")
-    //     let pdf = await CommunicationHandler.getBase64PDF(multicastClient.clientinfo.submissionnumber, serverstatus.examSections[currentLockedSection].sectionname)
-    //     if (pdf.status === "success"){
-    //         CommunicationHandler.sendBase64PDFtoTeacher(pdf.base64pdf, currentLockedSection)
-    //     }
-    // }
-    // CommunicationHandler.sendToTeacher()
-
-
-
-
-    if (previousExamtype === 'editor' || previousExamtype === 'math' || previousExamtype === 'activesheets') {
-        const examWin = WindowHandler.mainWin();
-        if (examWin && !examWin.isDestroyed()) {
-            examWin.webContents.send('save', 'auto');
-        }
-    }
-
-    //wait before file copy so auto-save can finish
-    await CommunicationHandler.sleep(2000);
-
-    // update examtype in clientinfo
-    multicastClient.clientinfo.examtype = serverstatus.examSections[newLockedSection].examtype
-    // Update the locked section AFTER saving the old state
-    multicastClient.clientinfo.lockedSection = newLockedSection;
-
-
-
-    // MOVE Section Files to a subdirectory named by the CURRENT locked section
     try {
-        // PART 1: SAVE CURRENT EXAMDIR FILES to a subdirectory named by the CURRENT locked section
-                        
-        if (fs.existsSync(examDir) && currentLockedSection != null && currentLockedSection !== undefined) { // Check if main dir exists and a section is currently active
-            
-            log.debug(`switchExamSection: Saving content from examDir to section ${currentLockedSection}`);
+        // --- 1) UI overlay ---
+        if (examWin?.webContents && !examWin.isDestroyed?.()) {
+            examWin.webContents.send('switching-exam-section', toSection);
+        }
+        log.warn(`switchExamSection: ${fromSection} → ${toSection} (${serverstatus.examSections[toSection].sectionname}, ${serverstatus.examSections[toSection].examtype})`);
 
-            const savePath = `${examDir}/${currentLockedSection}`;
-            if (!fs.existsSync(savePath)) {
-                fs.mkdirSync(savePath, { recursive: true }); // Create save directory if it doesn't exist
-            }
+        // --- 2) backup current section (renderer → disk, awaited) ---
+        const backupOk = await awaitRendererBackup(examWin?.webContents, fromExamtype);
+        if (!backupOk && NEEDS_BACKUP_SAVE.includes(fromExamtype)) {
+            log.error('switchExamSection: backup failed — abort');
+            examWin?.webContents?.send('section-switch-aborted');
+            return;
+        }
 
-            const files = fs.readdirSync(examDir);
-            log.info(`switchExamSection: Found ${files.length} items in examDir to save`);
-            
-            let filesSaved = 0;
-            for (const file of files) {
+        // --- 3) shuffle examDir: root → fromSection/, then toSection/ → root ---
+        if (fs.existsSync(examDir) && fromSection != null) {
+            const savePath = `${examDir}/${fromSection}`;
+            if (!fs.existsSync(savePath)) fs.mkdirSync(savePath, { recursive: true });
+            for (const file of fs.readdirSync(examDir)) {
                 const oldPath = `${examDir}/${file}`;
-                const stat = fs.statSync(oldPath); // Get file stats
-                
-                // Only process actual FILES, not directories (like the section folders themselves)
-                if (stat.isFile()) {
-                    const newPath = `${savePath}/${file}`;
-                    fs.copyFileSync(oldPath, newPath); // Copy file
-                    fs.unlinkSync(oldPath); // Delete original file from examDir
-                    filesSaved++;
-                    log.info(`switchExamSection: Saved file ${file} to section ${currentLockedSection}`);
-                } else {
-                    log.info(`switchExamSection: Skipping non-file (folder) item ${file} in examDir`);
-                }
+                if (!fs.statSync(oldPath).isFile()) continue;
+                fs.copyFileSync(oldPath, `${savePath}/${file}`);
+                fs.unlinkSync(oldPath);
             }
-            log.info(`switchExamSection: Successfully saved ${filesSaved} files to section ${currentLockedSection}`);
-        } else {
-            log.warn(`switchExamSection: Skipping save - examDir exists: ${fs.existsSync(examDir)}, currentLockedSection: ${currentLockedSection}`);
+        }
+        const loadPath = `${examDir}/${toSection}`;
+        if (fs.existsSync(loadPath)) {
+            for (const file of fs.readdirSync(loadPath)) {
+                const sourcePath = `${loadPath}/${file}`;
+                if (!fs.statSync(sourcePath).isFile()) continue;
+                fs.copyFileSync(sourcePath, `${examDir}/${file}`);
+            }
         }
 
-        // PART 2: LOAD FILES from the subdirectory named by the NEW locked section to examDir
-        if (newLockedSection != null && newLockedSection !== undefined) {
-            log.debug(`switchExamSection: Loading content from section ${newLockedSection} to examDir`);
+        // --- 4) clientinfo (after files on disk) ---
+        multicastClient.clientinfo.examtype = serverstatus.examSections[toSection].examtype;
+        multicastClient.clientinfo.lockedSection = toSection;
 
-            const loadPath = `${examDir}/${newLockedSection}`;
-            if (fs.existsSync(loadPath)) { // Check if the new section folder exists
-                const filesToLoad = fs.readdirSync(loadPath);
-                log.info(`switchExamSection: Found ${filesToLoad.length} items in section ${newLockedSection} directory`);
-                
-                let filesCopied = 0;
-                for (const file of filesToLoad) {
-                    const sourcePath = `${loadPath}/${file}`;
-                    const destPath = `${examDir}/${file}`;
-                    const stat = fs.statSync(sourcePath);
-                    
-                    if (stat.isFile()) { // Ensure only files are copied back
-                        fs.copyFileSync(sourcePath, destPath); // Copy file to examDir
-                        filesCopied++;
-                        log.info(`switchExamSection: Copied file ${file} from section ${newLockedSection} to examDir`);
-                    } else {
-                        log.warn(`switchExamSection: Skipping non-file item ${file} in section ${newLockedSection} directory`);
-                    }
-                }
-                log.info(`switchExamSection: Successfully copied ${filesCopied} files from section ${newLockedSection} to examDir`);
-            } else {
-                log.info(`switchExamSection: New locked section directory ${newLockedSection} does not exist. Starting with a clean state.`);
-            }
-        } else {
-            log.warn(`switchExamSection: newLockedSection is falsy (${newLockedSection}), skipping file load`);
+        // --- 5) reroute to new exam view ---
+        if (!examWin || examWin.isDestroyed?.()) {
+            log.warn('switchExamSection: no mainwindow for reroute');
+            return;
         }
+        if (fromExamtype === 'localvm' || multicastClient.clientinfo.localVMState === 'running') {
+            await CommunicationHandler.stopLocalVmIfActive();
+        }
+        if (config.development) {
+            webContents.getAllWebContents().forEach(wc => {
+                if (wc.hostWebContents?.id === examWin.webContents.id && wc.isDevToolsOpened?.()) {
+                    wc.closeDevTools();
+                }
+            });
+        }
+        WindowHandler.teardownExamChrome(WindowHandler.mainwindow);
+        await CommunicationHandler.rerouteExamSection(serverstatus);
     } catch (error) {
-        log.error(`switchExamSection: Error during folder operation - ${error}`);
-        log.error(`switchExamSection: Error stack: ${error.stack}`);
-        log.error(`switchExamSection: currentLockedSection: ${currentLockedSection}, newLockedSection: ${newLockedSection}, examDir: ${examDir}`);
-    }
-
-    /**
-     *  Actually SWITCH EXAM SECTION
-     */
-    if (!examWin || examWin.isDestroyed?.()) {
-        log.warn('switchExamSection: no mainwindow for reroute');
-        return;
-    }
-    if (previousExamtype === 'localvm' || multicastClient.clientinfo.localVMState === 'running') {
-        await CommunicationHandler.stopLocalVmIfActive();
-    }
-    // destroy devtools window - if you don't next-exam will crash silently on reload and section switch
-    if (config.development){
-        webContents.getAllWebContents().forEach(wc => {
-            if (wc.hostWebContents?.id === examWin.webContents.id && wc.isDevToolsOpened?.()){
-                log.info("switchExamSection: destroying devtools window")
-                wc.closeDevTools()
-            }
-        })
-    }
-    WindowHandler.teardownExamChrome(WindowHandler.mainwindow)
-    await CommunicationHandler.rerouteExamSection(serverstatus)
+        log.error(`switchExamSection: ${error?.message || error}`, error?.stack);
+        examWin?.webContents?.send('section-switch-aborted');
     } finally {
         switchExamSection._running = false;
     }

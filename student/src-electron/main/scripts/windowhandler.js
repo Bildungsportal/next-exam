@@ -113,7 +113,7 @@ class WindowHandler {
     }
 
     /** Brief student overlay, then navigate into an exam route. */
-    async navigateToExamRoute(win, hashRoute) {
+    async navigateToExamRoute(win, hashRoute, { sectionSwitch = false } = {}) {
         try {
             if (win?.webContents && !win.isDestroyed?.()) {
                 win.webContents.send('entering-exam-mode')
@@ -121,7 +121,7 @@ class WindowHandler {
         } catch (e) {
             log.debug('windowhandler @ navigateToExamRoute: notify renderer', e?.message)
         }
-        await this.sleep(1000)
+        if (!sectionSwitch) await this.sleep(1000)
         await this.navigateHashRoute(win, hashRoute)
     }
 
@@ -603,7 +603,7 @@ class WindowHandler {
                     this.clearExamRoute()
                     return
                 }
-                await this.navigateToExamRoute(win, this.buildExamHashRoute(examtype, token, serverstatus, options))
+                await this.navigateToExamRoute(win, this.buildExamHashRoute(examtype, token, serverstatus, options), options)
                 let contentView = new BrowserView({
                     webPreferences: {
                         spellcheck: false,
@@ -645,7 +645,7 @@ class WindowHandler {
                     });
                 });
             } else {
-                await this.navigateToExamRoute(win, this.buildExamHashRoute(examtype, token, serverstatus, options))
+                await this.navigateToExamRoute(win, this.buildExamHashRoute(examtype, token, serverstatus, options), options)
             }
 
             const examTypesWithPdfInHeader = ["forms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math", "localvm"];

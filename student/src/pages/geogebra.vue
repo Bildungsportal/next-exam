@@ -341,6 +341,16 @@ export default {
             console.log("editor @ save: Teacher saverequest received")
             this.saveContent(false, why)
         });
+        this._onSaveForSectionSwitch = async () => {
+            let ok = false;
+            try {
+                ok = await this.saveSectionSwitchBackup();
+            } catch (e) {
+                console.error('geogebra @ save-for-section-switch:', e);
+            }
+            signalBridge.send('section-switch-save-done', ok);
+        };
+        signalBridge.on('save-for-section-switch', this._onSaveForSectionSwitch);
 
         signalBridge.on('fileerror', (event, msg) => {
             console.log('geogebra @ fileerror: writing/deleting file error received');
@@ -784,6 +794,29 @@ export default {
             });
         },
 
+         // Backup .ggb only — awaited by main before section file shuffle.
+        async saveSectionSwitchBackup() {
+            if (!this.ggbReady || !window.ggbApplet) return false;
+            let base64GgbFile = null;
+            try {
+                base64GgbFile = await new Promise((resolve, reject) => {
+                    window.ggbApplet.getBase64(resolve);
+                    setTimeout(() => reject(new Error('timeout')), 10000);
+                });
+            } catch (e) {
+                console.error('geogebra @ saveSectionSwitchBackup:', e);
+                return false;
+            }
+            if (!base64GgbFile) return false;
+            const filename = this.currentFile || `${this.clientname}.ggb`;
+            const response = await signalBridge.invoke('saveGGB', {
+                filename,
+                content: base64GgbFile,
+                reason: 'sectionswitch',
+            });
+            return response?.status === 'success';
+        },
+
          // Silent restore of clientname.ggb when present in examDir (e.g. after section switch).
         async loadBackupGgbIfPresent() {
             for (let i = 0; i < 50 && !this.ggbReady; i++) {
@@ -798,7 +831,9 @@ export default {
         },
 
          /** Saves Content as GGB */
-        async saveContent(event=false, reason=false) { 
+        async saveContent(event=false, reason=false) {
+            if (reason === 'auto' && useInfoStore().switchingToSection != null) return;
+
             if (!window.ggbApplet) {
                 console.log("geogebra @ saveContent: applet not present"); // one line comment
                 return;
@@ -915,8 +950,7 @@ export default {
         signalBridge.removeAllListeners('getmaterials')
         signalBridge.removeAllListeners('fileerror')
         signalBridge.removeAllListeners('save')
-        
-        
+        signalBridge.removeAllListeners('save-for-section-switch');
         // Clean up preview click listener
         const preview = document.querySelector("#preview");
         if (preview && this._onPreviewClick) {

@@ -38,7 +38,7 @@ import platformDispatcher from './platformDispatcher.js';
 import { isAssessmentSessionActive } from './assessmentSession.js';
 import { updateSystemTray } from './traymenu.js';
 import { getWlanInfo } from './getwlaninfo.js';
-import { switchExamSection } from './switchExamSection.js';
+import { switchExamSection, isSectionSwitchRunning } from './switchExamSection.js';
 import { startProxy, stopProxy } from './vncproxy.js';
 import qemuService from './qemuService.js';
 import {
@@ -85,6 +85,33 @@ const logSaveInfoUnlessAuto = (saveReason, message) => {
     if (saveReason === 'auto') return
     log.info(message)
 }
+
+// Block stray examDir writes during section switch (sectionswitch saves are exempt).
+const isExamDirWriteBlocked = (saveReason) =>
+    isSectionSwitchRunning() && saveReason !== 'sectionswitch';
+
+// Sync .htm backup write shared by editor + activesheets section switch.
+const writeExamHtmBackupSync = (examDir, multicastClient, filenameStem, content, saveReason, commHandler) => {
+    const clientName = multicastClient.clientinfo.name;
+    let htmlfilename = `${clientName}.htm`;
+    if (filenameStem && String(filenameStem).trim()) {
+        htmlfilename = `${String(filenameStem).trim()}.htm`;
+    }
+    const htmlfile = resolveWritablePathUnderExamDir(examDir, htmlfilename, ['.htm']);
+    if (!htmlfile) return { status: 'error', message: 'invalid filename' };
+    if (content == null || content === '') return { status: 'error', message: 'empty content' };
+    try {
+        const pw = resolveExamDecryptPassword(multicastClient);
+        const out = encryptExamFileBytesUnlessAlready(Buffer.from(String(content), 'utf8'), pw);
+        fs.writeFileSync(htmlfile, out);
+        if (commHandler) commHandler.lastExamWriteSaveReason = saveReason;
+        log.info(`ipchandler @ writeExamHtmBackupSync: wrote ${htmlfilename}`);
+        return { status: 'success' };
+    } catch (err) {
+        log.error(`ipchandler @ writeExamHtmBackupSync: ${err.message}`);
+        return { status: 'error', message: err.message };
+    }
+};
 
 /** Per-guest webRequest hooks for eduvidual Moodle proof headers. */
 const eduvidualMoodleProofHooks = new Map();
@@ -1314,6 +1341,10 @@ class IpcHandler {
             const htmlContent = args.editorcontent
             const filename = args.filename
             const saveReason = typeof args.reason === 'string' ? args.reason : 'n/a'
+            if (isExamDirWriteBlocked(saveReason)) {
+                log.debug('ipchandler @ storeHTML: blocked during section switch');
+                return;
+            }
             let htmlfilename = `${this.multicastClient.clientinfo.name}.htm`
             
             if (filename && String(filename).trim()){
@@ -1371,6 +1402,19 @@ class IpcHandler {
             }
         })
 
+        /** Sync .htm backup for section switch (editor + activesheets). */
+        ipcMain.handle('writeExamHtmBackupSync', (event, args) => {
+            const saveReason = typeof args.reason === 'string' ? args.reason : 'sectionswitch';
+            return writeExamHtmBackupSync(
+                this.config.examdirectory,
+                this.multicastClient,
+                args.filename,
+                args.content,
+                saveReason,
+                this.CommunicationHandler,
+            );
+        });
+
 
 
         /**
@@ -1407,6 +1451,10 @@ class IpcHandler {
          */ 
         ipcMain.on('printpdf', (event, args) => { 
             const saveReason = typeof args.reason === 'string' ? args.reason : 'n/a'
+            if (isExamDirWriteBlocked(saveReason)) {
+                log.debug('ipchandler @ printpdf: blocked during section switch');
+                return;
+            }
             // do not print if exam mode is not active anymore
             if (!this.multicastClient?.clientinfo?.exammode){
                 log.warn("ipchandler @ printpdf: exammode is false - skipping print")
@@ -1480,6 +1528,10 @@ class IpcHandler {
         ipcMain.on('saveActivesheetsBak', (event, args) => {
             try {
                 const saveReason = typeof args.reason === 'string' ? args.reason : 'n/a'
+                if (isExamDirWriteBlocked(saveReason)) {
+                    log.debug('ipchandler @ saveActivesheetsBak: blocked during section switch');
+                    return;
+                }
                 const htmFilename = args.filename ? `${args.filename}.htm` : `${this.multicastClient.clientinfo.name}.htm`;
                 const htmFilePath = resolveWritablePathUnderExamDir(this.config.examdirectory, htmFilename, ['.htm']);
                 if (!htmFilePath) {
@@ -1503,9 +1555,6 @@ class IpcHandler {
                 event.reply("fileerror", { sender: "client", message: error.message, status: "error" });
             }
         })
-
-
-
 
         /**
          * Returns all found Servers and the information about this client
@@ -1712,6 +1761,10 @@ class IpcHandler {
             const content = args.content
             const filename = args.filename
             const saveReason = typeof args.reason === 'string' ? args.reason : 'n/a'
+            if (isExamDirWriteBlocked(saveReason)) {
+                log.debug('ipchandler @ saveGGB: blocked during section switch');
+                return { sender: 'client', message: 'section switch in progress', status: 'error' };
+            }
             const ggbFilePath = resolveWritablePathUnderExamDir(this.config.examdirectory, filename, ['.ggb']);
             if (!ggbFilePath) {
                 log.warn(`ipchandler @ saveGGB: rejected unsafe ggb filename (${filename})`);
