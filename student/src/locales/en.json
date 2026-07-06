@@ -191,7 +191,7 @@
     },
     "main": {
         "tray": {
-            "disconnect": "Disconnect",
+            "disconnect": "sign out",
             "exit": "Exit",
             "restore": "Restore"
         }
@@ -289,6 +289,7 @@
         "suggest": "Show suggestions",
         "timeout": "Timeout! Exam-Teacher is behind Firewall.",
         "unreachable": "Server API unreachable",
+        "unregister": "sign out",
         "username": "Your name",
         "vmConnecting": "Connecting to virtual machine …",
         "vmFailed": "Virtual machine could not be reached.",

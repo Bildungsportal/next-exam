@@ -191,7 +191,7 @@
     },
     "main": {
         "tray": {
-            "disconnect": "Verbindung trennen",
+            "disconnect": "abmelden",
             "exit": "Beenden",
             "restore": "Wiederherstellen"
         }
@@ -289,6 +289,7 @@
         "suggest": "Vorschläge zeigen",
         "timeout": "Timeout! Exam-Teacher befindet sich möglicherweise hinter einer Firewall.",
         "unreachable": "Server API nicht erreichbar.",
+        "unregister": "abmelden",
         "username": "Dein Name",
         "vmConnecting": "Verbinde zur virtuellen Maschine …",
         "vmFailed": "Virtuelle Maschine nicht erreichbar.",

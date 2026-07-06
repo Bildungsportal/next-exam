@@ -93,7 +93,7 @@ RULE^student^typingRhythm^editor.vue isTypingRhythmExemptKey clears deltas for B
 RULE^student^appsToClose^leaf appsToClose.js; kill=substring win; remotecheck=exact stem (+multi-word cmd on unix)
 RULE^student^screenshotStream^resetConnection must not stop getDisplayMedia stream; upload-fail pause must not stopSharedStream; stopSharedStream clears initAttempted; ensureDisplayStreamAsync re-acquires on Connect after track loss
 PATH^student^netScan^networkActiveProcesses.js scans non-loopback TCP established + TCP LISTEN; excludes next-exam subtree + LT + sys-critical allowlist (incl mainthread linux node/electron dev)
-PATH^student^remoteAssistant^updateRemoteAssistant in remoteAssistantScan.js; requestUpdate every 100s; after killAppsToClose if clientinfo passed; clears remoteassistant when scan empty
+PATH^student^remoteAssistant^updateRemoteAssistant in remoteAssistantScan.js; requestUpdate every 100s; after killAppsToClose if clientinfo passed; teacher gets appsToClose keyword hits+ports only; net scan logs locally
 RULE^student^vncproxyHelper^spawn vncproxy-helper.cjs with ELECTRON_RUN_AS_NODE=1 (packaged electron else hits requestSingleInstanceLock and exits 0 without listening)
 TECH^student^previewWebview^applyPreviewWebviewHostLayout(splitview); WebviewPane host no Vue inline style (re-render wiped 80vw); inner nx-webview-pane-fill; setZoomFactor dom-ready+try/catch
 RULE^student^webviewHostDisplay^never set <webview> host display:block; overrides Electron :host{display:flex} so internal iframe(flex:1) collapses (content not full height). Use display:flex + flex:1 1 0 to fill; CSS cannot pierce webview shadow DOM so no iframe-height JS hack^eduvidual.vue #webviewmain

@@ -1158,6 +1158,14 @@ class IpcHandler {
 
 
         /**
+        * Drop server registration (same as system tray disconnect)
+        */ 
+        ipcMain.on('disconnect', () => {
+            log.info('ipchandler @ disconnect: removing registration')
+            this.CommunicationHandler.resetConnection()
+        })
+
+        /**
         * Unlock Computer
         */ 
         ipcMain.on('gracefullyexit', () => {  
