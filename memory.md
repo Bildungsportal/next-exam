@@ -131,6 +131,6 @@ TECH^print^activesheetsHeader^pageMode='fullpage' margins 0+chromium header/foot
 IPC^student^getPDFbase64^args.pageMode='fullpage' (optional) => margins 0+displayHeaderFooter false+DOM overlay header; default behält editor-Verhalten (top/bottom 0.5"+header/footer)
 PATH^student^odtTiptap^student/src/utils/odtToTiptapHtml.js+filehandler loadODT+editor.vue materials+localfiles
 TECH^teacherCli^overrides^applyCliOverrides.js consumes --exam-modes=csv (override config.exammodes) + --expose-students (GET connectedstudentips→text/plain); needs running examServerList[0]
-TECH^macRosetta^check^platformDispatcher.macRosettaEmulation{runningUnderRosetta,nativeHostArch,processArch,procTranslated}; arm64 host+x64+sysctl.proc_translated; student.vue warnMacRosettaArch swal on mount
+TECH^macRosetta^check^platformDispatcher._detectMacRosettaEmulation; nativeHost=arch -arm64 uname -m (not plain uname under Rosetta); runningUnderRosetta=nativeHost arm64+processArch x64; student.vue warnMacRosettaArch
 RULE^teacher^logViewerTruncate^loadTextFile truncateLogTextForViewer keeps tail (max 200k chars); scroll bottom on open+dashboard serverlog
 TECH^languagetool^studentToggle^editor.vue ltExternalHost+ltUseExternal default external; sidebar Lokal/Extern btns beside update; LThost/LTport via applyLtActiveEndpoint; isLanguageToolRunning IPC opts host+port
