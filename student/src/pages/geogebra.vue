@@ -278,7 +278,11 @@ export default {
                 #buttonsID { display: none !important; }
                 button[id="mode26"],
                 button[aria-label="Hilfe"],
-                button[aria-label="Help"] { display: none !important; }
+                button[aria-label="Help"],
+                button[aria-label="Schaltfläche"],
+                button[aria-label="Button"],
+                button[aria-label="Kontrollkästchen"],
+                button[aria-label="Checkbox"] { display: none !important; }
 
  
                 button.helpBtn { display: none !important; }
@@ -288,6 +292,9 @@ export default {
                 li[aria-label="Sign In"],
                 li[aria-label="Datei"],
                 li[aria-label="File"] { display: none !important; }
+
+                .scriptTabPanel,
+                .scriptArea { display: none !important; }
             `,
             hideMenuTexts: [
                 'Neu', 'New',
@@ -305,6 +312,9 @@ export default {
                 'Download',
                 'Bild', 'Image',
                 'Hilfe', 'Help',
+                'Schaltfläche',
+                'Kontrollkästchen',
+                'Skripting', 'Scripting',
             ],
         }
     }, 
@@ -650,16 +660,18 @@ export default {
                 window.__ggbMenuObserver__ = null
             }
             if (hideTexts.length > 0) {
-                const hide = (menu) => menu.querySelectorAll('li.gwt-MenuItem').forEach(li => {
-                    if (hideTexts.includes(li.textContent.trim())) {
-                        li.style.setProperty('display', 'none', 'important')
-                    }
-                })
-                window.__ggbMenuObserver__ = new MutationObserver(() => {
-                    document.querySelectorAll('.gwt-MenuBar-vertical').forEach(hide)
-                })
+                const hideByText = () => {
+                    document.querySelectorAll(
+                        'li.gwt-MenuItem, td.gwt-MenuItem, td.gwt-TabBarItem, .gwt-TabLayoutPanelTab'
+                    ).forEach((el) => {
+                        if (hideTexts.includes(el.textContent.trim())) {
+                            el.style.setProperty('display', 'none', 'important')
+                        }
+                    })
+                }
+                window.__ggbMenuObserver__ = new MutationObserver(hideByText)
                 window.__ggbMenuObserver__.observe(document.body, { childList: true, subtree: true })
-                document.querySelectorAll('.gwt-MenuBar-vertical').forEach(hide)
+                hideByText()
             }
         },
 

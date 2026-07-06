@@ -357,7 +357,7 @@
                 <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
                  
 
-                    <div v-if="file.type == 'htm'" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.htm'}" @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ file.name }}<template v-if="!isActiveLocalHtmFile(file)"> ({{ formatHtmLocalFileAge(file) }})</template></div>
+                    <div v-if="file.type == 'htm'" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.htm'}" @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ file.name }}</div>
 
 
                     <div v-if="(file.type == 'docx')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
@@ -1664,24 +1664,6 @@ export default {
                 return this.$t('editor.caretCtxColor', {color: mark.attrs.color})
             }
             return ''
-        },
-
-        // True when this row is the document that receives the 20s auto-save (.htm).
-        isActiveLocalHtmFile(file) {
-            return !!(file && file.type === 'htm' && this.currentFile && file.name === `${this.currentFile}.htm`);
-        },
-
-        // Seconds/minutes/hours since last filesystem mtime (active .htm omits label in template).
-        formatHtmLocalFileAge(file) {
-            const t = Date.now();
-            const ms = Math.max(0, t - Number(file?.mod || 0));
-            const sec = Math.floor(ms / 1000);
-            if (sec < 60) return `${sec}s`;
-            const min = Math.floor(sec / 60);
-            if (min < 60) return `${min} min`;
-            const h = Math.floor(min / 60);
-            const m = min % 60;
-            return `${h}h ${m}m`;
         },
 
         //get all files in user directory
