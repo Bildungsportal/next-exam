@@ -304,16 +304,16 @@ import {
         this.multicastClient.clientinfo.isRunningInCage = platformDispatcher.runningInCage;
         this.multicastClient.clientinfo.isAssessmentMode = isAssessmentSessionActive();
 
-       
-        if (this.timer % 20 === 0 ){  // run every 20*5 (updateloop) seconds
+        this.timer++   // we use timer to time loops with different intervals without introducing new unneccesary schedulers
+
+        if (this.timer % 20 === 0 || this.timer === 1){  // run every 20*5 (updateloop) seconds
             await updateRemoteAssistant(this.multicastClient.clientinfo, {
                 logTag: 'communicationhandler',
                 applySecurityFocusLost: (reason) => this.applySecurityFocusLost(reason),
             });
         }
 
-        this.timer++   // we use timer to time loops with different intervals without introducing new unneccesary schedulers
-
+       
         if (this.multicastClient.clientinfo.localLockdown
             && (this.multicastClient.clientinfo.serverip === '127.0.0.1' || this.multicastClient.clientinfo.servername === 'localhost')) {
             return;
@@ -730,7 +730,7 @@ import {
         // <span class=date> ist Chromium-headerTemplate-Magic -> im DOM-Kontext durch ein gerendertes Datum ersetzen
         if (isFullpage) {
             const now = new Date()
-            const dStr = `${String(now.getDate()).padStart(2,'0')}.${String(now.getMonth()+1).padStart(2,'0')}.${now.getFullYear()}`
+            const dStr = `${String(now.getDate()).padStart(2,'0')}.${String(now.getMonth()+1).padStart(2,'0')}.${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
             // Datum-magic ersetzen + margins/top aus dem Editor-Template raus (Wrapper-div positioniert)
             const overlayInner = headerTemplate
                 .replace(/<span class=date[^>]*><\/span>/, `<span style="float:left;">${dStr}</span>`)

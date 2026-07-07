@@ -1,7 +1,8 @@
 /**
  * @license GPL LICENSE
  * Copyright (c) 2021 Thomas Michael Weissel
- * Refresh clientinfo.remoteassistant from keyword, network and LT-port scans.
+ * Refresh clientinfo.remoteassistant from appsToClose keyword/port scans (+ LT-port fake).
+ * Network-active scan runs for local logs only; hits are not sent to the teacher.
  */
 
 import log from 'electron-log';
@@ -17,7 +18,7 @@ export async function updateRemoteAssistant(clientinfo, opts = {}) {
     if (!clientinfo) return;
     const logTag = opts.logTag || 'remoteAssistantScan';
 
-    const [keywordHit, netScan, ltFakes] = await Promise.all([
+    const [keywordHit, , ltFakes] = await Promise.all([
         runRemoteCheck(process.platform),
         logNetworkActiveProcesses({ mode: 'both' }).catch((err) => {
             log.warn(`${logTag} @ updateRemoteAssistant: networkActiveProcesses failed: ${err.message}`);
@@ -47,12 +48,10 @@ export async function updateRemoteAssistant(clientinfo, opts = {}) {
         }
     }
 
-    const algorithmicNames = [...new Set(netScan.processes.map((p) => p.name))];
     const keywordHits = keywordHit ? keywordHit.keywords : [];
-    const mergedKeywords = [...new Set([...keywordHits, ...algorithmicNames])];
     const ports = keywordHit?.ports?.length ? keywordHit.ports : [];
 
-    if (mergedKeywords.length || ports.length) {
+    if (keywordHits.length || ports.length) {
         if (keywordHit?.keywords?.length) {
             log.warn(`${logTag} @ updateRemoteAssistant: possible remote assistance detected`);
             for (const keyword of keywordHit.keywords) {
@@ -67,7 +66,7 @@ export async function updateRemoteAssistant(clientinfo, opts = {}) {
         const ra = clientinfo.remoteassistant || { keywords: [], ports: [] };
         clientinfo.remoteassistant = {
             ...ra,
-            keywords: mergedKeywords,
+            keywords: keywordHits,
             ports: ports.length ? ports : (ra.ports || []),
         };
     } else if (clientinfo.remoteassistant?.languagetoolFake) {

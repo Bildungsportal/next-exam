@@ -51,6 +51,7 @@ TECH^win32^kioskFirewallHook^optional EXAM-STUDENT/firewall-rules.ps1 via -Firew
 RULE^win32^kioskAssignedAccessXml^do NOT add <v5:StartPins> nor xmlns:v5 (2022/config) to AssignedAccess XML; CONFIRMED Microsoft bug: Win11 26100.6584-26100.7705 + 26200.7171-26200.7705 v5 schema regression → MDM CSP returns 0x80004005/0x86000005 (fix in 26100.7705+ / Feb 2026 Patch Tuesday); empirical: desktopAppLink with abs/env paths all rejected on lenovo-class HW; if revisiting after Win update, desktopAppId with KnownFolder GUID format (e.g. {6D809377-6AF0-444B-8957-A3773F02200E}\\...) is reported to work where desktopAppLink fails; alternative is OEM provisioning (Lenovo Vantage proof that pins technically work); for now use kiosk-launcher-apps.json in-app bar - keep rs5 namespace+<StartLayout> only
 RULE^win32^kioskStartUi^launchers via strict JSON {"apps":[{name,path}]} at C:\NextExam\kiosk-launcher-apps.json; rendered in student.vue + ExamHeader.vue via loadWinKioskLauncherApps; $skipLauncherUi (java/javaw/disable-shortcuts/netsh/powershell/reg.exe/whoami.exe) hides internals; those AllowedApps are next-exam spawn-only, never student-facing buttons
 RULE^win32^kioskExam^skipElectronKiosk=win32&&runningInCage; no setKiosk/setAlwaysOnTop/win enable|disable restrictions/fullscreen/reconnect restrictions+blur; AssignedAccess shell handles focus/z-order
+RULE^electron^kiosk^applyElectronKioskMode: Win/Linux ohne Cage/AA→setKiosk(true); linux runningInCage|win skipElectronKiosk|darwin AAC→skip; screenlock fullscreenOnly; macOS→setSimpleFullScreen
 RULE^win32^kioskDetect^runningInCage=kioskOsUser&&provisionedSid(live sid===.kiosk-account-sid)&&aaProof; aaProof=assignedAccessActive|mdm|shell; assignedAccessActive=RestrictRun AssignedAccess_* via reg OR cmd.exe spawn blocked (cmd not on allow list); profileState128 diagnostic only not sufficient alone
 RULE^win32^kioskAllowedAppsDrift^read once at startup; clientinfo.allowedKioskApps={startLayoutReadable,appNames[]}; appNames=launcher.json names+pin drift names (Get-StartApps); teacher /update stores student.allowedKioskApps
 RULE^win32^kioskNoSpawn^under AssignedAccess any spawn of exe not in AllowedApps triggers spawn UNKNOWN; do NOT whitelist cmd.exe; windowsKioskSetup must use execFileSync to powershell/reg/whoami directly (Node execSync string→cmd.exe wrapper); when runningInCage SKIP checkparent; beware tasklist in vmDetection/remoteWin
@@ -67,7 +68,7 @@ BUG^print^swal2MultiPage^body.swal2-shown setzt im @media print "[aria-hidden=tr
 
 # Exam schema
 RULE^exam^sectionSchema^mode config only group.examConfig.{editor|website|eduvidual|forms|rdp|localvm|activeSheets|microsoft365}; section has examtype+sectionname+timelimit+locked+startTs+groups only
-RULE^student^sectionSwitch^switchExamSection: teardownExamChrome+rerouteToExamSection; keep examwindow+blur; no createExamWindow re-bind
+RULE^student^sectionSwitch^switchExamSection: awaitRendererBackup→shuffle examDir→lockedSection→reroute; isSectionSwitchRunning blocks stray examDir writes
 RULE^student^examWin^listeners^close once on mainwindow; app-command once; blur idempotent; teardown clears route listeners only
 RULE^student^examWin^state: clientinfo.exammode+mainwindow via mainWin/inExamMode; examServerstatus for IPC cache
 PATH^shared^editorExamConfig^shared/editorExamConfig.js DEFAULT_EDITOR_EXAM_CONFIG+resolveEditorExamConfig+resolveGroupKey
@@ -92,7 +93,7 @@ RULE^student^typingRhythm^editor.vue isTypingRhythmExemptKey clears deltas for B
 RULE^student^appsToClose^leaf appsToClose.js; kill=substring win; remotecheck=exact stem (+multi-word cmd on unix)
 RULE^student^screenshotStream^resetConnection must not stop getDisplayMedia stream; upload-fail pause must not stopSharedStream; stopSharedStream clears initAttempted; ensureDisplayStreamAsync re-acquires on Connect after track loss
 PATH^student^netScan^networkActiveProcesses.js scans non-loopback TCP established + TCP LISTEN; excludes next-exam subtree + LT + sys-critical allowlist (incl mainthread linux node/electron dev)
-PATH^student^remoteAssistant^updateRemoteAssistant in remoteAssistantScan.js; requestUpdate every 100s; after killAppsToClose if clientinfo passed; clears remoteassistant when scan empty
+PATH^student^remoteAssistant^updateRemoteAssistant in remoteAssistantScan.js; requestUpdate every 100s; after killAppsToClose if clientinfo passed; teacher gets appsToClose keyword hits+ports only; net scan logs locally
 RULE^student^vncproxyHelper^spawn vncproxy-helper.cjs with ELECTRON_RUN_AS_NODE=1 (packaged electron else hits requestSingleInstanceLock and exits 0 without listening)
 TECH^student^previewWebview^applyPreviewWebviewHostLayout(splitview); WebviewPane host no Vue inline style (re-render wiped 80vw); inner nx-webview-pane-fill; setZoomFactor dom-ready+try/catch
 RULE^student^webviewHostDisplay^never set <webview> host display:block; overrides Electron :host{display:flex} so internal iframe(flex:1) collapses (content not full height). Use display:flex + flex:1 1 0 to fill; CSS cannot pierce webview shadow DOM so no iframe-height JS hack^eduvidual.vue #webviewmain
@@ -130,6 +131,6 @@ TECH^print^activesheetsHeader^pageMode='fullpage' margins 0+chromium header/foot
 IPC^student^getPDFbase64^args.pageMode='fullpage' (optional) => margins 0+displayHeaderFooter false+DOM overlay header; default behält editor-Verhalten (top/bottom 0.5"+header/footer)
 PATH^student^odtTiptap^student/src/utils/odtToTiptapHtml.js+filehandler loadODT+editor.vue materials+localfiles
 TECH^teacherCli^overrides^applyCliOverrides.js consumes --exam-modes=csv (override config.exammodes) + --expose-students (GET connectedstudentips→text/plain); needs running examServerList[0]
-TECH^macRosetta^check^platformDispatcher.macRosettaEmulation{runningUnderRosetta,nativeHostArch,processArch,procTranslated}; arm64 host+x64+sysctl.proc_translated; student.vue warnMacRosettaArch swal on mount
+TECH^macRosetta^check^platformDispatcher._detectMacRosettaEmulation; nativeHost=arch -arm64 uname -m (not plain uname under Rosetta); runningUnderRosetta=nativeHost arm64+processArch x64; student.vue warnMacRosettaArch
 RULE^teacher^logViewerTruncate^loadTextFile truncateLogTextForViewer keeps tail (max 200k chars); scroll bottom on open+dashboard serverlog
 TECH^languagetool^studentToggle^editor.vue ltExternalHost+ltUseExternal default external; sidebar Lokal/Extern btns beside update; LThost/LTport via applyLtActiveEndpoint; isLanguageToolRunning IPC opts host+port

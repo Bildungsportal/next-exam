@@ -15,9 +15,9 @@
 
         <!-- toolbar start -->
         <div v-if="editor" class="m-2" id="editortoolbar" style="text-align:left;">
-            <button :title="$t('editor.backup')" @click="saveContent(true, 'manual');"
+            <button :title="$t('editor.saveCopyAs')" @click="saveContent(true, 'manual');"
                     class="invisible-button btn btn-outline-success p-1 me-1 mb-1 btn-sm"><img
-                src="/src/assets/img/svg/document-save.svg" class="white" width="22" height="22"></button>
+                src="/src/assets/img/svg/document-save-as.svg" class="" width="22" height="22"></button>
             <!-- <button :title="$t('editor.print')" @click="sendExamToTeacher();" class="invisible-button btn btn-outline-success p-1 me-1 mb-1 btn-sm"><img src="/src/assets/img/svg/print.svg" class="white" width="22" height="22" ></button> -->
             <button :title="$t('editor.undo')" @click="editor.chain().focus().undo().run()"
                     class="invisible-button btn btn-outline-warning p-1 me-0 mb-1 btn-sm"><img
@@ -295,9 +295,9 @@
 
                 <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
                 <div id="getmaterialsbutton"
-                     class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
+                     class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 ms-2 mb-0 btn-sm"
                      @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img
-                    src="/src/assets/img/svg/games-solve.svg" class="white" width="22" height="22"
+                    src="/src/assets/img/svg/gtk-convert.svg" class="white" width="22" height="22"
                     style="vertical-align: top;"> {{ $t('editor.materials') }}
                 </div>
 
@@ -357,7 +357,7 @@
                 <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
                  
 
-                    <div v-if="file.type == 'htm'" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.htm'}" @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ file.name }}<template v-if="!isActiveLocalHtmFile(file)"> ({{ formatHtmLocalFileAge(file) }})</template></div>
+                    <div v-if="file.type == 'htm'" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm" :class="{'bg-warning': file.name == currentFile+'.htm'}" @click="selectedFile=file.name; loadHTML(file.name)"><img src="/src/assets/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ file.name }}</div>
 
 
                     <div v-if="(file.type == 'docx')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
@@ -1666,24 +1666,6 @@ export default {
             return ''
         },
 
-        // True when this row is the document that receives the 20s auto-save (.htm).
-        isActiveLocalHtmFile(file) {
-            return !!(file && file.type === 'htm' && this.currentFile && file.name === `${this.currentFile}.htm`);
-        },
-
-        // Seconds/minutes/hours since last filesystem mtime (active .htm omits label in template).
-        formatHtmLocalFileAge(file) {
-            const t = Date.now();
-            const ms = Math.max(0, t - Number(file?.mod || 0));
-            const sec = Math.floor(ms / 1000);
-            if (sec < 60) return `${sec}s`;
-            const min = Math.floor(sec / 60);
-            if (min < 60) return `${min} min`;
-            const h = Math.floor(min / 60);
-            const m = min % 60;
-            return `${h}h ${m}m`;
-        },
-
         //get all files in user directory
         async loadFilelist() {
             let filelist = await signalBridge.invoke('getfilesasync', null)
@@ -1744,12 +1726,13 @@ export default {
 
         /** Converts the Editor View into a multipage PDF */
         async saveContent(backup, why) {
+            if (why === 'auto' && useInfoStore().switchingToSection != null) return;
 
             let filename = this.currentFile  // this can be set manually... otherwise currentFile is used (clientname unless you load another file)
 
             if (why === "manual") {
                 await this.$swal({
-                    title: this.$t("math.filename"),
+                    title: this.$t("editor.saveCopyAs"),
                     icon: "question",
                     input: 'text',
                     inputPlaceholder: 'Type here...',
@@ -2438,6 +2421,19 @@ export default {
             });
         },
         
+        // Backup .htm only — awaited by main before section file shuffle.
+        async saveSectionSwitchBackup() {
+            if (!this.editor) return false;
+            const ready = await this.waitForEditorReady();
+            if (!ready) return false;
+            const result = await signalBridge.invoke('writeExamHtmBackupSync', {
+                filename: this.currentFile,
+                content: this.editor.getHTML(),
+                reason: 'sectionswitch',
+            });
+            return result?.status === 'success';
+        },
+
         // Silent restore of clientname.htm after exam-section switch (no confirm dialog).
         async loadBackupFileSilent(filename = false) {
             const backupfileName = filename ? filename : `${this.clientname}.htm`;
@@ -2610,6 +2606,16 @@ export default {
             console.log("editor @ save: Teacher saverequest received")
             this.saveContent(true, why)
         });
+        this._onSaveForSectionSwitch = async () => {
+            let ok = false;
+            try {
+                ok = await this.saveSectionSwitchBackup();
+            } catch (e) {
+                console.error('editor @ save-for-section-switch:', e);
+            }
+            signalBridge.send('section-switch-save-done', ok);
+        };
+        signalBridge.on('save-for-section-switch', this._onSaveForSectionSwitch);
         signalBridge.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
             this.printdenied(why)
         });
@@ -2743,6 +2749,7 @@ export default {
         signalBridge.removeAllListeners('submitexam')
         signalBridge.removeAllListeners('fileerror')
         signalBridge.removeAllListeners('save')
+        signalBridge.removeAllListeners('save-for-section-switch');
         signalBridge.removeAllListeners('denied')
         signalBridge.removeAllListeners('backup')
         signalBridge.removeAllListeners('loadfilelist')

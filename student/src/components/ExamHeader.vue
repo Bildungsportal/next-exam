@@ -251,7 +251,11 @@
       this._onSwitchingExamSection = (_event, sectionNumber) => {
         useInfoStore().beginSectionSwitch(Number(sectionNumber) || 1);
       };
+      this._onSectionSwitchAborted = () => {
+        useInfoStore().endSectionSwitchOverlay();
+      };
       signalBridge.on('switching-exam-section', this._onSwitchingExamSection);
+      signalBridge.on('section-switch-aborted', this._onSectionSwitchAborted);
       useInfoStore().updateInfo();
       this.autoSchedulerService(() => useInfoStore().updateInfo(), 5000);
       this._scheduleEndSectionSwitchOverlay();
@@ -262,6 +266,7 @@
         this._sectionSwitchOverlayTimer = null;
       }
       signalBridge.removeAllListeners('switching-exam-section');
+      signalBridge.removeAllListeners('section-switch-aborted');
       if (this._clockInterval) {
         this._clockInterval.removeEventListener('action', this.tickHeaderClock);
         this._clockInterval.stop();

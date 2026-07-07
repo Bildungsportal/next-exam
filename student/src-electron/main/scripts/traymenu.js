@@ -46,15 +46,15 @@ export const updateSystemTray = (locale) => {
     if (!tray) {
       tray = new Tray(getTrayIconPath());
       tray.on('click', () => {                              // toggle window
-        WindowHandler.mainwindow.isVisible() 
-          ? WindowHandler.mainwindow.hide() 
-          : WindowHandler.mainwindow.show();
+        WindowHandler.mainwindow.isVisible()
+          ? WindowHandler.hideToTray()
+          : WindowHandler.showFromTray();
       });
     }
   
     // build context menu with current locale
     const contextMenu = Menu.buildFromTemplate([
-      { label: t('main.tray.restore'), click: () => WindowHandler.mainwindow.show() }, // show window
+      { label: t('main.tray.restore'), click: () => WindowHandler.showFromTray() }, // show window
       { label: t('main.tray.disconnect'), click: () => { 
           log.info("main @ systemtray: removing registration"); 
           CommHandler.resetConnection(); 

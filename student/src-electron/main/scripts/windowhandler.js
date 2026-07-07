@@ -113,7 +113,7 @@ class WindowHandler {
     }
 
     /** Brief student overlay, then navigate into an exam route. */
-    async navigateToExamRoute(win, hashRoute) {
+    async navigateToExamRoute(win, hashRoute, { sectionSwitch = false } = {}) {
         try {
             if (win?.webContents && !win.isDestroyed?.()) {
                 win.webContents.send('entering-exam-mode')
@@ -121,53 +121,92 @@ class WindowHandler {
         } catch (e) {
             log.debug('windowhandler @ navigateToExamRoute: notify renderer', e?.message)
         }
-        await this.sleep(1000)
+        if (!sectionSwitch) await this.sleep(1000)
         await this.navigateHashRoute(win, hashRoute)
     }
 
-    /** Platform-aware fullscreen for exam/screenlock windows (not Win-AA shell). */
-    applyElectronKioskMode(win) {
+    /** Win/Linux without Cage/AA: Electron setKiosk; macOS AAC/Cage/AA shells skip this. */
+    _shouldUseElectronSetKiosk() {
+        const p = platformDispatcher.platform;
+        return p !== 'darwin' && !platformDispatcher.skipElectronKiosk && !platformDispatcher.runningInCage;
+    }
+
+    /** Platform-aware exam lockdown (setKiosk on Win/Linux; simpleFullscreen on macOS). */
+    applyElectronKioskMode(win, { fullscreenOnly = false } = {}) {
         if (!win || win.isDestroyed?.()) return;
         if (platformDispatcher.skipElectronKiosk) return;
         if (platformDispatcher.platform === 'darwin') {
             win.setSimpleFullScreen(true);
             return;
         }
-        win.setFullScreen(true);
+        if (platformDispatcher.runningInCage) return;
+        if (fullscreenOnly || !this._shouldUseElectronSetKiosk()) {
+            win.setFullScreen(true);
+            return;
+        }
+        win.setKiosk(true);
     }
 
     /** Inverse of applyElectronKioskMode when leaving exam routes. */
-    releaseElectronKioskMode(win) {
+    releaseElectronKioskMode(win, { fullscreenOnly = false } = {}) {
         if (!win || win.isDestroyed?.()) return;
         if (platformDispatcher.skipElectronKiosk) return;
         if (platformDispatcher.platform === 'darwin') {
             win.setSimpleFullScreen(false);
             return;
         }
-        win.setFullScreen(false);
+        if (platformDispatcher.runningInCage) return;
+        if (fullscreenOnly || !this._shouldUseElectronSetKiosk()) {
+            win.setFullScreen(false);
+            return;
+        }
+        win.setKiosk(false);
     }
 
-    /** Fullscreen + always-on-top + focus before slow platform restrictions run. */
-    raiseExamWindowToFront(win) {
+    /** Hide main window to tray; on macOS also remove dock icon. */
+    hideToTray() {
+        this.mainwindow.hide();
+        if (platformDispatcher.platform === 'darwin') app.dock.hide();
+    }
+
+    /** Show main window from tray; on macOS restore dock icon. */
+    showFromTray() {
+        if (platformDispatcher.platform === 'darwin') app.dock.show();
+        this.mainwindow.show();
+    }
+
+    /** Show/focus window, then kiosk/fullscreen (before blur listener and restrictions). */
+    enterElectronExamKiosk(win) {
         if (!win || win.isDestroyed?.()) return;
-        this.applyElectronKioskMode(win);
-        // AAC owns stacking; screen-saver alwaysOnTop breaks simple fullscreen / notch
-        if (!platformDispatcher.skipElectronKiosk && !isAssessmentSessionActive()) {
-            win.setAlwaysOnTop(true, 'screen-saver', 1);
-        }
+        if (platformDispatcher.skipElectronKiosk) return;
+
+        const applyKiosk = () => {
+            if (!win || win.isDestroyed?.()) return;
+            this.applyElectronKioskMode(win);
+            // AAC owns stacking; screen-saver alwaysOnTop breaks simple fullscreen / notch
+            if (!isAssessmentSessionActive()) {
+                win.setAlwaysOnTop(true, 'screen-saver', 1);
+            }
+        };
+
         win.show();
         win.moveTop();
         win.focus();
+        if (win.isVisible()) {
+            applyKiosk();
+        } else {
+            win.once('show', applyKiosk);
+        }
     }
 
-    /** applyElectronKioskMode + restrictions after exam route finished loading */
+    /** Kiosk first, then blur listener, then restrictions (after exam route loaded). */
     async applyExamWindowLockdown(win) {
         if (!win || win.isDestroyed?.()) return;
         if (this.config.showdevtools) { win.webContents.openDevTools() }
         if (this.config.development) return;
         try {
             win.removeMenu();
-            this.raiseExamWindowToFront(win);
+            this.enterElectronExamKiosk(win);
             if (!win || win.isDestroyed?.()) return;
 
             if (platformDispatcher.skipElectronKiosk) {
@@ -470,7 +509,7 @@ class WindowHandler {
             
             screenlockWindow.removeMenu() 
             screenlockWindow.setMinimizable(false)
-            this.applyElectronKioskMode(screenlockWindow)
+            this.applyElectronKioskMode(screenlockWindow, { fullscreenOnly: true })
             screenlockWindow.setAlwaysOnTop(true, "pop-up-menu", 1)   //above exam window (pop-up-menu, 0)
             screenlockWindow.show()
             screenlockWindow.moveTop();
@@ -575,7 +614,7 @@ class WindowHandler {
                     this.clearExamRoute()
                     return
                 }
-                await this.navigateToExamRoute(win, this.buildExamHashRoute(examtype, token, serverstatus, options))
+                await this.navigateToExamRoute(win, this.buildExamHashRoute(examtype, token, serverstatus, options), options)
                 let contentView = new BrowserView({
                     webPreferences: {
                         spellcheck: false,
@@ -617,7 +656,7 @@ class WindowHandler {
                     });
                 });
             } else {
-                await this.navigateToExamRoute(win, this.buildExamHashRoute(examtype, token, serverstatus, options))
+                await this.navigateToExamRoute(win, this.buildExamHashRoute(examtype, token, serverstatus, options), options)
             }
 
             const examTypesWithPdfInHeader = ["forms", "website", "eduvidual", "editor", "rdp", "microsoft365", "activesheets", "math", "localvm"];
@@ -818,7 +857,7 @@ class WindowHandler {
                     e.preventDefault();
                     await this.showMinimizeWarning()
                     log.warn(`windowhandler @ createMainWindow: Minimizing Next-Exam to Systemtray`)  
-                    this.mainwindow.hide();
+                    this.hideToTray();
                     return;
                 }
             }

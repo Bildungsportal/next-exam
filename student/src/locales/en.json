@@ -84,7 +84,7 @@
         "finalsubmit": "Final submit",
         "focusLockReason": "Reason",
         "focusLockReason_ltPort8088": "Port 8088 is in use by another service (not LanguageTool)",
-        "getmaterials": "Get materials",
+        "getmaterials": "Update materials",
         "headercolumn": "headercolumn",
         "headerrow": "headerrow",
         "heading1": "heading1",
@@ -148,6 +148,7 @@
         "requestsent": "print request sent",
         "right": "right",
         "rowafter": "rowafter",
+        "saveCopyAs": "Save copy as",
         "saved": "Creating backup",
         "savedclip": "Creating backup and clipboard copy",
         "sectionSwitchText": "Are you sure you want to switch to the new section?",
@@ -190,7 +191,7 @@
     },
     "main": {
         "tray": {
-            "disconnect": "Disconnect",
+            "disconnect": "sign out",
             "exit": "Exit",
             "restore": "Restore"
         }
@@ -288,6 +289,7 @@
         "suggest": "Show suggestions",
         "timeout": "Timeout! Exam-Teacher is behind Firewall.",
         "unreachable": "Server API unreachable",
+        "unregister": "sign out",
         "username": "Your name",
         "vmConnecting": "Connecting to virtual machine …",
         "vmFailed": "Virtual machine could not be reached.",

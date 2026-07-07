@@ -103,7 +103,7 @@ log.debug(`main: Electron version: ${process.versions.electron}`)
 log.debug(`main: Chromium version: ${process.versions.chrome}`)
 log.debug(`main: Node version: ${process.versions.node}`)
 log.debug(`main: V8 version: ${process.versions.v8}`)
-log.debug(`main: OS: ${process.platform} ${process.arch}`)
+log.debug(`main: OS: ${process.platform} ${process.ƒ}`)
 log.debug(`main: Arch: ${process.arch}`)
 log.debug(`main: Desktop: ${platformDispatcher.desktopName}`)
 log.debug(`main: Display server: ${platformDispatcher.displayServer}`)
@@ -138,7 +138,7 @@ app.on('second-instance', () => {
     log.warn("main @ singleinstance: prevented second start of next-exam. Restoring existing Next-Exam window.")
     if (WindowHandler.mainwindow) {
         if (WindowHandler.mainwindow.isMinimized() || !WindowHandler.mainwindow.isVisible()) {
-            WindowHandler.mainwindow.show()
+            WindowHandler.showFromTray()
             WindowHandler.mainwindow.restore()
         } 
         WindowHandler.mainwindow.focus() // Focus on the main window if the user tried to open another

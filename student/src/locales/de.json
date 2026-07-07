@@ -84,7 +84,7 @@
         "finalsubmit": "abgeben",
         "focusLockReason": "Grund",
         "focusLockReason_ltPort8088": "Port 8088 ist von einem anderen Dienst belegt (nicht LanguageTool)",
-        "getmaterials": "Materialien holen",
+        "getmaterials": "Materialien aktualisieren",
         "headercolumn": "Titelspalte",
         "headerrow": "Titelreihe",
         "heading1": "Überschrift 1",
@@ -148,6 +148,7 @@
         "requestsent": "Druckanfrage gesendet!",
         "right": "Rechtsbündig",
         "rowafter": "Reihe einfügen",
+        "saveCopyAs": "Kopie speichern unter",
         "saved": "Die Arbeit wurde erfolgreich gesichert!",
         "savedclip": "Die aktuelle Arbeit wird gesichert und in die Zwischenablage kopiert!",
         "sectionSwitchText": "Bist du sicher, dass du zum neuen Abschnitt wechseln möchtest?",
@@ -190,7 +191,7 @@
     },
     "main": {
         "tray": {
-            "disconnect": "Verbindung trennen",
+            "disconnect": "abmelden",
             "exit": "Beenden",
             "restore": "Wiederherstellen"
         }
@@ -288,6 +289,7 @@
         "suggest": "Vorschläge zeigen",
         "timeout": "Timeout! Exam-Teacher befindet sich möglicherweise hinter einer Firewall.",
         "unreachable": "Server API nicht erreichbar.",
+        "unregister": "abmelden",
         "username": "Dein Name",
         "vmConnecting": "Verbinde zur virtuellen Maschine …",
         "vmFailed": "Virtuelle Maschine nicht erreichbar.",

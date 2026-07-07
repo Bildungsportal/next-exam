@@ -1,152 +1,123 @@
 <template>
     <div class="activesheets-field-layer">
     <div
-        v-for="field in page.formFields"
-        v-show="fieldVisible(field.id)"
-        :key="field.id"
-        :class="wrapperClass(field.id)"
-        :id="field.id + '_wrapper'"
-        :style="field.style"
-        @click.stop="onFieldClick(field.id, false)"
+        v-for="entry in orderedFieldsForPage"
+        v-show="fieldVisible(entry.field.id)"
+        :key="entry.field.id"
+        :class="wrapperClass(entry.field.id, isCheckboxOverlay(entry))"
+        :id="entry.field.id + '_wrapper'"
+        :style="entry.field.style"
+        @click.stop="onFieldClick(entry.field.id, entry.isCustom)"
     >
         <template v-if="interactive">
-            <input
-                v-if="field.type === 'checkbox'"
-                type="checkbox"
-                :checked="field.checked"
-                :name="field.name"
-                :id="field.id"
-                class="interactive-input checkbox"
-            />
-            <textarea
-                v-else-if="field.type === 'textarea'"
-                :name="field.name"
-                :id="field.id"
-                class="interactive-input textarea"
-            >{{ field.value }}</textarea>
-            <input
-                v-else
-                type="text"
-                :value="field.value"
-                :name="field.name"
-                :id="field.id"
-                class="interactive-input text"
-            />
-        </template>
-    </div>
-
-    <div
-        v-for="cloze in page.clozeFields"
-        v-show="fieldVisible(cloze.id)"
-        :key="cloze.id"
-        :class="wrapperClass(cloze.id, cloze.type === 'checkbox' || cloze.type === 'deselect')"
-        :id="cloze.id + '_wrapper'"
-        :style="cloze.style"
-        @click.stop="onFieldClick(cloze.id, false)"
-    >
-        <template v-if="interactive">
-            <input
-                v-if="cloze.type === 'checkbox'"
-                type="checkbox"
-                :checked="cloze.checked || false"
-                :name="cloze.id"
-                :id="cloze.id"
-                class="interactive-input checkbox"
-            />
-            <input
-                v-else-if="cloze.type === 'deselect'"
-                type="checkbox"
-                :checked="cloze.checked || false"
-                :name="cloze.id"
-                :id="cloze.id"
-                class="interactive-input checkbox deselect-checkbox"
-            />
-            <input
-                v-else
-                type="text"
-                class="interactive-input cloze"
-                :name="cloze.id"
-                :id="cloze.id"
-            />
-        </template>
-    </div>
-
-    <div
-        v-for="box in page.boxFields"
-        v-show="fieldVisible(box.id)"
-        :key="box.id"
-        :class="wrapperClass(box.id, box.type === 'checkbox')"
-        :id="box.id + '_wrapper'"
-        :style="box.style"
-        @click.stop="onFieldClick(box.id, false)"
-    >
-        <template v-if="interactive">
-            <input
-                v-if="box.type === 'checkbox'"
-                type="checkbox"
-                :name="box.id"
-                :id="box.id"
-                class="interactive-input checkbox"
-            />
-            <textarea
-                v-else-if="box.type === 'textarea' || box.isTextarea"
-                class="interactive-input textarea"
-                :name="box.id"
-                :id="box.id"
-            ></textarea>
-            <input
-                v-else
-                type="text"
-                class="interactive-input table-cell"
-                :name="box.id"
-                :id="box.id"
-            />
-        </template>
-    </div>
-
-    <div
-        v-for="customField in customFieldsForPage"
-        v-show="fieldVisible(customField.id)"
-        :key="customField.id"
-        :class="wrapperClass(customField.id)"
-        :id="customField.id + '_wrapper'"
-        :style="customField.style"
-        @click.stop="onFieldClick(customField.id, true)"
-    >
-        <template v-if="interactive">
-            <textarea
-                v-if="!customField.type || customField.type === 'textarea'"
-                class="interactive-input textarea"
-                :name="customField.id"
-                :id="customField.id"
-            ></textarea>
-            <input
-                v-else-if="customField.type === 'textinput'"
-                type="text"
-                class="interactive-input text"
-                :name="customField.id"
-                :id="customField.id"
-            />
-            <input
-                v-else-if="customField.type === 'checkbox'"
-                type="checkbox"
-                class="interactive-input checkbox"
-                :name="customField.id"
-                :id="customField.id"
-            />
-            <input
-                v-else
-                type="checkbox"
-                class="interactive-input checkbox deselect-checkbox"
-                :name="customField.id"
-                :id="customField.id"
-            />
+            <template v-if="entry.kind === 'form'">
+                <input
+                    v-if="entry.field.type === 'checkbox'"
+                    type="checkbox"
+                    :checked="entry.field.checked"
+                    :name="entry.field.name"
+                    :id="entry.field.id"
+                    class="interactive-input checkbox"
+                />
+                <textarea
+                    v-else-if="entry.field.type === 'textarea'"
+                    :name="entry.field.name"
+                    :id="entry.field.id"
+                    class="interactive-input textarea"
+                >{{ entry.field.value }}</textarea>
+                <input
+                    v-else
+                    type="text"
+                    :value="entry.field.value"
+                    :name="entry.field.name"
+                    :id="entry.field.id"
+                    class="interactive-input text"
+                />
+            </template>
+            <template v-else-if="entry.kind === 'cloze'">
+                <input
+                    v-if="entry.field.type === 'checkbox'"
+                    type="checkbox"
+                    :checked="entry.field.checked || false"
+                    :name="entry.field.id"
+                    :id="entry.field.id"
+                    class="interactive-input checkbox"
+                />
+                <input
+                    v-else-if="entry.field.type === 'deselect'"
+                    type="checkbox"
+                    :checked="entry.field.checked || false"
+                    :name="entry.field.id"
+                    :id="entry.field.id"
+                    class="interactive-input checkbox deselect-checkbox"
+                />
+                <input
+                    v-else
+                    type="text"
+                    class="interactive-input cloze"
+                    :name="entry.field.id"
+                    :id="entry.field.id"
+                />
+            </template>
+            <template v-else-if="entry.kind === 'box'">
+                <input
+                    v-if="entry.field.type === 'checkbox'"
+                    type="checkbox"
+                    :name="entry.field.id"
+                    :id="entry.field.id"
+                    class="interactive-input checkbox"
+                />
+                <textarea
+                    v-else-if="entry.field.type === 'textarea' || entry.field.isTextarea"
+                    class="interactive-input textarea"
+                    :name="entry.field.id"
+                    :id="entry.field.id"
+                ></textarea>
+                <input
+                    v-else
+                    type="text"
+                    class="interactive-input table-cell"
+                    :name="entry.field.id"
+                    :id="entry.field.id"
+                />
+            </template>
+            <template v-else>
+                <textarea
+                    v-if="!entry.field.type || entry.field.type === 'textarea'"
+                    class="interactive-input textarea"
+                    :name="entry.field.id"
+                    :id="entry.field.id"
+                ></textarea>
+                <input
+                    v-else-if="entry.field.type === 'textinput'"
+                    type="text"
+                    class="interactive-input text"
+                    :name="entry.field.id"
+                    :id="entry.field.id"
+                />
+                <input
+                    v-else-if="entry.field.type === 'checkbox'"
+                    type="checkbox"
+                    class="interactive-input checkbox"
+                    :name="entry.field.id"
+                    :id="entry.field.id"
+                />
+                <input
+                    v-else
+                    type="checkbox"
+                    class="interactive-input checkbox deselect-checkbox"
+                    :name="entry.field.id"
+                    :id="entry.field.id"
+                />
+            </template>
         </template>
     </div>
     </div>
 </template>
 
 <script>
+import { mergePageOverlayFields } from 'next-exam-shared/overlayFieldOrder.js';
+
 export default {
     name: 'ActivesheetsFieldLayer',
     emits: ['deleteField', 'dismissMismatch'],
@@ -164,11 +135,16 @@ export default {
         deleteToolActive: { type: Boolean, default: false }, // dismiss mismatches nur wenn Annotation-Delete-Tool aktiv
     },
     computed: {
-        customFieldsForPage() {
-            return (this.customFields || []).filter((f) => f.pageIndex === this.pageIndex);
+        orderedFieldsForPage() {
+            return mergePageOverlayFields(this.page, this.customFields, this.pageIndex);
         },
     },
     methods: {
+        isCheckboxOverlay(entry) {
+            if (entry.kind === 'cloze') return entry.field.type === 'checkbox' || entry.field.type === 'deselect';
+            if (entry.kind === 'box') return entry.field.type === 'checkbox';
+            return false;
+        },
         isBlacklisted(id) {
             return (this.blacklist || []).includes(id);
         },

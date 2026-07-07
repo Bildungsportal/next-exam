@@ -280,8 +280,9 @@
                                 :value="server.examStatus ? server.examStatus : (server.requireBiP ? 'restricted' : $t('student.register'))"/>
                                 <!-- logged in, on this server       --> <input
                                 v-if="clientinfo.servername === server.servername" style="width:200px;"
-                                :id="server.servername" disabled type="button" name="register"
-                                class="btn btn-sm btn-success" :value="$t('student.registered')"/>
+                                :id="server.servername" type="button" name="register"
+                                class="btn btn-sm btn-danger" :value="$t('student.unregister')"
+                                @click="disconnectClient"/>
                             </div>
 
                         </div>
@@ -611,6 +612,7 @@ export default {
         async maybeOfferCageKioskSetup() {
             const k = this.platformKiosk;
             if (!isElectronWindow(window) || this.development) return;
+            if (k.displayServer === 'windows') return;
             if (k.runningInCage || !k.needsCageKioskSetup) return;
             if (localStorage.getItem('next-exam-cage-kiosk-setup-dismissed') === '1') return;
             await this.promptCageKioskSetup();
@@ -1128,7 +1130,7 @@ export default {
         },
 
 
-        // Restore name/pin from main-process clientinfo after remount (name persists after kick; pin only when connected).
+        // Restore name/pin/serverip from main-process clientinfo after remount (name persists after kick; pin/serverip only when connected).
         syncLoginFieldsFromClientinfo() {
             const name = this.clientinfo?.name;
             if (name && name !== 'DemoUser' && this.username !== name) {
@@ -1138,6 +1140,10 @@ export default {
             const pin = this.clientinfo?.pin;
             if (pin != null && pin !== '' && String(this.pincode) !== String(pin)) {
                 this.pincode = String(pin);
+            }
+            const serverip = this.clientinfo?.serverip;
+            if (serverip && serverip !== false && String(this.serverip) !== String(serverip)) {
+                this.serverip = String(serverip);
             }
         },
 
@@ -1476,13 +1482,9 @@ export default {
                 if (!server.serverip) continue;
                 const serverIdentifier = this.getServerIdentifier(server);
                 const isManual = this.isManuallyAddedServer(server);
-                const signal = AbortSignal.timeout(4000); // 4000 milliseconds = 4 seconds
-                examApiFetch(`https://${server.serverip}:${this.serverApiPort}/server/control/pong`, {
-                    method: 'GET',
-                    signal
-                })
-                .then(response => {
-                    if (!response.ok) throw new Error('Response not OK');
+                signalBridge.invoke('pingexamserver', { serverip: server.serverip })
+                .then((result) => {
+                    if (!result?.ok) throw new Error('Response not OK');
                     // Optimized: Only set if value changes
                     if (server.reachable !== true) {
                         server.reachable = true;
@@ -1646,6 +1648,12 @@ export default {
         // implementing a sleep (wait) function
         sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
+        },
+
+        // Drop server registration (same as system tray disconnect)
+        disconnectClient() {
+            signalBridge.send('disconnect');
+            this.token = '';
         },
 
         /** register client on the server **/

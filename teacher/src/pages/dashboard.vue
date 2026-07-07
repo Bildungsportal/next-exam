@@ -433,7 +433,7 @@
 
                     <template v-else>
                         <div class="basematerial-row">
-                            <span class="basematerial-group-pill basematerial-group-pill--ab" aria-label="A/B">AB</span>
+                            <span class="basematerial-group-pill basematerial-group-pill--ab"  aria-label="A/B">AB</span>
                             <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.website?.url">
                                 <div class="btn-group basematerial-filegroup" role="group">
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website.url" @click="openAllowedUrl(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website)">
@@ -846,8 +846,7 @@
 
         <!-- BIP Section START -->
         <div v-if="bipToken && this.serverstatus.bip" class="mb-4">
-            <span class="small m-1">{{$t("dashboard.bildungsportal")}}</span><span v-if="bipToken" class="small m-1 me-0 text-secondary">(verbunden)</span>
-            <div id="biploginbutton" @click="showBipInfo()" class="disabledbutton btn btn-success m-1" style="padding:0;">
+            <div id="biploginbutton" @click="showBipInfo()" class="disabledbutton btn btn-success" style="padding:0;margin:4px 12px 0;box-sizing:border-box;">
                 <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
                 <span v-if="bipUsername" id="biploginbuttonlabel" style="padding:2px; font-size:0.9em;">{{bipUsername}}</span><span style="padding:2px; font-size:0.9em;" v-else id="biploginbuttonlabel">Login</span>
             </div> 
