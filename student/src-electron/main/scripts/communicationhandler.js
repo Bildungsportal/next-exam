@@ -323,9 +323,12 @@ import {
         if (this.multicastClient.beaconsLost >= 5 ){  
              if (!this.multicastClient.kicked){
                 log.warn("communicationhandler @ requestUpdate: Connection to Teacher lost! Removing registration.") //remove server registration locally (same as 'kick')
+                const wasExam = this.multicastClient.clientinfo.exammode
+                const examStartIp = this.multicastClient.clientinfo.examStartIp
                 this.multicastClient.beaconsLost = 0
                 this.resetConnection()   // this also resets serverip therefore no api calls are made afterwards
                 this.killScreenlock()       // just in case screens are blocked.. let students work
+                if (wasExam) this._notifyExamConnectionLost(examStartIp)
             }
         }  
 
@@ -1044,6 +1047,7 @@ import {
                     return;
                 }
                 log.info("communicationhandler @ startExam: initializing localvm exam")
+                this._snapshotExamStartIp()
                 await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus);
                 return;
             }
@@ -1051,6 +1055,7 @@ import {
             if (!(await this.ensureAssessmentForExamStart())) return;
 
             log.info("communicationhandler @ startExam: initializing exam")
+            this._snapshotExamStartIp()
             await WindowHandler.createExamWindow(examtype, this.multicastClient.clientinfo.token, serverstatus);  // does not create a new window, but loads the exam route into the existing main window
         } 
         finally {
@@ -1195,6 +1200,7 @@ import {
       
         if (this.multicastClient.clientinfo.exammode){
             this.multicastClient.clientinfo.exammode = false
+            this.multicastClient.clientinfo.examStartIp = false
             disableRestrictions()
         }
 
@@ -1277,6 +1283,22 @@ import {
     // INFO: this is basically redundant 
     async gracefullyEndExam(){
         this.endExam()
+    }
+
+    /** Remember host IP at first exam start for connection-loss diagnosis. */
+    _snapshotExamStartIp() {
+        if (this.multicastClient.clientinfo.examStartIp) return
+        const ip = this.config.hostip || this.multicastClient.clientinfo.ip || false
+        if (ip) this.multicastClient.clientinfo.examStartIp = ip
+    }
+
+    /** Renderer compares examStartIp with fresh checkhostip after heartbeat loss. */
+    _notifyExamConnectionLost(examStartIp) {
+        try {
+            WindowHandler.mainwindow?.webContents?.send('exam-connection-lost', { examStartIp: examStartIp || false })
+        } catch (e) {
+            log.debug('communicationhandler @ _notifyExamConnectionLost', e?.message)
+        }
     }
 
     // reset all variables that signal or need a valid teacher connection

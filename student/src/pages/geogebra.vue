@@ -24,7 +24,11 @@
     <div class="geogebra-main">
 
     <!-- filelist start - show local files from workfolder (pdf and gbb only)-->
-    <div id="toolbar" class="d-inline p-1">  
+    <div id="toolbar" class="d-inline p-1">
+        <div :title="$t('editor.splitview')" @click="toggleSplitview()"
+             class="invisible-button btn btn-outline-info p-0 ms-1 me-1 mb-0 btn-sm">
+            <img src="/src/assets/img/svg/view-split-left-right.svg" class="" width="22" height="22">
+        </div>
         <button :title="$t('editor.saveCopyAs')" @click="saveContent(null, 'manual'); " class="btn d-inline btn-success p-0 pe-2 ps-1 ms-1 mb-0 btn-sm"><img src="/src/assets/img/svg/document-save-as.svg" class="white" width="20" height="20" ></button>
         <button title="delete" @click="clearAll(); " class=" btn  d-inline btn-danger p-0 pe-2 ps-1 ms-2 mb-0 btn-sm"><img src="/src/assets/img/svg/edit-delete.svg" class="white" width="20" height="20" ></button>
         <button title="paste" @click="showClipboard(); " class="btn  d-inline btn-secondary p-0 pe-2 ps-1 ms-2 mb-0 btn-sm"><img src="/src/assets/img/svg/edit-paste-style.svg" class="white" width="20" height="20" ></button>
@@ -76,27 +80,49 @@
     
 
 
-    <!-- angabe/pdf preview start -->
-    <div id="preview" class="fadeinfast p-4">
-        <WebviewPane
-            id="webview"
-            :src="urlForWebview || ''"
-            :visible="webviewVisible"
-            :allowed-url="urlForWebview"
-            :block-external="true"
-            @close="hidepreview"
-        />
-        <PdfviewPaneRendered
-            :localLockdown="localLockdown"
-            :examtype="examtype"
-            :toolbar="pdfPreviewUi"
-            :preview="pdfPreviewState"
-            @close="hidepreview"
-        />
-    </div>
-    <!-- angabe/pdf preview end -->
-
-    <div id="ggb-canvas-wrap" ref="ggbSurface" class="ggb-canvas-wrap">
+    <div class="geogebra-body" :class="splitview ? 'split-view-container' : ''">
+        <div
+            id="preview"
+            :class="splitview ? ['p-0', 'split-pane', 'split-pane--left', 'splitback', { 'splitback--empty': !pdfPreviewState }] : 'fadeinfast p-4'"
+            :style="splitview ? { flexBasis: splitLeftPct + '%', '--nx-preview-scroll-padding': '6px' } : { '--nx-preview-top-offset': '60px' }"
+        >
+            <WebviewPane
+                id="webview"
+                :src="urlForWebview || ''"
+                :visible="webviewVisible"
+                :splitview="splitview"
+                :showClose="!splitview"
+                :allowed-url="urlForWebview"
+                :block-external="true"
+                @close="hidepreview"
+            />
+            <PdfviewPaneRendered
+                :localLockdown="localLockdown"
+                :examtype="examtype"
+                :toolbar="pdfPreviewUi"
+                :preview="pdfPreviewState"
+                :showClose="!splitview"
+                :style="!pdfPreviewState ? 'display:none;' : ''"
+                @close="hidepreview"
+            />
+        </div>
+        <div
+            v-if="splitview"
+            class="split-divider"
+            role="separator"
+            aria-orientation="vertical"
+            :aria-valuenow="Math.round(splitLeftPct)"
+            aria-valuemin="20"
+            aria-valuemax="80"
+            @pointerdown.prevent="startSplitResize"
+            title="Drag to resize"
+        ></div>
+        <div
+            id="ggb-canvas-wrap"
+            ref="ggbSurface"
+            :class="splitview ? 'ggb-canvas-wrap split-pane split-pane--right' : 'ggb-canvas-wrap'"
+            :style="splitview ? { flexBasis: (100 - splitLeftPct) + '%' } : null"
+        >
           <!-- focus warning start -->
           <div v-if="!focus" class="focus-container">
             <div id="focuswarning" class="infodiv p-4 d-block focuswarning" >
@@ -109,6 +135,7 @@
         </div>
         <!-- focuswarning end  -->
         <div id="ggb-applet-host"></div>
+        </div>
     </div>
 
     </div>
@@ -271,6 +298,9 @@ export default {
             ggbReady:false,
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
             pdfPreviewState: null,
+            splitview: false,
+            splitLeftPct: 50,
+            _splitResizing: false,
             _resizeHandler: null,
             _ggbClipIgnoreSelectUntil: 0,
             _ggbResizeObs: null,
@@ -321,6 +351,14 @@ export default {
     components: { ExamHeader, WebviewPane, PdfviewPaneRendered  },  
     computed: {
 
+    },
+    watch: {
+        splitview() {
+            this.$nextTick(() => this.resizeGgbSurface());
+        },
+        splitLeftPct() {
+            this.$nextTick(() => this.resizeGgbSurface());
+        },
     },
     async mounted() {
         this.currentFile = `${this.clientname}.ggb`
@@ -441,8 +479,72 @@ export default {
             resetPdfPreviewToolbar(this);
             this.pdfPreviewState = null;
             let preview = document.querySelector("#preview")
-            preview.style.display = 'none';
+            if (!this.splitview) preview.style.display = 'none';
             URL.revokeObjectURL(this.currentpreview);
+        },
+
+        toggleSplitview() {
+            const next = !this.splitview;
+            this.splitview = next;
+            this.$nextTick(() => {
+                const preview = document.querySelector("#preview");
+                if (!preview) return;
+
+                if (this.splitview) {
+                    preview.style.display = '';
+                    if (this._onPreviewClick) preview.removeEventListener("click", this._onPreviewClick);
+                    this.$nextTick(() => this.resizeGgbSurface());
+                    return;
+                }
+
+                resetPdfPreviewToolbar(this);
+                this.pdfPreviewState = null;
+                preview.style.display = 'none';
+                URL.revokeObjectURL(this.currentpreview);
+                if (this._onPreviewClick) this.autoEventListener(preview,"click", this._onPreviewClick);
+                this.$nextTick(() => this.resizeGgbSurface());
+            });
+        },
+
+        startSplitResize(e) {
+            if (!this.splitview) return;
+            this._splitResizing = true;
+            this.autoEventListener(window,'pointermove', this.onSplitResizeMove, { passive: false });
+            this.autoEventListener(window,'pointerup', this.stopSplitResize, { passive: true });
+            this.autoEventListener(window,'pointercancel', this.stopSplitResize, { passive: true });
+            this.onSplitResizeMove(e);
+        },
+
+        onSplitResizeMove(e) {
+            if (!this._splitResizing) return;
+            e.preventDefault();
+            const container = document.querySelector('.split-view-container');
+            if (!container) return;
+            const rect = container.getBoundingClientRect();
+            const x = Math.min(Math.max(e.clientX - rect.left, 0), rect.width);
+            const pct = (x / rect.width) * 100;
+            const minLeftPx = 320;
+            const minRightPx = 420;
+            const minPct = (minLeftPx / rect.width) * 100;
+            const maxPct = 100 - (minRightPx / rect.width) * 100;
+            const clamped = Math.min(Math.max(pct, minPct), maxPct);
+            this.splitLeftPct = Math.min(80, Math.max(20, Math.round(clamped * 10) / 10));
+            this.resizeGgbSurface();
+        },
+
+        stopSplitResize() {
+            this._splitResizing = false;
+            window.removeEventListener('pointermove', this.onSplitResizeMove);
+            window.removeEventListener('pointerup', this.stopSplitResize);
+            window.removeEventListener('pointercancel', this.stopSplitResize);
+            this.resizeGgbSurface();
+        },
+
+        // Resize GeoGebra applet when split pane geometry changes.
+        resizeGgbSurface() {
+            if (!window.ggbApplet || !this.ggbReady) return;
+            const s = this.ggbSurfaceSize();
+            window.ggbApplet.setSize(s.w, s.h);
         },
 
 
@@ -927,6 +1029,8 @@ export default {
             this._stopExammodeWatch()
         }
 
+        this.stopSplitResize()
+
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
         if (this._ggbResizeObs) {
@@ -976,6 +1080,12 @@ export default {
     min-height: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+}
+
+.geogebra-body {
+    flex: 1 1 auto;
+    min-height: 0;
     overflow: hidden;
 }
 
@@ -1123,8 +1233,88 @@ export default {
     visibility: visible !important;
 }
 
+.split-view-container {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    overflow: hidden;
+}
+
+.split-pane {
+    flex: 0 0 auto;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.split-pane--right {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    overscroll-behavior: contain;
+}
+
+.split-pane--left {
+    background-color: transparent;
+}
+
+.splitback {
+    position: relative;
+}
+.splitback.splitback--empty::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url('/src/assets/img/svg/document-replace.svg');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 180px;
+    opacity: 0.85;
+}
+.splitback > * {
+    position: relative;
+    z-index: 1;
+}
+
+.split-divider {
+    flex: 0 0 10px;
+    cursor: col-resize;
+    position: relative;
+    background: transparent;
+    touch-action: none;
+}
+
+.split-divider::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 4px;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.split-divider:hover::before {
+    background: rgba(13, 110, 253, 0.55);
+}
+
+.split-view-container #preview {
+    display: block;
+    position: relative;
+    width: auto;
+    height: auto;
+    background-color: transparent;
+    backdrop-filter: none;
+    z-index: auto;
+}
+
 @media print{
     .customClipboard {
+        display: none !important;
+    }
+    #preview, .split-divider {
         display: none !important;
     }
     #apphead {
@@ -1162,12 +1352,13 @@ export default {
 #preview {
     display: none;
     position: absolute;
-    top: var(--nx-preview-top-offset, var(--nx-apphead-h, 60px));
+    top: 0;
     left: 0;
-    width:100vw;
-    height: calc(100vh - var(--nx-preview-top-offset, var(--nx-apphead-h, 60px)));
+    width: 100vw;
+    height: 100vh;
     background-color: rgba(0, 0, 0, 0.4);
-    z-index:100001;
+    z-index: 100001;
+    backdrop-filter: blur(2px);
 }
 
 </style>

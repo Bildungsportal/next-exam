@@ -470,7 +470,6 @@ export default {
                                     showCancelButton: true,
                                     cancelButtonText: this.$t("editor.cancel"),
                                     confirmButtonText: this.$t("editor.replace"),
-                                    reverseButtons: true,
                                     allowOutsideClick: false,
                                     allowEscapeKey: true
                                 })
@@ -532,7 +531,6 @@ export default {
                         icon: "question",
                         showCancelButton: true,
                         cancelButtonText: this.$t("editor.cancel") || "Abbrechen",
-                        reverseButtons: true
                     });
 
                     if (!result.isConfirmed) {

@@ -165,7 +165,6 @@ export async function loadHTML(file){
         icon: "question",
         showCancelButton: true,
         cancelButtonText: this.$t("editor.cancel"),
-        reverseButtons: true
     })
     .then(async (result) => {
         if (result.isConfirmed) {
@@ -237,7 +236,6 @@ export async function loadDOCX(file, base64 = false, silent = false) {
         icon: "question",
         showCancelButton: true,
         cancelButtonText: this.$t("editor.cancel"),
-        reverseButtons: true,
     }).then(async (result) => {
         if (result.isConfirmed) {
             try {
@@ -317,7 +315,6 @@ export async function loadODT(file, base64 = false, silent = false) {
         icon: 'question',
         showCancelButton: true,
         cancelButtonText: this.$t('editor.cancel'),
-        reverseButtons: true,
     }).then(async (result) => {
         if (result.isConfirmed) {
             try {
@@ -408,7 +405,6 @@ export async function playAudio(file, base64=false) {
             icon: "question",
             showCancelButton: true,
             cancelButtonText: this.$t("editor.cancel"),
-            reverseButtons: true,
 
             html: audioFile.playbacks > 0 ? `
                 
@@ -504,7 +500,6 @@ export async function loadGGB(file, base64=false){
         icon: "question",
         showCancelButton: true,
         cancelButtonText: this.$t("editor.cancel"),
-        reverseButtons: true
     })
     .then(async (result) => {
         if (result.isConfirmed) {

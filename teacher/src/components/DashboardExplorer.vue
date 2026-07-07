@@ -22,6 +22,10 @@
                     <img src="/src/assets/img/svg/edit-undo.svg" width="16" height="16">
                 </div>
                 <span class="wf-path-text">{{ currentdirectory }}</span>
+                <button type="button" class="btn btn-sm btn-gray-dark wf-path-pdf-btn" @click="$emit('open-encrypted-pdf')" @mouseover="$emit('show-description', $t('dashboard.openEncryptedPdfTooltip'))" @mouseout="$emit('hide-description')">
+                    <img src="/src/assets/img/svg/rotation-locked-landscape.svg" class="white" width="16" height="16" alt="">
+                    {{ $t('dashboard.openEncryptedPdf') }}
+                </button>
             </div>
 
             <!-- File list -->
@@ -117,7 +121,7 @@ export default {
         backupdirectory:      { type: String, default: '' },
     },
 
-    emits: ['close', 'load-filelist', 'load-pdf', 'load-image', 'load-text', 'load-html', 'send-file', 'download-file', 'delete-file', 'timeline-diff'],
+    emits: ['close', 'load-filelist', 'load-pdf', 'load-image', 'load-text', 'load-html', 'send-file', 'download-file', 'delete-file', 'timeline-diff', 'open-encrypted-pdf', 'show-description', 'hide-description'],
 
     methods: {
         isHtmlFile(file) {
@@ -195,6 +199,15 @@ export default {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+.wf-path-pdf-btn {
+    margin-left: auto;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 .wf-filelist {
     overflow-y: auto;

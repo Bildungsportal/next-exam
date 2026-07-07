@@ -256,6 +256,8 @@
       };
       signalBridge.on('switching-exam-section', this._onSwitchingExamSection);
       signalBridge.on('section-switch-aborted', this._onSectionSwitchAborted);
+      this._onExamConnectionLost = (_event, payload) => this.handleExamConnectionLost(payload);
+      signalBridge.on('exam-connection-lost', this._onExamConnectionLost);
       useInfoStore().updateInfo();
       this.autoSchedulerService(() => useInfoStore().updateInfo(), 5000);
       this._scheduleEndSectionSwitchOverlay();
@@ -267,6 +269,7 @@
       }
       signalBridge.removeAllListeners('switching-exam-section');
       signalBridge.removeAllListeners('section-switch-aborted');
+      signalBridge.removeAllListeners('exam-connection-lost');
       if (this._clockInterval) {
         this._clockInterval.removeEventListener('action', this.tickHeaderClock);
         this._clockInterval.stop();
@@ -317,6 +320,27 @@
       reconnect() {
         // Restore connection
         this.$emit('reconnect');
+      },
+      // After heartbeat loss: warn if host IP differs from exam-start snapshot.
+      async handleExamConnectionLost({ examStartIp } = {}) {
+        if (!examStartIp) return
+        try {
+          const cur = await signalBridge.invoke('checkhostip')
+          const newIp = cur?.hostip
+          if (!newIp || examStartIp === newIp) return
+          this.$swal.fire({
+            title: this.$t('student.ipChangeHintTitle'),
+            text: this.$t('student.ipChangeHintText', { oldIp: examStartIp, newIp }),
+            icon: 'warning',
+            confirmButtonText: this.$t('editor.reconnect'),
+            showCancelButton: true,
+            cancelButtonText: this.$t('editor.cancel'),
+          }).then((result) => {
+            if (result.isConfirmed) this.reconnect()
+          })
+        } catch (e) {
+          console.warn('ExamHeader @ handleExamConnectionLost', e)
+        }
       },
       gracefullyExit() {
         // Clean exit from safe exam mode

@@ -1653,6 +1653,9 @@ function setEditorExamConfigPatch(patch) {
     this.backupinterval.stop();
     this.autobackup = false;
     this.setServerStatus();
+    if (patch && ('languagetool' in patch || 'languagetoolhost' in patch || 'languagetoolport' in patch) && typeof this.persistGlobalTeacherSettings === 'function') {
+        this.persistGlobalTeacherSettings();
+    }
 }
 
 async function configureCustomLanguageToolHost() {

@@ -138,6 +138,33 @@ class IpcHandler {
             }
         })
 
+        /** Reads teacher-wide defaults from workdir/global.json (sibling of per-exam folders). */
+        ipcMain.handle('getTeacherGlobalSettings', async () => {
+            const filePath = join(this.config.workdirectory, 'global.json')
+            try {
+                const parsed = JSON.parse(await fs.promises.readFile(filePath, 'utf-8'))
+                return parsed && typeof parsed === 'object' ? parsed : null
+            } catch (_err) {
+                return null
+            }
+        })
+
+        /** Writes teacher-wide defaults to workdir/global.json. */
+        ipcMain.handle('setTeacherGlobalSettings', async (_event, settings) => {
+            if (!settings || typeof settings !== 'object') {
+                return { sender: 'server', status: 'error', message: 'invalid payload' }
+            }
+            const filePath = join(this.config.workdirectory, 'global.json')
+            try {
+                await fs.promises.mkdir(this.config.workdirectory, { recursive: true })
+                await fs.promises.writeFile(filePath, JSON.stringify(settings, null, 2))
+                return { sender: 'server', status: 'success' }
+            } catch (err) {
+                log.error('ipchandler @ setTeacherGlobalSettings:', err)
+                return { sender: 'server', status: 'error', message: 'could not save global settings' }
+            }
+        })
+
         /** Applies payload.serverstatus to mcServer, validates optional 4-digit pin when present, writes serverstatus.json under workdir and mirrors it to backupdirectory when configured. */
         ipcMain.handle('setServerStatus', async (_event, payload) => {
             const { servername, serverstatus: incoming } = payload || {}

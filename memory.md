@@ -80,6 +80,7 @@ RULE^materials^pushOrder^teacher: await setServerStatus before setStudentStatus 
 RULE^dashboard^setupLogic^exam setup funcs live in teacher/src/utils/examsetup.js; dashboard.vue should mostly import+map
 TECH^dashboard^overlayZ^StudentView 4000; DashboardExplorer 4100; StudentEditorTimelineDiffViewer 1003 (below StudentView unless raised)
 PATH^examlog^settings^examLogSettings.js snapshot on examstart→event.settings; ExamLog.vue UI+print; examEventBus.push meta.settings
+PATH^teacher^globalSettings^workdir/global.json; IPC getTeacherGlobalSettings+setTeacherGlobalSettings; directPrint+screenshot+backup+muteAudio+LT host; new exam only apply global, serverstatus.json wins
 BUG^examlog^dupSubmission^dashboard mounted stacked ipcRenderer.on('submission'); rule: removeListener before on; examEventBus.push dedupe ≤1ms same type+student
 
 # Student exam lifecycle (load, focus, security)

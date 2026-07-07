@@ -576,12 +576,14 @@
         border-radius: 6px;
         display: flex;
         flex-direction: column;
-        align-items: center;
+        align-items: flex-start;
         min-width: 0;
     }
     .pdf-page-layout {
         flex-shrink: 0;
         margin-bottom: 16px;
+        margin-left: auto;
+        margin-right: auto;
         display: flex;
         justify-content: center;
         align-items: flex-start;
