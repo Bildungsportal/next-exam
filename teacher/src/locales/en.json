@@ -277,6 +277,7 @@
         "removeURLconfirm": "Are you sure you want to remove this URL?",
         "removefile": "Delete File",
         "removefileconfirm": "Are you sure you want to delete this file?",
+        "removematerialconfirm": "Do you want to remove the exam materials?",
         "replace": "Replace existing Files on OneDrive?",
         "restore": "restore",
         "resumeinfo": "resume focus state",

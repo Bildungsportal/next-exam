@@ -2,7 +2,7 @@
   <div v-show="visible" :id="id" class="position-relative nx-webview-pane-host">
     <div class="nx-webview-pane-fill">
       <ul
-      class="nav nav-tabs d-flex align-items-stretch flex-nowrap position-absolute start-0 end-0 w-100 bg-white"
+      class="nav nav-tabs d-flex align-items-center flex-nowrap position-absolute start-0 end-0 w-100 bg-white nx-webview-toolbar"
       style="top: var(--nx-preview-top-offset, 0px); z-index:2000; pointer-events:auto; font-size:1.1rem;"
       @mousedown.stop
       @click.stop
@@ -278,14 +278,21 @@ export default {
   min-height: 0;
 }
 
-/* Same vertical stretch as nav row so −/+/% align with ⌂◀▶ */
+.nx-webview-toolbar {
+  min-height: 42px;
+  box-sizing: border-box;
+}
+
 .webview-toolbar-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  align-self: stretch;
+  height: 40px;
   margin-bottom: 0;
   cursor: pointer !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: 1;
 }
 
 /* Gray compact zoom label; overrides Bootstrap .nav-link blue */

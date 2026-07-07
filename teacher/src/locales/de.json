@@ -277,6 +277,7 @@
         "removeURLconfirm": "Sind Sie sicher, dass Sie diese URL entfernen möchten?",
         "removefile": "Datei löschen",
         "removefileconfirm": "Wollen Sie die Datei wirklich löschen?",
+        "removematerialconfirm": "Wollen Sie die Prüfungsunterlagen entfernen?",
         "replace": "Vorhandene Dateien auf OneDrive ersetzen?",
         "restore": "fortsetzen",
         "resumeinfo": "Temporäre Blockade aufheben",

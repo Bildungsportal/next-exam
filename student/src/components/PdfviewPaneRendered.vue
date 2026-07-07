@@ -345,7 +345,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    align-content: flex-start;
+    align-content: center;
     row-gap: 2px;
     gap: 2px !important;
     padding: 0 8px;

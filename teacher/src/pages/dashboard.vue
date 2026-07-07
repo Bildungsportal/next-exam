@@ -2264,7 +2264,7 @@ computed: {
                     actions: 'my-swal2-actions'
                 },
                 title: this.$t("dashboard.removefile"),
-                text: this.$t("dashboard.removefileconfirm"),
+                text: this.$t("dashboard.removematerialconfirm"),
                 icon: 'warning',
                 showCancelButton: true,
                 
