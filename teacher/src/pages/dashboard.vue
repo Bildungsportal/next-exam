@@ -433,7 +433,7 @@
 
                     <template v-else>
                         <div class="basematerial-row">
-                            <span class="basematerial-group-pill basematerial-group-pill--ab" aria-label="A/B">AB</span>
+                            <span class="basematerial-group-pill basematerial-group-pill--ab"  aria-label="A/B">AB</span>
                             <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.website?.url">
                                 <div class="btn-group basematerial-filegroup" role="group">
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website.url" @click="openAllowedUrl(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website)">

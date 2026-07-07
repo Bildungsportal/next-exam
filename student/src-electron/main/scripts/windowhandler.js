@@ -175,27 +175,38 @@ class WindowHandler {
         this.mainwindow.show();
     }
 
-    /** Fullscreen + always-on-top + focus before slow platform restrictions run. */
-    raiseExamWindowToFront(win) {
+    /** Show/focus window, then kiosk/fullscreen (before blur listener and restrictions). */
+    enterElectronExamKiosk(win) {
         if (!win || win.isDestroyed?.()) return;
-        this.applyElectronKioskMode(win);
-        // AAC owns stacking; screen-saver alwaysOnTop breaks simple fullscreen / notch
-        if (!platformDispatcher.skipElectronKiosk && !isAssessmentSessionActive()) {
-            win.setAlwaysOnTop(true, 'screen-saver', 1);
-        }
+        if (platformDispatcher.skipElectronKiosk) return;
+
+        const applyKiosk = () => {
+            if (!win || win.isDestroyed?.()) return;
+            this.applyElectronKioskMode(win);
+            // AAC owns stacking; screen-saver alwaysOnTop breaks simple fullscreen / notch
+            if (!isAssessmentSessionActive()) {
+                win.setAlwaysOnTop(true, 'screen-saver', 1);
+            }
+        };
+
         win.show();
         win.moveTop();
         win.focus();
+        if (win.isVisible()) {
+            applyKiosk();
+        } else {
+            win.once('show', applyKiosk);
+        }
     }
 
-    /** applyElectronKioskMode + restrictions after exam route finished loading */
+    /** Kiosk first, then blur listener, then restrictions (after exam route loaded). */
     async applyExamWindowLockdown(win) {
         if (!win || win.isDestroyed?.()) return;
         if (this.config.showdevtools) { win.webContents.openDevTools() }
         if (this.config.development) return;
         try {
             win.removeMenu();
-            this.raiseExamWindowToFront(win);
+            this.enterElectronExamKiosk(win);
             if (!win || win.isDestroyed?.()) return;
 
             if (platformDispatcher.skipElectronKiosk) {
