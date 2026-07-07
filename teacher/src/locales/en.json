@@ -236,7 +236,7 @@
         "oldpdfwarningsingle": "The local version of the file may be outdated!",
         "online": "details",
         "open": "Open file in external viewer",
-        "openEncryptedPdf": "Open PDF",
+        "openEncryptedPdf": "Decrypt PDF",
         "openEncryptedPdfBadPassword": "Wrong encryption secret or corrupted encrypted file.",
         "openEncryptedPdfError": "Could not open the selected file.",
         "openEncryptedPdfNeedEncryptionKey": "Server encryption secret is missing; save server status or reload the exam folder.",

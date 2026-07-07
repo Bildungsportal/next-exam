@@ -2166,7 +2166,6 @@ export default {
                 icon: "question",
                 showCancelButton: true,
                 cancelButtonText: this.$t("editor.cancel"),
-                reverseButtons: true,
                 preConfirm: () => {
                     // Save checkbox value before dialog closes (Electron 39 compatibility)
                     const keepcontentElement = document.getElementById('keepcontent');
@@ -2474,7 +2473,6 @@ export default {
                         icon: "question",
                         showCancelButton: true,
                         cancelButtonText: this.$t("editor.cancel"),
-                        reverseButtons: true,
                         allowOutsideClick: false,
                         allowEscapeKey: true,
                     });

@@ -9,7 +9,6 @@
     </span>
 
     <div style="flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
-        <button type="button" class="btn btn-sm btn-gray-dark m-0 me-1 mt-0" style="height:32px;" @click="openEncryptedPdfPreview" @mouseover="showDescription($t('dashboard.openEncryptedPdfTooltip'))" @mouseout="hideDescription"><img src="/src/assets/img/svg/rotation-locked-landscape.svg" style="vertical-align:text-top;" class="white" width="20" height="20" alt="">&nbsp; {{ $t('dashboard.openEncryptedPdf') }}&nbsp;</button>
         <div class="btn btn-sm btn-danger m-0 me-1 mt-0" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style=" height:32px;"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" >&nbsp; {{$t('dashboard.stopserver')}}&nbsp; </div>
         <div v-if="!hostip?.hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 me-1 " style="cursor: unset;">{{ $t("general.offline") }}</div>
         <div class="btn btn-sm btn-cyan m-0 me-1 mt-0" style=" padding:3px; height:32px; width:32px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22" > </div>
@@ -126,6 +125,9 @@
         @download-file="(file) => downloadFile(file)"
         @delete-file="(file) => fdelete(file)"
         @timeline-diff="(file) => openStudentEditorTimelineDiff(file)"
+        @open-encrypted-pdf="openEncryptedPdfPreview"
+        @show-description="showDescription($event)"
+        @hide-description="hideDescription"
     />
 
     <StudentEditorTimelineDiffViewer
@@ -1827,7 +1829,7 @@ computed: {
                 })
                 return
             }
-            this.showPDFPreview({ filepath: res.filePath, filename: res.filename, base64: res.base64 })
+            this.showPDFPreview({ filename: res.filename, base64: res.base64 })
         },
 
         /**
