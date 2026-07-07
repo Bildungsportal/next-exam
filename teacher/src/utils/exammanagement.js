@@ -7,7 +7,8 @@ import { countReachableStudents, isStudentReachable } from './studentPresence.js
 
 // enable exam mode 
 async function startExam(){
- 
+    if (!(await this.ensureMandatoryBasematerialBeforeSecure())) return
+
     setTimeout(() => {
         this.getFiles('all'); //  trigger this one immediately to figure out if there are write problems on student pcs 
     }, 4000); 
@@ -97,7 +98,9 @@ async function startExam(){
     }
 }
 
-function lockSectionForAll(sectionIndex){
+async function lockSectionForAll(sectionIndex){
+    if (!(await this.ensureMandatoryBasematerialBeforeSecure())) return
+
     const now = Date.now()
     Object.values(this.serverstatus.examSections).forEach(section => { section.locked = false })
     this.serverstatus.examSections[sectionIndex].locked = true

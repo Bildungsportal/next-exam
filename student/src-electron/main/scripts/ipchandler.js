@@ -679,6 +679,56 @@ class IpcHandler {
             }
         });
 
+        // True when hostname belongs to Microsoft Forms or its sign-in redirect chain.
+        const isMicrosoftFormsNavigationHost = (hostname) => {
+            const host = String(hostname || '').toLowerCase();
+            if (!host) return false;
+            if (host === 'forms.cloud.microsoft' || host === 'forms.office.com' || host === 'forms.microsoft.com') return true;
+            if (host.endsWith('.forms.office.com')) return true;
+            return host.endsWith('.microsoftonline.com')
+                || host.endsWith('.live.com')
+                || host.endsWith('.microsoft.com')
+                || host.endsWith('.msftauth.net')
+                || host.endsWith('.office.com')
+                || host.endsWith('.office.net')
+                || host.endsWith('.office365.com');
+        };
+
+        // True when hostname belongs to Google Forms or its sign-in redirect chain.
+        const isGoogleFormsNavigationHost = (hostname) => {
+            const host = String(hostname || '').toLowerCase();
+            if (!host) return false;
+            if (host === 'forms.gle' || host === 'docs.google.com') return true;
+            return host.endsWith('.google.com');
+        };
+
+        // Extract stable form id from configured Google/Microsoft forms responder URL.
+        const getFormsIdFromConfiguredUrl = (baseFormsUrlObj) => {
+            if (!baseFormsUrlObj) return null;
+            const queryId = baseFormsUrlObj.searchParams.get('id');
+            if (queryId) return queryId;
+            const googleMatch = baseFormsUrlObj.pathname.match(/\/forms\/d\/(?:e\/)?([^/]+)/i);
+            return googleMatch ? googleMatch[1] : null;
+        };
+
+        // Allow forms-mode top-level navigation for the configured provider (same origin + auth/forms hosts).
+        const isFormsModeNavigationAllowed = (targetUrl, baseFormsUrlObj) => {
+            if (!baseFormsUrlObj) return false;
+            try {
+                const currentObj = new URL(targetUrl);
+                if (currentObj.origin === baseFormsUrlObj.origin) return true;
+                const targetHost = currentObj.hostname.toLowerCase();
+                const formsHost = baseFormsUrlObj.hostname.toLowerCase();
+                const formsId = getFormsIdFromConfiguredUrl(baseFormsUrlObj);
+                if (formsId && String(targetUrl).includes(formsId)) return true;
+                if ((formsHost.includes('microsoft') || formsHost.includes('office')) && isMicrosoftFormsNavigationHost(targetHost)) return true;
+                if ((formsHost.includes('google') || formsHost === 'forms.gle') && isGoogleFormsNavigationHost(targetHost)) return true;
+                return false;
+            } catch {
+                return false;
+            }
+        };
+
         // Helper function for common exception URLs (used by all exam modes)
         const checkCommonExceptions = (targetUrl) => {
             if (targetUrl.includes("login") && targetUrl.includes("Microsoft")) return true;
@@ -814,20 +864,7 @@ class IpcHandler {
                 } else if (mode === "forms") {
                     const lowerUrl = String(targetUrl).toLowerCase();
                     if (checkCommonExceptions(lowerUrl)) return { allowed: true };
-
-                    // Lock to same origin of the configured forms URL
-                    if (formsUrlObj) {
-                        try {
-                            const currentObj = new URL(targetUrl);
-                            if (currentObj.origin === formsUrlObj.origin) {
-                                return { allowed: true };
-                            }
-                        } catch (e) {
-                            return { allowed: false, reason: 'invalid target URL for forms mode' };
-                        }
-                    }
-
-                    // If we have no valid base URL or URL is outside allowed scope, block
+                    if (isFormsModeNavigationAllowed(targetUrl, formsUrlObj)) return { allowed: true };
                     return { allowed: false, reason: 'not in forms allow list' };
                 } else if (mode === "rdp") {
                     return { allowed: true };
@@ -854,10 +891,10 @@ class IpcHandler {
                 if (!allowed) {
                     log.warn(`ipchandler @ start-blocking-for-website-webview [${mode}]: blocked navigation to`, url, "-", reason);
                     e.preventDefault();
-                    guest.stop();
-                } else {
-                    log.info(`ipchandler @ start-blocking-for-website-webview [${mode}]: allowed navigation to`, url);
+                    if (mode !== 'forms') guest.stop();
+                    return;
                 }
+                log.info(`ipchandler @ start-blocking-for-website-webview [${mode}]: allowed navigation to`, url);
             });
 
             if (mode === 'eduvidual') {

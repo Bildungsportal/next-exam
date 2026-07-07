@@ -21,6 +21,10 @@ function resolveWindowsSystem32Exe(...segments) {
 let failureCounter = 0;
 const MAX_FAILURES = 3;
 
+// Skip deprecated airport CLI after repeated failures (fallback still runs).
+let airportFailureCount = 0;
+const MAX_AIRPORT_FAILURES = 2;
+
 // Convert RSSI in dBm to a quality percentage between 0 and 100.
 function dbmToQualityPercent(dbm) {
     if (dbm === null || Number.isNaN(dbm)) return null;
@@ -477,67 +481,73 @@ async function getWlanInfoMacOS() {
     }
 
     try {
-        // Try airport command first (deprecated but still available on some systems)
-        try {
-            // Check if airport is available (usually at /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport)
-            const { stdout: airportPath } = await execAsync('which airport 2>/dev/null || echo /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport', {
-                timeout: 1000,
-                maxBuffer: 1024 * 64
-            });
-            const airport = airportPath.trim();
-            
-            const { stdout } = await execAsync(`${airport} -I`, {
-                timeout: 2000,
-                maxBuffer: 1024 * 64
-            });
-            const lines = stdout.split('\n').map(line => line.trim());
-            
-            let ssid = null;
-            let bssid = null;
-            let rssiDbm = null;
-            let signalPercent = null;
-            
-            for (const line of lines) {
-                if (line.startsWith('SSID:')) {
-                    ssid = line.replace('SSID:', '').trim();
-                } else if (line.startsWith('BSSID:')) {
-                    // Extract MAC address pattern to ensure we get the full BSSID
-                    const bssidMatch = line.match(/BSSID:\s*([a-f0-9]{2}(?::[a-f0-9]{2}){5})/i);
-                    bssid = bssidMatch ? bssidMatch[1].toUpperCase() : null;
-                } else if (line.startsWith('agrCtlRSSI:')) {
-                    // RSSI in dBm (negative value)
-                    const rssiStr = line.replace('agrCtlRSSI:', '').trim();
-                    const rssi = rssiStr ? (parseInt(rssiStr, 10) || null) : null;
-                    rssiDbm = rssi;
-                } else if (line.startsWith('link auth:')) {
-                    // Alternative: signal strength as percentage (if available)
-                    const signalMatch = line.match(/(\d+)%/);
-                    if (signalMatch && signalPercent === null) {
-                        const parsed = parseInt(signalMatch[1], 10);
-                        signalPercent = isNaN(parsed) ? null : parsed;
+        // Try airport only until repeated failures; deprecated on modern macOS.
+        if (airportFailureCount < MAX_AIRPORT_FAILURES) {
+            try {
+                const { stdout: airportPath } = await execAsync('which airport 2>/dev/null || echo /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport', {
+                    timeout: 1000,
+                    maxBuffer: 1024 * 64
+                });
+                const airport = airportPath.trim();
+
+                const { stdout } = await execAsync(`${airport} -I`, {
+                    timeout: 2000,
+                    maxBuffer: 1024 * 64
+                });
+                const lines = stdout.split('\n').map(line => line.trim());
+
+                let ssid = null;
+                let bssid = null;
+                let rssiDbm = null;
+                let signalPercent = null;
+
+                for (const line of lines) {
+                    if (line.startsWith('SSID:')) {
+                        ssid = line.replace('SSID:', '').trim();
+                    } else if (line.startsWith('BSSID:')) {
+                        const bssidMatch = line.match(/BSSID:\s*([a-f0-9]{2}(?::[a-f0-9]{2}){5})/i);
+                        bssid = bssidMatch ? bssidMatch[1].toUpperCase() : null;
+                    } else if (line.startsWith('agrCtlRSSI:')) {
+                        const rssiStr = line.replace('agrCtlRSSI:', '').trim();
+                        const rssi = rssiStr ? (parseInt(rssiStr, 10) || null) : null;
+                        rssiDbm = rssi;
+                    } else if (line.startsWith('link auth:')) {
+                        const signalMatch = line.match(/(\d+)%/);
+                        if (signalMatch && signalPercent === null) {
+                            const parsed = parseInt(signalMatch[1], 10);
+                            signalPercent = isNaN(parsed) ? null : parsed;
+                        }
                     }
                 }
+
+                let quality = null;
+                if (signalPercent !== null) {
+                    quality = signalPercent;
+                } else if (rssiDbm !== null) {
+                    quality = dbmToQualityPercent(rssiDbm);
+                }
+
+                if (ssid || bssid || quality !== null) {
+                    airportFailureCount = 0;
+                    return {
+                        ssid: ssid || null,
+                        bssid: bssid || null,
+                        quality,
+                        message: null
+                    };
+                }
+                airportFailureCount++;
+            } catch (airportError) {
+                airportFailureCount++;
+                const isRealError = airportError.code !== 'ENOENT'
+                    && airportError.message
+                    && !airportError.message.includes('permission');
+                if (isRealError && airportFailureCount <= MAX_AIRPORT_FAILURES) {
+                    log.warn('getWlanInfoMacOS: airport command failed:', airportError.message || airportError);
+                }
             }
-            
-            let quality = null;
-            if (signalPercent !== null) {
-                quality = signalPercent;
-            } else if (rssiDbm !== null) {
-                quality = dbmToQualityPercent(rssiDbm);
-            }
-            
-            if (ssid || bssid || quality !== null) {
-                return {
-                    ssid: ssid || null,
-                    bssid: bssid || null,
-                    quality,
-                    message: null
-                };
-            }
-        } catch (airportError) {
-            // Fallback to networksetup - only log if it's a real error (not just no permission)
-            if (airportError.code !== 'ENOENT' && airportError.message && !airportError.message.includes('permission')) {
-                log.warn('getWlanInfoMacOS: airport command failed:');
+            if (airportFailureCount >= MAX_AIRPORT_FAILURES) {
+                log.warn('getWlanInfoMacOS: airport disabled after repeated failures');
             }
         }
         
