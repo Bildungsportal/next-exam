@@ -245,6 +245,8 @@
         "fr": "Französisch",
         "invalidip": "Ungültige IP-Adresse.",
         "ip": "Server-Adresse",
+        "ipChangeHintText": "Deine IP hat sich geändert ({oldIp} → {newIp}). Das kann die Verbindung zum Prüfungsserver unterbrochen haben. Bitte „Neu verbinden“ nutzen.",
+        "ipChangeHintTitle": "Verbindung verloren",
         "it": "Italienisch",
         "lang": "Sprachen",
         "localLockdown": "Lokal absperren",

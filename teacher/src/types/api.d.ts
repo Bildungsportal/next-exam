@@ -14,6 +14,8 @@ export type Exam = {
   delfolderonexit: boolean, // Remove?
   screenshotinterval: number,
   backupintervalPause: number,
+  directPrintAllowed?: boolean,
+  muteAudio?: boolean,
   screenslocked: boolean, // Remove?
   examStudents: Student[],
   examTeachers: Teacher[],

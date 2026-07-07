@@ -245,6 +245,8 @@
         "fr": "French",
         "invalidip": "Invalid IP address.",
         "ip": "Server address",
+        "ipChangeHintText": "Your IP address has changed ({oldIp} → {newIp}). This may have interrupted the connection to the exam server. Please use reconnect.",
+        "ipChangeHintTitle": "Connection lost",
         "it": "Italian",
         "lang": "Languages",
         "localLockdown": "Local lockdown",

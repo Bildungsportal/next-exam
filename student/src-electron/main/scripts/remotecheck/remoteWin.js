@@ -1,9 +1,10 @@
-import { exec } from 'child_process'
+import { exec, execFile } from 'child_process'
 import { promisify } from 'util'
 import { appsToClose } from '../appsToClose.js'
-import { findKeywordHits, parseWinTasklistStems } from './processKeywords.js'
+import { findKeywordHits, normalizeStem, parseWinTasklistStems } from './processKeywords.js'
 
 const execAsync = promisify(exec)
+const execFileAsync = promisify(execFile)
 
 // derived from appsToClose (single source of truth); lowercase + deduped; exact process-stem match via processKeywords.js
 const suspiciousKeywords = [...new Set(appsToClose.map((k) => k.toLowerCase()))]
@@ -13,6 +14,25 @@ const suspiciousPorts = [
   7070, 6783, 6784, 6785, 8040, 8041, 8042, 21115, 21116
 ];
 
+// True when msedge runs in an interactive session with a visible window or renderer (not Session-0 service).
+async function confirmMsedgeUserBrowser() {
+  try {
+    const ps =
+      '$h=Get-CimInstance Win32_Process -Filter "Name=\'msedge.exe\'"|Where-Object{$_.SessionId -gt 0 -and ' +
+      '(($_.CommandLine -match \'--type=renderer\') -or ((Get-Process -Id $_.ProcessId -EA SilentlyContinue).MainWindowHandle -gt 0))}|Select -First 1;' +
+      'if($h){"1"}'
+    const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-Command', ps], {
+      encoding: 'utf8',
+      timeout: 3000,
+      maxBuffer: 64 * 1024,
+      windowsHide: true,
+    })
+    return stdout.trim() === '1'
+  } catch {
+    return false
+  }
+}
+
 async function checkProcesses() {
   try {
     // Execute 'tasklist /fo csv' (structured format, faster than /v, still shows process names)
@@ -21,7 +41,12 @@ async function checkProcesses() {
       timeout: 3000,  // 3 second timeout
       maxBuffer: 1024 * 1024 * 2  // 2MB buffer
     })
-    return findKeywordHits(parseWinTasklistStems(stdout), suspiciousKeywords)
+    const stems = parseWinTasklistStems(stdout)
+    let hits = findKeywordHits(stems, suspiciousKeywords)
+    if (stems.has('msedge') && !(await confirmMsedgeUserBrowser())) {
+      hits = hits.filter((k) => normalizeStem(k) !== 'msedge' && normalizeStem(k) !== 'microsoft edge')
+    }
+    return hits
   } catch (error) {
     return []  // Return empty on error/timeout
   }

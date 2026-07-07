@@ -929,7 +929,7 @@
                             </div>
                             <div class="setup-row">
                                 <div class="form-check form-switch m-0">
-                                    <input v-model="serverstatus.directPrintAllowed" @change="checkforDefaultprinter(); setServerStatus()" class="form-check-input" type="checkbox" id="directprint" @mouseenter="setSetupStatus($t('dashboard.allowdirectprint'))" @mouseleave="clearSetupStatus">
+                                    <input v-model="serverstatus.directPrintAllowed" @change="checkforDefaultprinter(); setServerStatus(); persistGlobalTeacherSettings()" class="form-check-input" type="checkbox" id="directprint" @mouseenter="setSetupStatus($t('dashboard.allowdirectprint'))" @mouseleave="clearSetupStatus">
                                     <label class="form-check-label" for="directprint">{{$t('dashboard.directprint')}}</label>
                                 </div>
                                 <div class="setup-switch-details text-black-50 setup-hint" v-if="defaultPrinter">{{ defaultPrinter }}</div>
@@ -970,7 +970,7 @@
                             </div>
                             <div class="setup-row">
                                 <div class="form-check form-switch m-0">
-                                    <input v-model="muteAudio" class="form-check-input" type="checkbox" id="muteaudio" @mouseenter="setSetupStatus($t('dashboard.muteaudiointro'))" @mouseleave="clearSetupStatus">
+                                    <input v-model="serverstatus.muteAudio" @change="setServerStatus(); persistGlobalTeacherSettings()" class="form-check-input" type="checkbox" id="muteaudio" @mouseenter="setSetupStatus($t('dashboard.muteaudiointro'))" @mouseleave="clearSetupStatus">
                                     <label class="form-check-label" for="muteaudio">{{$t('dashboard.muteaudio')}}</label>
                                 </div>
                             </div>
@@ -1448,7 +1448,6 @@ export default {
             visiblePrinter: null,
             audioSource:'',
             audioFilename: '',
-            muteAudio: false,
             submissions: [],
             submissionsNumber: 0,
             urlForWebview: null,
@@ -1504,6 +1503,7 @@ export default {
                 backupintervalPause:6,
                 screenslocked: false,
                 directPrintAllowed: false,
+                muteAudio: false,
                 examTeachers: [],
                 examSecurityKey: "oI9xGzHkUFe7Lg2iTXHkYp4pDab3Nvj4kFEOqA93cZE=",
                 useExamSections: false, //if false exam section 1 is used and no tabs are displayed
@@ -2056,7 +2056,7 @@ computed: {
                                 //now update the entry in the original widgets object and check if the student is online
                                 const isReachable = isStudentReachable(student, this.now);
                                 if (!isReachable){
-                                    if (this.studentwidgets[i].online && !this.muteAudio){ // play short soundfile on the first time the student timestamp is older than 20 seconds
+                                    if (this.studentwidgets[i].online && !this.serverstatus.muteAudio){ // play short soundfile on the first time the student timestamp is older than 20 seconds
                                         console.log(`dashboard @ fetchInfo: student ${student.clientname} just went offline`)
                                         const audio = new Audio('dialog-warning.oga');
                                         audio.play();
@@ -2066,7 +2066,7 @@ computed: {
                                 else {student.online = true }  // set online status on student object
 
                                 // play sound once when student loses focus for the first time
-                                if (!student.focus && this.studentwidgets[i].focus && !this.muteAudio) {
+                                if (!student.focus && this.studentwidgets[i].focus && !this.serverstatus.muteAudio) {
                                     console.log(`dashboard @ fetchInfo: student ${student.clientname} lost focus`)
                                     const focusAudio = new Audio('dialog-warning.oga');
                                     focusAudio.play();
@@ -2370,6 +2370,7 @@ computed: {
                 this.backupinterval.start();
             }
             this.setServerStatus();
+            this.persistGlobalTeacherSettings();
         },
 
 
@@ -2385,6 +2386,50 @@ computed: {
                 this.autoscreenshot = true; // enable screenshots
             }
             this.setServerStatus(); // save changes
+            this.persistGlobalTeacherSettings();
+        },
+      
+        buildTeacherGlobalSettings() {
+            const editor = this.serverstatus.examSections?.[this.serverstatus.activeSection]?.groupA?.examConfig?.editor || {};
+            return {
+                directPrintAllowed: !!this.serverstatus.directPrintAllowed,
+                screenshotinterval: this.serverstatus.screenshotinterval,
+                backupintervalPause: this.serverstatus.backupintervalPause,
+                muteAudio: !!this.serverstatus.muteAudio,
+                languagetool: !!editor.languagetool,
+                languagetoolhost: editor.languagetoolhost || null,
+                languagetoolport: editor.languagetoolport || null,
+            };
+        },
+
+        applyTeacherGlobalSettings(global) {
+            if (!global || typeof global !== 'object') return;
+            if (typeof global.directPrintAllowed === 'boolean') this.serverstatus.directPrintAllowed = global.directPrintAllowed;
+            if (global.screenshotinterval != null) this.serverstatus.screenshotinterval = global.screenshotinterval;
+            if (global.backupintervalPause != null) this.serverstatus.backupintervalPause = global.backupintervalPause;
+            if (typeof global.muteAudio === 'boolean') this.serverstatus.muteAudio = global.muteAudio;
+            const ltHost = global.languagetoolhost;
+            const ltPort = global.languagetoolport;
+            if (!global.languagetool && !ltHost) return;
+            for (const section of Object.values(this.serverstatus.examSections || {})) {
+                for (const groupKey of ['groupA', 'groupB']) {
+                    const editor = section?.[groupKey]?.examConfig?.editor;
+                    if (!editor || typeof editor !== 'object') continue;
+                    if (global.languagetool) editor.languagetool = true;
+                    if (ltHost) {
+                        editor.languagetoolhost = ltHost;
+                        editor.languagetoolport = ltPort || '8088';
+                    }
+                }
+            }
+        },
+
+        async persistGlobalTeacherSettings() {
+            try {
+                await ipcRenderer.invoke('setTeacherGlobalSettings', this.buildTeacherGlobalSettings());
+            } catch (err) {
+                console.warn('dashboard @ persistGlobalTeacherSettings:', err);
+            }
         },
       
         async showDescription(description, info=false, isHtml=false) {
@@ -2681,6 +2726,7 @@ computed: {
             if (!status || typeof status !== 'object') return;
             if (!status.examSections || typeof status.examSections !== 'object') status.examSections = {};
             if (typeof status.directPrintAllowed !== 'boolean') status.directPrintAllowed = false;
+            if (typeof status.muteAudio !== 'boolean') status.muteAudio = false;
             if (typeof status.encryptionPassword !== 'string' || status.encryptionPassword.trim().length < 64) {
                 status.encryptionPassword = generateEncryptionPassword();
             }
@@ -2719,9 +2765,11 @@ computed: {
         // we save serverstatus everytime we start an exam - therefore exams can be resumed easily by the teacher if something wicked happens
         async getPreviousServerStatus(){
             this.config = await ipcRenderer.invoke('getconfigasync')
+            const globalSettings = await ipcRenderer.invoke('getTeacherGlobalSettings')
             const response = await ipcRenderer.invoke('getServerStatusFromDisk', this.servername)
             if (response.serverstatus === false) {
                 this.serverstatus.backupdirectory = this.config.backupdirectory || false
+                this.applyTeacherGlobalSettings(globalSettings)
                 this.migrateServerStatus()
                 this.setServerStatus()  // there is no serverstatus - we need to set it to default
                 return
