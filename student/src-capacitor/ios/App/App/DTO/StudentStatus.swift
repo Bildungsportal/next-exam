@@ -7,6 +7,7 @@ struct StudentStatus: Codable {
     var delfolder: Bool? = nil
     var sendexam: Bool? = nil
     var sendlog: Bool? = nil
+    var kicked: Bool? = nil
     var focus: Bool? = nil
     var getmaterials: Bool? = nil
 
@@ -14,6 +15,7 @@ struct StudentStatus: Codable {
     var asDictionary: [String: Any] {
             var dict = [String: Any]()
 
+            dict["kicked"]            = kicked
             dict["group"]             = group
             dict["restorefocusstate"] = restorefocusstate
             dict["printdenied"]       = printdenied

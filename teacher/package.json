@@ -120,6 +120,6 @@
   "overrides": {
     "@parcel/watcher": "npm:@favware/skip-dependency@1.2.2"
   },
-  "buildNumber": "0",
-  "buildVersion": "2.0.0.0"
+  "buildNumber": "1",
+  "buildVersion": "2.0.0.1"
 }

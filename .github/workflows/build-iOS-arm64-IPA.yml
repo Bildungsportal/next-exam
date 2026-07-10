@@ -1,0 +1,337 @@
+name: Build iOS arm64 App
+
+on:
+  workflow_call:
+    inputs:
+      prerelease:
+        type: boolean
+        required: false
+        default: false
+  workflow_dispatch: {}
+
+env:
+  NODE_VERSION: '24'
+  XCODE_SCHEME: 'App'
+  XCODE_WORKSPACE: 'src-capacitor/ios/App/App.xcworkspace'
+  ARCHIVE_PATH: '${{ github.workspace }}/student/build/App.xcarchive'
+  EXPORT_PATH:  '${{ github.workspace }}/student/build/ipa'
+
+jobs:
+  build-ios:
+    name: Build iOS App
+    runs-on: macos-15-intel
+    steps:
+      - name: Checkout This Repository
+        if: ${{ inputs.prerelease == false }}
+        uses: actions/checkout@v4
+
+      - name: Checkout Private Repository
+        if: ${{ inputs.prerelease == true }}
+        uses: actions/checkout@v4
+        with:
+          repository: BiP-org/next-exam
+          ref: main
+          token: ${{ secrets.PAT_BiP_ORG_NEXT_EXAM }}
+
+      # ── Node Setup ─────────────────────────
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.14.0'
+          cache: 'npm'
+          cache-dependency-path: |
+            student/package-lock.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Node dependencies
+        working-directory: ./student
+        run: npm ci
+
+      - name: Install Quasar CLI
+        run: npm install -g @quasar/cli @capacitor/cli
+
+      - name: Student cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ./student/.npm
+            ./student/node_modules
+          key: ${{ runner.os }}-node-s-x64-${{ hashFiles('./student/**/package-lock.json') }}
+
+      - name: Cache node-gyp
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/node-gyp
+            ~/.npm/_libvips
+          key: ${{ runner.os }}-gyp-x64-${{ hashFiles('student/package-lock.json') }}
+
+      # ── Cache CocoaPods ────────────────────
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: student/src-capacitor/ios/App/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('student/src-capacitor/ios/App/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Student install dependencies
+        working-directory: ./student
+        env:
+          npm_config_arch: x64
+          npm_config_target_arch: x64
+          npm_config_platform: darwin
+        run: |
+          npm install
+          # Force reinstall electron with correct architecture if needed
+          ELECTRON_ARCH=x64 npm install electron@38.1.2 --force
+          mkdir dist
+
+      # ── Build Quasar ───────────────────────
+      - name: Build Quasar app (Capacitor mode)
+        working-directory: ./student
+        run: npm run build:ios
+        env:
+          NODE_ENV: production
+          # Add your environment variables here:
+          # VITE_API_URL: ${{ secrets.API_URL }}
+
+      - name: Remove desktop-only assets for iOS build
+        working-directory: ./student
+        run: |
+          echo "Removing desktop-only assets..."
+          rm -rf src-capacitor/www/minimal-jre-11-lin
+          rm -rf src-capacitor/www/minimal-jre-11-mac
+          rm -rf src-capacitor/www/minimal-jre-11-mac-arm64
+          rm -rf src-capacitor/www/minimal-jre-11-win
+          rm -rf src-capacitor/www/LanguageTool
+          echo "Removed"
+          ls src-capacitor/www/
+
+      # ── Capacitor Sync ─────────────────────
+      - name: Capacitor sync iOS
+        working-directory: ./student
+        run: |
+          cd src-capacitor
+          npx cap sync ios
+
+      - name: Update CocoaPods
+        run: sudo gem install cocoapods
+
+      # ── CocoaPods ──────────────────────────
+      - name: Install CocoaPods dependencies
+        working-directory: ./student
+        run: |
+          cd src-capacitor/ios/App
+          pod install --repo-update
+
+      # ── Code Signing ───────────────────────
+      - name: Import Apple Distribution Certificate
+        uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.P12_BASE64_APPLE_IOS }}
+          p12-password: ${{ secrets.P12_PASSWORD_APPLE_IOS }}
+          keychain-password: ${{ secrets.P12_PASSWORD_APPLE }}
+
+      - name: Verify certificate imported correctly
+        run: |
+          echo "──── All signing identities ────"
+          security find-identity -v -p codesigning
+          
+          echo "──── All certificates ────"
+          security find-identity -v
+
+      - name: Install Provisioning Profile
+        run: |
+          PP_PATH="${{ github.workspace }}/student/scripts/apple/adhocipadmichael.mobileprovision"
+
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+
+          # Decode the profile properly first
+          security cms -D -i "$PP_PATH" > /tmp/decoded_profile.plist
+
+          PP_UUID=$(/usr/libexec/PlistBuddy -c "Print :UUID" /tmp/decoded_profile.plist)
+          PP_NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" /tmp/decoded_profile.plist)
+
+          cp "$PP_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/"$PP_UUID".mobileprovision
+
+          echo "PP_UUID=$PP_UUID" >> $GITHUB_ENV
+          echo "PP_NAME=$PP_NAME" >> $GITHUB_ENV
+          echo "UUID: $PP_UUID"
+          echo "Name: $PP_NAME"
+
+      # ── Export Options ─────────────────────
+      - name: Create ExportOptions.plist
+        run: |
+          cat > $RUNNER_TEMP/ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+            "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>ad-hoc</string>
+            <key>teamID</key>
+            <string>${{ secrets.TEAMID }}</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>stripSwiftSymbols</key>
+            <true/>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>ios.nextexam.student</key>
+              <string>$PP_UUID</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+
+          echo "ExportOptions.plist created"
+          cat $RUNNER_TEMP/ExportOptions.plist
+
+      # ── Configure Signing (App target only) ─
+      - name: Configure code signing in Xcode project
+        working-directory: ./student
+        run: |
+          PBXPROJ="src-capacitor/ios/App/App.xcodeproj/project.pbxproj"
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' "$PBXPROJ"
+          sed -i '' 's/CODE_SIGN_IDENTITY = "Apple Development";/CODE_SIGN_IDENTITY = "iPhone Distribution";/g' "$PBXPROJ"
+          sed -i '' "s/DEVELOPMENT_TEAM = \"\";/DEVELOPMENT_TEAM = \"${{ secrets.TEAMID }}\";/g" "$PBXPROJ"
+          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \"\";/PROVISIONING_PROFILE_SPECIFIER = \"$PP_NAME\";/g" "$PBXPROJ"
+          echo "Code signing configured for App target"
+
+      # ── Xcode Build ────────────────────────
+      - name: Set app version & build number
+        working-directory: ./student
+        run: |
+          BUILD_NUMBER=${{ github.run_number }}
+          APP_VERSION=$(node -p "require('./package.json').version")
+
+          /usr/libexec/PlistBuddy \
+            -c "Set :CFBundleShortVersionString $APP_VERSION" \
+            -c "Set :CFBundleVersion $BUILD_NUMBER" \
+            src-capacitor/ios/App/App/Info.plist
+
+          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> $GITHUB_ENV
+          echo "Building version $APP_VERSION ($BUILD_NUMBER)"
+
+#      - name: Build iOS Simulator app
+#        working-directory: ./student
+#        run: |
+#          set -o pipefail
+#          xcodebuild build \
+#            -sdk iphonesimulator \
+#            -workspace "${{ env.XCODE_WORKSPACE }}" \
+#            -scheme "${{ env.XCODE_SCHEME }}" \
+#            -configuration Release \
+#            -destination "generic/platform=iOS Simulator" \
+#            -derivedDataPath build/sim-derived \
+#            CODE_SIGN_IDENTITY=- \
+#            CODE_SIGNING_REQUIRED=NO \
+#            COMPILER_INDEX_STORE_ENABLE=NO \
+#            -jobs 1 2>&1 | tee sim_build_output.log
+#
+#      - name: Package Simulator app
+#        working-directory: ./student/build/sim-derived/Build/Products/Release-iphonesimulator
+#        run: |
+#          ditto -c -k --sequesterRsrc --keepParent App.app App-Simulator.zip
+#          echo "Packaged simulator app"
+#          ls -lh App-Simulator.zip
+#
+#      - name: Upload Simulator app artifact
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: next-exam-student-ios-simulator
+#          path: student/build/sim-derived/Build/Products/Release-iphonesimulator/App-Simulator.zip
+#          retention-days: 5
+#          if-no-files-found: error
+
+      - name: Build & Archive iOS app
+        working-directory: ./student
+        run: |
+          set -o pipefail
+
+          # Build first to ensure all bundle targets are produced
+          xcodebuild build \
+            -workspace "${{ env.XCODE_WORKSPACE }}" \
+            -scheme "${{ env.XCODE_SCHEME }}" \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            -jobs 1 2>&1 | tee build_output.log
+
+          # Then archive
+          xcodebuild archive \
+            -workspace "${{ env.XCODE_WORKSPACE }}" \
+            -scheme "${{ env.XCODE_SCHEME }}" \
+            -configuration Release \
+            -archivePath "${{ env.ARCHIVE_PATH }}" \
+            -destination "generic/platform=iOS" \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            -jobs 1 2>&1 | tee -a build_output.log
+
+          echo "──── Verify archive was created ────"
+          ls -la "${{ env.ARCHIVE_PATH }}" || echo "Archive not found!"
+
+      - name: Inspect archive
+        run: |
+          ARCHIVE_PATH="${{ env.ARCHIVE_PATH }}"
+          APP_BINARY=$(find "$ARCHIVE_PATH" -name "*.app" -type d | head -1)
+
+          echo "──── Archive contents ────"
+          ls -la "$ARCHIVE_PATH/Products/Applications/" || echo "No Applications folder"
+
+          echo "──── App binary ────"
+          BINARY=$(find "$ARCHIVE_PATH" -type f -perm +111 | head -5)
+          echo "$BINARY"
+
+          echo "──── Binary size ────"
+          find "$ARCHIVE_PATH" -name "App" -type f -exec ls -lh {} \;
+
+          echo "──── Binary type ────"
+          find "$ARCHIVE_PATH" -name "App" -type f -exec file {} \;
+
+      - name: Strip provisioning profiles from embedded frameworks
+        run: |
+          find "${{ env.ARCHIVE_PATH }}/Products/Applications/App.app/Frameworks" \
+            -name "embedded.mobileprovision" \
+            -delete \
+            -print
+          echo "Stripped framework provisioning profiles"
+
+      - name: Export IPA
+        working-directory: ./student
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -exportArchive \
+            -archivePath "${{ env.ARCHIVE_PATH }}" \
+            -exportPath "${{ env.EXPORT_PATH }}" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            2>&1 | tee export_output.log
+
+      # ── Artifacts ──────────────────────────
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-exam-student-ios
+          path: ${{ env.EXPORT_PATH }}/*.ipa
+          retention-days: 5
+          if-no-files-found: error
+
+      - name: Upload dSYMs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-exam-student-ios-dsyms
+          path: ${{ env.ARCHIVE_PATH }}/dSYMs/
+          retention-days: 5
+

@@ -20,6 +20,7 @@ struct ClientInfo: Codable {
     var printrequest: Bool                    = false
     var privateSpellcheck: PrivateSpellcheck  = PrivateSpellcheck()
     var localLockdown: Bool                   = false
+    var groups: Bool                          = false
     var group: String                         = "a"
     var submissionnumber: Int                 = 0
     var localVMHost: String?                  = nil
@@ -39,6 +40,7 @@ struct ClientInfo: Codable {
             "screenshotinterval": screenshotinterval,
             "printrequest":       printrequest,
             "localLockdown":      localLockdown,
+            "groups":             groups,
             "group":              group,
             "submissionnumber":   submissionnumber,
             "version":            version,

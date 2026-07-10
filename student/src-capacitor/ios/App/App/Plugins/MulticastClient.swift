@@ -16,10 +16,10 @@ struct AppConfig {
 final class SchedulerService {
 
     private var timer: Timer?
-    private let action: () -> Void
+    private let action: () async -> Void
     private let interval: TimeInterval
 
-    init(action: @escaping () -> Void, intervalMs: Double) {
+    init(action: @escaping () async -> Void, intervalMs: Double) {
         self.action   = action
         self.interval = intervalMs / 1_000
     }
@@ -29,7 +29,10 @@ final class SchedulerService {
             self.timer = Timer.scheduledTimer(
                 withTimeInterval: self.interval,
                 repeats: true
-            ) { [weak self] _ in self?.action() }
+            ) { [weak self] __ in
+                guard let self else { return }
+                Task { await self.action() }
+            }
         }
     }
 
@@ -41,7 +44,7 @@ final class SchedulerService {
     }
 }
 
-// MARK: - MulticastClientPlugin
+// MARK: - MulticastClient
 
 /**
  * Capacitor plugin that wraps the multicast UDP listener.
@@ -54,12 +57,12 @@ final class SchedulerService {
  *   • "examServerFound" – payload: ServerInfo dict
  *   • "examServerLost"  – payload: ServerInfo dict
  */
-@objc(MulticastClientPlugin)
-public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
+@objc(MulticastClient)
+public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
 
     // MARK: CAPBridgedPlugin requirements
 
-    public let identifier    = "MulticastClientPlugin"
+    public let identifier    = "MulticastClient"
     public let jsName        = "MulticastClient"
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "start",             returnType: CAPPluginReturnPromise),
@@ -110,7 +113,7 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
      * construction immediately wires up the socket.
      */
     public override func load() {
-        //pluginLog(.info, "MulticastClientPlugin loaded – starting multicast listener")
+        //pluginLog(.info, "MulticastClient loaded – starting multicast listener")
         startMulticast()
         IPCBridge.shared.handle("getinfoasync") { [weak self] _ throws -> Any? in
             guard let self else { throw PluginError.notInitialized }
@@ -168,7 +171,7 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
             let servername = args["servername"] as? String,
             let bipuserID  = args["bipuserID"]  as? String
         else {
-            return ["sender": "client", "status": "error", "message": "Missing required arguments"]
+            return ["sender": "client", "status": "error", "message": "Missing required arguments, clientname: \(args["clientname"] ?? "nil"), pin: \(args["pin"] ?? "nil"), serverip: \(args["serverip"] ?? "nil"), servername: \(args["servername"] ?? "nil"), bipuserID: \(args["bipuserID"] ?? "nil")"]
         }
         
         let clientip = Config.hostip // ?? getIPAddress()
@@ -736,7 +739,7 @@ public final class MulticastClientPlugin: CAPPlugin, CAPBridgedPlugin {
         case .error: tag = "[ERROR]"
         }
         // Replace with CAPLog or os.Logger in production
-        print("MulticastClientPlugin \(tag) \(message)")
+        print("MulticastClient \(tag) \(message)")
     }
 
     private func errnoString() -> String {

@@ -11,7 +11,8 @@ class MainViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(IPCPlugin())
         bridge?.registerPluginInstance(NetworkPlugin())
-        bridge?.registerPluginInstance(MulticastClientPlugin())
+        bridge?.registerPluginInstance(MulticastClient())
+        bridge?.registerPluginInstance(AssessmentHandler())
         
         // Save Capacitor's delegate, then replace with self
         originalNavigationDelegate = webView?.navigationDelegate

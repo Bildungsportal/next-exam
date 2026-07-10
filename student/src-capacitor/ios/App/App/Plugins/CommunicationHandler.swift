@@ -12,12 +12,15 @@ final class CommunicationHandler {
 
     // MARK: - Dependencies
 
-    private weak var multicastClient: MulticastClientPlugin?
+    private weak var multicastClient: MulticastClient?
+    private weak var assessmentHandler: AssessmentHandler?
 
     // MARK: - State
 
     private var updateScheduler: SchedulerService?
     private var timer: Int = 0
+    private var _startExamRunning: Bool = false
+    private var localVmStartState: String = "idle"
 
     private lazy var urlSession: URLSession = {
         let delegate = LocalNetworkSessionDelegate()
@@ -30,24 +33,28 @@ final class CommunicationHandler {
 
     // MARK: - Public API
 
-    func initialize(multicastClient: MulticastClientPlugin) {
+    func initialize(multicastClient: MulticastClient) {
         self.multicastClient = multicastClient
         updateScheduler?.stop()
         updateScheduler = SchedulerService(
-            action: { [weak self] in self?.requestUpdate() },
+            action: { [weak self] in await self?.requestUpdate() },
             intervalMs: 5_000
         )
         updateScheduler?.start()
     }
     
+    func initialize(assessmentHandler: AssessmentHandler) {
+        self.assessmentHandler = assessmentHandler
+    }
+
     deinit {
         updateScheduler?.stop()
     }
 
     // MARK: - Heartbeat Loop
 
-    func requestUpdate() {
-        log(.info, "communicationhandler @ requestUpdate: Starting to request update")
+    func requestUpdate() async {
+        //log(.info, "communicationhandler @ requestUpdate: Starting to request update")
 
         guard let mc = multicastClient else { return }
 
@@ -138,11 +145,10 @@ final class CommunicationHandler {
                     mc.beaconsLost += 1
                     return
                 }
-                
-                IPCBridge.shared.send("updateReceived", updateDto.asDictionary)
 
                 let status = updateDto.status
-
+                //log(.info, "communicationhandler @ update recieved")
+                
                 if status == "error" {
                     let message = updateDto.message
 
@@ -151,7 +157,7 @@ final class CommunicationHandler {
                         mc.beaconsLost = 5
                     } else if message == "removed" {
                         self.log(.warn, "communicationhandler @ requestUpdate: Student registration not found!")
-                        self.kickStudent()
+                        await self.kickStudent()
                     } else {
                         self.log(.warn, "communicationhandler @ requestUpdate: \(mc.beaconsLost) Heartbeat lost..")
                         mc.beaconsLost += 1
@@ -160,7 +166,9 @@ final class CommunicationHandler {
                 } else if status == "success" {
                     mc.beaconsLost = 0
                     mc.clientinfo.printrequest = false
-                    self.processUpdatedServerstatus(updateDto: updateDto)
+                    await self.processUpdatedServerstatus(serverstatus: updateDto.serverstatus!, studentstatus: updateDto.studentstatus!)
+                } else {
+                    log(.error, "communicationhandler @ unknown status \(status)")
                 }
 
             } catch {
@@ -172,47 +180,196 @@ final class CommunicationHandler {
 
     // MARK: - Server Status Processing
 
-    private func processUpdatedServerstatus(updateDto: Update) {
+    private func processUpdatedServerstatus(serverstatus: ServerStatus, studentstatus: StudentStatus) async {
+        //log(.info, "communicationhandler @ processUpdatedServerstatus")
         guard let mc = multicastClient else { return }
-        mc.serverstatus = updateDto.serverstatus!
+        mc.serverstatus = serverstatus
 
-        let kicked = handleStudentStatusUpdates(studentStatus: updateDto.studentstatus!, mc: mc)
+        let kicked = await handleStudentStatusUpdates(studentstatus: studentstatus, mc: mc)
         if kicked { return }
 
-        handleGlobalServerStatus(serverstatus: updateDto.serverstatus!, mc: mc)
+        await handleExamSections(serverstatus: serverstatus)
+        await handleGlobalServerStatus(serverstatus: serverstatus)
     }
 
     /// Processes per-student commands from the teacher (kick).
     /// Returns true when the student was kicked (caller must stop processing).
-    private func handleStudentStatusUpdates(studentStatus: StudentStatus, mc: MulticastClientPlugin) -> Bool {
-        // TODO: add other studentstatus updates other than kicked
-        if mc.kicked {
-            kickStudent()
+    private func handleStudentStatusUpdates(studentstatus: StudentStatus, mc: MulticastClient) async -> Bool {
+        if studentstatus.kicked == true {
+            await kickStudent()
             return true
-        }
-        if studentStatus.getmaterials != nil && studentStatus.getmaterials! {
-            IPCBridge.shared.send("getmaterials")
         }
         return false
     }
+    
+    private func handleExamSections(serverstatus: ServerStatus) async {
+        guard let mc = multicastClient else { return }
+
+        // Server-forced section switch (only when student may not switch freely)
+        if serverstatus.exammode && mc.clientinfo.exammode {
+            if serverstatus.useExamSections && !serverstatus.allowSectionSwitch {
+                if serverstatus.lockedSection != mc.clientinfo.lockedSection {
+                    await switchExamSection(multicastClient: mc, serverstatus: serverstatus, newSectionNumber: serverstatus.lockedSection)
+                    await startExam(serverstatus)
+                }
+            }
+        }
+
+        // Group assignment
+        let sectionForSync = serverstatus.allowSectionSwitch ? mc.clientinfo.lockedSection : serverstatus.lockedSection
+        if let section = serverstatus.examSections[sectionForSync] {
+            if section.groups {
+                mc.clientinfo.groups = true
+                let clientname = mc.clientinfo.name
+                let prevGroup = mc.clientinfo.group
+                if section.groupB.users.contains(clientname) {
+                    mc.clientinfo.group = "b"
+                } else {
+                    mc.clientinfo.group = "a"
+                }
+                if mc.clientinfo.group != prevGroup {
+                    IPCBridge.shared.send("getmaterials")
+                }
+            } else {
+                mc.clientinfo.groups = false
+            }
+        }
+    }
 
     /// Handles screenshot interval changes, and exam start/end transitions.
-    private func handleGlobalServerStatus(serverstatus: ServerStatus, mc: MulticastClientPlugin) {
+    private func handleGlobalServerStatus(serverstatus: ServerStatus) async {
+        //log(.info, "communicationhandler @ handleGlobalServerStatus")
+        guard let mc = multicastClient else { return }
+        
+        // MARK: - Screenlock
+        /*if serverstatus.screenslocked && !mc.clientinfo.screenlock {
+            activateScreenlock()
+        } else if !serverstatus.screenslocked {
+            killScreenlock()
+        }*/
 
-        // Exam end
-        if !serverstatus.exammode && mc.clientinfo.exammode {
-            log(.info, "communicationhandler @ handleGlobalServerStatus: exammode deactivated")
-            endExam(mc: mc)
+        // MARK: - Screenshot Interval
+        // JS: `|| === 0` pattern ensures 0 is treated as a valid value, hence Optional in Swift
+        let screenshotinterval = serverstatus.screenshotinterval
+        let intervalMs = screenshotinterval * 1000
+        if mc.clientinfo.screenshotinterval != intervalMs {
+            log(.info, "communicationhandler @ processUpdatedServerstatus: ScreenshotInterval changed to \(intervalMs)")
+            mc.clientinfo.screenshotinterval = intervalMs
+
+            if screenshotinterval == 0 {
+                log(.info, "communicationhandler @ processUpdatedServerstatus: ScreenshotInterval disabled!")
+            }
+
+            /*do {
+                try WindowHandler.mainwindow?.webContents?.send("screenshot-config", payload: [
+                    "screenshotinterval": mc.clientinfo.screenshotinterval,
+                    "serverip": mc.clientinfo.serverip
+                ])
+            } catch {
+                log(.info, "communicationhandler @ processUpdatedServerstatus: screenshot-config send \(error.localizedDescription)")
+            }*/
+        }
+
+        // MARK: - Exam Mode
+        if serverstatus.exammode && !mc.clientinfo.exammode {
+            let lockedSection = serverstatus.lockedSection
+            let examtype = serverstatus.examSections[lockedSection]?.examtype
+
+            if _startExamRunning {
+                log(.info, "communicationhandler @ processUpdatedServerstatus: startExam already running, skip duplicate")
+                return
+            }
+            if examtype == "localvm" && localVmStartState != "idle" {
+                log(.info, "communicationhandler @ processUpdatedServerstatus: localvm start suppressed (state=\(localVmStartState))")
+                return
+            }
+
+            log(.info, "communicationhandler @ processUpdatedServerstatus: exammode activated")
+            //killScreenlock()
+            await startExam(serverstatus)
+
+        } else if !serverstatus.exammode && mc.clientinfo.exammode {
+            log(.info, "communicationhandler @ processUpdatedServerstatus: exammode deactivated")
+            //killScreenlock()
+            await endExam()
+        }
+
+        // MARK: - Local VM State Cleanup
+        if !serverstatus.exammode && mc.clientinfo.examtype == "localvm" {
+            let st = mc.clientinfo.localVMState
+            let keepFixUi = st == "missing" || st == "hash_mismatch" || st == "error"
+
+            if !keepFixUi, let currentState = st {
+                log(.info, "communicationhandler @ processUpdatedServerstatus: localvm exammode off -> clearing transient vm state (\(currentState))")
+                mc.clientinfo.localVMState = nil
+                mc.clientinfo.localVMHost = nil
+            }
+
+            if localVmStartState != "idle" {
+                localVmStartState = "idle"
+            }
         }
     }
 
 
+    /// Starts exam mode: determines section/type, begins assessment lockdown, notifies renderer.
+    private func startExam(_ serverstatus: ServerStatus) async {
+        log(.info, "communicationhandler @ startExam: starting exam")
+        if _startExamRunning {
+            log(.info, "communicationhandler @ startExam: already running, skip duplicate")
+            return
+        }
+        _startExamRunning = true
+        defer { _startExamRunning = false }
+
+        guard let mc = multicastClient else { return }
+
+        // When allowSectionSwitch: client chooses section; do not overwrite with server value
+        if !serverstatus.allowSectionSwitch || mc.clientinfo.lockedSection == 0 {
+            mc.clientinfo.lockedSection = serverstatus.lockedSection
+        }
+        let effectiveSection = mc.clientinfo.lockedSection
+
+        guard let section = serverstatus.examSections[effectiveSection] else {
+            log(.error, "communicationhandler @ startExam: no exam section for index \(effectiveSection)")
+            return
+        }
+        let examtype = section.examtype
+
+        // LocalVM not supported on iOS
+        if examtype == "localvm" {
+            log(.warn, "communicationhandler @ startExam: localvm examtype not supported on iOS")
+            return
+        }
+
+        if !mc.clientinfo.exammode {
+            // First start — begin assessment lockdown
+            if assessmentHandler?.isLocked() == false {
+                let locked = await assessmentHandler?.startSession() ?? false
+                if !locked {
+                    log(.warn, "communicationhandler @ startExam: assessment mode declined or failed")
+                    return
+                }
+            }
+            mc.clientinfo.exammode = true
+            mc.clientinfo.examtype = examtype
+            log(.info, "communicationhandler @ startExam: creating exam view (type=\(examtype))")
+        } else {
+            // Reconnect / section switch — exam view already active
+            log(.info, "communicationhandler @ startExam: reconnecting into active exam session")
+        }
+
+        IPCBridge.shared.send("startExam", serverstatus.asDictionary)
+    }
+
     /// Tears down exam mode and notifies the renderer.
-    private func endExam(mc: MulticastClientPlugin) {
+    private func endExam() async {
+        guard let mc = multicastClient else { return }
         mc.clientinfo.exammode      = false
         mc.clientinfo.localLockdown = false
         log(.info, "communicationhandler @ endExam: ending exam")
         IPCBridge.shared.send("endExam")
+        await assessmentHandler?.endSession()
     }
 
     // MARK: - Connection Management
@@ -228,22 +385,23 @@ final class CommunicationHandler {
         mc.clientinfo.localLockdown = false
     }
 
-    private func kickStudent() {
+    private func kickStudent() async {
         guard let mc = multicastClient else { return }
         log(.warn, "communicationhandler @ kickStudent: Student got kicked by Teacher")
         mc.kicked = false
         mc.beaconsLost = 0
-        endExam(mc: mc)
+        await endExam()
         resetConnection()
     }
 
     // MARK: - Logging
 
-    private enum LogLevel { case info, warn, error }
+    private enum LogLevel { case debug, info, warn, error }
 
     private func log(_ level: LogLevel, _ message: String) {
         let tag: String
         switch level {
+        case .debug:  tag = "[DEBUG] "
         case .info:  tag = "[INFO] "
         case .warn:  tag = "[WARN] "
         case .error: tag = "[ERROR]"

@@ -6,7 +6,7 @@ import Foundation
 /// @capacitor/filesystem before this is called. This function only updates
 /// clientinfo and notifies the renderer to reload the exam.
 func switchExamSection(
-    multicastClient: MulticastClientPlugin,
+    multicastClient: MulticastClient,
     serverstatus: ServerStatus,
     newSectionNumber: Int
 ) async {

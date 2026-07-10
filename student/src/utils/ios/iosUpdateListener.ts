@@ -7,8 +7,6 @@ import {useInfoStore} from "../../stores/infoStore.js";
 const signalBridge = new SignalBridge(window)
 
 class IosUpdateListener {
-    currentExamType: string = "";
-    lastUpdate: any = null;
     infoStore: any = null;
 
     async init(): Promise<void> {
@@ -17,12 +15,21 @@ class IosUpdateListener {
         }
         this.infoStore = useInfoStore();
         await this.infoStore.updateInfo();
-        this.currentExamType = this.infoStore.examtype;
 
-        signalBridge.on('updateReceived', (update) => {
-            loggingBridge.debug("updateReceived in update handler: ", update);
-            this.lastUpdate = update;
-            this.handleUpdateReceived(update.serverstatus.exammode, this.infoStore.lockedSection);
+        signalBridge.on('startExam', (serverstatus) => {
+            const section = serverstatus.lockedSection;
+            let newExamType = serverstatus.examSections[section].examtype;
+            const examPath = `/${newExamType}/${this.infoStore.token}`;
+
+            loggingBridge.debug("iosUpdateListener @ handleUpdateReceived: currentExamType, ", this.infoStore.examtype, "newExamType: ", newExamType);
+            this.infoStore.lockedSection = section;
+            if (this.infoStore.examtype !== newExamType) {
+                this.infoStore.exammode = serverstatus.exammode;
+                this.infoStore.examtype = newExamType;
+                router.push({
+                    path: examPath
+                });
+            }
         });
 
         signalBridge.on('endExam', () => {
@@ -31,23 +38,6 @@ class IosUpdateListener {
             this.infoStore.examtype = "";
             this.infoStore.exammode = false;
         });
-    }
-
-    handleUpdateReceived(examMode: boolean, newSectionNumber: number): void {
-        if (examMode) {
-            let newExamType = this.lastUpdate.serverstatus.examSections[newSectionNumber].examtype;
-            const examPath = `/${newExamType}/${this.infoStore.token}`;
-
-            loggingBridge.debug("iosUpdateListener @ handleUpdateReceived: currentExamType, ", this.currentExamType, "newExamType: ", newExamType);
-            if (this.currentExamType !== newExamType) {
-                this.infoStore.exammode = examMode;
-                this.infoStore.examtype = newExamType;
-                this.currentExamType = newExamType;
-                router.push({
-                    path: examPath
-                });
-            }
-        }
     }
 }
 

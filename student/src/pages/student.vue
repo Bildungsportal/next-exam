@@ -1670,7 +1670,7 @@ export default {
                     servername: servername,
                     serverip: serverip,
                     //serverip,
-                    pin: this.pincode,
+                    pin: this.pincode+"",
                     bipuserID: this.bipuserID+""
                 })
                 console.log(`student @ registerClient: ${JSON.stringify(IPCresponse, null, 2)}`)
