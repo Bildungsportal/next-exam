@@ -33,6 +33,7 @@
             <div v-for="file in localfiles" class="d-inline mb-0">
                 <div v-if="(file.type == 'pdf')"   class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}} </div>
                 <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="loadImage(file.name)"><img src="/src/assets/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
+                <div v-if="(file.type == 'scratch')" class="btn btn-info p-0 pe-2 ps-1 ms-1 mb-0 btn-sm" @click="selectedFile=file.name; loadScratchProject(file.name)"><img src="/src/assets/img/svg/document-replace.svg" class="" width="20" height="20" > {{file.name}}</div>
             </div>
             <!-- local files end -->
 
@@ -246,6 +247,42 @@ export default {
             this.$refs.wvmain.setAttribute("src", this.url);
         },
 
+        isScratchEditor() {
+            return String(this.url || '').includes('scratch.mit.edu/projects');
+        },
+
+        // Load a local .sb2/.sb3 into the Scratch editor without a native file dialog.
+        async loadScratchProject(filename) {
+            if (!this.isScratchEditor()) return;
+            const result = await this.$swal.fire({
+                title: this.$t('editor.replace'),
+                html: `${this.$t('editor.replacecontent1')} <b>${filename}</b> ${this.$t('editor.replacecontent2')}`,
+                icon: 'question',
+                showCancelButton: true,
+                cancelButtonText: this.$t('editor.cancel'),
+            });
+            if (!result.isConfirmed) return;
+            const webview = document.getElementById('webviewmain');
+            const guestId = webview?.getWebContentsId?.();
+            if (!guestId) return;
+            const loadResult = await signalBridge.invoke('load-scratch-into-webview', { guestId, filename });
+            if (!loadResult?.ok) console.error('website @ loadScratchProject:', loadResult?.reason || 'failed');
+        },
+
+        // Auto-save scratch project as clientname.sb3 (same interval as text editor backup).
+        async saveScratchContent(reason = 'auto') {
+            if (!this.isScratchEditor()) return;
+            if (reason === 'auto' && useInfoStore().switchingToSection != null) return;
+            const webview = document.getElementById('webviewmain');
+            const guestId = webview?.getWebContentsId?.();
+            if (!guestId) return;
+            await signalBridge.invoke('save-scratch-from-webview', {
+                guestId,
+                filename: `${this.clientname}.sb3`,
+                reason,
+            });
+        },
+
         async sendFocuslost(){
             if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
@@ -352,6 +389,8 @@ export default {
             }
 
             this.autoSchedulerService(this.loadFilelist, 20000);
+            this.saveScratchAuto = () => this.saveScratchContent('auto');
+            this.autoSchedulerService(this.saveScratchAuto, 20000);
 
             attachExamMouseleaveGuardBoolean(signalBridge, this.development, this.sendFocuslost);
 
@@ -359,6 +398,8 @@ export default {
                 console.log("website @ getmaterials: get materials request received")
                 this.getExamMaterials();
             });
+
+            signalBridge.on('exam-download-complete', () => { this.loadFilelist(); });
 
 
             this.loadFilelist();
@@ -420,13 +461,100 @@ export default {
 
             this._onDomReady = () => {
                 if (config.showdevtools){ webview.openDevTools();   }
-                const css = ``;
+                const isScratch = String(this.url || '').includes('scratch.mit.edu/projects');
+                if (!isScratch) return;
                 webview.executeJavaScript(`
-                    (() => {  // anonymous function for its own scope, otherwise the variable is re-declared on page reload (form submit) and fails
-                        const style = document.createElement('style');
-                        style.type = 'text/css';
-                        style.innerHTML = \`${css}\`;
-                        document.head.appendChild(style);
+                    (() => {
+                        if (!window.__nxeScratchExamHideInit) {
+                            window.__nxeScratchExamHideInit = true;
+                            const style = document.createElement('style');
+                            style.id = '__nxeScratchExamHide__';
+                            style.textContent = '[class*="menu-bar_account-info-group"]{display:none!important;}';
+                            document.head.appendChild(style);
+                            const hideScratchLoadMenu = () => {
+                                document.querySelectorAll('[data-menu-item="true"]').forEach((el) => {
+                                    const t = (el.textContent || '').trim().toLowerCase();
+                                    if (t.includes('load from your computer') || t.includes('von deinem computer laden')) {
+                                        el.style.display = 'none';
+                                        el.setAttribute('aria-hidden', 'true');
+                                    }
+                                });
+                            };
+                            hideScratchLoadMenu();
+                            const obs = new MutationObserver(hideScratchLoadMenu);
+                            obs.observe(document.documentElement, { childList: true, subtree: true });
+                        }
+                        const visitFiber = (f) => {
+                            if (!f) return null;
+                            const vm = f.memoizedProps?.vm || f.pendingProps?.vm || f.stateNode?.props?.vm;
+                            if (vm?.loadProject) return vm;
+                            return visitFiber(f.child) || visitFiber(f.sibling);
+                        };
+                        window.__nxeFindScratchVm = () => {
+                            for (const root of document.querySelectorAll('#app, body > div')) {
+                                const fiberKey = Object.keys(root).find((k) => k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$'));
+                                if (!fiberKey) continue;
+                                const vm = visitFiber(root[fiberKey]);
+                                if (vm) return vm;
+                            }
+                            for (const el of document.querySelectorAll('*')) {
+                                const fiberKey = Object.keys(el).find((k) => k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$'));
+                                if (!fiberKey) continue;
+                                let f = el[fiberKey];
+                                while (f) {
+                                    const store = f.memoizedProps?.store || f.stateNode?.store;
+                                    const storeVm = store?.getState?.()?.scratchGui?.vm;
+                                    if (storeVm?.loadProject) return storeVm;
+                                    f = f.return;
+                                }
+                                const vm = visitFiber(el[fiberKey]);
+                                if (vm) return vm;
+                            }
+                            return null;
+                        };
+                        window.__nxeLoadScratchFromBase64 = async (base64, filename) => {
+                            const bin = atob(base64);
+                            const bytes = new Uint8Array(bin.length);
+                            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                            const arrayBuffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+                            let vm = null;
+                            for (let i = 0; i < 24; i++) {
+                                vm = window.__nxeFindScratchVm();
+                                if (vm?.loadProject) break;
+                                await new Promise((r) => setTimeout(r, 250));
+                            }
+                            if (!vm?.loadProject) return { ok: false, reason: 'no-vm' };
+                            try {
+                                await vm.loadProject(arrayBuffer);
+                                return { ok: true };
+                            } catch (err) {
+                                return { ok: false, reason: err?.message || String(err) };
+                            }
+                        };
+                        window.__nxeExportScratchSb3 = async () => {
+                            let vm = window.__nxeFindScratchVm();
+                            if (!vm?.saveProjectSb3) {
+                                for (let i = 0; i < 8; i++) {
+                                    await new Promise((r) => setTimeout(r, 250));
+                                    vm = window.__nxeFindScratchVm();
+                                    if (vm?.saveProjectSb3) break;
+                                }
+                            }
+                            if (!vm?.saveProjectSb3) return { ok: false, reason: 'no-vm' };
+                            try {
+                                const blob = await vm.saveProjectSb3();
+                                const buf = await blob.arrayBuffer();
+                                const bytes = new Uint8Array(buf);
+                                let bin = '';
+                                const chunk = 0x8000;
+                                for (let i = 0; i < bytes.length; i += chunk) {
+                                    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+                                }
+                                return { ok: true, base64: btoa(bin) };
+                            } catch (err) {
+                                return { ok: false, reason: err?.message || String(err) };
+                            }
+                        };
                     })();
                 `);
             };
@@ -445,6 +573,7 @@ export default {
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
         signalBridge.removeAllListeners('getmaterials')
+        signalBridge.removeAllListeners('exam-download-complete')
 
         // Clean up preview click listener
         const preview = document.querySelector("#preview");

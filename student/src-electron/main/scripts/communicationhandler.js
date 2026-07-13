@@ -1181,9 +1181,12 @@ import {
             try {
                 const examWin = WindowHandler.mainWin();
                 if (this.config.development || this.config.showdevtools){
+                    const hostId = examWin?.webContents?.isDestroyed?.() ? null : examWin?.webContents?.id;
                     const allWebContents = webContents.getAllWebContents()
                     for (const wc of allWebContents) {
-                        if (examWin && wc.hostWebContents?.id === examWin.webContents.id && wc.isDevToolsOpened?.()){
+                        if (wc.isDestroyed?.()) continue;
+                        const host = wc.hostWebContents;
+                        if (hostId != null && host && !host.isDestroyed?.() && host.id === hostId && wc.isDevToolsOpened?.()) {
                             log.info("communicationhandler @ endExam: destroying devtools window")
                             wc.closeDevTools()
                         }

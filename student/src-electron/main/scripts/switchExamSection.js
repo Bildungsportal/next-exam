@@ -102,8 +102,11 @@ export async function switchExamSection(CommunicationHandler, serverstatus, newS
             await CommunicationHandler.stopLocalVmIfActive();
         }
         if (config.development) {
+            const hostId = examWin.webContents?.isDestroyed?.() ? null : examWin.webContents.id;
             webContents.getAllWebContents().forEach(wc => {
-                if (wc.hostWebContents?.id === examWin.webContents.id && wc.isDevToolsOpened?.()) {
+                if (wc.isDestroyed?.()) return;
+                const host = wc.hostWebContents;
+                if (hostId != null && host && !host.isDestroyed?.() && host.id === hostId && wc.isDevToolsOpened?.()) {
                     wc.closeDevTools();
                 }
             });

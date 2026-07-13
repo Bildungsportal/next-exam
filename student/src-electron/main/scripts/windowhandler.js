@@ -26,6 +26,7 @@ import { isAssessmentSessionActive } from './assessmentSession.js';
 import i18n from '../../../src/locales/locales.js';
 import {fileURLToPath} from "node:url";
 import path from 'path';
+import { bindBlockBrowserNavInput, bindBlockBrowserNavInputWebContents, bindBlockExamHistoryPop } from '../../../../shared/bindBlockBrowserNavInput.js';
 
 const __dirname = import.meta.dirname;
 
@@ -67,7 +68,6 @@ class WindowHandler {
       this.minimizeWarningOpen = false  // track if minimize warning dialog is open
       this.ms365BrowserView = null
       this._examBlurHandler = null
-      this._examAppCommandBound = false
     }
 
     init (mc, config) {
@@ -103,6 +103,7 @@ class WindowHandler {
 
     /** Load a hash route in the given BrowserWindow (packaged file or dev APP_URL). */
     async navigateHashRoute(win, hashRoute) {
+        this._examHistoryNav?.allowHistoryPopOnce();
         const hash = hashRoute.startsWith('#') ? hashRoute : `#${hashRoute}`
         if (app.isPackaged) {
             await win.loadFile(getRendererIndexPath(), { hash })
@@ -257,18 +258,6 @@ class WindowHandler {
         win.removeAllListeners('enter-full-screen')
         win.removeAllListeners('resize')
         this.ms365BrowserView = null
-    }
-
-    /** Block browser-back/forward mouse buttons once per exam session on mainwindow. */
-    bindExamAppCommandOnce(win) {
-        if (this._examAppCommandBound || !win || win.isDestroyed?.()) return;
-        this._examAppCommandBound = true;
-        win.on('app-command', (e, cmd) => {
-            if (cmd === 'browser-backward' || cmd === 'browser-forward') {
-                log.warn("no navigation allowed")
-                e.preventDefault();
-            }
-        });
     }
 
     /** MS365 Office BrowserView (Electron 41: use getBrowserViews, not getBrowserView(0)). */
@@ -570,7 +559,6 @@ class WindowHandler {
             examtype = "editor";
         }
 
-        this.bindExamAppCommandOnce(win)
         this.examServerstatus = serverstatus
         win.menuHeight = 94
 
@@ -630,6 +618,7 @@ class WindowHandler {
                 });
                 contentView.setAutoResize({ width: true, height: true, horizontal: true, vertical: true });
                 contentView.webContents.loadURL(urlview);
+                bindBlockBrowserNavInputWebContents(contentView.webContents);
                 if (this.config.showdevtools) {       contentView.webContents.openDevTools() }
 
                 win.addBrowserView(contentView);
@@ -831,6 +820,15 @@ class WindowHandler {
                 backgroundThrottling: true  // allow throttling when window is in background
             }
         })
+
+        bindBlockBrowserNavInput(this.mainwindow);
+        this._examHistoryNav = bindBlockExamHistoryPop(
+            this.mainwindow.webContents,
+            () => !!this.examServerstatus,
+        );
+        this.mainwindow.webContents.on('did-attach-webview', (_event, guestContents) => {
+            bindBlockBrowserNavInputWebContents(guestContents);
+        });
 
         this.installVueJsDevTools();
 

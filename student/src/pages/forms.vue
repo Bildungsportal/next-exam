@@ -326,6 +326,15 @@ export default {
                                     button[aria-label="Form menu"] {
                                         display: none !important;
                                     }
+                                    button[data-automation-id="saveAndEditButton"] {
+                                        display: none !important;
+                                    }
+                                    div[tabindex="0"]:has([data-automation-id="promotionBottomTry"]) {
+                                        display: none !important;
+                                    }
+                                    div:has(> button[aria-haspopup="true"][aria-live="polite"]) {
+                                        display: none !important;
+                                    }
 
                                     /* Google Forms: hide help/feedback menu including report abuse */
                                     div[data-report-abuse-url] button[aria-haspopup="menu"],
