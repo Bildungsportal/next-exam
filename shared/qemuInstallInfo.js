@@ -3,7 +3,10 @@
 export const QEMU_DOWNLOAD_URL = 'https://www.qemu.org/download/';
 
 /** @param {string} [platform] process.platform */
-export function getQemuInstallInfo(platform = process.platform) {
+export function getQemuInstallInfo(platform) {
+    if (platform == null && typeof process !== 'undefined') {
+        platform = process.platform;
+    }
     if (platform === 'win32') {
         return {
             downloadUrl: 'https://qemu.weilnetz.de/w64/',
