@@ -39,6 +39,7 @@ import { setClientFocusLock, clearClientFocusLock } from './focusLockState.js';
 import { syncClientDisplayInfo } from './displayInfo.js';
 import qemuService from './qemuService.js';
 import { checkQemuAvailability } from '../../../../shared/qemuAvailability.js';
+import { getQemuInstallInfo } from '../../../../shared/qemuInstallInfo.js';
 import { pickLocalVmGroupConfig } from '../../../../shared/localVmDisplayResolutions.js';
 import { stopProxy } from './vncproxy.js';
 import { switchExamSection } from './switchExamSection.js';
@@ -177,6 +178,9 @@ import {
                 WindowHandler.mainwindow?.webContents?.send('qemu-not-available', {
                     missing: check.missing,
                     hypervisorPlatform: check.hypervisorPlatform,
+                    downloadUrl: check.downloadUrl,
+                    installHint: check.installHint,
+                    reason: check.reason,
                 });
             } catch (e) {
                 log.debug('communicationhandler @ ensureQemuAvailableForLocalVm: send failed', e?.message);
@@ -185,7 +189,12 @@ import {
         } catch (e) {
             log.error('communicationhandler @ ensureQemuAvailableForLocalVm', e);
             try {
-                WindowHandler.mainwindow?.webContents?.send('qemu-not-available', { missing: [] });
+                const install = getQemuInstallInfo();
+                WindowHandler.mainwindow?.webContents?.send('qemu-not-available', {
+                    missing: ['qemu-system-x86_64', 'qemu-img'],
+                    downloadUrl: install.downloadUrl,
+                    installHint: install.installHint,
+                });
             } catch (err) {}
             return false;
         }
@@ -968,7 +977,14 @@ import {
                 if (!sectionSwitch) this.multicastClient.clientinfo.exammode = false;
                 this.localVmStartState = sectionSwitch ? 'idle' : 'blocked';
                 if (e?.code === 'virt-disabled') {
-                    try { WindowHandler.mainwindow?.webContents?.send('qemu-not-available', { reason: 'virt-disabled' }); }
+                    try {
+                        const install = getQemuInstallInfo();
+                        WindowHandler.mainwindow?.webContents?.send('qemu-not-available', {
+                            reason: 'virt-disabled',
+                            downloadUrl: install.downloadUrl,
+                            installHint: install.installHint,
+                        });
+                    }
                     catch (err) { log.debug('communicationhandler @ bootLocalVmExamSection: virt-disabled notify failed', err?.message); }
                 }
                 return sectionSwitch;
@@ -1181,9 +1197,12 @@ import {
             try {
                 const examWin = WindowHandler.mainWin();
                 if (this.config.development || this.config.showdevtools){
+                    const hostId = examWin?.webContents?.isDestroyed?.() ? null : examWin?.webContents?.id;
                     const allWebContents = webContents.getAllWebContents()
                     for (const wc of allWebContents) {
-                        if (examWin && wc.hostWebContents?.id === examWin.webContents.id && wc.isDevToolsOpened?.()){
+                        if (wc.isDestroyed?.()) continue;
+                        const host = wc.hostWebContents;
+                        if (hostId != null && host && !host.isDestroyed?.() && host.id === hostId && wc.isDevToolsOpened?.()) {
                             log.info("communicationhandler @ endExam: destroying devtools window")
                             wc.closeDevTools()
                         }

@@ -23,6 +23,7 @@ import path from 'path'
 import { fileURLToPath } from 'node:url'
 import log from 'electron-log'
 import i18n from '../../../src/locales/locales.js'
+import { bindBlockBrowserNavInput, bindBlockBrowserNavInputWebContents } from '../../../../shared/bindBlockBrowserNavInput.js'
 
 const { t } = i18n.global
 const __dirname = import.meta.dirname
@@ -263,6 +264,11 @@ class WindowHandler {
                 webviewTag: true
             }
         })
+
+        bindBlockBrowserNavInput(this.mainwindow);
+        this.mainwindow.webContents.on('did-attach-webview', (_event, guestContents) => {
+            bindBlockBrowserNavInputWebContents(guestContents);
+        });
 
         this.installVueJsDevTools(this.mainwindow);
 

@@ -192,6 +192,47 @@ fsExtra.emptyDirSync(config.tempdirectory)  // clean temp directory
 
 if (process.platform === 'win32') app.setAppUserModelId(app.getName());
 
+// Resolve a safe unique path for an exam download inside the student workfolder.
+const resolveExamDownloadPath = (workDir, rawName) => {
+    const base = path.basename(String(rawName || 'download').trim());
+    if (!base || base === '.' || base === '..' || base.includes('\0')) return null;
+    const root = path.resolve(workDir);
+    let candidate = path.resolve(path.join(root, base));
+    const rel = path.relative(root, candidate);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) return null;
+    if (!fs.existsSync(candidate)) return candidate;
+    const { name, ext } = path.parse(base);
+    for (let i = 1; i < 1000; i++) {
+        candidate = path.resolve(path.join(root, `${name} (${i})${ext}`));
+        if (!fs.existsSync(candidate)) return candidate;
+    }
+    return null;
+};
+
+// Auto-save webview downloads to workfolder during exam mode (no native save dialog).
+const boundExamDownloadSessions = new WeakSet();
+const bindExamDownloadHandler = (sess) => {
+    if (!sess || boundExamDownloadSessions.has(sess)) return;
+    boundExamDownloadSessions.add(sess);
+    sess.on('will-download', (_event, item) => {
+        if (!multicastClient?.clientinfo?.exammode) return;
+        const examDir = config.examdirectory || config.workdirectory;
+        const savePath = resolveExamDownloadPath(examDir, item.getFilename());
+        if (!savePath) {
+            item.cancel();
+            return;
+        }
+        item.setSavePath(savePath);
+        item.once('done', (_e, state) => {
+            if (state !== 'completed') return;
+            log.info(`main @ exam-download: saved ${path.basename(savePath)}`);
+            WindowHandler.mainWin()?.webContents?.send('exam-download-complete', { filename: path.basename(savePath) });
+        });
+    });
+};
+
+app.on('session-created', (_event, sess) => bindExamDownloadHandler(sess));
+
 app.on('window-all-closed', async () => {  // last window closed – clear storage here to avoid Linux segfault in before-quit
     clearInterval( CommHandler.updateStudentIntervall )
     if (WindowHandler.checkWindowInterval?.stop) WindowHandler.checkWindowInterval.stop()
@@ -259,6 +300,7 @@ app.whenReady()
     syncClientDisplayInfo(multicastClient.clientinfo);
 
     nativeTheme.themeSource = 'light'  // prevent theme settings from being adopted from windows
+    bindExamDownloadHandler(session.defaultSession);
     session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform} mit SEB-Kompatibilitätsmodus`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
     

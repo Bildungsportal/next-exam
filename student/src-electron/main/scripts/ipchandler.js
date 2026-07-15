@@ -55,6 +55,7 @@ import { normalizeStudentClientName } from '../../../../shared/normalizeStudentC
 import { buildNextExamMoodleProof } from '../../../../shared/buildNextExamMoodleProof.js';
 import { DEFAULT_EDITOR_EXAM_CONFIG } from '../../../../shared/editorExamConfig.js';
 import { NEXT_EXAM_MOODLE_PROOF_HEADER } from '../../../../shared/nextExamMoodleProofSecret.js';
+import { bindBlockBrowserNavInputWebContents } from '../../../../shared/bindBlockBrowserNavInput.js';
 import { setClientFocusLock, clearClientFocusLock } from './focusLockState.js';
 import { syncClientDisplayInfo } from './displayInfo.js';
 import { captureActiveWindowScreenshot } from './cageScreenshotCapture.js';
@@ -758,6 +759,8 @@ class IpcHandler {
             const guest = webContents.fromId(Number(guestId));
             if (!guest || guest.isDestroyed?.()) return false;
 
+            bindBlockBrowserNavInputWebContents(guest);
+
             // Remove old listeners to prevent duplicate registrations
             guest.removeAllListeners('will-navigate');
 
@@ -826,6 +829,8 @@ class IpcHandler {
         ipcMain.handle('start-blocking-for-website-webview', (event, { guestId, mode, allowedDomain, baseUrl, blockSubdomains, blockSubfolders, moodleTestId, moodleDomain, formsUrl, exammode, sebConfigHash, sebBekHash }) => {
             const guest = webContents.fromId(Number(guestId));
             if (!guest || guest.isDestroyed?.()) return false;
+
+            bindBlockBrowserNavInputWebContents(guest);
 
             // Remove old listeners to prevent duplicate registrations
             guest.removeAllListeners('will-navigate');
@@ -1859,6 +1864,67 @@ class IpcHandler {
             }     
         })
 
+        // Load scratch project into webview guest via vm.loadProject (no native file dialog).
+        ipcMain.handle('load-scratch-into-webview', async (_event, { guestId, filename }) => {
+            const scratchPath = resolveWritablePathUnderExamDir(this.config.examdirectory, filename, ['.sb2', '.sb3']);
+            if (!scratchPath) {
+                log.warn(`ipchandler @ load-scratch-into-webview: rejected unsafe filename (${filename})`);
+                return { ok: false, reason: 'unsafe-path' };
+            }
+            const guest = webContents.fromId(Number(guestId));
+            if (!guest || guest.isDestroyed()) return { ok: false, reason: 'no-guest' };
+            try {
+                const pw = resolveExamDecryptPassword(this.multicastClient);
+                const raw = fs.readFileSync(scratchPath);
+                const isEnc = isExamFileEncryptedBytes(raw);
+                if (isEnc && pw) log.info(`ipchandler @ load-scratch-into-webview: decrypted read ${filename}`);
+                const fileData = (isEnc && pw) ? decryptExamFileAllLayers(raw, pw) : raw;
+                const base64 = fileData.toString('base64');
+                const result = await guest.executeJavaScript(
+                    `window.__nxeLoadScratchFromBase64(${JSON.stringify(base64)}, ${JSON.stringify(path.basename(filename))})`
+                );
+                if (!result?.ok) log.warn(`ipchandler @ load-scratch-into-webview: ${result?.reason || 'failed'} (${filename})`);
+                return result || { ok: false, reason: 'no-result' };
+            } catch (error) {
+                log.error(`ipchandler @ load-scratch-into-webview: ${error?.message || error}`);
+                return { ok: false, reason: error?.message || String(error) };
+            }
+        })
+
+        // Export scratch project from webview and store as .sb3 in examdirectory.
+        ipcMain.handle('save-scratch-from-webview', async (_event, { guestId, filename, reason }) => {
+            const saveReason = typeof reason === 'string' ? reason : 'n/a';
+            if (isExamDirWriteBlocked(saveReason)) {
+                log.debug('ipchandler @ save-scratch-from-webview: blocked during section switch');
+                return { sender: 'client', message: 'section switch in progress', status: 'error' };
+            }
+            const scratchPath = resolveWritablePathUnderExamDir(this.config.examdirectory, filename, ['.sb3']);
+            if (!scratchPath) {
+                log.warn(`ipchandler @ save-scratch-from-webview: rejected unsafe filename (${filename})`);
+                return { sender: 'client', message: 'invalid filename', status: 'error' };
+            }
+            const guest = webContents.fromId(Number(guestId));
+            if (!guest || guest.isDestroyed()) return { sender: 'client', message: 'no guest', status: 'error' };
+            try {
+                const exported = await guest.executeJavaScript('window.__nxeExportScratchSb3?.()');
+                if (!exported?.ok || !exported.base64) {
+                    log.debug(`ipchandler @ save-scratch-from-webview: ${exported?.reason || 'export failed'} (${filename})`);
+                    return { sender: 'client', message: exported?.reason || 'export failed', status: 'error' };
+                }
+                const fileData = Buffer.from(exported.base64, 'base64');
+                const pw = resolveExamDecryptPassword(this.multicastClient);
+                const out = encryptExamFileBytesUnlessAlready(fileData, pw);
+                if (pw) logSaveInfoUnlessAuto(saveReason, `ipchandler @ save-scratch-from-webview: encrypted write ${filename} saveReason=${saveReason}`);
+                else logSaveInfoUnlessAuto(saveReason, `ipchandler @ save-scratch-from-webview: plaintext write ${filename} saveReason=${saveReason}`);
+                fs.writeFileSync(scratchPath, out);
+                if (this.CommunicationHandler) this.CommunicationHandler.lastExamWriteSaveReason = saveReason;
+                if (saveReason === 'teacherrequest') this.CommunicationHandler.sendToTeacher();
+                return { sender: 'client', message: t('data.filestored'), status: 'success' };
+            } catch (error) {
+                log.error(`ipchandler @ save-scratch-from-webview: ${error?.message || error}`);
+                return { sender: 'client', message: error?.message || String(error), status: 'error' };
+            }
+        })
 
 
 
@@ -2006,6 +2072,7 @@ class IpcHandler {
                         else if  (path.extname(file).toLowerCase() === ".docx"){ files.push( {name: file, type: "docx", mod: mod})   }   // editor| content file (from teacher) to replace content and continue writing
                         else if  (path.extname(file).toLowerCase() === ".odt"){ files.push( {name: file, type: "odt", mod: mod})   }   // ODT → TipTap HTML in renderer
                         else if  (path.extname(file).toLowerCase() === ".ggb"){ files.push( {name: file, type: "ggb", mod: mod})   }  // geogebra
+                        else if  (path.extname(file).toLowerCase() === ".sb2" || path.extname(file).toLowerCase() === ".sb3"){ files.push( {name: file, type: "scratch", mod: mod})   }  // scratch
                         else if  (path.extname(file).toLowerCase() === ".mp3" || path.extname(file).toLowerCase() === ".ogg" || path.extname(file).toLowerCase() === ".wav" ){ files.push( {name: file, type: "audio", mod: mod})   }  // audio
                         else if  (path.extname(file).toLowerCase() === ".jpg" || path.extname(file).toLowerCase() === ".png" || path.extname(file).toLowerCase() === ".gif" ){ files.push( {name: file, type: "image", mod: mod})   }  // images
                     })

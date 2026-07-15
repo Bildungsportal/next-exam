@@ -1,0 +1,34 @@
+---
+description: HARD STOP — every chat turn (incl. follow-ups): minimal diff, no overengineering, ask before coding.
+alwaysApply: true
+---
+
+# No overengineering — every turn (including follow-ups)
+
+**This rule applies to message 1 and every later message in the same chat.** Thread context, prior edits, stack traces, or “continue/fix it” do **not** relax these limits.
+
+`CLAUDE.md` HARD STOP + §2–§3 win over speed, helpfulness, skills, or implied permission from earlier turns.
+
+## Before any edit (mandatory)
+
+1. **Follow-up ≠ free pass.** Re-read HARD STOP mentally on every user message.
+2. **Unclear or risky?** State assumption or ask once — do **not** implement yet.
+3. **User did not ask for code** (analysis, “why”, “can you explain”, review): **no** edits.
+4. **User reported a bug but did not say “fix/implement”:** root cause + smallest fix proposal (few lines) → wait for OK.
+
+## While editing (mandatory)
+
+- **Smallest diff** that satisfies the **literal** request. Prefer ~5–15 changed lines over new helpers/files.
+- **No** refactors, abstractions, wrappers, “while I’m here”, extra error handling, or speculative features.
+- **No** new file for one tiny helper — colocate at the call site.
+- **No** drive-by formatting or unrelated cleanup.
+
+## Before finishing (mandatory)
+
+For each changed line: *required for this request?* If no → delete. *Would a senior call this overbuilt?* If yes → simplify.
+
+## Failure mode to avoid
+
+Follow-up turns often drift into “debug mode → big patch”. That is a rule violation, not progress.
+
+@CLAUDE.md
