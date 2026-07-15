@@ -528,6 +528,9 @@ export default {
         },
 
         closeLocalVmCompatCheckDialog() {
+            if (!this.localVmCompatCheckSwalOpen) {
+                return;
+            }
             try {
                 if (this.$swal.isVisible()) {
                     this.$swal.close();
@@ -1882,7 +1885,7 @@ export default {
         });
 
         signalBridge.on('qemu-not-available', (_event, payload) => {
-            this.showQemuMissingWarning(payload || {});
+            void this.showQemuMissingWarning(payload || {});
         });
 
         // Screenshot scheduler only in main window (this page); exam window never loads student.vue

@@ -166,37 +166,26 @@ import {
         }
     }
 
-    // Notify renderer and block LocalVM exam start when qemu-system-x86_64 / qemu-img are missing.
+    // Probe system QEMU; caller shows UI after compat-check Swal is dismissed.
     async ensureQemuAvailableForLocalVm() {
         try {
             const check = await checkQemuAvailability();
             if (check.ok) {
-                return true;
+                return { ok: true, check };
             }
             log.warn('communicationhandler @ ensureQemuAvailableForLocalVm: QEMU missing', check.missing);
-            try {
-                WindowHandler.mainwindow?.webContents?.send('qemu-not-available', {
-                    missing: check.missing,
-                    hypervisorPlatform: check.hypervisorPlatform,
-                    downloadUrl: check.downloadUrl,
-                    installHint: check.installHint,
-                    reason: check.reason,
-                });
-            } catch (e) {
-                log.debug('communicationhandler @ ensureQemuAvailableForLocalVm: send failed', e?.message);
-            }
-            return false;
+            return { ok: false, check };
         } catch (e) {
             log.error('communicationhandler @ ensureQemuAvailableForLocalVm', e);
-            try {
-                const install = getQemuInstallInfo();
-                WindowHandler.mainwindow?.webContents?.send('qemu-not-available', {
+            const install = getQemuInstallInfo();
+            return {
+                ok: false,
+                check: {
                     missing: ['qemu-system-x86_64', 'qemu-img'],
                     downloadUrl: install.downloadUrl,
                     installHint: install.installHint,
-                });
-            } catch (err) {}
-            return false;
+                },
+            };
         }
     }
 
@@ -614,7 +603,9 @@ import {
             const examtype = serverstatus?.examSections?.[lockedSection]?.examtype;
             // startExam guards _endExamRunning/_startExamRunning itself; only the localvm state needs a pre-check here
             if (examtype === 'localvm' && this.localVmStartState !== 'idle') {
-                log.info(`communicationhandler @ processUpdatedServerstatus: localvm start suppressed (state=${this.localVmStartState})`);
+                log.debug(`communicationhandler @ processUpdatedServerstatus: localvm start suppressed (state=${this.localVmStartState})`);
+            } else if (examtype === 'localvm' && this.multicastClient.clientinfo.localVMState === 'error') {
+                // wait for localvm-retry-start after a failed preflight (qemu/disk)
             } else {
                 log.info("communicationhandler @ processUpdatedServerstatus: exammode activated");
                 this.killScreenlock();
@@ -928,15 +919,23 @@ import {
         }
         this.localVmStartState = 'starting';
         if (!sectionSwitch) this.notifyLocalVmCompatCheckStart();
-        let qemuOk = false;
+        let qemuResult = { ok: false, check: {} };
         try {
-            qemuOk = await this.ensureQemuAvailableForLocalVm();
+            qemuResult = await this.ensureQemuAvailableForLocalVm();
         } finally {
-            if (!qemuOk && !sectionSwitch) this.notifyLocalVmCompatCheckEnd();
+            if (!qemuResult.ok && !sectionSwitch) this.notifyLocalVmCompatCheckEnd();
         }
-        if (!qemuOk) {
-            if (!sectionSwitch) this.multicastClient.clientinfo.exammode = false;
-            this.localVmStartState = sectionSwitch ? 'idle' : 'blocked';
+        if (!qemuResult.ok) {
+            if (!sectionSwitch) {
+                this.multicastClient.clientinfo.exammode = false;
+                this.multicastClient.clientinfo.localVMState = 'error';
+            }
+            this.localVmStartState = 'idle';
+            try {
+                WindowHandler.mainwindow?.webContents?.send('qemu-not-available', qemuResult.check || {});
+            } catch (e) {
+                log.debug('communicationhandler @ bootLocalVmExamSection: qemu-not-available send failed', e?.message);
+            }
             return sectionSwitch;
         }
         try {
