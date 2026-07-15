@@ -166,6 +166,15 @@ import {
         }
     }
 
+    // True when LocalVM preflight failed and the user must invoke localvm-retry-start.
+    _localVmAwaitingRetry() {
+        if (this.multicastClient.clientinfo.exammode) {
+            return false;
+        }
+        const st = this.multicastClient.clientinfo.localVMState;
+        return st === 'error' || st === 'missing' || st === 'hash_mismatch';
+    }
+
     // Probe system QEMU; caller shows UI after compat-check Swal is dismissed.
     async ensureQemuAvailableForLocalVm() {
         try {
@@ -604,7 +613,7 @@ import {
             // startExam guards _endExamRunning/_startExamRunning itself; only the localvm state needs a pre-check here
             if (examtype === 'localvm' && this.localVmStartState !== 'idle') {
                 log.debug(`communicationhandler @ processUpdatedServerstatus: localvm start suppressed (state=${this.localVmStartState})`);
-            } else if (examtype === 'localvm' && this.multicastClient.clientinfo.localVMState === 'error') {
+            } else if (examtype === 'localvm' && this._localVmAwaitingRetry()) {
                 // wait for localvm-retry-start after a failed preflight (qemu/disk)
             } else {
                 log.info("communicationhandler @ processUpdatedServerstatus: exammode activated");
@@ -946,12 +955,12 @@ import {
                 log.error('communicationhandler @ bootLocalVmExamSection: preflightLocalVm failed', e);
                 this.multicastClient.clientinfo.localVMState = 'error';
                 if (!sectionSwitch) this.multicastClient.clientinfo.exammode = false;
-                this.localVmStartState = sectionSwitch ? 'idle' : 'blocked';
+                this.localVmStartState = 'idle';
                 return sectionSwitch;
             }
             if (!preflight?.allowStart) {
                 if (!sectionSwitch) this.multicastClient.clientinfo.exammode = false;
-                this.localVmStartState = sectionSwitch ? 'idle' : 'blocked';
+                this.localVmStartState = 'idle';
                 return sectionSwitch;
             }
             try {
@@ -974,7 +983,7 @@ import {
                 this.multicastClient.clientinfo.localVMHost = null;
                 this.multicastClient.clientinfo.localVMState = 'error';
                 if (!sectionSwitch) this.multicastClient.clientinfo.exammode = false;
-                this.localVmStartState = sectionSwitch ? 'idle' : 'blocked';
+                this.localVmStartState = 'idle';
                 if (e?.code === 'virt-disabled') {
                     try {
                         const install = getQemuInstallInfo();
@@ -991,7 +1000,7 @@ import {
             this.localVmStartState = 'idle';
             return true;
         } catch (e) {
-            this.localVmStartState = sectionSwitch ? 'idle' : 'blocked';
+            this.localVmStartState = 'idle';
             throw e;
         }
     }

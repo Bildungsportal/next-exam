@@ -504,6 +504,11 @@ export default {
                 check: payload || {},
                 cancelKey: 'cancel',
             });
+            if (!this.clientinfo) {
+                this.clientinfo = {};
+            }
+            this.clientinfo.examtype = 'localvm';
+            this.clientinfo.localVMState = 'error';
         },
 
         // Swal while main runs QEMU / hypervisor compatibility probes before LocalVM exam start.
@@ -531,12 +536,10 @@ export default {
             if (!this.localVmCompatCheckSwalOpen) {
                 return;
             }
-            try {
-                if (this.$swal.isVisible()) {
-                    this.$swal.close();
-                }
-            } catch (e) {}
             this.localVmCompatCheckSwalOpen = false;
+            try {
+                this.$swal.close();
+            } catch (e) {}
         },
 
         kioskI18n(suffix) {
@@ -1809,6 +1812,28 @@ export default {
         }
 
     },
+    created() {
+        // Register before mounted awaits so early LocalVM IPC is not dropped.
+        signalBridge.on('localvm-compat-check-start', () => {
+            if (!this.clientinfo) {
+                this.clientinfo = {};
+            }
+            this.clientinfo.examtype = 'localvm';
+            this.clientinfo.localVMState = 'checking_compat';
+            this.showLocalVmCompatCheckDialog();
+        });
+
+        signalBridge.on('localvm-compat-check-end', () => {
+            if (this.clientinfo?.localVMState === 'checking_compat') {
+                this.clientinfo.localVMState = null;
+            }
+            this.closeLocalVmCompatCheckDialog();
+        });
+
+        signalBridge.on('qemu-not-available', (_event, payload) => {
+            void this.showQemuMissingWarning(payload || {});
+        });
+    },
     async mounted() {
         document.querySelector("#statusdiv").style.visibility = "hidden";
         this.isLoading = false;
@@ -1868,26 +1893,6 @@ export default {
             this.localVmDownloadPercent = pct;
         });
 
-        signalBridge.on('localvm-compat-check-start', () => {
-            if (!this.clientinfo) {
-                this.clientinfo = {};
-            }
-            this.clientinfo.examtype = 'localvm';
-            this.clientinfo.localVMState = 'checking_compat';
-            this.showLocalVmCompatCheckDialog();
-        });
-
-        signalBridge.on('localvm-compat-check-end', () => {
-            if (this.clientinfo?.localVMState === 'checking_compat') {
-                this.clientinfo.localVMState = null;
-            }
-            this.closeLocalVmCompatCheckDialog();
-        });
-
-        signalBridge.on('qemu-not-available', (_event, payload) => {
-            void this.showQemuMissingWarning(payload || {});
-        });
-
         // Screenshot scheduler only in main window (this page); exam window never loads student.vue
         initScreenshotScheduler(signalBridge);
 
@@ -1935,7 +1940,7 @@ export default {
 }
 
 .swal2-container {
-    z-index: 100001 !important;
+    z-index: 300000 !important;
 }
 
 </style>
