@@ -21,7 +21,7 @@ struct ServerStatus: Codable {
     var screenshotinterval: Int = 4
     var backupintervalPause: Int = 6
     var screenslocked: Bool = false
-    var screenshotocr: Bool = false
+    var screenshotocr: Bool? = nil // Not included in recieved update dto
     var examTeachers: [String] = []
     var examSecurityKey: String = "oI9xGzHkUFe7Lg2iTXHkYp4pDab3Nvj4kFEOqA93cZE="
     var useExamSections: Bool = false       // if false, section 1 is used and no tabs are displayed

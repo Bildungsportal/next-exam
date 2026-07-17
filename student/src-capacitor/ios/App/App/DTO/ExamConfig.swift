@@ -19,8 +19,8 @@ struct FileObject: Codable {
 
 struct WebsiteConfig: Codable {
     var url: String?
-    var blockSubdomains: String?
-    var blockSubfolders: String?
+    var blockSubdomains: Bool?
+    var blockSubfolders: Bool?
     
     var asDictionary: [String: Any] {
         var dict = [String: Any]()
@@ -56,11 +56,11 @@ struct RdpConfig: Codable {
 }
 
 struct EditorConfig: Codable {
-    var editorTemplate: EditorTemplate = EditorTemplate()
+    var editorTemplate: EditorTemplate? = nil
     
     var asDictionary: [String: Any] {
         var dict = [String: Any]()
-        dict["editorTemplate"] = editorTemplate.asDictionary
+        dict["editorTemplate"] = editorTemplate?.asDictionary ?? NSNull()
         return dict
     }
 }
@@ -126,27 +126,27 @@ struct MathConfig: Codable {
 }
 
 struct ExamConfig: Codable {
-    var activeSheets: FileObject       = FileObject()
-    var editor:       EditorConfig     = EditorConfig()
-    var eduvidual:    EduvidualConfig  = EduvidualConfig()
-    var gforms:       GFormsConfig     = GFormsConfig()
-    var website:      WebsiteConfig    = WebsiteConfig()
-    var math:         MathConfig       = MathConfig()
-    var microsoft365: Microsoft365Config = Microsoft365Config()
-    var rdp:          RdpConfig        = RdpConfig()
-    var localvm:      LocalVMConfig    = LocalVMConfig()
+    var activeSheets: FileObject?       = nil
+    var editor:       EditorConfig?     = nil
+    var eduvidual:    EduvidualConfig?  = nil
+    var gforms:       GFormsConfig?     = nil
+    var website:      WebsiteConfig?    = nil
+    var math:         MathConfig?       = nil
+    var microsoft365: Microsoft365Config? = nil
+    var rdp:          RdpConfig?        = nil
+    var localvm:      LocalVMConfig?    = nil
 
     var asDictionary: [String: Any] {
         var dict = [String: Any]()
-        dict["activeSheets"] = activeSheets.asDictionary
-        dict["editor"]       = editor.asDictionary
-        dict["eduvidual"]    = eduvidual.asDictionary
-        dict["gforms"]       = gforms.asDictionary
-        dict["website"]      = website.asDictionary
-        dict["math"]         = math.asDictionary
-        dict["microsoft365"] = microsoft365.asDictionary
-        dict["rdp"]          = rdp.asDictionary
-        dict["localvm"]      = localvm.asDictionary
+        dict["activeSheets"] = activeSheets?.asDictionary  ?? NSNull()
+        dict["editor"]       = editor?.asDictionary ?? NSNull()
+        dict["eduvidual"]    = eduvidual?.asDictionary  ?? NSNull()
+        dict["gforms"]       = gforms?.asDictionary ?? NSNull()
+        dict["website"]      = website?.asDictionary    ?? NSNull()
+        dict["math"]         = math?.asDictionary   ?? NSNull()
+        dict["microsoft365"] = microsoft365?.asDictionary   ?? NSNull()
+        dict["rdp"]          = rdp?.asDictionary    ?? NSNull()
+        dict["localvm"]      = localvm?.asDictionary    ?? NSNull()
         return dict
     }
 }
