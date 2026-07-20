@@ -150,10 +150,12 @@ export default defineConfig(( ctx: any ) => {
           'next-exam-shared': sharedDir,
         };
         viteConf.optimizeDeps = viteConf.optimizeDeps || {};
-        viteConf.optimizeDeps.include = viteConf.optimizeDeps.include || [];
-        if (!viteConf.optimizeDeps.include.includes('pdfjs-dist')) {
-          viteConf.optimizeDeps.include.push('pdfjs-dist');
-        }
+        viteConf.optimizeDeps.include = [
+          ...(viteConf.optimizeDeps.include || []),
+          'vue', 'vue-router', 'vue-i18n', 'vue-sweetalert2', 'vue-draggable-next',
+          'quasar', 'pdfjs-dist', 'bootstrap', 'sortablejs', 'moment',
+          'crypto-js', 'uuid', 'lowlight',
+        ];
 
         viteConf.build = viteConf.build || {};
         viteConf.build.chunkSizeWarningLimit = 1500;

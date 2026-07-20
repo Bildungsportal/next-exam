@@ -305,9 +305,12 @@ class WindowHandler {
         })
 
 
-        // Block navigation on mainwindow.webContents to avoid any navigation away from the app except for internal links
+        // Block navigation away from the app (allow dev-server reloads in dev mode)
         this.mainwindow.webContents.on('will-navigate', (event, url) => {
-            event.preventDefault(); // Prevent navigation away from the app
+            const devUrl = process.env.APP_URL || `http://${process.env['VITE_DEV_SERVER_HOST'] || 'localhost'}:${process.env['VITE_DEV_SERVER_PORT'] || '9300'}`;
+            if (!app.isPackaged && url.startsWith(devUrl)) return;
+            console.log('will-navigate blocked', url);
+            event.preventDefault();
         });
 
         this.mainwindow.webContents.on('new-window', (event, url) => {

@@ -1625,22 +1625,22 @@ export default {
             }
             // capturePage path (macOS + Linux Cage) was already selected at init via setCageWindowCaptureFallback;
             // Win32 AssignedAccess and plain desktop use getDisplayMedia.
-            // if (!isCageWindowCaptureFallback()) {
-            //     if (!hasActiveScreenshotStream()) {
-            //         const ok = await ensureDisplayStreamAsync();
-            //         if (!ok) {
-            //             // this.$swal.fire({ title: "Error", text: this.$t("student.screenshotpermission"), icon: 'error', showCancelButton: false });
-            //             // return;
-            //         }
-            //     }
-            //     // Win AA kiosk auto-grants sources[0]=screen via main-process handler, so the picker-misclick
-            //     // heuristic does not apply; skip the check there.
-            //     const winKiosk = this.platformKiosk.runningInCage && this.platformKiosk.displayServer === 'windows';
-            //     if (!winKiosk && !isFullDesktopCaptureLikely() && !this.development) {
-            //         this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
-            //         return;
-            //     }
-            // }
+            if (!isCageWindowCaptureFallback()) {
+                if (!hasActiveScreenshotStream()) {
+                    const ok = await ensureDisplayStreamAsync();
+                    if (!ok) {
+                        // this.$swal.fire({ title: "Error", text: this.$t("student.screenshotpermission"), icon: 'error', showCancelButton: false });
+                        // return;
+                    }
+                }
+                // Win AA kiosk auto-grants sources[0]=screen via main-process handler, so the picker-misclick
+                // heuristic does not apply; skip the check there.
+                const winKiosk = this.platformKiosk.runningInCage && this.platformKiosk.displayServer === 'windows';
+                if (!winKiosk && !isFullDesktopCaptureLikely() && !this.development) {
+                    this.$swal.fire({ title: "Error", text: this.$t("student.screenshotarea"), icon: 'error', showCancelButton: false });
+                    return;
+                }
+            }
             const displayInfo = await signalBridge.invoke('getinfoasync');
             if (displayInfo?.clientinfo?.multiMonitor && !this.development) {
                 this.$swal.fire({ title: "Error", text: this.$t("student.multimonitor"), icon: 'error', showCancelButton: false });

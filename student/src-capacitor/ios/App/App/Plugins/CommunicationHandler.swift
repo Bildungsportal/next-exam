@@ -101,7 +101,7 @@ final class CommunicationHandler {
             request.httpBody = try JSONSerialization.data(withJSONObject: payload)
         } catch {
             log(.error, "communicationhandler @ requestUpdate: JSON serialization failed – \(error.localizedDescription)")
-            return
+            return	
         }
 
         Task { [weak self, weak mc] in
@@ -251,23 +251,16 @@ final class CommunicationHandler {
         // MARK: - Screenshot Interval
         // JS: `|| === 0` pattern ensures 0 is treated as a valid value, hence Optional in Swift
         let screenshotinterval = serverstatus.screenshotinterval
-        let intervalMs = screenshotinterval * 1000
+        let intervalMs = Int(screenshotinterval)! * 1000
         if mc.clientinfo.screenshotinterval != intervalMs {
             log(.info, "communicationhandler @ processUpdatedServerstatus: ScreenshotInterval changed to \(intervalMs)")
             mc.clientinfo.screenshotinterval = intervalMs
 
-            if screenshotinterval == 0 {
+            if intervalMs == 0 {
                 log(.info, "communicationhandler @ processUpdatedServerstatus: ScreenshotInterval disabled!")
             }
 
-            /*do {
-                try WindowHandler.mainwindow?.webContents?.send("screenshot-config", payload: [
-                    "screenshotinterval": mc.clientinfo.screenshotinterval,
-                    "serverip": mc.clientinfo.serverip
-                ])
-            } catch {
-                log(.info, "communicationhandler @ processUpdatedServerstatus: screenshot-config send \(error.localizedDescription)")
-            }*/
+            ScreenshotHandler.shared.applyConfig(intervalMs: intervalMs)
         }
 
         // MARK: - Exam Mode

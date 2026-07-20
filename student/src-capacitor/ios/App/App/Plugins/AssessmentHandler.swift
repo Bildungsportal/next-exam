@@ -16,16 +16,6 @@ public class AssessmentHandler: CAPPlugin, CAPBridgedPlugin {
 
     public override func load() {
         CommunicationHandler.shared.initialize(assessmentHandler: self)
-
-        /*IPCBridge.shared.handle("assessmentStart") { [weak self] _ throws in
-            guard let self else { throw PluginError.notInitialized }
-            return self.startSession()
-        }
-
-        IPCBridge.shared.handle("assessmentEnd") { [weak self] _ throws in
-            guard let self else { throw PluginError.notInitialized }
-            return self.endSession()
-        }*/
     }
 
     @objc func isAvailable(_ call: CAPPluginCall) {

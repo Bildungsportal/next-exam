@@ -13,6 +13,7 @@ class MainViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(NetworkPlugin())
         bridge?.registerPluginInstance(MulticastClient())
         bridge?.registerPluginInstance(AssessmentHandler())
+        bridge?.registerPluginInstance(ScreenshotRecorder())
         
         // Save Capacitor's delegate, then replace with self
         originalNavigationDelegate = webView?.navigationDelegate

@@ -18,7 +18,7 @@ struct ServerStatus: Codable {
     var requireBiP: Bool = false
     var exammode: Bool = false
     var delfolderonexit: Bool = true
-    var screenshotinterval: Int = 4
+    var screenshotinterval: String = "4"
     var backupintervalPause: Int = 6
     var screenslocked: Bool = false
     var screenshotocr: Bool? = nil // Not included in recieved update dto

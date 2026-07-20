@@ -152,6 +152,7 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
         }
 
         CommunicationHandler.shared.initialize(multicastClient: self)
+        ScreenshotHandler.shared.initialize(multicastClient: self)
     }
     
     private func getinfoasync() async -> GetInfoAsync {
