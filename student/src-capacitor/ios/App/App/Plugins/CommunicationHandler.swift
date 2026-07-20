@@ -354,6 +354,10 @@ final class CommunicationHandler {
 
         IPCBridge.shared.send("startExam", serverstatus.asDictionary)
     }
+    
+    public func gracefullyEndExam() {
+        Task { await endExam() }
+    }
 
     /// Tears down exam mode and notifies the renderer.
     private func endExam() async {
@@ -367,7 +371,7 @@ final class CommunicationHandler {
 
     // MARK: - Connection Management
 
-    private func resetConnection() {
+    public func resetConnection() {
         guard let mc = multicastClient else { return }
         mc.clientinfo.token         = nil
         mc.clientinfo.ip            = nil

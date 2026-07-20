@@ -150,6 +150,11 @@ public final class MulticastClient: CAPPlugin, CAPBridgedPlugin {
             await switchExamSection(multicastClient: self, serverstatus: self.serverstatus, newSectionNumber: sectionNumber)
             return ["status": "success"]
         }
+        
+        IPCBridge.shared.on("gracefullyexit") { [weak self] payload throws in
+            CommunicationHandler.shared.gracefullyEndExam()
+            CommunicationHandler.shared.resetConnection()
+        }
 
         CommunicationHandler.shared.initialize(multicastClient: self)
         ScreenshotHandler.shared.initialize(multicastClient: self)
