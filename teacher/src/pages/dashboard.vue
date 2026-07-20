@@ -936,6 +936,15 @@
                                 <div class="setup-switch-details text-black-50 setup-hint" v-if="!defaultPrinter">{{$t('dashboard.noprinterChosen')}}</div>
                             </div>
                         </div>
+
+                        <div v-if="config.bipIntegration && bipToken" class="setup-card">
+                            <div class="setup-row">
+                                <div class="form-check form-switch m-0">
+                                    <input v-model="serverstatus.requireBiP" class="form-check-input" type="checkbox" id="activatebip" @mouseenter="setSetupStatus($t('control.biprequired'))" @mouseleave="clearSetupStatus">
+                                    <label class="form-check-label" for="activatebip">{{$t('dashboard.bildungsportalLoginEnforce')}}</label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="setup-grid-col">
@@ -1005,15 +1014,6 @@
                                     <span class="setup-unit">min</span>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-if="config.bipIntegration && bipToken" class="setup-card mt-2">
-                    <div class="setup-row">
-                        <div class="form-check form-switch m-0">
-                            <input v-model="serverstatus.requireBiP" class="form-check-input" type="checkbox" id="activatebip" @mouseenter="setSetupStatus($t('control.biprequired'))" @mouseleave="clearSetupStatus">
-                            <label class="form-check-label" for="activatebip">{{$t('dashboard.bildungsportalLoginEnforce')}}</label>
                         </div>
                     </div>
                 </div>

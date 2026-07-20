@@ -45,7 +45,7 @@ import { stopProxy } from './vncproxy.js';
 import { switchExamSection } from './switchExamSection.js';
 import {
     buildLocalSubmissionSigningSecret,
-    deriveSigningP12,
+    deriveSigningIdentity,
     signSubmissionPdf,
     SUBMISSION_SIGN_MODE_BIP,
     SUBMISSION_SIGN_MODE_LOCAL,
@@ -774,16 +774,18 @@ import {
             if (isSigningExport) {
                 try {
                     const tP12 = Date.now()
-                    const { p12Buffer, mode } = this.ensureSubmissionSigningP12()
+                    const identity = await this.ensureSubmissionSigningP12()
+                    const mode = identity.mode
                     const p12Ms = Date.now() - tP12
                     signMode = mode
                     const signedAt = new Date()
+                    const iconPath = this.resolveSubmissionStampIconPath()
                     const tSign = Date.now()
-                    pdfBuf = await signSubmissionPdf(pdfBuf, p12Buffer, {
+                    pdfBuf = await signSubmissionPdf(pdfBuf, identity, {
                         name: this.multicastClient.clientinfo.name,
                         signMode: mode,
                         signedAt,
-                        logoPngPath: this.resolveSubmissionStampIconPath(),
+                        logoPngBytes: iconPath ? fs.readFileSync(iconPath) : null,
                         reason: 'Next-Exam submission',
                         contactInfo: 'https://next-exam.at',
                         location: 'Next-Exam',
@@ -1119,27 +1121,27 @@ import {
         return { status: 'success' }
     }
 
-    /** Drops cached P12 so the next sign uses fresh BiP/local identity material. */
+    /** Drops cached identity so the next sign uses fresh BiP/local identity material. */
     invalidateSubmissionSigningP12() {
         this.cachedSubmissionSigningP12 = null
     }
 
-    /** Builds signing P12 once per exam session (or after BiP login); reused for every submission. */
-    ensureSubmissionSigningP12() {
-        if (this.cachedSubmissionSigningP12?.p12Buffer?.length) {
+    /** Builds signing identity once per exam session (or after BiP login); reused for every submission. */
+    async ensureSubmissionSigningP12() {
+        if (this.cachedSubmissionSigningP12?.privateKey) {
             return this.cachedSubmissionSigningP12
         }
-        this.cachedSubmissionSigningP12 = this.materializeSubmissionSigningP12()
+        this.cachedSubmissionSigningP12 = await this.materializeSubmissionSigningP12()
         return this.cachedSubmissionSigningP12
     }
 
-    /** Warms RSA/P12 on main after exam view load so submit does not block the UI. */
+    /** Warms EC key + cert on main after exam view load so submit does not block the UI. */
     prewarmSubmissionSigningP12() {
         return new Promise((resolve) => {
-            setImmediate(() => {
+            setImmediate(async () => {
                 try {
                     const t0 = Date.now()
-                    this.ensureSubmissionSigningP12()
+                    await this.ensureSubmissionSigningP12()
                     log.info(`communicationhandler @ prewarmSubmissionSigningP12: ready in ${Date.now() - t0}ms`)
                     resolve({ status: 'success' })
                 } catch (e) {
@@ -1172,13 +1174,13 @@ import {
         return null;
     }
 
-    /** Creates P12: BiP userprivateaccesskey or local pin+token+time secret (called once per cache cycle). */
+    /** Creates identity: BiP userprivateaccesskey or local pin+token+time secret (called once per cache cycle). */
     materializeSubmissionSigningP12() {
         const displayName = String(this.multicastClient?.clientinfo?.name || 'Next-Exam Student').trim()
         const saltHex = crypto.randomBytes(16).toString('hex')
         const bip = this.bipSiteInfo?.userprivateaccesskey
         if (bip) {
-            return deriveSigningP12(bip, saltHex, this.bipSiteInfo.fullname || displayName, {
+            return deriveSigningIdentity(bip, saltHex, this.bipSiteInfo.fullname || displayName, {
                 mode: SUBMISSION_SIGN_MODE_BIP,
                 bipUserId: this.bipSiteInfo.userid,
             })
@@ -1187,7 +1189,7 @@ import {
         const token = this.multicastClient?.clientinfo?.token ?? ''
         const timeMs = Date.now()
         const secret = buildLocalSubmissionSigningSecret(pin, token, timeMs)
-        return deriveSigningP12(secret, saltHex, displayName, { mode: SUBMISSION_SIGN_MODE_LOCAL })
+        return deriveSigningIdentity(secret, saltHex, displayName, { mode: SUBMISSION_SIGN_MODE_LOCAL })
     }
 
     async endExam(serverstatus){

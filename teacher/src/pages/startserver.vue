@@ -966,7 +966,13 @@ export default {
                 if (result.isConfirmed) { 
                     let response = await ipcRenderer.invoke('delPrevious', name)
                     console.log(response)
-                    this.getPreviousExams()
+                    await this.getPreviousExams()
+                    // reset selection if the deleted exam was the selected one
+                    if ((this.servername || '').toLowerCase() === (name || '').toLowerCase()) {
+                        this.servername = ''
+                        this.selectedExam = null
+                    }
+                    this.checkExistingExam()
                 } 
             });  
         },

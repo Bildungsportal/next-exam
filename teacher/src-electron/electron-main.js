@@ -200,7 +200,7 @@ app.whenReady().then(()=>{
     powerSaveBlocker.start('prevent-display-sleep')
 
     WindowHandler.createWindow()
-
+ 
     globalShortcut.register('CommandOrControl+Shift+H', () => {  const win = BrowserWindow.getFocusedWindow(); if (win) { win.webContents.toggleDevTools() }});
     globalShortcut.register('Alt+Left', () => {  return false });  // Navigation attempt blocked
 

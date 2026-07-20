@@ -81,10 +81,12 @@ class WindowHandler {
         }
     }
 
-    createBiPLoginWin(biptest) {
+    createBiPLoginWin(biptest, { isolated = false } = {}) {
         if (this.bipwindow && !this.bipwindow.isDestroyed()) {
             this.bipwindow.close()
         }
+        // isolated: ephemeral in-memory session (no "persist:") so verify forces a fresh login and leaves the teacher's default BiP session intact
+        const webPreferences = isolated ? { partition: `bip-verify-${Date.now()}` } : undefined
         this.bipwindow = new BrowserWindow({
             title: 'Next-Exam',
             icon: join(getPublicBase(), 'icons', 'icon.png'),
@@ -100,6 +102,7 @@ class WindowHandler {
            // frame: false,
             show: false,
            // transparent: true
+            webPreferences,
         })
         
         this.bipwindow.loadURL(this.getBiPUrl(biptest)+`/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)
@@ -215,7 +218,7 @@ class WindowHandler {
                     reject(err)
                 },
             }
-            this.createBiPLoginWin(biptest)
+            this.createBiPLoginWin(biptest, { isolated: true })
         })
     }
 

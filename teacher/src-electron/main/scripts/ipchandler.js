@@ -1436,10 +1436,10 @@ class IpcHandler {
             }
         })
 
-        ipcMain.handle('verifySubmissionPdfIntegrity', (_event, { pdfBase64 } = {}) => {
+        ipcMain.handle('verifySubmissionPdfIntegrity', async (_event, { pdfBase64 } = {}) => {
             try {
                 const buf = Buffer.from(String(pdfBase64 || ''), 'base64')
-                const result = verifySubmissionPdfIntegrity(buf)
+                const result = await verifySubmissionPdfIntegrity(buf)
                 return {
                     ok: !!result.integrityValid,
                     code: result.code,
@@ -1457,7 +1457,7 @@ class IpcHandler {
         ipcMain.handle('verifySubmissionPdfViaBip', async (_event, { pdfBase64, biptest } = {}) => {
             try {
                 const buf = Buffer.from(String(pdfBase64 || ''), 'base64')
-                const pre = verifySubmissionPdfIntegrity(buf)
+                const pre = await verifySubmissionPdfIntegrity(buf)
                 if (!pre.hasSignature) {
                     return { ok: false, ...pre, code: 'NO_SIGNATURE' }
                 }
@@ -1475,7 +1475,7 @@ class IpcHandler {
                 if (!key) {
                     return { ok: false, code: 'BIP_SECRET_MISSING', verifyError: 'no userprivateaccesskey' }
                 }
-                const result = verifySubmissionPdfBipIdentity(buf, key)
+                const result = await verifySubmissionPdfBipIdentity(buf, key)
                 return {
                     ok: !!result.ok,
                     code: result.code,
