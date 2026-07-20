@@ -48,8 +48,7 @@
             <div v-if="localLockdown && exammode" class="header-item btn btn-danger p-1 pe-2 me-1 btn-sm"  @click="gracefullyExit()"><img src="/src/assets/img/svg/dialog-cancel.svg" class="" width="22" height="20"> {{ $t("editor.endexam") }}  </div>
         </div>
 
-        <div class="header-right">
-        <!-- Exam sections: show all 4 section buttons and current section; if allowSectionSwitch, buttons trigger switch-exam-section IPC -->
+        <!-- Exam sections: sibling of left/right so narrow viewports can drop them to a full second row -->
         <div v-if="serverstatus?.useExamSections" class="header-sections me-2">
             <div v-for="n in 4" :key="n"
                 class="btn btn-sm ms-1 p-0 pe-1 ps-1"
@@ -59,6 +58,7 @@
             </div>
         </div>
 
+        <div class="header-right">
         <div class="header-item">
 
             <!-- Show WLAN SSID -->
@@ -442,6 +442,18 @@
     flex-direction: row;
     align-items: center;
     justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+/* iPad / narrow fullscreen: sections → full second row, centered; net/clock/type stay top-right */
+@media (max-width: 1100px) {
+    .header-sections {
+        flex-basis: 100%;
+        order: 3;
+        justify-content: center;
+        margin-top: 4px;
+        margin-right: 0 !important;
+    }
 }
 
 .header-meta {
