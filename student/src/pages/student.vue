@@ -1658,8 +1658,20 @@ export default {
 
         // Drop server registration (same as system tray disconnect)
         disconnectClient() {
-            signalBridge.send('disconnect');
-            this.token = '';
+            this.$swal({
+                title: this.$t("student.unregister"),
+                text: this.$t("student.logoutBiP"),
+                showCancelButton: true,
+                confirmButtonText: 'Ok',
+                cancelButtonText: this.$t("editor.cancel"),
+                focusConfirm: false,
+                icon: 'question',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    signalBridge.send('disconnect');
+                    this.token = '';
+                }
+            });
         },
 
         /** register client on the server **/

@@ -528,7 +528,7 @@ function sendFiles(who) {
             who: whoParam,
             files: filesPayload,
         })
-        .then( (data) => {log.info("exmmmanagment @ sendFiles:", data) })
+        .then( (data) => {log.info("exmmmanagment @ sendFiles: uploadTeacherFiles successful") })
         .catch( err =>{ log.error(`${err}`) })
     });    
 }
