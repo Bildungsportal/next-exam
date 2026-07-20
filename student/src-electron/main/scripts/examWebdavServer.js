@@ -341,7 +341,7 @@ export function startExamWebdav(opts) {
     });
 
     server.listen(port, '0.0.0.0', () => {
-        log.info(`examWebdavServer: listening ${port} mount=${mountPath} root=${rootDir}`);
+        log.info(`examWebdavServer: listening 0.0.0.0:${port} mount=${mountPath} root=${rootDir}`);
     });
     server.on('error', (e) => {
         log.error('examWebdavServer: server error', e);

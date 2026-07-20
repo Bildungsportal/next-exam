@@ -40,7 +40,7 @@ echo [%date% %time%] writing rclone.conf >> "%LOG%"
 > "%TARGET%\rclone.conf" (
     echo [electron_host]
     echo type = webdav
-    echo url = http://10.0.2.2:1900/share
+    echo url = http://10.0.2.1:1900/share
     echo vendor = other
 )
 

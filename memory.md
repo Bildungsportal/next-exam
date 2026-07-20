@@ -96,7 +96,7 @@ RULE^student^typingRhythm^editor.vue isTypingRhythmExemptKey clears deltas for B
 RULE^student^appsToClose^leaf appsToClose.js; kill=substring win; remotecheck=exact stem (+multi-word cmd on unix)
 RULE^student^screenshotStream^resetConnection must not stop getDisplayMedia stream; upload-fail pause must not stopSharedStream; stopSharedStream clears initAttempted; ensureDisplayStreamAsync re-acquires on Connect after track loss
 PATH^student^netScan^networkActiveProcesses.js scans non-loopback TCP established + TCP LISTEN; excludes next-exam subtree + LT + sys-critical allowlist (incl mainthread linux node/electron dev)
-PATH^student^remoteAssistant^updateRemoteAssistant in remoteAssistantScan.js; requestUpdate every 100s; after killAppsToClose if clientinfo passed; teacher gets appsToClose keyword hits+ports only; net scan logs locally
+PATH^student^remoteAssistant^updateRemoteAssistant in remoteAssistantScan.js; requestUpdate every 100s; after killAppsToClose if clientinfo passed; teacher gets appsToClose keyword hits+ports only; net scan logs locally; examtype=localvm drops port 5901 (QEMU VNC)
 RULE^student^vncproxyHelper^spawn vncproxy-helper.cjs with ELECTRON_RUN_AS_NODE=1 (packaged electron else hits requestSingleInstanceLock and exits 0 without listening)
 TECH^student^previewWebview^applyPreviewWebviewHostLayout(splitview); WebviewPane host no Vue inline style (re-render wiped 80vw); inner nx-webview-pane-fill; setZoomFactor dom-ready+try/catch
 RULE^student^webviewHostDisplay^never set <webview> host display:block; overrides Electron :host{display:flex} so internal iframe(flex:1) collapses (content not full height). Use display:flex + flex:1 1 0 to fill; CSS cannot pierce webview shadow DOM so no iframe-height JS hack^eduvidual.vue #webviewmain
@@ -116,7 +116,7 @@ RULE^localvm^display^presets 1920x1080,1680x1050,1440x900,1280x700,1024x768; def
 RULE^localvm^gpu^standard viogpudo+virtio-vga; autounattend FirstLogon pnputil; do not diagnose choppy VNC as missing GPU; FB cursor lag in VNC stream not missing viogpu
 RULE^localvm^rclone^setup-rclone runs at FirstLogon; failure usually in mount-rclone autostart not setup
 TECH^localvm^whpx^HypervisorPresent (NOT Get-WindowsOptionalFeature - needs admin, false negatives); win32 cpu Skylake,+nx,+popcnt no hv_* runtime; smp cores=4,threads=1; rtc localtime; disk cache=writeback (not none on QEMU11)
-TECH^localvm^webdav^WebDAV 0.0.0.0:1900 /share→workdir; guest http://10.0.2.2:1900/share; blockInternet uses restrict=on+guestfwd tcp:10.0.2.2:1900-tcp:127.0.0.1:1900; start WebDAV before QEMU
+TECH^localvm^webdav^WebDAV 0.0.0.0:1900 /share→workdir; guestfwd=tcp:10.0.2.1:1900→127.0.0.1:1900. IP choice tested: QEMU REJECTS .2(gateway)+.3(DNS) "Conflicting/invalid host:port"; ACCEPTS .1+.100; but .100 in DHCP range=unrouted in guest→timeout; .1=only IP both accepted+routable. guestfwd in BOTH blockInternet(restrict=on)+unblocked netdev; rclone url=http://10.0.2.1:1900/share; poll host .1; WinFsp has no IP; start WebDAV before QEMU; changing .cmd IPs needs VM/ISO rebuild
 TECH^localvm^qmp^student graceful shutdown via QMP; win tcp:47043 linux unix sock
 TECH^localvm^verify^calculateSha256 (default false); when false stat.size verify; when true sha256 verify; sha256 base qcow2 BEFORE qemu start (runLocalVmPreStartVerify) avoids guest freeze
 TECH^localvm^startState^localVmStartState idle|starting|blocked; qemu-download/import must not set idle while starting (parallel startExam)
