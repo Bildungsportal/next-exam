@@ -22,6 +22,7 @@ jobs:
       prerelease: true
 
   macos-x64:
+    needs: macos-arm64
     uses: ./.github/workflows/build-MacOS-x64-DMG.yml
     secrets: inherit
     with:

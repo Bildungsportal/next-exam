@@ -11,7 +11,6 @@ const { notarize } = require('@electron/notarize');
 const { exec } = require('child_process');
 
 const assessmentEntitlements = path.join(projectRoot, 'scripts', 'entitlements.mac.assessment.plist');
-const wifiEntitlements = path.join(projectRoot, 'scripts', 'entitlements.mac.wifi.plist');
 
 function execPromise(command) {
   return new Promise((resolve, reject) => {
@@ -47,7 +46,6 @@ async function resignAppleHelpers(appBundlePath) {
   const mainEntitlements = path.join(path.dirname(assessmentEntitlements), 'entitlements.mac.plist');
   const helpers = [
     { name: 'assessment-helper.app', entitlements: assessmentEntitlements, identifier: bundleId },
-    { name: 'wifi-helper', entitlements: wifiEntitlements, identifier: null },
   ];
   let anyReSigned = false;
   for (const { name, entitlements, identifier } of helpers) {

@@ -100,7 +100,14 @@ class PlatformDispatcher {
     this.runningUnderMacRosetta = this.macRosettaEmulation.runningUnderRosetta;
   }
 
-  // True when Apple Silicon runs this x64 binary under Rosetta (sysctl.proc_translated).
+  // Normalize uname -m style arch strings to match process.arch naming.
+  _normalizeUnameArch(unameArch) {
+    if (unameArch === 'x86_64' || unameArch === 'amd64') return 'x64';
+    if (unameArch === 'aarch64') return 'arm64';
+    return unameArch;
+  }
+
+  // True when Apple Silicon runs this x64 binary under Rosetta.
   _detectMacRosettaEmulation() {
     const processArch = this.arch;
     if (this.platform !== 'darwin') {
@@ -108,9 +115,18 @@ class PlatformDispatcher {
     }
     let nativeHostArch = null;
     try {
-      nativeHostArch = execSync('uname -m', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim();
+      // arch -arm64 bypasses Rosetta; plain uname -m inherits the translated view on x64 builds.
+      nativeHostArch = this._normalizeUnameArch(
+        execSync('arch -arm64 /usr/bin/uname -m', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim()
+      );
     } catch {
-      return { runningUnderRosetta: false, nativeHostArch: null, processArch, procTranslated: false };
+      try {
+        nativeHostArch = this._normalizeUnameArch(
+          execSync('uname -m', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] }).trim()
+        );
+      } catch {
+        return { runningUnderRosetta: false, nativeHostArch: null, processArch, procTranslated: false };
+      }
     }
     let procTranslated = false;
     try {
@@ -120,8 +136,7 @@ class PlatformDispatcher {
     } catch {
       procTranslated = false;
     }
-    const runningUnderRosetta =
-      nativeHostArch === 'arm64' && processArch === 'x64' && procTranslated;
+    const runningUnderRosetta = nativeHostArch === 'arm64' && processArch === 'x64';
     if (runningUnderRosetta) {
       this.messages.push(
         `platformDispatcher @ _detectMacRosettaEmulation: x64 process on arm64 host (Rosetta); native=${nativeHostArch} process=${processArch}`
@@ -132,19 +147,6 @@ class PlatformDispatcher {
 
   _isIOS() {
     return process.ios === true || process.env.IOS === 'true';
-  }
-
-  /** Electron kiosk flag only when OS is not already in Assigned Access / cage shell. */
-  applyElectronKioskMode(win) {
-    if (!win || win.isDestroyed?.()) return;
-    if (this.skipElectronKiosk) return;
-    // macOS: AAC assessment mode handles the lockdown; we only want a borderless fullscreen
-    // (simple fullscreen = no separate Space, no notch/camera safe-area inset, no menu bar).
-    if (this.platform === 'darwin') {
-      win.setSimpleFullScreen(true);
-      return;
-    }
-    win.setKiosk(true);
   }
 
   _whichDesktopName() {

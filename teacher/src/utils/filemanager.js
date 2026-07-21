@@ -87,11 +87,10 @@ async function loadActivesheetsCorrectionContext(vm, pdfFilepath) {
     if (!String(pdfFilepath || '').replace(/\\/g, '/').includes('/ABGABE/')) return;
     if (/-korrigiert\.pdf$/i.test(pdfFilepath)) return; // bereits korrigierte Ausgabe nicht erneut als korrigierbar markieren
     const section = vm.serverstatus?.examSections?.[vm.serverstatus.activeSection];
-    if (!section || section.examtype !== 'activesheets') return;
+    if (!section) return;
 
     const groupKey = resolveSubmissionStudentGroup(vm, pdfFilepath) === 'B' ? 'groupB' : 'groupA';
     const activeSheets = section[groupKey]?.examConfig?.activeSheets;
-    if (!activeSheets?.filecontent) return;
 
     let submissionFormData = null;
     let templateFormData = null;
@@ -106,7 +105,8 @@ async function loadActivesheetsCorrectionContext(vm, pdfFilepath) {
         submissionFormData = parseActivesheetsFormDataJson(workdirBytesToUtf8(htmRaw));
     }
 
-    const templatePath = activesheetsCorrectionTemplatePath(vm.workdirectory, activeSheets.filename);
+    const templatePdfName = activeSheets?.filename || pdfFilepath.split(/[/\\]/).pop();
+    const templatePath = activesheetsCorrectionTemplatePath(vm.workdirectory, templatePdfName);
     const tplRaw = await readWorkdirFileForDashboard(vm, templatePath, { optional: true });
     if (tplRaw == null) {
         log.warn('filemanager @ loadActivesheetsCorrectionContext: no autocorrect template found');
@@ -116,10 +116,10 @@ async function loadActivesheetsCorrectionContext(vm, pdfFilepath) {
     }
 
     let baseParsedPages = [];
-    const customFields = activeSheets.customFields ? JSON.parse(JSON.stringify(activeSheets.customFields)) : [];
-    const blacklist = activeSheets.blacklist ? [...activeSheets.blacklist] : [];
+    const customFields = activeSheets?.customFields ? JSON.parse(JSON.stringify(activeSheets.customFields)) : [];
+    const blacklist = activeSheets?.blacklist ? [...activeSheets.blacklist] : [];
 
-    if (templateFormData) {
+    if (templateFormData && activeSheets?.filecontent) {
         try {
             await ensurePdfOverlayFontsReady();
             baseParsedPages = await parsePdfToPages(base64ToUint8Array(activeSheets.filecontent));
@@ -229,7 +229,24 @@ function downloadFile(file){
 
 
 // send a file from dashboard explorer to specific student
+const EXPLORER_NON_STUDENT_ROOT_DIRS = new Set(['ABGABE', 'logfiles', 'screenshots', 'activesheets'])
+
+/** Map explorer file path to student token via first segment under exam workdir (clientname folder). */
+function resolveStudentTokenFromExplorerFile(file, workdirectory, studentlist) {
+    if (!file?.path || !workdirectory || !Array.isArray(studentlist)) return ''
+    const norm = (s) => String(s).replace(/\\/g, '/').replace(/\/+$/, '')
+    const fp = norm(file.path)
+    const root = norm(workdirectory)
+    if (fp !== root && !fp.startsWith(`${root}/`)) return ''
+    const rel = fp === root ? '' : fp.slice(root.length + 1)
+    const folderName = rel.split('/')[0]
+    if (!folderName || EXPLORER_NON_STUDENT_ROOT_DIRS.has(folderName)) return ''
+    const student = studentlist.find((s) => String(s.clientname || '').toLowerCase() === folderName.toLowerCase())
+    return student?.token || ''
+}
+
 function dashboardExplorerSendFile(file){
+    const preselectedToken = resolveStudentTokenFromExplorerFile(file, this.workdirectory, this.studentlist)
     const inputOptions = new Promise((resolve) => {  // prepare input options for radio buttons
         let connectedStudents = {}
         this.studentlist.forEach( (student) => { connectedStudents[student.token]=student.clientname });
@@ -249,6 +266,7 @@ function dashboardExplorerSendFile(file){
         icon: 'success',
         showCancelButton: true,
         inputOptions: inputOptions,
+        inputValue: preselectedToken,
         inputValidator: (value) => { if (!value) { return this.$t("dashboard.chooserequire") } },
     })
     .then((input) => {
@@ -765,6 +783,41 @@ async function saveActivesheetsCorrectionTemplate(formData) {
     }
 }
  
+// Deletes the open -korrigiert.pdf and closes preview so the original submission can be corrected again.
+async function discardActivesheetsCorrectedPdf() {
+    if (!this.currentpreviewPath || !/-korrigiert\.pdf$/i.test(this.currentpreviewPath)) return;
+    const result = await this.$swal.fire({
+        customClass: {
+            popup: 'my-popup',
+            title: 'my-title',
+            content: 'my-content',
+            actions: 'my-swal2-actions',
+        },
+        title: this.$t('dashboard.sure'),
+        html: `<div class="my-content">${this.$t('pdf.correctionDiscardConfirm')}</div>`,
+        icon: 'warning',
+        showCancelButton: true,
+        cancelButtonText: this.$t('dashboard.cancel'),
+    });
+    if (!result.isConfirmed) return;
+    try {
+        const res = await window.ipcRenderer.invoke('deleteWorkdirItem', {
+            servername: this.servername,
+            filepath: this.currentpreviewPath,
+        });
+        if (res?.status !== 'success') {
+            await this.$swal.fire({ icon: 'error', text: res?.message || 'Delete failed' });
+            return;
+        }
+        if (this.showExplorer && this.currentdirectory) this.loadFilelist(this.currentdirectory);
+        this.showSubmissionsView = false;
+        this.hidepreview();
+    } catch (err) {
+        log.error('filemanager @ discardActivesheetsCorrectedPdf:', err);
+        await this.$swal.fire({ icon: 'error', text: String(err?.message || err) });
+    }
+}
+
 async function saveActivesheetsCorrectedPdf() {
     if (!this.currentpreviewPath) return;
     try {
@@ -797,4 +850,4 @@ async function saveActivesheetsCorrectedPdf() {
     }
 }
 
-export {loadFilelist, getLatest, processPrintrequest, loadImage, showPDFPreview, loadTextFile, loadHtmlFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate, saveActivesheetsCorrectedPdf, base64ToUint8Array}
+export {loadFilelist, getLatest, processPrintrequest, loadImage, showPDFPreview, loadTextFile, loadHtmlFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete, openLatestFolder, printBase64, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate, saveActivesheetsCorrectedPdf, discardActivesheetsCorrectedPdf, base64ToUint8Array}

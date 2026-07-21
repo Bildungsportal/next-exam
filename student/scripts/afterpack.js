@@ -25,18 +25,21 @@ async function removeByName(dir, name) {
 }
 
 export default async function afterPack(context) {
-  const arch = context.arch;
+  const macArch =
+    process.env.NXE_EB_MAC_ARCH === 'x64' || context.arch === 1 || context.arch === 'x64'
+      ? 'x64'
+      : 'arm64';
   const appPath = context.appOutDir;
 
   const x64JrePath = path.join(appPath, 'public', 'minimal-jre-11-mac-arm64');
   const arm64JrePath = path.join(appPath, 'public', 'minimal-jre-11-mac');
 
-  if (arch === 'x64') {
+  if (macArch === 'x64') {
     if (await fs.pathExists(x64JrePath)) {
       await fs.remove(x64JrePath);
       console.log(`Removed ARM64 JRE from x64 build: ${x64JrePath}`);
     }
-  } else if (arch === 'arm64') {
+  } else if (macArch === 'arm64') {
     if (await fs.pathExists(arm64JrePath)) {
       await fs.remove(arm64JrePath);
       console.log(`Removed x64 JRE from ARM64 build: ${arm64JrePath}`);
@@ -61,7 +64,7 @@ export default async function afterPack(context) {
     }
 
     if (signEnabled && identity) {
-      await signLanguageToolJars(appPath, appName, identity);
+      await signLanguageToolJars(appPath, appName, identity, macArch);
     }
     // apple/* helpers: signed in notarize.cjs afterSign (after electron-builder; see resignAppleHelpers)
   }

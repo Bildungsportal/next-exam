@@ -1,13 +1,25 @@
 <template>
 
     <div id="apphead" class="bg-dark">
+        <div v-if="showSectionSwitchOverlay" class="section-switch-backdrop">
+            <div class="section-switch-card">
+                <div class="section-switch-spinner" aria-hidden="true"></div>
+                <div class="section-switch-text">{{ $t('editor.switchingSection') }}</div>
+            </div>
+        </div>
+
         <div class="header-left">
             <div v-if="online && !localLockdown" class="header-item">
                 <img src="/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style="float: left;" />
                 <button v-if="groups  && group === 'a'" type="button" class="header-item btn btn-info btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> A  </button>
                 <button v-if="groups  && group === 'b'" type="button" class="header-item btn btn-warning btn-sm ms-2 me-2" style="cursor: unset; width: 32px; justify-content:center; "> B  </button>
-                <span class="fs-5 align-middle me-1" style="float: left;">{{clientname}} @ {{servername}} | {{pincode}}</span>
-                <span class="fs-5 align-middle me-4 teal" style="float: left;" >| {{$t('student.connected')}}</span>
+                <span class="fs-5 align-middle me-4 header-meta" style="float: left;">
+                    {{clientname}} @ {{servername}}
+                    <span class="header-sep" aria-hidden="true">·</span>
+                    {{pincode}}
+                    <span class="header-sep" aria-hidden="true">·</span>
+                    <span class="teal">{{$t('student.connected')}}</span>
+                </span>
                 <span v-if="kioskLauncherApps.length" class="kiosk-launcher-bar ms-1">
                     <button v-for="app in kioskLauncherApps" :key="app.path" type="button"
                             class="btn btn-outline-cyan btn-sm py-1 px-3 ms-2 kiosk-launcher-btn"
@@ -16,32 +28,37 @@
             </div>
             <div v-if="!online && !localLockdown" class="header-item">
                 <img src="/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style=" float: left;" />
-                <span class="fs-5 align-middle me-1" style=" float: left;"> {{clientname}} </span>
-                <span class="fs-5 align-middle me-4 red" style="float: left;"> | {{ $t("student.disconnected") }} </span>
+                <span class="fs-5 align-middle me-4 header-meta" style="float: left;">
+                    {{clientname}}
+                    <span class="header-sep" aria-hidden="true">·</span>
+                    <span class="red">{{ $t("student.disconnected") }}</span>
+                </span>
             </div>
             <div v-if="localLockdown" class="header-item">
                 <img src="/img/svg/speedometer.svg" class="white me-2" width="32" height="32" style="float: left;" />
-                <span class="fs-5 align-middle me-1" style="float: left;">{{clientname}}</span>
-                <span v-if="localLockdown && exammode"  class="fs-5 align-middle me-4 green" style="float: left;" >| Lokal abgesichert</span>
-                <span v-if="localLockdown && !exammode"  class="fs-5 align-middle me-4 red" style="float: left;" >| nicht abgesichert</span>
+                <span class="fs-5 align-middle me-4 header-meta" style="float: left;">
+                    {{clientname}}
+                    <span class="header-sep" aria-hidden="true">·</span>
+                    <span v-if="localLockdown && exammode" class="green">Lokal abgesichert</span>
+                    <span v-if="localLockdown && !exammode" class="red">nicht abgesichert</span>
+                </span>
             </div>
             <div v-if="!online && !localLockdown && exammode" class="header-item btn btn-success p-1 me-1 btn-sm" @click="reconnect()"><img src="/img/svg/gtk-convert.svg" class="" width="22" height="20"> {{ $t("editor.reconnect")}}</div>
             <div v-if="!online && !localLockdown && exammode" class="header-item btn btn-danger p-1 me-1 btn-sm"  @click="gracefullyExit()"><img src="/img/svg/dialog-cancel.svg" class="" width="22" height="20"> {{ $t("editor.endexam")}} </div>
             <div v-if="localLockdown && exammode" class="header-item btn btn-danger p-1 pe-2 me-1 btn-sm"  @click="gracefullyExit()"><img src="/img/svg/dialog-cancel.svg" class="" width="22" height="20"> {{ $t("editor.endexam") }}  </div>
         </div>
-        
-     
 
-        <!-- Exam sections: show all 4 section buttons and current section; if allowSectionSwitch, buttons trigger switch-exam-section IPC -->
-        <div v-if="serverstatus?.useExamSections" class="header-item me-2">
+        <!-- Exam sections: sibling of left/right so narrow viewports can drop them to a full second row -->
+        <div v-if="serverstatus?.useExamSections" class="header-sections me-2">
             <div v-for="n in 4" :key="n"
-                class="header-item btn btn-sm ms-1 p-0 pe-1 ps-1"
+                class="btn btn-sm ms-1 p-0 pe-1 ps-1"
                 :class="(lockedSection === n ? 'btn-teal' : 'btn-outline-secondary') + (!serverstatus?.allowSectionSwitch ? ' disabledbtn' : '') "
                 @click="switchExamSection(n)">
                 {{ serverstatus?.examSections?.[n]?.sectionname || n }}
             </div>
         </div>
 
+        <div class="header-right">
         <div class="header-item">
 
             <!-- Show WLAN SSID -->
@@ -105,6 +122,7 @@
             <span ref="headerClock" class="fs-5 d-inline-block" style="width:90px;"></span>
             <div class="fs-5" >{{componentName}}</div>
         </div>
+        </div>
     </div>
   
 </template>
@@ -144,12 +162,13 @@
       const {
         groups, group, examtype, servername, clientname, serverstatus, pincode,
         localLockdown, online, battery, entryTime, componentName, wlanInfo,
-        exammode, lockedSection,
+        exammode, lockedSection, switchingToSection,
       } = storeToRefs(infoStore);
 
       return {
         hostip, examdirectory, groups, group, examtype, servername, clientname, serverstatus, pincode,
         localLockdown, online, battery, entryTime, componentName, wlanInfo, exammode, lockedSection,
+        switchingToSection,
       };
     },
     data() {
@@ -158,10 +177,14 @@
         _nxHeaderResizeObs: null,
         _clockInterval: null,
         _entrytimeMs: 0,
+        _sectionSwitchOverlayTimer: null,
         kioskLauncherApps: [],
       };
     },
     computed: {
+      showSectionSwitchOverlay() {
+        return this.switchingToSection != null;
+      },
       warning() {
         return this.wlanInfo?.message === 'nopermissions' ? this.$t('student.wlanNopermissionsText') : null;
       },
@@ -228,10 +251,28 @@
       window.addEventListener('resize', this._nxSetHeaderHeightVar);
       this.$nextTick(() => this.tickHeaderClock());
       loadWinKioskLauncherApps(signalBridge).then((apps) => { this.kioskLauncherApps = apps; });
+      this._onSwitchingExamSection = (_event, sectionNumber) => {
+        useInfoStore().beginSectionSwitch(Number(sectionNumber) || 1);
+      };
+      this._onSectionSwitchAborted = () => {
+        useInfoStore().endSectionSwitchOverlay();
+      };
+      signalBridge.on('switching-exam-section', this._onSwitchingExamSection);
+      signalBridge.on('section-switch-aborted', this._onSectionSwitchAborted);
+      this._onExamConnectionLost = (_event, payload) => this.handleExamConnectionLost(payload);
+      signalBridge.on('exam-connection-lost', this._onExamConnectionLost);
       useInfoStore().updateInfo();
       this.autoSchedulerService(() => useInfoStore().updateInfo(), 5000);
+      this._scheduleEndSectionSwitchOverlay();
     },
     beforeUnmount() {
+      if (this._sectionSwitchOverlayTimer) {
+        clearTimeout(this._sectionSwitchOverlayTimer);
+        this._sectionSwitchOverlayTimer = null;
+      }
+      signalBridge.removeAllListeners('switching-exam-section');
+      signalBridge.removeAllListeners('section-switch-aborted');
+      signalBridge.removeAllListeners('exam-connection-lost');
       if (this._clockInterval) {
         this._clockInterval.removeEventListener('action', this.tickHeaderClock);
         this._clockInterval.stop();
@@ -254,7 +295,13 @@
         } else if (!newMessage) {
           this.lastShownMessage = null;
         }
-      }
+      },
+      lockedSection() {
+        this._scheduleEndSectionSwitchOverlay();
+      },
+      switchingToSection() {
+        this._scheduleEndSectionSwitchOverlay();
+      },
     },
     methods: {
       // Update clock DOM only — no reactive state, avoids header re-render each tick.
@@ -276,6 +323,27 @@
       reconnect() {
         // Restore connection
         this.$emit('reconnect');
+      },
+      // After heartbeat loss: warn if host IP differs from exam-start snapshot.
+      async handleExamConnectionLost({ examStartIp } = {}) {
+        if (!examStartIp) return
+        try {
+          const cur = await signalBridge.invoke('checkhostip')
+          const newIp = cur?.hostip
+          if (!newIp || examStartIp === newIp) return
+          this.$swal.fire({
+            title: this.$t('student.ipChangeHintTitle'),
+            text: this.$t('student.ipChangeHintText', { oldIp: examStartIp, newIp }),
+            icon: 'warning',
+            confirmButtonText: this.$t('editor.reconnect'),
+            showCancelButton: true,
+            cancelButtonText: this.$t('editor.cancel'),
+          }).then((result) => {
+            if (result.isConfirmed) this.reconnect()
+          })
+        } catch (e) {
+          console.warn('ExamHeader @ handleExamConnectionLost', e)
+        }
       },
       gracefullyExit() {
         // Clean exit from safe exam mode
@@ -304,12 +372,20 @@
           cancelButtonText: this.$t('editor.cancel'),
         }).then( async (result) => {
           if (result.isConfirmed) {
-            console.log(`switchExamSection: running file ops then calling switch-exam-section`)
+            console.log(`switchExamSection: calling switch-exam-section`)
+            const infoStore = useInfoStore();
+            infoStore.beginSectionSwitch(sectionNumber);
             await switchExamSectionFiles(this.examdirectory, this.lockedSection, sectionNumber);
-            await signalBridge.invoke('switch-exam-section', sectionNumber);
-            if (isIOS()) {
-                iosUpdateListener.handleUpdateReceived(true, sectionNumber);
-            }
+            signalBridge.invoke('switch-exam-section', sectionNumber)
+              .finally(() => {
+                if (isIOS()) {
+                  iosUpdateListener.handleUpdateReceived(true, sectionNumber);
+                }
+                this._scheduleEndSectionSwitchOverlay();
+                setTimeout(() => {
+                  if (infoStore.switchingToSection === sectionNumber) infoStore.endSectionSwitchOverlay();
+                }, 12000);
+              });
           }
           else {
             if (this.serverstatus.examSections[this.lockedSection].examtype == 'microsoft365'){
@@ -317,7 +393,21 @@
             }
           }
         });
-      }
+      },
+      // Hide overlay after min display once lockedSection matches the switch target.
+      _scheduleEndSectionSwitchOverlay() {
+        const infoStore = useInfoStore();
+        const target = infoStore.switchingToSection;
+        if (target == null || this.lockedSection !== target) return;
+        if (this._sectionSwitchOverlayTimer) clearTimeout(this._sectionSwitchOverlayTimer);
+        const minMs = 450;
+        const elapsed = Date.now() - (infoStore.switchingStartedAt || 0);
+        const delay = Math.max(0, minMs - elapsed);
+        this._sectionSwitchOverlayTimer = setTimeout(() => {
+          this._sectionSwitchOverlayTimer = null;
+          infoStore.endSectionSwitchOverlay();
+        }, delay);
+      },
     },
   }
 </script>
@@ -344,6 +434,48 @@
     align-items: center;
     flex-shrink: 1;
     min-width: 0;
+}
+
+.header-right {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.header-sections {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+/* iPad / narrow fullscreen: sections → full second row, centered; net/clock/type stay top-right */
+@media (max-width: 1100px) {
+    .header-sections {
+        flex-basis: 100%;
+        order: 3;
+        justify-content: center;
+        margin-top: 4px;
+        margin-right: 0 !important;
+    }
+}
+
+.header-meta {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+}
+
+.header-sep {
+    font-weight: 900;
+    font-size: 1.25em;
+    line-height: 1;
+    padding: 0 0.45em;
+    color: #fff;
 }
 
 .header-item {
@@ -379,6 +511,46 @@
     font-size: 0.68rem;
     line-height: 1.15;
     color: #fff;
+}
+
+.section-switch-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.38);
+    z-index: 200001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.section-switch-card {
+    background: rgba(33, 37, 41, 0.94);
+    border-radius: 10px;
+    padding: 22px 28px;
+    text-align: center;
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.section-switch-spinner {
+    width: 28px;
+    height: 28px;
+    margin: 0 auto;
+    border: 3px solid rgba(255, 255, 255, 0.25);
+    border-top-color: #0aa2c0;
+    border-radius: 50%;
+    animation: section-switch-spin 0.85s linear infinite;
+}
+
+@keyframes section-switch-spin {
+    to { transform: rotate(360deg); }
+}
+
+.section-switch-text {
+    margin-top: 12px;
+    font-size: 0.95rem;
+    opacity: 0.92;
 }
 
 </style>

@@ -25,7 +25,8 @@ async function showIntegrityResultSwal(vm, integrity) {
 async function runIssuerVerificationSwal(vm, pdfBase64) {
     const result = await window.ipcRenderer.invoke('verifySubmissionPdfViaBip', {
         pdfBase64,
-        biptest: !!vm.biptest,
+        // biptest arrives as a route-param string ("true"/"false"); !! would make "false" truthy → always q
+        biptest: vm.biptest === true || vm.biptest === 'true',
     })
     if (result?.ok) {
         await swalQueued({

@@ -137,11 +137,6 @@ export const detectorMethods = {
       inputType = 'text';
     }
 
-    // Reconstructed table cells are single-line inputs regardless of height.
-    if (isTableCell && inputType === 'textarea') {
-      inputType = 'text';
-    }
-
     // Normalize checkbox size to a minimum of 18x18px.
     // The drawn path is often a sub-element of the visible checkbox (e.g. inner
     // fill area), so we expand outward from the center.
@@ -454,11 +449,14 @@ export const detectorMethods = {
     };
 
     const makeCell = (left, top, width, height) => {
-      const inputType = this.determineBoxType(width, height);
+      let inputType = this.determineBoxType(width, height);
+      if (inputType === 'textarea' && height <= this.SINGLE_LINE_TEXTAREA_MAX_HEIGHT) {
+        inputType = 'text';
+      }
       return {
         id: this.generateElementId('box'),
-        type: inputType === 'textarea' ? 'text' : inputType,
-        isTextarea: false,
+        type: inputType,
+        isTextarea: inputType === 'textarea',
         isTableCell: true,
         style: { position: 'absolute', left: `${left}px`, top: `${top}px`, width: `${width}px`, height: `${height}px`, zIndex: 5 },
       };

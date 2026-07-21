@@ -22,7 +22,10 @@ import { join } from 'path'
 import path from 'path'
 import { fileURLToPath } from 'node:url'
 import log from 'electron-log'
+import i18n from '../../../src/locales/locales.js'
+import { bindBlockBrowserNavInput, bindBlockBrowserNavInputWebContents } from '../../../../shared/bindBlockBrowserNavInput.js'
 
+const { t } = i18n.global
 const __dirname = import.meta.dirname
 
 // Base path for public assets (icons, etc.): packaged = app.asar.unpacked/public, dev = project public
@@ -78,10 +81,12 @@ class WindowHandler {
         }
     }
 
-    createBiPLoginWin(biptest) {
+    createBiPLoginWin(biptest, { isolated = false } = {}) {
         if (this.bipwindow && !this.bipwindow.isDestroyed()) {
             this.bipwindow.close()
         }
+        // isolated: ephemeral in-memory session (no "persist:") so verify forces a fresh login and leaves the teacher's default BiP session intact
+        const webPreferences = isolated ? { partition: `bip-verify-${Date.now()}` } : undefined
         this.bipwindow = new BrowserWindow({
             title: 'Next-Exam',
             icon: join(getPublicBase(), 'icons', 'icon.png'),
@@ -97,6 +102,7 @@ class WindowHandler {
            // frame: false,
             show: false,
            // transparent: true
+            webPreferences,
         })
         
         this.bipwindow.loadURL(this.getBiPUrl(biptest)+`/admin/tool/mobile/launch.php?service=moodle_mobile_app&passport=next-exam`)
@@ -212,7 +218,7 @@ class WindowHandler {
                     reject(err)
                 },
             }
-            this.createBiPLoginWin(biptest)
+            this.createBiPLoginWin(biptest, { isolated: true })
         })
     }
 
@@ -261,6 +267,11 @@ class WindowHandler {
                 webviewTag: true
             }
         })
+
+        bindBlockBrowserNavInput(this.mainwindow);
+        this.mainwindow.webContents.on('did-attach-webview', (_event, guestContents) => {
+            bindBlockBrowserNavInputWebContents(guestContents);
+        });
 
         this.installVueJsDevTools(this.mainwindow);
 
@@ -327,11 +338,11 @@ class WindowHandler {
                 // do not close a running exam by accident 
                 log.info("windowhandler @ close: do not close running exam this way"); e.preventDefault(); 
                 dialog.showMessageBoxSync(this.mainwindow, {
-                    type: 'info', 
-                    buttons: ['OK'], // Single button only
+                    type: 'info',
+                    buttons: [t('general.ok')],
                     defaultId: 0,
-                    title: 'Exam running',
-                    message: 'Please end the running exam first!'
+                    title: t('general.examRunningTitle'),
+                    message: t('general.endRunningExamFirst')
                 });
                 return
             }

@@ -52,8 +52,12 @@ import { enqueuePrintJob } from './printjobhandler.js'
 import { buildTeacherCombinedLatestPdf } from './getLatestCombinedPdf.js'
 import multiCastserver from './multicastserver.js'
 import i18n from '../../../src/locales/locales.js'
+import {loadSEBConfig} from "./sebintegration.js";
 
 const { t } = i18n.global
+
+// server-level dirs under workdir/<server>/ that are not student submission folders (lowercase compare)
+const NON_STUDENT_ROOT_DIRS = new Set(['uploads', 'activesheets'])
 
 /** Zip a folder for dashboard explorer download (same behaviour as data.js zipDirectory). */
 function zipExplorerDirectory(sourceDir, outPath) {
@@ -131,6 +135,33 @@ class IpcHandler {
                 return { sender: 'server', status: 'success', serverstatus: parsed }
             } catch (_err) {
                 return { sender: 'server', status: 'success', serverstatus: false }
+            }
+        })
+
+        /** Reads teacher-wide defaults from workdir/global.json (sibling of per-exam folders). */
+        ipcMain.handle('getTeacherGlobalSettings', async () => {
+            const filePath = join(this.config.workdirectory, 'global.json')
+            try {
+                const parsed = JSON.parse(await fs.promises.readFile(filePath, 'utf-8'))
+                return parsed && typeof parsed === 'object' ? parsed : null
+            } catch (_err) {
+                return null
+            }
+        })
+
+        /** Writes teacher-wide defaults to workdir/global.json. */
+        ipcMain.handle('setTeacherGlobalSettings', async (_event, settings) => {
+            if (!settings || typeof settings !== 'object') {
+                return { sender: 'server', status: 'error', message: 'invalid payload' }
+            }
+            const filePath = join(this.config.workdirectory, 'global.json')
+            try {
+                await fs.promises.mkdir(this.config.workdirectory, { recursive: true })
+                await fs.promises.writeFile(filePath, JSON.stringify(settings, null, 2))
+                return { sender: 'server', status: 'success' }
+            } catch (err) {
+                log.error('ipchandler @ setTeacherGlobalSettings:', err)
+                return { sender: 'server', status: 'error', message: 'could not save global settings' }
             }
         })
 
@@ -568,8 +599,8 @@ class IpcHandler {
         })
 
         ipcMain.handle('qemu-boot-disk', async (_event, payload = {}) => {
-            const { qcow2Name, useOverlay } = payload || {};
-            log.info(`ipchandler @ qemu-boot-disk: qcow2=${qcow2Name} useOverlay=${!!useOverlay}`);
+            const { qcow2Name, useOverlay, displayResolution } = payload || {};
+            log.info(`ipchandler @ qemu-boot-disk: qcow2=${qcow2Name} useOverlay=${!!useOverlay} display=${displayResolution || '-'}`);
             try {
                 log.info('ipchandler @ qemu-boot-disk: deep QEMU check…');
                 const avail = await checkQemuAvailability();
@@ -581,6 +612,7 @@ class IpcHandler {
                     workdirectory: config.workdirectory,
                     qcow2Name,
                     useOverlay: useOverlay === true,
+                    displayResolution,
                 })
             } catch (e) {
                 log.error('ipchandler @ qemu-boot-disk', e)
@@ -1249,6 +1281,39 @@ class IpcHandler {
             }
         })
 
+        /** Persists teacher correction annotations as sidecar JSON next to ABGABE submission PDFs. */
+        ipcMain.handle('writeTeacherAbgabeAnnotations', async (_event, payload = {}) => {
+            const servername = payload?.servername
+            const servertoken = payload?.servertoken
+            const filepath = payload?.filepath
+            const utf8 = payload?.utf8
+            const mcServer = this.config.examServerList[servername]
+            if (!mcServer || servertoken !== mcServer.serverinfo?.servertoken) {
+                return { status: 'error', sender: 'server', message: t('data.tokennotvalid') }
+            }
+            if (!filepath || typeof filepath !== 'string' || typeof utf8 !== 'string') {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            if (!path.basename(filepath).endsWith('.annotations.json')) {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            const examRoot = path.resolve(path.join(this.config.workdirectory, mcServer.serverinfo.servername))
+            const absTarget = path.resolve(filepath)
+            const rel = path.relative(examRoot, absTarget).replace(/\\/g, '/')
+            if (rel.startsWith('..') || path.isAbsolute(rel) || !rel.includes('ABGABE/')) {
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+            try {
+                JSON.parse(utf8)
+                await fs.promises.mkdir(path.dirname(absTarget), { recursive: true })
+                await fs.promises.writeFile(absTarget, utf8, 'utf8')
+                return { status: 'success', sender: 'server' }
+            } catch (err) {
+                log.error('ipchandler @ writeTeacherAbgabeAnnotations:', err)
+                return { status: 'error', sender: 'server', message: t('data.fileerror') }
+            }
+        })
+
         /** Writes UTF-8 JSON from trusted teacher renderer; basename must end with _editor_timeline.json. */
         ipcMain.handle('writeTeacherWorkdirUtf8File', async (_event, payload = {}) => {
             const servername = payload?.servername
@@ -1371,10 +1436,10 @@ class IpcHandler {
             }
         })
 
-        ipcMain.handle('verifySubmissionPdfIntegrity', (_event, { pdfBase64 } = {}) => {
+        ipcMain.handle('verifySubmissionPdfIntegrity', async (_event, { pdfBase64 } = {}) => {
             try {
                 const buf = Buffer.from(String(pdfBase64 || ''), 'base64')
-                const result = verifySubmissionPdfIntegrity(buf)
+                const result = await verifySubmissionPdfIntegrity(buf)
                 return {
                     ok: !!result.integrityValid,
                     code: result.code,
@@ -1392,7 +1457,7 @@ class IpcHandler {
         ipcMain.handle('verifySubmissionPdfViaBip', async (_event, { pdfBase64, biptest } = {}) => {
             try {
                 const buf = Buffer.from(String(pdfBase64 || ''), 'base64')
-                const pre = verifySubmissionPdfIntegrity(buf)
+                const pre = await verifySubmissionPdfIntegrity(buf)
                 if (!pre.hasSignature) {
                     return { ok: false, ...pre, code: 'NO_SIGNATURE' }
                 }
@@ -1410,7 +1475,7 @@ class IpcHandler {
                 if (!key) {
                     return { ok: false, code: 'BIP_SECRET_MISSING', verifyError: 'no userprivateaccesskey' }
                 }
-                const result = verifySubmissionPdfBipIdentity(buf, key)
+                const result = await verifySubmissionPdfBipIdentity(buf, key)
                 return {
                     ok: !!result.ok,
                     code: result.code,
@@ -1454,7 +1519,7 @@ class IpcHandler {
                     .map(dirent => dirent.name)
 
                 for (const studentName of folders) { // iterate over directory names
-                    if (studentName.toUpperCase() === 'UPLOADS') { // ignore UPLOADS directory
+                    if (NON_STUDENT_ROOT_DIRS.has(studentName.toLowerCase())) { // ignore server-level non-student dirs (UPLOADS, activesheets, ...)
                         continue
                     }
                     
@@ -1611,6 +1676,8 @@ class IpcHandler {
             
             // Collect all IPv4 addresses
             Object.keys(interfaces).forEach((interfaceName) => {
+                // Filter out bridge (br*) and vpn (vpn*) interfaces by name
+                if (interfaceName.startsWith('br') || interfaceName.startsWith('vpn')) { return }
                 interfaces[interfaceName].forEach((iface) => {
                     // Filter out loopback and local addresses
                     if (iface.family === 'IPv4' &&
@@ -1712,124 +1779,6 @@ class IpcHandler {
             }
 
             return { 
-                hostip: this.config.hostip, 
-                interface: this.config.interface,
-                availableInterfaces: this.availableInterfaces,
-                preferredInterface: this.preferredInterface 
-            }
-        })
-
-        ipcMain.on('checkhostip', async (event) => { 
-            // Collect all available network interfaces with IP addresses
-            const interfaces = networkInterfaces()
-            this.availableInterfaces = null
-            
-            // Collect all IPv4 addresses
-            Object.keys(interfaces).forEach((interfaceName) => {
-                interfaces[interfaceName].forEach((iface) => {
-                    // Filter out loopback and local addresses
-                    if (iface.family === 'IPv4' && 
-                        !iface.address.startsWith('127.') && 
-                        !iface.address.startsWith('169.254.')) {
-                        if (!this.availableInterfaces) {
-                            this.availableInterfaces = []
-                        }
-                        this.availableInterfaces.push({
-                            name: interfaceName,
-                            address: iface.address
-                        })
-                    }
-                })
-            })
-
-            // Save the old IP address
-            const oldHostIp = this.config.hostip
-
-            // If a preferred interface is set, use it to quickly get an IP
-            if (this.preferredInterface) {
-                const preferred = this.availableInterfaces?.find(iface => iface.name === this.preferredInterface)
-                if (preferred) {
-                    this.config.hostip = preferred.address
-                    this.config.interface = preferred.name
-                    // Check if a gateway exists for the preferred interface
-                    try {
-                        const {gateway, version, int} = gateway4sync(preferred.name)
-                        this.config.gateway = int === this.preferredInterface
-                    } catch (e) {
-                        this.config.gateway = false
-                    }
-                }
-            } 
-            else {
-                try { 
-                    const {gateway, version, int} =  gateway4sync()
-                    this.config.hostip = ip.address(int)
-                    this.config.interface = int
-                    this.config.gateway = true
-                }
-                catch (e) {
-                    this.config.hostip = false
-                    this.config.gateway = false
-                }
-
-                if (!this.config.hostip) {
-                    try {
-                        this.config.hostip = ip.address() //this delivers an ip even if gateway is not set - the first ip address of the system
-                        // use this address to find the name of the interface
-                        const interfaceName = Object.keys(interfaces).find(key => interfaces[key].some(iface => iface.address === this.config.hostip))
-                        this.config.interface = interfaceName
-
-                    }  
-                    catch (e) {
-                        log.error("ipcHandler @ checkhostip: Unable to determine ip address")
-                        this.config.hostip = false
-                        this.config.gateway = false
-                        this.config.interface = false
-                    }
-                }
-            }
-           
-            // check if multicast client is running - otherwise start it
-            if (this.config.hostip == "127.0.0.1") { this.config.hostip = false }
-
-            // Check if the IP has changed and reinitialize everything if necessary
-            if (oldHostIp !== this.config.hostip && this.config.hostip) {
-                log.info(`main: IP changed from ${oldHostIp} to ${this.config.hostip}, reinitializing services...`)
-
-                // Reinitialize multicast client on IP change (multicastclient is only used for discovery of other exam servers)
-                if (this.multicastClient && this.multicastClient.client.address()) { // check if multicast client is actually running
-                    try {
-                        await this.multicastClient.stop()
-                        this.multicastClient.init(this.config.gateway)
-                        log.info('main: Multicast client reinitialized')
-                    } 
-                    catch (e) {
-                        log.error('main: Failed to reinitialize multicast client:', e)
-                    }
-                }
-
-                // Restart Express server on IP change
-                if (server) {
-                    if (server.listening) {
-                        server.close(() => {
-                            log.info(`main: Express server stopped due to IP change`)
-                            server.listen(config.serverApiPort, () => {
-                                log.info(`main: Express server restarted on https://${config.hostip}:${config.serverApiPort}`)
-                            })
-                        })
-                    } 
-                    else {
-                        server.listen(config.serverApiPort, () => {
-                            log.info(`main: Express server started on https://${config.hostip}:${config.serverApiPort}`)
-                        })
-                    }
-                }
-            } 
-            // else if (this.config.hostip && this.multicastClient && !this.multicastClient.client.address()) {  // If no IP change but multicast client is not running
-            //     this.multicastClient.init(this.config.gateway)
-            // }
-              
-            event.returnValue = { 
                 hostip: this.config.hostip, 
                 interface: this.config.interface,
                 availableInterfaces: this.availableInterfaces,
@@ -1997,6 +1946,14 @@ class IpcHandler {
         })
 
 
+        ipcMain.handle('loadSEBConfig', async (event, configFile, password, bek) => {
+            try {
+                return await loadSEBConfig(configFile, password, bek);
+            } catch (e) {
+                console.error(e);
+                return undefined;
+            }
+        });
 
     }
 

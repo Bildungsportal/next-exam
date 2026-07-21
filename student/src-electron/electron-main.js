@@ -40,17 +40,19 @@ import { updateSystemTray } from './main/scripts/traymenu.js'
 import JreHandler from './main/scripts/jre-handler.js';
 import { checkParentProcess } from './main/scripts/checkparent.js';
 
-// toggleMacOSLockdown disabled while macOS Automatic Assessment mode is active
 import { stopProxy } from './main/scripts/vncproxy.js';
 import { stopAssessmentSession } from './main/scripts/assessmentSession.js';
 import { initErrorHandling } from './main/scripts/errorHandling.js';
 import { syncClientDisplayInfo } from './main/scripts/displayInfo.js';
 
-if (!config.development && process.argv.some(arg => arg.startsWith('--inspect') || arg.startsWith('--remote-debugging'))) {  // disable options to read v8 heap on production builds
-    log.info('main @ electron-main: Inspect mode detected, quitting...');
-    app.quit();
-    process.exit(0);
-}
+
+// if (!config.development && process.argv.some(arg => arg.startsWith('--inspect') || arg.startsWith('--remote-debugging'))) {  // disable options to read v8 heap on production builds
+//     log.info('main @ electron-main: Inspect mode detected, quitting...');
+//     app.quit();
+//     process.exit(0);
+// }
+
+
 
 app.commandLine.appendSwitch('lang', 'de');
 // Chromium stack for main-process fetch ignores NODE_TLS_REJECT_UNAUTHORIZED (Electron 38+).
@@ -101,7 +103,7 @@ log.debug(`main: Electron version: ${process.versions.electron}`)
 log.debug(`main: Chromium version: ${process.versions.chrome}`)
 log.debug(`main: Node version: ${process.versions.node}`)
 log.debug(`main: V8 version: ${process.versions.v8}`)
-log.debug(`main: OS: ${process.platform} ${process.arch}`)
+log.debug(`main: OS: ${process.platform} ${process.ƒ}`)
 log.debug(`main: Arch: ${process.arch}`)
 log.debug(`main: Desktop: ${platformDispatcher.desktopName}`)
 log.debug(`main: Display server: ${platformDispatcher.displayServer}`)
@@ -136,7 +138,7 @@ app.on('second-instance', () => {
     log.warn("main @ singleinstance: prevented second start of next-exam. Restoring existing Next-Exam window.")
     if (WindowHandler.mainwindow) {
         if (WindowHandler.mainwindow.isMinimized() || !WindowHandler.mainwindow.isVisible()) {
-            WindowHandler.mainwindow.show()
+            WindowHandler.showFromTray()
             WindowHandler.mainwindow.restore()
         } 
         WindowHandler.mainwindow.focus() // Focus on the main window if the user tried to open another
@@ -189,6 +191,47 @@ fsExtra.emptyDirSync(config.tempdirectory)  // clean temp directory
 
 
 if (process.platform === 'win32') app.setAppUserModelId(app.getName());
+
+// Resolve a safe unique path for an exam download inside the student workfolder.
+const resolveExamDownloadPath = (workDir, rawName) => {
+    const base = path.basename(String(rawName || 'download').trim());
+    if (!base || base === '.' || base === '..' || base.includes('\0')) return null;
+    const root = path.resolve(workDir);
+    let candidate = path.resolve(path.join(root, base));
+    const rel = path.relative(root, candidate);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) return null;
+    if (!fs.existsSync(candidate)) return candidate;
+    const { name, ext } = path.parse(base);
+    for (let i = 1; i < 1000; i++) {
+        candidate = path.resolve(path.join(root, `${name} (${i})${ext}`));
+        if (!fs.existsSync(candidate)) return candidate;
+    }
+    return null;
+};
+
+// Auto-save webview downloads to workfolder during exam mode (no native save dialog).
+const boundExamDownloadSessions = new WeakSet();
+const bindExamDownloadHandler = (sess) => {
+    if (!sess || boundExamDownloadSessions.has(sess)) return;
+    boundExamDownloadSessions.add(sess);
+    sess.on('will-download', (_event, item) => {
+        if (!multicastClient?.clientinfo?.exammode) return;
+        const examDir = config.examdirectory || config.workdirectory;
+        const savePath = resolveExamDownloadPath(examDir, item.getFilename());
+        if (!savePath) {
+            item.cancel();
+            return;
+        }
+        item.setSavePath(savePath);
+        item.once('done', (_e, state) => {
+            if (state !== 'completed') return;
+            log.info(`main @ exam-download: saved ${path.basename(savePath)}`);
+            WindowHandler.mainWin()?.webContents?.send('exam-download-complete', { filename: path.basename(savePath) });
+        });
+    });
+};
+
+app.on('session-created', (_event, sess) => bindExamDownloadHandler(sess));
 
 app.on('window-all-closed', async () => {  // last window closed – clear storage here to avoid Linux segfault in before-quit
     clearInterval( CommHandler.updateStudentIntervall )
@@ -257,9 +300,10 @@ app.whenReady()
     syncClientDisplayInfo(multicastClient.clientinfo);
 
     nativeTheme.themeSource = 'light'  // prevent theme settings from being adopted from windows
-    session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform}`);  // set user agent for all sessions
+    bindExamDownloadHandler(session.defaultSession);
+    session.defaultSession.setUserAgent(`Next-Exam/${config.version} (${config.info}) ${process.platform} mit SEB-Kompatibilitätsmodus`);  // set user agent for all sessions
     session.defaultSession.setCertificateVerifyProc((request, callback) => { callback(0); });   // set certificate verification globally for all sessions
-   
+    
     // Kiosk (Linux cage OR Win32 AssignedAccess): no system picker available; auto-grant the
     // first source. Linux cage limits to windows (cage shows one window). Win32 grants screen.
     // Non-kiosk: useSystemPicker:true so the OS dialog appears as usual.

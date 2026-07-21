@@ -16,9 +16,9 @@
 
 
             <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
-            <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
+            <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 ms-2 mb-0 btn-sm"
                  @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img
-                src="/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;">
+                src="/img/svg/gtk-convert.svg" class="" width="22" height="22" style="vertical-align: top;">
                 {{ $t('editor.materials') }}
             </div>
 
@@ -132,8 +132,9 @@
                 </div>
             </div>
             <!-- focuswarning end  -->
-            <webview ref="wvmain" id="formswebview" autosize="on"
-                     :src="formsUrlComputed"></webview>
+            <webview ref="wvmain" id="formswebview" autosize="on" allowpopups
+                     :src="formsUrlComputed"
+                     useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"></webview>
 
         </div>
     </div>
@@ -152,6 +153,8 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
     resolveLockedSection,
+    formatFocusLostTime,
+    applyFocusLostFromIpc,
 } from '../utils/examFetchInfoSync.js'
 import {ref} from "vue";
 import {useConfigStore} from "../stores/configStore.ts";
@@ -220,6 +223,8 @@ export default {
             // Event listener references for cleanup
             _onDomReady: null,
             _onPreviewClick: null,
+            _formsBlockingUrl: null,
+            _formsWebviewLoaded: false,
             internetCheckCounter: 0,
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
             pdfPreviewState: null,
@@ -272,25 +277,7 @@ export default {
                 }  // for some reason iframe height is only 200px
 
                 // Setup blocking in backend via IPC - this ensures events are caught early
-                const setupBackendBlocking = async () => {
-                    if (webview.getWebContentsId) {
-                        const guestId = webview.getWebContentsId();
-                        if (guestId) {
-                            try {
-                                if (isElectronWindow(window)) {
-                                    await signalBridge.invoke('start-blocking-for-website-webview', {
-                                        guestId,
-                                        mode: 'forms',
-                                        formsUrl: this.formsUrl
-                                    });
-                                    console.log(`forms @ mounted: backend blocking setup for webview ${guestId}`);
-                                }
-                            } catch (error) {
-                                console.error('forms @ mounted: failed to setup backend blocking', error);
-                            }
-                        }
-                    }
-                };
+                const setupBackendBlocking = () => this.setupFormsWebviewBlocking();
 
                 // Try to setup blocking immediately, retry on dom-ready if needed
                 setupBackendBlocking().catch(() => {
@@ -337,6 +324,15 @@ export default {
                                     }
                                     button[aria-label="Formularmenü"],
                                     button[aria-label="Form menu"] {
+                                        display: none !important;
+                                    }
+                                    button[data-automation-id="saveAndEditButton"] {
+                                        display: none !important;
+                                    }
+                                    div[tabindex="0"]:has([data-automation-id="promotionBottomTry"]) {
+                                        display: none !important;
+                                    }
+                                    div:has(> button[aria-haspopup="true"][aria-live="polite"]) {
                                         display: none !important;
                                     }
 
@@ -392,7 +388,7 @@ export default {
 
         async reloadWebview() {
             if (!this.$swal) {
-                this.$refs.wvmain.setAttribute("src", this.formsUrlComputed);
+                this.loadFormsWebview();
                 return;
             }
 
@@ -412,7 +408,7 @@ export default {
             });
 
             if (result.isConfirmed) {
-                this.$refs.wvmain.setAttribute("src", this.formsUrlComputed);
+                this.loadFormsWebview();
             }
         },
 
@@ -439,9 +435,7 @@ export default {
             if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             if (isElectronWindow(window)) {
                 let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
-                if (!this.development && !response.focus) {  //immediately block frontend
-                    this.focus = false
-                }
+                applyFocusLostFromIpc(this, response, this.development);
             }
         },
         async tryUnlockLocalLockdown() {
@@ -488,18 +482,50 @@ export default {
             }
         },
 
-        formatTime(unixTime) {
-            const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
-            return date.toLocaleTimeString('en-US', {hour12: false}); // Adjust locale and options as needed
+        formatTime: formatFocusLostTime,
+
+        // Load the main forms webview URL (Electron webview is unreliable with reactive :src alone).
+        loadFormsWebview() {
+            if (!this.formsUrl || !this.$refs.wvmain) return;
+            const target = this.formsUrlComputed;
+            if (typeof this.$refs.wvmain.loadURL === 'function') {
+                this.$refs.wvmain.loadURL(target);
+            } else {
+                this.$refs.wvmain.setAttribute('src', target);
+            }
+            this._formsWebviewLoaded = true;
+        },
+
+        // Attach guest webview navigation lock for the current forms URL.
+        async setupFormsWebviewBlocking() {
+            if (!isElectronWindow(window) || !this.formsUrl) return;
+            const webview = this.$refs.wvmain || document.getElementById('formswebview');
+            if (!webview?.getWebContentsId) return;
+            const guestId = webview.getWebContentsId();
+            if (!guestId) return;
+            try {
+                await signalBridge.invoke('start-blocking-for-website-webview', {
+                    guestId,
+                    mode: 'forms',
+                    formsUrl: this.formsUrl,
+                });
+                this._formsBlockingUrl = this.formsUrl;
+            } catch (error) {
+                console.error('forms @ setupFormsWebviewBlocking:', error);
+            }
         },
 
         // Apply forms examConfig for locked section; returns true if main webview URL changed.
         applyFormsConfigFromSection(sectionIndex) {
             const section = this.serverstatus?.examSections?.[sectionIndex];
+            if (!section) return false;
             const groupKey = section?.groups && this.clientinfo?.group === 'b' ? 'groupB' : 'groupA';
-            const formsConfig = section?.[groupKey]?.examConfig?.forms || null;
-            if (!formsConfig || typeof formsConfig.url !== 'string') return false;
-            const nextUrl = formsConfig.url;
+            const readUrl = (key) => {
+                const raw = section?.[key]?.examConfig?.forms?.url;
+                return typeof raw === 'string' && raw.trim() ? raw.trim() : null;
+            };
+            const nextUrl = readUrl(groupKey) || readUrl('groupA') || readUrl('groupB');
+            if (!nextUrl) return false;
             const urlChanged = nextUrl !== this.formsUrl;
             if (urlChanged) this.formsUrl = nextUrl;
             return urlChanged;
@@ -518,11 +544,14 @@ export default {
             if (sectionIndex !== this.lockedSection) this.lockedSection = sectionIndex;
 
             const urlChanged = this.applyFormsConfigFromSection(sectionIndex);
-            if (urlChanged && this.$refs.wvmain) {
-                this.$refs.wvmain.setAttribute('src', this.formsUrlComputed);
+            if (this.formsUrl && this.$refs.wvmain) {
+                if (urlChanged || !this._formsWebviewLoaded) {
+                    this.loadFormsWebview();
+                }
+                if (urlChanged || this._formsBlockingUrl !== this.formsUrl) {
+                    await this.setupFormsWebviewBlocking();
+                }
             }
-
-            if (!this.focus) this.entrytime = new Date().getTime();
 
             this.battery = await navigator.getBattery().then(battery => battery)
                 .catch(error => { console.error('Error accessing the Battery API:', error); });

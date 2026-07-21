@@ -17,9 +17,9 @@
             </button>
 
 
-            <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
+            <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 ms-2 mb-0 btn-sm"
                  @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img
-                src="/img/svg/games-solve.svg" class="white" width="22" height="22"
+                src="/img/svg/gtk-convert.svg" class="white" width="22" height="22"
                 style="vertical-align: top;"> {{ $t('editor.materials') }}
             </div>
 
@@ -126,6 +126,8 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
     resolveLockedSection,
+    formatFocusLostTime,
+    applyFocusLostFromIpc,
 } from '../utils/examFetchInfoSync.js'
 import {ref} from "vue";
 import {useConfigStore} from "../stores/configStore.ts";
@@ -295,15 +297,10 @@ export default {
             if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             if (isElectronWindow(window)) {
                 let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
-                if (!this.development && !response.focus) {  //immediately block frontend
-                    this.focus = false
-                }
+                applyFocusLostFromIpc(this, response, this.development);
             }
         },
-        formatTime(unixTime) {
-            const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
-            return date.toLocaleTimeString('en-US', {hour12: false}); // Adjust locale and options as needed
-        },
+        formatTime: formatFocusLostTime,
 
         //checks if arraybuffer contains a valid pdf file
         isValidPdf(data) {
@@ -346,7 +343,6 @@ export default {
 
             if (hadFocus && !this.focus) {
                 this.warning = true;
-                this.entrytime = new Date().getTime();
                 signalBridge.send('collapse-browserview');
             } else if (!hadFocus && this.focus && this.warning) {
                 this.warning = false;

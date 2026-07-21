@@ -1,6 +1,7 @@
 // gracefullyExit.js
 // ES module: import { gracefullyExit } from 'commonMethods.js'
 import {SignalBridge} from './signalBridge.js'
+import { useInfoStore } from '../stores/infoStore.ts'
 
 // signalBridge instance centralizes ipc calls with platform checks
 const signalBridge = new SignalBridge(window);
@@ -65,6 +66,10 @@ export function gracefullyExit() {
         signalBridge.send('collapse-browserview')
     }
 
+    const infoStore = useInfoStore();
+    // Page setup copies store once; header uses storeToRefs — prefer store pin, keep page IP after disconnect reset.
+    const displayIp = this.serverip || infoStore.serverip || '';
+    const displayPin = this.pincode || infoStore.pincode || '';
 
     this.$swal.fire({
         title: this.$t("editor.reconnect"), // Dialog title
@@ -76,9 +81,9 @@ export function gracefullyExit() {
         html: `
             <div class="nx-swal-form text-start">
                 <label for="swal-input-ip" class="form-label mb-1">${this.$t("student.ip")}</label>
-                <input id="swal-input-ip" class="swal2-input nx-swal-input" type="text" value="${this.serverip}" placeholder="${this.$t("student.ip")}">
+                <input id="swal-input-ip" class="swal2-input nx-swal-input" type="text" value="${displayIp}" placeholder="${this.$t("student.ip")}">
                 <label for="swal-input-pin" class="form-label mb-1 mt-2">${this.$t("student.pin")}</label>
-                <input id="swal-input-pin" class="swal2-input nx-swal-input" type="number" value="${this.pincode}" placeholder="${this.$t("student.pin")}">
+                <input id="swal-input-pin" class="swal2-input nx-swal-input" type="number" value="${displayPin}" placeholder="${this.$t("student.pin")}">
             </div>
         `,
         preConfirm: () => {

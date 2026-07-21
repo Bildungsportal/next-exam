@@ -9,7 +9,6 @@
     </span>
 
     <div style="flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap;">
-        <button type="button" class="btn btn-sm btn-gray-dark m-0 me-1 mt-0" style="height:32px;" @click="openEncryptedPdfPreview" @mouseover="showDescription($t('dashboard.openEncryptedPdfTooltip'))" @mouseout="hideDescription"><img src="/src/assets/img/svg/rotation-locked-landscape.svg" style="vertical-align:text-top;" class="white" width="20" height="20" alt="">&nbsp; {{ $t('dashboard.openEncryptedPdf') }}&nbsp;</button>
         <div class="btn btn-sm btn-danger m-0 me-1 mt-0" @click="stopserver()" @mouseover="showDescription($t('dashboard.exitexam'))" @mouseout="hideDescription"  style=" height:32px;"><img src="/src/assets/img/svg/stock_exit.svg" style="vertical-align:text-top;" class="" width="20" height="20" >&nbsp; {{$t('dashboard.stopserver')}}&nbsp; </div>
         <div v-if="!hostip?.hostip" id="adv" class="btn btn-danger btn-sm m-0  mt-1 me-1 " style="cursor: unset;">{{ $t("general.offline") }}</div>
         <div class="btn btn-sm btn-cyan m-0 me-1 mt-0" style=" padding:3px; height:32px; width:32px;" @click="showSetup()"  @mouseover="showDescription($t('dashboard.extendedsettings'))" @mouseout="hideDescription" ><img src="/src/assets/img/svg/settings-symbolic.svg" class="white-100" width="22" height="22" > </div>
@@ -126,6 +125,9 @@
         @download-file="(file) => downloadFile(file)"
         @delete-file="(file) => fdelete(file)"
         @timeline-diff="(file) => openStudentEditorTimelineDiff(file)"
+        @open-encrypted-pdf="openEncryptedPdfPreview"
+        @show-description="showDescription($event)"
+        @hide-description="hideDescription"
     />
 
     <StudentEditorTimelineDiffViewer
@@ -151,13 +153,13 @@
         <div class="sidebar-info-strip">
         <div class="text-start infobutton d-flex align-items-start">
             <div class="flex-grow-1 min-w-0">{{$t('dashboard.name')}} <br><b> {{$route.params.servername}}</b></div>
-            <button type="button" class="sectionbutton-edit flex-shrink-0 ms-1 me-1" :title="$t('dashboard.online')" @click.stop="showinfo()">
+            <button type="button" class="sectionbutton-edit flex-shrink-0 ms-1 me-1" :title="$t('dashboard.online')" @click.stop="showinfo()" @mouseover="showDescription($t('dashboard.showcredentials'))" @mouseout="hideDescription">
                 <img src="/src/assets/img/svg/eye-fill.svg" alt="" width="22" height="22">
             </button>
         </div>
         <div class="text-start infobutton d-flex align-items-start">
             <div class="flex-grow-1 min-w-0">{{$t('dashboard.pin')}}<br><b> {{ serverstatus.pin }} </b></div>
-            <button type="button" class="sectionbutton-edit flex-shrink-0 ms-1 me-1" :title="$t('dashboard.pin')" @click.stop="editPin()">
+            <button type="button" class="sectionbutton-edit flex-shrink-0 ms-1 me-1" :title="$t('dashboard.pin')" @click.stop="editPin()" @mouseover="showDescription($t('dashboard.changepin'))" @mouseout="hideDescription">
                 <img src="/src/assets/img/svg/document-edit.svg" class="white" alt="" width="22" height="22">
             </button>
         </div>
@@ -165,7 +167,7 @@
         </div>
 
         
-        <div class="sidebar-scroll">
+        <div class="sidebar-scroll" :class="{ 'sidebar-groups-inactive': !serverstatus.examSections[serverstatus.activeSection]?.groups }">
         <div class="dropdown-section" :class="lockInExammode ? 'disabledexam-dropdown' : ''">
             <div class="sidebar-dropdown-inset">
             <div class="mb-1">{{$t("dashboard.exammode")}}</div>
@@ -212,22 +214,34 @@
                         </select>
                     </div>
 
-                    <div class="mt-2" style="display:flex; gap:8px; flex-wrap:wrap;">
-                        <button type="button"
-                                class="btn btn-sm"
-                                :class="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool ? 'btn-teal' : 'btn-outline-secondary'"
-                                @click="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool ? setEditorExamConfigPatch({ languagetool: false, languagetoolhost: null, languagetoolport: null, suggestions: false }) : setEditorExamConfigPatch({ languagetool: true })">
-                            LanguageTool
-                        </button>
-                        <button v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool"
-                                type="button"
-                                class="btn btn-sm"
-                                :class="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.suggestions ? 'btn-teal' : 'btn-outline-secondary'"
-                                @click="setEditorExamConfigPatch({ suggestions: !serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.suggestions })">
-                            {{ $t('dashboard.suggest') }}
-                        </button>
+                    <div class="mt-2">
+                        <div class="form-check form-switch m-0">
+                            <input id="sidebar-languagetool"
+                                   class="form-check-input"
+                                   type="checkbox"
+                                   :checked="!!serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool"
+                                   @change="$event.target.checked ? setEditorExamConfigPatch({ languagetool: true }) : setEditorExamConfigPatch({ languagetool: false, languagetoolhost: null, languagetoolport: null, suggestions: false })">
+                            <label class="form-check-label" for="sidebar-languagetool">LanguageTool</label>
+                        </div>
+                        <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool"
+                             class="form-check form-switch m-0 mt-1">
+                            <input id="sidebar-lt-suggestions"
+                                   class="form-check-input"
+                                   type="checkbox"
+                                   :checked="!!serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.suggestions"
+                                   @change="setEditorExamConfigPatch({ suggestions: $event.target.checked })">
+                            <label class="form-check-label" for="sidebar-lt-suggestions">{{ $t('dashboard.suggest') }}</label>
+                        </div>
                     </div>
 
+                    <button type="button"
+                            class="sidebar-advanced-toggle"
+                            @click="editorAdvancedOpen = !editorAdvancedOpen">
+                        <span class="sidebar-advanced-chevron" :class="editorAdvancedOpen ? 'open' : ''">›</span>
+                        <span class="sidebar-advanced-label">{{ $t('dashboard.advanced') }}</span>
+                    </button>
+
+                    <template v-if="editorAdvancedOpen">
                     <div v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetool" class="mt-2">
                         <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.languagetoolhost">
                             <div class="btn-group basematerial-filegroup w-100" role="group">
@@ -253,7 +267,7 @@
                         </button>
                     </div>
 
-                    <div class="mt-1 mb-2">
+                    <div class="mt-2">
                         <div class="smalltext text-white-50 mb-0">{{ $t('dashboard.audiorepeattitle') }}</div>
                         <select class="form-select form-select-sm"
                                 :value="String(serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.editor?.audioRepeat ?? '0')"
@@ -266,14 +280,6 @@
                         </select>
                     </div>
 
-                    <button type="button"
-                            class="sidebar-advanced-toggle"
-                            @click="editorAdvancedOpen = !editorAdvancedOpen">
-                        <span class="sidebar-advanced-chevron" :class="editorAdvancedOpen ? 'open' : ''">›</span>
-                        <span class="sidebar-advanced-label">{{ $t('dashboard.advanced') }}</span>
-                    </button>
-
-                    <template v-if="editorAdvancedOpen">
                     <div class="mt-2">
                         <div class="smalltext text-white-50 mb-0">{{ $t('dashboard.cmargin-value') }}</div>
                         <div style="display:flex; gap:8px; align-items:center;">
@@ -329,7 +335,7 @@
                     </template>
                 </div>
 
-                <div v-if="isExamType('editor')" class="basematerial-sidebar-block mt-3">
+                <div v-if="isExamType('editor')" class="basematerial-sidebar-block basematerial-sidebar-block--optional mt-3">
                     <div class="basematerial-panel-caption">{{ $t('dashboard.editorTemplateCaption') }}</div>
 
                     <template v-if="serverstatus.examSections[serverstatus.activeSection].groups">
@@ -429,7 +435,7 @@
 
                     <template v-else>
                         <div class="basematerial-row">
-                            <span class="basematerial-group-pill basematerial-group-pill--ab" aria-label="A/B">AB</span>
+                            <span class="basematerial-group-pill basematerial-group-pill--ab"  aria-label="A/B">AB</span>
                             <template v-if="serverstatus.examSections[serverstatus.activeSection].groupA?.examConfig?.website?.url">
                                 <div class="btn-group basematerial-filegroup" role="group">
                                     <button type="button" class="btn btn-sm btn-teal basematerial-filename text-truncate" :title="serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website.url" @click="openAllowedUrl(serverstatus.examSections[serverstatus.activeSection].groupA.examConfig.website)">
@@ -842,8 +848,7 @@
 
         <!-- BIP Section START -->
         <div v-if="bipToken && this.serverstatus.bip" class="mb-4">
-            <span class="small m-1">{{$t("dashboard.bildungsportal")}}</span><span v-if="bipToken" class="small m-1 me-0 text-secondary">(verbunden)</span>
-            <div id="biploginbutton" @click="showBipInfo()" class="disabledbutton btn btn-success m-1" style="padding:0;">
+            <div id="biploginbutton" @click="showBipInfo()" class="disabledbutton btn btn-success" style="padding:0;margin:4px 12px 0;box-sizing:border-box;">
                 <img id="biplogo" style="filter: hue-rotate(140deg);  width:100%; border-top-left-radius:3px;border-top-right-radius:3px; margin:0; " src="/src/assets/img/login_students.jpg">
                 <span v-if="bipUsername" id="biploginbuttonlabel" style="padding:2px; font-size:0.9em;">{{bipUsername}}</span><span style="padding:2px; font-size:0.9em;" v-else id="biploginbuttonlabel">Login</span>
             </div> 
@@ -888,119 +893,127 @@
 
             <div class="setup-scroll">
                 <div class="setup-grid">
-                    <div class="setup-card">
-                        <div class="setup-row">
-                            <div class="form-check form-switch m-0">
-                                <input v-model="serverstatus.useExamSections" @change="onToggleExamSections" :disabled="sectionsLocked" class="form-check-input" type="checkbox" id="activatesections" @mouseenter="setSetupStatus(sectionsLocked ? $t('dashboard.sectionslocked') : $t('dashboard.activatesections'))" @mouseleave="clearSetupStatus">
-                                <label class="form-check-label" :class="{'text-muted': sectionsLocked}" for="activatesections">{{$t('dashboard.activatesections')}}</label>
+                    <div class="setup-grid-col">
+                        <div class="setup-card">
+                            <div class="setup-row">
+                                <div class="form-check form-switch m-0">
+                                    <input v-model="serverstatus.useExamSections" @change="onToggleExamSections" :disabled="sectionsLocked" class="form-check-input" type="checkbox" id="activatesections" @mouseenter="setSetupStatus(sectionsLocked ? $t('dashboard.sectionslocked') : $t('dashboard.activatesections'))" @mouseleave="clearSetupStatus">
+                                    <label class="form-check-label" :class="{'text-muted': sectionsLocked}" for="activatesections">{{$t('dashboard.activatesections')}}</label>
+                                </div>
+                            </div>
+
+                            <div class="setup-row" v-if="serverstatus.useExamSections">
+                                <div class="form-check form-switch m-0">
+                                    <input v-model="serverstatus.allowSectionSwitch" class="form-check-input" type="checkbox" id="allowsectionswitch" @mouseenter="setSetupStatus($t('dashboard.allowsectionswitch'))" @mouseleave="clearSetupStatus">
+                                    <label class="form-check-label" for="allowsectionswitch">{{$t('dashboard.allowsectionswitchshort')}}</label>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="setup-row" v-if="serverstatus.useExamSections">
-                            <div class="form-check form-switch m-0">
-                                <input v-model="serverstatus.allowSectionSwitch" class="form-check-input" type="checkbox" id="allowsectionswitch" @mouseenter="setSetupStatus($t('dashboard.allowsectionswitch'))" @mouseleave="clearSetupStatus">
-                                <label class="form-check-label" for="allowsectionswitch">{{$t('dashboard.allowsectionswitchshort')}}</label>
+                        <div class="setup-card">
+                            <div
+                                class="setup-row"
+                                :class="serverstatus.useExamSections ? 'setup-row-disabled' : ''"
+                                @mouseenter="serverstatus.useExamSections ? setSetupStatus($t('dashboard.sectionSettingsRequiredHint')) : setSetupStatus($t('dashboard.groupinfo'))"
+                                @mouseleave="clearSetupStatus">
+                                <div class="form-check form-switch m-0">
+                                    <input
+                                        id="activategroups"
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        v-model="serverstatus.examSections[1].groups"
+                                        :disabled="serverstatus.useExamSections"
+                                        @change="serverstatus.useExamSections ? null : (serverstatus.examSections[1].groups ? setupGroups(1) : setServerStatus())">
+                                    <label class="form-check-label" for="activategroups">{{$t('dashboard.groups')}}</label>
+                                </div>
+                            </div>
+                            <div class="setup-row">
+                                <div class="form-check form-switch m-0">
+                                    <input v-model="serverstatus.directPrintAllowed" @change="checkforDefaultprinter(); setServerStatus(); persistGlobalTeacherSettings()" class="form-check-input" type="checkbox" id="directprint" @mouseenter="setSetupStatus($t('dashboard.allowdirectprint'))" @mouseleave="clearSetupStatus">
+                                    <label class="form-check-label" for="directprint">{{$t('dashboard.directprint')}}</label>
+                                </div>
+                                <div class="setup-switch-details text-black-50 setup-hint" v-if="defaultPrinter">{{ defaultPrinter }}</div>
+                                <div class="setup-switch-details text-black-50 setup-hint" v-if="!defaultPrinter">{{$t('dashboard.noprinterChosen')}}</div>
+                            </div>
+                        </div>
+
+                        <div v-if="config.bipIntegration && bipToken" class="setup-card">
+                            <div class="setup-row">
+                                <div class="form-check form-switch m-0">
+                                    <input v-model="serverstatus.requireBiP" class="form-check-input" type="checkbox" id="activatebip" @mouseenter="setSetupStatus($t('control.biprequired'))" @mouseleave="clearSetupStatus">
+                                    <label class="form-check-label" for="activatebip">{{$t('dashboard.bildungsportalLoginEnforce')}}</label>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="setup-card">
-                        <div
-                            class="setup-row setup-row-split"
-                            :class="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? 'setup-row-disabled' : ''"
-                            @mouseenter="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? setSetupStatus($t('dashboard.sectionSettingsRequiredHint')) : null"
-                            @mouseleave="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? clearSetupStatus() : null">
-                            <div class="setup-field-label">{{$t('dashboard.timelimit')}}</div>
-                            <div class="setup-inline">
-                                <input
-                                    id="timelimitInput"
-                                    type="number"
-                                    min="1"
-                                    step="1"
-                                    v-model.number="serverstatus.examSections[1].timelimit"
-                                    class="form-control form-control-sm setup-timelimit"
-                                    :disabled="serverstatus.useExamSections && !serverstatus.allowSectionSwitch"
-                                    @mouseenter="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? setSetupStatus($t('dashboard.sectionSettingsRequiredHint')) : setSetupStatus($t('dashboard.timelimitInfo'))"
-                                    @mouseleave="clearSetupStatus"
-                                    @change="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? null : setServerStatus()">
-                                <span class="setup-unit">min</span>
+                    <div class="setup-grid-col">
+                        <div class="setup-card">
+                            <div class="setup-row">
+                                <div class="setup-field-label">{{$t('dashboard.screenshot')}}</div>
+                                <div class="setup-inline setup-inline-fill">
+                                    <input id="screenshotIntervalSlider" type="range"
+                                        v-model="serverstatus.screenshotinterval"
+                                        :min="0" :max="60" step="2"
+                                        class="form-range custom-slider setup-range"
+                                        @input="updateScreenshotInterval"
+                                        @mouseenter="setSetupStatus($t('dashboard.screenshotquestion'))"
+                                        @mouseleave="clearSetupStatus">
+                                    <span class="setup-value text-black-50" v-if="serverstatus.screenshotinterval > 0">{{serverstatus.screenshotinterval}}s</span>
+                                    <span class="setup-value text-black-50" v-else>{{$t('dashboard.disabled')}}</span>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="setup-card">
-                        <div class="setup-row">
-                            <div class="setup-field-label">{{$t('dashboard.screenshot')}}</div>
-                            <div class="setup-inline setup-inline-fill">
-                                <input id="screenshotIntervalSlider" type="range"
-                                    v-model="serverstatus.screenshotinterval"
-                                    :min="0" :max="60" step="2"
-                                    class="form-range custom-slider setup-range"
-                                    @input="updateScreenshotInterval"
-                                    @mouseenter="setSetupStatus($t('dashboard.screenshotquestion'))"
-                                    @mouseleave="clearSetupStatus">
-                                <span class="setup-value text-black-50" v-if="serverstatus.screenshotinterval > 0">{{serverstatus.screenshotinterval}}s</span>
-                                <span class="setup-value text-black-50" v-else>{{$t('dashboard.disabled')}}</span>
+                            <div class="setup-row">
+                                <div class="setup-field-label">{{$t('dashboard.autoget')}}</div>
+                                <div class="setup-inline setup-inline-fill">
+                                    <input id="backupintervalSlider" type="range"
+                                        v-model="serverstatus.backupintervalPause"
+                                        :min="0" :max="20" step="1"
+                                        class="form-range custom-slider setup-range"
+                                        @input="updateBackupInterval"
+                                        @mouseenter="setSetupStatus($t('dashboard.backupautoquestion'))"
+                                        @mouseleave="clearSetupStatus">
+                                    <span class="setup-value text-black-50" v-if="serverstatus.backupintervalPause > 0">{{serverstatus.backupintervalPause}}min</span>
+                                    <span class="setup-value text-black-50" v-else>{{$t('dashboard.disabled')}}</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="setup-divider"></div>
-                        <div class="setup-row">
-                            <div class="setup-field-label">{{$t('dashboard.autoget')}}</div>
-                            <div class="setup-inline setup-inline-fill">
-                                <input id="backupintervalSlider" type="range"
-                                    v-model="serverstatus.backupintervalPause"
-                                    :min="0" :max="20" step="1"
-                                    class="form-range custom-slider setup-range"
-                                    @input="updateBackupInterval"
-                                    @mouseenter="setSetupStatus($t('dashboard.backupautoquestion'))"
-                                    @mouseleave="clearSetupStatus">
-                                <span class="setup-value text-black-50" v-if="serverstatus.backupintervalPause > 0">{{serverstatus.backupintervalPause}}min</span>
-                                <span class="setup-value text-black-50" v-else>{{$t('dashboard.disabled')}}</span>
+                            <div class="setup-row">
+                                <div class="form-check form-switch m-0">
+                                    <input v-model="serverstatus.muteAudio" @change="setServerStatus(); persistGlobalTeacherSettings()" class="form-check-input" type="checkbox" id="muteaudio" @mouseenter="setSetupStatus($t('dashboard.muteaudiointro'))" @mouseleave="clearSetupStatus">
+                                    <label class="form-check-label" for="muteaudio">{{$t('dashboard.muteaudio')}}</label>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="setup-card">
-                        <div
-                            class="setup-row"
-                            :class="serverstatus.useExamSections ? 'setup-row-disabled' : ''"
-                            @mouseenter="serverstatus.useExamSections ? setSetupStatus($t('dashboard.sectionSettingsRequiredHint')) : setSetupStatus($t('dashboard.groupinfo'))"
-                            @mouseleave="clearSetupStatus">
-                            <div class="form-check form-switch m-0">
-                                <input
-                                    id="activategroups"
-                                    class="form-check-input"
-                                    type="checkbox"
-                                    v-model="serverstatus.examSections[1].groups"
-                                    :disabled="serverstatus.useExamSections"
-                                    @change="serverstatus.useExamSections ? null : (serverstatus.examSections[1].groups ? setupGroups(1) : setServerStatus())">
-                                <label class="form-check-label" for="activategroups">{{$t('dashboard.groups')}}</label>
+                            <div
+                                class="setup-row setup-row-split"
+                                :class="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? 'setup-row-disabled' : ''"
+                                @mouseenter="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? setSetupStatus($t('dashboard.sectionSettingsRequiredHint')) : null"
+                                @mouseleave="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? clearSetupStatus() : null">
+                                <div class="form-check form-switch m-0">
+                                    <input
+                                        id="examDurationToggle"
+                                        class="form-check-input"
+                                        type="checkbox"
+                                        v-model="examDurationEnabled"
+                                        :disabled="serverstatus.useExamSections && !serverstatus.allowSectionSwitch"
+                                        @mouseenter="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? setSetupStatus($t('dashboard.sectionSettingsRequiredHint')) : setSetupStatus($t('dashboard.examDurationInfo'))"
+                                        @mouseleave="clearSetupStatus">
+                                    <label class="form-check-label" for="examDurationToggle">{{ $t('dashboard.examDuration') }}</label>
+                                </div>
+                                <div class="setup-inline">
+                                    <input
+                                        id="timelimitInput"
+                                        type="number"
+                                        :min="examDurationEnabled ? 1 : 0"
+                                        step="1"
+                                        v-model.number="serverstatus.examSections[1].timelimit"
+                                        class="form-control form-control-sm setup-timelimit"
+                                        :disabled="!examDurationEnabled || (serverstatus.useExamSections && !serverstatus.allowSectionSwitch)"
+                                        @mouseenter="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? setSetupStatus($t('dashboard.sectionSettingsRequiredHint')) : setSetupStatus($t('dashboard.examDurationInfo'))"
+                                        @mouseleave="clearSetupStatus"
+                                        @change="(serverstatus.useExamSections && !serverstatus.allowSectionSwitch) ? null : setServerStatus()">
+                                    <span class="setup-unit">min</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="setup-divider"></div>
-                        <div class="setup-row">
-                            <div class="form-check form-switch m-0">
-                                <input v-model="muteAudio" class="form-check-input" type="checkbox" id="muteaudio" @mouseenter="setSetupStatus($t('dashboard.muteaudiointro'))" @mouseleave="clearSetupStatus">
-                                <label class="form-check-label" for="muteaudio">{{$t('dashboard.muteaudio')}}</label>
-                            </div>
-                        </div>
-                        <div class="setup-divider"></div>
-                        <div class="setup-row">
-                            <div class="form-check form-switch m-0">
-                                <input v-model="serverstatus.directPrintAllowed" @change="checkforDefaultprinter(); setServerStatus()" class="form-check-input" type="checkbox" id="directprint" @mouseenter="setSetupStatus($t('dashboard.allowdirectprint'))" @mouseleave="clearSetupStatus">
-                                <label class="form-check-label" for="directprint">{{$t('dashboard.directprint')}}</label>
-                            </div>
-                            <div class="setup-switch-details ellipsis text-black-50 setup-hint" v-if="defaultPrinter">{{ defaultPrinter }}</div>
-                            <div class="setup-switch-details ellipsis text-black-50 setup-hint" v-if="!defaultPrinter">{{$t('dashboard.noprinterChosen')}}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div v-if="config.bipIntegration && bipToken" class="setup-card mt-2">
-                    <div class="setup-row">
-                        <div class="form-check form-switch m-0">
-                            <input v-model="serverstatus.requireBiP" class="form-check-input" type="checkbox" id="activatebip" @mouseenter="setSetupStatus($t('control.biprequired'))" @mouseleave="clearSetupStatus">
-                            <label class="form-check-label" for="activatebip">{{$t('dashboard.bildungsportalLoginEnforce')}}</label>
                         </div>
                     </div>
                 </div>
@@ -1028,8 +1041,8 @@
                 </button>
                 <div class="setup-footer-right">
                     <div class="setup-footer-actions">
-                        <button id="okButton" class="btn btn-success" @click="hideSetup(); this.currentpreviewPath=null;">{{$t('general.ok')}}</button>
-                        <button id="cancelButton" class="btn btn-danger" @click="hideSetup(false); this.currentpreviewPath=null;">{{$t('dashboard.cancel')}}</button>
+                        <button id="okButton" class="btn btn-cyan" @click="hideSetup(); this.currentpreviewPath=null;">{{$t('general.ok')}}</button>
+                        <button id="cancelButton" class="btn btn-teal text-white" @click="hideSetup(false); this.currentpreviewPath=null;">{{$t('dashboard.cancel')}}</button>
                     </div>
                 </div>
             </div>
@@ -1067,17 +1080,17 @@
             <img src="/src/assets/img/svg/folder-open.svg" class="control-button-icon me-1" width="32" height="32">
             <div class="control-button-label">{{$t('dashboard.workfolder')}}</div>
         </div>
-        <div v-if="bipToken && serverstatus.bip" @mouseover="showDescription($t('dashboard.bipinfo'))" @mouseout="hideDescription" class="btn control-button m-1 mt-0 ms-0 text-start" :class="bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'" @click="toggleBipStatus">
-            <img src="/src/assets/img/svg/globe.svg" class="control-button-icon me-1" width="32" height="32">
-            <div class="control-button-label">BiP-Status {{bipStatus}}</div>
-        </div>
         <div @mouseover="showDescription($t('examlog.buttondesc'))" @mouseout="hideDescription" class="btn btn-gray-dark control-button m-1 mt-0 ms-0 text-start" @click="showExamLog = true">
             <img src="/src/assets/img/icons/log.png" class="white control-button-icon me-1" width="32" height="32">
             <div class="control-button-label">{{ $t('examlog.button') }}</div>
         </div>
         <div @mouseover="showDescription($t('submissionsview.buttondesc'))" @mouseout="hideDescription" class="btn btn-gray-dark control-button m-1 mt-0 ms-0 text-start" @click="showSubmissionsView = true">
             <img src="/src/assets/img/svg/dialog-ok-apply.svg" class="control-button-icon me-1" width="32" height="32" style="filter: invert(55%) sepia(40%) saturate(300%) hue-rotate(140deg) brightness(1.1)">
-            <div class="control-button-label">{{ $t('submissionsview.button') }}</div>
+            <div class="control-button-label">{{ $t('submissionsview.buttoncontrol') }}</div>
+        </div>
+        <div v-if="bipToken && serverstatus.bip" @mouseover="showDescription($t('dashboard.bipinfo'))" @mouseout="hideDescription" class="btn control-button control-button-bip-access m-1 mt-0 ms-0 text-start" :class="bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'" @click="toggleBipStatus">
+            <img src="/src/assets/img/svg/globe.svg" class="control-button-icon me-1" width="32" height="32">
+            <div class="control-button-label">{{ bipJoinStatusLabel() }}</div>
         </div>
         </div>
 
@@ -1252,7 +1265,7 @@
         <button type="button" class="btn btn-sm btn-gray studentslist-controls-btn" @click="studentsZoomOut" title="Zoom out">−</button>
         <button type="button" class="btn btn-sm btn-gray studentslist-controls-btn studentslist-controls-label" @click="studentsZoomReset" title="Zoom reset">{{ Math.round(studentsZoom * 100) }}%</button>
         <button type="button" class="btn btn-sm btn-gray studentslist-controls-btn" @click="studentsZoomIn" title="Zoom in">+</button>
-        <button type="button" class="btn btn-sm btn-gray studentslist-controls-btn" @click="sortStudentWidgets()" title="Sort">
+        <button type="button" class="btn btn-sm btn-gray studentslist-controls-btn" @click="sortStudentWidgets()" title="Sort" @mouseover="showDescription($t('dashboard.sortstudentwidgets'))" @mouseout="hideDescription">
             <img src="/src/assets/img/svg/view-sort-ascending-name.svg" class="" width="20" height="20" >
         </button>
     </div>
@@ -1302,11 +1315,14 @@
                 :currentpreviewBase64=currentpreviewBase64
                 :currentpreviewType="currentpreviewType"
                 :activesheets-correction="activesheetsCorrection"
+                :servername="servername"
+                :servertoken="servertoken"
                 @close="hidepreview"
                 @printBase64="printBase64"
                 @downloadFile="downloadFile"
                 @openFileExternal="openFileExternal"
                 @save-correction="saveActivesheetsCorrectedPdf"
+                @discard-correction="discardActivesheetsCorrectedPdf"
             />
         </div>
         <PdfRenderer
@@ -1351,7 +1367,7 @@ import { isStudentReachable, countReachableStudents } from '../utils/studentPres
 
 import { uploadselect, onedriveUpload, onedriveUploadSingle, uploadAndShareFile, createSharingLink, fileExistsInAppFolder, downloadFilesFromOneDrive} from '../msalutils/onedrive'
 import { handleDragEndItem, handleMoveItem, sortStudentWidgets, initializeStudentwidgets} from '../utils/dragndrop'
-import { loadFilelist, getLatest, processPrintrequest,  loadImage, showPDFPreview, loadTextFile, loadHtmlFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate, saveActivesheetsCorrectedPdf } from '../utils/filemanager'
+import { loadFilelist, getLatest, processPrintrequest,  loadImage, showPDFPreview, loadTextFile, loadHtmlFile, dashboardExplorerSendFile, downloadFile, showWorkfolder, fdelete,  openLatestFolder, printBase64, showBase64ImagePreview, showBase64PdfInRenderer, saveActivesheetsCorrectionTemplate, saveActivesheetsCorrectedPdf, discardActivesheetsCorrectedPdf } from '../utils/filemanager'
 import { swalQueued } from '../utils/swalQueue.js'
 import { activateSpellcheckForStudent, delfolderquestion, stopserver, sendFiles, lockscreens, getFiles, startExam, lockSectionForAll, endExam, kick, restore } from '../utils/exammanagement.js'
 import { configureWebsite, configureEduvidual, configureForms, configureMicrosoft365Template, configureEditorTemplate, removeEditorTemplate, removeMicrosoft365Template, removeWebsiteUrl, removeEduvidualUrl, removeRdp, removeFormsUrl, setEditorExamConfigPatch, configureCustomLanguageToolHost, removeCustomLanguageToolHost, configureActivesheets, configureRDP, configureLocalVM, defineMaterials, handleAllowedUrlRemove, openAllowedUrl, addFileAsExamMaterial } from '../utils/examsetup.js'
@@ -1432,7 +1448,6 @@ export default {
             visiblePrinter: null,
             audioSource:'',
             audioFilename: '',
-            muteAudio: false,
             submissions: [],
             submissionsNumber: 0,
             urlForWebview: null,
@@ -1488,6 +1503,7 @@ export default {
                 backupintervalPause:6,
                 screenslocked: false,
                 directPrintAllowed: false,
+                muteAudio: false,
                 examTeachers: [],
                 examSecurityKey: "oI9xGzHkUFe7Lg2iTXHkYp4pDab3Nvj4kFEOqA93cZE=",
                 useExamSections: false, //if false exam section 1 is used and no tabs are displayed
@@ -1497,7 +1513,7 @@ export default {
                 examSections: {
                     1: {
                         examtype: 'math',
-                        timelimit: 600,
+                        timelimit: 0,
                         locked: false,
                         sectionname: "Abschnitt 1",
                         groups: false,
@@ -1506,7 +1522,7 @@ export default {
                     },
                     2: {
                         examtype: 'math',
-                        timelimit: 600,
+                        timelimit: 0,
                         locked: false,
                         sectionname: "Abschnitt 2",
                         groups: false,
@@ -1515,7 +1531,7 @@ export default {
                     },
                     3: {
                         examtype: 'math',
-                        timelimit: 600,
+                        timelimit: 0,
                         locked: false,
                         sectionname: "Abschnitt 3",
                         groups: false,
@@ -1524,7 +1540,7 @@ export default {
                     },
                     4: {
                         examtype: 'math',
-                        timelimit: 600,
+                        timelimit: 0,
                         locked: false,
                         sectionname: "Abschnitt 4",
                         groups: false,
@@ -1540,6 +1556,22 @@ computed: {
     examLogEvents()    { return examEventBus.events.length ? examEventBus.events.slice() : [] },
     examLogStart()     { return examEventBus.examStart },
     examLogEnd()       { return examEventBus.examEnd },
+
+    examDurationEnabled: {
+        get() {
+            return Number(this.serverstatus?.examSections?.[1]?.timelimit || 0) > 0
+        },
+        set(enabled) {
+            const section = this.serverstatus?.examSections?.[1]
+            if (!section) return
+            if (enabled) {
+                if (Number(section.timelimit) < 1) section.timelimit = 60
+            } else {
+                section.timelimit = 0
+            }
+            this.setServerStatus()
+        },
+    },
 
     studentsZoomStyle() {
         const z = Number(this.studentsZoom) || 1
@@ -1561,50 +1593,7 @@ computed: {
         return section.groups ? (hasA && hasB) : hasA;
     },
     hasMandatoryBasematerialReady() {
-        const section = this.serverstatus.examSections[this.serverstatus.activeSection];
-        if (!section) return false;
-        const examType = section.examtype;
-        if (examType === 'microsoft365') {
-            return !!this.config.accessToken && this.hasMicrosoft365TemplateReady;
-        }
-        if (examType === 'activesheets') {
-            return this.hasActiveSheetsPdf;
-        }
-        if (examType === 'website') {
-            const hasA = !!section.groupA?.examConfig?.website?.url;
-            const hasB = !!section.groupB?.examConfig?.website?.url;
-            return section.groups ? (hasA && hasB) : hasA;
-        }
-        if (examType === 'eduvidual') {
-            const hasA = !!section.groupA?.examConfig?.eduvidual?.url;
-            const hasB = !!section.groupB?.examConfig?.eduvidual?.url;
-            return section.groups ? (hasA && hasB) : hasA;
-        }
-        if (examType === 'rdp') {
-            const hasA = !!section.groupA?.examConfig?.rdp?.domain;
-            const hasB = !!section.groupB?.examConfig?.rdp?.domain;
-            return section.groups ? (hasA && hasB) : hasA;
-        }
-        if (examType === 'forms') {
-            const hasA = !!section.groupA?.examConfig?.forms?.url;
-            const hasB = !!section.groupB?.examConfig?.forms?.url;
-            return section.groups ? (hasA && hasB) : hasA;
-        }
-        if (examType === 'localvm') {
-            const isOk = (cfg) => {
-                if (!cfg || !cfg.qcow2Name) return false;
-                const wantsHash = cfg.calculateSha256 === true;
-                return wantsHash ? !!cfg.qcow2Sha256 : !!cfg.qcow2SizeBytes;
-            };
-            if (!section.groups) {
-                const c = section.groupA?.examConfig?.localvm || {};
-                return isOk(c);
-            }
-            const cfgA = section.groupA?.examConfig?.localvm || {};
-            const cfgB = section.groupB?.examConfig?.localvm || {};
-            return isOk(cfgA) && isOk(cfgB);
-        }
-        return true;
+        return this.sectionsMissingMandatoryBasematerial().length === 0
     },
     lockInExammode() {
         //if sections are disabled, return true if exammode is active
@@ -1669,6 +1658,90 @@ computed: {
         clearSetupStatus() {
             this.setupStatusText = ''
         },
+
+        // Section indexes that require mandatory basematerial before securing the exam.
+        mandatoryBasematerialSectionIndexes() {
+            return this.serverstatus?.useExamSections ? [1, 2, 3, 4] : [1]
+        },
+
+        // Returns whether mandatory basematerial is configured for one exam section.
+        sectionMandatoryBasematerialReady(sectionIndex) {
+            const section = this.serverstatus?.examSections?.[sectionIndex]
+            if (!section) return true
+            const examType = section.examtype
+            if (examType === 'microsoft365') {
+                const hasA = !!section.groupA?.examConfig?.microsoft365?.template?.filename
+                const hasB = !!section.groupB?.examConfig?.microsoft365?.template?.filename
+                const templatesOk = section.groups ? (hasA && hasB) : hasA
+                return !!this.config.accessToken && templatesOk
+            }
+            if (examType === 'activesheets') {
+                if (section.groups) {
+                    return !!(section.groupA?.examConfig?.activeSheets?.filename && section.groupB?.examConfig?.activeSheets?.filename)
+                }
+                return !!section.groupA?.examConfig?.activeSheets?.filename
+            }
+            if (examType === 'website') {
+                const hasA = !!section.groupA?.examConfig?.website?.url
+                const hasB = !!section.groupB?.examConfig?.website?.url
+                return section.groups ? (hasA && hasB) : hasA
+            }
+            if (examType === 'eduvidual') {
+                const hasA = !!section.groupA?.examConfig?.eduvidual?.url
+                const hasB = !!section.groupB?.examConfig?.eduvidual?.url
+                return section.groups ? (hasA && hasB) : hasA
+            }
+            if (examType === 'rdp') {
+                const hasA = !!section.groupA?.examConfig?.rdp?.domain
+                const hasB = !!section.groupB?.examConfig?.rdp?.domain
+                return section.groups ? (hasA && hasB) : hasA
+            }
+            if (examType === 'forms') {
+                const hasA = !!section.groupA?.examConfig?.forms?.url
+                const hasB = !!section.groupB?.examConfig?.forms?.url
+                return section.groups ? (hasA && hasB) : hasA
+            }
+            if (examType === 'localvm') {
+                const isOk = (cfg) => {
+                    if (!cfg || !cfg.qcow2Name) return false
+                    const wantsHash = cfg.calculateSha256 === true
+                    return wantsHash ? !!cfg.qcow2Sha256 : !!cfg.qcow2SizeBytes
+                }
+                if (!section.groups) return isOk(section.groupA?.examConfig?.localvm || {})
+                return isOk(section.groupA?.examConfig?.localvm || {}) && isOk(section.groupB?.examConfig?.localvm || {})
+            }
+            return true
+        },
+
+        sectionsMissingMandatoryBasematerial() {
+            return this.mandatoryBasematerialSectionIndexes()
+                .filter((index) => !this.sectionMandatoryBasematerialReady(index))
+                .map((index) => ({
+                    index,
+                    name: this.serverstatus.examSections[index]?.sectionname || String(index),
+                }))
+        },
+
+        // Blocks securing when any configured section lacks mandatory basematerial.
+        async ensureMandatoryBasematerialBeforeSecure() {
+            const missing = this.sectionsMissingMandatoryBasematerial()
+            if (!missing.length) return true
+            const sections = missing.map((entry) => entry.name).join(', ')
+            await swalQueued({
+                customClass: {
+                    popup: 'my-popup',
+                    title: 'my-title',
+                    content: 'my-content',
+                    actions: 'my-swal2-actions',
+                },
+                icon: 'warning',
+                title: this.$t('dashboard.mandatoryBasematerialIncompleteTitle'),
+                html: `<div class="my-content">${this.$t('dashboard.mandatoryBasematerialIncompleteText', { sections })}</div>`,
+                confirmButtonText: this.$t('general.ok'),
+            })
+            return false
+        },
+
         isSectionTabActive(sectionIndex) {
             return this.serverstatus?.activeSection === sectionIndex;
         },
@@ -1689,13 +1762,16 @@ computed: {
                         <label class="form-check-label" for="nx-section-groups">${this.$t('dashboard.groups')}</label>
                     </div>
                     <div class="mt-3 text-start">
-                        <label class="form-label mb-1" for="nx-section-timelimit">${this.$t('dashboard.timelimit')}</label>
-                        <input id="nx-section-timelimit" class="form-control" type="number" min="1" step="1" value="${Number(section.timelimit ?? 60)}" ${this.serverstatus?.allowSectionSwitch ? 'disabled' : ''}>
+                        <div class="form-check form-switch">
+                            <input id="nx-section-timelimit-toggle" class="form-check-input" type="checkbox" ${Number(section.timelimit) > 0 ? 'checked' : ''} ${this.serverstatus?.allowSectionSwitch ? 'disabled' : ''}>
+                            <label class="form-check-label" for="nx-section-timelimit-toggle">${this.$t('dashboard.sectionDuration')}</label>
+                        </div>
+                        <input id="nx-section-timelimit" class="form-control mt-2" type="number" min="0" step="1" value="${Number(section.timelimit) > 0 ? section.timelimit : 0}" ${Number(section.timelimit) > 0 && !this.serverstatus?.allowSectionSwitch ? '' : 'disabled'}>
                     </div>
                 `,
                 showCancelButton: true,
                 cancelButtonText: this.$t('dashboard.cancel'),
-                confirmButtonText: this.$t('dashboard.save'),
+                confirmButtonText: this.$t('general.ok'),
                 customClass: {
                     popup: 'my-popup',
                     title: 'my-title',
@@ -1705,6 +1781,20 @@ computed: {
                 didOpen: () => {
                     const nameEl = document.getElementById('nx-section-name');
                     if (nameEl && typeof nameEl.focus === 'function') nameEl.focus();
+                    const toggleEl = document.getElementById('nx-section-timelimit-toggle');
+                    const tlEl = document.getElementById('nx-section-timelimit');
+                    const syncSectionDurationInput = () => {
+                        const on = !!toggleEl?.checked;
+                        if (!tlEl) return;
+                        tlEl.disabled = !on || !!this.serverstatus?.allowSectionSwitch;
+                        tlEl.min = on ? '1' : '0';
+                        if (!on) tlEl.value = '0';
+                        else if (Number.parseInt(String(tlEl.value), 10) < 1) {
+                            tlEl.value = String(Number(section.timelimit) > 0 ? section.timelimit : 60);
+                        }
+                    };
+                    toggleEl?.addEventListener('change', syncSectionDurationInput);
+                    syncSectionDurationInput();
                 },
                 preConfirm: () => {
                     const nameEl = document.getElementById('nx-section-name');
@@ -1712,11 +1802,18 @@ computed: {
                     if (!nextName) return false;
                     const groupsEl = document.getElementById('nx-section-groups');
                     const nextGroups = !!groupsEl?.checked;
+                    const toggleEl = document.getElementById('nx-section-timelimit-toggle');
                     const tlEl = document.getElementById('nx-section-timelimit');
-                    const nextTimelimit = this.serverstatus?.allowSectionSwitch
-                        ? Number(section.timelimit ?? 60)
-                        : Number.parseInt(String(tlEl?.value ?? ''), 10);
-                    if (!Number.isFinite(nextTimelimit) || nextTimelimit < 1) return false;
+                    const durationOn = !!toggleEl?.checked;
+                    let nextTimelimit = 0;
+                    if (durationOn) {
+                        if (this.serverstatus?.allowSectionSwitch) {
+                            nextTimelimit = Number(section.timelimit ?? 0);
+                        } else {
+                            nextTimelimit = Number.parseInt(String(tlEl?.value ?? ''), 10);
+                            if (!Number.isFinite(nextTimelimit) || nextTimelimit < 1) return false;
+                        }
+                    }
                     return { nextName, nextGroups, nextTimelimit };
                 },
             });
@@ -1821,7 +1918,7 @@ computed: {
                 })
                 return
             }
-            this.showPDFPreview({ filepath: res.filePath, filename: res.filename, base64: res.base64 })
+            this.showPDFPreview({ filename: res.filename, base64: res.base64 })
         },
 
         /**
@@ -1846,6 +1943,7 @@ computed: {
         showBase64PdfInRenderer:showBase64PdfInRenderer,            // displays a base64 encoded pdf in PdfRenderer component
         saveActivesheetsCorrectionTemplate: saveActivesheetsCorrectionTemplate,
         saveActivesheetsCorrectedPdf: saveActivesheetsCorrectedPdf,
+        discardActivesheetsCorrectedPdf: discardActivesheetsCorrectedPdf,
 
         /**
          * Exam Managment functions
@@ -1958,7 +2056,7 @@ computed: {
                                 //now update the entry in the original widgets object and check if the student is online
                                 const isReachable = isStudentReachable(student, this.now);
                                 if (!isReachable){
-                                    if (this.studentwidgets[i].online && !this.muteAudio){ // play short soundfile on the first time the student timestamp is older than 20 seconds
+                                    if (this.studentwidgets[i].online && !this.serverstatus.muteAudio){ // play short soundfile on the first time the student timestamp is older than 20 seconds
                                         console.log(`dashboard @ fetchInfo: student ${student.clientname} just went offline`)
                                         const audio = new Audio('dialog-warning.oga');
                                         audio.play();
@@ -1968,7 +2066,7 @@ computed: {
                                 else {student.online = true }  // set online status on student object
 
                                 // play sound once when student loses focus for the first time
-                                if (!student.focus && this.studentwidgets[i].focus && !this.muteAudio) {
+                                if (!student.focus && this.studentwidgets[i].focus && !this.serverstatus.muteAudio) {
                                     console.log(`dashboard @ fetchInfo: student ${student.clientname} lost focus`)
                                     const focusAudio = new Audio('dialog-warning.oga');
                                     focusAudio.play();
@@ -2015,7 +2113,7 @@ computed: {
                         examEventBus.push('login', student)
                         this.getLatestBakFile(student.clientname).then(bakResult => {
                             if (bakResult.status === "success") {
-                                const fileName = bakResult.filepath.split('/').pop()
+                                const fileName = bakResult.filepath.split(/[/\\]/).pop()
                                 const filePath = bakResult.filepath
                                 swalQueued({
                                     customClass: {
@@ -2140,7 +2238,7 @@ computed: {
         async getSpecificSubmissionBase64(filepath) {
             const result = await ipcRenderer.invoke('getSpecificSubmissionBase64', filepath)
             if (result.status === "success") {
-                this.showPDFPreview({ filepath, filename: filepath.split('/').pop(), base64: result.submission })
+                this.showPDFPreview({ filepath, filename: filepath.split(/[/\\]/).pop(), base64: result.submission })
             }
             else {
                 this.$swal.fire({
@@ -2166,7 +2264,7 @@ computed: {
                     actions: 'my-swal2-actions'
                 },
                 title: this.$t("dashboard.removefile"),
-                text: this.$t("dashboard.removefileconfirm"),
+                text: this.$t("dashboard.removematerialconfirm"),
                 icon: 'warning',
                 showCancelButton: true,
                 
@@ -2272,6 +2370,7 @@ computed: {
                 this.backupinterval.start();
             }
             this.setServerStatus();
+            this.persistGlobalTeacherSettings();
         },
 
 
@@ -2287,11 +2386,55 @@ computed: {
                 this.autoscreenshot = true; // enable screenshots
             }
             this.setServerStatus(); // save changes
+            this.persistGlobalTeacherSettings();
+        },
+      
+        buildTeacherGlobalSettings() {
+            const editor = this.serverstatus.examSections?.[this.serverstatus.activeSection]?.groupA?.examConfig?.editor || {};
+            return {
+                directPrintAllowed: !!this.serverstatus.directPrintAllowed,
+                screenshotinterval: this.serverstatus.screenshotinterval,
+                backupintervalPause: this.serverstatus.backupintervalPause,
+                muteAudio: !!this.serverstatus.muteAudio,
+                languagetool: !!editor.languagetool,
+                languagetoolhost: editor.languagetoolhost || null,
+                languagetoolport: editor.languagetoolport || null,
+            };
+        },
+
+        applyTeacherGlobalSettings(global) {
+            if (!global || typeof global !== 'object') return;
+            if (typeof global.directPrintAllowed === 'boolean') this.serverstatus.directPrintAllowed = global.directPrintAllowed;
+            if (global.screenshotinterval != null) this.serverstatus.screenshotinterval = global.screenshotinterval;
+            if (global.backupintervalPause != null) this.serverstatus.backupintervalPause = global.backupintervalPause;
+            if (typeof global.muteAudio === 'boolean') this.serverstatus.muteAudio = global.muteAudio;
+            const ltHost = global.languagetoolhost;
+            const ltPort = global.languagetoolport;
+            if (!global.languagetool && !ltHost) return;
+            for (const section of Object.values(this.serverstatus.examSections || {})) {
+                for (const groupKey of ['groupA', 'groupB']) {
+                    const editor = section?.[groupKey]?.examConfig?.editor;
+                    if (!editor || typeof editor !== 'object') continue;
+                    if (global.languagetool) editor.languagetool = true;
+                    if (ltHost) {
+                        editor.languagetoolhost = ltHost;
+                        editor.languagetoolport = ltPort || '8088';
+                    }
+                }
+            }
+        },
+
+        async persistGlobalTeacherSettings() {
+            try {
+                await ipcRenderer.invoke('setTeacherGlobalSettings', this.buildTeacherGlobalSettings());
+            } catch (err) {
+                console.warn('dashboard @ persistGlobalTeacherSettings:', err);
+            }
         },
       
         async showDescription(description, info=false, isHtml=false) {
             if (info) {
-                description += ' | ';
+                description += '  ';
                 // remoteassistant: keywords and ports
                 if (info.keywords?.length > 0) {
                     
@@ -2305,14 +2448,14 @@ computed: {
                 const vm = info.vmFindings;
                 const webgl = info.webglFindings;
                 if (vm?.isVM && vm?.reasons?.length > 0) {
-                    description += ' ||' + this.$t('dashboard.vmFindingsBackend') + '|';
-                    description += vm.reasons.map(r => '• ' + r).join('|');
-                    if (vm.vendor) description += '|' + this.$t('dashboard.vmFindingsVendor') + ': ' + vm.vendor;
+                    description += ' || ' + this.$t('dashboard.vmFindingsBackend') + ' ';
+                    description += vm.reasons.map(r => ' • ' + r).join(' ');
+                    if (vm.vendor) description += ' | ' + this.$t('dashboard.vmFindingsVendor') + ': ' + vm.vendor;
                 }
                 if (webgl?.detected) {
-                    description += ' ||' + this.$t('dashboard.vmFindingsWebgl');
-                    if (webgl.vendor) description += '|• Vendor: ' + webgl.vendor;
-                    if (webgl.renderer) description += '|• Renderer: ' + webgl.renderer;
+                    description += ' || ' + this.$t('dashboard.vmFindingsWebgl');
+                    if (webgl.vendor) description += ' • Vendor: ' + webgl.vendor;
+                    if (webgl.renderer) description += ' • Renderer: ' + webgl.renderer;
                 }
             }
             this.currentDescription = isHtml ? description : description.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
@@ -2366,7 +2509,7 @@ computed: {
             const ip = escape(student?.clientip ?? '?');
             const docs = student?.files ?? 0;
             const versionSuffix = this.isVersionMismatch(student) ? ` (->${escape(this.version)})` : '';
-            return `<b>${name}</b><br>Version: ${v}${versionSuffix}<br>IP: ${ip}<br>Documents: ${docs}`;
+            return `Name: ${name}<br>Version: ${v}${versionSuffix}<br>IP: ${ip}<br>Documents: ${docs}`;
         },
         //display student specific actions
         showStudentview(student) {
@@ -2583,6 +2726,7 @@ computed: {
             if (!status || typeof status !== 'object') return;
             if (!status.examSections || typeof status.examSections !== 'object') status.examSections = {};
             if (typeof status.directPrintAllowed !== 'boolean') status.directPrintAllowed = false;
+            if (typeof status.muteAudio !== 'boolean') status.muteAudio = false;
             if (typeof status.encryptionPassword !== 'string' || status.encryptionPassword.trim().length < 64) {
                 status.encryptionPassword = generateEncryptionPassword();
             }
@@ -2621,9 +2765,11 @@ computed: {
         // we save serverstatus everytime we start an exam - therefore exams can be resumed easily by the teacher if something wicked happens
         async getPreviousServerStatus(){
             this.config = await ipcRenderer.invoke('getconfigasync')
+            const globalSettings = await ipcRenderer.invoke('getTeacherGlobalSettings')
             const response = await ipcRenderer.invoke('getServerStatusFromDisk', this.servername)
             if (response.serverstatus === false) {
                 this.serverstatus.backupdirectory = this.config.backupdirectory || false
+                this.applyTeacherGlobalSettings(globalSettings)
                 this.migrateServerStatus()
                 this.setServerStatus()  // there is no serverstatus - we need to set it to default
                 return
@@ -2839,16 +2985,22 @@ computed: {
 
 
 
+        // Localized label for BiP exam join permission (open = students may connect)
+        bipJoinStatusLabel(status = this.bipStatus) {
+            return status === 'open'
+                ? this.$t('dashboard.bipAccessOpen')
+                : this.$t('dashboard.bipAccessClosed');
+        },
+
         showBipInfo(){
             let message = "Bildungsportal"
             let html = `
             <div style="font-size:0.9em; text-align:left">
-                <div><b>Bip-Token: </b>${this.bipToken}</div>
                 <div><b>Bip-Username: </b>${this.bipUsername}</div>
                 <div><b>Bip-UserID: </b>${this.bipuserID}</div><br>
-                <div><b>Bip-Exam-Status: </b></div>
-                <button id="fbtnA" class="swal2-button btn ${this.bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'} mt-2" style="width: 100px; height: 42px;">
-                    ${this.bipStatus}
+                <div><b>${this.$t('dashboard.bipAccessPopupLabel')}: </b></div>
+                <button id="fbtnA" class="swal2-button btn ${this.bipStatus === 'closed' ? 'btn-warning' : 'btn-teal'} mt-2" style="min-width: 100px; height: 42px;">
+                    ${this.bipJoinStatusLabel()}
                 </button>
             </div>
             `
@@ -2869,7 +3021,7 @@ computed: {
                             
                             btnA.classList.remove(oldClass);
                             btnA.classList.add(newClass);
-                            btnA.textContent = newStatus;
+                            btnA.textContent = this.bipJoinStatusLabel(newStatus);
 
                             //call api and update bip data
                             if (this.bipToken && this.serverstatus.bip) {
@@ -3189,7 +3341,7 @@ computed: {
             
             if (bakResult.status === "success") {
                 // BAK file found - show dialog with option to send
-                const fileName = bakResult.filepath.split('/').pop()
+                const fileName = bakResult.filepath.split(/[/\\]/).pop()
                 const filePath = bakResult.filepath
                 
                 swalQueued({
@@ -3325,6 +3477,16 @@ computed: {
     gap: 4px;
     z-index: 1000;
    
+}
+
+.control-buttons-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.control-button-bip-access {
+    margin-left: auto;
 }
 
 .control-button {
@@ -3554,7 +3716,6 @@ computed: {
 
 .setup-grid .setup-card {
     margin-bottom: 0;
-    height: 100%;
 }
 
 .setup-grid {
@@ -3562,7 +3723,18 @@ computed: {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
-    align-items: stretch;
+    align-items: start;
+}
+
+.setup-grid-col {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+.setup-grid-col .setup-card {
+    margin-bottom: 0;
 }
 
 @media (max-width: 860px) {
@@ -3651,6 +3823,30 @@ computed: {
     font-weight: 500;
 }
 
+#setupdiv .form-check.form-switch,
+.sidebar-root .form-check.form-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    padding-left: 0;
+}
+
+#setupdiv .form-check.form-switch .form-check-input,
+.sidebar-root .form-check.form-switch .form-check-input {
+    margin: 0;
+    float: none;
+    flex: 0 0 auto;
+}
+
+#setupdiv .form-check.form-switch .form-check-label,
+.sidebar-root .form-check.form-switch .form-check-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1;
+    margin: 0;
+    padding: 0;
+}
+
 .setup-inline {
     display: inline-flex;
     align-items: center;
@@ -3726,6 +3922,11 @@ computed: {
 
 .setup-switch-details {
     padding-left: 3em;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Teal accents for setup sliders (match editor sidebar vibe) */
@@ -3740,11 +3941,13 @@ computed: {
     border: none;
 }
 
-/* Teal accents for setup switches/checkboxes */
-#setupdiv .form-check-input {
+/* Teal accents for setup + sidebar switches/checkboxes */
+#setupdiv .form-check-input,
+.sidebar-root .form-check-input {
     accent-color: var(--bs-teal, #20c997);
 }
-#setupdiv .form-check-input:disabled {
+#setupdiv .form-check-input:disabled,
+.sidebar-root .form-check-input:disabled {
     accent-color: rgba(0,0,0,0.25);
 }
 
@@ -3760,11 +3963,13 @@ computed: {
 }
 
 /* Bootstrap switches ignore accent-color in some cases; force teal when checked */
-#setupdiv .form-check-input:checked {
+#setupdiv .form-check-input:checked,
+.sidebar-root .form-check-input:checked {
     background-color: var(--bs-teal, #20c997);
     border-color: var(--bs-teal, #20c997);
 }
-#setupdiv .form-check-input:focus {
+#setupdiv .form-check-input:focus,
+.sidebar-root .form-check-input:focus {
     box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--bs-teal, #20c997) 25%, transparent);
     border-color: var(--bs-teal, #20c997);
 }
@@ -3861,13 +4066,6 @@ computed: {
     display: none; /* hidden by default */
    transition: 0.3s;
 }
-
-/* match swal2: green button with white label */
-#setupdiv #okButton.btn-success {
-    color: #fff;
-}
-
-
 
 
 
@@ -4027,6 +4225,9 @@ computed: {
 
 .sidebar-root {
     position: relative;
+    width: 240px;
+    min-width: 240px;
+    max-width: 240px;
     height: calc(100vh - 63px);
     min-height: 0;
 }
@@ -4037,8 +4238,12 @@ computed: {
 
 .sidebar-scroll {
     flex: 1 1 auto;
+    width: 240px;
+    max-width: 240px;
     min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
+    box-sizing: border-box;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
@@ -4630,6 +4835,31 @@ hr {
     padding-left: 1.9em !important;
     padding-right: 1.9em !important;
 }
+
+.my-popup .form-label,
+.my-popup .form-check-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.my-popup .form-check.form-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    padding-left: 0;
+}
+
+.my-popup .form-check.form-switch .form-check-input {
+    margin: 0;
+    float: none;
+    flex: 0 0 auto;
+}
+
+.my-popup .form-check.form-switch .form-check-label {
+    line-height: 1;
+    margin: 0;
+    padding: 0;
+}
 .my-popup-sprachen {
     justify-content: flex-start !important;
     justify-items: flex-start !important;
@@ -4839,7 +5069,7 @@ hr {
     border-color: rgba(205, 53, 69, 0.9) !important;
 }
 
-.basematerial-sidebar-block--optional .sidebar-pick-btn.btn {
+.basematerial-sidebar-block.basematerial-sidebar-block--optional .sidebar-pick-btn.btn {
     border-color: rgba(255, 255, 255, 0.28) !important;
 }
 
@@ -4849,9 +5079,9 @@ hr {
     border-color: rgba(220, 53, 69, 0.75) !important;
 }
 
-.basematerial-sidebar-block--optional .sidebar-pick-btn.btn-outline-secondary:hover,
-.basematerial-sidebar-block--optional .sidebar-pick-btn.btn-outline-secondary:focus,
-.basematerial-sidebar-block--optional .sidebar-pick-btn.btn-outline-secondary:active {
+.basematerial-sidebar-block.basematerial-sidebar-block--optional .sidebar-pick-btn.btn-outline-secondary:hover,
+.basematerial-sidebar-block.basematerial-sidebar-block--optional .sidebar-pick-btn.btn-outline-secondary:focus,
+.basematerial-sidebar-block.basematerial-sidebar-block--optional .sidebar-pick-btn.btn-outline-secondary:active {
     border-color: rgba(255, 255, 255, 0.22) !important;
 }
 
@@ -4929,6 +5159,20 @@ hr {
     color: var(--bs-dark);
     border: 0px solid rgba(255, 255, 255, 0.12);
     text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.sidebar-groups-inactive .basematerial-group-pill,
+.sidebar-groups-inactive .materials-group-pill {
+    background: #6c757d !important;
+    color: rgba(255, 255, 255, 0.88) !important;
+    text-shadow: none !important;
+    filter: none;
+}
+
+.sidebar-groups-inactive .basematerial-group-pill--ab,
+.sidebar-groups-inactive .materials-group-pill--ab {
+    background: linear-gradient(135deg, #6c757d 0 50%, #90989f 50% 100%) !important;
+    color: rgba(255, 255, 255, 0.92) !important;
 }
 
 .basematerial-filename {

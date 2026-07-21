@@ -13,7 +13,7 @@
                 title="VM hart zurücksetzen"
             ><img src="/img/svg/edit-redo.svg" class="" width="22" height="20">Reset VM</button>
 
-            <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
+            <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0 pe-2 ps-1 me-1 ms-2 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/img/svg/gtk-convert.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
 
             <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
                 <div v-if="(file.filetype == 'htm')" class="btn btn-outline-cyan p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.filename; loadBase64file(file)"><img src="/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ file.filename }}</div>
@@ -36,7 +36,7 @@
         <div
             id="preview"
             class="fadeinfast p-4"
-            style="--nx-preview-chrome-top: 80px; --nx-preview-top-offset: 0px; --nx-preview-content-width: 90%;"
+            style="--nx-preview-chrome-top: 80px; --nx-preview-top-offset: 0px;"
         >
             <WebviewPane
                 id="webview"
@@ -108,6 +108,7 @@ import {SignalBridge} from '../utils/signalBridge.js';
 import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
+    applyFocusLostFromIpc,
 } from '../utils/examFetchInfoSync.js';
 import {ref} from "vue";
 import {useConfigStore} from "../stores/configStore.ts";
@@ -527,9 +528,6 @@ export default {
                     this.teardownRfb();
                 }
             }
-            if (prevFocus && !this.focus) {
-                this.entrytime = new Date().getTime();
-            }
             this.lastFocusState = !!this.focus;
         },
 
@@ -549,9 +547,7 @@ export default {
         async sendFocuslost() {
             if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             const response = await signalBridge.invoke('focuslost');
-            if (!this.development && response && !response.focus) {
-                this.focus = false;
-            }
+            applyFocusLostFromIpc(this, response, this.development);
         },
 
         async fetchInfo() {

@@ -16,7 +16,6 @@ dotenv.config({ path: envFile });
 // wifi-helper is a plain CLI. Sign each at its bundle/binary path with its own entitlements.
 const helperEntitlements = {
     'assessment-helper.app': path.join(projectRoot, 'scripts', 'entitlements.mac.assessment.plist'),
-    'wifi-helper': path.join(projectRoot, 'scripts', 'entitlements.mac.wifi.plist'),
 };
 
 function run(cmd, args, opts = {}) {
@@ -30,38 +29,30 @@ function run(cmd, args, opts = {}) {
     });
 }
 
-// Codesign one helper with its own entitlements plist.
-async function signHelper(helperPath, entitlementsPath, identity, adhoc) {
-    if (identity) {
-        await run('codesign', [
-            '--force',
-            '--options', 'runtime',
-            '--timestamp',
-            '--entitlements', entitlementsPath,
-            '-s', identity,
-            helperPath,
-        ]);
-        console.log(`Signed ${path.basename(helperPath)} with: ${identity}`);
-        return;
-    }
-    if (adhoc) {
-        await run('codesign', [
-            '--force',
-            '--entitlements', entitlementsPath,
-            '-s', '-',
-            helperPath,
-        ]);
-        console.log(`Ad-hoc signed ${path.basename(helperPath)} (local dev)`);
-    }
+// Ad-hoc sign helpers for local dev only; production signing is in notarize.cjs afterSign.
+async function signHelper(helperPath, entitlementsPath, adhoc) {
+    if (!adhoc) return;
+    await run('codesign', [
+        '--force',
+        '--entitlements', entitlementsPath,
+        '-s', '-',
+        helperPath,
+    ]);
+    console.log(`Ad-hoc signed ${path.basename(helperPath)} (local dev)`);
 }
 
 async function maybeSign() {
     const identity = (process.env.NXE_APPLE_SIGN_IDENTITY || process.env.CSC_NAME || process.env.SHAID || '').trim();
     const adhoc = process.env.NXE_APPLE_ADHOC === '1' || process.env.SIGN === 'false';
+    // Production signing runs in notarize.cjs afterSign (resignAppleHelpers); pre-pack codesign duplicates and can hang in CI.
+    if (identity && !adhoc) {
+        console.log('Skipping pre-pack codesign (notarize.cjs resigns helpers after electron-builder)');
+        return;
+    }
     for (const [name, entitlementsPath] of Object.entries(helperEntitlements)) {
         const helperPath = path.join(appleDir, name);
         if (!fs.existsSync(helperPath)) continue;
-        await signHelper(helperPath, entitlementsPath, identity, adhoc);
+        await signHelper(helperPath, entitlementsPath, adhoc);
     }
 }
 

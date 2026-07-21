@@ -114,9 +114,9 @@
                         v-for="exam of previousLocalExams"
                         :key="`local-main-${exam.examName}`"
                         class="bip-exam-card bip-exam-card-local"
-                        :class="{ 'bg-cyan-transparent': servername === exam.examName, 'cursornotallowed': exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion }"
-                        @click="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? '' : setPreviousExam(exam)"
-                        :title="exam.nextexamVersion && exam.nextexamVersion.slice(0, 3) !== version.slice(0, 3) || !exam.nextexamVersion ? $t('startserver.incompatible') : ''"
+                        :class="{ 'bg-cyan-transparent': servername === exam.examName, 'cursornotallowed': !isExamVersionCompatible(exam) }"
+                        @click="isExamVersionCompatible(exam) ? setPreviousExam(exam) : ''"
+                        :title="!isExamVersionCompatible(exam) ? $t('startserver.incompatible') : ''"
                     >
                         <!-- Name -->
                         <div class="bip-exam-card-head">
@@ -141,7 +141,7 @@
                             </span>
                             <span v-if="exam.examSections && exam.examSections[exam.activeSection] && exam.examSections[exam.activeSection].groups" class="badge bip-type-sus">A/B</span>
                             <span v-if="exam.screenslocked" class="badge bg-danger-subtle text-danger border border-danger-subtle">gesperrt</span>
-                            <span v-if="exam.useExamSections" class="badge bg-secondary">§ {{ exam.activeSection }}/{{ exam.lockedSection }}</span>
+                            <span v-if="exam.useExamSections" class="badge bg-secondary" :title="exam.allowSectionSwitch ? $t('startserver.sectionByStudent') : $t('startserver.sectionByTeacher')">§ {{ exam.allowSectionSwitch ? 'S' : 'T' }}</span>
                             <span v-if="exam.pin" class="badge bg-secondary-subtle text-secondary bip-status-pill ms-auto">{{ exam.pin }}</span>
                         </div>
                     </div>
@@ -201,8 +201,9 @@
                         v-for="exam of onlineExams"
                         :key="`bip-main-${exam.id}-${exam.examName}`"
                         class="bip-exam-card bip-exam-card-bip"
-                        :class="{ 'bip-exam-card-active': servername === exam.examName }"
-                        @click="setOnlineExam(exam)"
+                        :class="{ 'bip-exam-card-active': servername === exam.examName, 'cursornotallowed': !isExamVersionCompatible(exam) }"
+                        @click="isExamVersionCompatible(exam) ? setOnlineExam(exam) : ''"
+                        :title="!isExamVersionCompatible(exam) ? $t('startserver.incompatible') : ''"
                     >
                         <!-- Name + PIN -->
                         <div class="bip-exam-card-head">
@@ -227,7 +228,7 @@
                             </span>
                             <span v-if="exam.examSections && exam.examSections[exam.activeSection] && exam.examSections[exam.activeSection].groups" class="badge bip-type-sus">A/B</span>
                             <span v-if="exam.screenslocked" class="badge bg-danger-subtle text-danger border border-danger-subtle">gesperrt</span>
-                            <span v-if="exam.useExamSections" class="badge bip-type-sus">§ {{ exam.activeSection }}/4</span>
+                            <span v-if="exam.useExamSections" class="badge bip-type-sus" :title="exam.allowSectionSwitch ? $t('startserver.sectionByStudent') : $t('startserver.sectionByTeacher')">§ {{ exam.allowSectionSwitch ? 'S' : 'T' }}</span>
                             <span v-if="exam.examStudents && exam.examStudents.length" class="badge bip-type-sus">{{ exam.examStudents.length }} SuS</span>
                             <span v-if="exam.pin" class="badge bg-secondary-subtle text-secondary bip-status-pill ms-auto">{{ exam.pin }}</span>
                         </div>
@@ -280,6 +281,7 @@
 import log from 'electron-log/renderer';
 import {SchedulerService} from '../utils/schedulerservice.js'
 import {Exam} from "../types/api";
+import {extractDomainAndId} from '../utils/examsetup.js'
 
 
 // Capture unhandled promise rejections
@@ -385,6 +387,13 @@ export default {
     },
 
     methods: {
+        // True when exam nextexamVersion major matches the running teacher build.
+        isExamVersionCompatible(exam) {
+            const examVersion = exam?.nextexamVersion;
+            if (!examVersion || !this.version) return false;
+            return examVersion.slice(0, 3) === this.version.slice(0, 3);
+        },
+
         formatUnixDate(value) {
             if (!value) return "";
             // If timestamp is in seconds (10 digits), multiply by 1000
@@ -551,12 +560,45 @@ export default {
                 this.bipData = data;
                 this.onlineExams.splice(0);
                 this.onlineExams.push(...(Array.isArray(data.exams) ? data.exams : []));
+
+                this.computeSebConfigForOnlineExams();
+                 
             })
             .catch(error => { console.error('startserver @ fetchBipExams:', error); });
         },
-
+        
+        computeSebConfigForOnlineExams() {
+            for (const [examkey, exam] of Object.entries(this.onlineExams)) {
+                for (let i = 1; i <= 4; i++) {
+                    if (exam.examSections[i].examtype === 'eduvidual') {
+                        for (let group of ['groupA', 'groupB']) {
+                            const config = exam.examSections[i][group].examConfig.eduvidual;
+                            if (config.sebConfigFile != null) {
+                                window.ipcRenderer?.invoke?.('loadSEBConfig', config.sebConfigFile, config.sebConfigPassword, config.sebConfigBek).then((sebConfig) => {
+                                    if (sebConfig != null) {
+                                        const url = sebConfig.sebConfig.startURL;
+                                        const {moodledomain, testid} = extractDomainAndId(url);
+                                        Object.assign(this.onlineExams[examkey].examSections[i][group].examConfig.eduvidual, {...sebConfig, url, moodleDomain: moodledomain, moodleTestId: testid});
+                                    } else {
+                                        let html = this.$t('startserver.bipExamSebConfigLoadingFailed') + `<br><br>${this.onlineExams[examkey].examName}`;
+                                        if (this.onlineExams[examkey].useExamSections) html += ' -> ' + this.onlineExams[examkey].examSections[i].sectionname;
+                                        if (this.onlineExams[examkey].examSections[i].groups) html += ' -> ' + this.$t('dashboard.' + group);
+                                        html += '<br><br>' + this.$t('startserver.bipExamSebConfigLoadingFailedReason');
+                                        this.$swal.fire({title: this.$t('startserver.bipExamSebConfigLoadingFailedTitle'), html: html, icon: 'error'});
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        },
 
         async setOnlineExam(exam){
+            if (!this.isExamVersionCompatible(exam)) {
+                this.status(this.$t('startserver.incompatible'));
+                return;
+            }
             this.servername = exam.examName
 
             this.selectedExam = { ...exam, bip: true }  // mark as bip exam for consistent tab-based start logic
@@ -824,6 +866,10 @@ export default {
 
         /** Sets the exam name field to the clicked exam directory name. */
         async setPreviousExam(exam){
+            if (!this.isExamVersionCompatible(exam)) {
+                this.status(this.$t('startserver.incompatible'));
+                return;
+            }
             this.servername = exam.examName
             this.selectedExam = exam
 
@@ -846,6 +892,17 @@ export default {
                         this.backupdir = ''
                         this.bipNameConflict = true
                         if (examstart) examstart.classList.add('disabledstart')
+                        if (examPasswordDiv) examPasswordDiv.disabled = false
+                        return
+                    }
+
+                    if (!this.isExamVersionCompatible(previousExam)) {
+                        this.bipNameConflict = false
+                        this.backupdir = previousExam.backupdirectory || ''
+                        if (examstart) {
+                            examstart.innerHTML = this.$t("startserver.resume")
+                            examstart.classList.add('disabledstart')
+                        }
                         if (examPasswordDiv) examPasswordDiv.disabled = false
                         return
                     }
@@ -909,7 +966,13 @@ export default {
                 if (result.isConfirmed) { 
                     let response = await ipcRenderer.invoke('delPrevious', name)
                     console.log(response)
-                    this.getPreviousExams()
+                    await this.getPreviousExams()
+                    // reset selection if the deleted exam was the selected one
+                    if ((this.servername || '').toLowerCase() === (name || '').toLowerCase()) {
+                        this.servername = ''
+                        this.selectedExam = null
+                    }
+                    this.checkExistingExam()
                 } 
             });  
         },
@@ -973,8 +1036,8 @@ export default {
            
 
                 // check if the exam is compatible with the current version
-                if (this.selectedExam && this.selectedExam.nextexamVersion && this.selectedExam.nextexamVersion.slice(0, 3) !== this.version.slice(0, 3) || (this.selectedExam && !this.selectedExam.nextexamVersion)){
-                    this.status(this.$t("startserver.incompatible")); 
+                if (this.selectedExam && !this.isExamVersionCompatible(this.selectedExam)) {
+                    this.status(this.$t("startserver.incompatible"));
                     return;
                 }
 

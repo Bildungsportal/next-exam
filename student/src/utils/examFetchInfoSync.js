@@ -40,13 +40,23 @@ export function applyClientinfoFromFetch(vm, ci, { trackPrivateSpellcheck = fals
         Object.assign(vm.clientinfo, ci);
     }
     if (ci.token !== vm.token) vm.token = ci.token;
-    if (ci.focus !== vm.focus) vm.focus = ci.focus;
+    if (ci.focus !== vm.focus) {
+        if (!ci.focus && vm.focus && 'entrytime' in vm) vm.entrytime = Date.now();
+        vm.focus = ci.focus;
+    }
     const reason = ci.focusLockReason || '';
     const message = ci.focusLockMessage || '';
     if (reason !== vm.focusLockReason) vm.focusLockReason = reason;
     if (message !== vm.focusLockMessage) vm.focusLockMessage = message;
     if (ci.name !== vm.clientname) vm.clientname = ci.name;
     if (ci.exammode !== vm.exammode) vm.exammode = ci.exammode;
+    const connected = ci.token && ci.token !== '0000' && ci.token !== false;
+    if (connected && ci.pin != null && ci.pin !== false && String(ci.pin) !== String(vm.pincode ?? '')) {
+        vm.pincode = String(ci.pin);
+    }
+    if (connected && ci.serverip && ci.serverip !== false && typeof vm.serverip === 'string' && String(ci.serverip) !== vm.serverip) {
+        vm.serverip = String(ci.serverip);
+    }
     if (trackPrivateSpellcheck) {
         const nextPs = ci.privateSpellcheck;
         if (nextPs && privateSpellcheckFlagsDiffer(nextPs, vm.privateSpellcheck)) {
@@ -117,4 +127,21 @@ export function activeSheetLoadKey(serverstatus, clientinfo, lockedSection) {
     const groupKey = section.groups && clientinfo?.group === 'b' ? 'groupB' : 'groupA';
     const filename = section[groupKey]?.examConfig?.activeSheets?.filename || '';
     return `${lockedSection}:${groupKey}:${filename}`;
+}
+
+/** Wall-clock HH:mm:ss when focus was lost (entrytime stored as Date.now() ms). */
+export function formatFocusLostTime(ms) {
+    const date = new Date(Number(ms) || 0);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+}
+
+/** Apply focuslost IPC: stamp entrytime once and block UI when teacher lock is active. */
+export function applyFocusLostFromIpc(vm, response, development) {
+    if (response && !development && !response.focus) {
+        if (vm.focus && 'entrytime' in vm) vm.entrytime = Date.now();
+        vm.focus = false;
+    }
 }

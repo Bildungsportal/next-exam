@@ -423,7 +423,7 @@ export default defineConfig(( ctx: any ) => {
           { from: 'src-electron/main/scripts/vncproxy-helper.cjs', to: 'vncproxy/vncproxy-helper.cjs' },
           { from: 'node_modules/ws', to: 'vncproxy/node_modules/ws' },
           // assessment-helper.app = .app bundle (embedded profile authorizes restricted AAC entitlement); wifi-helper = plain CLI
-          ...['assessment-helper.app', 'wifi-helper']
+          ...['assessment-helper.app']
             .filter((name) => fse.existsSync(path.join(__dirname, 'scripts/apple', name)))
             .map((name) => ({ from: `scripts/apple/${name}`, to: `apple/${name}` })),
         ],

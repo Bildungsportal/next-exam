@@ -429,13 +429,13 @@ async function startHeadless({
         port: EXAM_WEBDAV_PORT,
         mountPath: EXAM_WEBDAV_MOUNT_PATH,
     });
-    log.info(`qemuService @ startHeadless: exam WebDAV http://10.0.2.2:${EXAM_WEBDAV_PORT}${EXAM_WEBDAV_MOUNT_PATH} -> ${workdirectory}`);
-
-    // restrict=on blocks general internet; guestfwd tunnels guest TCP to 10.0.2.2:EXAM_WEBDAV_PORT to host WebDAV (must listen before QEMU starts).
-    const webdavGuestFwd = `guestfwd=tcp:10.0.2.2:${EXAM_WEBDAV_PORT}-tcp:127.0.0.1:${EXAM_WEBDAV_PORT}`;
+    // guestfwd tunnels guest TCP 10.0.2.1:1900 to host WebDAV; must listen before QEMU starts.
+    // .1 = only slirp IP QEMU accepts for guestfwd (.2 gateway/.3 DNS rejected) that's also outside DHCP range → routable in guest.
+    const webdavGuestFwd = `guestfwd=tcp:10.0.2.1:${EXAM_WEBDAV_PORT}-tcp:127.0.0.1:${EXAM_WEBDAV_PORT}`;
     const netArgs = blockInternet
         ? ['-netdev', `user,id=net0,restrict=on,${webdavGuestFwd}`, '-device', 'virtio-net-pci,netdev=net0']
-        : ['-netdev', 'user,id=n0', '-device', 'virtio-net-pci,netdev=n0'];
+        : ['-netdev', `user,id=n0,${webdavGuestFwd}`, '-device', 'virtio-net-pci,netdev=n0'];
+    log.info(`qemuService @ startHeadless: WebDAV host=127.0.0.1:${EXAM_WEBDAV_PORT}${EXAM_WEBDAV_MOUNT_PATH} root=${workdirectory} guestfwd=10.0.2.1:${EXAM_WEBDAV_PORT} blockInternet=${blockInternet}`);
 
     const args = [
         ...getQemuAccelArgs(),

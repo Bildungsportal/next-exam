@@ -13,6 +13,10 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
+concurrency:
+  group: macos-codesign-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: macos-latest
@@ -91,7 +95,7 @@ jobs:
         with:
           name: next-exam-teacher-macos-arm64-dmg
           path: ./teacher/dist/electron/Packaged/Next-Exam-Teacher*arm64*.dmg
-          retention-days: 5
+          retention-days: 14
 
 
       - name: Student cache dependencies
@@ -141,4 +145,4 @@ jobs:
         with:
           name: next-exam-student-macos-arm64-dmg
           path: ./student/dist/electron/Packaged/Next-Exam-Student*arm64*.dmg
-          retention-days: 5
+          retention-days: 14

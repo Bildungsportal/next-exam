@@ -14,7 +14,7 @@
         <button class="btn btn-primary p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="reloadWebview" :title="$t('website.reloadwebview')"> <img src="/img/svg/edit-redo.svg" class="" width="22" height="20" >{{moodleDomain}}</button>
 
         <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
-        <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
+        <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 ms-2 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/img/svg/gtk-convert.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
 
         <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
             <div v-if="(file.filetype == 'htm')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
@@ -102,6 +102,8 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
     resolveLockedSection,
+    formatFocusLostTime,
+    applyFocusLostFromIpc,
 } from '../utils/examFetchInfoSync.js'
 
 // signalBridge instance centralizes ipc calls with platform checks
@@ -153,6 +155,8 @@ export default {
             moodleDomain: null,
             moodleTestType: null,
             moodleTestId: null,
+            sebConfigHash: null,
+            sebBekHash: null,
 
             clientinfo: null,
             localfiles: null,
@@ -331,20 +335,17 @@ export default {
                 moodleTestId: this.moodleTestId,
                 moodleDomain: this.moodleDomain,
                 exammode: this.exammode,
+                sebConfigHash: this.sebConfigHash,
+                sebBekHash: this.sebBekHash,
             });
         },
 
-        formatTime(unixTime) {
-            const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
-            return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed
-        },
+        formatTime: formatFocusLostTime,
         async sendFocuslost(){
             if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             if (isElectronWindow(window)) {
                 let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
-                if (!this.development && !response.focus) {  //immediately block frontend
-                    this.focus = false
-                }
+                applyFocusLostFromIpc(this, response, this.development);
             }
         },
 
@@ -363,11 +364,15 @@ export default {
             const nextUrl = eduConfig.url || null;
             const nextDomain = eduConfig.moodleDomain || null;
             const nextTestId = eduConfig.moodleTestId || null;
+            const nextSebConfigHash = eduConfig.sebConfigHash || null;
+            const nextSebBekHash = eduConfig.sebBekHash || null;
             const urlChanged = nextUrl !== this.url;
             if (urlChanged) this.url = nextUrl;
             if (nextDomain !== this.moodleDomain) this.moodleDomain = nextDomain;
             this.moodleTestType = null;
             if (nextTestId !== this.moodleTestId) this.moodleTestId = nextTestId;
+            if (nextSebConfigHash !== this.sebConfigHash) this.sebConfigHash = nextSebConfigHash;
+            if (nextSebBekHash !== this.sebBekHash) this.sebBekHash = nextSebBekHash;
             return urlChanged;
         },
 
@@ -395,8 +400,6 @@ export default {
                 });
             }
 
-            if (!this.focus) this.entrytime = new Date().getTime();
-
             this.battery = await navigator.getBattery().then(battery => battery)
                 .catch(error => { console.error('Error accessing the Battery API:', error); });
 
@@ -411,7 +414,8 @@ export default {
     },
     beforeUnmount() {
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
-        
+        signalBridge.removeAllListeners('getmaterials');
+
         // Clean up webview event listeners (blocking is handled in backend, but we still clean up local listeners)
         const webview = document.getElementById('webviewmain');
         if (webview) {

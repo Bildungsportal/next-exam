@@ -182,7 +182,7 @@
                 <div v-if="!bipToken" class="input-group  mb-1">
                     <span class="input-group-text col-3" style="width:135px;"
                           id="inputGroup-sizing-lg">{{ $t("student.username") }}</span>
-                    <input ref="userInput" v-model="username" @input="onUsernameInput" @paste.prevent @drop.prevent type="text"
+                    <input ref="userInput" :value="username" @input="onUsernameInput" @focus="onUsernameFocus" @paste.prevent @drop.prevent type="text"
                            required="required" maxlength="25" class="form-control" id="user" placeholder=""
                            style="width:200px;max-width:200px;min-width:135px;">
                 </div>
@@ -280,8 +280,9 @@
                                 :value="server.examStatus ? server.examStatus : (server.requireBiP ? 'restricted' : $t('student.register'))"/>
                                 <!-- logged in, on this server       --> <input
                                 v-if="clientinfo.servername === server.servername" style="width:200px;"
-                                :id="server.servername" disabled type="button" name="register"
-                                class="btn btn-sm btn-success" :value="$t('student.registered')"/>
+                                :id="server.servername" type="button" name="register"
+                                class="btn btn-sm btn-danger" :value="$t('student.unregister')"
+                                @click="disconnectClient"/>
                             </div>
 
                         </div>
@@ -345,12 +346,8 @@ export default {
 
     setup() {
       const configStore = useConfigStore();
-      let username = "";
-      let pincode = "";
-      if(configStore.development) {
-        username = "thomas";
-        pincode = "1111";
-      }
+      const username = ref(configStore.development ? "thomas" : "");
+      const pincode = ref(configStore.development ? "1111" : "");
       let development = ref(configStore.development);
       let version = ref(configStore.version);
       let serverApiPort = ref(configStore.serverApiPort);
@@ -470,12 +467,30 @@ export default {
 
 
     methods: {
-        // Force lowercase while typing so reconnects match regardless of caps lock.
-        onUsernameInput() {
-            const normalized = normalizeStudentClientName(this.username);
-            if (normalized !== this.username) {
+        // Lowercase on input; :value not v-model so v-model cannot overwrite from DOM after normalize.
+        onUsernameInput(event) {
+            const el = event.target;
+            const normalized = normalizeStudentClientName(el.value);
+            if (this.username !== normalized) {
                 this.username = normalized;
             }
+            if (el.value !== normalized) {
+                const pos = el.selectionStart;
+                el.value = normalized;
+                const nextPos = pos != null ? Math.min(pos, normalized.length) : normalized.length;
+                el.setSelectionRange(nextPos, nextPos);
+            }
+        },
+
+        // Windows selects all on focus; caret at end stops spurious empty input from clearing :value binding
+        onUsernameFocus(event) {
+            const el = event.target;
+            const len = (el.value || this.username || '').length;
+            if (len === 0) return;
+            requestAnimationFrame(() => {
+                if (document.activeElement !== el) return;
+                try { el.setSelectionRange(len, len); } catch (_) {}
+            });
         },
 
         async showQemuMissingWarning(payload = {}) {
@@ -488,6 +503,11 @@ export default {
                 check: payload || {},
                 cancelKey: 'cancel',
             });
+            if (!this.clientinfo) {
+                this.clientinfo = {};
+            }
+            this.clientinfo.examtype = 'localvm';
+            this.clientinfo.localVMState = 'error';
         },
 
         // Swal while main runs QEMU / hypervisor compatibility probes before LocalVM exam start.
@@ -512,12 +532,13 @@ export default {
         },
 
         closeLocalVmCompatCheckDialog() {
-            try {
-                if (this.$swal.isVisible()) {
-                    this.$swal.close();
-                }
-            } catch (e) {}
+            if (!this.localVmCompatCheckSwalOpen) {
+                return;
+            }
             this.localVmCompatCheckSwalOpen = false;
+            try {
+                this.$swal.close();
+            } catch (e) {}
         },
 
         kioskI18n(suffix) {
@@ -596,6 +617,7 @@ export default {
         async maybeOfferCageKioskSetup() {
             const k = this.platformKiosk;
             if (!isElectronWindow(window) || this.development) return;
+            if (k.displayServer === 'windows') return;
             if (k.runningInCage || !k.needsCageKioskSetup) return;
             if (localStorage.getItem('next-exam-cage-kiosk-setup-dismissed') === '1') return;
             await this.promptCageKioskSetup();
@@ -693,7 +715,7 @@ export default {
                 if (result.isConfirmed) {
                     await signalBridge.invoke('setPreferredInterface', result.value);
                     const updated = await signalBridge.invoke('checkhostip');
-                    this.safeAssign('hostip', updated);
+                    this.safeAssignHostip(updated);
                 }
                 this.activeDialog = false;
                 void this.maybeShowWinKioskSessionInfo();
@@ -1128,6 +1150,23 @@ export default {
         },
 
 
+        // Restore name/pin/serverip from main-process clientinfo after remount (name persists after kick; pin/serverip only when connected).
+        syncLoginFieldsFromClientinfo() {
+            const name = this.clientinfo?.name;
+            if (name && name !== 'DemoUser' && this.username !== name) {
+                this.username = name;
+            }
+            if (!this.token || this.token === '0000') return;
+            const pin = this.clientinfo?.pin;
+            if (pin != null && pin !== '' && String(this.pincode) !== String(pin)) {
+                this.pincode = String(pin);
+            }
+            const serverip = this.clientinfo?.serverip;
+            if (serverip && serverip !== false && String(this.serverip) !== String(serverip)) {
+                this.serverip = String(serverip);
+            }
+        },
+
         clearUser() {
             this.username = ""
         },
@@ -1158,6 +1197,30 @@ export default {
         safeAssign(key, newValue) {
             if (this[key] !== newValue) {
                 this[key] = newValue;
+            }
+        },
+
+        // checkhostip returns a new object each poll — compare fields, not reference
+        safeAssignHostip(newHostip) {
+            const cur = this.hostip;
+            if (!cur && !newHostip) return;
+            const curIp = cur && typeof cur === 'object' ? cur.hostip : cur;
+            const newIp = newHostip && typeof newHostip === 'object' ? newHostip.hostip : newHostip;
+            if (curIp !== newIp) {
+                this.hostip = newHostip;
+                return;
+            }
+            if (typeof cur !== 'object' || typeof newHostip !== 'object') return;
+            if ((cur.interface || '') !== (newHostip.interface || '')) {
+                this.hostip = newHostip;
+                return;
+            }
+            if ((cur.preferredInterface || '') !== (newHostip.preferredInterface || '')) {
+                this.hostip = newHostip;
+                return;
+            }
+            if (JSON.stringify(cur.availableInterfaces || []) !== JSON.stringify(newHostip.availableInterfaces || [])) {
+                this.hostip = newHostip;
             }
         },
 
@@ -1304,11 +1367,8 @@ export default {
 
 
             applyClientinfoFromFetch(this, getinfo.clientinfo);
+            this.syncLoginFieldsFromClientinfo();
             applyServerstatusFromFetch(this, getinfo.serverstatus || null);
-
-            if (getinfo.clientinfo.exammode) {
-                return;
-            }  // do not stress ui updates if exammode is active
 
             // Only set token if changed
             const newToken = this.clientinfo.token;
@@ -1420,7 +1480,7 @@ export default {
              * If not we exit here
              */
             const newHostip = await signalBridge.invoke('checkhostip');
-            this.safeAssign('hostip', newHostip);
+            this.safeAssignHostip(newHostip);
             const hasIp = this.hostip && (typeof this.hostip === 'object' ? this.hostip.hostip : this.hostip);
             if (!hasIp) return;
             if (this.hostip?.availableInterfaces?.length > 1 && !this.hostip?.preferredInterface) {
@@ -1441,48 +1501,44 @@ export default {
                 if (!server.serverip) continue;
                 const serverIdentifier = this.getServerIdentifier(server);
                 const isManual = this.isManuallyAddedServer(server);
-                const signal = AbortSignal.timeout(4000); // 4000 milliseconds = 4 seconds
-                examApiFetch(`https://${server.serverip}:${this.serverApiPort}/server/control/pong`, {
-                    method: 'GET',
-                    signal
+                signalBridge.invoke('pingexamserver', { serverip: server.serverip })
+                .then((result) => {
+                    if (!result?.ok) throw new Error('Response not OK');
+                    // Optimized: Only set if value changes
+                    if (server.reachable !== true) {
+                        server.reachable = true;
+                    }
+                    // Reset failure count if server is reachable again
+                    if (isManual && this.serverFailureCount[serverIdentifier] !== undefined) {
+                        this.serverFailureCount[serverIdentifier] = 0;
+                    }
                 })
-                    .then(response => {
-                        if (!response.ok) throw new Error('Response not OK');
-                        // Optimized: Only set if value changes
-                        if (server.reachable !== true) {
-                            server.reachable = true;
-                        }
-                        // Reset failure count if server is reachable again
-                        if (isManual && this.serverFailureCount[serverIdentifier] !== undefined) {
+                .catch(err => {
+                    if (err.name === 'AbortError') {
+                        console.warn('student.vue @ fetchinfo (ping): Fetch request was aborted due to timeout');
+                    } else {
+                        console.warn(`student.vue @ fetchinfo: ${err.message} - Server unavailable `);
+                    }
+                    // Optimized: Only set if value changes
+                    if (server.reachable !== false) {
+                        server.reachable = false;
+                    }
+                    // Track failures for manually added servers
+                    if (isManual) {
+                        // Initialize counter if not exists
+                        if (this.serverFailureCount[serverIdentifier] === undefined) {
                             this.serverFailureCount[serverIdentifier] = 0;
                         }
-                    })
-                    .catch(err => {
-                        if (err.name === 'AbortError') {
-                            console.warn('student.vue @ fetchinfo (ping): Fetch request was aborted due to timeout');
-                        } else {
-                            console.warn(`student.vue @ fetchinfo: ${err.message} - Server unavailable `);
+                        // Increment failure count
+                        this.serverFailureCount[serverIdentifier]++;
+                        // Remove server if more than 2 failures
+                        if (this.serverFailureCount[serverIdentifier] > 2) {
+                            console.log(`student.vue @ fetchinfo: Removing manually added server ${serverIdentifier} after ${this.serverFailureCount[serverIdentifier]} failures`);
+                            this.removeFailedManualServer(serverIdentifier);
                         }
-                        // Optimized: Only set if value changes
-                        if (server.reachable !== false) {
-                            server.reachable = false;
-                        }
-                        // Track failures for manually added servers
-                        if (isManual) {
-                            // Initialize counter if not exists
-                            if (this.serverFailureCount[serverIdentifier] === undefined) {
-                                this.serverFailureCount[serverIdentifier] = 0;
-                            }
-                            // Increment failure count
-                            this.serverFailureCount[serverIdentifier]++;
-                            // Remove server if more than 2 failures
-                            if (this.serverFailureCount[serverIdentifier] > 2) {
-                                console.log(`student.vue @ fetchinfo: Removing manually added server ${serverIdentifier} after ${this.serverFailureCount[serverIdentifier]} failures`);
-                                this.removeFailedManualServer(serverIdentifier);
-                            }
-                        }
-                    });
-            }
+                    }
+                });
+            }   
         },
 
         getLocalVmConfig() {
@@ -1611,6 +1667,24 @@ export default {
         // implementing a sleep (wait) function
         sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
+        },
+
+        // Drop server registration (same as system tray disconnect)
+        disconnectClient() {
+            this.$swal({
+                title: this.$t("student.unregister"),
+                text: this.$t("student.logoutBiP"),
+                showCancelButton: true,
+                confirmButtonText: 'Ok',
+                cancelButtonText: this.$t("editor.cancel"),
+                focusConfirm: false,
+                icon: 'question',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    signalBridge.send('disconnect');
+                    this.token = '';
+                }
+            });
         },
 
         /** register client on the server **/
@@ -1764,6 +1838,28 @@ export default {
         }
 
     },
+    created() {
+        // Register before mounted awaits so early LocalVM IPC is not dropped.
+        signalBridge.on('localvm-compat-check-start', () => {
+            if (!this.clientinfo) {
+                this.clientinfo = {};
+            }
+            this.clientinfo.examtype = 'localvm';
+            this.clientinfo.localVMState = 'checking_compat';
+            this.showLocalVmCompatCheckDialog();
+        });
+
+        signalBridge.on('localvm-compat-check-end', () => {
+            if (this.clientinfo?.localVMState === 'checking_compat') {
+                this.clientinfo.localVMState = null;
+            }
+            this.closeLocalVmCompatCheckDialog();
+        });
+
+        signalBridge.on('qemu-not-available', (_event, payload) => {
+            void this.showQemuMissingWarning(payload || {});
+        });
+    },
     async mounted() {
       if (isIOS()) {
         try {
@@ -1793,15 +1889,14 @@ export default {
             await this.maybeOfferCageKioskSetup();
         }
 
-        // Focus username input field when component is mounted
-        this.$nextTick(() => {
-            if (this.$refs.userInput && !this.bipToken) {
-                this.$refs.userInput.focus();
-            }
+        await this.fetchInfo();
 
+        // Focus username only when not on BiP and not already connected to a teacher
+        this.$nextTick(() => {
+            const el = this.$refs.userInput;
+            if (!el || this.bipToken || this.token) return;
+            el.focus();
         });
-       // Fetch info asynchronously without blocking
-        this.fetchInfo();
 
         this.autoSchedulerService(this.fetchInfo, 4000);
         this.autoSchedulerService(this.bipAutoUpdate, 10000);
@@ -1830,26 +1925,6 @@ export default {
         signalBridge.on('qemu-download-progress', (_event, payload) => {
             const pct = payload && typeof payload.percent === 'number' ? payload.percent : null;
             this.localVmDownloadPercent = pct;
-        });
-
-        signalBridge.on('localvm-compat-check-start', () => {
-            if (!this.clientinfo) {
-                this.clientinfo = {};
-            }
-            this.clientinfo.examtype = 'localvm';
-            this.clientinfo.localVMState = 'checking_compat';
-            this.showLocalVmCompatCheckDialog();
-        });
-
-        signalBridge.on('localvm-compat-check-end', () => {
-            if (this.clientinfo?.localVMState === 'checking_compat') {
-                this.clientinfo.localVMState = null;
-            }
-            this.closeLocalVmCompatCheckDialog();
-        });
-
-        signalBridge.on('qemu-not-available', (_event, payload) => {
-            this.showQemuMissingWarning(payload || {});
         });
 
         // Screenshot scheduler only in main window (this page); exam window never loads student.vue
@@ -1900,7 +1975,7 @@ export default {
 }
 
 .swal2-container {
-    z-index: 100001 !important;
+    z-index: 300000 !important;
 }
 
 </style>

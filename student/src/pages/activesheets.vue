@@ -14,13 +14,13 @@
              class="invisible-button btn btn-outline-info p-0 ms-1 me-1 mb-0 btn-sm">
             <img src="/img/svg/view-split-left-right.svg" class="" width="22" height="22">
         </div>
-        <button v-if="!localLockdown" :title="$t('editor.backup')" @click="saveContent(true, 'manual');" class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm"><img src="/img/svg/document-save.svg" class="" width="22" height="22" ></button>
+        <button v-if="!localLockdown" :title="$t('editor.saveCopyAs')" @click="saveContent(true, 'manual');" class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm"><img src="/img/svg/document-save-as.svg" class="white" width="22" height="22" ></button>
         <button v-if="!localLockdown" id="printfinalexam" class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm pe-2 ps-1" @click="sendExamToTeacher(false, 'print')" :title="$t('editor.print')"><img src="/img/svg/print.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.print') }}</button>
         <button v-if="!localLockdown" id="sendfinalexam"  class="invisible-button btn btn-outline-success p-0 ms-1 me-1 mb-0 btn-sm pe-2 ps-1 " @click="sendExamToTeacher(false, 'send')" :title="$t('editor.sendfinalexam')"><img src="/img/svg/document-send.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.finalsubmit') }}</button>
 
 
         <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
-        <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
+        <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 ms-2 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/img/svg/gtk-convert.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
 
         <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
             <div v-if="(file.filetype == 'htm')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
@@ -33,11 +33,12 @@
         </div>
         <!-- exam materials end -->
 
+        <div class="white text-muted me-2 ms-2 small d-inline-block mb-0" style="vertical-align: middle;">{{ $t('editor.localfiles') }} </div>
 
         <div v-for="file in localfiles" :key="file.name" class="d-inline" style="text-align:left">
                 <div v-if="(file.type == 'htm')" class="btn btn-mediumlight p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.name; loadBAK(file.name)"><img src="/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}}</div>
 
-                
+
                 <div v-if="(file.type == 'pdf')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadPDF(file.name)"><img src="/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
                 <div v-if="(file.type == 'audio')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="playAudio(file.name)"><img src="/img/svg/im-google-talk.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
                 <div v-if="(file.type == 'image')" class="btn btn-info p-0 pe-2 ps-1 me-1 mb-0 btn-sm" @click="selectedFile=file.name; loadImage(file.name)"><img src="/img/svg/eye-fill.svg" class="white" width="22" height="22" style="vertical-align: top;"> {{file.name}} </div>
@@ -54,7 +55,7 @@
         <div
             id="preview"
             :class="splitview ? ['p-0', 'split-pane', 'split-pane--left', 'splitback', { 'splitback--empty': !pdfPreviewState }] : 'p-4'"
-            :style="splitview ? { flexBasis: splitLeftPct + '%', '--nx-preview-scroll-padding': '6px' } : { '--nx-preview-top-offset': '60px', '--nx-preview-content-width': '90%' }"
+            :style="splitview ? { flexBasis: splitLeftPct + '%', '--nx-preview-scroll-padding': '6px' } : { '--nx-preview-top-offset': '60px' }"
         >
         <WebviewPane
             id="webview"
@@ -108,6 +109,9 @@
             :pdf-base64="pdfBase64"
             :custom-fields="customFields"
             :blacklist="blacklist"
+            enable-annotations
+            :content-zoom="zoom"
+            :annotations-key="activesheetAnnotationsKey"
         />
     
         </div>
@@ -139,6 +143,8 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
     resolveLockedSection,
+    formatFocusLostTime,
+    applyFocusLostFromIpc,
 } from '../utils/examFetchInfoSync.js'
 import {autoCleanupMixin} from "../mixins/autoCleanupMixin.ts";
 import {ref} from "vue";
@@ -236,12 +242,36 @@ export default {
             if (this.zoom < ACTIVESHEETS_ZOOM_MAX) this.zoom = Math.min(ACTIVESHEETS_ZOOM_MAX, this.zoom + 0.1)
             const el = document.getElementById(`content`)
             if (el) el.style.zoom = this.zoom
+            this.syncAnnotationToolbarDock()
         },
         zoomout() {
             if (this.zoom > ACTIVESHEETS_ZOOM_MIN) this.zoom = Math.max(ACTIVESHEETS_ZOOM_MIN, this.zoom - 0.1)
             const el = document.getElementById(`content`)
             if (el) el.style.zoom = this.zoom
+            this.syncAnnotationToolbarDock()
         },
+
+        // Shared getPDFbase64 args for activesheets (fullpage + backgrounds).
+        activesheetsPdfInvokeArgs(reason) {
+            return {
+                landscape: false,
+                servername: this.servername,
+                clientname: this.clientname,
+                submissionnumber: this.submissionnumber,
+                sectionname: this.serverstatus.examSections[this.lockedSection].sectionname,
+                printBackground: true,
+                pageMode: 'fullpage',
+                screenZoom: this.zoom,
+                reason,
+            }
+        },
+
+        // Optional preview hide before capture; screen zoom stays unchanged (compensated in getBase64PDF).
+        async withActivesheetsPdfCapture(fn, { hidePreview = false } = {}) {
+            if (hidePreview) this.hidepreview()
+            return fn()
+        },
+
         getUrlDisplay(allowedUrl) {
             return typeof allowedUrl === 'object' ? allowedUrl.url : allowedUrl;
         },
@@ -265,6 +295,7 @@ export default {
                 if (this.splitview) {
                     preview.style.display = '';
                     if (this._onPreviewClick) preview.removeEventListener("click", this._onPreviewClick);
+                    this.$nextTick(() => this.syncAnnotationToolbarDock());
                     return;
                 }
 
@@ -274,6 +305,7 @@ export default {
                 preview.style.display = 'none';
                 URL.revokeObjectURL(this.currentpreview);
                 if (this._onPreviewClick) this.autoEventListener(preview,"click", this._onPreviewClick);
+                this.$nextTick(() => this.syncAnnotationToolbarDock());
             });
         },
 
@@ -300,6 +332,7 @@ export default {
             const maxPct = 100 - (minRightPx / rect.width) * 100;
             const clamped = Math.min(Math.max(pct, minPct), maxPct);
             this.splitLeftPct = Math.min(80, Math.max(20, Math.round(clamped * 10) / 10));
+            this.syncAnnotationToolbarDock();
         },
 
         stopSplitResize() {
@@ -307,6 +340,25 @@ export default {
             window.removeEventListener('pointermove', this.onSplitResizeMove);
             window.removeEventListener('pointerup', this.stopSplitResize);
             window.removeEventListener('pointercancel', this.stopSplitResize);
+            this.syncAnnotationToolbarDock();
+        },
+
+        // Pin activesheet annotation toolbar to #content left edge (split boundary in splitview).
+        syncAnnotationToolbarDock() {
+            const root = document.querySelector('.activesheets-body');
+            if (!root) return;
+            if (!this.splitview) {
+                root.style.removeProperty('--nx-annotation-toolbar-left');
+                return;
+            }
+            const apply = () => {
+                const content = document.getElementById('content');
+                if (!content) return;
+                const left = Math.round(content.getBoundingClientRect().left + 8);
+                root.style.setProperty('--nx-annotation-toolbar-left', `${left}px`);
+            };
+            if (typeof requestAnimationFrame === 'function') requestAnimationFrame(apply);
+            else apply();
         },
         loadBase64file(file){
             this.webviewVisible = false
@@ -323,9 +375,7 @@ export default {
         async sendFocuslost(){
             if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
-            if (!this.development && !response.focus){  //immediately block frontend
-                this.focus = false 
-            }  
+            applyFocusLostFromIpc(this, response, this.development);
         },
 
 
@@ -337,6 +387,55 @@ export default {
             this.localfiles = filelist;
         },
         
+        // Wait until PdfOverlay rendered interactive fields (same readiness as backup restore).
+        async waitForActivesheetsInputsReady(maxAttempts = 100, delayMs = 100) {
+            for (let attempts = 0; attempts < maxAttempts; attempts++) {
+                if (document.querySelectorAll('.interactive-input').length > 0) {
+                    await this.sleep(100);
+                    return true;
+                }
+                await this.sleep(delayMs);
+            }
+            console.error(`activesheets @ waitForActivesheetsInputsReady: inputs not ready after ${maxAttempts} attempts`);
+            return false;
+        },
+
+        // Backup .htm only — awaited by main before section file shuffle.
+        async saveSectionSwitchBackup() {
+            const ready = await this.waitForActivesheetsInputsReady();
+            if (!ready) return false;
+            const formData = collectActivesheetsFormData(
+                document.getElementById('pdfrenderer'),
+                this.activeSheetPdfFilename || 'unknown.pdf'
+            );
+            const result = await signalBridge.invoke('writeExamHtmBackupSync', {
+                filename: this.clientname,
+                content: JSON.stringify(formData, null, 2),
+                reason: 'sectionswitch',
+            });
+            return result?.status === 'success';
+        },
+
+        // Silent restore of clientname.htm after exam-section switch (no confirm dialog).
+        async loadBackupFileSilent(filename = false) {
+            const backupfileName = filename ? filename : `${this.clientname}.htm`;
+            try {
+                const [backupfileContent, ready] = await Promise.all([
+                    signalBridge.invoke('getbackupfile', backupfileName),
+                    this.waitForActivesheetsInputsReady(),
+                ]);
+                if (!ready || !backupfileContent) return;
+                try {
+                    JSON.parse(backupfileContent);
+                } catch {
+                    return;
+                }
+                await this.loadBAK(backupfileName, true, true);
+            } catch (error) {
+                console.error(`activesheets @ loadBackupFileSilent: ${error}`);
+            }
+        },
+
         async loadBackupFile(filename=false){
             // check if there is an htm backup in the exam directory and load it
             // This must run early to read the file before it gets overwritten
@@ -350,31 +449,29 @@ export default {
                     try {
                         JSON.parse(backupfileContent);
                     } catch (parseError) {
-                        console.warn(`activesheets @ loadBackupFile: Backup file content is not valid JSON, skipping: ${parseError.message}`);
-                        return; // Don't show dialog if content is not valid JSON
+                        console.warn(`activesheets @ loadBackupFile: Backup file content is not valid JSON: ${parseError.message}`);
+                        this.$swal.fire({
+                            title: this.$t('editor.error') || 'Fehler',
+                            text: this.$t('editor.backupnotjson') || 'Die Datei ist kein gültiges Activesheets-Backup (JSON erwartet).',
+                            icon: 'warning'
+                        });
+                        return;
                     }
                     
                     console.log(`activesheets @ loadBackupFile: Backup file found with valid JSON, waiting for PDF renderer to be ready before showing dialog`)
-                    // Wait for PDF renderer to be fully initialized before showing dialog
                     const waitForPdfRenderer = async () => {
-                        let attempts = 0
-                        const maxAttempts = 50 // 5 seconds max wait
-                        
-                        while (attempts < maxAttempts) {
-                            // Check if PDF renderer is ready by looking for interactive inputs
-                            const hasInputs = document.querySelectorAll('.interactive-input').length > 0
-                            if (hasInputs || !this.isLoading) {
-                                console.log(`activesheets @ loadBackupFile: PDF renderer ready, showing dialog`)
-                                // Wait one more frame to ensure DOM is ready
-                                await this.sleep(100)
-                                this.$swal.fire({
+                        if (!await this.waitForActivesheetsInputsReady()) {
+                            console.error(`activesheets @ loadBackupFile: PDF renderer not ready`)
+                            return
+                        }
+                        console.log(`activesheets @ loadBackupFile: PDF renderer ready, showing dialog`)
+                        this.$swal.fire({
                                     title: this.$t("editor.backupfound"),
                                     html:  `${this.$t("editor.replacecontent1")} <b>${backupfileName}</b> ${this.$t("editor.replacecontent2")}`,
                                     icon: "question",
                                     showCancelButton: true,
                                     cancelButtonText: this.$t("editor.cancel"),
                                     confirmButtonText: this.$t("editor.replace"),
-                                    reverseButtons: true,
                                     allowOutsideClick: false,
                                     allowEscapeKey: true
                                 })
@@ -389,12 +486,6 @@ export default {
                                 .catch((error) => {
                                     console.error(`activesheets @ loadBackupFile: Error showing dialog: ${error}`)
                                 })
-                                return
-                            }
-                            attempts++
-                            await this.sleep(100)
-                        }
-                        console.error(`activesheets @ loadBackupFile: PDF renderer not ready after ${maxAttempts} attempts`)
                     }
                     waitForPdfRenderer()
                 } else {
@@ -404,40 +495,50 @@ export default {
                 console.error(`activesheets @ loadBackupFile: Error loading backup file: ${error}`)
             }
         },
-        async loadBAK(filename, skipDialog=false) {
+        async loadBAK(filename, skipDialog = false, silent = false) {
             try {
-                // Show confirmation dialog before loading (unless skipDialog is true)
+                const bakContent = await signalBridge.invoke('getbackupfile', filename);
+
+                if (!bakContent) {
+                    console.warn('activesheets @ loadBAK: No content found in .htm file');
+                    if (!silent) {
+                        this.$swal.fire({
+                            title: this.$t('editor.error') || 'Fehler',
+                            text: this.$t('editor.backupnotfound') || 'Backup-Datei konnte nicht gelesen werden',
+                            icon: 'error'
+                        });
+                    }
+                    return;
+                }
+
+                let formData;
+                try {
+                    formData = JSON.parse(bakContent);
+                } catch {
+                    console.warn(`activesheets @ loadBAK: ${filename} is not valid JSON (activesheets backup format required)`);
+                    if (!silent) {
+                        this.$swal.fire({
+                            title: this.$t('editor.error') || 'Fehler',
+                            text: this.$t('editor.backupnotjson') || 'Die Datei ist kein gültiges Activesheets-Backup (JSON erwartet).',
+                            icon: 'warning'
+                        });
+                    }
+                    return;
+                }
+
                 if (!skipDialog) {
                     const result = await this.$swal.fire({
-                        title: this.$t('editor.backupfound') || 'Backup gefunden',
-                        html: `${this.$t('editor.replacecontent1') || 'Do you really want to replace the current input with the saved values from'} <b>${filename}</b> ${this.$t('editor.replacecontent2') || '?'}`,
+                        title: this.$t('editor.replace') || 'Ersetzen',
+                        html: `${this.$t('editor.replacecontent1')} <b>${filename}</b> ${this.$t('editor.replacecontent2')}`,
                         icon: "question",
                         showCancelButton: true,
                         cancelButtonText: this.$t("editor.cancel") || "Abbrechen",
-                        confirmButtonText: this.$t("editor.replace") || "Ersetzen",
-                        reverseButtons: true
                     });
-                    
+
                     if (!result.isConfirmed) {
-                        return; // User cancelled
+                        return;
                     }
                 }
-                
-                // Read the .htm file via IPC
-                const bakContent = await signalBridge.invoke('getbackupfile', filename);
-                
-                if (!bakContent) {
-                    console.warn('activesheets @ loadBAK: No content found in .htm file');
-                    this.$swal.fire({
-                        title: this.$t('editor.error') || 'Fehler',
-                        text: this.$t('editor.backupnotfound') || 'Backup-Datei konnte nicht gelesen werden',
-                        icon: 'error'
-                    });
-                    return;
-                }
-                
-                // Parse JSON
-                const formData = JSON.parse(bakContent);
                 
                 // Apply values to input fields based on their IDs
                 // Text inputs
@@ -465,27 +566,28 @@ export default {
                 });
                 
                 console.log('activesheets @ loadBAK: Successfully loaded form data from', filename);
-                
-                this.$swal.fire({
-                    title: this.$t('editor.success') || 'Erfolg',
-                    text: this.$t('editor.backuploaded') || 'Backup erfolgreich geladen',
-                    icon: 'success',
-                    timer: 2000,
-                    timerProgressBar: true
-                });
+
+                if (!silent) {
+                    this.$swal.fire({
+                        title: this.$t('editor.success') || 'Erfolg',
+                        text: this.$t('editor.backuploaded') || 'Backup erfolgreich geladen',
+                        icon: 'success',
+                        timer: 2000,
+                        timerProgressBar: true
+                    });
+                }
             } catch (error) {
                 console.error('activesheets @ loadBAK: Error loading .htm file:', error);
-                this.$swal.fire({
-                    title: this.$t('editor.error') || 'Fehler',
-                    text: this.$t('editor.backuperror') || 'Fehler beim Laden der Backup-Datei',
-                    icon: 'error'
-                });
+                if (!silent) {
+                    this.$swal.fire({
+                        title: this.$t('editor.error') || 'Fehler',
+                        text: this.$t('editor.backuperror') || 'Fehler beim Laden der Backup-Datei',
+                        icon: 'error'
+                    });
+                }
             }
         },
-        formatTime(unixTime) {
-            const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
-            return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed
-        },  
+        formatTime: formatFocusLostTime,
         // Reload active-sheet PDF only when section/group/filename actually changes (not every fetchInfo poll).
         maybeReloadActiveSheetPdf() {
             const key = activeSheetLoadKey(this.serverstatus, this.clientinfo, this.lockedSection);
@@ -508,10 +610,9 @@ export default {
             const sectionChanged = sectionIndex !== this.lockedSection;
             if (sectionChanged) this.lockedSection = sectionIndex;
 
-            if (!this.focus) this.entrytime = new Date().getTime();
-
             const groupChanged = prevClientinfo != null && getinfo.clientinfo?.group !== prevGroup;
-            if (sectionChanged || serverstatusChanged || groupChanged) {
+            const deferSectionReload = useInfoStore().switchingToSection != null;
+            if ((sectionChanged || serverstatusChanged || groupChanged) && !deferSectionReload) {
                 this.maybeReloadActiveSheetPdf();
             }
 
@@ -568,11 +669,13 @@ export default {
         },
         
         /** Converts the Active Sheet PDF View into a multipage PDF */
-        async saveContent(backup, why) {     
+        async saveContent(backup, why) {
+            if (why === 'auto' && useInfoStore().switchingToSection != null) return;
+
             let filename = false  // this is set manually... otherwise use clientname
             if (why === "manual"){
                 await this.$swal({
-                    title: this.$t("math.filename") ,
+                    title: this.$t("editor.saveCopyAs") ,
                     icon: "question",
                     input: 'text',
                     inputPlaceholder: 'Type here...',
@@ -619,21 +722,27 @@ export default {
                 reason: why
             });
 
-            // SAVE AS PDF - inform mainprocess to save webcontent as pdf
-            // For activesheets, we need to generate PDF from the filled form
-            // We'll use getPDFbase64 to render the current view
-            if (this.currentpreviewBase64) {
-                // If we have a preview PDF, use it
-                signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: this.currentpreviewBase64 })  
-            } else {
-                // Otherwise generate from current view
-                let response = await signalBridge.invoke('getPDFbase64', {landscape: false, servername: this.servername, clientname: this.clientname, submissionnumber: this.submissionnumber, sectionname: this.serverstatus.examSections[this.lockedSection].sectionname, printBackground: true, reason: why, pageMode: 'fullpage'})
-                if (response?.status == "success") {
-                    signalBridge.send('printpdf', {filename: filename, landscape: false, servername: this.servername, clientname: this.clientname, reason: why, base64pdf: response.base64pdf })
+            if (!this.serverstatus?.examSections?.[this.lockedSection]) {
+                console.error('activesheets @ saveContent: Invalid section data')
+                return
+            }
+
+            // One render via getPDFbase64; printpdf writes the buffer to disk (no second printToPDF).
+            await this.withActivesheetsPdfCapture(async () => {
+                const response = await signalBridge.invoke('getPDFbase64', this.activesheetsPdfInvokeArgs(why))
+                if (response?.status === 'success') {
+                    signalBridge.send('printpdf', {
+                        filename: filename || false,
+                        landscape: false,
+                        servername: this.servername,
+                        clientname: this.clientname,
+                        reason: why,
+                        base64pdf: response.base64pdf,
+                    })
                 } else {
                     this.showPdfGenerationError(response)
                 }
-            }
+            })
             this.loadFilelist()
         },
 
@@ -710,28 +819,15 @@ export default {
                 console.error('activesheets @ sendExamToTeacher: Invalid section data');
                 return;
             }
-            // Ensure printToPDF captures only the form content (no preview overlay, no zoom).
-            const prevZoom = this.zoom
-            this.hidepreview()
-            const contentEl = document.getElementById('content')
-            if (contentEl) contentEl.style.zoom = 1
-            const pdfArgs = {
-                landscape: false,
-                servername: this.servername,
-                clientname: this.clientname,
-                submissionnumber: this.submissionnumber,
-                sectionname: this.serverstatus.examSections[this.lockedSection].sectionname,
-                printBackground: true,
-                pageMode: 'fullpage', // margins 0 + Header als DOM-Overlay (siehe communicationhandler.getBase64PDF)
-            }
-            try {
+            const reason = type === 'print' ? 'print' : 'previewSigned'
+            await this.withActivesheetsPdfCapture(async () => {
+                const response = await signalBridge.invoke('getPDFbase64', this.activesheetsPdfInvokeArgs(reason))
+                if (response?.status !== 'success') {
+                    this.showPdfGenerationError(response)
+                    return
+                }
+                this.currentpreviewBase64 = response.base64pdf
                 if (type === 'print') {
-                    const response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'print' })
-                    if (response?.status !== 'success') {
-                        this.showPdfGenerationError(response)
-                        return
-                    }
-                    this.currentpreviewBase64 = response.base64pdf
                     this.loadPDF({
                         filename: `${this.clientname}.pdf`,
                         filetype: "pdf",
@@ -739,16 +835,6 @@ export default {
                     }, true, 100, true, type)
                     return
                 }
-
-                // SWAL temporaer disabled - body.swal2-shown kills multi-page printToPDF
-                // await this.waitUntilSigningSwalPainted()
-                let response
-                response = await signalBridge.invoke('getPDFbase64', { ...pdfArgs, reason: 'previewSigned' })
-                if (response?.status !== 'success') {
-                    this.showPdfGenerationError(response)
-                    return
-                }
-                this.currentpreviewBase64 = response.base64pdf
                 if (directsend) {
                     return this.printBase64(false, 'directsend')
                 }
@@ -757,10 +843,7 @@ export default {
                     filetype: "pdf",
                     filecontent: response.dataUrl
                 }, true, 100, true, type)
-            } finally {
-                const restoreEl = document.getElementById('content')
-                if (restoreEl) restoreEl.style.zoom = prevZoom
-            }
+            }, { hidePreview: true })
         },
 
         waitUntilSigningSwalPainted() {
@@ -800,6 +883,10 @@ export default {
         },
     },
     computed: {
+        activesheetAnnotationsKey() {
+            if (!this.clientname) return '';
+            return `activesheet-${this.clientname}`;
+        },
     },
     watch: {
         examMaterials: {
@@ -810,7 +897,13 @@ export default {
                 }
             },
             immediate: false
-        }
+        },
+        splitview() {
+            this.$nextTick(() => this.syncAnnotationToolbarDock());
+        },
+        splitLeftPct() {
+            this.$nextTick(() => this.syncAnnotationToolbarDock());
+        },
     },
     mounted() {
         console.log("activesheets @ mounted")
@@ -822,6 +915,8 @@ export default {
 
             const content = document.getElementById(`content`)
             if (content) content.style.zoom = this.zoom
+            this.syncAnnotationToolbarDock()
+            this.autoEventListener(window, 'resize', this.syncAnnotationToolbarDock)
 
             this.autoSchedulerService(this.fetchInfo, 5000);
             this.autoSchedulerService(this.loadFilelist, 20000);
@@ -844,8 +939,18 @@ export default {
             signalBridge.on('save', (event, why) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
                 console.log("activesheets @ save: Teacher saverequest received")
                 this.saveContent(true, why) 
-            }); 
-            
+            });
+            this._onSaveForSectionSwitch = async () => {
+                let ok = false;
+                try {
+                    ok = await this.saveSectionSwitchBackup();
+                } catch (e) {
+                    console.error('activesheets @ save-for-section-switch:', e);
+                }
+                signalBridge.send('section-switch-save-done', ok);
+            };
+            signalBridge.on('save-for-section-switch', this._onSaveForSectionSwitch);
+
             signalBridge.on('denied', (event, why) => {  //print request was denied by teacher because he can not handle so much requests at once
                 this.printdenied(why)
             });
@@ -861,7 +966,7 @@ export default {
                 this.setAttribute("src", "about:blank");
                 URL.revokeObjectURL(this.currentpreview);
             };
-            this.autoSchedulerService(document.querySelector("#preview"),"click", this._onPreviewClick);
+            this.autoEventListener(document.querySelector("#preview"), "click", this._onPreviewClick);
 
 
             this.wlanInfo = await signalBridge.invoke('get-wlan-info')
@@ -872,10 +977,13 @@ export default {
             this.loadFilelist()
             await this.getExamMaterials()
 
-            this.loadPdfParserHtml()
+            await this.loadPdfParserHtml()
 
-            console.log(`activesheets @ mounted: Calling loadBackupFile`)
-            this.loadBackupFile()
+            if (this.$route.query.restore === '1') {
+                await this.loadBackupFileSilent();
+            } else {
+                this.loadBackupFile();
+            }
             setTimeout(() => {
                 signalBridge.invoke('prewarmSubmissionSigningP12').catch(() => {})
             }, 400)
@@ -891,7 +999,9 @@ export default {
         signalBridge.removeAllListeners('finalsubmit');
         signalBridge.removeAllListeners('submitexam');
         signalBridge.removeAllListeners('save');
+        signalBridge.removeAllListeners('save-for-section-switch');
         signalBridge.removeAllListeners('denied');
+        signalBridge.removeAllListeners('backup');
         this.stopSplitResize()
     },
     
@@ -931,6 +1041,7 @@ export default {
     width: 100%;
     overscroll-behavior: contain;
     background-color: #eee;
+    border-radius: 0px;
 }
 
 /* Keep PdfviewPaneRendered internal scrolling intact. */
@@ -1054,7 +1165,7 @@ export default {
 
 
     #webview, #apphead, #focuswarning, .focus-container, #preview, #pdfembed, #toolbar, #statusbar, .pdfview-pane-rendered,
-    .embed-container.pdfview-pane-rendered , .zoombutton, #preview, .pdf-overlay-root   {
+    .embed-container.pdfview-pane-rendered , .zoombutton, #preview, .pdf-annotation-toolbar {
         display: none !important;
     }
 
@@ -1098,7 +1209,15 @@ export default {
         overflow: visible !important;
 
     }
- 
+
+    :deep(.ann-text-input),
+    :deep(.ann-text-display) {
+        border: none !important;
+        background: transparent !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
 
     html, body, .activesheets-root, .activesheets-body {
         position: absolute !important;

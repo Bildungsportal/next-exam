@@ -3,10 +3,17 @@
  *    - onAnnotationsChange(): called after each push/delete (e.g. student queueSave)
  *    - onAnnotationUndoRestore(prev): called after successful undoAnnotation
  */
+/** Ink color for pen strokes and free-text annotations (activesheet + preview). */
+export const ANNOTATION_INK_COLOR = '#0a2472';
+export const ANNOTATION_INK_STROKE = 'rgba(10, 36, 114, 0.95)';
+const DRAW_ANNOTATION_TOOLS = new Set(['highlight-yellow', 'highlight-green', 'highlight-blue', 'highlight-red', 'underline-red', 'pen-red']);
+
 export const pdfPageAnnotationsMixin = {
     data() {
         return {
-            tool: 'highlight-yellow',
+            tool: null,
+            annotationInkColor: ANNOTATION_INK_COLOR,
+            annotationInkStroke: ANNOTATION_INK_STROKE,
             isDrawing: false,
             drawStart: null,
             currentDraft: null,
@@ -14,6 +21,7 @@ export const pdfPageAnnotationsMixin = {
             draftPenPath: null, // { pageIndex, points: [{x,y},...] } während Stift-Zeichnen
             annotations: [],
             annotationUndoStack: [],
+            editingTextId: null,
         };
     },
     computed: {
@@ -42,6 +50,7 @@ export const pdfPageAnnotationsMixin = {
             return true;
         },
         setTool(tool) {
+            if (tool !== this.tool) this.cancelDraw();
             this.tool = tool;
         },
         annotationsForPage(pageIndex) {
@@ -52,6 +61,9 @@ export const pdfPageAnnotationsMixin = {
         },
         penForPage(pageIndex) {
             return this.annotations.filter((a) => a.pageIndex === pageIndex && a.kind === 'pen');
+        },
+        textForPage(pageIndex) {
+            return this.annotations.filter((a) => a.pageIndex === pageIndex && a.kind === 'text');
         },
         // SVG-polyline points string aus {x,y}[] array
         penPointsAttr(points) {
@@ -72,6 +84,76 @@ export const pdfPageAnnotationsMixin = {
                 zIndex: 20,
             };
         },
+        textAnnotationStyle(ann) {
+            return {
+                position: 'absolute',
+                left: `${ann.x}px`,
+                top: `${ann.y}px`,
+                zIndex: 25,
+                pointerEvents: 'auto',
+                cursor: this.tool === 'delete' ? 'pointer' : 'text',
+            };
+        },
+        // Hidden mirror for text annotation width/height measurement.
+        getTextAnnotationMeasureMirror(el) {
+            let mirror = document.getElementById('__annTextMeasure__');
+            if (!mirror) {
+                mirror = document.createElement('div');
+                mirror.id = '__annTextMeasure__';
+                mirror.setAttribute('aria-hidden', 'true');
+                mirror.style.cssText = 'position:absolute;visibility:hidden;top:-9999px;left:-9999px;white-space:pre;';
+                document.body.appendChild(mirror);
+            }
+            const cs = getComputedStyle(el);
+            mirror.style.font = cs.font;
+            mirror.style.fontSize = cs.fontSize;
+            mirror.style.fontFamily = cs.fontFamily;
+            mirror.style.lineHeight = cs.lineHeight;
+            mirror.style.padding = cs.padding;
+            mirror.style.border = cs.border;
+            mirror.style.boxSizing = cs.boxSizing;
+            return mirror;
+        },
+        // Grow textarea with typed content; cap width at remaining page space.
+        syncTextAnnotationInputSize(el, pageIndex) {
+            if (!el) return;
+            const pageW = this.parsedPages?.[pageIndex]?.width;
+            const ann = this.annotations.find((a) => a.id === this.editingTextId);
+            const maxW = pageW && ann ? Math.max(80, pageW - ann.x - 8) : 320;
+            const mirror = this.getTextAnnotationMeasureMirror(el);
+            const cs = getComputedStyle(el);
+            const lineHeight = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.3;
+            const padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0)
+                + (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0);
+            const lines = String(el.value ?? '').split('\n');
+            const measureLines = lines.length ? lines : [''];
+
+            mirror.style.whiteSpace = 'pre';
+            mirror.style.width = 'auto';
+            let contentW = 80;
+            for (const line of measureLines) {
+                mirror.textContent = line || ' ';
+                contentW = Math.max(contentW, mirror.offsetWidth + 4);
+            }
+            const width = Math.min(maxW, contentW);
+            const atMaxWidth = contentW >= maxW - 1;
+
+            // While width still grows: height = explicit line breaks only (no wrap jitter).
+            let height;
+            if (!atMaxWidth) {
+                height = Math.ceil(measureLines.length * lineHeight + padY);
+            } else {
+                mirror.style.whiteSpace = 'pre-wrap';
+                mirror.style.wordBreak = 'break-word';
+                mirror.style.width = `${width}px`;
+                mirror.textContent = el.value || ' ';
+                height = Math.ceil(mirror.offsetHeight);
+            }
+
+            el.style.maxWidth = `${maxW}px`;
+            el.style.width = `${width}px`;
+            el.style.height = `${height}px`;
+        },
         deleteAnnotation(id) {
             this.pushAnnotationUndoSnapshot();
             this.annotations = this.annotations.filter((a) => a.id !== id);
@@ -89,7 +171,7 @@ export const pdfPageAnnotationsMixin = {
             return { x, y };
         },
         startDraw(event, pageIndex) {
-            if (this.tool === 'delete') return;
+            if (!DRAW_ANNOTATION_TOOLS.has(this.tool)) return;
             event.preventDefault();
             event.stopPropagation();
             const { x, y } = this.getRelativePoint(event);
@@ -204,7 +286,9 @@ export const pdfPageAnnotationsMixin = {
                     ? 'rgba(0,255,90,0.28)'
                     : this.tool === 'highlight-blue'
                         ? 'rgba(0,170,255,0.26)'
-                        : 'rgba(255,255,0,0.32)';
+                        : this.tool === 'highlight-red'
+                            ? 'rgba(220,53,69,0.28)'
+                            : 'rgba(255,255,0,0.32)';
                 this.annotations.push({
                     id: `ann_${Date.now()}_${Math.random().toString(16).slice(2)}`,
                     kind: 'highlight',
@@ -226,8 +310,67 @@ export const pdfPageAnnotationsMixin = {
             this.draftLine = null;
             this.draftPenPath = null;
         },
+        // Click-to-place free text annotation (activesheet / preview).
+        placeTextAnnotation(event, pageIndex) {
+            if (this.tool !== 'text') return;
+            if (event.target.closest('.ann-text') || event.target.closest('.input-overlay')) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const { x, y } = this.getRelativePoint(event);
+            this.pushAnnotationUndoSnapshot();
+            const id = `ann_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+            this.annotations.push({
+                id,
+                kind: 'text',
+                pageIndex,
+                x,
+                y,
+                text: '',
+                fontSize: 14,
+                color: this.annotationInkColor,
+            });
+            this.editingTextId = id;
+            this.notifyAnnotationsChanged();
+            this.$nextTick(() => {
+                const el = document.getElementById(`ann-text-input-${id}`);
+                if (el) {
+                    el.focus();
+                    this.syncTextAnnotationInputSize(el, pageIndex);
+                }
+            });
+        },
+        startEditText(id) {
+            if (this.tool !== 'text') return;
+            const ann = this.annotations.find((a) => a.id === id);
+            this.editingTextId = id;
+            this.$nextTick(() => {
+                const el = document.getElementById(`ann-text-input-${id}`);
+                if (el) {
+                    el.focus();
+                    if (typeof el.select === 'function') el.select();
+                    if (ann) this.syncTextAnnotationInputSize(el, ann.pageIndex);
+                }
+            });
+        },
+        finishTextEdit(id) {
+            if (this.editingTextId !== id) return;
+            const ann = this.annotations.find((a) => a.id === id);
+            if (!ann) {
+                this.editingTextId = null;
+                return;
+            }
+            const text = String(ann.text ?? '').trim();
+            if (!text) {
+                this.annotations = this.annotations.filter((a) => a.id !== id);
+            } else {
+                ann.text = text;
+            }
+            this.editingTextId = null;
+            this.notifyAnnotationsChanged();
+        },
         resetAnnotations() {
             this.cancelDraw();
+            this.editingTextId = null;
             this.annotations = [];
             this.annotationUndoStack = [];
         },

@@ -15,9 +15,9 @@
                                                               height="20">Reload RD Webclient
             </button>
 
-            <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"
+            <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 ms-2 mb-0 btn-sm"
                  @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img
-                src="/img/svg/games-solve.svg" class="white" width="22" height="22" style="vertical-align: top;">
+                src="/img/svg/gtk-convert.svg" class="white" width="22" height="22" style="vertical-align: top;">
                 {{ $t('editor.materials') }}
             </div>
 
@@ -73,7 +73,7 @@
         <div
             id="preview"
             class="fadeinfast p-4"
-            style="--nx-preview-chrome-top: 80px; --nx-preview-top-offset: 0px; --nx-preview-content-width: 90%;"
+            style="--nx-preview-chrome-top: 80px; --nx-preview-top-offset: 0px;"
         >
             <WebviewPane
                 id="webview"
@@ -131,6 +131,8 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
     resolveLockedSection,
+    formatFocusLostTime,
+    applyFocusLostFromIpc,
 } from '../utils/examFetchInfoSync.js'
 import {ref} from "vue";
 import {useConfigStore} from "../stores/configStore.ts";
@@ -307,9 +309,7 @@ export default {
             if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             if (isElectronWindow(window)) {
                 let response = await signalBridge.invoke('focuslost')  // refocus, go back to kiosk, inform teacher
-                if (!this.development && !response.focus) {  //immediately block frontend
-                    this.focus = false
-                }
+                applyFocusLostFromIpc(this, response, this.development);
             }
         },
 
@@ -331,10 +331,7 @@ export default {
                 this.localfiles = filelist;
             }
         },
-        formatTime(unixTime) {
-            const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
-            return date.toLocaleTimeString('en-US', {hour12: false}); // Adjust locale and options as needed
-        },
+        formatTime: formatFocusLostTime,
         // Apply RDP examConfig for locked section; returns true if webview URL changed.
         applyRdpConfigFromSection(sectionIndex) {
             const section = this.serverstatus?.examSections?.[sectionIndex];
@@ -368,8 +365,6 @@ export default {
             if (urlChanged && this.$refs.wvmain && this.rdpUrl) {
                 this.$refs.wvmain.setAttribute('src', this.rdpUrl);
             }
-
-            if (!this.focus) this.entrytime = new Date().getTime();
 
             this.battery = await navigator.getBattery().then(battery => battery)
                 .catch(error => { console.error('Error accessing the Battery API:', error); });

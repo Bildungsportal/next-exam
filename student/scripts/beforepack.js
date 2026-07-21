@@ -23,7 +23,7 @@ export default async function beforePack(context) {
   const projectRoot = path.resolve(path.dirname(__filename), '..');
   const protectScript = path.join(projectRoot, 'scripts', 'protect-main.mjs');
   const appleBuildScript = path.join(projectRoot, 'scripts', 'apple', 'build-apple.mjs');
-  const appleHelpers = ['assessment-helper.app', 'wifi-helper'].map((name) => path.join(projectRoot, 'scripts', 'apple', name));
+  const appleHelpers = ['assessment-helper.app'].map((name) => path.join(projectRoot, 'scripts', 'apple', name));
   const appDir = path.join(projectRoot, 'dist', 'electron', 'UnPackaged');
 
   if (process.platform === 'darwin') {

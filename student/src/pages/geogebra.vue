@@ -24,8 +24,12 @@
     <div class="geogebra-main">
 
     <!-- filelist start - show local files from workfolder (pdf and gbb only)-->
-    <div id="toolbar" class="d-inline p-1">  
-        <button title="backup" @click="saveContent(null, 'manual'); " class="btn d-inline btn-success p-0 pe-2 ps-1 ms-1 mb-0 btn-sm"><img src="/img/svg/document-save.svg" class="white" width="20" height="20" ></button>
+    <div id="toolbar" class="d-inline p-1">
+        <div :title="$t('editor.splitview')" @click="toggleSplitview()"
+             class="invisible-button btn btn-outline-info p-0 ms-1 me-1 mb-0 btn-sm">
+            <img src="/view-split-left-right.svg" class="" width="22" height="22">
+        </div>
+        <button :title="$t('editor.saveCopyAs')" @click="saveContent(null, 'manual'); " class="btn d-inline btn-success p-0 pe-2 ps-1 ms-1 mb-0 btn-sm"><img src="/img/svg/document-save-as.svg" class="white" width="20" height="20" ></button>
         <button title="delete" @click="clearAll(); " class=" btn  d-inline btn-danger p-0 pe-2 ps-1 ms-2 mb-0 btn-sm"><img src="/img/svg/edit-delete.svg" class="white" width="20" height="20" ></button>
         <button title="paste" @click="showClipboard(); " class="btn  d-inline btn-secondary p-0 pe-2 ps-1 ms-2 mb-0 btn-sm"><img src="/img/svg/edit-paste-style.svg" class="white" width="20" height="20" ></button>
         <div class="btn-group  ms-2 me-1 mb-0 " role="group">
@@ -39,7 +43,7 @@
 
 
         <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
-        <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
+        <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 ms-2 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/img/svg/gtk-convert.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
 
         <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
             <div v-if="(file.filetype === 'htm')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
@@ -76,27 +80,49 @@
     
 
 
-    <!-- angabe/pdf preview start -->
-    <div id="preview" class="fadeinfast p-4">
-        <WebviewPane
-            id="webview"
-            :src="urlForWebview || ''"
-            :visible="webviewVisible"
-            :allowed-url="urlForWebview"
-            :block-external="true"
-            @close="hidepreview"
-        />
-        <PdfviewPaneRendered
-            :localLockdown="localLockdown"
-            :examtype="examtype"
-            :toolbar="pdfPreviewUi"
-            :preview="pdfPreviewState"
-            @close="hidepreview"
-        />
-    </div>
-    <!-- angabe/pdf preview end -->
-
-    <div id="ggb-canvas-wrap" ref="ggbSurface" class="ggb-canvas-wrap">
+    <div class="geogebra-body" :class="splitview ? 'split-view-container' : ''">
+        <div
+            id="preview"
+            :class="splitview ? ['p-0', 'split-pane', 'split-pane--left', 'splitback', { 'splitback--empty': !pdfPreviewState }] : 'fadeinfast p-4'"
+            :style="splitview ? { flexBasis: splitLeftPct + '%', '--nx-preview-scroll-padding': '6px' } : { '--nx-preview-top-offset': '60px' }"
+        >
+            <WebviewPane
+                id="webview"
+                :src="urlForWebview || ''"
+                :visible="webviewVisible"
+                :splitview="splitview"
+                :showClose="!splitview"
+                :allowed-url="urlForWebview"
+                :block-external="true"
+                @close="hidepreview"
+            />
+            <PdfviewPaneRendered
+                :localLockdown="localLockdown"
+                :examtype="examtype"
+                :toolbar="pdfPreviewUi"
+                :preview="pdfPreviewState"
+                :showClose="!splitview"
+                :style="!pdfPreviewState ? 'display:none;' : ''"
+                @close="hidepreview"
+            />
+        </div>
+        <div
+            v-if="splitview"
+            class="split-divider"
+            role="separator"
+            aria-orientation="vertical"
+            :aria-valuenow="Math.round(splitLeftPct)"
+            aria-valuemin="20"
+            aria-valuemax="80"
+            @pointerdown.prevent="startSplitResize"
+            title="Drag to resize"
+        ></div>
+        <div
+            id="ggb-canvas-wrap"
+            ref="ggbSurface"
+            :class="splitview ? 'ggb-canvas-wrap split-pane split-pane--right' : 'ggb-canvas-wrap'"
+            :style="splitview ? { flexBasis: (100 - splitLeftPct) + '%' } : null"
+        >
           <!-- focus warning start -->
           <div v-if="!focus" class="focus-container">
             <div id="focuswarning" class="infodiv p-4 d-block focuswarning" >
@@ -109,6 +135,7 @@
         </div>
         <!-- focuswarning end  -->
         <div id="ggb-applet-host"></div>
+        </div>
     </div>
 
     </div>
@@ -177,6 +204,8 @@ import {
     applyClientinfoFromFetch,
     applyServerstatusFromFetch,
     resolveLockedSection,
+    formatFocusLostTime,
+    applyFocusLostFromIpc,
 } from '../utils/examFetchInfoSync.js'
 import {ref} from "vue";
 import {useConfigStore} from "../stores/configStore.ts";
@@ -270,6 +299,9 @@ export default {
             ggbReady:false,
             pdfPreviewUi: { showInsert: false, showPrint: false, showSend: false, showZoom: false },
             pdfPreviewState: null,
+            splitview: false,
+            splitLeftPct: 50,
+            _splitResizing: false,
             _resizeHandler: null,
             _ggbClipIgnoreSelectUntil: 0,
             _ggbResizeObs: null,
@@ -277,7 +309,11 @@ export default {
                 #buttonsID { display: none !important; }
                 button[id="mode26"],
                 button[aria-label="Hilfe"],
-                button[aria-label="Help"] { display: none !important; }
+                button[aria-label="Help"],
+                button[aria-label="Schaltfläche"],
+                button[aria-label="Button"],
+                button[aria-label="Kontrollkästchen"],
+                button[aria-label="Checkbox"] { display: none !important; }
 
  
                 button.helpBtn { display: none !important; }
@@ -287,6 +323,9 @@ export default {
                 li[aria-label="Sign In"],
                 li[aria-label="Datei"],
                 li[aria-label="File"] { display: none !important; }
+
+                .scriptTabPanel,
+                .scriptArea { display: none !important; }
             `,
             hideMenuTexts: [
                 'Neu', 'New',
@@ -304,12 +343,23 @@ export default {
                 'Download',
                 'Bild', 'Image',
                 'Hilfe', 'Help',
+                'Schaltfläche',
+                'Kontrollkästchen',
+                'Skripting', 'Scripting',
             ],
         }
     }, 
     components: { ExamHeader, WebviewPane, PdfviewPaneRendered  },  
     computed: {
 
+    },
+    watch: {
+        splitview() {
+            this.$nextTick(() => this.resizeGgbSurface());
+        },
+        splitLeftPct() {
+            this.$nextTick(() => this.resizeGgbSurface());
+        },
     },
     async mounted() {
         this.currentFile = `${this.clientname}.ggb`;
@@ -330,6 +380,16 @@ export default {
             console.log("editor @ save: Teacher saverequest received")
             this.saveContent(false, why)
         });
+        this._onSaveForSectionSwitch = async () => {
+            let ok = false;
+            try {
+                ok = await this.saveSectionSwitchBackup();
+            } catch (e) {
+                console.error('geogebra @ save-for-section-switch:', e);
+            }
+            signalBridge.send('section-switch-save-done', ok);
+        };
+        signalBridge.on('save-for-section-switch', this._onSaveForSectionSwitch);
 
         signalBridge.on('fileerror', (event, msg) => {
             console.log('geogebra @ fileerror: writing/deleting file error received');
@@ -392,6 +452,7 @@ export default {
             try {
                 await loadGgbDeployScript()
                 await this.initGeoGebra('suite')
+                await this.loadBackupGgbIfPresent()
             } catch (e) {
                 console.error('geogebra @ mounted: GeoGebra bootstrap failed', e)
             }
@@ -423,8 +484,72 @@ export default {
             resetPdfPreviewToolbar(this);
             this.pdfPreviewState = null;
             let preview = document.querySelector("#preview")
-            preview.style.display = 'none';
+            if (!this.splitview) preview.style.display = 'none';
             URL.revokeObjectURL(this.currentpreview);
+        },
+
+        toggleSplitview() {
+            const next = !this.splitview;
+            this.splitview = next;
+            this.$nextTick(() => {
+                const preview = document.querySelector("#preview");
+                if (!preview) return;
+
+                if (this.splitview) {
+                    preview.style.display = '';
+                    if (this._onPreviewClick) preview.removeEventListener("click", this._onPreviewClick);
+                    this.$nextTick(() => this.resizeGgbSurface());
+                    return;
+                }
+
+                resetPdfPreviewToolbar(this);
+                this.pdfPreviewState = null;
+                preview.style.display = 'none';
+                URL.revokeObjectURL(this.currentpreview);
+                if (this._onPreviewClick) this.autoEventListener(preview,"click", this._onPreviewClick);
+                this.$nextTick(() => this.resizeGgbSurface());
+            });
+        },
+
+        startSplitResize(e) {
+            if (!this.splitview) return;
+            this._splitResizing = true;
+            this.autoEventListener(window,'pointermove', this.onSplitResizeMove, { passive: false });
+            this.autoEventListener(window,'pointerup', this.stopSplitResize, { passive: true });
+            this.autoEventListener(window,'pointercancel', this.stopSplitResize, { passive: true });
+            this.onSplitResizeMove(e);
+        },
+
+        onSplitResizeMove(e) {
+            if (!this._splitResizing) return;
+            e.preventDefault();
+            const container = document.querySelector('.split-view-container');
+            if (!container) return;
+            const rect = container.getBoundingClientRect();
+            const x = Math.min(Math.max(e.clientX - rect.left, 0), rect.width);
+            const pct = (x / rect.width) * 100;
+            const minLeftPx = 320;
+            const minRightPx = 420;
+            const minPct = (minLeftPx / rect.width) * 100;
+            const maxPct = 100 - (minRightPx / rect.width) * 100;
+            const clamped = Math.min(Math.max(pct, minPct), maxPct);
+            this.splitLeftPct = Math.min(80, Math.max(20, Math.round(clamped * 10) / 10));
+            this.resizeGgbSurface();
+        },
+
+        stopSplitResize() {
+            this._splitResizing = false;
+            window.removeEventListener('pointermove', this.onSplitResizeMove);
+            window.removeEventListener('pointerup', this.stopSplitResize);
+            window.removeEventListener('pointercancel', this.stopSplitResize);
+            this.resizeGgbSurface();
+        },
+
+        // Resize GeoGebra applet when split pane geometry changes.
+        resizeGgbSurface() {
+            if (!window.ggbApplet || !this.ggbReady) return;
+            const s = this.ggbSurfaceSize();
+            window.ggbApplet.setSize(s.w, s.h);
         },
 
 
@@ -483,9 +608,7 @@ export default {
         async sendFocuslost(ctrlalt = false){
             if (await shouldSkipEdgeFocusLost(signalBridge, this.development)) return;
             let response = await signalBridge.invoke('focuslost', ctrlalt)  // refocus, go back to kiosk, inform teacher
-            if (response && !this.development && !response.focus) {  //immediately block frontend
-                this.focus = false
-            }
+            applyFocusLostFromIpc(this, response, this.development);
         },
 
 
@@ -493,10 +616,7 @@ export default {
 
 
 
-        formatTime(unixTime) {
-            const date = new Date(unixTime * 1000); // Convert Unix time to milliseconds
-            return date.toLocaleTimeString('en-US', { hour12: false }); // Adjust locale and options as needed
-        },
+        formatTime: formatFocusLostTime,
 
 
         async loadFilelist(){
@@ -657,16 +777,18 @@ export default {
                 window.__ggbMenuObserver__ = null
             }
             if (hideTexts.length > 0) {
-                const hide = (menu) => menu.querySelectorAll('li.gwt-MenuItem').forEach(li => {
-                    if (hideTexts.includes(li.textContent.trim())) {
-                        li.style.setProperty('display', 'none', 'important')
-                    }
-                })
-                window.__ggbMenuObserver__ = new MutationObserver(() => {
-                    document.querySelectorAll('.gwt-MenuBar-vertical').forEach(hide)
-                })
+                const hideByText = () => {
+                    document.querySelectorAll(
+                        'li.gwt-MenuItem, td.gwt-MenuItem, td.gwt-TabBarItem, .gwt-TabLayoutPanelTab'
+                    ).forEach((el) => {
+                        if (hideTexts.includes(el.textContent.trim())) {
+                            el.style.setProperty('display', 'none', 'important')
+                        }
+                    })
+                }
+                window.__ggbMenuObserver__ = new MutationObserver(hideByText)
                 window.__ggbMenuObserver__.observe(document.body, { childList: true, subtree: true })
-                document.querySelectorAll('.gwt-MenuBar-vertical').forEach(hide)
+                hideByText()
             }
         },
 
@@ -689,8 +811,6 @@ export default {
             if (sectionIndex !== this.lockedSection) this.lockedSection = sectionIndex;
 
             if (this.pincode !== '0000') this.localLockdown = false;
-
-            if (!this.focus) this.entrytime = new Date().getTime();
 
             if (this.exammode !== prevExammode) this.injectCSS();
 
@@ -783,8 +903,46 @@ export default {
             });
         },
 
+         // Backup .ggb only — awaited by main before section file shuffle.
+        async saveSectionSwitchBackup() {
+            if (!this.ggbReady || !window.ggbApplet) return false;
+            let base64GgbFile = null;
+            try {
+                base64GgbFile = await new Promise((resolve, reject) => {
+                    window.ggbApplet.getBase64(resolve);
+                    setTimeout(() => reject(new Error('timeout')), 10000);
+                });
+            } catch (e) {
+                console.error('geogebra @ saveSectionSwitchBackup:', e);
+                return false;
+            }
+            if (!base64GgbFile) return false;
+            const filename = this.currentFile || `${this.clientname}.ggb`;
+            const response = await signalBridge.invoke('saveGGB', {
+                filename,
+                content: base64GgbFile,
+                reason: 'sectionswitch',
+            });
+            return response?.status === 'success';
+        },
+
+         // Silent restore of clientname.ggb when present in examDir (e.g. after section switch).
+        async loadBackupGgbIfPresent() {
+            for (let i = 0; i < 50 && !this.ggbReady; i++) {
+                await new Promise((r) => setTimeout(r, 100));
+            }
+            if (!this.ggbReady || !window.ggbApplet) return;
+            const filename = `${this.clientname}.ggb`;
+            const loadResult = await signalBridge.invoke('loadGGB', filename);
+            if (loadResult?.status !== 'success' || !loadResult.content) return;
+            window.ggbApplet.setBase64(loadResult.content);
+            this.currentFile = filename;
+        },
+
          /** Saves Content as GGB */
-        async saveContent(event=false, reason=false) { 
+        async saveContent(event=false, reason=false) {
+            if (reason === 'auto' && useInfoStore().switchingToSection != null) return;
+
             if (!window.ggbApplet) {
                 console.log("geogebra @ saveContent: applet not present"); // one line comment
                 return;
@@ -810,7 +968,7 @@ export default {
             let filename = this.currentFile
             if (reason == "manual" ){ 
                 await this.$swal({
-                    title: this.$t("math.filename") ,
+                    title: this.$t("editor.saveCopyAs") ,
                     input: 'text',
                     inputPlaceholder: 'Type here...',
                     showCancelButton: true,
@@ -878,6 +1036,8 @@ export default {
             this._stopExammodeWatch()
         }
 
+        this.stopSplitResize()
+
         document.body.removeEventListener('mouseleave', this.sendFocuslost);
 
         if (this._ggbResizeObs) {
@@ -901,8 +1061,7 @@ export default {
         signalBridge.removeAllListeners('getmaterials')
         signalBridge.removeAllListeners('fileerror')
         signalBridge.removeAllListeners('save')
-        
-        
+        signalBridge.removeAllListeners('save-for-section-switch');
         // Clean up preview click listener
         const preview = document.querySelector("#preview");
         if (preview && this._onPreviewClick) {
@@ -928,6 +1087,12 @@ export default {
     min-height: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+}
+
+.geogebra-body {
+    flex: 1 1 auto;
+    min-height: 0;
     overflow: hidden;
 }
 
@@ -1075,8 +1240,88 @@ export default {
     visibility: visible !important;
 }
 
+.split-view-container {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    overflow: hidden;
+}
+
+.split-pane {
+    flex: 0 0 auto;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.split-pane--right {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    overscroll-behavior: contain;
+}
+
+.split-pane--left {
+    background-color: transparent;
+}
+
+.splitback {
+    position: relative;
+}
+.splitback.splitback--empty::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url('/src/assets/img/svg/document-replace.svg');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 180px;
+    opacity: 0.85;
+}
+.splitback > * {
+    position: relative;
+    z-index: 1;
+}
+
+.split-divider {
+    flex: 0 0 10px;
+    cursor: col-resize;
+    position: relative;
+    background: transparent;
+    touch-action: none;
+}
+
+.split-divider::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 4px;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.split-divider:hover::before {
+    background: rgba(13, 110, 253, 0.55);
+}
+
+.split-view-container #preview {
+    display: block;
+    position: relative;
+    width: auto;
+    height: auto;
+    background-color: transparent;
+    backdrop-filter: none;
+    z-index: auto;
+}
+
 @media print{
     .customClipboard {
+        display: none !important;
+    }
+    #preview, .split-divider {
         display: none !important;
     }
     #apphead {
@@ -1114,12 +1359,13 @@ export default {
 #preview {
     display: none;
     position: absolute;
-    top: var(--nx-preview-top-offset, var(--nx-apphead-h, 60px));
+    top: 0;
     left: 0;
-    width:100vw;
-    height: calc(100vh - var(--nx-preview-top-offset, var(--nx-apphead-h, 60px)));
+    width: 100vw;
+    height: 100vh;
     background-color: rgba(0, 0, 0, 0.4);
-    z-index:100001;
+    z-index: 100001;
+    backdrop-filter: blur(2px);
 }
 
 </style>

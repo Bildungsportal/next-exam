@@ -23,7 +23,7 @@ final class AssessmentRunner: NSObject, AEAssessmentSessionDelegate {
         // and that the app is notarized/App-Store (so Next-Exam must be notarized); pass teamIdentifier
         // for an unambiguous identity match. requiresSignatureValidation stays true (default).
         let configuration = AEAssessmentConfiguration()
-        let examApp = AEAssessmentApplication(bundleIdentifier: "com.nextexam.student", teamIdentifier: "89V82RD7XY")
+        let examApp = AEAssessmentApplication(bundleIdentifier: "com.nextexam.student", teamIdentifier: "__APPLE_TEAM_ID__")
         let examAppConfig = AEAssessmentParticipantConfiguration()
         // Next-Exam needs network during the exam (teacher comms, materials); default is false.
         // Media/audio playback is NOT restricted by AAC, so no extra config for that.

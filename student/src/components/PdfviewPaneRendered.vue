@@ -38,9 +38,12 @@
             <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'pen-red' }" @click.stop="setTool('pen-red')" title="Pen red">
             <img src="/img/svg/document-edit.svg" class="white">
             </button>
-            <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'delete' }" @click.stop="setTool('delete')" title="Delete">
-            ✕
+            <button type="button" class="btn btn-light pdf-tool-btn pdf-tool-btn--text" :class="{ active: tool === 'text' }" @click.stop="setTool('text')" :title="$t('editor.pdfAnnotationText')">T</button>
+            <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'delete' }" @click.stop="setTool('delete')" :title="$t('editor.pdfAnnotationDelete')">
+            <img src="/src/assets/img/svg/edit-delete.svg" alt="">
             </button>
+            <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === null }" @click.stop="setTool(null)" :title="$t('editor.pdfAnnotationClearTool')">✕</button>
+            <span class="pdf-annotation-hint">{{ $t('editor.pdfAnnotationsNotStored') }}</span>
         </li>
 
         <li v-show="toolbar.showZoom && !isSubmissionPreview" class="nav-item ms-2">
@@ -73,10 +76,11 @@
         <div
             class="pdf-page-wrapper"
             :style="{ width: page.width + 'px', height: page.height + 'px', transform: `scale(${zoom})` }"
-            @mousedown="tool !== 'delete' ? startDraw($event, pageIndex) : null"
+            @mousedown="tool !== 'delete' && tool !== 'text' ? startDraw($event, pageIndex) : null"
             @mousemove="isDrawing ? updateDraw($event, pageIndex) : null"
             @mouseup="isDrawing ? finishDraw($event, pageIndex) : null"
             @mouseleave="isDrawing ? cancelDraw() : null"
+            @click="tool === 'text' ? placeTextAnnotation($event, pageIndex) : null"
         >
         <img :src="page.imgSrc" class="pdf-bg-image" draggable="false" />
 
@@ -100,7 +104,7 @@
                 :y1="ann.y1"
                 :x2="ann.x2"
                 :y2="ann.y2"
-                stroke="rgba(220,53,69,0.95)"
+                :stroke="annotationInkStroke"
                 stroke-width="3"
                 stroke-linecap="round"
                 @click.stop="tool === 'delete' ? deleteAnnotation(ann.id) : null"
@@ -117,7 +121,7 @@
                 <polyline
                 :points="penPointsAttr(ann.points)"
                 fill="none"
-                stroke="rgba(220,53,69,0.95)"
+                :stroke="annotationInkStroke"
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -125,14 +129,36 @@
                 :style="{ pointerEvents: 'all', cursor: tool === 'delete' ? 'pointer' : 'default' }"
                 />
             </svg>
+            <div
+                v-for="ann in textForPage(pageIndex)"
+                :key="ann.id"
+                class="ann ann-text"
+                :style="textAnnotationStyle(ann)"
+                @click.stop="tool === 'delete' ? deleteAnnotation(ann.id) : (tool === 'text' ? startEditText(ann.id) : null)"
+            >
+                <textarea
+                    v-if="editingTextId === ann.id"
+                    :id="'ann-text-input-' + ann.id"
+                    v-model="ann.text"
+                    class="ann-text-input"
+                    rows="1"
+                    @blur="finishTextEdit(ann.id)"
+                    @input="syncTextAnnotationInputSize($event.target, pageIndex)"
+                    @focus="syncTextAnnotationInputSize($event.target, pageIndex)"
+                    @mousedown.stop
+                    @click.stop
+                    @keydown.stop
+                />
+                <span v-else class="ann-text-display">{{ ann.text }}</span>
+            </div>
             </template>
 
             <div v-if="currentDraft && currentDraft.pageIndex === pageIndex" class="draft" :style="draftStyle"></div>
             <svg v-if="draftLine && draftLine.pageIndex === pageIndex" class="draft-line" :style="{ position:'absolute', left:0, top:0, width: page.width + 'px', height: page.height + 'px' }">
-            <line :x1="draftLine.x1" :y1="draftLine.y1" :x2="draftLine.x2" :y2="draftLine.y2" stroke="rgba(220,53,69,0.95)" stroke-width="3" stroke-linecap="round" />
+            <line :x1="draftLine.x1" :y1="draftLine.y1" :x2="draftLine.x2" :y2="draftLine.y2" :stroke="annotationInkStroke" stroke-width="3" stroke-linecap="round" />
             </svg>
             <svg v-if="draftPenPath && draftPenPath.pageIndex === pageIndex" class="draft-pen" :style="{ position:'absolute', left:0, top:0, width: page.width + 'px', height: page.height + 'px', pointerEvents: 'none' }">
-            <polyline :points="penPointsAttr(draftPenPath.points)" fill="none" stroke="rgba(220,53,69,0.95)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            <polyline :points="penPointsAttr(draftPenPath.points)" fill="none" :stroke="annotationInkStroke" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
         </div>
         </div>
@@ -308,19 +334,21 @@
 
 <style scoped>
     .pdf-toolbar {
-    position: absolute;
-    left: 0;
-    right: 0;
+    position: relative;
+    flex-shrink: 0;
+    container-type: inline-size;
     z-index: 2000;
     pointer-events: auto;
     font-size: 1.1rem;
-    height: 45px;
+    min-height: 45px;
+    height: auto;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    align-content: center;
+    row-gap: 2px;
     gap: 2px !important;
     padding: 0 8px;
-    top: var(--nx-preview-top-offset, 0px);
-    /* Fill .embed-container only; content width is set on that wrapper. */
     width: 100%;
     box-sizing: border-box;
     }
@@ -377,6 +405,20 @@
     padding: 0 !important;
     }
 
+    .pdf-annotation-hint {
+    margin-left: 8px;
+    font-size: 0.78rem;
+    color: rgba(108, 117, 125, 0.85);
+    white-space: nowrap;
+    user-select: none;
+    }
+
+    @container (max-width: 720px) {
+    .pdf-annotation-hint {
+        display: none;
+    }
+    }
+
     .pdf-tool-btn.active {
     border: 2px solid rgba(13, 110, 253, 0.35) !important;
     background: transparent !important;
@@ -407,7 +449,7 @@
     .tool-underline {
     width: 18px;
     height: 0;
-    border-top: 3px solid rgba(220,53,69,0.95);
+    border-top: 3px solid rgba(10, 36, 114, 0.95);
     display: inline-block;
     border-radius: 2px;
     }
@@ -427,13 +469,11 @@
     user-select: none;
     }
     .render-overlay {
-    position: absolute;
-    top: calc(40px + var(--nx-preview-top-offset, 0px));
-    left: 0;
-    right: 0;
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
     width: 100%;
     box-sizing: border-box;
-    bottom: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -454,21 +494,23 @@
 
     .pdf-scroll-container {
     position: relative;
-    top: calc(40px + var(--nx-preview-top-offset, 0px));
+    flex: 1 1 auto;
+    min-height: 0;
     width: 100%;
-    height: calc(100% - 40px - var(--nx-preview-top-offset, 0px));
     overflow: auto;
     padding: 16px;
     background: rgba(33, 37, 41, 0.92);
     border-radius: 6px;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     min-width: 0;
     }
     .pdf-page-layout {
     flex-shrink: 0;
     margin-bottom: 16px;
+    margin-left: auto;
+    margin-right: auto;
     display: flex;
     justify-content: center;
     align-items: flex-start;
@@ -512,6 +554,40 @@
     z-index: 21;
     }
 
+    .ann-text-display {
+    display: inline-block;
+    font-size: 14px;
+    line-height: 1.3;
+    color: #0a2472;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 2px 4px;
+    border-radius: 2px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    }
+
+    .ann-text-input {
+    box-sizing: border-box;
+    display: block;
+    font-size: 14px;
+    line-height: 1.3;
+    color: #0a2472;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(13, 110, 253, 0.5);
+    border-radius: 2px;
+    padding: 2px 4px;
+    resize: none;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-width: 80px;
+    }
+
+    .pdf-tool-btn--text {
+    font-weight: 700;
+    font-size: 1rem;
+    }
+
     .unstyled{
     box-shadow: none !important;
     padding: 10px !important;
@@ -547,13 +623,23 @@
     margin-right: auto;
     height: 100%;
     display: flex;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: stretch;
+    padding-top: var(--nx-preview-top-offset, 0px);
     box-sizing: border-box;
     }
 
     @media print {
         .pdfview-pane-rendered {
             display: none !important;
+        }
+
+        .ann-text-input,
+        .ann-text-display {
+            border: none !important;
+            background: transparent !important;
+            outline: none !important;
+            box-shadow: none !important;
         }
     }
 
