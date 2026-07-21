@@ -554,10 +554,10 @@ export async function loadGGB(file, base64=false){
  */
 export async function getExamMaterials() {
     let examMaterials = await fetchExamMaterials()
-    console.log('filehandler @ getExamMaterials: got materials:', examMaterials)
+    //console.log('filehandler @ getExamMaterials: got materials:', examMaterials)
     if (examMaterials) {
 
-        let materials = examMaterials.materials
+        this.examMaterials = examMaterials.materials
         let allowedUrls = examMaterials.allowedUrls || [];                                         // ensure array
         let currentUrls = this.allowedUrls || [];
 
@@ -581,21 +581,21 @@ export async function getExamMaterials() {
             if (webviewPane._blockingDomReadyHandler) {
                 webviewPane.removeEventListener('dom-ready', webviewPane._blockingDomReadyHandler);
             }
-            console.log('filehandler @ getExamMaterials: 1')
+            // console.log('filehandler @ getExamMaterials: 1')
             // create named handler function and store reference
             webviewPane._blockingDomReadyHandler = async () => {  // content id can only be accessed after dom-ready event                
                 // try to get webContentsId with retry logic
 
-                console.log('filehandler @ getExamMaterials: 2')
+                //console.log('filehandler @ getExamMaterials: 2')
                 const tryStartBlocking = async (retries = 10, delay = 100) => {
                     for (let i = 0; i < retries; i++) {
                         if (webviewPane.getWebContentsId) {
 
-                            console.log('filehandler @ getExamMaterials: 2')
+                            //console.log('filehandler @ getExamMaterials: 2')
                             const guestId = webviewPane.getWebContentsId();
                             if (guestId) {
 
-                                console.log('filehandler @ getExamMaterials: 3')
+                                // console.log('filehandler @ getExamMaterials: 3')
                                 // send webview id + allowlist to main process to block navigation before it happens
                                 await signalBridge.invoke('start-blocking-for-webview', {guestId, allowedUrls});
                                 console.log(`filehandler @ getExamMaterials: started blocking for WebviewPane ${guestId}`);
@@ -612,7 +612,7 @@ export async function getExamMaterials() {
                 await tryStartBlocking();
             };
 
-            console.log('filehandler @ getExamMaterials: 4')
+            // console.log('filehandler @ getExamMaterials: 4')
             webviewPane.addEventListener('dom-ready', webviewPane._blockingDomReadyHandler);
 
         } else {
@@ -627,22 +627,22 @@ export async function getExamMaterials() {
 }
 
     async function fetchExamMaterials() {
-        console.log("filehandler @ fetchExamMaterials")
+        // console.log("filehandler @ fetchExamMaterials")
         let infoStore = useInfoStore()
-        console.log("filehandler @ fetchExamMaterials: 1")
+        //console.log("filehandler @ fetchExamMaterials: 1")
         let payload = {
             group: infoStore.group,
-            lockedSection: infoStore.lockedsection,
+            lockedSection: infoStore.lockedSection,
         }
-        console.log("filehandler @ fetchExamMaterials: 2")
+        //console.log("filehandler @ fetchExamMaterials: 2")
 
         let examMaterials = false
-        if (infoStore.locallockdown) {
+        if (infoStore.localLockdown) {
             return false
-            console.log("filehandler @ fetchExamMaterials: 3")
+            //console.log("filehandler @ fetchExamMaterials: 3")
         }
         else{
-            console.log("filehandler @ fetchExamMaterials: 4")
+           // console.log("filehandler @ fetchExamMaterials: 4")
             // Fetch request with the corresponding options
             examMaterials = examApiFetch(`https://${infoStore.serverip}:${useConfigStore().serverApiPort}/server/data/getexammaterials/${infoStore.servername}`, {
                 method: "POST",
@@ -651,12 +651,12 @@ export async function getExamMaterials() {
             })
                 .then(response => response.json()) // Receive response as JSON
                 .then(data => {
-                    console.log("filehandler @ fetchExamMaterials: received data", data)
+                    //console.log("filehandler @ fetchExamMaterials: received data", data)
                     return data
                 })
                 .catch(err => log.error(`ipchandler @ getExamMaterials: ${err}`));
 
-            console.log("filehandler @ fetchExamMaterials: received exam materials", examMaterials)
+            // console.log("filehandler @ fetchExamMaterials: received exam materials", examMaterials)
             return examMaterials
         }
     }

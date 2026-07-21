@@ -375,7 +375,10 @@
             console.log(`switchExamSection: calling switch-exam-section`)
             const infoStore = useInfoStore();
             infoStore.beginSectionSwitch(sectionNumber);
-            await switchExamSectionFiles(this.examdirectory, this.lockedSection, sectionNumber);
+            // iOS: Capacitor FS shuffle in renderer; Electron: main switchExamSection does disk ops
+            if (isIOS()) {
+              await switchExamSectionFiles(this.examdirectory, this.lockedSection, sectionNumber);
+            }
             signalBridge.invoke('switch-exam-section', sectionNumber)
               .finally(() => {
                 if (isIOS()) {

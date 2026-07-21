@@ -294,7 +294,7 @@
 
 
                 <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
-                <div id="getmaterialsbutton"
+                <div v-if="!localLockdown" id="getmaterialsbutton"
                      class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 ms-2 mb-0 btn-sm"
                      @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img
                     src="/img/svg/gtk-convert.svg" class="white" width="22" height="22"
@@ -1664,6 +1664,24 @@ export default {
                 return this.$t('editor.caretCtxColor', {color: mark.attrs.color})
             }
             return ''
+        },
+
+        // True when this row is the document that receives the 20s auto-save (.htm).
+        isActiveLocalHtmFile(file) {
+            return !!(file && file.type === 'htm' && this.currentFile && file.name === `${this.currentFile}.htm`);
+        },
+
+        // Seconds/minutes/hours since last filesystem mtime (active .htm omits label in template).
+        formatHtmLocalFileAge(file) {
+            const t = Date.now();
+            const ms = Math.max(0, t - Number(file?.mod || 0));
+            const sec = Math.floor(ms / 1000);
+            if (sec < 60) return `${sec}s`;
+            const min = Math.floor(sec / 60);
+            if (min < 60) return `${min} min`;
+            const h = Math.floor(min / 60);
+            const m = min % 60;
+            return `${h}h ${m}m`;
         },
 
         //get all files in user directory

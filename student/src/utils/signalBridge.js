@@ -86,7 +86,7 @@ export class SignalBridge {
     async invoke(channel, ...args) {
         const win = this.targetWindow
 
-        if (isElectronWindow(win) && win.ipcRenderer && typeof win.ipcRenderer.on === 'function') {
+        if (isElectronWindow(win) && win.ipcRenderer && typeof win.ipcRenderer.invoke === 'function') {
             return await win.ipcRenderer.invoke(channel, ...args);
         }
 

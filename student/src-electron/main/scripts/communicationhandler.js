@@ -42,7 +42,7 @@ import { checkQemuAvailability } from '../../../../shared/qemuAvailability.js';
 import { getQemuInstallInfo } from '../../../../shared/qemuInstallInfo.js';
 import { pickLocalVmGroupConfig } from '../../../../shared/localVmDisplayResolutions.js';
 import { stopProxy } from './vncproxy.js';
-import { switchExamSectionFiles } from '../../../src/utils/switchExamSection.ts';
+import { switchExamSection } from './switchExamSection.js';
 import {
     buildLocalSubmissionSigningSecret,
     deriveSigningIdentity,
@@ -50,7 +50,7 @@ import {
     SUBMISSION_SIGN_MODE_BIP,
     SUBMISSION_SIGN_MODE_LOCAL,
 } from '../../../../shared/submissionPdfSign.js';
-import config from "../config.js";
+import config from "../../../src/utils/config.js";
 
 
 

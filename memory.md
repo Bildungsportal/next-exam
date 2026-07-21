@@ -71,6 +71,7 @@ BUG^print^swal2MultiPage^body.swal2-shown setzt im @media print "[aria-hidden=tr
 # Exam schema
 RULE^exam^sectionSchema^mode config only group.examConfig.{editor|website|eduvidual|forms|rdp|localvm|activeSheets|microsoft365}; section has examtype+sectionname+timelimit+locked+startTs+groups only
 RULE^student^sectionSwitch^switchExamSection: awaitRendererBackup→shuffle examDir→lockedSection→reroute; isSectionSwitchRunning blocks stray examDir writes
+RULE^student^configImport^electron main must import src/utils/config.js (same as electron-main); src-electron/main/config.js is stale duplicate — empty examdirectory breaks shuffle
 RULE^student^examWin^listeners^close once on mainwindow; app-command once; blur idempotent; teardown clears route listeners only
 RULE^student^examWin^state: clientinfo.exammode+mainwindow via mainWin/inExamMode; examServerstatus for IPC cache
 PATH^shared^editorExamConfig^shared/editorExamConfig.js DEFAULT_EDITOR_EXAM_CONFIG+resolveEditorExamConfig+resolveGroupKey

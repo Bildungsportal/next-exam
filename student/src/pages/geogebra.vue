@@ -43,7 +43,7 @@
 
 
         <!-- exam materials start - these are base64 encoded files fetched on examstart or section start-->
-        <div id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 ms-2 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/img/svg/gtk-convert.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
+        <div v-if="!localLockdown" id="getmaterialsbutton" class="invisible-button btn btn-outline-cyan p-0  pe-2 ps-1 me-1 ms-2 mb-0 btn-sm" @click="getExamMaterials()" :title="$t('editor.getmaterials')"><img src="/img/svg/gtk-convert.svg" class="" width="22" height="22" style="vertical-align: top;"> {{ $t('editor.materials') }}</div>
 
         <div v-for="file in examMaterials" :key="file.filename" class="d-inline" style="text-align:left">
             <div v-if="(file.filetype === 'htm')" class="btn btn-outline-cyan p-0  pe-2 ps-1 me-1 mb-0 btn-sm"   @click="selectedFile=file.filename; loadBase64file(file)"><img src="/img/svg/games-solve.svg" class="" width="22" height="22" style="vertical-align: top;"> {{file.filename}}</div>
@@ -405,10 +405,6 @@ export default {
             })
         });
 
-        let examMaterials = await this.getExamMaterials()
-        this.examMaterials = examMaterials.materials;
-        this.allowedUrls = examMaterials.allowedUrls;
-        console.log("geogebra @ getmaterials: get materials request done, set materials: ", this.examMaterials, examMaterials);
         signalBridge.on('getmaterials', (event) => {  //trigger document save by signal "save" sent from sendExamtoteacher in communication handler
             console.log("geogebra @ getmaterials: get materials request received")
             this.getExamMaterials()

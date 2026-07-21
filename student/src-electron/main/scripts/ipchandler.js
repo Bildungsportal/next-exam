@@ -1634,21 +1634,14 @@ class IpcHandler {
             };
         })
 
-        // Student-initiated section switch; file ops happen in renderer via @capacitor/filesystem before this IPC call
+        // Student-initiated section switch when allowSectionSwitch is true; always uses current serverstatus and section number
         ipcMain.handle('switch-exam-section', async (event, sectionNumber) => {
             const serverstatus = this.multicastClient.serverstatus;
             if (!serverstatus?.useExamSections || !serverstatus?.allowSectionSwitch) return;
             if (!this.multicastClient.clientinfo.exammode) return;
             if (this.multicastClient.clientinfo.lockedSection === sectionNumber) return;
             log.info(`ipchandler @ switch-exam-section: switching to section ${sectionNumber}`)
-            this.multicastClient.clientinfo.examtype = serverstatus.examSections[sectionNumber].examtype;
-            this.multicastClient.clientinfo.lockedSection = sectionNumber;
-            await new Promise(r => setTimeout(r, 2000));
-            if (this.WindowHandler.examwindow) {
-                this.WindowHandler.teardownExamChrome(this.WindowHandler.mainwindow);
-                this.WindowHandler.examwindow = null;
-                this.CommunicationHandler.startExam(serverstatus);
-            }
+            await switchExamSection(this.CommunicationHandler, serverstatus, sectionNumber);
         })
 
         /**

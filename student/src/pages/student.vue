@@ -884,16 +884,6 @@ export default {
 
 
         setupLocalLockdown() {
-
-            signalBridge.send('locallockdown', {
-                password: "Test",
-                exammode: "ggb",
-                clientname: "username",
-                languagetool: false,
-                spellchecklang: "german",
-                suggestions: true
-            })
-
             const inputOptions = {
                 'de-DE': this.$t("student.de"),
                 'en-GB': this.$t("student.en"),
@@ -1747,7 +1737,6 @@ export default {
                     pin: this.pincode+"",
                     bipuserID: this.bipuserID+""
                 })
-                console.log(`student @ registerClient: ${JSON.stringify(IPCresponse, null, 2)}`)
                 if (IPCresponse) {
                     console.log(`student @ registerClient: ${IPCresponse.message}`)
                     if (IPCresponse.token) {
