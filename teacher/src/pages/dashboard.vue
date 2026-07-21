@@ -2006,7 +2006,9 @@ computed: {
             }
             
             if (this.serverlogActive && this.serverlogReload){
-                this.serverlog = await ipcRenderer.invoke('getlog')
+                const log = await ipcRenderer.invoke('getlog')
+                if (!this.serverlogActive) return
+                this.serverlog = Array.isArray(log) ? log : []
                 this.scheduleScrollServerLogToBottom()
             }
 
@@ -3142,7 +3144,8 @@ computed: {
                 eye.classList.add('darkgreen');
                 eye.classList.remove('eyeclose');
                 eye.classList.remove('darkred');
-                this.serverlogActive = false; 
+                this.serverlogActive = false;
+                this.serverlog = [];
             }
             else {
                 logdiv.style.right = "0px"
@@ -3154,8 +3157,8 @@ computed: {
                 this.serverlogActive = true;
 
                 let log = await ipcRenderer.invoke('getlog');
-                if (log.length == 0){ this.serverlog = [] }
-                else { this.serverlog = log }
+                if (!this.serverlogActive) return
+                this.serverlog = Array.isArray(log) ? log : []
 
                 this.scheduleScrollServerLogToBottom()
             }
