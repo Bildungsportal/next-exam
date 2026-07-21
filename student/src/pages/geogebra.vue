@@ -1270,7 +1270,7 @@ export default {
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    background-image: url('/src/assets/img/svg/document-replace.svg');
+    background-image: url('/img/svg/document-replace.svg');
     background-repeat: no-repeat;
     background-position: center;
     background-size: 180px;

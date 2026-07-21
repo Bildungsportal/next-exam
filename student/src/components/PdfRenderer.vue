@@ -26,7 +26,7 @@
             </li>
             <li>
                 <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'pen-red' }" @click.stop="setTool('pen-red')" title="Pen red">
-                    <img src="/src/assets/img/svg/document-edit.svg" class="white">
+                    <img src="/img/svg/document-edit.svg" class="white">
                 </button>
             </li>
             <li>
@@ -34,7 +34,7 @@
             </li>
             <li>
                 <button type="button" class="btn btn-light pdf-tool-btn" :class="{ active: tool === 'delete' }" @click.stop="setTool('delete')" :title="$t('editor.pdfAnnotationDelete')">
-                    <img src="/src/assets/img/svg/edit-delete.svg" alt="">
+                    <img src="/img/svg/edit-delete.svg" alt="">
                 </button>
             </li>
         </ul>

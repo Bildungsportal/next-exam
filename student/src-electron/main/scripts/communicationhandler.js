@@ -91,7 +91,7 @@ import config from "../../../src/utils/config.js";
         const examWin = WindowHandler?.inExamMode() ? WindowHandler?.mainWin() : null;
         if (examWin && !this.config?.development) {
             examWin.moveTop();
-            platformDispatcher.applyElectronKioskMode(examWin);
+            WindowHandler.applyElectronKioskMode(examWin);
             examWin.show();
             examWin.focus();
         }

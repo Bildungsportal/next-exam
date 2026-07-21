@@ -17,6 +17,8 @@ RULE^i18n^alphabetical^keep keys in teacher/src/locales/de.json+en.json alphabet
 RULE^i18n^intlifyPipe^vue-i18n/intlify treats | in messages as plural delimiter; literal pipe write {'|'}
 RULE^ui^colors^shared^btn-cyan+swal confirm=$cyan-600^shared/css/nxe-theme.scss; app.scss imports nxe-bootstrap-config+nxe-theme
 TECH^vue^api^Options API teacher/src; mirror sibling file; no script setup unless user migrates
+RULE^student^kioskMethod^applyElectronKioskMode lives ONLY on WindowHandler (windowhandler.js), NOT platformDispatcher (only has skipElectronKiosk flag); ios-merge wrongly called platformDispatcher.applyElectronKioskMode in communicationhandler applySecurityFocusLost→TypeError in focus-lost lockdown
+RULE^student^publicImg^student assets moved src/assets/img→public/img in ios-merge; ref as /img/... NOT /src/assets/img/... (src/assets/img now empty→404 dev+prod)
 
 # Build pipeline
 TECH^quasar^vite^@quasar/app-vite bundles Vite 8; server.forwardConsole=false in student+teacher quasar.config.ts extendViteConf stops browser console mirroring to dev terminal
